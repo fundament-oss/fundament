@@ -21,6 +21,14 @@ And fundamentally:
 
 - Public Cloud, we are not in the business of creating a public cloud offering. Fundament is specifically designed to be self-hosted by companies and large organizations, giving them an Autonomous Private Cloud.
 
+## How?
+
+Fundament [builds](./infrastructure.md) on top of Metal Stack for automated bare-metal provisioning and Gardener for Kubernetes cluster management. This combination ensures a reliable, high-performance foundation without unnecessary complexity, while maintaining full compatibility with existing cloud-native practices.
+
+On top of this foundation, tenants gain access to a developer-friendly, multi-tenant platform that abstracts infrastructure and orchestration into a simple, scalable service. Core capabilities -such as compute, storage, and networking- are managed out of the box, while higher-level features are delivered as [Tools](./tools.md). These Tools may wrap proven open-source projects to provide cloud-like services such as load balancing, databases, or object storage.
+
+The result is an autonomous, extensible, and self-hosted platform: secure by default, highly available under load, fast in operation, and designed to scale from a handful of tenants to thousands.
+
 ## Open Source Mindset
 
 Fundament builds on top of existing Open Source projects. This has a number of benefits:
