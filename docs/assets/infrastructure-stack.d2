@@ -1,0 +1,50 @@
+grid-columns: 1
+
+classes: {
+  layer: {
+    icon.near: center-left
+    icon.size: 10
+  }
+}
+
+Fundament: {
+  class: layer
+  icon: https://icons.terrastruct.com/essentials%2F111-idea.svg # TODO
+  Description: |md
+    Provides platform services.
+
+    Defers to Gardener to provision Kubernetse clusters.
+  |
+}
+
+Gardener: {
+  class: layer
+  icon: https://raw.githubusercontent.com/gardener/gardener/refs/heads/master/logo/gardener.svg
+  Description: |md
+    Full lifecycle management of Kubernetes cluster.
+
+    Defers to metal-stack for the provisioning of bare metal servers.
+  |
+}
+
+Metal Stack: {
+  class: layer
+  icon: https://raw.githubusercontent.com/metal-stack/website/refs/heads/main/static/img/metal-stack.png
+  Description: |md
+    Configures switches and servers.
+
+    Defers to Datacenter Humans to install and connect metal boxes.
+  |
+}
+
+Datacenter: {
+  class: layer
+  icon: https://icons.terrastruct.com/tech%2Fservers.svg
+  Description: |md
+    Datacenter employees are tasked with adding metal boxes and wiring them up.
+  |
+}
+
+Fundament -> Gardener
+Gardener -> Metal Stack
+Metal Stack -> Datacenter

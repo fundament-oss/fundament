@@ -1,0 +1,3 @@
+[tools]
+just = "1.42.4"
+"ubi:terrastruct/d2" = "0.7.1"
