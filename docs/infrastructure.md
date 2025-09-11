@@ -1,7 +1,5 @@
 # Fundament Infrastructure
 
-Fundament builds on top of Gardener Kubernetes and Metal Stack. A running Fundament system provides Tenants with the capability to install Tools into their cluster. Some Tools will be pre-installed by default, others are optional. Tenants may also install their own custom-built Tools, or Tools that are made available by the community.
-
 Unlike platforms such as OpenStack or CloudStack -which aim to deliver every conceivable service “out of the box” and end up being heavyweight and complex- Fundament takes the opposite approach. It is intentionally minimal at the lower layers of the stack, offering only the essentials by default. This simplicity keeps the foundation clean and reliable. From there, functionality grows on a per-tenant basis: each tenant extends their environment with exactly the Tools they need, nothing more.
 
 ![assets/infrastructure-stack.svg](assets/infrastructure-stack.svg)
