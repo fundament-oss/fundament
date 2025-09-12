@@ -6,7 +6,7 @@ Unlike platforms such as OpenStack or CloudStack -which aim to deliver every con
 
 ### Why Gardener
 
-Gardener is a battle-tested, production-grade Kubernetes management solution originally developed by SAP to run thousands of clusters at scale. It has proven reliability in real-world 𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒 scenarios where uptime, consistency, and security are essential.
+[Gardener](https://gardener.cloud/) is a battle-tested, production-grade Kubernetes management solution originally developed by SAP to run thousands of clusters at scale. It has proven reliability in real-world 𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒 scenarios where uptime, consistency, and security are essential.
 
 Gardener’s architecture cleanly separates the control plane from tenant clusters, ensuring that workloads remain isolated while still benefiting from central governance. This design makes it straightforward to support multi-tenancy, self-service cluster provisioning, and automated lifecycle management.
 
@@ -18,7 +18,7 @@ Gardener has a large community in Germany and is Funded by the European Union / 
 
 ### Why Metal-Stack
 
-Metal Stack provides the bare-metal infrastructure that Fundament relies on to stay simple, performant, and transparent at its core. Unlike traditional virtualization layers, Metal Stack provisions physical servers directly in an automated and Kubernetes-native way. This means tenants get the raw performance and predictable behavior of true bare metal, without the overhead of a hypervisor.
+[Metal Stack](https://metal-stack.io/) provides the bare-metal infrastructure that Fundament relies on to stay simple, performant, and transparent at its core. Unlike traditional virtualization layers, Metal Stack provisions physical servers directly in an automated and Kubernetes-native way. This means tenants get the raw performance and predictable behavior of true bare metal, without the overhead of a hypervisor.
 
 By embracing bare metal, Fundament can guarantee consistent network throughput, storage performance, and latency, which are often compromised in virtualized environments. For a platform that aims to provide flexible tooling to tenants, having a stable and predictable infrastructure layer is critical.
 
