@@ -16,14 +16,14 @@ Gardener’s extensibility and strong community backing mean we’re not locked 
 
 Gardener has a large community in Germany and is Funded by the European Union / NextGenerationEU. It is a project of NeoNephos Foundation, which is part of Linux Foundation Europe.
 
-### Why Metal-Stack
+### Why metal-stack
 
-[Metal Stack](https://metal-stack.io/) provides the bare-metal infrastructure that Fundament relies on to stay simple, performant, and transparent at its core. Unlike traditional virtualization layers, Metal Stack provisions physical servers directly in an automated and Kubernetes-native way. This means tenants get the raw performance and predictable behavior of true bare metal, without the overhead of a hypervisor.
+[metal-stack](https://metal-stack.io/) provides the bare-metal infrastructure that Fundament relies on to stay simple, performant, and transparent at its core. Unlike traditional virtualization layers, metal-stack provisions physical servers directly in an automated and Kubernetes-native way. This means tenants get the raw performance and predictable behavior of true bare metal, without the overhead of a hypervisor.
 
 By embracing bare metal, Fundament can guarantee consistent network throughput, storage performance, and latency, which are often compromised in virtualized environments. For a platform that aims to provide flexible tooling to tenants, having a stable and predictable infrastructure layer is critical.
 
-Metal Stack also aligns perfectly with Fundament’s philosophy: minimal by default, extensible where needed. It doesn’t drown operators in layers of abstraction, but instead delivers just enough automation to make managing bare-metal infrastructure practical at scale.
+metal-stack also aligns perfectly with Fundament’s philosophy: minimal by default, extensible where needed. It doesn’t drown operators in layers of abstraction, but instead delivers just enough automation to make managing bare-metal infrastructure practical at scale.
 
-Metal Stack is designed to support a broad range of hardware vendors and configurations, ensuring there’s no lock-in to a single supplier. Its focus on open standards and automated provisioning means operators can manage diverse server fleets (Dell, HPE, Supermicro, etc., or custom builds) with the same workflows. This flexibility not only protects against vendor dependency but also allows Fundament to run on the hardware that best fits performance, cost, or availability requirements.
+metal-stack is designed to support a broad range of hardware vendors and configurations, ensuring there’s no lock-in to a single supplier. Its focus on open standards and automated provisioning means operators can manage diverse server fleets (Dell, HPE, Supermicro, etc., or custom builds) with the same workflows. This flexibility not only protects against vendor dependency but also allows Fundament to run on the hardware that best fits performance, cost, or availability requirements.
 
-The Metal Stack project is relatively young and makes use of modern technologies. It has a dedicated team of developers who are passionate about building a robust and scalable infrastructure solution.
+The metal-stack project is relatively young and makes use of modern technologies. It has a dedicated team of developers who are passionate about building a robust and scalable infrastructure solution.
