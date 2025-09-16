@@ -1,5 +1,5 @@
 _default:
-    just --list
+    @just --list
 
 # Watch for changes to .d2 files and re-generate .svgs
 watch-d2:
