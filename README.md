@@ -23,4 +23,8 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-The Open-Source license under which Fundament is to be released is still to be determined. At this moment the contents of this repository are copyrighted by The Fundament Authors (`git log --format='%aN <%aE>' | sort -u`).
+The contents of this repository are copyrighted by *The Fundament Authors*
+(`git log --format='%aN <%aE>' | sort -u`).
+
+- **Source code** is licensed under the [GNU Affero General Public License (AGPL)](https://www.gnu.org/licenses/agpl-3.0.html), unless otherwise stated.
+- **Documentation** (including Markdown, D2 and similar files) is licensed under [CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/).
