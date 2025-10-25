@@ -2,7 +2,7 @@
 
 Fundament is software for running an Autonomous Private Cloud. It is designed to provide organizations with a minimal, reliable foundation for running modern applications. Unlike traditional platforms that bundle every service by default, Fundament is basic at its core -delivering only the essential infrastructure and orchestration layers- while allowing each tenant to extend their environment with exactly the services and tools they need.
 
-On top of this foundation, Fundament serves as an internal developer platform (IDP): enabling developers to build, deploy, and operate applications with speed and confidence. Its API-first design, multi-tenant architecture, and focus on autonomy and scalability make it suitable for organizations that want cloud-like capabilities on their own terms; secure, reliable, and without unnecessary complexity.
+On top of this foundation, Fundament serves as an internal developer platform (IDP): enabling developers to build, deploy, and operate applications with speed and confidence. Its API-first design, multi-tenant architecture, and focus on autonomy and scalability make it suitable for organizations that want cloud capabilities on their own terms; secure, reliable, and without unnecessary complexity.
 
 ## Project status
 
