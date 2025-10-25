@@ -1,6 +1,6 @@
 # Fundament Organizations
 
-Fundament requires a solid orgnizational structure to provide multi-tenancy.
+Fundament requires a solid organizational structure to provide multi-tenancy.
 
 Entities:
 

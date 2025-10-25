@@ -8,7 +8,7 @@ Tenants can also build and install their own Tools. This allows tenants to exper
 
 ## Installation and versioning
 
-A Tool is installed within a Cluster. Each Cluster can have a different set of Tools installed, and each Cluster can a have different version of a tool installed.
+A Tool is installed within a Cluster. Each Cluster can have a different set of Tools installed, and each Cluster can have a different version of a tool installed.
 
 A Tool is installed as a Helm Chart, with some extra stuff.
 
@@ -22,5 +22,5 @@ _Terms/names to be refined._
 
 - Gold / Built-in: Provided and maintained by the Fundament team, operated by NCOC.
 - Silver / Certified: Validated by the Fundament team, operated by the plugin developer.
-- Bronze / Experimental: The plugin itself is not checked, but the publishing Team was verified. Not endorsed by Fudnament but allowed to publish the plugin in the plugin catalog. Comes with a big warning.
+- Bronze / Experimental: The plugin itself is not checked, but the publishing Team was verified. Not endorsed by Fundament but allowed to publish the plugin in the plugin catalog. Comes with a big warning.
 - Grey / Internal: The plugin is not available in the plugin catalog and can only be used within the tenant that has developed it. Other tenants can install it manually if they put their cluster in Tool Development Mode.

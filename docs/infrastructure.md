@@ -10,7 +10,7 @@ Unlike platforms such as OpenStack or CloudStack -which aim to deliver every con
 
 Gardener’s architecture cleanly separates the control plane from tenant clusters, ensuring that workloads remain isolated while still benefiting from central governance. This design makes it straightforward to support multi-tenancy, self-service cluster provisioning, and automated lifecycle management.
 
-Another major benefit is underlying infrastructure neutrality. Gardener supports all major public cloud providers, as well as private data centers via bare metal and virtualization layers. This gives users the flexibility to modify Fundament to run on different a infrastructure provider than metal-stack, and prevents lock-in to a single vendor.
+Another major benefit is underlying infrastructure neutrality. Gardener supports all major public cloud providers, as well as private data centers via bare metal and virtualization layers. This gives users the flexibility to modify Fundament to run on a different infrastructure provider than metal-stack, and prevents lock-in to a single vendor.
 
 Gardener’s extensibility and strong community backing mean we’re not locked into a rigid system. With well-defined extension points, we can add your own logic for networking, storage, identity, and other layers. At the same time, we benefit from an active open-source community and ongoing 𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒 contributions, ensuring the project evolves with industry best practices.
 
