@@ -23,9 +23,9 @@ And fundamentally:
 
 ## How?
 
-Fundament [builds](./infrastructure.md) on top of [metal-stack](https://metal-stack.io/) for automated bare-metal provisioning and [Gardener](https://gardener.cloud/) for Kubernetes cluster management. This combination ensures a reliable, high-performance foundation without unnecessary complexity, while maintaining full compatibility with existing cloud-native practices.
+Fundament integrates [metal-stack](https://metal-stack.io/) for automated bare-metal provisioning and [Gardener](https://gardener.cloud/) for Kubernetes cluster management into a complete cloud solution. This combination delivers Infrastructure-as-a-Service (IaaS) through a reliable, high-performance foundation without unnecessary complexity, while maintaining full compatibility with existing cloud-native practices.
 
-On top of this foundation, tenants gain access to a developer-friendly, multi-tenant platform that abstracts infrastructure and orchestration into a simple, scalable service. Core capabilities -such as compute, storage, and networking- are managed out of the box, while higher-level features are delivered as [Tools](./tools.md). These Tools may wrap proven open-source projects to provide cloud services such as load balancing, databases, or object storage.
+On top of this IaaS layer, Fundament provides Platform-as-a-Service (PaaS) capabilities through a developer-friendly, multi-tenant platform that abstracts infrastructure and orchestration into a simple, scalable service. Core capabilities -such as compute, storage, and networking- are managed out of the box, while higher-level features are delivered as [Tools](./tools.md). These Tools may wrap proven open-source projects to provide cloud services such as load balancing, databases, or object storage.
 
 The result is an autonomous, extensible, and self-hosted platform: secure by default, highly available under load, fast in operation, and designed to scale from a handful of tenants to thousands.
 
