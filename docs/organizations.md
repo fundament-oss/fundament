@@ -1,19 +1,16 @@
-# Fundament Organizations
+# Multi-tenancy Model
 
-Fundament requires a solid orgnizational structure to provide multi-tenancy.
+Fundament implements multi-tenancy through the following identity and resource model.
 
-Entities:
+Identity & Access:
 
 - Organization
 - Team (?)
 - User
 - ServiceAccount
-
-Make use of:
-
 - Role
 
-To interact with:
+Resources:
 
 - Cluster
 - Namespace

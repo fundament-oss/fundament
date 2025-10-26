@@ -10,11 +10,11 @@ Unlike platforms such as OpenStack or CloudStack -which aim to deliver every con
 
 Gardener’s architecture cleanly separates the control plane from tenant clusters, ensuring that workloads remain isolated while still benefiting from central governance. This design makes it straightforward to support multi-tenancy, self-service cluster provisioning, and automated lifecycle management.
 
-Another major benefit is underlying infrastructure neutrality. Gardener supports all major public cloud providers, as well as private data centers via bare metal and virtualization layers. This gives users the flexibility to modify Fundament to run on different a infrastructure provider than metal-stack, and prevents lock-in to a single vendor.
+Another major benefit is underlying infrastructure neutrality. Gardener supports all major public cloud providers, as well as private data centers via bare metal and virtualization layers. This infrastructure neutrality means Fundament could potentially support alternative infrastructure providers beyond metal-stack in the future, preventing vendor lock-in.
 
-Gardener’s extensibility and strong community backing mean we’re not locked into a rigid system. With well-defined extension points, we can add your own logic for networking, storage, identity, and other layers. At the same time, we benefit from an active open-source community and ongoing 𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒 contributions, ensuring the project evolves with industry best practices.
+Gardener's extensibility and strong community backing mean Fundament is not locked into a rigid system. With well-defined extension points, operators can add custom logic for networking, storage, identity, and other layers. At the same time, Fundament benefits from an active open-source community and ongoing 𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒 contributions, ensuring the project evolves with industry best practices.
 
-Gardener has a large community in Germany and is Funded by the European Union / NextGenerationEU. It is a project of NeoNephos Foundation, which is part of Linux Foundation Europe.
+Gardener has a large community in Germany and is funded by the European Union / NextGenerationEU. It is a project of NeoNephos Foundation, which is part of Linux Foundation Europe.
 
 ### Why metal-stack
 
@@ -26,4 +26,4 @@ metal-stack also aligns perfectly with Fundament’s philosophy: minimal by defa
 
 metal-stack is designed to support a broad range of hardware vendors and configurations, ensuring there’s no lock-in to a single supplier. Its focus on open standards and automated provisioning means operators can manage diverse server fleets (Dell, HPE, Supermicro, etc., or custom builds) with the same workflows. This flexibility not only protects against vendor dependency but also allows Fundament to run on the hardware that best fits performance, cost, or availability requirements.
 
-The metal-stack project is relatively young and makes use of modern technologies. It has a dedicated team of developers who are passionate about building a robust and scalable infrastructure solution.
+The metal-stack project is relatively young and makes use of modern technologies. It has been in production use at financial institutions since 2020, with active development by a dedicated team and a growing community.
