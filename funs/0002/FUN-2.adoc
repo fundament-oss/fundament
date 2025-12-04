@@ -1,0 +1,22 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: prediscussion
+
+= FUN-2 A Fundament for the Future of Government Computing
+
+== Why
+
+== Assumptions
+
+* Tenants are friends
+** Live within the same company or broader organization
+** Preference to have tenants start in the same starting point
+* Tenants make mistakes (so isolation is definitely required)
+
+== How
+* Opinionated configuration of metal-stack+gardener for multi-tentant usage
+* Strong opinions on 'how these clusters work', lowering complexity and increasing interoperability.
+* User-friendly click-ops management
+* Developer-friendly infra-as-code and CLI

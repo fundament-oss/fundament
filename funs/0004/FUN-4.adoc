@@ -1,0 +1,39 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: prediscussion
+
+= FUN-4 Plugins or Apps or Addons or Tools
+
+Name to be determined. For now going with 'App'.
+
+An app is installed in a cluster.
+An app can be a wrapper around some k8s operator. Plugins may be installed via helm installs. Plugin installations are isolated from Users.
+
+An app is installed Cluster-wide, but may be enabled/disabled per project (or even namespace? tbd)
+
+
+An app exposes resources. For example;
+* cert-manager plugin, installed via helm chart, exposes Certificate resource.
+*
+
+The App must make sure that User permissions to Resources are properly maintained (Project>Namespace).
+
+== Interact with an App
+
+=== console-ui
+
+Apps may hook into the console-ui via a console-plugin. This lets them present resources into the console-ui, either read-only or read-write.
+
+=== infra-as-code
+
+In-cluser Resources that are available as manifest (crd) should be accessed by infra-as-code via the kubernetes API.
+
+== Compatibility
+
+An app can be installed only once in a cluster. This means that if an app needs to be updated, all projects in the cluster that use resources that are managed by the app they must update to that new version as well. This is a concern for breaking changes in manifests.
+
+== Presets
+
+Haven+ preset to install a great set of apps to get started fast.
