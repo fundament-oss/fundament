@@ -1,0 +1,6 @@
+model_name: fundament
+db_name: fundament
+db_users:
+  - authn_api
+  - appstore_api
+  - organization_api

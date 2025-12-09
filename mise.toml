@@ -2,5 +2,11 @@
 JUST_ONE=true
 
 [tools]
+# Scripting & Meta
 just = "1.42.4"
+
+# Documentation
 "ubi:terrastruct/d2" = "0.7.1"
+
+# Database
+"go:github.com/printeers/trek" = "0.9.3"

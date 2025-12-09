@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+CAUTION: Do not modify this file unless you know what you are doing.
+ Unexpected results may occur if the code is changed deliberately.
+-->
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="4"
+	 gen-disabled-objs-code="false" show-sys-schemas-rects="false"
+	 last-position="0,13" last-zoom="1" scene-rect="0,0,2027.96,1076.8"
+	 default-owner="postgres"
+	 layers="Default layer"
+	 active-layers="0"
+	 layer-name-colors="#000000"
+	 layer-rect-colors="#6ee6ef"
+	 show-layer-names="false" show-layer-rects="false">
+<role name="authn_api"
+ sql-disabled="true">
+</role>
+
+<role name="appstore_api"
+ sql-disabled="true">
+</role>
+
+<role name="organization_api"
+ sql-disabled="true">
+</role>
+
+<database name="fundament" is-template="false" allow-conns="true" sql-disabled="true">
+</database>
+
+<schema name="public" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#000000" sql-disabled="true">
+	<role name="postgres"/>
+</schema>
+
+<schema name="organization" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
+	<role name="postgres"/>
+</schema>
+
+<table name="tenants" layers="0" collapse-mode="1" max-obj-count="3" z-value="0">
+	<schema name="organization"/>
+	<role name="postgres"/>
+	<position x="460" y="420"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="tenants_pk" type="pk-constr" table="organization.tenants">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="tenants_uq_name" type="uq-constr" table="organization.tenants">
+		<columns names="name" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="projects" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
+	<schema name="organization"/>
+	<role name="postgres"/>
+	<position x="1020" y="440"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="tenant_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="projects_pk" type="pk-constr" table="organization.projects">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="projects_uq_tenant_name" type="uq-constr" table="organization.projects">
+		<columns names="tenant_id,name" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="namespaces" layers="0" collapse-mode="1" max-obj-count="7" z-value="0">
+	<schema name="organization"/>
+	<role name="postgres"/>
+	<position x="1760" y="700"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="project_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="cluster_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="namespaces_pk" type="pk-constr" table="organization.namespaces">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="namespaces_ck_name" type="ck-constr" table="organization.namespaces">
+			<expression> <![CDATA[name = name]]> </expression>
+	</constraint>
+	<constraint name="namespaces_uq_name" type="uq-constr" nulls-not-distinct="true" table="organization.namespaces">
+		<columns names="project_id,name,deleted" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="clusters" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
+	<schema name="organization"/>
+	<role name="postgres"/>
+	<position x="1020" y="680"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="tenant_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="clusters_pk" type="pk-constr" table="organization.clusters">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="clusters_uq_name" type="uq-constr" nulls-not-distinct="true" table="organization.clusters">
+		<columns names="tenant_id,name,deleted" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<function name="clusters_tr_verify_deleted"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="organization"/>
+	<role name="postgres"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+	IF EXISTS (
+		SELECT 1
+		FROM organization.namespaces
+		WHERE
+			cluster_id = NEW.id
+			AND deleted IS NULL
+	) THEN
+		RAISE EXCEPTION 'Cannot delete cluster with undeleted namespaces';
+	END IF;
+END;]]> </definition>
+</function>
+
+<trigger name="verify_deleted" firing-type="AFTER" per-line="true" constraint="true"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="organization.clusters">
+		<function signature="organization.clusters_tr_verify_deleted()"/>
+</trigger>
+
+<constraint name="projects_fk_tenant" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="organization.tenants" table="organization.projects">
+	<columns names="tenant_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="namespaces_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="organization.projects" table="organization.namespaces">
+	<columns names="project_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="namespaces_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="organization.clusters" table="organization.namespaces">
+	<columns names="cluster_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="clusters_fk_tenant" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="organization.tenants" table="organization.clusters">
+	<columns names="tenant_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<relationship name="rel_namespaces_projects" type="relfk" layers="0"
+	 src-table="organization.namespaces"
+	 dst-table="organization.projects" reference-fk="namespaces_fk_project"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_clusters_tenants" type="relfk" layers="0"
+	 src-table="organization.clusters"
+	 dst-table="organization.tenants" reference-fk="clusters_fk_tenant"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_projects_tenants" type="relfk" layers="0"
+	 src-table="organization.projects"
+	 dst-table="organization.tenants" reference-fk="projects_fk_tenant"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_namespaces_clusters" type="relfk" layers="0"
+	 src-table="organization.namespaces"
+	 dst-table="organization.clusters" reference-fk="namespaces_fk_cluster"
+	 src-required="false" dst-required="true"/>
+
+</dbmodel>

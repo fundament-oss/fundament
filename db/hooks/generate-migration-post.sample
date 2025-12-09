@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euxo pipefail
+
+echo "This is generate-migration-post"
+echo "Running on migration file $1"
