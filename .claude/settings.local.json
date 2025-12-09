@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(just generate:*)",
+      "Bash(go build:*)",
+      "Bash(just lint:*)",
+      "Bash(npm install)",
+      "Bash(npm run build:*)"
+    ]
+  }
+}
