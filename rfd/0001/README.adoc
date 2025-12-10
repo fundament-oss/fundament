@@ -1,3 +1,49 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: discussion
+:discussion: https://github.com/fundament-oss/fundament/pull/1
+:authors: Your Name <your.email@example.com>
+:labels: infrastructure, architecture
+:revremark: State: {state} | {discussion}
+
+= RFD 1 Fundament System Architecture
+{authors}
+
+== Introduction
+
+This RFD proposes the initial architecture for the Fundament system, outlining the core components and their interactions.
+
+== Background
+
+[Describe why this RFD is needed and what problem it solves]
+
+== Proposal
+
+[Your main proposal content]
+
+=== Component Overview
+
+[Details about components]
+
+=== Design Decisions
+
+[Key design decisions and rationale]
+
+== Implementation
+
+[How this will be implemented]
+
+== Open Questions
+
+* Question 1?
+* Question 2?
+
+== References
+
+* https://example.com/relevant-doc[Relevant Documentation]
+
 == Standing on the shoulders of giants
 
 * https://rfd.shared.oxide.computer/rfd/0001
