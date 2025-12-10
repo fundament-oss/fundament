@@ -1,0 +1,7 @@
+== Standing on the shoulders of giants
+
+* https://rfd.shared.oxide.computer/rfd/0001
+* Enhancement Proposals
+** https://github.com/kubernetes/enhancements
+** https://metal-stack.io/docs/enhancement-proposals
+** https://github.com/gardener/gardener/tree/master/docs/proposals
