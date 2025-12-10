@@ -3,9 +3,9 @@
   :toc: left
   :numbered:
   :icons: font
-  :state: prediscussion
+  :state: discussion
   :discussion:
-  :authors: Your Name <your.email@example.com>
+  :authors: Chiel Timmermans <chiel.timmermans@aceworks.nl>
   :labels: category1, category2
   :revremark: State: {state}
 
