@@ -1,0 +1,44 @@
+
+  :showtitle:
+  :toc: left
+  :numbered:
+  :icons: font
+  :state: prediscussion
+  :discussion:
+  :authors: Your Name <your.email@example.com>
+  :labels: category1, category2
+  :revremark: State: {state}
+
+  = RFD 6 Dit is een Pull Request Work Flow test
+  {authors}
+
+  == Introduction
+
+  Brief introduction of what this RFD proposes.
+
+  == Background
+
+  Why is this needed? What problem does it solve?
+
+  == Proposal
+
+  ### Overview
+
+  Main proposal details.
+
+  ### Implementation Details
+
+  Technical details of the proposal.
+
+  ### Alternatives Considered
+
+  What other approaches were considered and why were they rejected?
+
+  ## Open Questions
+
+  * Question 1?
+  * Question 2?
+
+  ## References
+
+  * https://example.com/relevant-doc[Relevant Documentation]
