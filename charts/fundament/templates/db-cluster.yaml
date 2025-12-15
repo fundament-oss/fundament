@@ -9,6 +9,7 @@ metadata:
 spec:
   instances: {{ $.Values.db.instances }}
   imageName: ghcr.io/cloudnative-pg/postgresql:18
+  enableSuperuserAccess: true
   bootstrap:
     initdb:
       database: fundament

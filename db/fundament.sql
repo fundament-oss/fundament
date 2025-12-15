@@ -114,6 +114,21 @@ CREATE CONSTRAINT TRIGGER verify_deleted
 	EXECUTE PROCEDURE organization.clusters_tr_verify_deleted();
 -- ddl-end --
 
+-- object: organization.users | type: TABLE --
+-- DROP TABLE IF EXISTS organization.users CASCADE;
+CREATE TABLE organization.users (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	tenant_id uuid NOT NULL,
+	name text NOT NULL,
+	external_id text NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT users_pk PRIMARY KEY (id),
+	CONSTRAINT users_uq_external_id UNIQUE (external_id)
+);
+-- ddl-end --
+ALTER TABLE organization.users OWNER TO postgres;
+-- ddl-end --
+
 -- object: projects_fk_tenant | type: CONSTRAINT --
 -- ALTER TABLE organization.projects DROP CONSTRAINT IF EXISTS projects_fk_tenant CASCADE;
 ALTER TABLE organization.projects ADD CONSTRAINT projects_fk_tenant FOREIGN KEY (tenant_id)
@@ -138,6 +153,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- object: clusters_fk_tenant | type: CONSTRAINT --
 -- ALTER TABLE organization.clusters DROP CONSTRAINT IF EXISTS clusters_fk_tenant CASCADE;
 ALTER TABLE organization.clusters ADD CONSTRAINT clusters_fk_tenant FOREIGN KEY (tenant_id)
+REFERENCES organization.tenants (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: users_fk_tenant | type: CONSTRAINT --
+-- ALTER TABLE organization.users DROP CONSTRAINT IF EXISTS users_fk_tenant CASCADE;
+ALTER TABLE organization.users ADD CONSTRAINT users_fk_tenant FOREIGN KEY (tenant_id)
 REFERENCES organization.tenants (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --

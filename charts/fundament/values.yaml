@@ -1,35 +1,56 @@
 # Fundament Helm Chart - Default Values
 
+# JWT Secret - required for token signing/validation across services
+# Must be set in production (no default for security)
+jwtSecret: ""
+
+# External URLs - must be set for your environment
+externalUrls:
+  authn: ""      # e.g., https://authn.example.com
+  frontend: ""   # e.g., https://app.example.com
+  cookieDomain: ""  # e.g., example.com
+
 # Container images
 images:
+  dbMigrations: db-migrations:latest
   authnApi: authn-api:latest
   organizationApi: organization-api:latest
   appstoreApi: appstore-api:latest
   frontend: frontend:latest
+  loginFrontend: login-frontend:latest
 
 # Database (CloudNativePG)
 db:
   enabled: true
   instances: 1
   storageSize: 1Gi
+  insertTestData: false
 
 # Authentication API
 authnApi:
   enabled: true
   replicas: 1
+  logLevel: info
 
 # Organization API
 organizationApi:
   enabled: false
   replicas: 1
+  logLevel: info
 
 # Appstore API
 appstoreApi:
   enabled: false
   replicas: 1
+  logLevel: info
 
 # Frontend
 frontend:
+  enabled: false
+  replicas: 1
+
+# Login Frontend
+loginFrontend:
   enabled: false
   replicas: 1
 
@@ -37,11 +58,15 @@ frontend:
 dex:
   enabled: true
   issuer: ""
+  discoveryUrl: ""  # Internal URL for OIDC discovery (defaults to issuer if empty)
   staticClients: []
   staticPasswords: []
+
+# Host aliases for pods (useful for local development to resolve external URLs to internal services)
+hostAliases: []
 
 # Ingress
 ingress:
   enabled: false
   className: nginx
-  domain: 127.0.0.1.nip.io
+  domain: ""
