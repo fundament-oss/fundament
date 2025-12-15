@@ -1,0 +1,10 @@
+.claude
+
+# Go builds
+authn-api/authn-api
+organization-api/organization-api
+
+# Frontend
+node_modules
+dist
+.vite

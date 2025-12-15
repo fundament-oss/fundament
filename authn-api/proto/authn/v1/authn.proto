@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package authn.v1;
+
+option go_package = "github.com/fundament-oss/fundament/authn-api/proto/gen/authn/v1;authnv1";
+
+service AuthnService {
+  // GetUserInfo returns the current user's information
+  // Validates the JWT from Authorization header or cookie
+  rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse);
+}
+
+message GetUserInfoRequest {}
+
+message GetUserInfoResponse {
+  // User information
+  User user = 1;
+}
+
+message User {
+  // User ID
+  string id = 1;
+  // Tenant ID
+  string tenant_id = 2;
+  // User name
+  string name = 3;
+  // External ID from OIDC provider
+  string external_id = 4;
+  // Groups the user belongs to
+  repeated string groups = 5;
+}

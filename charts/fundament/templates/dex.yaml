@@ -14,7 +14,9 @@ data:
     web:
       http: 0.0.0.0:5556
     oauth2:
+      responseTypes: ["code"]
       skipApprovalScreen: true
+      passwordConnector: local
     {{- if $.Values.dex.staticClients }}
     staticClients:
       {{- toYaml $.Values.dex.staticClients | nindent 6 }}
@@ -76,6 +78,9 @@ spec:
     - port: 5556
       targetPort: http
       name: http
+    - port: 8080
+      targetPort: http
+      name: http-alt
   selector:
     app.kubernetes.io/component: dex
 ---
