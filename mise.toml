@@ -10,3 +10,10 @@ just = "1.42.4"
 
 # Database
 "go:github.com/printeers/trek" = "0.10.0"
+
+# Protobuf
+"ubi:bufbuild/buf" = "1.61.0"
+
+# Go
+golangci-lint = "2.7.2"
+"ubi:sqlc-dev/sqlc" = "1.30.0"

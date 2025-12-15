@@ -1,0 +1,30 @@
+issuer: http://localhost:5556
+
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+enablePasswordDB: true
+
+staticPasswords:
+  - email: "admin@example.com"
+    # echo 'password' | htpasswd -BinC 10 admin
+    hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+    username: "admin"
+    userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+
+staticClients:
+  - id: authn-api
+    redirectURIs:
+      - "http://localhost:10100/callback"
+    name: "Fundament Auth API"
+    public: true
+# NOTE: staticPasswords doesn't support groups (https://github.com/dexidp/dex/issues/1080)
+# For local dev, groups are hardcoded in authn-api based on email
+
+# Configure for PKCE flow
+oauth2:
+  responseTypes: ["code"]
+  skipApprovalScreen: true
