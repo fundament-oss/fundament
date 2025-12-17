@@ -1,0 +1,37 @@
+# Sandbox environment values
+
+db:
+  enabled: true
+  instances: 2
+  storageSize: 5Gi
+
+authnApi:
+  enabled: true
+  replicas: 2
+
+organizationApi:
+  enabled: true
+  replicas: 2
+
+appstoreApi:
+  enabled: true
+  replicas: 2
+
+frontend:
+  enabled: true
+  replicas: 2
+
+dex:
+  enabled: true
+  issuer: https://dex.sandbox.example.com
+  staticClients:
+    - id: fundament
+      name: Fundament
+      secret: "" # Set via secret management
+      redirectURIs:
+        - https://fundament.sandbox.example.com/callback
+
+ingress:
+  enabled: true
+  className: nginx
+  domain: sandbox.example.com

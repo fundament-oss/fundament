@@ -1,0 +1,20 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: fundament
+servers: 1
+agents: 0
+ports:
+  - port: 8080:80
+    nodeFilters:
+      - loadbalancer
+options:
+  k3s:
+    extraArgs:
+      - arg: --disable=traefik
+        nodeFilters:
+          - server:*
+volumes:
+  - volume: ${PWD}/deploy/k3d/resources/cloudnative-pg.yaml:/var/lib/rancher/k3s/server/manifests/cloudnative-pg.yaml
+  - volume: ${PWD}/deploy/k3d/resources/cert-manager.yaml:/var/lib/rancher/k3s/server/manifests/cert-manager.yaml
+  - volume: ${PWD}/deploy/k3d/resources/ingress-nginx.yaml:/var/lib/rancher/k3s/server/manifests/ingress-nginx.yaml

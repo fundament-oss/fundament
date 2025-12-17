@@ -1,0 +1,42 @@
+# Local development environment values
+
+db:
+  enabled: true
+  instances: 1
+  storageSize: 1Gi
+
+authnApi:
+  enabled: true
+  replicas: 1
+
+organizationApi:
+  enabled: true
+  replicas: 1
+
+appstoreApi:
+  enabled: true
+  replicas: 1
+
+frontend:
+  enabled: false
+
+dex:
+  enabled: true
+  issuer: http://dex.127.0.0.1.nip.io:8080
+  staticClients:
+    - id: fundament
+      name: Fundament
+      secret: fundament-dev-secret
+      redirectURIs:
+        - http://fundament.127.0.0.1.nip.io:8080/callback
+        - http://authn.127.0.0.1.nip.io:8080/callback
+  staticPasswords:
+    - email: admin@example.com
+      hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+      username: admin
+      userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+
+ingress:
+  enabled: true
+  className: nginx
+  domain: 127.0.0.1.nip.io

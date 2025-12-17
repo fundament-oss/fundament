@@ -1,0 +1,77 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: fundament
+
+# Build configuration for all images
+build:
+  artifacts:
+    # API services (using ko for fast Go builds)
+    - image: appstore-api
+      context: .
+      ko:
+        main: ./appstore-api
+        dependencies:
+          paths: ["go.mod", "appstore-api/**/*.go"]
+
+    - image: authn-api
+      context: .
+      ko:
+        main: ./authn-api
+        dependencies:
+          paths: ["go.mod", "authn-api/**/*.go"]
+
+    - image: organization-api
+      context: .
+      ko:
+        main: ./organization-api
+        dependencies:
+          paths: ["go.mod", "organization-api/**/*.go"]
+
+  # Local build settings - load directly into k3d (no registry needed)
+  local:
+    push: false
+
+# Deployment profiles
+profiles:
+  # Local development profile (k3d)
+  - name: local
+    activation:
+      - kubeContext: k3d-fundament
+    build:
+      local:
+        push: false
+      tagPolicy:
+        gitCommit: {}
+    deploy:
+      kubeContext: k3d-fundament
+      statusCheckDeadlineSeconds: 300
+      helm:
+        releases:
+          - name: fundament
+            chartPath: charts/fundament
+            valuesFiles:
+              - charts/fundament/values-local.yaml
+            namespace: fundament
+            createNamespace: true
+            setValueTemplates:
+              imageAppstoreAPI: "{.IMAGE_FULLY_QUALIFIED_appstore_api}"
+              imageAuthnAPI: "{.IMAGE_FULLY_QUALIFIED_authn_api}"
+              imageOrganizationAPI: "{.IMAGE_FULLY_QUALIFIED_organization_api}"
+
+  # Production deployment profile
+  - name: production
+    deploy:
+      statusCheckDeadlineSeconds: 600
+      helm:
+        releases:
+          - name: fundament
+            chartPath: charts/fundament
+            valuesFiles:
+              - charts/fundament/values-production.yaml
+            namespace: fundament
+            createNamespace: true
+            setValueTemplates:
+              imageAppstoreAPI: "{.IMAGE_FULLY_QUALIFIED_appstore_api}"
+              imageAuthnAPI: "{.IMAGE_FULLY_QUALIFIED_authn_api}"
+              imageOrganizationAPI: "{.IMAGE_FULLY_QUALIFIED_organization_api}"

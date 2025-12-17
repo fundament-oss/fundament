@@ -1,0 +1,81 @@
+{{- if .Values.appstoreApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-appstore-api
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: appstore-api
+spec:
+  replicas: {{ .Values.appstoreApi.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: appstore-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: appstore-api
+    spec:
+      containers:
+        - name: appstore-api
+          image: {{ .Values.images.appstoreApi }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: {{ include "fundament.db.host" . }}
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: fundament
+            - name: DB_USER
+              value: fundament
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fundament.db.secretName" . }}
+                  key: password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-appstore-api
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: appstore-api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: appstore-api
+---
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-appstore-api
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: appstore-api
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: appstore.{{ .Values.ingress.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-appstore-api
+                port:
+                  name: http
+{{- end }}
+{{- end }}
