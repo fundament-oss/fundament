@@ -14,6 +14,16 @@ options:
       - arg: --disable=traefik
         nodeFilters:
           - server:*
+registries:
+  create:
+    name: "registry.localhost"
+    host: "0.0.0.0"
+    hostPort: "5111"
+  config: |
+    mirrors:
+      "localhost:5111":
+        endpoint:
+          - http://registry.localhost:5000
 volumes:
   - volume: ${PWD}/deploy/k3d/resources/cloudnative-pg.yaml:/var/lib/rancher/k3s/server/manifests/cloudnative-pg.yaml
   - volume: ${PWD}/deploy/k3d/resources/cert-manager.yaml:/var/lib/rancher/k3s/server/manifests/cert-manager.yaml

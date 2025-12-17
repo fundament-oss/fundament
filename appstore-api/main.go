@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	log.Println("appstore-api started 8")
+	log.Println("appstore-api started 11")
 	for {
 		time.Sleep(time.Hour)
 	}

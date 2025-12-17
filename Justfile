@@ -41,7 +41,7 @@ helm-deps:
 
 # Deploy to local k3d cluster (development mode with hot-reload, keeps resources on exit)
 dev:
-	SKAFFOLD_DEFAULT_REPO="fundament-registry.localhost:5111/fundament" \
+	SKAFFOLD_DEFAULT_REPO="localhost:5111" \
 	skaffold dev -p local --cleanup=false
 
 # Deploy to local k3d cluster (one-time deployment)

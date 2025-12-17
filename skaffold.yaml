@@ -5,6 +5,11 @@ metadata:
 
 # Build configuration for all images
 build:
+  # Local build settings - load directly into k3d (no registry needed)
+  local:
+    useDockerCLI: true
+    push: true
+
   artifacts:
     # API services (using ko for fast Go builds)
     - image: appstore-api
@@ -27,22 +32,12 @@ build:
         main: ./organization-api
         dependencies:
           paths: ["go.mod", "organization-api/**/*.go"]
-
-  # Local build settings - load directly into k3d (no registry needed)
-  local:
-    push: false
-
 # Deployment profiles
 profiles:
   # Local development profile (k3d)
   - name: local
     activation:
       - kubeContext: k3d-fundament
-    build:
-      local:
-        push: false
-      tagPolicy:
-        gitCommit: {}
     deploy:
       kubeContext: k3d-fundament
       statusCheckDeadlineSeconds: 300
