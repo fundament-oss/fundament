@@ -1,5 +1,5 @@
 const CONFIG = {
-  apiBaseUrl: 'http://localhost:10100',
+  apiBaseUrl: 'http://authn.127.0.0.1.nip.io:8080',
   servicePath: '/authn.v1.AuthnService',
 };
 

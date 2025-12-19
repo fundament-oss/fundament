@@ -11,6 +11,7 @@ import (
 type Config struct {
 	JWTSecret          []byte
 	OIDCIssuer         string
+	OIDCDiscoveryURL   string // URL to fetch OIDC discovery document (defaults to OIDCIssuer)
 	ClientID           string
 	RedirectURL        string
 	FrontendURL        string
@@ -29,8 +30,10 @@ func Load() *Config {
 		log.Fatal("JWT_SECRET environment variable is required")
 	}
 
+	oidcIssuer := getEnv("OIDC_ISSUER", "http://localhost:5556")
 	return &Config{
-		OIDCIssuer:         getEnv("OIDC_ISSUER", "http://localhost:5556"),
+		OIDCIssuer:         oidcIssuer,
+		OIDCDiscoveryURL:   getEnv("OIDC_DISCOVERY_URL", oidcIssuer),
 		ClientID:           getEnv("OIDC_CLIENT_ID", "authn-api"),
 		RedirectURL:        getEnv("OIDC_REDIRECT_URL", "http://localhost:10100/callback"),
 		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),

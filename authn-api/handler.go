@@ -104,6 +104,9 @@ func (s *AuthnServer) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("code: %v\n", code)
+	fmt.Printf("verifier: %v\n", verifier)
+
 	// Exchange code for tokens with PKCE verifier
 	token, err := s.oauth2Config.Exchange(ctx, code, oauth2.VerifierOption(verifier))
 	if err != nil {

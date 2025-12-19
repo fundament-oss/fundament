@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -45,22 +46,49 @@ func main() {
 
 	ctx := context.Background()
 
-	logger.Debug("connecting to OIDC provider", "issuer", cfg.OIDCIssuer)
-	provider, err := oidc.NewProvider(ctx, cfg.OIDCIssuer)
+	logger.Debug("connecting to OIDC provider", "issuer", cfg.OIDCIssuer, "discovery_url", cfg.OIDCDiscoveryURL)
+
+	// Use internal URL for discovery
+	if cfg.OIDCDiscoveryURL != cfg.OIDCIssuer {
+		ctx = oidc.InsecureIssuerURLContext(ctx, cfg.OIDCIssuer)
+	}
+
+	provider, err := oidc.NewProvider(ctx, cfg.OIDCDiscoveryURL)
 	if err != nil {
 		logger.Error("failed to create OIDC provider", "error", err)
 		os.Exit(1)
 	}
+
 	logger.Debug("OIDC provider connected")
+
+	endpoint := provider.Endpoint()
+
+	// Override the token URL to use internal discovery URL instead of issuer
+	// When running in k8s, the issuer (external URL) is unreachable from within the cluster
+	// but the discovery URL (internal service) is. We need to rewrite all endpoints.
+	var verifier *oidc.IDTokenVerifier
+	if cfg.OIDCDiscoveryURL != cfg.OIDCIssuer {
+		// Replace the issuer domain in endpoints with discovery domain
+		endpoint.TokenURL = strings.Replace(endpoint.TokenURL, cfg.OIDCIssuer, cfg.OIDCDiscoveryURL, 1)
+		// Keep AuthURL pointing to external issuer for browser redirects
+		// (the provider already returns the issuer-based URL)
+
+		// Create a custom keyset that fetches JWKS from the internal discovery URL
+		// The provider's verifier would try to fetch from the issuer URL which is unreachable
+		jwksURL := cfg.OIDCDiscoveryURL + "/keys"
+		logger.Debug("using custom JWKS URL", "jwks_url", jwksURL)
+		keySet := oidc.NewRemoteKeySet(ctx, jwksURL)
+		verifier = oidc.NewVerifier(cfg.OIDCIssuer, keySet, &oidc.Config{ClientID: cfg.ClientID})
+	} else {
+		verifier = provider.Verifier(&oidc.Config{ClientID: cfg.ClientID})
+	}
 
 	oauth2Config := &oauth2.Config{
 		ClientID:    cfg.ClientID,
 		RedirectURL: cfg.RedirectURL,
-		Endpoint:    provider.Endpoint(),
+		Endpoint:    endpoint,
 		Scopes:      []string{oidc.ScopeOpenID, "profile", "email", "groups"},
 	}
-
-	verifier := provider.Verifier(&oidc.Config{ClientID: cfg.ClientID})
 
 	logger.Debug("connecting to database")
 	storage, err := NewStorage(ctx, cfg.DatabaseURL, logger)

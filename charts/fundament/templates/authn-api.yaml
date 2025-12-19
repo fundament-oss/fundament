@@ -16,6 +16,10 @@ spec:
       labels:
         app.kubernetes.io/component: authn-api
     spec:
+      {{- if .Values.hostAliases }}
+      hostAliases:
+        {{- toYaml .Values.hostAliases | nindent 8 }}
+      {{- end }}
       containers:
         - name: authn-api
           image: {{ $.Values.images.authnApi }}
@@ -24,16 +28,16 @@ spec:
               containerPort: 8080
           env:
             - name: DATABASE_URL
-              value: postgres://fundament:$(DB_PASSWORD)@{{ include "fundament.db.host" . }}:5432/fundament
-            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "fundament.db.secretName" . }}
-                  key: password
+                  name: {{ $.Release.Name }}-db-fun-authn-api
+                  key: uri
             - name: JWT_SECRET
               value: {{ include "fundament.jwtSecret" . }}
             - name: OIDC_ISSUER
               value: {{ .Values.dex.issuer }}
+            - name: OIDC_DISCOVERY_URL
+              value: {{ .Values.dex.discoveryUrl }}
             - name: OIDC_CLIENT_ID
               value: fundament
             - name: OIDC_REDIRECT_URL
@@ -44,6 +48,8 @@ spec:
               value: {{ .Values.externalUrls.cookieDomain }}
             - name: COOKIE_SECURE
               value: "{{ hasPrefix "https://" .Values.externalUrls.authn }}"
+            - name: LOG_LEVEL
+              value: {{ .Values.authnApi.logLevel }}
 ---
 apiVersion: v1
 kind: Service

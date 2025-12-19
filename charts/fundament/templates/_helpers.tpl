@@ -21,10 +21,17 @@ Database host (CNPG read-write service)
 {{- end }}
 
 {{/*
-Database secret name
+Database secret name (app user)
 */}}
 {{- define "fundament.db.secretName" -}}
 {{ include "fundament.db.name" . }}-app
+{{- end }}
+
+{{/*
+Database superuser secret name
+*/}}
+{{- define "fundament.db.superuserSecretName" -}}
+{{ include "fundament.db.name" . }}-superuser
 {{- end }}
 
 {{/*
@@ -32,4 +39,11 @@ JWT Secret - used for signing and validating tokens across services
 */}}
 {{- define "fundament.jwtSecret" -}}
 {{- required "jwtSecret is required" .Values.jwtSecret -}}
+{{- end }}
+
+{{/*
+Ingress controller service for internal access
+*/}}
+{{- define "fundament.ingressService" -}}
+ingress-nginx-controller.ingress-nginx.svc.cluster.local
 {{- end }}

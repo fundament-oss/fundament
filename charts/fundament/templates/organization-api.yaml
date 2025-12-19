@@ -24,14 +24,14 @@ spec:
               containerPort: 8080
           env:
             - name: DATABASE_URL
-              value: postgres://fundament:$(DB_PASSWORD)@{{ include "fundament.db.host" . }}:5432/fundament
-            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "fundament.db.secretName" . }}
-                  key: password
+                  name: {{ $.Release.Name }}-db-fun-organization-api
+                  key: uri
             - name: JWT_SECRET
               value: {{ include "fundament.jwtSecret" . }}
+            - name: LOG_LEVEL
+              value: {{ .Values.organizationApi.logLevel }}
 ---
 apiVersion: v1
 kind: Service

@@ -12,16 +12,16 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	 layer-name-colors="#000000"
 	 layer-rect-colors="#6ee6ef"
 	 show-layer-names="false" show-layer-rects="false">
-<role name="authn_api"
- sql-disabled="true">
+<role name="fun_authn_api"
+	sql-disabled="false">
 </role>
 
-<role name="appstore_api"
- sql-disabled="true">
+<role name="fun_appstore_api"
+	sql-disabled="false">
 </role>
 
-<role name="organization_api"
- sql-disabled="true">
+<role name="fun_organization_api"
+	sql-disabled="false">
 </role>
 
 <database name="fundament" is-template="false" allow-conns="true" sql-disabled="true">

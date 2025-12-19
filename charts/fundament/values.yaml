@@ -12,6 +12,7 @@ externalUrls:
 
 # Container images
 images:
+  dbMigrations: db-migrations:latest
   authnApi: authn-api:latest
   organizationApi: organization-api:latest
   appstoreApi: appstore-api:latest
@@ -27,16 +28,19 @@ db:
 authnApi:
   enabled: true
   replicas: 1
+  logLevel: info
 
 # Organization API
 organizationApi:
   enabled: false
   replicas: 1
+  logLevel: info
 
 # Appstore API
 appstoreApi:
   enabled: false
   replicas: 1
+  logLevel: info
 
 # Frontend
 frontend:
@@ -47,8 +51,12 @@ frontend:
 dex:
   enabled: true
   issuer: ""
+  discoveryUrl: ""  # Internal URL for OIDC discovery (defaults to issuer if empty)
   staticClients: []
   staticPasswords: []
+
+# Host aliases for pods (useful for local development to resolve external URLs to internal services)
+hostAliases: []
 
 # Ingress
 ingress:

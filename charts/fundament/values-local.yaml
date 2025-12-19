@@ -15,6 +15,7 @@ db:
 authnApi:
   enabled: true
   replicas: 1
+  logLevel: debug
 
 organizationApi:
   enabled: true
@@ -30,16 +31,18 @@ frontend:
 dex:
   enabled: true
   issuer: http://dex.127.0.0.1.nip.io:8080
+  discoveryUrl: http://fundament-dex:5556
   staticClients:
     - id: fundament
-      name: Fundament
-      secret: fundament-dev-secret
+      name: "Fundament Auth API"
       redirectURIs:
         - http://fundament.127.0.0.1.nip.io:8080/callback
         - http://authn.127.0.0.1.nip.io:8080/callback
+      public: true
   staticPasswords:
     - email: admin@example.com
-      hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+      # echo 'password' | htpasswd -BinC 10 admin
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: admin
       userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
 

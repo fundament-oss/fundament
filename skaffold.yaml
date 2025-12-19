@@ -12,6 +12,11 @@ build:
     push: true
 
   artifacts:
+    - image: db-migrations
+      context: db
+      docker:
+        dockerfile: Dockerfile
+
     - image: appstore-api
       context: .
       ko:
@@ -43,9 +48,10 @@ deploy:
         namespace: fundament
         createNamespace: true
         setValueTemplates:
-          imageAppstoreAPI: "{.IMAGE_FULLY_QUALIFIED_appstore_api}"
-          imageAuthnAPI: "{.IMAGE_FULLY_QUALIFIED_authn_api}"
-          imageOrganizationAPI: "{.IMAGE_FULLY_QUALIFIED_organization_api}"
+          images.dbMigrations: "{{.IMAGE_FULLY_QUALIFIED_db_migrations}}"
+          images.appstoreApi: "{{.IMAGE_FULLY_QUALIFIED_appstore_api}}"
+          images.authnApi: "{{.IMAGE_FULLY_QUALIFIED_authn_api}}"
+          images.organizationApi: "{{.IMAGE_FULLY_QUALIFIED_organization_api}}"
 
 profiles:
   - name: env-local

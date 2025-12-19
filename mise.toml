@@ -15,7 +15,7 @@ just = "1.42.4"
 # Kubernetes & Deployment
 kubectl = "1.31.4"
 helm = "3.16.3"
-skaffold = "2.17.0"
+skaffold = "latest"
 k3d = "5.7.5"
 
 # Protobuf
