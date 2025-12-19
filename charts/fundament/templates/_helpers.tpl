@@ -2,15 +2,15 @@
 Common labels
 */}}
 {{- define "fundament.labels" -}}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/part-of: {{ $.Release.Name }}
+app.kubernetes.io/managed-by: {{ $.Release.Service }}
 {{- end }}
 
 {{/*
 Database name
 */}}
 {{- define "fundament.db.name" -}}
-{{ .Release.Name }}-db
+{{ $.Release.Name }}-db
 {{- end }}
 
 {{/*
