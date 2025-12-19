@@ -1,4 +1,4 @@
-apiVersion: skaffold/v4beta11
+apiVersion: skaffold/v4beta13
 kind: Config
 metadata:
   name: fundament
@@ -7,11 +7,11 @@ metadata:
 build:
   # Local build settings - load directly into k3d (no registry needed)
   local:
-    useDockerCLI: true
+    useBuildkit: true
+    concurrency: 0
     push: true
 
   artifacts:
-    # API services (using ko for fast Go builds)
     - image: appstore-api
       context: .
       ko:
@@ -32,41 +32,36 @@ build:
         main: ./organization-api
         dependencies:
           paths: ["go.mod", "organization-api/**/*.go"]
-# Deployment profiles
+
+deploy:
+  kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
+  statusCheckDeadlineSeconds: 300
+  helm:
+    releases:
+      - name: fundament
+        chartPath: charts/fundament
+        namespace: fundament
+        createNamespace: true
+        setValueTemplates:
+          imageAppstoreAPI: "{.IMAGE_FULLY_QUALIFIED_appstore_api}"
+          imageAuthnAPI: "{.IMAGE_FULLY_QUALIFIED_authn_api}"
+          imageOrganizationAPI: "{.IMAGE_FULLY_QUALIFIED_organization_api}"
+
 profiles:
-  # Local development profile (k3d)
-  - name: local
-    activation:
-      - kubeContext: k3d-fundament
+  - name: env-local
     deploy:
       kubeContext: k3d-fundament
-      statusCheckDeadlineSeconds: 300
-      helm:
-        releases:
-          - name: fundament
-            chartPath: charts/fundament
-            valuesFiles:
-              - charts/fundament/values-local.yaml
-            namespace: fundament
-            createNamespace: true
-            setValueTemplates:
-              imageAppstoreAPI: "{.IMAGE_FULLY_QUALIFIED_appstore_api}"
-              imageAuthnAPI: "{.IMAGE_FULLY_QUALIFIED_authn_api}"
-              imageOrganizationAPI: "{.IMAGE_FULLY_QUALIFIED_organization_api}"
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/valuesFiles
+        value:
+          - charts/fundament/values-local.yaml
 
-  # Production deployment profile
-  - name: production
+  - name: env-production
     deploy:
-      statusCheckDeadlineSeconds: 600
-      helm:
-        releases:
-          - name: fundament
-            chartPath: charts/fundament
-            valuesFiles:
-              - charts/fundament/values-production.yaml
-            namespace: fundament
-            createNamespace: true
-            setValueTemplates:
-              imageAppstoreAPI: "{.IMAGE_FULLY_QUALIFIED_appstore_api}"
-              imageAuthnAPI: "{.IMAGE_FULLY_QUALIFIED_authn_api}"
-              imageOrganizationAPI: "{.IMAGE_FULLY_QUALIFIED_organization_api}"
+      kubeContext: PRODUCTION-NOT-AVAILABLE-YET
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/valuesFiles
+        value:
+          - charts/fundament/values-production.yaml
