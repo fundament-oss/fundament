@@ -60,7 +60,7 @@ profiles:
         value:
           - charts/fundament/values-production.yaml
 
-  # Hot reload profile for local development (use with env-local: -p env-local,hotreload)
+  # Hot reload profile for local development
   - name: hotreload
     patches:
       - op: replace
@@ -68,37 +68,16 @@ profiles:
         value: appstore-api/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/0/sync
-        value:
-          manual:
-            - src: appstore-api/**/*
-              dest: /src
-            - src: go.mod
-              dest: /src
-            - src: go.sum
-              dest: /src
+        value: {}
       - op: replace
         path: /build/artifacts/1/docker/dockerfile
         value: authn-api/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/1/sync
-        value:
-          manual:
-            - src: authn-api/**/*
-              dest: /src
-            - src: go.mod
-              dest: /src
-            - src: go.sum
-              dest: /src
+        value: {}
       - op: replace
         path: /build/artifacts/2/docker/dockerfile
         value: organization-api/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/2/sync
-        value:
-          manual:
-            - src: organization-api/**/*
-              dest: /src
-            - src: go.mod
-              dest: /src
-            - src: go.sum
-              dest: /src
+        value: {}
