@@ -41,24 +41,16 @@ helm-deps:
 
 # Deploy to local k3d cluster (development mode with hot-reload, keeps resources on exit)
 dev:
-	SKAFFOLD_DEFAULT_REPO="localhost:5111" \
-	skaffold dev -p local --cleanup=false
+    SKAFFOLD_DEFAULT_REPO="localhost:5111" \
+    skaffold dev --profile env-local --cleanup=false
 
-# Deploy to local k3d cluster (one-time deployment)
-deploy-local:
-    skaffold run -p local
+# Deploy to an environment (e.g. local, production)
+deploy env:
+    skaffold run --profile env-{{ env }}
 
-# Deploy to sandbox environment
-deploy-sandbox:
-    skaffold run -p sandbox
-
-# Delete deployment from local cluster
-undeploy-local:
-    skaffold delete -p local
-
-# Delete deployment from sandbox
-undeploy-sandbox:
-    skaffold delete -p sandbox
+# Delete deployment, can also be used to remove the deployment created by `just dev`.
+undeploy env:
+    skaffold delete --profile env-{{ env }}
 
 # View logs from all pods
 logs:
