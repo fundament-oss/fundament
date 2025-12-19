@@ -40,9 +40,12 @@ helm-deps:
     helm dependency update deploy/charts/fundament
 
 # Deploy to local k3d cluster (development mode with hot-reload, keeps resources on exit)
-dev:
+dev *flags:
     SKAFFOLD_DEFAULT_REPO="localhost:5111" \
-    skaffold dev --profile env-local --cleanup=false
+    skaffold dev --profile env-local --cleanup=false {{ flags }}
+
+dev-hotreload:
+    @just dev --profile hotreload
 
 # Deploy to an environment (e.g. local, production)
 deploy env:

@@ -14,24 +14,18 @@ build:
   artifacts:
     - image: appstore-api
       context: .
-      ko:
-        main: ./appstore-api
-        dependencies:
-          paths: ["go.mod", "appstore-api/**/*.go"]
+      docker:
+        dockerfile: appstore-api/Dockerfile
 
     - image: authn-api
       context: .
-      ko:
-        main: ./authn-api
-        dependencies:
-          paths: ["go.mod", "authn-api/**/*.go"]
+      docker:
+        dockerfile: authn-api/Dockerfile
 
     - image: organization-api
       context: .
-      ko:
-        main: ./organization-api
-        dependencies:
-          paths: ["go.mod", "organization-api/**/*.go"]
+      docker:
+        dockerfile: organization-api/Dockerfile
 
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
@@ -65,3 +59,46 @@ profiles:
         path: /deploy/helm/releases/0/valuesFiles
         value:
           - charts/fundament/values-production.yaml
+
+  # Hot reload profile for local development (use with env-local: -p env-local,hotreload)
+  - name: hotreload
+    patches:
+      - op: replace
+        path: /build/artifacts/0/docker/dockerfile
+        value: appstore-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/0/sync
+        value:
+          manual:
+            - src: appstore-api/**/*
+              dest: /src
+            - src: go.mod
+              dest: /src
+            - src: go.sum
+              dest: /src
+      - op: replace
+        path: /build/artifacts/1/docker/dockerfile
+        value: authn-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/1/sync
+        value:
+          manual:
+            - src: authn-api/**/*
+              dest: /src
+            - src: go.mod
+              dest: /src
+            - src: go.sum
+              dest: /src
+      - op: replace
+        path: /build/artifacts/2/docker/dockerfile
+        value: organization-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/2/sync
+        value:
+          manual:
+            - src: organization-api/**/*
+              dest: /src
+            - src: go.mod
+              dest: /src
+            - src: go.sum
+              dest: /src

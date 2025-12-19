@@ -1,0 +1,16 @@
+root = "/src"
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o tmp/fun-appstore-api ./appstore-api/cmd/fun-appstore-api"
+bin = "tmp/fun-appstore-api"
+include_ext = ["go", "mod", "sum"]
+include_dir = ["appstore-api"]
+exclude_dir = ["tmp"]
+delay = 500
+
+[log]
+time = false
+
+[misc]
+clean_on_exit = true

@@ -1,0 +1,13 @@
+root = "/src"
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o tmp/fun-organization-api ./organization-api/cmd/fun-organization-api"
+bin = "tmp/fun-organization-api"
+include_ext = ["go", "mod", "sum"]
+include_dir = ["organization-api"]
+exclude_dir = ["tmp"]
+delay = 500
+
+[log]
+time = false
