@@ -1,5 +1,15 @@
 # Fundament Helm Chart - Default Values
 
+# JWT Secret - required for token signing/validation across services
+# Must be set in production (no default for security)
+jwtSecret: ""
+
+# External URLs - must be set for your environment
+externalUrls:
+  authn: ""      # e.g., https://authn.example.com
+  frontend: ""   # e.g., https://app.example.com
+  cookieDomain: ""  # e.g., example.com
+
 # Container images
 images:
   authnApi: authn-api:latest
@@ -44,4 +54,4 @@ dex:
 ingress:
   enabled: false
   className: nginx
-  domain: 127.0.0.1.nip.io
+  domain: ""

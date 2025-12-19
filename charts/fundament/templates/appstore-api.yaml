@@ -25,19 +25,15 @@ spec:
             - name: http
               containerPort: 8080
           env:
-            - name: DB_HOST
-              value: {{ include "fundament.db.host" . }}
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_NAME
-              value: fundament
-            - name: DB_USER
-              value: fundament
+            - name: DATABASE_URL
+              value: postgres://fundament:$(DB_PASSWORD)@{{ include "fundament.db.host" . }}:5432/fundament
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "fundament.db.secretName" . }}
                   key: password
+            - name: JWT_SECRET
+              value: {{ include "fundament.jwtSecret" . }}
 ---
 apiVersion: v1
 kind: Service

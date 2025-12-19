@@ -26,3 +26,10 @@ Database secret name
 {{- define "fundament.db.secretName" -}}
 {{ include "fundament.db.name" . }}-app
 {{- end }}
+
+{{/*
+JWT Secret - used for signing and validating tokens across services
+*/}}
+{{- define "fundament.jwtSecret" -}}
+{{- required "jwtSecret is required" .Values.jwtSecret -}}
+{{- end }}
