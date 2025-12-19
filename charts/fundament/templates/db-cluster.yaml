@@ -1,0 +1,18 @@
+{{- if .Values.db.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "fundament.db.name" . }}
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  instances: {{ .Values.db.instances }}
+  imageName: ghcr.io/cloudnative-pg/postgresql:18
+  bootstrap:
+    initdb:
+      database: fundament
+      owner: fundament
+  storage:
+    size: {{ .Values.db.storageSize }}
+{{- end }}

@@ -1,0 +1,81 @@
+{{- if .Values.organizationApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-organization-api
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: organization-api
+spec:
+  replicas: {{ .Values.organizationApi.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: organization-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: organization-api
+    spec:
+      containers:
+        - name: organization-api
+          image: {{ .Values.images.organizationApi }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: {{ include "fundament.db.host" . }}
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: fundament
+            - name: DB_USER
+              value: fundament
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fundament.db.secretName" . }}
+                  key: password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-organization-api
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: organization-api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: organization-api
+---
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-organization-api
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: organization-api
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: organization.{{ .Values.ingress.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-organization-api
+                port:
+                  name: http
+{{- end }}
+{{- end }}

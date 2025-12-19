@@ -1,0 +1,47 @@
+# Fundament Helm Chart - Default Values
+
+# Container images
+images:
+  authnApi: authn-api:latest
+  organizationApi: organization-api:latest
+  appstoreApi: appstore-api:latest
+  frontend: frontend:latest
+
+# Database (CloudNativePG)
+db:
+  enabled: true
+  instances: 1
+  storageSize: 1Gi
+
+# Authentication API
+authnApi:
+  enabled: true
+  replicas: 1
+
+# Organization API
+organizationApi:
+  enabled: false
+  replicas: 1
+
+# Appstore API
+appstoreApi:
+  enabled: false
+  replicas: 1
+
+# Frontend
+frontend:
+  enabled: false
+  replicas: 1
+
+# Dex (OIDC Identity Provider)
+dex:
+  enabled: true
+  issuer: ""
+  staticClients: []
+  staticPasswords: []
+
+# Ingress
+ingress:
+  enabled: false
+  className: nginx
+  domain: 127.0.0.1.nip.io
