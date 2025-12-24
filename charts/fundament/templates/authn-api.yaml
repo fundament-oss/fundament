@@ -51,7 +51,7 @@ spec:
             - name: LOG_LEVEL
               value: {{ .Values.authnApi.logLevel }}
             - name: CORS_ALLOWED_ORIGINS
-              value: {{ .Values.externalUrls.frontend }}
+              value: {{ .Values.externalUrls.corsAllowedOrigins | default .Values.externalUrls.frontend }}
 ---
 apiVersion: v1
 kind: Service
@@ -77,6 +77,8 @@ metadata:
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
     app.kubernetes.io/component: authn-api
+  annotations:
+    nginx.ingress.kubernetes.io/enable-cors: "false"
 spec:
   ingressClassName: {{ $.Values.ingress.className }}
   rules:
