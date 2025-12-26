@@ -1,7 +1,7 @@
 [env]
-JUST_ONE=true
+JUST_ONE = true
 # Local k3d registry for Skaffold image builds
-SKAFFOLD_DEFAULT_REPO="k3d-registry.localhost:5111"
+SKAFFOLD_DEFAULT_REPO = "k3d-registry.localhost:5111"
 
 [tools]
 # Scripting & Meta
@@ -10,11 +10,19 @@ just = "1.42.4"
 # Documentation
 "ubi:terrastruct/d2" = "0.7.1"
 
-# Database
-"go:github.com/printeers/trek" = "0.9.3"
+"go:github.com/printeers/trek" = "0.10.0"
 
 # Kubernetes & Deployment
 kubectl = "1.31.4"
 helm = "3.16.3"
-skaffold = "2.17.0"
+skaffold = "latest"
 k3d = "5.7.5"
+
+# Protobuf
+"ubi:bufbuild/buf" = "1.61.0"
+
+# Go
+
+go = "1.25.5"
+golangci-lint = "2.7.2"
+"ubi:sqlc-dev/sqlc" = "1.30.0"

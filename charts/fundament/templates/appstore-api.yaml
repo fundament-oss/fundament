@@ -23,19 +23,15 @@ spec:
             - name: http
               containerPort: 8080
           env:
-            - name: DB_HOST
-              value: {{ include "fundament.db.host" . }}
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_NAME
-              value: fundament
-            - name: DB_USER
-              value: fundament
-            - name: DB_PASSWORD
+            - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "fundament.db.secretName" . }}
-                  key: password
+                  name: {{ $.Release.Name }}-db-fun-appstore-api
+                  key: uri
+            - name: JWT_SECRET
+              value: {{ include "fundament.jwtSecret" . }}
+            - name: LOG_LEVEL
+              value: {{ .Values.appstoreApi.logLevel }}
 ---
 apiVersion: v1
 kind: Service
