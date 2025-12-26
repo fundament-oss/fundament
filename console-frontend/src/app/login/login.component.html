@@ -1,0 +1,68 @@
+<div class="flex min-h-[calc(100vh-7.0625rem)] flex-col justify-center py-12 sm:px-6 lg:px-8">
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <h2 class="text-center text-3xl font-extrabold dark:text-white">Login</h2>
+    <p class="mt-2 text-center text-gray-600 dark:text-gray-300">
+      Please enter your credentials to continue.
+    </p>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <div
+      class="rounded-lg border border-gray-200 bg-white px-4 py-8 sm:px-10 dark:border-gray-800 dark:bg-gray-950"
+    >
+      <form [formGroup]="loginForm" class="space-y-6" (ngSubmit)="onSubmit()">
+        <div>
+          <label for="email" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+            Email address
+          </label>
+          <input
+            #emailInput
+            id="email"
+            formControlName="email"
+            type="email"
+            placeholder="Enter your email address"
+            autocomplete="email"
+          />
+          @if (email?.invalid && email?.touched) {
+            <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getEmailError() }}</p>
+          }
+        </div>
+
+        <div>
+          <label
+            for="password"
+            class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+          >
+            Password
+          </label>
+          <input
+            id="password"
+            formControlName="password"
+            type="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+          />
+          @if (password?.invalid && password?.touched) {
+            <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getPasswordError() }}</p>
+          }
+        </div>
+
+        @if (error()) {
+          <div class="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
+            <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+          </div>
+        }
+
+        <div>
+          <button
+            type="submit"
+            [disabled]="isLoading()"
+            class="w-full cursor-pointer rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-indigo-500 transition-colors duration-200 hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:ring-offset-gray-950"
+          >
+            {{ isLoading() ? 'Signing in...' : 'Sign in' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

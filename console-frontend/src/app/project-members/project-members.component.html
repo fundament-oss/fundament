@@ -1,0 +1,123 @@
+<div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+  <!-- Header -->
+  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+    <h1 class="text-2xl font-bold dark:text-white">Project members</h1>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Members and roles for projects</p>
+  </div>
+
+  <div class="space-y-8 p-6">
+    <!-- Project Members Sections -->
+    @for (project of members.projects; track project.name) {
+      <div>
+        <h2 class="mb-2 text-lg font-semibold dark:text-white">{{ project.name }}</h2>
+
+        <button type="button" class="btn-light mb-5 inline-flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="mr-1.5 h-4 w-4" viewBox="0 0 24 24">
+            <path
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 5v14m-7-7h14"
+            />
+          </svg>
+          Add a member
+        </button>
+
+        <div
+          class="ring-opacity-5 overflow-hidden rounded-md shadow ring-1 ring-gray-300 dark:ring-gray-700"
+        >
+          <table class="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th
+                  width="50%"
+                  scope="col"
+                  class="px-6 py-3.5 text-left text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                >
+                  Name
+                </th>
+                <th
+                  width="30%"
+                  scope="col"
+                  class="px-6 py-3.5 text-left text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                >
+                  Role
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3.5 text-left text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                >
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
+              @for (user of project.users; track user.name) {
+                <tr>
+                  <td class="px-6 py-3 text-sm font-medium whitespace-nowrap dark:text-white">
+                    {{ user.name }}
+                  </td>
+                  <td class="px-6 py-3 whitespace-nowrap">
+                    <span
+                      class="inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium"
+                      [ngClass]="{
+                        'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200':
+                          user.role === 'Project admin',
+                        'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200':
+                          user.role === 'Project member',
+                      }"
+                    >
+                      {{ user.role }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-3 whitespace-nowrap">
+                    <button
+                      type="button"
+                      class="mr-2 inline-flex shrink-0 cursor-pointer items-center rounded-md border border-indigo-300 bg-white px-4 py-2 text-sm font-medium text-indigo-700 shadow-sm ring-indigo-500 hover:bg-indigo-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300 dark:ring-offset-gray-950 dark:hover:bg-indigo-900 dark:hover:text-white"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="mr-1.5 h-4 w-4"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 20h4L18.5 9.5a2.828 2.828 0 1 0-4-4L4 16zm9.5-13.5l4 4"
+                        />
+                      </svg>
+                      Edit
+                    </button>
+
+                    <button type="button" class="btn-remove shrink-0">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="mr-1.5 h-4 w-4"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 7h16m-10 4v6m4-6v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"
+                        />
+                      </svg>
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  </div>
+</div>
