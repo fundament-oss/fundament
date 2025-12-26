@@ -1,0 +1,335 @@
+<div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+  <!-- Header -->
+  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+    <div class="grid items-center gap-3 sm:grid-cols-2">
+      <div>
+        <h1 class="text-2xl font-bold dark:text-white">Usage</h1>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          Monitor resource usage across your clusters
+        </p>
+      </div>
+
+      <div class="flex gap-2 sm:justify-end">
+        <button
+          type="button"
+          class="inline-flex cursor-pointer items-center rounded-md border border-transparent bg-indigo-600 px-3 py-2 text-sm leading-4 font-medium text-white ring-indigo-500 transition-all duration-200 ease-in-out hover:-translate-y-px hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24">
+            <path
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7.5M3 10h18M10 3v18m9-5v6m3-3l-3 3l-3-3"
+            />
+          </svg>
+          Download CSV
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <!-- Time Range From -->
+      <div class="lg:col-span-2">
+        <label for="date" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >Date range</label
+        >
+        <app-date-range-picker
+          [id]="'date'"
+          [(dateFrom)]="dateFrom"
+          [(dateTo)]="dateTo"
+          (dateRangeChange)="onDateChange()"
+        ></app-date-range-picker>
+      </div>
+
+      <!-- Project Filter -->
+      <div>
+        <label for="project" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >Project</label
+        >
+        <select
+          id="project"
+          [(ngModel)]="selectedProjectId"
+          (change)="onProjectChange()"
+          class="w-full"
+        >
+          <option value="">All projects</option>
+          @for (project of projects; track project.id) {
+            <option [value]="project.id">{{ project.name }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Cluster Filter -->
+      <div>
+        <label for="cluster" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >Cluster</label
+        >
+        <select
+          id="cluster"
+          [(ngModel)]="selectedClusterId"
+          (change)="onClusterChange()"
+          class="w-full"
+        >
+          <option value="">All clusters</option>
+          @for (cluster of availableClusters; track cluster.id) {
+            <option [value]="cluster.id">{{ cluster.name }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Namespace Filter -->
+      <div>
+        <label
+          for="namespace"
+          class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >Namespace</label
+        >
+        <select
+          id="namespace"
+          [(ngModel)]="selectedNamespace"
+          (change)="onNamespaceChange()"
+          [disabled]="!selectedClusterId"
+          class="w-full"
+        >
+          <option value="">All namespaces</option>
+          @for (namespace of availableNamespaces; track namespace) {
+            <option [value]="namespace">{{ namespace }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="space-y-6 p-6">
+    <!-- Cluster-Level Usage -->
+    <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+      <h3 class="mb-4 text-lg font-medium dark:text-white">Cluster usage</h3>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <!-- CPU Usage -->
+        <div>
+          <div class="mb-1 flex justify-between text-sm">
+            <span class="font-medium text-gray-700 dark:text-white">CPU</span>
+            <span class="text-gray-500 dark:text-gray-400"
+              >{{ clusterUsage.cpu.used }} / {{ clusterUsage.cpu.total }}
+              {{ clusterUsage.cpu.unit }}</span
+            >
+          </div>
+          <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+            <div
+              class="h-2 rounded-full transition-all duration-300 ease-in-out"
+              [class]="
+                getUsageColor(getUsagePercentage(clusterUsage.cpu.used, clusterUsage.cpu.total))
+              "
+              [style.width.%]="getUsagePercentage(clusterUsage.cpu.used, clusterUsage.cpu.total)"
+            ></div>
+          </div>
+          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {{ getUsagePercentage(clusterUsage.cpu.used, clusterUsage.cpu.total) }}% used
+          </div>
+        </div>
+
+        <!-- Memory Usage -->
+        <div>
+          <div class="mb-1 flex justify-between text-sm">
+            <span class="font-medium text-gray-700 dark:text-white">Memory</span>
+            <span class="text-gray-500 dark:text-gray-400"
+              >{{ clusterUsage.memory.used }} / {{ clusterUsage.memory.total }}
+              {{ clusterUsage.memory.unit }}</span
+            >
+          </div>
+          <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+            <div
+              class="h-2 rounded-full transition-all duration-300 ease-in-out"
+              [class]="
+                getUsageColor(
+                  getUsagePercentage(clusterUsage.memory.used, clusterUsage.memory.total)
+                )
+              "
+              [style.width.%]="
+                getUsagePercentage(clusterUsage.memory.used, clusterUsage.memory.total)
+              "
+            ></div>
+          </div>
+          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {{ getUsagePercentage(clusterUsage.memory.used, clusterUsage.memory.total) }}% used
+          </div>
+        </div>
+
+        <!-- Pod Usage -->
+        <div>
+          <div class="mb-1 flex justify-between text-sm">
+            <span class="font-medium text-gray-700 dark:text-white">Pods</span>
+            <span class="text-gray-500 dark:text-gray-400"
+              >{{ clusterUsage.pods.used }} / {{ clusterUsage.pods.total }}
+              {{ clusterUsage.pods.unit }}</span
+            >
+          </div>
+          <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+            <div
+              class="h-2 rounded-full transition-all duration-300 ease-in-out"
+              [class]="
+                getUsageColor(getUsagePercentage(clusterUsage.pods.used, clusterUsage.pods.total))
+              "
+              [style.width.%]="getUsagePercentage(clusterUsage.pods.used, clusterUsage.pods.total)"
+            ></div>
+          </div>
+          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {{ getUsagePercentage(clusterUsage.pods.used, clusterUsage.pods.total) }}% used
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <!-- CPU Chart -->
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">CPU usage over time</h3>
+        <div class="h-64">
+          <canvas #cpuChart></canvas>
+        </div>
+      </div>
+
+      <!-- Memory Chart -->
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">Memory usage over time</h3>
+        <div class="h-64">
+          <canvas #memoryChart></canvas>
+        </div>
+      </div>
+
+      <!-- Pod Chart -->
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">Pod count over time</h3>
+        <div class="h-64">
+          <canvas #podChart></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-Node Usage -->
+    <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+      <h3 class="mb-4 text-lg font-medium dark:text-white">Per node usage</h3>
+      <div class="space-y-4">
+        @for (node of nodeUsage; track node.name) {
+          <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800">
+            <h4 class="mb-3 text-sm font-medium dark:text-white">{{ node.name }}</h4>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <!-- Node CPU -->
+              <div>
+                <div class="mb-1 flex justify-between text-xs">
+                  <span class="text-gray-600 dark:text-gray-300">CPU</span>
+                  <span class="text-gray-500 dark:text-gray-400"
+                    >{{ node.cpu.used }} / {{ node.cpu.total }} cores</span
+                  >
+                </div>
+                <div class="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-1.5 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="getUsageColor(getUsagePercentage(node.cpu.used, node.cpu.total))"
+                    [style.width.%]="getUsagePercentage(node.cpu.used, node.cpu.total)"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- Node Memory -->
+              <div>
+                <div class="mb-1 flex justify-between text-xs">
+                  <span class="text-gray-600 dark:text-gray-300">Memory</span>
+                  <span class="text-gray-500 dark:text-gray-400"
+                    >{{ node.memory.used }} / {{ node.memory.total }} GB</span
+                  >
+                </div>
+                <div class="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-1.5 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="getUsageColor(getUsagePercentage(node.memory.used, node.memory.total))"
+                    [style.width.%]="getUsagePercentage(node.memory.used, node.memory.total)"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- Node Pods -->
+              <div>
+                <div class="mb-1 flex justify-between text-xs">
+                  <span class="text-gray-600 dark:text-gray-300">Pods</span>
+                  <span class="text-gray-500 dark:text-gray-400"
+                    >{{ node.pods.used }} / {{ node.pods.total }}</span
+                  >
+                </div>
+                <div class="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-1.5 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="getUsageColor(getUsagePercentage(node.pods.used, node.pods.total))"
+                    [style.width.%]="getUsagePercentage(node.pods.used, node.pods.total)"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Per-Namespace Usage -->
+    <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+      <h3 class="mb-4 text-lg font-medium dark:text-white">Per namespace usage</h3>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-900">
+            <tr>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Namespace
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                CPU (cores)
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Memory (GB)
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Pods
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
+            @for (ns of namespaceUsage; track ns.name) {
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-900">
+                <td class="px-6 py-4 text-sm font-medium whitespace-nowrap dark:text-white">
+                  {{ ns.name }}
+                </td>
+                <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                  {{ ns.cpu }}
+                </td>
+                <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                  {{ ns.memory }}
+                </td>
+                <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                  {{ ns.pods }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

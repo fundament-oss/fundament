@@ -1,0 +1,99 @@
+@if (show) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div
+      class="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950"
+    >
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-xl font-semibold dark:text-white">
+          {{ isEditMode ? 'Edit permission' : 'Add permission' }}
+        </h2>
+        <button
+          type="button"
+          (click)="onClose()"
+          class="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        @if (!isEditMode) {
+          <div>
+            <label for="user-select" class="mb-1 block text-sm font-medium dark:text-white">User</label>
+            <select
+              id="user-select"
+              [(ngModel)]="selectedUser"
+              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            >
+              <option value="">Select a user</option>
+              @for (user of users; track user) {
+                <option [value]="user">{{ user }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <div>
+          <label for="object-select" class="mb-1 block text-sm font-medium dark:text-white">Object</label>
+          <select
+            id="object-select"
+            [(ngModel)]="selectedObject"
+            (ngModelChange)="onObjectChange()"
+            class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          >
+            <option value="">Select an object</option>
+            @for (object of availableObjects; track object.name) {
+              <option [value]="object.name">{{ object.name }} ({{ object.type }})</option>
+            }
+          </select>
+        </div>
+
+        <div>
+          <label for="role-select" class="mb-1 block text-sm font-medium dark:text-white">Role</label>
+          <select
+            id="role-select"
+            [(ngModel)]="selectedRole"
+            (ngModelChange)="onRoleChange()"
+            class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          >
+            <option value="">Select a role</option>
+            @for (role of availableRoles; track role.name) {
+              <option [value]="role.name">{{ role.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end space-x-3">
+        <button
+          type="button"
+          (click)="onClose()"
+          class="cursor-pointer rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          (click)="onSave()"
+          [disabled]="!isFormValid()"
+          class="cursor-pointer rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+        >
+          {{ isEditMode ? 'Update' : 'Add' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
