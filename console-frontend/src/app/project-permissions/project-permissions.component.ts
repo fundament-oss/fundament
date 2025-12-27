@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { PermissionModalComponent } from '../permission-modal/permission-modal.component';
 
@@ -12,7 +13,7 @@ interface Permission {
 @Component({
   selector: 'app-project-permissions',
   standalone: true,
-  imports: [CommonModule, PermissionModalComponent],
+  imports: [CommonModule, PermissionModalComponent, RouterLink, RouterLinkActive],
   templateUrl: './project-permissions.component.html',
   styleUrl: './project-permissions.component.css',
 })

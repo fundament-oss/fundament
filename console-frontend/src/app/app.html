@@ -308,8 +308,11 @@
             <li>
               <a
                 routerLink="/project-members"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                 class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
+                [ngClass]="{
+                  'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
+                    isProjectMembersOrPermissions(),
+                }"
                 (click)="closeSidebar()"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-5 w-5" viewBox="0 0 24 24">

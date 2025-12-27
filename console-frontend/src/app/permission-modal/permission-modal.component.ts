@@ -35,7 +35,7 @@ export class PermissionModalComponent implements OnChanges {
 
   // Available options for selects
   users = ['John Doe', 'Jane Smith', 'Alice Johnson', 'Bob Johnson', 'Charlie Brown'];
-  
+
   allObjects: ObjectItem[] = [
     { name: 'cluster-1', type: 'cluster' },
     { name: 'cluster-2', type: 'cluster' },
@@ -77,11 +77,11 @@ export class PermissionModalComponent implements OnChanges {
     if (!this.selectedObject) {
       return this.allRoles;
     }
-    const object = this.allObjects.find(obj => obj.name === this.selectedObject);
+    const object = this.allObjects.find((obj) => obj.name === this.selectedObject);
     if (!object) {
       return this.allRoles;
     }
-    return this.allRoles.filter(role => role.applicableTypes.includes(object.type));
+    return this.allRoles.filter((role) => role.applicableTypes.includes(object.type));
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -105,7 +105,7 @@ export class PermissionModalComponent implements OnChanges {
 
   validateSelections(): void {
     // Only clear role if it's not applicable to the selected object
-    if (this.selectedRole && !this.availableRoles.find(role => role.name === this.selectedRole)) {
+    if (this.selectedRole && !this.availableRoles.find((role) => role.name === this.selectedRole)) {
       this.selectedRole = '';
     }
   }

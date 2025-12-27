@@ -1,8 +1,26 @@
 <div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
   <!-- Header -->
-  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+  <div class="border-b border-gray-200 px-6 pt-4 dark:border-gray-800">
     <h1 class="text-2xl font-bold dark:text-white">Project permissions</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Permissions for project Project #1</p>
+
+    <!-- Tabs -->
+    <nav class="mt-4 -mb-px flex space-x-2">
+      <a
+        routerLink="/project-members"
+        routerLinkActive="border-b-white dark:border-b-gray-950 text-gray-700 dark:text-gray-200"
+        class="rounded-t-lg border border-gray-200 border-b-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 dark:border-gray-800 dark:border-b-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+      >
+        Members
+      </a>
+      <a
+        routerLink="/project-permissions"
+        routerLinkActive="border-b-white dark:border-b-gray-950 text-gray-700 dark:text-gray-200"
+        class="rounded-t-lg border border-gray-200 border-b-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 dark:border-gray-800 dark:border-b-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+      >
+        Permissions
+      </a>
+    </nav>
   </div>
 
   <div class="p-6">

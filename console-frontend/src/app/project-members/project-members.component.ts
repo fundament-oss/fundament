@@ -1,11 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-project-members',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './project-members.component.html',
   styleUrl: './project-members.component.css',
 })

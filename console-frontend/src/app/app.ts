@@ -43,6 +43,11 @@ export class App implements OnInit {
     return this.router.url === '/login';
   }
 
+  // Check if current route is project members or permissions
+  isProjectMembersOrPermissions(): boolean {
+    return this.router.url === '/project-members' || this.router.url === '/project-permissions';
+  }
+
   // Initialize theme from localStorage or system preference
   private initializeTheme() {
     const savedTheme = localStorage.getItem('theme');
