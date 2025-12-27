@@ -26,6 +26,16 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'cluster-nodes',
+    loadComponent: () =>
+      import('./cluster-nodes/cluster-nodes.component').then((m) => m.ClusterNodesComponent),
+  },
+  {
+    path: 'cluster-plugins',
+    loadComponent: () =>
+      import('./cluster-plugins/cluster-plugins.component').then((m) => m.ClusterPluginsComponent),
+  },
+  {
     path: 'projects',
     loadComponent: () => import('./projects/projects.component').then((m) => m.ProjectsComponent),
   },

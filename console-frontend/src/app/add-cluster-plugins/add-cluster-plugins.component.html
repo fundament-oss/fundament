@@ -24,100 +24,12 @@
   </div>
 
   <!-- Form -->
-  <form (ngSubmit)="onSubmit()" #clusterForm="ngForm" class="space-y-6 px-6 py-6">
-    <!-- Plugin Preset Selection -->
-    <div class="space-y-4">
-      <h3 class="text-lg font-medium dark:text-white">Plugin preset</h3>
-      <div class="grid gap-4 md:grid-cols-3">
-        <label
-          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
-        >
-          <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
-            <input
-              name="preset"
-              type="radio"
-              value="havenplus"
-              [(ngModel)]="selectedPreset"
-              (change)="onPresetChange()"
-              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
-            />
-            Haven+ preset
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300"
-            >Includes monitoring, logging, security scanning, and backup solutions.</span
-          >
-        </label>
-
-        <label
-          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
-        >
-          <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
-            <input
-              name="preset"
-              type="radio"
-              value="preset2"
-              [(ngModel)]="selectedPreset"
-              (change)="onPresetChange()"
-              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
-            />
-            Preset #2
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300"
-            >Some other preset.</span
-          >
-        </label>
-
-        <label
-          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
-        >
-          <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
-            <input
-              name="preset"
-              type="radio"
-              value="custom"
-              [(ngModel)]="selectedPreset"
-              (change)="onPresetChange()"
-              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
-            />
-            Custom plugin selection
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300"
-            >Cherry pick plugins you need.</span
-          >
-        </label>
+  <div class="px-6 py-6">
+    <app-shared-plugins-form (formSubmit)="onFormSubmit($event)">
+      <div class="flex space-x-3">
+        <a routerLink="/add-cluster-nodes" class="btn-secondary"> Previous step </a>
+        <button type="submit" class="btn-primary">Next step</button>
       </div>
-    </div>
-
-    <!-- Plugin Selection -->
-    <div class="space-y-4">
-      <h3 class="text-lg font-medium dark:text-white">Plugins</h3>
-      <div class="space-y-4">
-        @for (plugin of plugins; track plugin.id) {
-          <div>
-            <label class="inline-flex cursor-pointer items-center">
-              <input
-                [id]="plugin.id"
-                type="checkbox"
-                [(ngModel)]="plugin.selected"
-                [name]="plugin.id"
-                [disabled]="selectedPreset !== 'custom'"
-                class="peer sr-only"
-              />
-              <span
-                class="peer-checked:after:border-buffer relative h-5 w-9 rounded-full bg-gray-200 peer-checked:bg-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-200 peer-focus:outline-none peer-disabled:opacity-60 after:absolute after:start-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full focus:ring-offset-2 rtl:peer-checked:after:-translate-x-full dark:bg-gray-800 dark:ring-offset-gray-950 dark:peer-focus:ring-indigo-800 dark:after:bg-gray-950"
-              ></span>
-              <span class="mr-1.5 ml-3 font-medium select-none">{{ plugin.name }}</span>
-            </label>
-            <p class="-mt-0.5 ml-12 text-gray-500 dark:text-gray-400">{{ plugin.description }}</p>
-          </div>
-        }
-      </div>
-    </div>
-
-    <!-- Form Actions -->
-    <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-      <a routerLink="/add-cluster-nodes" class="btn-secondary"> Previous step </a>
-      <button type="submit" class="btn-primary">Next step</button>
-    </div>
-  </form>
+    </app-shared-plugins-form>
+  </div>
 </div>
