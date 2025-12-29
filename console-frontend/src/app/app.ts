@@ -2,6 +2,7 @@ import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ApiService, UserInfo } from './api.service';
+import { OrganizationApiService } from './organization-api.service';
 
 @Component({
   selector: 'app-root',
@@ -13,6 +14,10 @@ export class App implements OnInit {
   protected readonly title = signal('fundament-console');
   private router = inject(Router);
   private apiService = inject(ApiService);
+  private organizationApiService = inject(OrganizationApiService);
+
+  // Version mismatch state
+  apiVersionMismatch = signal(false);
 
   // Dropdown states
   projectDropdownOpen = signal(false);
@@ -36,6 +41,15 @@ export class App implements OnInit {
     this.apiService.currentUser$.subscribe((user) => {
       this.currentUser.set(user);
     });
+
+    // Subscribe to API version mismatch
+    this.organizationApiService.versionMismatch$.subscribe((mismatch) => {
+      this.apiVersionMismatch.set(mismatch);
+    });
+  }
+
+  reloadApp() {
+    window.location.reload();
   }
 
   // Check if current route is login

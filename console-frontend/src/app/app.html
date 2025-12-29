@@ -1,4 +1,36 @@
 <div class="min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-white">
+  <!-- API Version Mismatch Banner -->
+  @if (apiVersionMismatch()) {
+    <div
+      class="flex items-center justify-between bg-amber-500 px-4 py-3 text-white shadow-md dark:bg-amber-600"
+      role="alert"
+    >
+      <div class="flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-6 w-6 shrink-0" viewBox="0 0 24 24">
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v4m-1.637-9.409L2.257 17.125a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636-2.87L13.637 3.59a1.914 1.914 0 0 0-3.274 0M12 16h.01"
+          />
+        </svg>
+        <div>
+          <p class="font-semibold">New version available</p>
+          <p class="text-sm">The API has been updated. Please reload to use the latest version.</p>
+        </div>
+      </div>
+      <button
+        (click)="reloadApp()"
+        type="button"
+        class="ml-4 shrink-0 cursor-pointer rounded-md bg-white px-4 py-2 text-sm font-medium text-amber-600 transition-colors hover:bg-amber-50 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-amber-500 focus:outline-none dark:bg-gray-900 dark:text-amber-400 dark:hover:bg-gray-800"
+      >
+        Reload now
+      </button>
+    </div>
+  }
+
   <!-- Header -->
   <header class="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
     <div class="mx-auto px-4 sm:px-6 lg:px-8">
