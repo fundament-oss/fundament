@@ -1,13 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Title } from '@angular/platform-browser';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 
 @Component({
   selector: 'app-cluster-plugins',
   standalone: true,
-  imports: [CommonModule, SharedPluginsFormComponent, RouterLink],
+  imports: [CommonModule, SharedPluginsFormComponent],
   templateUrl: './cluster-plugins.component.html',
   styleUrl: './cluster-plugins.component.css',
 })

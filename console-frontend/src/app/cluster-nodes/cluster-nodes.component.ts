@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Title } from '@angular/platform-browser';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import {
   SharedNodePoolsFormComponent,
   NodePoolData,
@@ -10,7 +10,7 @@ import {
 @Component({
   selector: 'app-cluster-nodes',
   standalone: true,
-  imports: [CommonModule, SharedNodePoolsFormComponent, RouterLink],
+  imports: [CommonModule, SharedNodePoolsFormComponent],
   templateUrl: './cluster-nodes.component.html',
   styleUrl: './cluster-nodes.component.css',
 })
