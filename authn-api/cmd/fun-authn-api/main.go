@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/caarlos0/env/v11"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/rs/cors"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
@@ -16,15 +19,39 @@ import (
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/oauth2"
 
-	"github.com/fundament-oss/fundament/authn-api"
-	"github.com/fundament-oss/fundament/authn-api/config"
-	"github.com/fundament-oss/fundament/authn-api/pkgs/session"
-	"github.com/fundament-oss/fundament/authn-api/pkgs/storage"
-	"github.com/fundament-oss/fundament/authn-api/proto/gen/authn/v1/authnv1connect"
+	"github.com/fundament-oss/fundament/authn-api/pkg/authn"
+	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
+	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
+	"github.com/fundament-oss/fundament/common/psqldb"
 )
 
+type config struct {
+	JWTSecret          string        `env:"JWT_SECRET,required,notEmpty" `
+	OIDCIssuer         string        `env:"OIDC_ISSUER,required,notEmpty" envDefault:"http://localhost:5556"`
+	OIDCDiscoveryURL   string        `env:"OIDC_DISCOVERY_URL"` // URL to fetch OIDC discovery document (defaults to OIDCIssuer)
+	ClientID           string        `env:"OIDC_CLIENT_ID,required,notEmpty" envDefault:"authn-api"`
+	RedirectURL        string        `env:"OIDC_REDIRECT_URL,required,notEmpty" envDefault:"http://authn.127.0.0.1.nip.io:8080/callback"`
+	FrontendURL        string        `env:"FRONTEND_URL,required,notEmpty" envDefault:"http://login.127.0.0.1.nip.io:8080"`
+	CookieDomain       string        `env:"COOKIE_DOMAIN,required,notEmpty" envDefault:"localhost"`
+	CookieSecure       bool          `env:"COOKIE_SECURE,required,notEmpty"`
+	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
+	ListenAddr         string        `env:"LISTEN_ADDR" envDefault:":8080"`
+	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
+	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,http://login.127.0.0.1.nip.io:8080"`
+}
+
 func main() {
-	cfg := config.Load()
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
+	var cfg config
+	if err := env.Parse(&cfg); err != nil {
+		return fmt.Errorf("env parse: %w", err)
+	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: cfg.LogLevel,
@@ -48,8 +75,7 @@ func main() {
 
 	provider, err := oidc.NewProvider(ctx, cfg.OIDCDiscoveryURL)
 	if err != nil {
-		logger.Error("failed to create OIDC provider", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create OIDC provider: %w", err)
 	}
 
 	logger.Debug("OIDC provider connected")
@@ -84,21 +110,30 @@ func main() {
 	}
 
 	logger.Debug("connecting to database")
-	store, err := storage.New(ctx, logger, cfg.DatabaseURL)
+	db, err := psqldb.New(ctx, logger, cfg.DatabaseURL)
 	if err != nil {
-		logger.Error("failed to connect to database", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
+
+	defer db.Close()
+
 	logger.Debug("database connected")
 
 	// Create session store for OAuth state management
-	sessionStore := session.New(cfg.JWTSecret)
+	sessionStore := authn.NewSessionStore([]byte(cfg.JWTSecret))
 	sessionStore.ConfigureOptions(cfg.CookieDomain, cfg.CookieSecure)
 
-	server, err := authn.New(logger, cfg, oauth2Config, verifier, sessionStore, store)
+	authnCfg := &authn.Config{
+		TokenExpiry:  cfg.TokenExpiry,
+		JWTSecret:    []byte(cfg.JWTSecret),
+		CookieDomain: cfg.CookieDomain,
+		CookieSecure: cfg.CookieSecure,
+		FrontendURL:  cfg.FrontendURL,
+	}
+
+	server, err := authn.New(logger, authnCfg, oauth2Config, verifier, sessionStore, db)
 	if err != nil {
-		logger.Error("failed to create authn api", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create authn api: %w", err)
 	}
 
 	mux := http.NewServeMux()
@@ -113,12 +148,8 @@ func main() {
 	path, handler := authnv1connect.NewAuthnServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
 	mux.Handle(path, handler)
 
-	// HTTP endpoints for authentication flow
-	mux.HandleFunc("/login", server.HandleLogin)
-	mux.HandleFunc("/login/password", server.HandlePasswordLogin)
-	mux.HandleFunc("/callback", server.HandleCallback)
-	mux.HandleFunc("/refresh", server.HandleRefresh)
-	mux.HandleFunc("/logout", server.HandleLogout)
+	// HTTP endpoints for authentication flow (registers routes on mux)
+	_ = authnhttp.HandlerFromMux(server, mux)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
@@ -135,8 +166,8 @@ func main() {
 
 	logger.Info("server listening", "addr", cfg.ListenAddr)
 	if err := httpServer.ListenAndServe(); err != nil {
-		logger.Error("server failed", "error", err)
-		store.Close()
-		os.Exit(1)
+		return fmt.Errorf("server failed: %w", err)
 	}
+
+	return nil
 }

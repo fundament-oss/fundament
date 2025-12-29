@@ -64,19 +64,8 @@ db-shell:
     kubectl exec -it -n fundament fundament-db-1 -- psql -U postgres -d fundament
 
 generate:
-    just sqlc && just proto
-
-# Generate protobuf code for authn-api
-proto:
-    cd authn-api/proto && buf generate
-    cd organization-api/proto && buf generate
-
-# Generate all sqlc code
-sqlc:
-    cd authn-api/pkgs/storage/sqlc && sqlc generate
-    cd organization-api/pkgs/storage/sqlc && sqlc generate
+    go generate -x ./...
 
 # Lint all Go code
 lint:
-    cd authn-api && golangci-lint run ./...
-    cd organization-api && golangci-lint run ./...
+    golangci-lint run ./...

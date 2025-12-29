@@ -1,0 +1,333 @@
+openapi: 3.0.3
+info:
+  title: Fundament Authentication API
+  description: Authentication service providing OIDC-based login, JWT token management, and user information endpoints.
+  version: 1.0.0
+  contact:
+    name: Fundament OSS
+
+servers:
+  - url: http://authn.127.0.0.1.nip.io:8080
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: Browser-facing authentication flow endpoints
+  - name: User
+    description: User information endpoints (Connect RPC)
+
+paths:
+  /login:
+    get:
+      tags:
+        - Authentication
+      summary: Initiate OIDC login flow
+      description: |
+        Initiates the OIDC login flow by redirecting to the configured identity provider.
+        Stores state and PKCE verifier in session cookie for security.
+      operationId: handleLogin
+      parameters:
+        - name: return_to
+          in: query
+          description: URL to redirect to after successful login
+          required: false
+          schema:
+            type: string
+            format: uri
+      responses:
+        "307":
+          description: Redirect to OIDC provider
+          headers:
+            Location:
+              $ref: "#/components/headers/Location"
+            Set-Cookie:
+              $ref: "#/components/headers/SetCookieAuth"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /login/password:
+    post:
+      tags:
+        - Authentication
+      summary: Password-based login
+      description: |
+        Authenticates a user using email and password credentials.
+        Uses the OIDC provider's password grant flow.
+      operationId: handlePasswordLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordLoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetCookieAuth"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /callback:
+    get:
+      tags:
+        - Authentication
+      summary: OIDC callback handler
+      description: |
+        Handles the redirect from the OIDC provider after authentication.
+        Exchanges the authorization code for tokens, creates/updates the user in the database,
+        and sets the authentication cookie.
+      operationId: handleCallback
+      parameters:
+        - name: code
+          in: query
+          description: Authorization code from OIDC provider
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          description: State parameter for CSRF protection
+          required: true
+          schema:
+            type: string
+        - name: error
+          in: query
+          description: Error code from OIDC provider (if authentication failed)
+          required: false
+          schema:
+            type: string
+        - name: error_description
+          in: query
+          description: Human-readable error description
+          required: false
+          schema:
+            type: string
+      responses:
+        "307":
+          description: Redirect to frontend or return_to URL
+          headers:
+            Location:
+              $ref: "#/components/headers/Location"
+            Set-Cookie:
+              $ref: "#/components/headers/SetCookieAuth"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh JWT token
+      description: |
+        Refreshes the JWT token using the current valid token from cookie or Authorization header.
+        Returns a new token with extended expiry.
+      operationId: handleRefresh
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Token refreshed successfully
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetCookieAuth"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Clears the authentication cookie to log out the user.
+      operationId: handleLogout
+      responses:
+        "200":
+          description: Logout successful
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetCookieAuth"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+
+components:
+  headers:
+    SetCookieAuth:
+      description: Authentication cookie (fundament_auth)
+      schema:
+        type: string
+    Location:
+      description: Redirect URL
+      schema:
+        type: string
+        format: uri
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    MethodNotAllowed:
+      description: Method not allowed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: fundament_auth
+      description: JWT token stored in HTTP-only cookie
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token in Authorization header
+
+  schemas:
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Token expiry in seconds
+          example: 86400
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - access_token
+        - token_type
+        - expires_in
+        - user
+
+    RefreshResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: New JWT access token
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Token expiry in seconds
+          example: 86400
+      required:
+        - access_token
+        - token_type
+        - expires_in
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User ID
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant ID
+        name:
+          type: string
+          description: User's display name
+        groups:
+          type: array
+          items:
+            type: string
+          description: Groups the user belongs to
+      required:
+        - id
+        - tenant_id
+        - name
+        - groups
+    PasswordLoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          description: User's password
+        return_to:
+          type: string
+          format: uri
+          description: Optional URL to redirect to after successful login
+
+    StatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: Invalid request

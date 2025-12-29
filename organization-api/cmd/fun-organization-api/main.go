@@ -2,25 +2,44 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/caarlos0/env/v11"
 	"github.com/rs/cors"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
-	"github.com/fundament-oss/fundament/organization-api"
-	"github.com/fundament-oss/fundament/organization-api/config"
-	"github.com/fundament-oss/fundament/organization-api/pkgs/storage"
-	"github.com/fundament-oss/fundament/organization-api/proto/gen/organization/v1/organizationv1connect"
+	"github.com/fundament-oss/fundament/common/psqldb"
+	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
+	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/organization/v1/organizationv1connect"
 )
 
+type config struct {
+	JWTSecret          string     `env:"JWT_SECRET,required,notEmpty" `
+	DatabaseURL        string     `env:"DATABASE_URL,required,notEmpty"`
+	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
+	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
+}
+
 func main() {
-	cfg := config.Load()
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
+	var cfg config
+	if err := env.Parse(&cfg); err != nil {
+		return fmt.Errorf("env parse: %w", err)
+	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: cfg.LogLevel,
@@ -35,17 +54,18 @@ func main() {
 	ctx := context.Background()
 
 	logger.Debug("connecting to database")
-	store, err := storage.New(ctx, cfg.DatabaseURL, logger)
+	db, err := psqldb.New(ctx, logger, cfg.DatabaseURL)
 	if err != nil {
-		logger.Error("failed to connect to database", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
+
+	defer db.Close()
+
 	logger.Debug("database connected")
 
-	server, err := organization.New(logger, cfg, store)
+	server, err := organization.New(logger, &organization.Config{JWTSecret: cfg.JWTSecret}, db)
 	if err != nil {
-		logger.Error("failed to connect to database", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create organization server: %w", err)
 	}
 
 	mux := http.NewServeMux()
@@ -73,8 +93,8 @@ func main() {
 
 	logger.Info("server listening", "addr", cfg.ListenAddr)
 	if err := httpServer.ListenAndServe(); err != nil {
-		logger.Error("server failed", "error", err)
-		store.Close()
-		os.Exit(1)
+		return fmt.Errorf("server failed: %w", err)
 	}
+
+	return nil
 }

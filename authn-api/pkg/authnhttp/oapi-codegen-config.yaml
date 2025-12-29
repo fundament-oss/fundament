@@ -1,0 +1,8 @@
+package: authnhttp
+output: ./server.go
+generate:
+  strict-server: true
+  std-http-server: true
+  models: true
+output-options:
+  skip-prune: true

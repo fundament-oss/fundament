@@ -18,7 +18,7 @@ cd authn-api && golangci-lint run ./...
 cd authn-api/proto && buf generate
 
 # Generate sqlc database code
-cd authn-api/pkgs/storage/sqlc && sqlc generate
+cd authn-api/pkg/storage/sqlc && sqlc generate
 
 # Generate all code (proto + sqlc) from repo root
 just generate
@@ -44,8 +44,8 @@ This is a Go authentication service using:
 - `cmd/fun-authn-api/main.go` - Server setup, OIDC provider initialization, HTTP routing
 - `handler.go` - HTTP handlers for auth flow + RPC handler for GetUserInfo
 - `auth.go` - AuthnServer struct, JWT generation/validation, cookie signing with HMAC-SHA256
-- `pkgs/session/session.go` - Gorilla Sessions wrapper for OAuth state + PKCE management
-- `pkgs/storage/storage.go` - PostgreSQL connection pool management
+- `pkg/session/session.go` - Gorilla Sessions wrapper for OAuth state + PKCE management
+- `pkg/storage/storage.go` - PostgreSQL connection pool management
 - `config/config.go` - Environment variable configuration
 
 ### Authentication Flow
@@ -71,7 +71,7 @@ This is a Go authentication service using:
 ### Proto and Database Code Generation
 
 - Proto files: `proto/authn/v1/authn.proto` → generates to `proto/gen/`
-- SQL queries: `pkgs/storage/sqlc/queries.sql` → generates to `pkgs/storage/sqlc/db/`
+- SQL queries: `pkg/storage/sqlc/queries.sql` → generates to `pkg/storage/sqlc/db/`
 - Schema source: `../db/fundament.sql`
 
 ## Environment Variables
@@ -82,11 +82,11 @@ Optional with defaults:
 - `OIDC_ISSUER` (http://localhost:5556)
 - `OIDC_DISCOVERY_URL` (defaults to OIDC_ISSUER) - Internal URL for OIDC discovery in k8s
 - `OIDC_CLIENT_ID` (authn-api)
-- `OIDC_REDIRECT_URL` (http://localhost:10100/callback)
-- `FRONTEND_URL` (http://localhost:5173)
+- `OIDC_REDIRECT_URL` (http://authn.127.0.0.1.nip.io:8080/callback)
+- `FRONTEND_URL` (http://login.127.0.0.1.nip.io:8080)
 - `DATABASE_URL` (postgres://authn_api:password@localhost:5432/fundament)
 - `LISTEN_ADDR` (:8080)
 - `LOG_LEVEL` (info)
-- `CORS_ALLOWED_ORIGINS` (http://localhost:5173,http://localhost:4200)
+- `CORS_ALLOWED_ORIGINS` (http://localhost:5173,http://localhost:4200,http://login.127.0.0.1.nip.io:8080)
 - `COOKIE_DOMAIN` (localhost)
 - `COOKIE_SECURE` (false)
