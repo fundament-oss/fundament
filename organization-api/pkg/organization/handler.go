@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/organization-api/pkg/proto"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/organization/v1"
 )
 
@@ -40,9 +41,11 @@ func (s *OrganizationServer) GetTenant(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get tenant: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.GetTenantResponse{
+	res := connect.NewResponse(&organizationv1.GetTenantResponse{
 		Tenant: dbTenantToProto(tenant),
-	}), nil
+	})
+	res.Header().Set("X-API-Version", proto.APIVersion)
+	return res, nil
 }
 
 func (s *OrganizationServer) UpdateTenant(
@@ -82,9 +85,11 @@ func (s *OrganizationServer) UpdateTenant(
 
 	s.logger.Info("tenant updated", "tenant_id", tenant.ID, "name", tenant.Name)
 
-	return connect.NewResponse(&organizationv1.UpdateTenantResponse{
+	res := connect.NewResponse(&organizationv1.UpdateTenantResponse{
 		Tenant: dbTenantToProto(tenant),
-	}), nil
+	})
+	res.Header().Set("X-API-Version", proto.APIVersion)
+	return res, nil
 }
 
 func dbTenantToProto(t db.OrganizationTenant) *organizationv1.Tenant {

@@ -82,6 +82,7 @@ func run() error {
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization", "Connect-Protocol-Version"},
+		ExposedHeaders:   []string{"X-API-Version"},
 		AllowCredentials: true,
 	})
 
