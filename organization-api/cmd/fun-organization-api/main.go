@@ -63,7 +63,7 @@ func run() error {
 
 	logger.Debug("database connected")
 
-	server, err := organization.New(logger, &organization.Config{JWTSecret: cfg.JWTSecret}, db)
+	server, err := organization.New(logger, &organization.Config{JWTSecret: []byte(cfg.JWTSecret)}, db)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)
 	}

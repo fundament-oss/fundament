@@ -8,7 +8,7 @@ import (
 )
 
 type Config struct {
-	JWTSecret string
+	JWTSecret []byte
 }
 
 type OrganizationServer struct {
