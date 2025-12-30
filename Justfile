@@ -61,4 +61,11 @@ logs:
 
 # Open a shell to the PostgreSQL database
 db-shell:
-    kubectl exec -it -n fundament deployment/fundament-db-postgresql -- psql -U postgres -d fundament
+    kubectl exec -it -n fundament fundament-db-1 -- psql -U postgres -d fundament
+
+generate:
+    go generate -x ./...
+
+# Lint all Go code
+lint:
+    golangci-lint run ./...

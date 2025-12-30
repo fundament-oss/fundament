@@ -1,0 +1,6 @@
+.claude
+
+# Frontend
+node_modules
+dist
+.vite

@@ -9,10 +9,25 @@ metadata:
 spec:
   instances: {{ $.Values.db.instances }}
   imageName: ghcr.io/cloudnative-pg/postgresql:18
+  enableSuperuserAccess: true
   bootstrap:
     initdb:
       database: fundament
       owner: fundament
   storage:
     size: {{ $.Values.db.storageSize }}
+  managed:
+    roles:
+      - name: fun_authn_api
+        login: true
+        passwordSecret:
+          name: {{ $.Release.Name }}-db-fun-authn-api
+      - name: fun_appstore_api
+        login: true
+        passwordSecret:
+          name: {{ $.Release.Name }}-db-fun-appstore-api
+      - name: fun_organization_api
+        login: true
+        passwordSecret:
+          name: {{ $.Release.Name }}-db-fun-organization-api
 {{- end }}
