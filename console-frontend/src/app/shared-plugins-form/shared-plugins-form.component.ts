@@ -20,6 +20,8 @@ export class SharedPluginsFormComponent {
   @Output() formSubmit = new EventEmitter<{ preset: string; plugins: string[] }>();
 
   selectedPreset = 'havenplus'; // Default to Haven+ preset
+  customPluginUploadEnabled = false;
+  selectedCustomPluginFile: File | null = null;
 
   plugins: Plugin[] = [
     {
@@ -118,6 +120,15 @@ export class SharedPluginsFormComponent {
       });
     }
     // For custom preset, don't change selections automatically
+  }
+
+  onCustomPluginFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.selectedCustomPluginFile = input.files[0];
+    } else {
+      this.selectedCustomPluginFile = null;
+    }
   }
 
   onSubmit() {

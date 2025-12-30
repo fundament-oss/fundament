@@ -78,11 +78,59 @@
             <span
               class="peer-checked:after:border-buffer relative h-5 w-9 rounded-full bg-gray-200 peer-checked:bg-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-200 peer-focus:outline-none peer-disabled:opacity-60 after:absolute after:start-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full focus:ring-offset-2 rtl:peer-checked:after:-translate-x-full dark:bg-gray-800 dark:ring-offset-gray-950 dark:peer-focus:ring-indigo-800 dark:after:bg-gray-950"
             ></span>
-            <span class="mr-1.5 ml-3 font-medium select-none">{{ plugin.name }}</span>
+            <span class="mr-1.5 ml-3 font-medium">{{ plugin.name }}</span>
           </label>
           <p class="-mt-0.5 ml-12 text-gray-500 dark:text-gray-400">{{ plugin.description }}</p>
         </div>
       }
+    </div>
+  </div>
+
+  <!-- Custom Plugin Upload Section -->
+  <div class="space-y-4">
+    <h3 class="text-lg font-medium dark:text-white">Custom plugins</h3>
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+      Upload a custom plugin as a ZIP file. Custom plugins can extend the functionality of your
+      cluster.
+    </p>
+
+    <div class="space-y-4">
+      <!-- Warning checkbox -->
+      <label class="inline-flex cursor-pointer items-center">
+        <input
+          id="customPluginUploadEnabled"
+          type="checkbox"
+          [(ngModel)]="customPluginUploadEnabled"
+          name="customPluginUploadEnabled"
+          class="peer sr-only"
+        />
+        <span
+          class="peer-checked:after:border-buffer relative h-5 w-9 rounded-full bg-gray-200 peer-checked:bg-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-200 peer-focus:outline-none after:absolute after:start-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full focus:ring-offset-2 rtl:peer-checked:after:-translate-x-full dark:bg-gray-800 dark:ring-offset-gray-950 dark:peer-focus:ring-indigo-800 dark:after:bg-gray-950"
+        ></span>
+        <span class="mr-1.5 ml-3 font-medium">
+          Enable uploading custom plugins
+          <span class="text-orange-600 dark:text-orange-400">(warranty on cluster void)</span>
+        </span>
+      </label>
+
+      <!-- File upload input -->
+      <div>
+        <label
+          for="customPluginFile"
+          class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Upload plugin ZIP file
+        </label>
+        <input
+          id="customPluginFile"
+          type="file"
+          accept=".zip"
+          [disabled]="!customPluginUploadEnabled"
+          (change)="onCustomPluginFileChange($event)"
+          class="block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 file:mr-4 file:rounded-l-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:file:bg-gray-700 dark:file:text-gray-300 dark:hover:file:bg-gray-600"
+        />
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Only ZIP files are accepted</p>
+      </div>
     </div>
   </div>
 
