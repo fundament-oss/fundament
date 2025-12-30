@@ -58,7 +58,7 @@ spec:
             - name: TREK_INSERT_TEST_DATA
               value: {{ $.Values.db.insertTestData | quote }}
       containers:
-        - name: create-roles
+        - name: grant-access
           image: ghcr.io/cloudnative-pg/postgresql:18
           command:
             - sh
@@ -69,26 +69,6 @@ spec:
               PGHOST="{{ include "fundament.db.host" . }}"
               PGUSER="$POSTGRES_USER"
               PGDATABASE="fundament"
-
-              # Function to create role if it doesn't exist
-              create_role() {
-                ROLE_NAME=$1
-                ROLE_PASSWORD=$2
-                echo "Creating role $ROLE_NAME if it doesn't exist..."
-                psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c "
-                  DO \$\$
-                  BEGIN
-                    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$ROLE_NAME') THEN
-                      CREATE ROLE $ROLE_NAME WITH LOGIN PASSWORD '$ROLE_PASSWORD';
-                      RAISE NOTICE 'Role $ROLE_NAME created';
-                    ELSE
-                      ALTER ROLE $ROLE_NAME WITH PASSWORD '$ROLE_PASSWORD';
-                      RAISE NOTICE 'Role $ROLE_NAME already exists, password updated';
-                    END IF;
-                  END
-                  \$\$;
-                "
-              }
 
               # Function to grant database and schema access
               grant_access() {
@@ -115,17 +95,12 @@ spec:
                 "
               }
 
-              # Create roles
-              create_role "fun_authn_api" "$FUN_AUTHN_API_PASSWORD"
-              create_role "fun_appstore_api" "$FUN_APPSTORE_API_PASSWORD"
-              create_role "fun_organization_api" "$FUN_ORGANIZATION_API_PASSWORD"
-
-              # Grant access to each role
+              # Grant access to each role (roles are managed by CNPG declarative role management)
               grant_access "fun_authn_api"
               grant_access "fun_appstore_api"
               grant_access "fun_organization_api"
 
-              echo "All roles created and access granted!"
+              echo "Access granted to all roles!"
           env:
             - name: POSTGRES_USER
               valueFrom:
@@ -136,21 +111,6 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ include "fundament.db.superuserSecretName" . }}
-                  key: password
-            - name: FUN_AUTHN_API_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $.Release.Name }}-db-fun-authn-api
-                  key: password
-            - name: FUN_APPSTORE_API_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $.Release.Name }}-db-fun-appstore-api
-                  key: password
-            - name: FUN_ORGANIZATION_API_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $.Release.Name }}-db-fun-organization-api
                   key: password
 ---
 {{- $authnSecretName := printf "%s-db-fun-authn-api" $.Release.Name }}
