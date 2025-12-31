@@ -8,7 +8,6 @@ import { Title } from '@angular/platform-browser';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.css',
 })
 export class DashboardComponent {
   private titleService = inject(Title);

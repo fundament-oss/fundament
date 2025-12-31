@@ -10,7 +10,6 @@ import { InstallPluginModalComponent } from '../install-plugin-modal/install-plu
   standalone: true,
   imports: [CommonModule, RouterLink, InstallPluginModalComponent],
   templateUrl: './plugin-details.component.html',
-  styleUrl: './plugin-details.component.css',
 })
 export class PluginDetailsComponent {
   private titleService = inject(Title);

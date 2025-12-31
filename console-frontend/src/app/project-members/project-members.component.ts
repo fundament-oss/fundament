@@ -8,7 +8,6 @@ import { Title } from '@angular/platform-browser';
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './project-members.component.html',
-  styleUrl: './project-members.component.css',
 })
 export class ProjectMembersComponent {
   private titleService = inject(Title);

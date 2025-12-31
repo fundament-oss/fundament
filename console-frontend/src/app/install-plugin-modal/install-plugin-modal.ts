@@ -12,7 +12,6 @@ interface Cluster {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './install-plugin-modal.html',
-  styleUrl: './install-plugin-modal.css',
 })
 export class InstallPluginModalComponent {
   @Input() pluginName = '';

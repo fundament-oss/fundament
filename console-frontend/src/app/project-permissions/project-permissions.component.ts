@@ -15,7 +15,6 @@ interface Permission {
   standalone: true,
   imports: [CommonModule, PermissionModalComponent, RouterLink, RouterLinkActive],
   templateUrl: './project-permissions.component.html',
-  styleUrl: './project-permissions.component.css',
 })
 export class ProjectPermissionsComponent {
   private titleService = inject(Title);

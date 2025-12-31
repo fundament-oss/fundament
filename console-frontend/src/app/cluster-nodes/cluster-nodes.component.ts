@@ -12,7 +12,6 @@ import {
   standalone: true,
   imports: [CommonModule, SharedNodePoolsFormComponent],
   templateUrl: './cluster-nodes.component.html',
-  styleUrl: './cluster-nodes.component.css',
 })
 export class ClusterNodesComponent {
   private titleService = inject(Title);

@@ -9,7 +9,6 @@ import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugin
   standalone: true,
   imports: [CommonModule, SharedPluginsFormComponent],
   templateUrl: './cluster-plugins.component.html',
-  styleUrl: './cluster-plugins.component.css',
 })
 export class ClusterPluginsComponent {
   private titleService = inject(Title);

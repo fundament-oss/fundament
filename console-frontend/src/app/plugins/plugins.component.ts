@@ -37,7 +37,6 @@ interface Preset {
   standalone: true,
   imports: [CommonModule, RouterLink, InstallPluginModalComponent],
   templateUrl: './plugins.component.html',
-  styleUrl: './plugins.component.css',
 })
 export class PluginsComponent {
   private titleService = inject(Title);

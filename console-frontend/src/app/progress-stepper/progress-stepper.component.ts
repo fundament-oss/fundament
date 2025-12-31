@@ -12,7 +12,6 @@ export interface ProgressStep {
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './progress-stepper.component.html',
-  styleUrl: './progress-stepper.component.css',
 })
 export class ProgressStepperComponent {
   @Input() steps: ProgressStep[] = [];

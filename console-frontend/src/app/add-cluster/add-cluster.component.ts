@@ -11,7 +11,6 @@ import { ADD_CLUSTER_STEPS } from './add-cluster.constants';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ProgressStepperComponent],
   templateUrl: './add-cluster.component.html',
-  styleUrl: './add-cluster.component.css',
 })
 export class AddClusterComponent implements AfterViewInit {
   @ViewChild('clusterNameInput') clusterNameInput!: ElementRef<HTMLInputElement>;

@@ -8,7 +8,6 @@ import { RouterLink } from '@angular/router';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './cluster-overview.component.html',
-  styleUrl: './cluster-overview.component.css',
 })
 export class ClusterOverviewComponent {
   private titleService = inject(Title);

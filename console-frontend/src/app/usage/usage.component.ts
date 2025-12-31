@@ -44,7 +44,6 @@ interface Project {
   standalone: true,
   imports: [CommonModule, FormsModule, DateRangePickerComponent],
   templateUrl: './usage.component.html',
-  styleUrl: './usage.component.css',
 })
 export class UsageComponent implements AfterViewInit {
   private titleService = inject(Title);

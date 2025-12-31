@@ -8,7 +8,6 @@ import { OrganizationApiService } from './organization-api.service';
   selector: 'app-root',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
   templateUrl: './app.html',
-  styleUrl: './app.css',
 })
 export class App implements OnInit {
   protected readonly title = signal('fundament-console');

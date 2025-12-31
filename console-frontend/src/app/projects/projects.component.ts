@@ -25,7 +25,6 @@ import { ADD_CLUSTER_STEPS } from '../add-cluster/add-cluster.constants';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './projects.component.html',
-  styleUrl: './projects.component.css',
 })
 export class ProjectsComponent implements AfterViewInit {
   @ViewChildren('projectNameInput') projectNameInputs!: QueryList<ElementRef<HTMLInputElement>>;

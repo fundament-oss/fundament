@@ -10,7 +10,6 @@ import { OrganizationApiService, Tenant } from '../organization-api.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './tenant.component.html',
-  styleUrl: './tenant.component.css',
 })
 export class TenantComponent implements OnInit {
   private titleService = inject(Title);

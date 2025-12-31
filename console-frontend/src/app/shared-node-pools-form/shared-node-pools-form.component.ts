@@ -32,7 +32,6 @@ export interface NodePoolData {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './shared-node-pools-form.component.html',
-  styleUrl: './shared-node-pools-form.component.css',
 })
 export class SharedNodePoolsFormComponent implements AfterViewInit {
   @ViewChildren('nodePoolNameInput') nodePoolNameInputs!: QueryList<ElementRef<HTMLInputElement>>;

@@ -14,7 +14,6 @@ export interface Plugin {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './shared-plugins-form.component.html',
-  styleUrl: './shared-plugins-form.component.css',
 })
 export class SharedPluginsFormComponent {
   @Output() formSubmit = new EventEmitter<{ preset: string; plugins: string[] }>();

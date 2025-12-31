@@ -10,7 +10,6 @@ import { Title } from '@angular/platform-browser';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './profile.component.html',
-  styleUrl: './profile.component.css',
 })
 export class ProfileComponent implements OnInit {
   private titleService = inject(Title);

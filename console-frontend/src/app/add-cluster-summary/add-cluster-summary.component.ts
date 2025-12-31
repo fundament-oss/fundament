@@ -10,7 +10,6 @@ import { ADD_CLUSTER_STEPS } from '../add-cluster/add-cluster.constants';
   standalone: true,
   imports: [CommonModule, ProgressStepperComponent, RouterLink],
   templateUrl: './add-cluster-summary.component.html',
-  styleUrl: './add-cluster-summary.component.css',
 })
 export class AddClusterSummaryComponent {
   private titleService = inject(Title);

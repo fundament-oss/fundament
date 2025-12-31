@@ -23,7 +23,6 @@ interface RoleItem {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './permission-modal.component.html',
-  styleUrl: './permission-modal.component.css',
 })
 export class PermissionModalComponent implements OnChanges {
   @Input() show = false;
