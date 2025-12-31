@@ -1,6 +1,6 @@
 {
-  "name": "MyWebSite",
-  "short_name": "MySite",
+  "name": "Fundament Console",
+  "short_name": "FunCon",
   "icons": [
     {
       "src": "/img/web-app-manifest-192x192.png",
