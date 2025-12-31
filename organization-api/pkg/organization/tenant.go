@@ -10,7 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/organization/v1"
+	"github.com/fundament-oss/fundament/organization-api/pkg/models"
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
 func (s *OrganizationServer) GetTenant(
@@ -22,16 +23,21 @@ func (s *OrganizationServer) GetTenant(
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
 
-	id, err := uuid.Parse(req.Msg.Id)
+	tenantID, err := uuid.Parse(req.Msg.Id)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid tenant ID: %w", err))
+		return nil, fmt.Errorf("cluster id parse: %w", err)
 	}
 
-	if claims.TenantID != id {
+	input := models.TenantGet{ID: tenantID}
+	if err := s.validator.Validate(input); err != nil {
+		return nil, err
+	}
+
+	if claims.TenantID != input.ID {
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("access denied to tenant"))
 	}
 
-	tenant, err := s.queries.TenantGetByID(ctx, id)
+	tenant, err := s.queries.TenantGetByID(ctx, input.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("tenant not found"))
@@ -54,23 +60,23 @@ func (s *OrganizationServer) UpdateTenant(
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
 
-	id, err := uuid.Parse(req.Msg.Id)
+	tenantID, err := uuid.Parse(req.Msg.Id)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid tenant ID: %w", err))
+		return nil, fmt.Errorf("cluster id parse: %w", err)
 	}
 
-	if claims.TenantID != id {
+	input := models.TenantUpdate{ID: tenantID, Name: req.Msg.Name}
+	if err := s.validator.Validate(input); err != nil {
+		return nil, err
+	}
+
+	if claims.TenantID != input.ID {
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("access denied to tenant"))
 	}
 
-	name := req.Msg.Name
-	if name == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("tenant name is required"))
-	}
-
 	tenant, err := s.queries.TenantUpdate(ctx, db.TenantUpdateParams{
-		ID:   id,
-		Name: name,
+		ID:   input.ID,
+		Name: input.Name,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

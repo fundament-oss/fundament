@@ -1,0 +1,183 @@
+syntax = "proto3";
+
+package organization.v1;
+
+import "v1/common.proto";
+
+option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
+
+// ClusterService manages Kubernetes clusters
+service ClusterService {
+  // List all clusters for the current tenant
+  rpc ListClusters(ListClustersRequest) returns (ListClustersResponse);
+
+  // Get detailed information about a specific cluster
+  rpc GetCluster(GetClusterRequest) returns (GetClusterResponse);
+
+  // Create a new cluster
+  rpc CreateCluster(CreateClusterRequest) returns (CreateClusterResponse);
+
+  // Update cluster configuration
+  rpc UpdateCluster(UpdateClusterRequest) returns (UpdateClusterResponse);
+
+  // Delete a cluster
+  rpc DeleteCluster(DeleteClusterRequest) returns (DeleteClusterResponse);
+
+  // Get cluster activity log
+  rpc GetClusterActivity(GetClusterActivityRequest) returns (GetClusterActivityResponse);
+
+  // Download kubeconfig for a cluster
+  rpc GetKubeconfig(GetKubeconfigRequest) returns (GetKubeconfigResponse);
+}
+
+// List clusters request
+message ListClustersRequest {
+  string project_id = 10;  // Optional: filter by project
+}
+
+// List clusters response
+message ListClustersResponse {
+  repeated ClusterSummary clusters = 10;
+}
+
+// Cluster summary information
+message ClusterSummary {
+  string id = 10;
+  string name = 20;
+  ClusterStatus status = 30;
+  string region = 40;
+  int32 project_count = 50;
+  int32 node_pool_count = 60;
+}
+
+// Get cluster request
+message GetClusterRequest {
+  string cluster_id = 10;
+}
+
+// Get cluster response
+message GetClusterResponse {
+  ClusterDetails cluster = 10;
+}
+
+// Detailed cluster information
+message ClusterDetails {
+  string id = 10;
+  string name = 20;
+  string region = 30;
+  string kubernetes_version = 40;
+  ClusterStatus status = 50;
+  Timestamp created_at = 60;
+  ResourceUsageInfo resource_usage = 70;
+  repeated NodePool node_pools = 80;
+  repeated ClusterMember members = 90;
+  repeated ClusterProject projects = 100;
+}
+
+// Resource usage information for a cluster
+message ResourceUsageInfo {
+  ResourceUsage cpu = 10;
+  ResourceUsage memory = 20;
+  ResourceUsage disk = 30;
+  ResourceUsage pods = 40;
+}
+
+// Node pool information
+message NodePool {
+  string id = 10;
+  string name = 20;
+  string machine_type = 30;
+  int32 current_nodes = 40;
+  int32 min_nodes = 50;
+  int32 max_nodes = 60;
+  NodePoolStatus status = 70;
+  string version = 80;
+}
+
+// Cluster member information
+message ClusterMember {
+  string user_id = 10;
+  string name = 20;
+  string role = 30;
+  Timestamp last_active = 40;
+}
+
+// Project associated with cluster
+message ClusterProject {
+  string project_id = 10;
+  string name = 20;
+  repeated string namespaces = 30;
+}
+
+// Create cluster request
+message CreateClusterRequest {
+  string name = 10;
+  string region = 20;
+  string kubernetes_version = 30;
+  repeated NodePoolSpec node_pools = 40;
+  repeated string plugin_ids = 50;
+  string plugin_preset = 60;  // e.g., "havenplus", "preset2", "custom"
+}
+
+// Node pool specification
+message NodePoolSpec {
+  string name = 10;
+  string machine_type = 20;
+  int32 autoscale_min = 30;
+  int32 autoscale_max = 40;
+}
+
+// Create cluster response
+message CreateClusterResponse {
+  string cluster_id = 10;
+  ClusterStatus status = 20;
+}
+
+// Update cluster request
+message UpdateClusterRequest {
+  string cluster_id = 10;
+  optional string kubernetes_version = 20;
+  repeated NodePoolSpec node_pools = 30;
+}
+
+// Update cluster response
+message UpdateClusterResponse {
+  ClusterDetails cluster = 10;
+}
+
+// Delete cluster request
+message DeleteClusterRequest {
+  string cluster_id = 10;
+}
+
+// Delete cluster response
+message DeleteClusterResponse {
+  bool success = 10;
+}
+
+// Get cluster activity request
+message GetClusterActivityRequest {
+  string cluster_id = 10;
+}
+
+// Get cluster activity response
+message GetClusterActivityResponse {
+  repeated ActivityEntry activities = 10;
+}
+
+// Activity entry
+message ActivityEntry {
+  Timestamp timestamp = 10;
+  string action = 20;
+  string details = 30;
+}
+
+// Get kubeconfig request
+message GetKubeconfigRequest {
+  string cluster_id = 10;
+}
+
+// Get kubeconfig response
+message GetKubeconfigResponse {
+  string kubeconfig_content = 10;
+}

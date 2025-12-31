@@ -61,19 +61,12 @@ CREATE TABLE organization.namespaces (
 ALTER TABLE organization.namespaces OWNER TO postgres;
 -- ddl-end --
 
--- object: organization.clusters | type: TABLE --
--- DROP TABLE IF EXISTS organization.clusters CASCADE;
-CREATE TABLE organization.clusters (
-	id uuid NOT NULL DEFAULT uuidv7(),
-	tenant_id uuid NOT NULL,
-	name text NOT NULL,
-	created timestamptz NOT NULL DEFAULT now(),
-	deleted timestamptz,
-	CONSTRAINT clusters_pk PRIMARY KEY (id),
-	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (tenant_id,name,deleted)
-);
+-- object: organization."ClusterStatus" | type: TYPE --
+-- DROP TYPE IF EXISTS organization."ClusterStatus" CASCADE;
+CREATE TYPE organization."ClusterStatus" AS
+ENUM ('unspecified','provisioning','starting','running','upgrading','error','stopping','stopped');
 -- ddl-end --
-ALTER TABLE organization.clusters OWNER TO postgres;
+ALTER TYPE organization."ClusterStatus" OWNER TO postgres;
 -- ddl-end --
 
 -- object: organization.clusters_tr_verify_deleted | type: FUNCTION --
@@ -98,20 +91,11 @@ BEGIN
 	) THEN
 		RAISE EXCEPTION 'Cannot delete cluster with undeleted namespaces';
 	END IF;
+	RETURN NEW;
 END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION organization.clusters_tr_verify_deleted() OWNER TO postgres;
--- ddl-end --
-
--- object: verify_deleted | type: TRIGGER --
--- verify_deleted ON organization.clusters CASCADE;
-CREATE CONSTRAINT TRIGGER verify_deleted
-	AFTER INSERT OR UPDATE
-	ON organization.clusters
-	NOT DEFERRABLE 
-	FOR EACH ROW
-	EXECUTE PROCEDURE organization.clusters_tr_verify_deleted();
 -- ddl-end --
 
 -- object: organization.users | type: TABLE --
@@ -127,6 +111,45 @@ CREATE TABLE organization.users (
 );
 -- ddl-end --
 ALTER TABLE organization.users OWNER TO postgres;
+-- ddl-end --
+
+-- object: organization.clusters | type: TABLE --
+-- DROP TABLE IF EXISTS organization.clusters CASCADE;
+CREATE TABLE organization.clusters (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	tenant_id uuid NOT NULL,
+	name text NOT NULL,
+	region text NOT NULL,
+	kubernetes_version text NOT NULL,
+	status organization."ClusterStatus" NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT clusters_pk PRIMARY KEY (id),
+	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (tenant_id,name,deleted)
+);
+-- ddl-end --
+ALTER TABLE organization.clusters OWNER TO postgres;
+-- ddl-end --
+ALTER TABLE organization.clusters ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: verify_deleted | type: TRIGGER --
+-- verify_deleted ON organization.clusters CASCADE;
+CREATE CONSTRAINT TRIGGER verify_deleted
+	AFTER INSERT OR UPDATE
+	ON organization.clusters
+	NOT DEFERRABLE 
+	FOR EACH ROW
+	EXECUTE PROCEDURE organization.clusters_tr_verify_deleted();
+-- ddl-end --
+
+-- object: tenant_isolation | type: POLICY --
+-- DROP POLICY IF EXISTS tenant_isolation ON organization.clusters CASCADE;
+CREATE POLICY tenant_isolation ON organization.clusters
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_organization_api
+	USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
 -- ddl-end --
 
 -- object: projects_fk_tenant | type: CONSTRAINT --
@@ -150,16 +173,16 @@ REFERENCES organization.clusters (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
--- object: clusters_fk_tenant | type: CONSTRAINT --
--- ALTER TABLE organization.clusters DROP CONSTRAINT IF EXISTS clusters_fk_tenant CASCADE;
-ALTER TABLE organization.clusters ADD CONSTRAINT clusters_fk_tenant FOREIGN KEY (tenant_id)
+-- object: users_fk_tenant | type: CONSTRAINT --
+-- ALTER TABLE organization.users DROP CONSTRAINT IF EXISTS users_fk_tenant CASCADE;
+ALTER TABLE organization.users ADD CONSTRAINT users_fk_tenant FOREIGN KEY (tenant_id)
 REFERENCES organization.tenants (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
--- object: users_fk_tenant | type: CONSTRAINT --
--- ALTER TABLE organization.users DROP CONSTRAINT IF EXISTS users_fk_tenant CASCADE;
-ALTER TABLE organization.users ADD CONSTRAINT users_fk_tenant FOREIGN KEY (tenant_id)
+-- object: clusters_fk_tenant | type: CONSTRAINT --
+-- ALTER TABLE organization.clusters DROP CONSTRAINT IF EXISTS clusters_fk_tenant CASCADE;
+ALTER TABLE organization.clusters ADD CONSTRAINT clusters_fk_tenant FOREIGN KEY (tenant_id)
 REFERENCES organization.tenants (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --

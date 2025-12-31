@@ -18,7 +18,7 @@ import (
 
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
-	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/organization/v1/organizationv1connect"
+	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
 type config struct {
@@ -75,8 +75,12 @@ func run() error {
 		}),
 		logging.WithLogOnEvents(logging.FinishCall),
 	)
-	path, handler := organizationv1connect.NewOrganizationServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
-	mux.Handle(path, handler)
+
+	orgPath, orgHandler := organizationv1connect.NewOrganizationServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
+	mux.Handle(orgPath, orgHandler)
+
+	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
+	mux.Handle(clusterPath, clusterHandler)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
