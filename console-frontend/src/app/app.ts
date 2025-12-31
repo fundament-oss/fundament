@@ -3,10 +3,33 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 import { CommonModule } from '@angular/common';
 import { ApiService, UserInfo } from './api.service';
 import { OrganizationApiService } from './organization-api.service';
+import {
+  WarningIconComponent,
+  MenuIconComponent,
+  CloseIconComponent,
+  MoonIconComponent,
+  SunIconComponent,
+  ChevronDownIconComponent,
+  UserCircleIconComponent,
+  FundamentLogoIconComponent,
+} from './icons';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    CommonModule,
+    WarningIconComponent,
+    MenuIconComponent,
+    CloseIconComponent,
+    MoonIconComponent,
+    SunIconComponent,
+    ChevronDownIconComponent,
+    UserCircleIconComponent,
+    FundamentLogoIconComponent,
+  ],
   templateUrl: './app.html',
 })
 export class App implements OnInit {

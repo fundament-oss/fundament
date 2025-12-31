@@ -6,16 +6,7 @@
       role="alert"
     >
       <div class="flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-6 w-6 shrink-0" viewBox="0 0 24 24">
-          <path
-            fill="none"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 9v4m-1.637-9.409L2.257 17.125a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636-2.87L13.637 3.59a1.914 1.914 0 0 0-3.274 0M12 16h.01"
-          />
-        </svg>
+        <app-warning-icon class="mr-3 h-6 w-6 shrink-0" />
         <div>
           <p class="font-semibold">New version available</p>
           <p class="text-sm">The API has been updated. Please reload to use the latest version.</p>
@@ -43,34 +34,12 @@
               aria-label="Toggle sidebar"
               class="mr-3 cursor-pointer rounded-md p-2 text-gray-600 ring-indigo-500 hover:bg-gray-100 focus:ring-2 focus:outline-none lg:hidden dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24">
-                <path
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M3 6h18M3 12h18M3 18h18"
-                />
-              </svg>
+              <app-menu-icon class="h-6 w-6" />
             </button>
           }
           <h1 class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
-            <!-- <a class="flex items-center" routerLink="/"><svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 mr-2" viewBox="0 0 25 24"><path fill="currentColor" fill-rule="evenodd" d="M8.667 6.75a2.25 2.25 0 0 1 2.25-2.25h3.167a2.25 2.25 0 0 1 2.25 2.25V9h.833a2.25 2.25 0 0 1 2.25 2.25v2.25h.833a2.25 2.25 0 0 1 2.25 2.25v3a.75.75 0 0 1-.75.75H3.25a.75.75 0 0 1-.75-.75v-3a2.25 2.25 0 0 1 2.25-2.25h.834v-2.25A2.25 2.25 0 0 1 7.834 9h.833zm1.5 2.25h4.667V6.75a.75.75 0 0 0-.75-.75h-3.167a.75.75 0 0 0-.75.75zm-2.333 1.5a.75.75 0 0 0-.75.75v2.25h4.667v-3zm5.417 0v3h4.666v-2.25a.75.75 0 0 0-.75-.75zM4.75 15a.75.75 0 0 0-.75.75V18h4.667v-3zm5.417 0v3h4.667v-3zm6.167 0v3H21v-2.25a.75.75 0 0 0-.75-.75z" clip-rule="evenodd"/></svg>
-            Fundament</a> -->
-            <!-- <a class="flex items-center" routerLink="/"><svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mr-2.5 text-sky-600" viewBox="0 0 16 16"><path fill="currentColor" d="M0 .5A.5.5 0 0 1 .5 0h15a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5H14v2h1.5a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5H14v2h1.5a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5H.5a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5H2v-2H.5a.5.5 0 0 1-.5-.5v-3A.5.5 0 0 1 .5 6H2V4H.5a.5.5 0 0 1-.5-.5zM3 4v2h4.5V4zm5.5 0v2H13V4zM3 10v2h4.5v-2zm5.5 0v2H13v-2zM1 1v2h3.5V1zm4.5 0v2h5V1zm6 0v2H15V1zM1 7v2h3.5V7zm4.5 0v2h5V7zm6 0v2H15V7zM1 13v2h3.5v-2zm4.5 0v2h5v-2zm6 0v2H15v-2z"/></svg>
-            Fundament</a> -->
             <a class="flex items-center" routerLink="/"
-              ><svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="mr-1.5 h-8 w-8 text-sky-600 dark:text-sky-400"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fill="currentColor"
-                  d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
-                />
-              </svg>
+              ><app-fundament-logo-icon class="mr-1.5 h-8 w-8 text-sky-600 dark:text-sky-400" />
               Fundament</a
             >
           </h1>
@@ -91,27 +60,9 @@
               class="flex h-[21px] w-[21px] translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow transition-transform group-aria-checked:translate-x-[19px] dark:bg-gray-950 dark:text-gray-300"
             >
               @if (isDarkMode()) {
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24">
-                  <path
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 3h.393a7.5 7.5 0 0 0 7.92 12.446A9 9 0 1 1 12 2.992z"
-                  />
-                </svg>
+                <app-moon-icon class="h-4 w-4" />
               } @else {
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24">
-                  <path
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 12a4 4 0 1 0 8 0a4 4 0 1 0-8 0m-5 0h1m8-9v1m8 8h1m-9 8v1M5.6 5.6l.7.7m12.1-.7l-.7.7m0 11.4l.7.7m-12.1-.7l-.7.7"
-                  />
-                </svg>
+                <app-sun-icon class="h-4 w-4" />
               }
             </span>
           </button>
@@ -123,14 +74,7 @@
                 class="flex cursor-pointer items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 ring-indigo-500 hover:bg-gray-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-950 dark:bg-gray-950 dark:text-white dark:ring-offset-gray-950 dark:hover:bg-gray-900"
               >
                 {{ selectedProject() }}
-                <svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  ></path>
-                </svg>
+                <app-chevron-down-icon class="ml-2 h-4 w-4" />
               </button>
 
               @if (projectDropdownOpen()) {
@@ -164,20 +108,7 @@
                 class="flex cursor-pointer items-center rounded-full text-indigo-600 ring-indigo-500 focus:ring-2 focus:outline-none dark:text-indigo-400 dark:ring-offset-gray-950"
                 aria-label="User menu"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24">
-                  <g
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                  >
-                    <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0" />
-                    <path
-                      d="M9 10a3 3 0 1 0 6 0a3 3 0 1 0-6 0m-2.832 8.849A4 4 0 0 1 10 16h4a4 4 0 0 1 3.834 2.855"
-                    />
-                  </g>
-                </svg>
+                <app-user-circle-icon class="h-8 w-8" />
               </button>
 
               @if (userDropdownOpen()) {
@@ -242,16 +173,7 @@
             aria-label="Close sidebar"
             class="cursor-pointer rounded-md p-2 text-gray-600 ring-indigo-500 hover:bg-gray-100 focus:ring-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24">
-              <path
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <app-close-icon class="h-6 w-6" />
           </button>
         </div>
         <nav class="h-full overflow-y-auto px-4 pt-1 pb-6 lg:pt-4">
