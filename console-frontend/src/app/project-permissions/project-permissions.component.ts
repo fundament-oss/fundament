@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { PermissionModalComponent } from '../permission-modal/permission-modal.component';
+import { PlusIconComponent } from '../icons';
 
 interface Permission {
   name: string;
@@ -13,7 +14,13 @@ interface Permission {
 @Component({
   selector: 'app-project-permissions',
   standalone: true,
-  imports: [CommonModule, PermissionModalComponent, RouterLink, RouterLinkActive],
+  imports: [
+    CommonModule,
+    PermissionModalComponent,
+    RouterLink,
+    RouterLinkActive,
+    PlusIconComponent,
+  ],
   templateUrl: './project-permissions.component.html',
 })
 export class ProjectPermissionsComponent {

@@ -3,6 +3,9 @@ import { Component, Input } from '@angular/core';
 @Component({
   selector: 'app-sun-icon',
   standalone: true,
+  host: {
+    class: 'contents',
+  },
   template: `
     <svg xmlns="http://www.w3.org/2000/svg" [attr.class]="class" viewBox="0 0 24 24">
       <path

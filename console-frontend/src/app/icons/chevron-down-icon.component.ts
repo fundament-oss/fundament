@@ -3,6 +3,9 @@ import { Component, Input } from '@angular/core';
 @Component({
   selector: 'app-chevron-down-icon',
   standalone: true,
+  host: {
+    class: 'contents',
+  },
   template: `
     <svg [attr.class]="class" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
