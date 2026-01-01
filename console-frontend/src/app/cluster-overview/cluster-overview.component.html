@@ -15,37 +15,14 @@
           (click)="openTerminal()"
           class="btn-secondary inline-flex shrink-0 items-center transition-transform duration-200 ease-in-out hover:-translate-y-px"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24">
-            <path
-              fill="none"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="m5 7l5 5l-5 5m7 2h7"
-            />
-          </svg>
-          Open terminal
+          <app-terminal-icon class="mr-2 h-4 w-4" /> Open terminal
         </button>
         <button
           type="button"
           (click)="downloadKubeconfig()"
           class="btn-primary inline-flex shrink-0 items-center transition-transform duration-200 ease-in-out hover:-translate-y-px"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24">
-            <g
-              fill="none"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-            >
-              <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-              <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2m-5-4v-6" />
-              <path d="M9.5 14.5L12 17l2.5-2.5" />
-            </g>
-          </svg>
-          Download kubeconfig
+          <app-download-icon class="mr-2 h-4 w-4" /> Download kubeconfig
         </button>
       </div>
     </div>
@@ -84,19 +61,7 @@
               type="button"
               class="btn-light -my-0.5 ml-1 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="mr-1 h-3.5 w-3.5" viewBox="0 0 24 24">
-                <g
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                >
-                  <path d="m3 17l6-6l4 4l8-8" />
-                  <path d="M14 7h7v7" />
-                </g>
-              </svg>
-              Upgrade
+              <app-upgrade-icon class="mr-1 h-3.5 w-3.5" /> Upgrade
             </button>
           </dd>
         </dl>
@@ -301,17 +266,7 @@
             routerLink="/project-members"
             class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="mr-1 h-4 w-4" viewBox="0 0 24 24">
-              <path
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 20h4L18.5 9.5a2.828 2.828 0 1 0-4-4L4 16zm9.5-13.5l4 4"
-              />
-            </svg>
-            Edit
+            <app-edit-icon class="mr-1 h-4 w-4" /> Edit
           </a>
         </h3>
         <div class="space-y-3">
@@ -360,17 +315,7 @@
             routerLink="/cluster-nodes"
             class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="mr-1 h-4 w-4" viewBox="0 0 24 24">
-              <path
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 20h4L18.5 9.5a2.828 2.828 0 1 0-4-4L4 16zm9.5-13.5l4 4"
-              />
-            </svg>
-            Edit
+            <app-edit-icon class="mr-1 h-4 w-4" /> Edit
           </a>
         </h3>
         <div class="space-y-4">
@@ -419,17 +364,7 @@
             routerLink="/cluster-plugins"
             class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="mr-1 h-4 w-4" viewBox="0 0 24 24">
-              <path
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 20h4L18.5 9.5a2.828 2.828 0 1 0-4-4L4 16zm9.5-13.5l4 4"
-              />
-            </svg>
-            Edit
+            <app-edit-icon class="mr-1 h-4 w-4" /> Edit
           </a>
         </h3>
         <dl>
@@ -448,17 +383,7 @@
             routerLink="/projects"
             class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="mr-1 h-4 w-4" viewBox="0 0 24 24">
-              <path
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 20h4L18.5 9.5a2.828 2.828 0 1 0-4-4L4 16zm9.5-13.5l4 4"
-              />
-            </svg>
-            Edit
+            <app-edit-icon class="mr-1 h-4 w-4" /> Edit
           </a>
         </h3>
         <div class="space-y-4">

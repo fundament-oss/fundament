@@ -4,11 +4,12 @@ import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
 import { ProgressStepperComponent } from '../progress-stepper/progress-stepper.component';
 import { ADD_CLUSTER_STEPS } from '../add-cluster/add-cluster.constants';
+import { InfoCircleIconComponent } from '../icons';
 
 @Component({
   selector: 'app-add-cluster-summary',
   standalone: true,
-  imports: [CommonModule, ProgressStepperComponent, RouterLink],
+  imports: [CommonModule, ProgressStepperComponent, RouterLink, InfoCircleIconComponent],
   templateUrl: './add-cluster-summary.component.html',
 })
 export class AddClusterSummaryComponent {

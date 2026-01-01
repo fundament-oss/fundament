@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CloseIconComponent } from '../icons';
 
 interface Permission {
   name?: string;
@@ -21,7 +22,7 @@ interface RoleItem {
 @Component({
   selector: 'app-permission-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CloseIconComponent],
   templateUrl: './permission-modal.component.html',
 })
 export class PermissionModalComponent implements OnChanges {

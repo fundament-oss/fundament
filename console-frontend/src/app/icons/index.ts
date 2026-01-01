@@ -20,3 +20,4 @@ export { MoonIconComponent } from './moon-icon.component';
 export { SunIconComponent } from './sun-icon.component';
 export { UserCircleIconComponent } from './user-circle-icon.component';
 export { FundamentLogoIconComponent } from './fundament-logo-icon.component';
+export { UpgradeIconComponent } from './upgrade-icon.component';

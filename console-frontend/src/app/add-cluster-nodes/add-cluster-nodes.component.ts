@@ -8,11 +8,18 @@ import {
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
 import { ADD_CLUSTER_STEPS } from '../add-cluster/add-cluster.constants';
+import { ArrowRightIconComponent } from '../icons';
 
 @Component({
   selector: 'app-add-cluster-nodes',
   standalone: true,
-  imports: [CommonModule, ProgressStepperComponent, SharedNodePoolsFormComponent, RouterLink],
+  imports: [
+    CommonModule,
+    ProgressStepperComponent,
+    SharedNodePoolsFormComponent,
+    RouterLink,
+    ArrowRightIconComponent,
+  ],
   templateUrl: './add-cluster-nodes.component.html',
 })
 export class AddClusterNodesComponent {

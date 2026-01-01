@@ -2,11 +2,24 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
+import {
+  EditIconComponent,
+  TerminalIconComponent,
+  DownloadIconComponent,
+  UpgradeIconComponent,
+} from '../icons';
 
 @Component({
   selector: 'app-cluster-overview',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [
+    CommonModule,
+    RouterLink,
+    EditIconComponent,
+    TerminalIconComponent,
+    DownloadIconComponent,
+    UpgradeIconComponent,
+  ],
   templateUrl: './cluster-overview.component.html',
 })
 export class ClusterOverviewComponent {

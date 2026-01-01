@@ -5,11 +5,18 @@ import { Router, RouterLink } from '@angular/router';
 import { ProgressStepperComponent } from '../progress-stepper/progress-stepper.component';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { ADD_CLUSTER_STEPS } from '../add-cluster/add-cluster.constants';
+import { ArrowRightIconComponent } from '../icons';
 
 @Component({
   selector: 'app-add-cluster-plugins',
   standalone: true,
-  imports: [CommonModule, ProgressStepperComponent, SharedPluginsFormComponent, RouterLink],
+  imports: [
+    CommonModule,
+    ProgressStepperComponent,
+    SharedPluginsFormComponent,
+    RouterLink,
+    ArrowRightIconComponent,
+  ],
   templateUrl: './add-cluster-plugins.component.html',
 })
 export class AddClusterPluginsComponent {

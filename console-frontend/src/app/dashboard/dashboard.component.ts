@@ -2,12 +2,12 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Title } from '@angular/platform-browser';
-import { PlusIconComponent } from '../icons';
+import { PlusIconComponent, EyeIconComponent } from '../icons';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, PlusIconComponent],
+  imports: [CommonModule, RouterLink, PlusIconComponent, EyeIconComponent],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent {
