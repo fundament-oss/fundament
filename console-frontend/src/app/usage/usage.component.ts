@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { DateRangePickerComponent } from '../date-range-picker/date-range-picker.component';
+import { TableDownloadIconComponent } from '../icons';
 
 Chart.register(...registerables);
 
@@ -42,7 +43,7 @@ interface Project {
 @Component({
   selector: 'app-usage',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateRangePickerComponent],
+  imports: [CommonModule, FormsModule, DateRangePickerComponent, TableDownloadIconComponent],
   templateUrl: './usage.component.html',
 })
 export class UsageComponent implements AfterViewInit {

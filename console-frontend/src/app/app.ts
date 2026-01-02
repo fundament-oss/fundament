@@ -12,6 +12,12 @@ import {
   ChevronDownIconComponent,
   UserCircleIconComponent,
   FundamentLogoIconComponent,
+  DashboardIconComponent,
+  KubernetesIconComponent,
+  FolderIconComponent,
+  PuzzleIconComponent,
+  UsersIconComponent,
+  ChartIconComponent,
 } from './icons';
 
 @Component({
@@ -29,6 +35,12 @@ import {
     ChevronDownIconComponent,
     UserCircleIconComponent,
     FundamentLogoIconComponent,
+    DashboardIconComponent,
+    KubernetesIconComponent,
+    FolderIconComponent,
+    PuzzleIconComponent,
+    UsersIconComponent,
+    ChartIconComponent,
   ],
   templateUrl: './app.html',
 })
