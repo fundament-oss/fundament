@@ -4,12 +4,23 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
-import { ChevronRightIconComponent } from '../icons';
+import {
+  ChevronRightIconComponent,
+  CheckmarkIconComponent,
+  ExternalLinkIconComponent,
+} from '../icons';
 
 @Component({
   selector: 'app-plugin-details',
   standalone: true,
-  imports: [CommonModule, RouterLink, InstallPluginModalComponent, ChevronRightIconComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    InstallPluginModalComponent,
+    ChevronRightIconComponent,
+    CheckmarkIconComponent,
+    ExternalLinkIconComponent,
+  ],
   templateUrl: './plugin-details.component.html',
 })
 export class PluginDetailsComponent {

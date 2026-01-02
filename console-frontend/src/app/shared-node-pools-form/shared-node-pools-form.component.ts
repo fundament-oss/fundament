@@ -19,7 +19,7 @@ import {
   AbstractControl,
   ValidationErrors,
 } from '@angular/forms';
-import { PlusIconComponent } from '../icons';
+import { PlusIconComponent, TrashIconComponent } from '../icons';
 
 export interface NodePoolData {
   name: string;
@@ -31,7 +31,7 @@ export interface NodePoolData {
 @Component({
   selector: 'app-shared-node-pools-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PlusIconComponent],
+  imports: [CommonModule, ReactiveFormsModule, PlusIconComponent, TrashIconComponent],
   templateUrl: './shared-node-pools-form.component.html',
 })
 export class SharedNodePoolsFormComponent implements AfterViewInit {

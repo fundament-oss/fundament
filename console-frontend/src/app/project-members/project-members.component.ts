@@ -2,12 +2,19 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Title } from '@angular/platform-browser';
-import { PlusIconComponent } from '../icons';
+import { PlusIconComponent, EditIconComponent, TrashIconComponent } from '../icons';
 
 @Component({
   selector: 'app-project-members',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, PlusIconComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    RouterLinkActive,
+    PlusIconComponent,
+    EditIconComponent,
+    TrashIconComponent,
+  ],
   templateUrl: './project-members.component.html',
 })
 export class ProjectMembersComponent {

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Title, DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
+import { CheckmarkIconComponent, CloseIconComponent } from '../icons';
 
 export interface Plugin {
   id: string;
@@ -35,7 +36,13 @@ interface Preset {
 @Component({
   selector: 'app-plugins',
   standalone: true,
-  imports: [CommonModule, RouterLink, InstallPluginModalComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    InstallPluginModalComponent,
+    CheckmarkIconComponent,
+    CloseIconComponent,
+  ],
   templateUrl: './plugins.component.html',
 })
 export class PluginsComponent {

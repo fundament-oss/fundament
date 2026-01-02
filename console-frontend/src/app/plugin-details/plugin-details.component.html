@@ -3,7 +3,7 @@
   <a routerLink="/plugins" class="hover:text-indigo-600 dark:hover:text-indigo-400"
     >All categories</a
   >
-  <app-chevron-right-icon class="h-3.5 w-3.5" />
+  <app-chevron-right-icon class="mr-2 h-3.5 w-3.5" />
   <span>Observability</span>
 </nav>
 
@@ -29,28 +29,13 @@
             <span
               class="mt-2 mr-2.5 inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="mr-1 h-3 w-3"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-              </svg>
-              Official
+              <app-checkmark-icon class="mr-1 h-3 w-3" /> Official
             </span>
             <span
               class="mt-2 inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="mr-1 h-3 w-3"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-              </svg>
-              Installed on {{ installedClusters.join(' and ') }}
+              <app-checkmark-icon class="mr-1 h-3 w-3" /> Installed on
+              {{ installedClusters.join(' and ') }}
             </span>
           </div>
         </div>
@@ -90,49 +75,22 @@
         </button>
 
         <div class="mt-6 space-y-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-          <div class="flex items-start space-x-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+          <div class="flex items-start">
+            <app-checkmark-icon
+              class="mr-3 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+            />
             <span class="text-sm text-gray-600 dark:text-gray-300">Community support</span>
           </div>
-          <div class="flex items-start space-x-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+          <div class="flex items-start">
+            <app-checkmark-icon
+              class="mr-3 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+            />
             <span class="text-sm text-gray-600 dark:text-gray-300">Open source</span>
           </div>
-          <div class="flex items-start space-x-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+          <div class="flex items-start">
+            <app-checkmark-icon
+              class="mr-3 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+            />
             <span class="text-sm text-gray-600 dark:text-gray-300">Regular updates</span>
           </div>
         </div>
@@ -154,20 +112,7 @@
                 class="inline-flex items-center text-sm text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300"
               >
                 {{ documentation.label }}
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="ml-1 h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
+                <app-external-link-icon class="ml-1 h-4 w-4" />
               </a>
             </dd>
           </div>
@@ -181,20 +126,7 @@
                 class="inline-flex items-center text-sm text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300"
               >
                 {{ author.website }}
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="ml-1 h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
+                <app-external-link-icon class="ml-1 h-4 w-4" />
               </a>
             </dd>
           </div>

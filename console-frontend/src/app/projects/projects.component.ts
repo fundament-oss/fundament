@@ -19,12 +19,12 @@ import {
 import { Title } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { ADD_CLUSTER_STEPS } from '../add-cluster/add-cluster.constants';
-import { PlusIconComponent } from '../icons';
+import { PlusIconComponent, TrashIconComponent } from '../icons';
 
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PlusIconComponent],
+  imports: [CommonModule, ReactiveFormsModule, PlusIconComponent, TrashIconComponent],
   templateUrl: './projects.component.html',
 })
 export class ProjectsComponent implements AfterViewInit {

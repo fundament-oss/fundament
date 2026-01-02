@@ -14,12 +14,7 @@
           class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-3 border-gray-200 text-sm font-semibold text-gray-400 group-data-[active=true]:border-emerald-500 group-data-[active=true]:text-emerald-500 group-data-[completed=true]:border-emerald-500 group-data-[completed=true]:text-emerald-500 dark:border-gray-700 dark:text-gray-500"
         >
           @if (isCompleted(i)) {
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24">
-              <path
-                d="M9.707 19.121a.997.997 0 0 1-1.414 0l-5.646-5.647a1.5 1.5 0 0 1 0-2.121l.707-.707a1.5 1.5 0 0 1 2.121 0L9 14.171l9.525-9.525a1.5 1.5 0 0 1 2.121 0l.707.707a1.5 1.5 0 0 1 0 2.121z"
-                fill="currentColor"
-              />
-            </svg>
+            <app-checkmark-icon class="h-4 w-4" />
           } @else if (isActive(i)) {
             <span class="h-3 w-3 rounded-full bg-emerald-500"></span>
           } @else {

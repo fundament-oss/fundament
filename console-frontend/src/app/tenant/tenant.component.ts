@@ -4,11 +4,18 @@ import { Title } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../api.service';
 import { OrganizationApiService, Tenant } from '../organization-api.service';
+import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '../icons';
 
 @Component({
   selector: 'app-tenant',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    CheckmarkIconComponent,
+    CloseIconComponent,
+    EditIconComponent,
+  ],
   templateUrl: './tenant.component.html',
 })
 export class TenantComponent implements OnInit {

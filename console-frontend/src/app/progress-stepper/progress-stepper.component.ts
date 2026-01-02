@@ -1,6 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { CheckmarkIconComponent } from '../icons';
 
 export interface ProgressStep {
   name: string;
@@ -10,7 +11,7 @@ export interface ProgressStep {
 @Component({
   selector: 'app-progress-stepper',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, CheckmarkIconComponent],
   templateUrl: './progress-stepper.component.html',
 })
 export class ProgressStepperComponent {

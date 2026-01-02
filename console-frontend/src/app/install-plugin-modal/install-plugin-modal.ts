@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CloseIconComponent } from '../icons';
+import { CloseIconComponent, CheckmarkIconComponent } from '../icons';
 
 interface Cluster {
   id: string;
@@ -11,7 +11,7 @@ interface Cluster {
 @Component({
   selector: 'app-install-plugin-modal',
   standalone: true,
-  imports: [CommonModule, CloseIconComponent],
+  imports: [CommonModule, CloseIconComponent, CheckmarkIconComponent],
   templateUrl: './install-plugin-modal.html',
 })
 export class InstallPluginModalComponent {
