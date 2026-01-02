@@ -15,10 +15,11 @@
       <div class="border-b border-gray-200 px-6 py-6 dark:border-gray-800">
         <div class="flex items-center space-x-4">
           <!-- Plugin Logo -->
-          <div
+          <img
             class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gray-100 p-2 dark:bg-gray-800"
-            [innerHTML]="getLogo()"
-          ></div>
+            src="/img/plugins/{{ pluginId }}.svg"
+            alt="{{ pluginName }}"
+          />
 
           <!-- Title and Author -->
           <div class="flex-1">
