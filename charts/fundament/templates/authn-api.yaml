@@ -16,6 +16,10 @@ spec:
       labels:
         app.kubernetes.io/component: authn-api
     spec:
+      {{- if .Values.hostAliases }}
+      hostAliases:
+        {{- toYaml .Values.hostAliases | nindent 8 }}
+      {{- end }}
       containers:
         - name: authn-api
           image: {{ $.Values.images.authnApi }}
@@ -23,19 +27,31 @@ spec:
             - name: http
               containerPort: 8080
           env:
-            - name: DB_HOST
-              value: {{ include "fundament.db.host" . }}
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_NAME
-              value: fundament
-            - name: DB_USER
-              value: fundament
-            - name: DB_PASSWORD
+            - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "fundament.db.secretName" . }}
-                  key: password
+                  name: {{ $.Release.Name }}-db-fun-authn-api
+                  key: uri
+            - name: JWT_SECRET
+              value: {{ include "fundament.jwtSecret" . }}
+            - name: OIDC_ISSUER
+              value: {{ .Values.dex.issuer }}
+            - name: OIDC_DISCOVERY_URL
+              value: {{ .Values.dex.discoveryUrl }}
+            - name: OIDC_CLIENT_ID
+              value: fundament
+            - name: OIDC_REDIRECT_URL
+              value: {{ .Values.externalUrls.authn }}/callback
+            - name: FRONTEND_URL
+              value: {{ .Values.externalUrls.frontend }}
+            - name: COOKIE_DOMAIN
+              value: {{ .Values.externalUrls.cookieDomain }}
+            - name: COOKIE_SECURE
+              value: "{{ hasPrefix "https://" .Values.externalUrls.authn }}"
+            - name: LOG_LEVEL
+              value: {{ .Values.authnApi.logLevel }}
+            - name: CORS_ALLOWED_ORIGINS
+              value: {{ .Values.externalUrls.corsAllowedOrigins | default .Values.externalUrls.frontend }}
 ---
 apiVersion: v1
 kind: Service
@@ -61,6 +77,8 @@ metadata:
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
     app.kubernetes.io/component: authn-api
+  annotations:
+    nginx.ingress.kubernetes.io/enable-cors: "false"
 spec:
   ingressClassName: {{ $.Values.ingress.className }}
   rules:

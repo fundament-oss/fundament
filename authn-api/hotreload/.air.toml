@@ -3,7 +3,7 @@ tmp_dir = "tmp"
 
 [build]
 cmd = "go build -o tmp/fun-authn-api ./authn-api/cmd/fun-authn-api"
-bin = "tmp/fun-authn-api"
+entrypoint = "tmp/fun-authn-api"
 include_ext = ["go", "mod", "sum"]
 include_dir = ["authn-api"]
 exclude_dir = ["tmp"]

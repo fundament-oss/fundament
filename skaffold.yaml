@@ -27,6 +27,15 @@ build:
       docker:
         dockerfile: organization-api/Dockerfile
 
+    - image: db-migrations
+      context: db
+      docker:
+        dockerfile: Dockerfile
+
+    - image: login-frontend
+      context: login-frontend
+      docker:
+        dockerfile: Dockerfile
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheckDeadlineSeconds: 300
@@ -37,9 +46,11 @@ deploy:
         namespace: fundament
         createNamespace: true
         setValueTemplates:
-          imageAppstoreAPI: "{.IMAGE_FULLY_QUALIFIED_appstore_api}"
-          imageAuthnAPI: "{.IMAGE_FULLY_QUALIFIED_authn_api}"
-          imageOrganizationAPI: "{.IMAGE_FULLY_QUALIFIED_organization_api}"
+          images.dbMigrations: "{{.IMAGE_FULLY_QUALIFIED_db_migrations}}"
+          images.appstoreApi: "{{.IMAGE_FULLY_QUALIFIED_appstore_api}}"
+          images.authnApi: "{{.IMAGE_FULLY_QUALIFIED_authn_api}}"
+          images.organizationApi: "{{.IMAGE_FULLY_QUALIFIED_organization_api}}"
+          images.loginFrontend: "{{.IMAGE_FULLY_QUALIFIED_login_frontend}}"
 
 profiles:
   - name: env-local

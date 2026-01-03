@@ -3,7 +3,7 @@ tmp_dir = "tmp"
 
 [build]
 cmd = "go build -o tmp/fun-appstore-api ./appstore-api/cmd/fun-appstore-api"
-bin = "tmp/fun-appstore-api"
+entrypoint = "tmp/fun-appstore-api"
 include_ext = ["go", "mod", "sum"]
 include_dir = ["appstore-api"]
 exclude_dir = ["tmp"]

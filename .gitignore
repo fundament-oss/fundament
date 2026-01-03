@@ -1,3 +1,10 @@
 # System files
 .DS_Store
 Thumbs.db
+
+.claude
+
+# login-frontend (possibly to be removed later)
+node_modules
+dist
+.vite

@@ -1,0 +1,56 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gocritic
+    - misspell
+    - unconvert
+    - unparam
+    - gosec
+    - prealloc
+    - noctx
+    - bodyclose
+    - exhaustive
+    - nilerr
+    - errorlint
+    - wrapcheck
+
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - unnamedResult
+    exhaustive:
+      default-signifies-exhaustive: true
+    wrapcheck:
+      ignore-sigs:
+        - .Errorf(
+        - errors.New(
+        - connect.NewError(
+
+  exclusions:
+    paths:
+      - .*/proto/gen/.*
+      - .*/sqlc/db/.*
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/fundament-oss/fundament
