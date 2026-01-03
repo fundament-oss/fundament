@@ -2,7 +2,7 @@ import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CheckmarkIconComponent } from '../icons';
- interface ProgressStep {
+interface ProgressStep {
   name: string;
   route: string;
 }
