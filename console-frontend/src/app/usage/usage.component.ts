@@ -1,8 +1,8 @@
 import { Component, inject, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Title } from '@angular/platform-browser';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { TitleService } from '../title.service';
 import { DateRangePickerComponent } from '../date-range-picker/date-range-picker.component';
 import { TableDownloadIconComponent } from '../icons';
 
@@ -47,7 +47,7 @@ interface Project {
   templateUrl: './usage.component.html',
 })
 export class UsageComponent implements AfterViewInit {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
 
   @ViewChild('cpuChart') cpuChartCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('memoryChart') memoryChartCanvas!: ElementRef<HTMLCanvasElement>;
@@ -135,7 +135,7 @@ export class UsageComponent implements AfterViewInit {
   ];
 
   constructor() {
-    this.titleService.setTitle('Usage — Fundament Console');
+    this.titleService.setTitle('Usage');
 
     // Set default date range (last 7 days)
     const today = new Date();

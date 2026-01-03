@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Title } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
+import { TitleService } from '../title.service';
 import { ApiService } from '../api.service';
 import { OrganizationApiService, Tenant } from '../organization-api.service';
 import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '../icons';
@@ -19,7 +19,7 @@ import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '.
   templateUrl: './tenant.component.html',
 })
 export class TenantComponent implements OnInit {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
   private apiService = inject(ApiService);
   private organizationApiService = inject(OrganizationApiService);
   private cdr = inject(ChangeDetectorRef);
@@ -33,7 +33,7 @@ export class TenantComponent implements OnInit {
   error: string | null = null;
 
   constructor() {
-    this.titleService.setTitle('Tenant — Fundament Console');
+    this.titleService.setTitle('Tenant details');
   }
 
   async ngOnInit() {

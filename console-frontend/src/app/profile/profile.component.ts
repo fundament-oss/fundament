@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
 import { ApiService, UserInfo } from '../api.service';
-import { Title } from '@angular/platform-browser';
+import { TitleService } from '../title.service';
 
 @Component({
   selector: 'app-profile',
@@ -12,7 +12,7 @@ import { Title } from '@angular/platform-browser';
   templateUrl: './profile.component.html',
 })
 export class ProfileComponent implements OnInit {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
   private fb = inject(FormBuilder);
   private apiService = inject(ApiService);
   private router = inject(Router);
@@ -23,7 +23,7 @@ export class ProfileComponent implements OnInit {
   error = signal<string | null>(null);
 
   constructor() {
-    this.titleService.setTitle('Profile — Fundament Console');
+    this.titleService.setTitle('Profile');
 
     this.profileForm = this.fb.group({
       fullName: ['', Validators.required],

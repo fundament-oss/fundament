@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Title } from '@angular/platform-browser';
+import { TitleService } from '../title.service';
 import { PlusIconComponent, EyeIconComponent } from '../icons';
 
 @Component({
@@ -11,7 +11,7 @@ import { PlusIconComponent, EyeIconComponent } from '../icons';
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
 
   // Mock data for existing clusters
   clusters = [
@@ -32,7 +32,7 @@ export class DashboardComponent {
   ];
 
   constructor() {
-    this.titleService.setTitle('Dashboard — Fundament Console');
+    this.titleService.setTitle('Dashboard');
   }
 
   getStatusColor(status: string): string {

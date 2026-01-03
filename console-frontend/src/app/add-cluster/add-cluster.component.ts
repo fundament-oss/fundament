@@ -1,8 +1,8 @@
 import { Component, ViewChild, ElementRef, AfterViewInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Title } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { TitleService } from '../title.service';
 @Component({
   selector: 'app-add-cluster',
   standalone: true,
@@ -12,7 +12,7 @@ import { Router } from '@angular/router';
 export class AddClusterComponent implements AfterViewInit {
   @ViewChild('clusterNameInput') clusterNameInput!: ElementRef<HTMLInputElement>;
 
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
 
@@ -29,7 +29,7 @@ export class AddClusterComponent implements AfterViewInit {
   kubernetesVersions = ['1.34.x', '1.28.x', '1.27.x', '1.26.x', '1.25.x'];
 
   constructor() {
-    this.titleService.setTitle('Add cluster components — Fundament Console');
+    this.titleService.setTitle('Add cluster components');
 
     this.clusterForm = this.fb.group({
       clusterName: [

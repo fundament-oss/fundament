@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
+import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { ArrowRightIconComponent } from '../icons';
 
@@ -12,11 +12,11 @@ import { ArrowRightIconComponent } from '../icons';
   templateUrl: './add-cluster-plugins.component.html',
 })
 export class AddClusterPluginsComponent {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
   private router = inject(Router);
 
   constructor() {
-    this.titleService.setTitle('Add cluster plugins — Fundament Console');
+    this.titleService.setTitle('Add cluster plugins');
   }
 
   onFormSubmit(data: { preset: string; plugins: string[] }) {

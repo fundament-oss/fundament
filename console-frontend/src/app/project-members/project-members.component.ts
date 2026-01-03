@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { Title } from '@angular/platform-browser';
+import { TitleService } from '../title.service';
 import { PlusIconComponent, EditIconComponent, TrashIconComponent } from '../icons';
 
 @Component({
@@ -18,7 +18,7 @@ import { PlusIconComponent, EditIconComponent, TrashIconComponent } from '../ico
   templateUrl: './project-members.component.html',
 })
 export class ProjectMembersComponent {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
 
   // Members data for the project
   members = {
@@ -49,6 +49,6 @@ export class ProjectMembersComponent {
   };
 
   constructor() {
-    this.titleService.setTitle('Project Members — TODO project name — Fundament Console');
+    this.titleService.setTitle('Project members');
   }
 }

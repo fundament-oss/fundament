@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Title } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { TitleService } from '../title.service';
 import {
   SharedNodePoolsFormComponent,
   NodePoolData,
@@ -14,11 +14,11 @@ import {
   templateUrl: './cluster-nodes.component.html',
 })
 export class ClusterNodesComponent {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
   private router = inject(Router);
 
   constructor() {
-    this.titleService.setTitle('Cluster nodes — Fundament Console');
+    this.titleService.setTitle('Cluster nodes');
   }
 
   onFormSubmit(data: { nodePools: NodePoolData[] }) {

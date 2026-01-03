@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { Title } from '@angular/platform-browser';
+import { TitleService } from '../title.service';
 import { PermissionModalComponent } from '../permission-modal/permission-modal.component';
 import { PlusIconComponent, EditIconComponent, TrashIconComponent } from '../icons';
 
@@ -26,7 +26,7 @@ interface Permission {
   templateUrl: './project-permissions.component.html',
 })
 export class ProjectPermissionsComponent {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
 
   // Permissions data for the project
   permissions: Permission[] = [
@@ -50,7 +50,7 @@ export class ProjectPermissionsComponent {
   editingIndex = -1;
 
   constructor() {
-    this.titleService.setTitle('Project permissions — Fundament Console');
+    this.titleService.setTitle('Project permissions');
   }
 
   onAddPermission(): void {

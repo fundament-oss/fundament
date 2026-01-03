@@ -16,8 +16,8 @@ import {
   AbstractControl,
   ValidationErrors,
 } from '@angular/forms';
-import { Title } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { TitleService } from '../title.service';
 import { PlusIconComponent, TrashIconComponent } from '../icons';
 
 @Component({
@@ -28,7 +28,7 @@ import { PlusIconComponent, TrashIconComponent } from '../icons';
 })
 export class ProjectsComponent implements AfterViewInit {
   @ViewChildren('projectNameInput') projectNameInputs!: QueryList<ElementRef<HTMLInputElement>>;
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
 
@@ -39,7 +39,7 @@ export class ProjectsComponent implements AfterViewInit {
   projectsForm: FormGroup;
 
   constructor() {
-    this.titleService.setTitle('Projects — Fundament Console');
+    this.titleService.setTitle('Projects');
 
     this.projectsForm = this.fb.group({
       projects: this.fb.array([this.createProjectFormGroup(0)]),

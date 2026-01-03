@@ -9,8 +9,8 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Title } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { TitleService } from '../title.service';
 import { ApiService } from '../api.service';
 
 @Component({
@@ -22,7 +22,7 @@ import { ApiService } from '../api.service';
 export class LoginComponent implements OnInit, AfterViewInit {
   @ViewChild('emailInput') emailInput!: ElementRef<HTMLInputElement>;
 
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
   private router = inject(Router);
   private apiService = inject(ApiService);
   private fb = inject(FormBuilder);
@@ -32,7 +32,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   isLoading = signal(false);
 
   constructor() {
-    this.titleService.setTitle('Inloggen — Fundament Console');
+    this.titleService.setTitle('Log in');
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required]],

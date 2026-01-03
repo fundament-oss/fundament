@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Title } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 
 @Component({
@@ -11,11 +11,11 @@ import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugin
   templateUrl: './cluster-plugins.component.html',
 })
 export class ClusterPluginsComponent {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
   private router = inject(Router);
 
   constructor() {
-    this.titleService.setTitle('Cluster plugins — Fundament Console');
+    this.titleService.setTitle('Cluster plugins');
   }
 
   onFormSubmit(data: { preset: string; plugins: string[] }) {

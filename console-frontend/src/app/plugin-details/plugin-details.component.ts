@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
-import { Title } from '@angular/platform-browser';
+import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
 import {
   ChevronRightIconComponent,
@@ -24,7 +24,7 @@ import {
   templateUrl: './plugin-details.component.html',
 })
 export class PluginDetailsComponent {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
   private sanitizer = inject(DomSanitizer);
 
   pluginId = 'grafana';
@@ -77,7 +77,7 @@ Grafana is the open source analytics and monitoring solution for every database.
   };
 
   constructor() {
-    this.titleService.setTitle(`${this.pluginName} — Plugins — Fundament Console`);
+    this.titleService.setTitle(`${this.pluginName} — Plugins`);
   }
 
   getRenderedMarkdown(): SafeHtml {

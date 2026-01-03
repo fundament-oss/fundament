@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
+import { TitleService } from '../title.service';
 import {
   EditIconComponent,
   TerminalIconComponent,
@@ -23,7 +23,7 @@ import {
   templateUrl: './cluster-overview.component.html',
 })
 export class ClusterOverviewComponent {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
 
   // Hardcoded overview data
   clusterData = {
@@ -120,7 +120,7 @@ export class ClusterOverviewComponent {
   };
 
   constructor() {
-    this.titleService.setTitle('TODO cluster name — Fundament Console');
+    this.titleService.setTitle(this.clusterData.basics.name);
   }
 
   getStatusColor(status: string): string {

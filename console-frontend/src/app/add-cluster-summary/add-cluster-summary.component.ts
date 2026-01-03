@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
+import { TitleService } from '../title.service';
 import { InfoCircleIconComponent } from '../icons';
 
 @Component({
@@ -11,7 +11,7 @@ import { InfoCircleIconComponent } from '../icons';
   templateUrl: './add-cluster-summary.component.html',
 })
 export class AddClusterSummaryComponent {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
   private router = inject(Router);
 
   // Hardcoded summary data
@@ -46,7 +46,7 @@ export class AddClusterSummaryComponent {
   };
 
   constructor() {
-    this.titleService.setTitle('Cluster summary — Fundament Console');
+    this.titleService.setTitle('Cluster summary');
   }
 
   onCreateCluster() {

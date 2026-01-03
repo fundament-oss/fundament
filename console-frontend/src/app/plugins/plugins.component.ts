@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
+import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
 import { CheckmarkIconComponent, CloseIconComponent } from '../icons';
 
@@ -46,7 +46,7 @@ interface Preset {
   templateUrl: './plugins.component.html',
 })
 export class PluginsComponent {
-  private titleService = inject(Title);
+  private titleService = inject(TitleService);
 
   selectedCategory = 'all';
   selectedPreset = 'all';
@@ -254,7 +254,7 @@ export class PluginsComponent {
   }
 
   constructor() {
-    this.titleService.setTitle('Plugins — Fundament Console');
+    this.titleService.setTitle('Plugins');
   }
 
   get filteredPlugins(): Plugin[] {
