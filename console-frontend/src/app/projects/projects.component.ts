@@ -18,7 +18,6 @@ import {
 } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { ADD_CLUSTER_STEPS } from '../add-cluster/add-cluster.constants';
 import { PlusIconComponent, TrashIconComponent } from '../icons';
 
 @Component({
@@ -32,10 +31,6 @@ export class ProjectsComponent implements AfterViewInit {
   private titleService = inject(Title);
   private router = inject(Router);
   private fb = inject(FormBuilder);
-
-  // Progress stepper
-  steps = ADD_CLUSTER_STEPS;
-  currentStepIndex = 3;
 
   // Clusters
   clusterNames = ['cluster-1', 'cluster-2', 'cluster-3'];

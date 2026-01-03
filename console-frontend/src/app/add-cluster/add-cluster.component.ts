@@ -3,13 +3,10 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { ProgressStepperComponent } from '../progress-stepper/progress-stepper.component';
-import { ADD_CLUSTER_STEPS } from './add-cluster.constants';
-
 @Component({
   selector: 'app-add-cluster',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ProgressStepperComponent],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './add-cluster.component.html',
 })
 export class AddClusterComponent implements AfterViewInit {
@@ -18,10 +15,6 @@ export class AddClusterComponent implements AfterViewInit {
   private titleService = inject(Title);
   private router = inject(Router);
   private fb = inject(FormBuilder);
-
-  // Progress stepper
-  steps = ADD_CLUSTER_STEPS;
-  currentStepIndex = 0;
 
   // Form
   clusterForm: FormGroup;
@@ -86,7 +79,7 @@ export class AddClusterComponent implements AfterViewInit {
 
     // For now, just navigate to the next step
     // In a real app, this would make an API call
-    this.router.navigate(['/add-cluster-nodes']);
+    this.router.navigate(['/add-cluster/nodes']);
   }
 
   private scrollToFirstError() {

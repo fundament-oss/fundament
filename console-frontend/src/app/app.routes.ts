@@ -9,21 +9,37 @@ export const routes: Routes = [
   {
     path: 'add-cluster',
     loadComponent: () =>
-      import('./add-cluster/add-cluster.component').then((m) => m.AddClusterComponent),
-  },
-  {
-    path: 'add-cluster-nodes',
-    loadComponent: () =>
-      import('./add-cluster-nodes/add-cluster-nodes.component').then(
-        (m) => m.AddClusterNodesComponent,
+      import('./add-cluster-wizard-layout/add-cluster-wizard-layout.component').then(
+        (m) => m.AddClusterWizardLayoutComponent,
       ),
-  },
-  {
-    path: 'add-cluster-plugins',
-    loadComponent: () =>
-      import('./add-cluster-plugins/add-cluster-plugins.component').then(
-        (m) => m.AddClusterPluginsComponent,
-      ),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./add-cluster/add-cluster.component').then((m) => m.AddClusterComponent),
+      },
+      {
+        path: 'nodes',
+        loadComponent: () =>
+          import('./add-cluster-nodes/add-cluster-nodes.component').then(
+            (m) => m.AddClusterNodesComponent,
+          ),
+      },
+      {
+        path: 'plugins',
+        loadComponent: () =>
+          import('./add-cluster-plugins/add-cluster-plugins.component').then(
+            (m) => m.AddClusterPluginsComponent,
+          ),
+      },
+      {
+        path: 'summary',
+        loadComponent: () =>
+          import('./add-cluster-summary/add-cluster-summary.component').then(
+            (m) => m.AddClusterSummaryComponent,
+          ),
+      },
+    ],
   },
   {
     path: 'cluster-nodes',
@@ -38,13 +54,6 @@ export const routes: Routes = [
   {
     path: 'projects',
     loadComponent: () => import('./projects/projects.component').then((m) => m.ProjectsComponent),
-  },
-  {
-    path: 'add-cluster-summary',
-    loadComponent: () =>
-      import('./add-cluster-summary/add-cluster-summary.component').then(
-        (m) => m.AddClusterSummaryComponent,
-      ),
   },
   {
     path: 'cluster-overview',
