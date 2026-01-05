@@ -15,6 +15,15 @@ export class AddClusterPluginsComponent {
   private titleService = inject(TitleService);
   private router = inject(Router);
 
+  get clusterId(): string | null {
+    const currentRoute = this.router.url;
+    const clusterIdMatch = currentRoute.match(/\/add-cluster\/([^/]+)/);
+    if (clusterIdMatch && clusterIdMatch[1] !== 'nodes' && clusterIdMatch[1] !== 'plugins' && clusterIdMatch[1] !== 'summary') {
+      return clusterIdMatch[1];
+    }
+    return null;
+  }
+
   constructor() {
     this.titleService.setTitle('Add cluster plugins');
   }
