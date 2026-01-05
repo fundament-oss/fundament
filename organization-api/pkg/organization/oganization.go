@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/google/uuid"
-
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/common/validate"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -36,9 +34,4 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*OrganizationSe
 		queries:   db.New(database.Pool),
 		validator: validator,
 	}, nil
-}
-
-// tenantQueries returns a Queries instance scoped to the given tenant via RLS.
-func (s *OrganizationServer) tenantQueries(tenantID uuid.UUID) *db.Queries {
-	return db.New(s.db.ForTenant(tenantID))
 }

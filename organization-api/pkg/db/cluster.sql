@@ -1,13 +1,3 @@
--- name: TenantGetByID :one
-SELECT id, name, created
-FROM organization.tenants
-WHERE id = $1;
-
--- name: TenantUpdate :one
-UPDATE organization.tenants
-SET name = $2
-WHERE id = $1
-RETURNING id, name, created;
 
 -- name: ClusterListByTenantID :many
 SELECT id, tenant_id, name, region, kubernetes_version, status, created, deleted
@@ -27,8 +17,7 @@ RETURNING id, tenant_id, name, region, kubernetes_version, status, created, dele
 
 -- name: ClusterUpdate :one
 UPDATE organization.clusters
-SET kubernetes_version = COALESCE(sqlc.narg('kubernetes_version'), kubernetes_version),
-    status = COALESCE(sqlc.narg('status'), status)
+SET kubernetes_version = COALESCE(sqlc.narg('kubernetes_version'), kubernetes_version)
 WHERE id = $1 AND deleted IS NULL
 RETURNING id, tenant_id, name, region, kubernetes_version, status, created, deleted;
 

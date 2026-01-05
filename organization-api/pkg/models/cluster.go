@@ -13,11 +13,8 @@ type ClusterCreate struct {
 }
 
 type ClusterUpdate struct {
-	ClusterID uuid.UUID `validate:"required"`
-}
-
-type ClusterDelete struct {
-	ClusterID uuid.UUID `validate:"required"`
+	ClusterID         uuid.UUID `validate:"required"`
+	KubernetesVersion string    `validate:"required"`
 }
 
 type ClusterGetActivity struct {

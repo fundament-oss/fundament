@@ -12,6 +12,7 @@ import (
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/models"
+	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -24,28 +25,15 @@ func (s *OrganizationServer) ListClusters(
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
 
-	queries := s.tenantQueries(claims.TenantID)
-
+	queries := db.New(WithTenant(s.db.Pool, claims.TenantID))
 	clusters, err := queries.ClusterListByTenantID(ctx, claims.TenantID)
 	if err != nil {
 		s.logger.Error("failed to list clusters", "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list clusters: %w", err))
 	}
 
-	summaries := make([]*organizationv1.ClusterSummary, 0, len(clusters))
-	for _, c := range clusters {
-		summaries = append(summaries, &organizationv1.ClusterSummary{
-			Id:            c.ID.String(),
-			Name:          c.Name,
-			Status:        dbStatusToProto(c.Status),
-			Region:        c.Region,
-			ProjectCount:  0, // Stub
-			NodePoolCount: 0, // Stub
-		})
-	}
-
 	return connect.NewResponse(&organizationv1.ListClustersResponse{
-		Clusters: summaries,
+		Clusters: adapter.FromClustersSummary(clusters),
 	}), nil
 }
 
@@ -68,20 +56,26 @@ func (s *OrganizationServer) GetCluster(
 		return nil, err
 	}
 
-	queries := s.tenantQueries(claims.TenantID)
+	var cluster db.OrganizationCluster
 
-	// RLS ensures we can only see clusters belonging to our tenant
-	cluster, err := queries.ClusterGetByID(ctx, input.ClusterID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+	if err := WithTxTenant(ctx, s.db.Pool, claims.TenantID, func(q *db.Queries) error {
+		cluster, err = q.ClusterGetByID(ctx, input.ClusterID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+			}
+
+			s.logger.Error("failed to get cluster", "error", err)
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 		}
-		s.logger.Error("failed to get cluster", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	return connect.NewResponse(&organizationv1.GetClusterResponse{
-		Cluster: dbClusterToProtoDetails(cluster),
+		Cluster: adapter.FromClusterDetail(cluster),
 	}), nil
 }
 
@@ -94,30 +88,31 @@ func (s *OrganizationServer) CreateCluster(
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
 
-	input := models.ClusterCreate{
-		Name:              req.Msg.Name,
-		Region:            req.Msg.Region,
-		KubernetesVersion: req.Msg.KubernetesVersion,
-	}
+	input := adapter.ToClusterCreate(req.Msg)
 	if err := s.validator.Validate(input); err != nil {
 		return nil, err
 	}
 
-	queries := s.tenantQueries(claims.TenantID)
+	var cluster db.OrganizationCluster
+	if err := WithTxTenant(ctx, s.db.Pool, claims.TenantID, func(q *db.Queries) error {
+		params := db.ClusterCreateParams{
+			ID:                uuid.New(),
+			TenantID:          claims.TenantID,
+			Name:              req.Msg.Name,
+			Region:            req.Msg.Region,
+			KubernetesVersion: req.Msg.KubernetesVersion,
+			Status:            db.OrganizationClusterStatusUnspecified,
+		}
 
-	params := db.ClusterCreateParams{
-		ID:                uuid.New(),
-		TenantID:          claims.TenantID,
-		Name:              req.Msg.Name,
-		Region:            req.Msg.Region,
-		KubernetesVersion: req.Msg.KubernetesVersion,
-		Status:            db.OrganizationClusterStatusUnspecified,
-	}
+		cluster, err = q.ClusterCreate(ctx, params)
+		if err != nil {
+			s.logger.Error("failed to create cluster", "error", err)
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
+		}
 
-	cluster, err := queries.ClusterCreate(ctx, params)
-	if err != nil {
-		s.logger.Error("failed to create cluster", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	s.logger.Info("cluster created",
@@ -129,7 +124,7 @@ func (s *OrganizationServer) CreateCluster(
 
 	return connect.NewResponse(&organizationv1.CreateClusterResponse{
 		ClusterId: cluster.ID.String(),
-		Status:    dbStatusToProto(cluster.Status),
+		Status:    adapter.FromClusterStatus(cluster.Status),
 	}), nil
 }
 
@@ -142,40 +137,44 @@ func (s *OrganizationServer) UpdateCluster(
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
 
-	clusterID, err := uuid.Parse(req.Msg.ClusterId)
+	input, err := adapter.ToClusterUpdate(req.Msg)
 	if err != nil {
-		return nil, fmt.Errorf("cluster id parse: %w", err)
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	input := models.ClusterUpdate{ClusterID: clusterID}
 	if err := s.validator.Validate(input); err != nil {
-		return nil, err
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	queries := s.tenantQueries(claims.TenantID)
-
-	params := db.ClusterUpdateParams{
-		ID: input.ClusterID,
-	}
-
-	if req.Msg.KubernetesVersion != nil {
-		params.KubernetesVersion = pgtype.Text{String: *req.Msg.KubernetesVersion, Valid: true}
-	}
-
-	// RLS ensures we can only update clusters belonging to our tenant
-	cluster, err := queries.ClusterUpdate(ctx, params)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+	var cluster db.OrganizationCluster
+	if err := WithTxTenant(ctx, s.db.Pool, claims.TenantID, func(q *db.Queries) error {
+		params := db.ClusterUpdateParams{
+			ID: input.ClusterID,
 		}
-		s.logger.Error("failed to update cluster", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update cluster: %w", err))
+
+		if req.Msg.KubernetesVersion != nil {
+			params.KubernetesVersion = pgtype.Text{String: *req.Msg.KubernetesVersion, Valid: true}
+		}
+
+		cluster, err = q.ClusterUpdate(ctx, params)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+			}
+
+			s.logger.Error("failed to update cluster", "error", err)
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update cluster: %w", err))
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	s.logger.Info("cluster updated", "cluster_id", cluster.ID, "name", cluster.Name)
 
 	return connect.NewResponse(&organizationv1.UpdateClusterResponse{
-		Cluster: dbClusterToProtoDetails(cluster),
+		Cluster: adapter.FromClusterDetail(cluster),
 	}), nil
 }
 
@@ -193,21 +192,18 @@ func (s *OrganizationServer) DeleteCluster(
 		return nil, fmt.Errorf("cluster id parse: %w", err)
 	}
 
-	input := models.ClusterDelete{ClusterID: clusterID}
-	if err := s.validator.Validate(input); err != nil {
+	if err := WithTxTenant(ctx, s.db.Pool, claims.TenantID, func(q *db.Queries) error {
+		if err := q.ClusterDelete(ctx, clusterID); err != nil {
+			s.logger.Error("failed to delete cluster", "error", err)
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete cluster: %w", err))
+		}
+
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
-	queries := s.tenantQueries(claims.TenantID)
-
-	// RLS ensures we can only delete clusters belonging to our tenant
-	err = queries.ClusterDelete(ctx, input.ClusterID)
-	if err != nil {
-		s.logger.Error("failed to delete cluster", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete cluster: %w", err))
-	}
-
-	s.logger.Info("cluster deleted", "cluster_id", input.ClusterID)
+	s.logger.Info("cluster deleted", "cluster_id", clusterID)
 
 	return connect.NewResponse(&organizationv1.DeleteClusterResponse{
 		Success: true,
@@ -233,16 +229,20 @@ func (s *OrganizationServer) GetClusterActivity(
 		return nil, err
 	}
 
-	queries := s.tenantQueries(claims.TenantID)
-
-	// Verify cluster exists and belongs to tenant (via RLS)
-	_, err = queries.ClusterGetByID(ctx, input.ClusterID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+	if err := WithTxTenant(ctx, s.db.Pool, claims.TenantID, func(q *db.Queries) error {
+		// Verify cluster exists and belongs to tenant
+		_, err = q.ClusterGetByID(ctx, input.ClusterID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+			}
+			s.logger.Error("failed to get cluster", "error", err)
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 		}
-		s.logger.Error("failed to get cluster", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	// Stub: return empty activities
@@ -270,16 +270,22 @@ func (s *OrganizationServer) GetKubeconfig(
 		return nil, err
 	}
 
-	queries := s.tenantQueries(claims.TenantID)
+	var cluster db.OrganizationCluster
 
-	// RLS ensures we can only see clusters belonging to our tenant
-	cluster, err := queries.ClusterGetByID(ctx, input.ClusterID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+	if err := WithTxTenant(ctx, s.db.Pool, claims.TenantID, func(q *db.Queries) error {
+		cluster, err = q.ClusterGetByID(ctx, input.ClusterID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+			}
+
+			s.logger.Error("failed to get cluster", "error", err)
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 		}
-		s.logger.Error("failed to get cluster", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	// Stub: return placeholder kubeconfig
@@ -303,44 +309,4 @@ users:
 	return connect.NewResponse(&organizationv1.GetKubeconfigResponse{
 		KubeconfigContent: kubeconfig,
 	}), nil
-}
-
-// Helper functions for cluster
-
-func dbStatusToProto(status db.OrganizationClusterStatus) organizationv1.ClusterStatus {
-	switch status {
-	case db.OrganizationClusterStatusProvisioning:
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
-	case db.OrganizationClusterStatusStarting:
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING
-	case db.OrganizationClusterStatusRunning:
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING
-	case db.OrganizationClusterStatusUpgrading:
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING
-	case db.OrganizationClusterStatusError:
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR
-	case db.OrganizationClusterStatusStopping:
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING
-	case db.OrganizationClusterStatusStopped:
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED
-	default:
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED
-	}
-}
-
-func dbClusterToProtoDetails(c db.OrganizationCluster) *organizationv1.ClusterDetails {
-	return &organizationv1.ClusterDetails{
-		Id:                c.ID.String(),
-		Name:              c.Name,
-		Region:            c.Region,
-		KubernetesVersion: c.KubernetesVersion,
-		Status:            dbStatusToProto(c.Status),
-		CreatedAt: &organizationv1.Timestamp{
-			Value: c.Created.Time.Format("2006-01-02T15:04:05Z07:00"),
-		},
-		ResourceUsage: nil, // Stub
-		NodePools:     nil, // Stub
-		Members:       nil, // Stub
-		Projects:      nil, // Stub
-	}
 }
