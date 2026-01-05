@@ -7,6 +7,7 @@ export { CloseIconComponent } from './close-icon.component';
 export { PlusIconComponent } from './plus-icon.component';
 export { TrashIconComponent } from './trash-icon.component';
 export { EditIconComponent } from './edit-icon.component';
+export { ErrorIconComponent } from './error-icon.component';
 export { CheckmarkIconComponent } from './checkmark-icon.component';
 export { ArrowRightIconComponent } from './arrow-right-icon.component';
 export { InfoCircleIconComponent } from './info-circle-icon.component';

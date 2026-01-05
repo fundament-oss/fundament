@@ -1,13 +1,22 @@
-import { Component, ViewChild, ElementRef, AfterViewInit, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { OrganizationApiService } from '../organization-api.service';
+import { ErrorIconComponent } from '../icons';
 @Component({
   selector: 'app-add-cluster',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ErrorIconComponent],
   templateUrl: './add-cluster.component.html',
 })
 export class AddClusterComponent implements AfterViewInit, OnInit {
@@ -21,10 +30,10 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
 
   // Form
   clusterForm: FormGroup;
-  
+
   // Cluster ID from route (if editing existing cluster)
   clusterId: string | null = null;
-  
+
   // Error message for cluster operations (using signal for automatic reactivity)
   errorMessage = signal<string | null>(null);
 
@@ -57,7 +66,7 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
   async ngOnInit() {
     // Get clusterId from route if it exists
     this.clusterId = this.route.snapshot.paramMap.get('clusterId');
-    
+
     // If we have a clusterId, fetch the cluster data
     if (this.clusterId) {
       await this.loadClusterData(this.clusterId);
@@ -110,7 +119,7 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
 
     const clusterData = this.clusterForm.value;
     this.errorMessage.set(null);
-    
+
     try {
       if (this.clusterId) {
         // Update existing cluster
@@ -118,9 +127,9 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
           clusterId: this.clusterId,
           kubernetesVersion: clusterData.kubernetesVersion,
         });
-        
+
         console.log('Cluster updated successfully');
-        
+
         // Navigate to the next step with existing clusterId
         this.router.navigate(['/add-cluster', this.clusterId, 'nodes']);
       } else {
@@ -130,12 +139,12 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
           region: clusterData.region,
           kubernetesVersion: clusterData.kubernetesVersion,
         });
-        
+
         console.log('Cluster created successfully:', response);
-        
+
         // Extract clusterId from response
         const clusterId = response.clusterId;
-        
+
         // Navigate to the next step with clusterId
         this.router.navigate(['/add-cluster', clusterId, 'nodes']);
       }

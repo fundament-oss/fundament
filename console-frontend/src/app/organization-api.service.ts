@@ -89,7 +89,11 @@ export class OrganizationApiService {
   private versionMismatchSubject = new BehaviorSubject<boolean>(false);
   public versionMismatch$ = this.versionMismatchSubject.asObservable();
 
-  private async connectRpc<T>(servicePath: string, method: string, request: object = {}): Promise<T> {
+  private async connectRpc<T>(
+    servicePath: string,
+    method: string,
+    request: object = {},
+  ): Promise<T> {
     const url = `${CONFIG.apiBaseUrl}${servicePath}/${method}`;
 
     const headers: Record<string, string> = {
@@ -125,26 +129,46 @@ export class OrganizationApiService {
   }
 
   async getTenant(id: string): Promise<Tenant> {
-    const response = await this.connectRpc<GetTenantResponse>(CONFIG.organizationServicePath, 'GetTenant', { id });
+    const response = await this.connectRpc<GetTenantResponse>(
+      CONFIG.organizationServicePath,
+      'GetTenant',
+      { id },
+    );
     return response.tenant;
   }
 
   async updateTenant(id: string, name: string): Promise<Tenant> {
-    const response = await this.connectRpc<UpdateTenantResponse>(CONFIG.organizationServicePath, 'UpdateTenant', { id, name });
+    const response = await this.connectRpc<UpdateTenantResponse>(
+      CONFIG.organizationServicePath,
+      'UpdateTenant',
+      { id, name },
+    );
     return response.tenant;
   }
 
   async createCluster(request: CreateClusterRequest): Promise<CreateClusterResponse> {
-    return this.connectRpc<CreateClusterResponse>(CONFIG.clusterServicePath, 'CreateCluster', request);
+    return this.connectRpc<CreateClusterResponse>(
+      CONFIG.clusterServicePath,
+      'CreateCluster',
+      request,
+    );
   }
 
   async updateCluster(request: UpdateClusterRequest): Promise<ClusterDetails> {
-    const response = await this.connectRpc<UpdateClusterResponse>(CONFIG.clusterServicePath, 'UpdateCluster', request);
+    const response = await this.connectRpc<UpdateClusterResponse>(
+      CONFIG.clusterServicePath,
+      'UpdateCluster',
+      request,
+    );
     return response.cluster;
   }
 
   async getCluster(clusterId: string): Promise<ClusterDetails> {
-    const response = await this.connectRpc<GetClusterResponse>(CONFIG.clusterServicePath, 'GetCluster', { clusterId });
+    const response = await this.connectRpc<GetClusterResponse>(
+      CONFIG.clusterServicePath,
+      'GetCluster',
+      { clusterId },
+    );
     return response.cluster;
   }
 }

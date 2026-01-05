@@ -37,13 +37,20 @@ export class AddClusterWizardLayoutComponent {
 
   get currentStepIndex(): number {
     const currentRoute = this.router.url;
-    
+
     // Extract clusterId if present in the URL
     const clusterIdMatch = currentRoute.match(/\/add-cluster\/([^/]+)/);
-    const hasClusterId = clusterIdMatch && clusterIdMatch[1] !== 'nodes' && clusterIdMatch[1] !== 'plugins' && clusterIdMatch[1] !== 'summary';
-    
+    const hasClusterId =
+      clusterIdMatch &&
+      clusterIdMatch[1] !== 'nodes' &&
+      clusterIdMatch[1] !== 'plugins' &&
+      clusterIdMatch[1] !== 'summary';
+
     // Check for exact matches first
-    if (currentRoute === '/add-cluster' || (hasClusterId && currentRoute === `/add-cluster/${clusterIdMatch![1]}`)) {
+    if (
+      currentRoute === '/add-cluster' ||
+      (hasClusterId && currentRoute === `/add-cluster/${clusterIdMatch![1]}`)
+    ) {
       return 0; // Basics
     }
     if (currentRoute.includes('/nodes')) {
@@ -55,14 +62,19 @@ export class AddClusterWizardLayoutComponent {
     if (currentRoute.includes('/summary')) {
       return 3; // Summary
     }
-    
+
     return 0; // Default to Basics
   }
-  
+
   get clusterId(): string | null {
     const currentRoute = this.router.url;
     const clusterIdMatch = currentRoute.match(/\/add-cluster\/([^/]+)/);
-    if (clusterIdMatch && clusterIdMatch[1] !== 'nodes' && clusterIdMatch[1] !== 'plugins' && clusterIdMatch[1] !== 'summary') {
+    if (
+      clusterIdMatch &&
+      clusterIdMatch[1] !== 'nodes' &&
+      clusterIdMatch[1] !== 'plugins' &&
+      clusterIdMatch[1] !== 'summary'
+    ) {
       return clusterIdMatch[1];
     }
     return null;
@@ -117,5 +129,4 @@ export class AddClusterWizardLayoutComponent {
   isActive(index: number): boolean {
     return index === this.currentStepIndex;
   }
-  
 }
