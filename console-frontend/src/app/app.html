@@ -1,0 +1,261 @@
+<div class="min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-white">
+  <!-- API Version Mismatch Banner -->
+  @if (apiVersionMismatch()) {
+    <div
+      class="flex items-center justify-between bg-amber-500 px-4 py-3 text-white shadow-md dark:bg-amber-600"
+      role="alert"
+    >
+      <div class="flex items-center">
+        <app-warning-icon class="mr-3 h-6 w-6 shrink-0" />
+        <div>
+          <p class="font-semibold">New version available</p>
+          <p class="text-sm">The API has been updated. Please reload to use the latest version.</p>
+        </div>
+      </div>
+      <button
+        (click)="reloadApp()"
+        type="button"
+        class="ml-4 shrink-0 cursor-pointer rounded-md bg-white px-4 py-2 text-sm font-medium text-amber-600 transition-colors hover:bg-amber-50 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-amber-500 focus:outline-none dark:bg-gray-900 dark:text-amber-400 dark:hover:bg-gray-800"
+      >
+        Reload now
+      </button>
+    </div>
+  }
+
+  <!-- Header -->
+  <header class="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+    <div class="mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between py-4">
+        <div class="flex items-center">
+          @if (!isLoginPage()) {
+            <button
+              (click)="toggleSidebar()"
+              type="button"
+              aria-label="Toggle sidebar"
+              class="mr-3 cursor-pointer rounded-md p-2 text-gray-600 ring-indigo-500 hover:bg-gray-100 focus:ring-2 focus:outline-none lg:hidden dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
+            >
+              <app-menu-icon class="h-6 w-6" />
+            </button>
+          }
+          <h1 class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+            <a class="flex items-center" routerLink="/"
+              ><app-fundament-logo-icon class="mr-1.5 h-8 w-8 text-sky-600 dark:text-sky-400" />
+              Fundament</a
+            >
+          </h1>
+        </div>
+
+        <!-- Right side dropdowns -->
+        <div class="-my-1 flex items-center space-x-3">
+          <!-- Theme (dark/light mode) Switcher -->
+          <button
+            (click)="toggleTheme()"
+            type="button"
+            role="switch"
+            aria-label="Toggle dark mode"
+            [attr.aria-checked]="isDarkMode()"
+            class="group h-[25px] w-[42px] cursor-pointer rounded-full border border-gray-300 bg-gray-200 text-indigo-600 ring-indigo-500 outline-none focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:ring-offset-gray-950"
+          >
+            <span
+              class="flex h-[21px] w-[21px] translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow transition-transform group-aria-checked:translate-x-[19px] dark:bg-gray-950 dark:text-gray-300"
+            >
+              @if (isDarkMode()) {
+                <app-moon-icon class="h-4 w-4" />
+              } @else {
+                <app-sun-icon class="h-4 w-4" />
+              }
+            </span>
+          </button>
+
+          @if (!isLoginPage()) {
+            <div class="project-dropdown relative">
+              <button
+                (click)="toggleProjectDropdown()"
+                class="flex cursor-pointer items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 ring-indigo-500 hover:bg-gray-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-950 dark:bg-gray-950 dark:text-white dark:ring-offset-gray-950 dark:hover:bg-gray-900"
+              >
+                {{ selectedProject() }}
+                <app-chevron-down-icon class="ml-2 h-4 w-4" />
+              </button>
+
+              @if (projectDropdownOpen()) {
+                <div
+                  class="ring-opacity-5 absolute right-0 z-10 mt-2 w-48 rounded-md bg-white shadow-lg ring-1 ring-gray-300 dark:bg-gray-950 dark:ring-gray-800"
+                >
+                  <div class="py-1">
+                    <button
+                      (click)="selectProject('Project 1')"
+                      class="block w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900 dark:[&.bg-gray-100]:bg-gray-700"
+                      [class.bg-gray-100]="selectedProject() === 'Project 1'"
+                    >
+                      Project 1
+                    </button>
+                    <button
+                      (click)="selectProject('Project 2')"
+                      class="block w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900 dark:[&.bg-gray-100]:bg-gray-700"
+                      [class.bg-gray-100]="selectedProject() === 'Project 2'"
+                    >
+                      Project 2
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- User Dropdown -->
+            <div class="user-dropdown relative">
+              <button
+                (click)="toggleUserDropdown()"
+                class="flex cursor-pointer items-center rounded-full text-indigo-600 ring-indigo-500 focus:ring-2 focus:outline-none dark:text-indigo-400 dark:ring-offset-gray-950"
+                aria-label="User menu"
+              >
+                <app-user-circle-icon class="h-8 w-8" />
+              </button>
+
+              @if (userDropdownOpen()) {
+                <div
+                  class="ring-opacity-5 absolute right-0 z-10 mt-2 w-48 rounded-md bg-white shadow-lg ring-1 ring-gray-300 dark:bg-gray-950 dark:ring-gray-800"
+                >
+                  <div class="py-1">
+                    <div
+                      class="border-b border-gray-100 px-4 py-2 text-sm text-gray-500 dark:border-gray-950 dark:text-gray-300"
+                    >
+                      Logged in as {{ currentUser()?.name || 'Unknown' }}
+                    </div>
+                    <a
+                      routerLink="/profile"
+                      (click)="userDropdownOpen.set(false)"
+                      class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900"
+                    >
+                      My profile
+                    </a>
+                    <button
+                      (click)="handleLogout()"
+                      class="block w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900"
+                    >
+                      Log out
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex">
+    <!-- Sidebar -->
+    @if (!isLoginPage()) {
+      <!-- Overlay for mobile -->
+      <div
+        class="fixed inset-0 z-40 bg-gray-900/50 transition-opacity duration-300 lg:hidden"
+        [class.opacity-0]="!sidebarOpen()"
+        [class.opacity-100]="sidebarOpen()"
+        [class.pointer-events-none]="!sidebarOpen()"
+        (click)="closeSidebar()"
+        (keydown.escape)="closeSidebar()"
+        role="button"
+        tabindex="0"
+        aria-label="Close sidebar"
+      ></div>
+
+      <!-- Sidebar -->
+      <aside
+        class="fixed inset-y-0 left-0 z-50 w-64 transform border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:static lg:min-h-[calc(100vh-4rem-1px)] lg:translate-x-0 dark:border-gray-800 dark:bg-gray-950"
+        [class.-translate-x-full]="!sidebarOpen()"
+      >
+        <!-- Close button for mobile -->
+        <div class="flex justify-end px-4 pt-4 lg:hidden">
+          <button
+            (click)="closeSidebar()"
+            type="button"
+            aria-label="Close sidebar"
+            class="cursor-pointer rounded-md p-2 text-gray-600 ring-indigo-500 hover:bg-gray-100 focus:ring-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
+          >
+            <app-close-icon class="h-6 w-6" />
+          </button>
+        </div>
+        <nav class="h-full overflow-y-auto px-4 pt-1 pb-6 lg:pt-4">
+          <ul class="space-y-2">
+            <li>
+              <a
+                routerLink="/"
+                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                [routerLinkActiveOptions]="{ exact: true }"
+                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                (click)="closeSidebar()"
+              >
+                <app-dashboard-icon class="mr-3 h-5 w-5" />
+                Dashboard
+              </a>
+            </li>
+            <li>
+              <a
+                routerLink="/cluster-overview"
+                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
+                (click)="closeSidebar()"
+              >
+                <app-kubernetes-icon class="mr-3 h-5 w-5" />
+                Clusters
+              </a>
+            </li>
+            <li>
+              <a
+                routerLink="/projects"
+                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
+                (click)="closeSidebar()"
+              >
+                <app-folder-icon class="mr-3 h-5 w-5" />
+                Projects
+              </a>
+            </li>
+            <li>
+              <a
+                routerLink="/plugins"
+                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
+                (click)="closeSidebar()"
+              >
+                <app-puzzle-icon class="mr-3 h-5 w-5" />
+                Plugins
+              </a>
+            </li>
+            <li>
+              <a
+                routerLink="/project-members"
+                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
+                [ngClass]="{
+                  'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
+                    isProjectMembersOrPermissions(),
+                }"
+                (click)="closeSidebar()"
+              >
+                <app-users-icon class="mr-3 h-5 w-5" />
+                Members
+              </a>
+            </li>
+            <li>
+              <a
+                routerLink="/usage"
+                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
+                (click)="closeSidebar()"
+              >
+                <app-chart-icon class="mr-3 h-5 w-5" />
+                Usage
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+    }
+
+    <!-- Main Content -->
+    <main class="mx-auto max-w-7xl flex-1 px-4 py-6 sm:px-6">
+      <router-outlet />
+    </main>
+  </div>
+</div>

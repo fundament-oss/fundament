@@ -1,0 +1,60 @@
+<!-- Header -->
+<div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+  <h1 class="text-2xl font-bold dark:text-white">Create a Kubernetes cluster</h1>
+  <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+    Configure your new Kubernetes cluster with the settings below.
+  </p>
+</div>
+
+<!-- Form -->
+<form [formGroup]="clusterForm" (ngSubmit)="onSubmit()" class="space-y-6 px-6 py-6">
+  <!-- Cluster Name -->
+  <div>
+    <label for="clusterName" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+      Cluster name
+    </label>
+    <input
+      #clusterNameInput
+      id="clusterName"
+      formControlName="clusterName"
+      type="text"
+      placeholder="E.g. my-production-cluster"
+    />
+    @if (clusterName?.invalid && (clusterName?.dirty || clusterName?.touched)) {
+      <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getClusterNameError() }}</p>
+    }
+  </div>
+
+  <!-- Region -->
+  <div>
+    <label for="region" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+      Region
+    </label>
+    <select id="region" formControlName="region">
+      @for (r of regions; track r.value) {
+        <option [value]="r.value">{{ r.label }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- Kubernetes Version -->
+  <div>
+    <label
+      for="kubernetesVersion"
+      class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+    >
+      Kubernetes version
+    </label>
+    <select id="kubernetesVersion" formControlName="kubernetesVersion">
+      @for (kv of kubernetesVersions; track kv) {
+        <option [value]="kv">{{ kv }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- Form Actions -->
+  <div class="flex items-center space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+    <button type="button" (click)="onCancel()" class="btn-secondary">Cancel</button>
+    <button type="submit" class="btn-primary">Next step</button>
+  </div>
+</form>

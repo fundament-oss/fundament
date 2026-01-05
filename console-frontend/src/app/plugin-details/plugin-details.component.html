@@ -1,0 +1,147 @@
+<!-- Breadcrumb -->
+<nav class="-mt-2 mb-4 flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+  <a routerLink="/plugins" class="hover:text-indigo-600 dark:hover:text-indigo-400"
+    >All categories</a
+  >
+  <app-chevron-right-icon class="mr-2 h-3.5 w-3.5" />
+  <span>Observability</span>
+</nav>
+
+<div class="flex flex-col gap-6 md:flex-row">
+  <!-- Main Content -->
+  <div class="flex-1">
+    <div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+      <!-- Header with Logo and Title -->
+      <div class="border-b border-gray-200 px-6 py-6 dark:border-gray-800">
+        <div class="flex items-center space-x-4">
+          <!-- Plugin Logo -->
+          <img
+            class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gray-100 p-2 dark:bg-gray-800"
+            src="/img/plugins/{{ pluginId }}.svg"
+            alt="{{ pluginName }}"
+          />
+
+          <!-- Title and Author -->
+          <div class="flex-1">
+            <h1 class="text-3xl font-bold">{{ pluginName }}</h1>
+            <div class="mt-2 flex items-center space-x-2">
+              <span class="text-sm text-gray-600 dark:text-gray-300">by {{ author.name }}</span>
+            </div>
+            <span
+              class="mt-2 mr-2.5 inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
+            >
+              <app-checkmark-icon class="mr-1 h-3 w-3" /> Official
+            </span>
+            <span
+              class="mt-2 inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
+            >
+              <app-checkmark-icon class="mr-1 h-3 w-3" /> Installed on
+              {{ installedClusters.join(' and ') }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description Content -->
+      <div class="m-6" [innerHTML]="getRenderedMarkdown()"></div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="md:w-80">
+    <div class="sticky top-6">
+      <div
+        class="mb-6 rounded-md border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950"
+      >
+        <h3 class="mb-2 text-lg font-semibold">Pricing</h3>
+
+        @if (pricing.type === 'free') {
+          <div class="mb-6">
+            <div class="mb-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">Free</div>
+            <p class="text-sm text-gray-600 dark:text-gray-300">{{ pricing.details }}</p>
+          </div>
+        } @else {
+          <div class="mb-6">
+            <div class="mb-2 text-3xl font-bold">Custom</div>
+            <p class="text-sm text-gray-600 dark:text-gray-300">{{ pricing.details }}</p>
+          </div>
+        }
+
+        <button
+          type="button"
+          (click)="openInstallModal()"
+          class="btn-primary w-full transition-transform duration-200 ease-in-out hover:-translate-y-px"
+        >
+          Install plugin
+        </button>
+
+        <div class="mt-6 space-y-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+          <div class="flex items-start">
+            <app-checkmark-icon
+              class="mr-3 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+            />
+            <span class="text-sm text-gray-600 dark:text-gray-300">Community support</span>
+          </div>
+          <div class="flex items-start">
+            <app-checkmark-icon
+              class="mr-3 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+            />
+            <span class="text-sm text-gray-600 dark:text-gray-300">Open source</span>
+          </div>
+          <div class="flex items-start">
+            <app-checkmark-icon
+              class="mr-3 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+            />
+            <span class="text-sm text-gray-600 dark:text-gray-300">Regular updates</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Additional Information -->
+      <div
+        class="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950"
+      >
+        <h3 class="mb-4 text-lg font-medium">Additional information</h3>
+        <dl class="space-y-3">
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Documentation</dt>
+            <dd class="mt-1">
+              <a
+                [href]="documentation.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center text-sm text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                {{ documentation.label }}
+                <app-external-link-icon class="ml-1 h-4 w-4" />
+              </a>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Author website</dt>
+            <dd class="mt-1">
+              <a
+                [href]="author.website"
+                target="_blank"
+                rel="nofollow noopener noreferrer"
+                class="inline-flex items-center text-sm text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                {{ author.website }}
+                <app-external-link-icon class="ml-1 h-4 w-4" />
+              </a>
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Install Modal -->
+<app-install-plugin-modal
+  [pluginName]="pluginName"
+  [clusters]="clusters"
+  [show]="showInstallModal"
+  (closeModal)="closeInstallModal()"
+  (install)="onInstallOnCluster($event)"
+></app-install-plugin-modal>

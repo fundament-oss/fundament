@@ -1,0 +1,413 @@
+<div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+  <!-- Header -->
+  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+    <div class="grid items-center gap-3 lg:grid-cols-2">
+      <div>
+        <h1 class="text-2xl font-bold dark:text-white">{{ clusterData.basics.name }}</h1>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          Created {{ formatDate(clusterData.creationDate) }}
+        </p>
+      </div>
+
+      <div class="flex gap-2 lg:justify-end">
+        <button
+          type="button"
+          (click)="openTerminal()"
+          class="btn-secondary inline-flex shrink-0 items-center transition-transform duration-200 ease-in-out hover:-translate-y-px"
+        >
+          <app-terminal-icon class="mr-2 h-4 w-4" /> Open terminal
+        </button>
+        <button
+          type="button"
+          (click)="downloadKubeconfig()"
+          class="btn-primary inline-flex shrink-0 items-center transition-transform duration-200 ease-in-out hover:-translate-y-px"
+        >
+          <app-download-icon class="mr-2 h-4 w-4" /> Download kubeconfig
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Content -->
+  <div class="space-y-6 p-6">
+    <!-- Basics Block -->
+    <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+      <h3 class="mb-4 text-lg font-medium dark:text-white">Basics</h3>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <dl>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
+          <dd class="mt-1 text-sm dark:text-white">{{ clusterData.basics.name }}</dd>
+        </dl>
+        <dl>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
+          <dd class="mt-1 text-sm dark:text-white">{{ clusterData.basics.region }}</dd>
+        </dl>
+        <dl>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
+          <dd class="mt-1">
+            <span
+              class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+              [class]="getStatusColor(clusterData.status)"
+            >
+              {{ clusterData.status }}
+            </span>
+          </dd>
+        </dl>
+        <dl>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
+          <dd class="mt-1 text-sm dark:text-white">
+            {{ clusterData.basics.kubernetesVersion }}
+            <button
+              type="button"
+              class="btn-light -my-0.5 ml-1 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
+            >
+              <app-upgrade-icon class="mr-1 h-3.5 w-3.5" /> Upgrade
+            </button>
+          </dd>
+        </dl>
+      </div>
+    </div>
+
+    <!-- Resource Usage Stats -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <!-- Resource Usage Charts -->
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">Resource usage</h3>
+        <div class="space-y-4">
+          <!-- CPU Usage -->
+          <div>
+            <div class="mb-1 flex justify-between text-sm">
+              <span class="font-medium text-gray-700 dark:text-white">CPU</span>
+              <span class="text-gray-500 dark:text-gray-400"
+                >{{ clusterData.resourceUsage.cpu.used }} /
+                {{ clusterData.resourceUsage.cpu.limit }}
+                {{ clusterData.resourceUsage.cpu.unit }}</span
+              >
+            </div>
+            <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+              <div
+                class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                [class]="
+                  getUsageColor(
+                    getUsagePercentage(
+                      clusterData.resourceUsage.cpu.used,
+                      clusterData.resourceUsage.cpu.limit
+                    )
+                  )
+                "
+                [style.width.%]="
+                  getUsagePercentage(
+                    clusterData.resourceUsage.cpu.used,
+                    clusterData.resourceUsage.cpu.limit
+                  )
+                "
+              ></div>
+            </div>
+            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{
+                getUsagePercentage(
+                  clusterData.resourceUsage.cpu.used,
+                  clusterData.resourceUsage.cpu.limit
+                )
+              }}% used
+            </div>
+          </div>
+
+          <!-- Memory Usage -->
+          <div>
+            <div class="mb-1 flex justify-between text-sm">
+              <span class="font-medium text-gray-700 dark:text-white">Memory</span>
+              <span class="text-gray-500 dark:text-gray-400"
+                >{{ clusterData.resourceUsage.memory.used }} /
+                {{ clusterData.resourceUsage.memory.limit }}
+                {{ clusterData.resourceUsage.memory.unit }}</span
+              >
+            </div>
+            <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+              <div
+                class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                [class]="
+                  getUsageColor(
+                    getUsagePercentage(
+                      clusterData.resourceUsage.memory.used,
+                      clusterData.resourceUsage.memory.limit
+                    )
+                  )
+                "
+                [style.width.%]="
+                  getUsagePercentage(
+                    clusterData.resourceUsage.memory.used,
+                    clusterData.resourceUsage.memory.limit
+                  )
+                "
+              ></div>
+            </div>
+            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{
+                getUsagePercentage(
+                  clusterData.resourceUsage.memory.used,
+                  clusterData.resourceUsage.memory.limit
+                )
+              }}% used
+            </div>
+          </div>
+
+          <!-- Disk Usage -->
+          <div>
+            <div class="mb-1 flex justify-between text-sm">
+              <span class="font-medium text-gray-700 dark:text-white">Disk</span>
+              <span class="text-gray-500 dark:text-gray-400"
+                >{{ clusterData.resourceUsage.disk.used }} /
+                {{ clusterData.resourceUsage.disk.limit }}
+                {{ clusterData.resourceUsage.disk.unit }}</span
+              >
+            </div>
+            <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+              <div
+                class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                [class]="
+                  getUsageColor(
+                    getUsagePercentage(
+                      clusterData.resourceUsage.disk.used,
+                      clusterData.resourceUsage.disk.limit
+                    )
+                  )
+                "
+                [style.width.%]="
+                  getUsagePercentage(
+                    clusterData.resourceUsage.disk.used,
+                    clusterData.resourceUsage.disk.limit
+                  )
+                "
+              ></div>
+            </div>
+            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{
+                getUsagePercentage(
+                  clusterData.resourceUsage.disk.used,
+                  clusterData.resourceUsage.disk.limit
+                )
+              }}% used
+            </div>
+          </div>
+
+          <!-- Pods Usage -->
+          <div>
+            <div class="mb-1 flex justify-between text-sm">
+              <span class="font-medium text-gray-700 dark:text-white">Pods</span>
+              <span class="text-gray-500 dark:text-gray-400"
+                >{{ clusterData.resourceUsage.pods.used }} /
+                {{ clusterData.resourceUsage.pods.limit }}
+                {{ clusterData.resourceUsage.pods.unit }}</span
+              >
+            </div>
+            <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+              <div
+                class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                [class]="
+                  getUsageColor(
+                    getUsagePercentage(
+                      clusterData.resourceUsage.pods.used,
+                      clusterData.resourceUsage.pods.limit
+                    )
+                  )
+                "
+                [style.width.%]="
+                  getUsagePercentage(
+                    clusterData.resourceUsage.pods.used,
+                    clusterData.resourceUsage.pods.limit
+                  )
+                "
+              ></div>
+            </div>
+            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{
+                getUsagePercentage(
+                  clusterData.resourceUsage.pods.used,
+                  clusterData.resourceUsage.pods.limit
+                )
+              }}% used
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">Recent activity</h3>
+        <div class="max-h-80 space-y-3 overflow-y-auto" tabindex="0">
+          @for (activity of clusterData.activity; track activity.timestamp) {
+            <div
+              class="relative flex items-start space-x-3 after:absolute after:top-6 after:bottom-0 after:left-1 after:w-px after:bg-gray-300 after:content-[''] last:after:hidden dark:after:bg-gray-600"
+            >
+              <div class="flex-0">
+                <div class="mt-2 h-2.25 w-2.25 rounded-full bg-indigo-500 dark:bg-indigo-400"></div>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium dark:text-white">{{ activity.action }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ activity.details }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {{ formatDate(activity.timestamp) }}
+                </p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Members and Node Pools -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <!-- Members -->
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">
+          Members
+          <a
+            routerLink="/project-members"
+            class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
+          >
+            <app-edit-icon class="mr-1 h-4 w-4" /> Edit
+          </a>
+        </h3>
+        <div class="space-y-3">
+          @for (member of clusterData.members; track member.name) {
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="flex-0">
+                  <div
+                    class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900"
+                  >
+                    <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">{{
+                      member.name.charAt(0)
+                    }}</span>
+                  </div>
+                </div>
+                <p class="text-sm font-medium dark:text-white">{{ member.name }}</p>
+              </div>
+              <div class="text-right">
+                <span
+                  class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
+                  [ngClass]="{
+                    'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200':
+                      member.role === 'admin',
+                    'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200':
+                      member.role === 'edit',
+                    'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200':
+                      member.role === 'view',
+                  }"
+                >
+                  {{ member.role }}
+                </span>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Last active: {{ formatDate(member.lastActive) }}
+                </p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Node Pools -->
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">
+          Node pools
+          <a
+            routerLink="/cluster-nodes"
+            class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
+          >
+            <app-edit-icon class="mr-1 h-4 w-4" /> Edit
+          </a>
+        </h3>
+        <div class="space-y-4">
+          @for (pool of clusterData.nodePools; track pool.name) {
+            <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800">
+              <div class="mb-2 flex items-center justify-between">
+                <h4 class="text-sm font-medium dark:text-white">{{ pool.name }}</h4>
+                <span
+                  class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
+                  [class]="
+                    pool.status === 'healthy'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'
+                      : 'darK:bg-red-950 bg-red-100 text-red-800 dark:text-red-200'
+                  "
+                >
+                  {{ pool.status }}
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span class="text-gray-500 dark:text-gray-400">Type:</span>
+                  <span class="ml-1 dark:text-white">{{ pool.nodeType }}</span>
+                </div>
+                <!-- <div>
+                <span class="text-gray-500 dark:text-gray-400">Version:</span>
+                <span class="ml-1">{{ pool.version }}</span>
+              </div> -->
+                <div class="text-right">
+                  <span class="text-gray-500 dark:text-gray-400">Nodes:</span>
+                  <span class="ml-1 dark:text-white"
+                    >{{ pool.currentNodes }} (min: {{ pool.minNodes }} - max:
+                    {{ pool.maxNodes }})</span
+                  >
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Plugins Block -->
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">
+          Plugins
+          <a
+            routerLink="/cluster-plugins"
+            class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
+          >
+            <app-edit-icon class="mr-1 h-4 w-4" /> Edit
+          </a>
+        </h3>
+        <dl>
+          <dt class="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">Preset</dt>
+          <dd class="mb-2 text-sm dark:text-white">{{ clusterData.plugins.preset }}</dd>
+          <dt class="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">Description</dt>
+          <dd class="text-sm dark:text-white">{{ clusterData.plugins.description }}</dd>
+        </dl>
+      </div>
+
+      <!-- Projects Block -->
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">
+          Projects
+          <a
+            routerLink="/projects"
+            class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
+          >
+            <app-edit-icon class="mr-1 h-4 w-4" /> Edit
+          </a>
+        </h3>
+        <div class="space-y-4">
+          @for (project of clusterData.projects; track $index) {
+            <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800">
+              <h4 class="mb-3 text-sm font-medium dark:text-white">{{ project.name }}</h4>
+              <dl>
+                <dt class="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  Namespaces
+                </dt>
+                <dd class="flex flex-wrap gap-1 text-sm">
+                  @for (namespace of project.namespaces; track namespace) {
+                    <span
+                      class="inline-flex items-center rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-950 dark:text-blue-200"
+                    >
+                      {{ namespace }}
+                    </span>
+                  }
+                </dd>
+              </dl>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
