@@ -1,0 +1,57 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: discussion
+
+= FUN-1 Fundament Update Note
+
+== Introduction
+
+A FUN about FUNs. This document describes the FUN process itself.
+
+FUNs are inspired by https://rfd.shared.oxide.computer/rfd/0001[Oxide RFD-1] and the IETF Request for Comments tradition. From https://www.rfc-editor.org/rfc/rfc3[RFC 3]:
+
+[quote]
+The content of a note may be any thought, suggestion, etc. related to the software or other aspect of the network.
+
+== Philosophy
+
+The goal is to encourage rigorous thinking while lowering barriers to sharing nascent ideas. Rather than demanding polish, FUNs embrace timely, unfinished thoughts. This eases the natural hesitancy people feel about publishing unpolished work.
+
+FUNs serve dual purposes: they enable rapid iteration on rough ideas while creating a permanent repository of established thinking. Some FUNs may be quick discussions, others become authoritative references.
+
+Anyone can propose a FUN about technical decisions, API changes, architecture, or processes. Good ideas come from everywhere and deserve a structured forum.
+
+== Why FUNs?
+
+* Public discussion of new ideas
+* Documentation of decisions made / historical record
+* Serves as reference / specification for implementation.
+
+== Writing a FUN
+
+A FUN doesn't have to be strong from the start. Start with a rough idea, a few bullet points, or just a question. The document can grow and improve through discussion.
+
+As a FUN matures, it may evolve to:
+
+* Document options with their benefits and drawbacks
+* Include reasoning supported by data or references
+* Make decisions transparent to future team members
+
+But none of this is required upfront.
+
+== States
+
+* `prediscussion` - Initial draft, not yet discussed
+* `discussion` - Actively being discussed
+* `published` - Approved
+* `committed` - Implementation delivered
+* `abandoned` - No longer being pursued
+
+== Related proposal schemes
+
+* https://rfd.shared.oxide.computer/rfd/0001[Oxide RFDs]
+* https://github.com/kubernetes/enhancements[Kubernetes Enhancement Proposals]
+* https://github.com/gardener/gardener/tree/master/docs/proposals[Gardener Proposals]
+* https://metal-stack.io/docs/enhancement-proposals[metal-stack Enhancement Proposals]
