@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, AfterViewInit, inject, OnInit } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -24,6 +24,9 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
   
   // Cluster ID from route (if editing existing cluster)
   clusterId: string | null = null;
+  
+  // Error message for cluster operations (using signal for automatic reactivity)
+  errorMessage = signal<string | null>(null);
 
   // Dropdown options based on Gardener
   regions = [
@@ -74,9 +77,10 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
         region: cluster.region,
         kubernetesVersion: cluster.kubernetesVersion,
       });
+      this.errorMessage.set(null);
     } catch (error) {
       console.error('Failed to load cluster data:', error);
-      // TODO: Show error message to user
+      this.errorMessage.set('Failed to load cluster data. Please try again.');
     }
   }
 
@@ -105,24 +109,40 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
     }
 
     const clusterData = this.clusterForm.value;
+    this.errorMessage.set(null);
     
     try {
-      const response = await this.organizationApiService.createCluster({
-        name: clusterData.clusterName,
-        region: clusterData.region,
-        kubernetesVersion: clusterData.kubernetesVersion,
-      });
-      
-      console.log('Cluster created successfully:', response);
-      
-      // Extract clusterId from response
-      const clusterId = response.clusterId;
-      
-      // Navigate to the next step with clusterId
-      this.router.navigate(['/add-cluster', clusterId, 'nodes']);
+      if (this.clusterId) {
+        // Update existing cluster
+        await this.organizationApiService.updateCluster({
+          clusterId: this.clusterId,
+          kubernetesVersion: clusterData.kubernetesVersion,
+        });
+        
+        console.log('Cluster updated successfully');
+        
+        // Navigate to the next step with existing clusterId
+        this.router.navigate(['/add-cluster', this.clusterId, 'nodes']);
+      } else {
+        // Create new cluster
+        const response = await this.organizationApiService.createCluster({
+          name: clusterData.clusterName,
+          region: clusterData.region,
+          kubernetesVersion: clusterData.kubernetesVersion,
+        });
+        
+        console.log('Cluster created successfully:', response);
+        
+        // Extract clusterId from response
+        const clusterId = response.clusterId;
+        
+        // Navigate to the next step with clusterId
+        this.router.navigate(['/add-cluster', clusterId, 'nodes']);
+      }
     } catch (error) {
-      console.error('Failed to create cluster:', error);
-      // TODO: Show error message to user
+      console.error('Failed to create/update cluster:', error);
+      const action = this.clusterId ? 'update' : 'create';
+      this.errorMessage.set(`Failed to ${action} cluster. Please check your input and try again.`);
     }
   }
 

@@ -55,6 +55,16 @@ export interface CreateClusterResponse {
   status: string;
 }
 
+export interface UpdateClusterRequest {
+  clusterId: string;
+  kubernetesVersion?: string;
+  nodePools?: NodePoolSpec[];
+}
+
+export interface UpdateClusterResponse {
+  cluster: ClusterDetails;
+}
+
 export interface GetClusterRequest {
   clusterId: string;
 }
@@ -126,6 +136,11 @@ export class OrganizationApiService {
 
   async createCluster(request: CreateClusterRequest): Promise<CreateClusterResponse> {
     return this.connectRpc<CreateClusterResponse>(CONFIG.clusterServicePath, 'CreateCluster', request);
+  }
+
+  async updateCluster(request: UpdateClusterRequest): Promise<ClusterDetails> {
+    const response = await this.connectRpc<UpdateClusterResponse>(CONFIG.clusterServicePath, 'UpdateCluster', request);
+    return response.cluster;
   }
 
   async getCluster(clusterId: string): Promise<ClusterDetails> {
