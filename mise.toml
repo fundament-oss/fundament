@@ -24,8 +24,11 @@ k3d = "5.7.5"
 "go:connectrpc.com/connect/cmd/protoc-gen-connect-go" = "1.19.1"
 
 # Go
-
 go = "1.25.5"
 golangci-lint = "2.7.2"
 "ubi:sqlc-dev/sqlc" = "1.30.0"
 "go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen" = "2.4.1"
+
+# Console Frontend
+node = "24"
+pnpm = "10.27.0"

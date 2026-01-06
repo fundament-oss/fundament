@@ -11,7 +11,7 @@
     "lint": "ng lint",
     "format": "prettier --write ."
   },
-  "packageManager": "pnpm@10.24.0",
+  "packageManager": "pnpm@10.27.0",
   "prettier": {
     "printWidth": 100,
     "singleQuote": true,
