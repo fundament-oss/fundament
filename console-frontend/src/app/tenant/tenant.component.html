@@ -9,21 +9,21 @@
 
   <div class="p-6">
     <!-- Error Message -->
-    @if (error) {
+    @if (error()) {
       <div class="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-950">
-        <p class="text-sm text-red-800 dark:text-red-200">{{ error }}</p>
+        <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
       </div>
     }
 
     <!-- Loading State -->
-    @if (loading) {
+    @if (loading()) {
       <div class="py-8 text-center">
         <p class="text-gray-600 dark:text-gray-300">Loading tenant...</p>
       </div>
     }
 
     <!-- Tenant Information -->
-    @if (tenant) {
+    @if (tenant()) {
       <div class="space-y-6">
         <!-- Tenant ID -->
         <div>
@@ -33,19 +33,20 @@
           <p
             class="rounded-md bg-gray-50 px-4 py-2 font-mono text-sm text-gray-900 dark:bg-gray-900 dark:text-white"
           >
-            {{ tenant.id }}
+            {{ tenant()!.id }}
           </p>
         </div>
 
         <!-- Tenant Name -->
         <div>
           <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Name</div>
-          @if (isEditing) {
+          @if (isEditing()) {
             <div class="flex gap-2">
               <input
                 #nameInput
                 type="text"
-                [(ngModel)]="editingName"
+                [ngModel]="editingName()"
+                (ngModelChange)="editingName.set($event)"
                 class="block flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                 (keyup.enter)="saveEdit()"
                 (keyup.escape)="cancelEdit()"
@@ -53,7 +54,7 @@
               <button
                 type="button"
                 (click)="saveEdit()"
-                [disabled]="loading"
+                [disabled]="loading()"
                 class="btn-primary inline-flex shrink-0 items-center"
               >
                 <app-checkmark-icon class="mr-1.5 h-4 w-4" /> Save
@@ -61,7 +62,7 @@
               <button
                 type="button"
                 (click)="cancelEdit()"
-                [disabled]="loading"
+                [disabled]="loading()"
                 class="btn-secondary inline-flex shrink-0 items-center"
               >
                 <app-close-icon class="mr-1.5 h-4 w-4" /> Cancel
@@ -69,11 +70,11 @@
             </div>
           } @else {
             <div class="flex items-center justify-between">
-              <p class="text-sm text-gray-900 dark:text-white">{{ tenant.name }}</p>
+              <p class="text-sm text-gray-900 dark:text-white">{{ tenant()!.name }}</p>
               <button
                 type="button"
                 (click)="startEdit()"
-                [disabled]="loading"
+                [disabled]="loading()"
                 class="btn-light inline-flex shrink-0 items-center"
               >
                 <app-edit-icon class="mr-1.5 h-4 w-4" /> Rename
@@ -86,14 +87,14 @@
         <div>
           <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Created</div>
           <p class="text-sm text-gray-900 dark:text-white">
-            {{ formatDate(tenant.created) }}
+            {{ formatDate(tenant()!.created) }}
           </p>
         </div>
       </div>
     }
 
     <!-- Empty State -->
-    @if (!loading && !tenant && !error) {
+    @if (!loading() && !tenant() && !error()) {
       <div class="py-8 text-center">
         <p class="text-gray-600 dark:text-gray-300">No tenant information available</p>
       </div>

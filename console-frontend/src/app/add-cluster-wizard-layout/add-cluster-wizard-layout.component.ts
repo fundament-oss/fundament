@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CheckmarkIconComponent } from '../icons';
@@ -15,7 +15,6 @@ interface ProgressStep {
 })
 export class AddClusterWizardLayoutComponent {
   private router = inject(Router);
-  private cdr = inject(ChangeDetectorRef);
 
   steps: ProgressStep[] = [
     { name: 'Basics', route: '/add-cluster' },
@@ -24,8 +23,12 @@ export class AddClusterWizardLayoutComponent {
     { name: 'Summary', route: '/add-cluster/summary' },
   ];
 
-  get currentStepIndex(): number {
-    const currentRoute = this.router.url;
+  // Signal to track route changes
+  private routeSignal = signal(this.router.url);
+
+  // Computed signal for current step index
+  currentStepIndex = computed(() => {
+    const currentRoute = this.routeSignal();
     // Find the last matching step (most specific route)
     // e.g., /add-cluster/nodes should match /add-cluster/nodes, not /add-cluster
     for (let i = this.steps.length - 1; i >= 0; i--) {
@@ -34,43 +37,41 @@ export class AddClusterWizardLayoutComponent {
       }
     }
     return -1;
-  }
+  });
 
   onActivate() {
-    this.cdr.markForCheck();
+    // Update the route signal when a new route is activated
+    this.routeSignal.set(this.router.url);
   }
 
-  get currentStep() {
-    return this.steps[this.currentStepIndex];
-  }
-
-  get isFirstStep(): boolean {
-    return this.currentStepIndex === 0;
-  }
-
-  get isLastStep(): boolean {
-    return this.currentStepIndex === this.steps.length - 1;
-  }
-
-  get previousRoute(): string | null {
-    if (this.isFirstStep) return null;
-    return this.steps[this.currentStepIndex - 1].route;
-  }
-
-  get nextRoute(): string | null {
-    if (this.isLastStep) return null;
-    return this.steps[this.currentStepIndex + 1].route;
-  }
+  // Computed signals for derived state
+  currentStep = computed(() => this.steps[this.currentStepIndex()]);
+  
+  isFirstStep = computed(() => this.currentStepIndex() === 0);
+  
+  isLastStep = computed(() => this.currentStepIndex() === this.steps.length - 1);
+  
+  previousRoute = computed(() => {
+    if (this.isFirstStep()) return null;
+    return this.steps[this.currentStepIndex() - 1].route;
+  });
+  
+  nextRoute = computed(() => {
+    if (this.isLastStep()) return null;
+    return this.steps[this.currentStepIndex() + 1].route;
+  });
 
   onPrevious() {
-    if (this.previousRoute) {
-      this.router.navigate([this.previousRoute]);
+    const prev = this.previousRoute();
+    if (prev) {
+      this.router.navigate([prev]);
     }
   }
 
   onNext() {
-    if (this.nextRoute) {
-      this.router.navigate([this.nextRoute]);
+    const next = this.nextRoute();
+    if (next) {
+      this.router.navigate([next]);
     }
   }
 
@@ -79,10 +80,10 @@ export class AddClusterWizardLayoutComponent {
   }
 
   isCompleted(index: number): boolean {
-    return index < this.currentStepIndex;
+    return index < this.currentStepIndex();
   }
 
   isActive(index: number): boolean {
-    return index === this.currentStepIndex;
+    return index === this.currentStepIndex();
   }
 }
