@@ -7,6 +7,7 @@ import {
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
 import { ArrowRightIconComponent } from '../icons';
+import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 
 @Component({
   selector: 'app-add-cluster-nodes',
@@ -17,6 +18,7 @@ import { ArrowRightIconComponent } from '../icons';
 export class AddClusterNodesComponent {
   private titleService = inject(TitleService);
   private router = inject(Router);
+  private stateService = inject(ClusterWizardStateService);
 
   constructor() {
     this.titleService.setTitle('Add cluster nodes');
@@ -25,8 +27,11 @@ export class AddClusterNodesComponent {
   onFormSubmit(data: { nodePools: NodePoolData[] }) {
     console.log('Creating cluster with data:', data);
 
-    // For now, just navigate to the next step
-    // In a real app, this would make an API call
+    // Save node pools to state
+    this.stateService.updateNodePools(data.nodePools);
+    this.stateService.markStepCompleted(1);
+
+    // Navigate to the next step
     this.router.navigate(['/add-cluster/plugins']);
   }
 }

@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { ArrowRightIconComponent } from '../icons';
+import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 
 @Component({
   selector: 'app-add-cluster-plugins',
@@ -14,6 +15,7 @@ import { ArrowRightIconComponent } from '../icons';
 export class AddClusterPluginsComponent {
   private titleService = inject(TitleService);
   private router = inject(Router);
+  private stateService = inject(ClusterWizardStateService);
 
   constructor() {
     this.titleService.setTitle('Add cluster plugins');
@@ -22,6 +24,14 @@ export class AddClusterPluginsComponent {
   onFormSubmit(data: { preset: string; plugins: string[] }) {
     console.log('Creating cluster with data:', data);
 
+    // Save plugins to state
+    this.stateService.updatePlugins({
+      preset: data.preset,
+      plugins: data.plugins,
+    });
+    this.stateService.markStepCompleted(2);
+
+    // Navigate to the next step
     this.router.navigate(['/add-cluster/summary']);
   }
 }

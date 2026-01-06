@@ -14,16 +14,16 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <dl>
         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
-        <dd class="mt-1 text-sm dark:text-white">{{ clusterSummary.basics.name }}</dd>
+        <dd class="mt-1 text-sm dark:text-white">{{ state().clusterName || 'N/A' }}</dd>
       </dl>
       <dl>
         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
-        <dd class="mt-1 text-sm dark:text-white">{{ clusterSummary.basics.region }}</dd>
+        <dd class="mt-1 text-sm dark:text-white">{{ state().region || 'N/A' }}</dd>
       </dl>
       <dl>
         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
         <dd class="mt-1 text-sm dark:text-white">
-          {{ clusterSummary.basics.kubernetesVersion }}
+          {{ state().kubernetesVersion || 'N/A' }}
         </dd>
       </dl>
     </div>
@@ -32,70 +32,64 @@
   <!-- Node Pools Block -->
   <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
     <h3 class="mb-4 text-lg font-medium dark:text-white">Node pools</h3>
-    <div class="space-y-4">
-      @for (nodePool of clusterSummary.nodePools; track $index) {
-        <div
-          class="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900"
-        >
-          <h4 class="mb-3 text-sm font-medium dark:text-white">{{ nodePool.name }}</h4>
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <dl>
-              <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Machine type</dt>
-              <dd class="mt-1 text-sm dark:text-white">{{ nodePool.machineType }}</dd>
-            </dl>
-            <dl>
-              <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Min autoscaling</dt>
-              <dd class="mt-1 text-sm dark:text-white">{{ nodePool.autoscaleMin }} nodes</dd>
-            </dl>
-            <dl>
-              <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Max autoscaling</dt>
-              <dd class="mt-1 text-sm dark:text-white">{{ nodePool.autoscaleMax }} nodes</dd>
-            </dl>
+    @if (state().nodePools && state().nodePools!.length > 0) {
+      <div class="space-y-4">
+        @for (nodePool of state().nodePools; track nodePool.name) {
+          <div
+            class="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900"
+          >
+            <h4 class="mb-3 text-sm font-medium dark:text-white">{{ nodePool.name }}</h4>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <dl>
+                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Machine type</dt>
+                <dd class="mt-1 text-sm dark:text-white">{{ nodePool.machineType }}</dd>
+              </dl>
+              <dl>
+                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Min autoscaling</dt>
+                <dd class="mt-1 text-sm dark:text-white">{{ nodePool.autoscaleMin }} nodes</dd>
+              </dl>
+              <dl>
+                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Max autoscaling</dt>
+                <dd class="mt-1 text-sm dark:text-white">{{ nodePool.autoscaleMax }} nodes</dd>
+              </dl>
+            </div>
           </div>
-        </div>
-      }
-    </div>
+        }
+      </div>
+    } @else {
+      <p class="text-sm text-gray-500 dark:text-gray-400">No node pools configured</p>
+    }
   </div>
 
   <!-- Plugins Block -->
   <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
     <h3 class="mb-4 text-lg font-medium dark:text-white">Plugins</h3>
-    <div class="space-y-2">
-      <dl>
-        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Preset</dt>
-        <dd class="mt-1 text-sm dark:text-white">{{ clusterSummary.plugins.preset }}</dd>
-      </dl>
-      <dl>
-        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Description</dt>
-        <dd class="mt-1 text-sm dark:text-white">{{ clusterSummary.plugins.description }}</dd>
-      </dl>
-    </div>
-  </div>
-
-  <!-- Projects Block -->
-  <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-    <h3 class="mb-4 text-lg font-medium dark:text-white">Projects</h3>
-    <div class="grid gap-4 sm:grid-cols-2">
-      @for (project of clusterSummary.projects; track $index) {
-        <div
-          class="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900"
-        >
-          <h4 class="mb-3 text-sm font-medium dark:text-white">{{ project.name }}</h4>
+    @if (state().preset || (state().plugins && state().plugins!.length > 0)) {
+      <div class="space-y-2">
+        @if (state().preset) {
           <dl>
-            <dt class="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">Namespaces</dt>
-            <dd class="flex flex-wrap gap-1 text-sm">
-              @for (namespace of project.namespaces; track namespace) {
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Preset</dt>
+            <dd class="mt-1 text-sm dark:text-white">{{ state().preset }}</dd>
+          </dl>
+        }
+        @if (state().plugins && state().plugins!.length > 0) {
+          <dl>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Selected plugins</dt>
+            <dd class="mt-2 flex flex-wrap gap-1">
+              @for (plugin of state().plugins; track plugin) {
                 <span
-                  class="inline-flex items-center rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-950 dark:text-blue-200"
+                  class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
                 >
-                  {{ namespace }}
+                  {{ plugin }}
                 </span>
               }
             </dd>
           </dl>
-        </div>
-      }
-    </div>
+        }
+      </div>
+    } @else {
+      <p class="text-sm text-gray-500 dark:text-gray-400">No plugins configured</p>
+    }
   </div>
 
   <!-- Creation Notice -->

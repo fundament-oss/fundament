@@ -1,20 +1,23 @@
-import { Component, ViewChild, ElementRef, AfterViewInit, inject } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
+import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
+
 @Component({
   selector: 'app-add-cluster',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './add-cluster.component.html',
 })
-export class AddClusterComponent implements AfterViewInit {
+export class AddClusterComponent implements AfterViewInit, OnInit {
   @ViewChild('clusterNameInput') clusterNameInput!: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
+  private stateService = inject(ClusterWizardStateService);
 
   // Form
   clusterForm: FormGroup;
@@ -43,6 +46,18 @@ export class AddClusterComponent implements AfterViewInit {
       region: ['nl1', Validators.required],
       kubernetesVersion: ['1.34.x', Validators.required],
     });
+  }
+
+  ngOnInit(): void {
+    // Load existing state if available
+    const state = this.stateService.getState();
+    if (state.clusterName) {
+      this.clusterForm.patchValue({
+        clusterName: state.clusterName,
+        region: state.region,
+        kubernetesVersion: state.kubernetesVersion,
+      });
+    }
   }
 
   ngAfterViewInit() {
@@ -77,8 +92,15 @@ export class AddClusterComponent implements AfterViewInit {
     const clusterData = this.clusterForm.value;
     console.log('Creating cluster with data:', clusterData);
 
-    // For now, just navigate to the next step
-    // In a real app, this would make an API call
+    // Save state
+    this.stateService.updateBasicInfo({
+      clusterName: clusterData.clusterName,
+      region: clusterData.region,
+      kubernetesVersion: clusterData.kubernetesVersion,
+    });
+    this.stateService.markStepCompleted(0);
+
+    // Navigate to the next step
     this.router.navigate(['/add-cluster/nodes']);
   }
 

@@ -1,7 +1,9 @@
-import { Component, inject, computed, signal } from '@angular/core';
+import { Component, inject, computed, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CheckmarkIconComponent } from '../icons';
+import { ClusterWizardStateService } from './cluster-wizard-state.service';
+
 interface ProgressStep {
   name: string;
   route: string;
@@ -13,8 +15,9 @@ interface ProgressStep {
   imports: [CommonModule, RouterOutlet, RouterLink, CheckmarkIconComponent],
   templateUrl: './add-cluster-wizard-layout.component.html',
 })
-export class AddClusterWizardLayoutComponent {
+export class AddClusterWizardLayoutComponent implements OnDestroy {
   private router = inject(Router);
+  protected stateService = inject(ClusterWizardStateService);
 
   steps: ProgressStep[] = [
     { name: 'Basics', route: '/add-cluster' },
@@ -38,6 +41,11 @@ export class AddClusterWizardLayoutComponent {
     }
     return -1;
   });
+
+  ngOnDestroy(): void {
+    // Reset state when leaving the wizard
+    this.stateService.reset();
+  }
 
   onActivate() {
     // Update the route signal when a new route is activated
@@ -80,10 +88,19 @@ export class AddClusterWizardLayoutComponent {
   }
 
   isCompleted(index: number): boolean {
-    return index < this.currentStepIndex();
+    return this.stateService.isStepCompleted(index);
   }
 
   isActive(index: number): boolean {
     return index === this.currentStepIndex();
+  }
+
+  canNavigate(index: number): boolean {
+    // First step is always accessible
+    if (index === 0) {
+      return true;
+    }
+    // Other steps require first step to be completed
+    return this.stateService.isFirstStepCompleted();
   }
 }
