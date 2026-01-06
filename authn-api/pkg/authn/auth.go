@@ -223,7 +223,7 @@ func (s *AuthnServer) buildAuthCookie(token string) *http.Cookie {
 		MaxAge:   int(s.config.TokenExpiry.Seconds()),
 		HttpOnly: true,
 		Secure:   s.config.CookieSecure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 	}
 }
 
@@ -237,7 +237,7 @@ func (s *AuthnServer) buildClearAuthCookie() *http.Cookie {
 		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   s.config.CookieSecure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 	}
 }
 
