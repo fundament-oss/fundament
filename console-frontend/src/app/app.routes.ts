@@ -19,26 +19,21 @@ export const routes: Routes = [
           import('./add-cluster/add-cluster.component').then((m) => m.AddClusterComponent),
       },
       {
-        path: ':clusterId',
-        loadComponent: () =>
-          import('./add-cluster/add-cluster.component').then((m) => m.AddClusterComponent),
-      },
-      {
-        path: ':clusterId/nodes',
+        path: 'nodes',
         loadComponent: () =>
           import('./add-cluster-nodes/add-cluster-nodes.component').then(
             (m) => m.AddClusterNodesComponent,
           ),
       },
       {
-        path: ':clusterId/plugins',
+        path: 'plugins',
         loadComponent: () =>
           import('./add-cluster-plugins/add-cluster-plugins.component').then(
             (m) => m.AddClusterPluginsComponent,
           ),
       },
       {
-        path: ':clusterId/summary',
+        path: 'summary',
         loadComponent: () =>
           import('./add-cluster-summary/add-cluster-summary.component').then(
             (m) => m.AddClusterSummaryComponent,

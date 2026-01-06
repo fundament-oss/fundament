@@ -1,41 +1,23 @@
-import {
-  Component,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
-  inject,
-  OnInit,
-  signal,
-} from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
-import { OrganizationApiService } from '../organization-api.service';
-import { ErrorIconComponent } from '../icons';
 @Component({
   selector: 'app-add-cluster',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ErrorIconComponent],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './add-cluster.component.html',
 })
-export class AddClusterComponent implements AfterViewInit, OnInit {
+export class AddClusterComponent implements AfterViewInit {
   @ViewChild('clusterNameInput') clusterNameInput!: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
   private router = inject(Router);
-  private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);
-  private organizationApiService = inject(OrganizationApiService);
 
   // Form
   clusterForm: FormGroup;
-
-  // Cluster ID from route (if editing existing cluster)
-  clusterId: string | null = null;
-
-  // Error message for cluster operations (using signal for automatic reactivity)
-  errorMessage = signal<string | null>(null);
 
   // Dropdown options based on Gardener
   regions = [
@@ -63,34 +45,9 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
     });
   }
 
-  async ngOnInit() {
-    // Get clusterId from route if it exists
-    this.clusterId = this.route.snapshot.paramMap.get('clusterId');
-
-    // If we have a clusterId, fetch the cluster data
-    if (this.clusterId) {
-      await this.loadClusterData(this.clusterId);
-    }
-  }
-
   ngAfterViewInit() {
     // Focus the cluster name input after the view is initialized
     this.clusterNameInput.nativeElement.focus();
-  }
-
-  private async loadClusterData(clusterId: string) {
-    try {
-      const cluster = await this.organizationApiService.getCluster(clusterId);
-      this.clusterForm.patchValue({
-        clusterName: cluster.name,
-        region: cluster.region,
-        kubernetesVersion: cluster.kubernetesVersion,
-      });
-      this.errorMessage.set(null);
-    } catch (error) {
-      console.error('Failed to load cluster data:', error);
-      this.errorMessage.set('Failed to load cluster data. Please try again.');
-    }
   }
 
   get clusterName() {
@@ -110,7 +67,7 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
     return '';
   }
 
-  async onSubmit() {
+  onSubmit() {
     if (this.clusterForm.invalid) {
       this.clusterForm.markAllAsTouched();
       this.scrollToFirstError();
@@ -118,41 +75,11 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
     }
 
     const clusterData = this.clusterForm.value;
-    this.errorMessage.set(null);
+    console.log('Creating cluster with data:', clusterData);
 
-    try {
-      if (this.clusterId) {
-        // Update existing cluster
-        await this.organizationApiService.updateCluster({
-          clusterId: this.clusterId,
-          kubernetesVersion: clusterData.kubernetesVersion,
-        });
-
-        console.log('Cluster updated successfully');
-
-        // Navigate to the next step with existing clusterId
-        this.router.navigate(['/add-cluster', this.clusterId, 'nodes']);
-      } else {
-        // Create new cluster
-        const response = await this.organizationApiService.createCluster({
-          name: clusterData.clusterName,
-          region: clusterData.region,
-          kubernetesVersion: clusterData.kubernetesVersion,
-        });
-
-        console.log('Cluster created successfully:', response);
-
-        // Extract clusterId from response
-        const clusterId = response.clusterId;
-
-        // Navigate to the next step with clusterId
-        this.router.navigate(['/add-cluster', clusterId, 'nodes']);
-      }
-    } catch (error) {
-      console.error('Failed to create/update cluster:', error);
-      const action = this.clusterId ? 'update' : 'create';
-      this.errorMessage.set(`Failed to ${action} cluster. Please check your input and try again.`);
-    }
+    // For now, just navigate to the next step
+    // In a real app, this would make an API call
+    this.router.navigate(['/add-cluster/nodes']);
   }
 
   private scrollToFirstError() {

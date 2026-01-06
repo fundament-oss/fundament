@@ -8,20 +8,6 @@
 
 <!-- Form -->
 <form [formGroup]="clusterForm" (ngSubmit)="onSubmit()" class="space-y-6 px-6 py-6">
-  <!-- Error Message -->
-  @if (errorMessage()) {
-    <div class="rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
-      <div class="flex">
-        <div class="flex-0">
-          <app-error-icon class="h-5 w-5 text-rose-400 dark:text-rose-500" />
-        </div>
-        <div class="ml-3">
-          <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
-        </div>
-      </div>
-    </div>
-  }
-
   <!-- Cluster Name -->
   <div>
     <label for="clusterName" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">

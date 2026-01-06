@@ -17,67 +17,23 @@ export class AddClusterWizardLayoutComponent {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
-  get steps(): ProgressStep[] {
-    const cid = this.clusterId;
-    if (cid) {
-      return [
-        { name: 'Basics', route: `/add-cluster/${cid}` },
-        { name: 'Worker nodes', route: `/add-cluster/${cid}/nodes` },
-        { name: 'Plugins', route: `/add-cluster/${cid}/plugins` },
-        { name: 'Summary', route: `/add-cluster/${cid}/summary` },
-      ];
-    }
-    return [
-      { name: 'Basics', route: '/add-cluster' },
-      { name: 'Worker nodes', route: '/add-cluster/nodes' },
-      { name: 'Plugins', route: '/add-cluster/plugins' },
-      { name: 'Summary', route: '/add-cluster/summary' },
-    ];
-  }
+  steps: ProgressStep[] = [
+    { name: 'Basics', route: '/add-cluster' },
+    { name: 'Worker nodes', route: '/add-cluster/nodes' },
+    { name: 'Plugins', route: '/add-cluster/plugins' },
+    { name: 'Summary', route: '/add-cluster/summary' },
+  ];
 
   get currentStepIndex(): number {
     const currentRoute = this.router.url;
-
-    // Extract clusterId if present in the URL
-    const clusterIdMatch = currentRoute.match(/\/add-cluster\/([^/]+)/);
-    const hasClusterId =
-      clusterIdMatch &&
-      clusterIdMatch[1] !== 'nodes' &&
-      clusterIdMatch[1] !== 'plugins' &&
-      clusterIdMatch[1] !== 'summary';
-
-    // Check for exact matches first
-    if (
-      currentRoute === '/add-cluster' ||
-      (hasClusterId && currentRoute === `/add-cluster/${clusterIdMatch![1]}`)
-    ) {
-      return 0; // Basics
+    // Find the last matching step (most specific route)
+    // e.g., /add-cluster/nodes should match /add-cluster/nodes, not /add-cluster
+    for (let i = this.steps.length - 1; i >= 0; i--) {
+      if (currentRoute.startsWith(this.steps[i].route)) {
+        return i;
+      }
     }
-    if (currentRoute.includes('/nodes')) {
-      return 1; // Worker nodes
-    }
-    if (currentRoute.includes('/plugins')) {
-      return 2; // Plugins
-    }
-    if (currentRoute.includes('/summary')) {
-      return 3; // Summary
-    }
-
-    return 0; // Default to Basics
-  }
-
-  get clusterId(): string | null {
-    const currentRoute = this.router.url;
-    const clusterIdMatch = currentRoute.match(/\/add-cluster\/([^/]+)/);
-    if (
-      clusterIdMatch &&
-      clusterIdMatch[1] !== 'nodes' &&
-      clusterIdMatch[1] !== 'plugins' &&
-      clusterIdMatch[1] !== 'summary'
-    ) {
-      return clusterIdMatch[1];
-    }
-    return null;
+    return -1;
   }
 
   onActivate() {
