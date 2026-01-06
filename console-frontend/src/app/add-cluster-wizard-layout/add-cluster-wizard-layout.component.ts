@@ -46,16 +46,16 @@ export class AddClusterWizardLayoutComponent {
 
   // Computed signals for derived state
   currentStep = computed(() => this.steps[this.currentStepIndex()]);
-  
+
   isFirstStep = computed(() => this.currentStepIndex() === 0);
-  
+
   isLastStep = computed(() => this.currentStepIndex() === this.steps.length - 1);
-  
+
   previousRoute = computed(() => {
     if (this.isFirstStep()) return null;
     return this.steps[this.currentStepIndex() - 1].route;
   });
-  
+
   nextRoute = computed(() => {
     if (this.isLastStep()) return null;
     return this.steps[this.currentStepIndex() + 1].route;

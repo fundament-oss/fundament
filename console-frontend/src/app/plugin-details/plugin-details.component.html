@@ -53,20 +53,6 @@
       <div
         class="mb-6 rounded-md border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950"
       >
-        <h3 class="mb-2 text-lg font-semibold">Pricing</h3>
-
-        @if (pricing.type === 'free') {
-          <div class="mb-6">
-            <div class="mb-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">Free</div>
-            <p class="text-sm text-gray-600 dark:text-gray-300">{{ pricing.details }}</p>
-          </div>
-        } @else {
-          <div class="mb-6">
-            <div class="mb-2 text-3xl font-bold">Custom</div>
-            <p class="text-sm text-gray-600 dark:text-gray-300">{{ pricing.details }}</p>
-          </div>
-        }
-
         <button
           type="button"
           (click)="openInstallModal()"

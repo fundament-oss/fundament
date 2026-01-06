@@ -76,7 +76,7 @@ export class TenantComponent implements OnInit {
   async saveEdit() {
     const currentTenant = this.tenant();
     const nameToSave = this.editingName();
-    
+
     if (!nameToSave.trim() || !currentTenant) {
       return;
     }
@@ -85,10 +85,9 @@ export class TenantComponent implements OnInit {
     this.error.set(null);
 
     try {
-      this.tenant.set(await this.organizationApiService.updateTenant(
-        currentTenant.id,
-        nameToSave.trim(),
-      ));
+      this.tenant.set(
+        await this.organizationApiService.updateTenant(currentTenant.id, nameToSave.trim()),
+      );
       this.isEditing.set(false);
       this.editingName.set('');
     } catch (err) {
