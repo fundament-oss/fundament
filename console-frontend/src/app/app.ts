@@ -96,6 +96,11 @@ export class App implements OnInit {
     return this.router.url === '/project-members' || this.router.url === '/project-permissions';
   }
 
+  // Check if current route is clusters or add-cluster
+  isClustersActive(): boolean {
+    return this.router.url.startsWith('/clusters/') || this.router.url.startsWith('/add-cluster');
+  }
+
   // Initialize theme from localStorage or system preference
   private initializeTheme() {
     const savedTheme = localStorage.getItem('theme');

@@ -6,6 +6,16 @@
 
   <!-- Content -->
   <div class="p-6">
+    <!-- Error Message -->
+    @if (errorMessage()) {
+      <div class="mb-6 rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
+        <div class="flex items-center">
+          <app-error-icon class="mr-3 h-5 w-5 shrink-0 text-rose-400 dark:text-rose-500" />
+          <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
+        </div>
+      </div>
+    }
+
     <!-- Create Cluster Button -->
     <div class="mb-6">
       <a
@@ -19,17 +29,17 @@
 
     <!-- Clusters Grid -->
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      @for (cluster of clusters; track cluster.name) {
+      @for (cluster of clusters(); track cluster.id) {
         <div class="rounded-md border border-gray-200 dark:border-gray-800">
           <!-- Card Header -->
           <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
             <div class="flex items-center justify-between">
               <h2 class="text-xl font-bold dark:text-white">{{ cluster.name }}</h2>
               <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                 [class]="getStatusColor(cluster.status)"
               >
-                {{ cluster.status }}
+                {{ cluster.status || 'Unknown status' }}
               </span>
             </div>
           </div>
@@ -38,15 +48,17 @@
           <div class="p-6">
             <dl>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
-              <dd class="mt-0.5 mb-4 text-sm dark:text-white">{{ cluster.region }}</dd>
+              <dd class="mt-0.5 mb-4 text-sm dark:text-white">
+                {{ cluster.region.toUpperCase() }}
+              </dd>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
                 Number of projects
               </dt>
-              <dd class="mt-0.5 mb-4 text-sm dark:text-white">{{ cluster.projectCount }}</dd>
+              <dd class="mt-0.5 mb-4 text-sm dark:text-white">{{ cluster.projectCount || 0 }}</dd>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
                 Number of node pools
               </dt>
-              <dd class="mt-0.5 mb-4 text-sm dark:text-white">{{ cluster.nodePoolCount }}</dd>
+              <dd class="mt-0.5 mb-4 text-sm dark:text-white">{{ cluster.nodePoolCount || 0 }}</dd>
             </dl>
 
             <!-- Card Actions -->

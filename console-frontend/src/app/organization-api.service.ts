@@ -69,6 +69,23 @@ export interface GetClusterRequest {
   clusterId: string;
 }
 
+export interface ClusterSummary {
+  id: string;
+  name: string;
+  status: string;
+  region: string;
+  projectCount: number;
+  nodePoolCount: number;
+}
+
+export interface ListClustersRequest {
+  projectId?: string;
+}
+
+export interface ListClustersResponse {
+  clusters: ClusterSummary[];
+}
+
 export interface ClusterDetails {
   id: string;
   name: string;
@@ -170,5 +187,14 @@ export class OrganizationApiService {
       { clusterId },
     );
     return response.cluster;
+  }
+
+  async listClusters(projectId?: string): Promise<ClusterSummary[]> {
+    const response = await this.connectRpc<ListClustersResponse>(
+      CONFIG.clusterServicePath,
+      'ListClusters',
+      projectId ? { projectId } : {},
+    );
+    return response.clusters;
   }
 }

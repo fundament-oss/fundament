@@ -61,7 +61,7 @@ export const routes: Routes = [
     loadComponent: () => import('./projects/projects.component').then((m) => m.ProjectsComponent),
   },
   {
-    path: 'cluster-overview',
+    path: 'clusters/:id',
     loadComponent: () =>
       import('./cluster-overview/cluster-overview.component').then(
         (m) => m.ClusterOverviewComponent,
