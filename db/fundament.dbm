@@ -13,15 +13,15 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	 layer-rect-colors="#6ee6ef"
 	 show-layer-names="false" show-layer-rects="false">
 <role name="fun_authn_api"
-	sql-disabled="false">
+	sql-disabled="true">
 </role>
 
 <role name="fun_appstore_api"
-	sql-disabled="false">
+	sql-disabled="true">
 </role>
 
 <role name="fun_organization_api"
-	sql-disabled="false">
+	sql-disabled="true">
 </role>
 
 <database name="fundament" is-template="false" allow-conns="true" sql-disabled="true">
