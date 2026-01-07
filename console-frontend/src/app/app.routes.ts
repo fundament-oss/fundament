@@ -47,12 +47,12 @@ export const routes: Routes = [
     ],
   },
   {
-    path: 'cluster-nodes',
+    path: 'clusters/:id/nodes',
     loadComponent: () =>
       import('./cluster-nodes/cluster-nodes.component').then((m) => m.ClusterNodesComponent),
   },
   {
-    path: 'cluster-plugins',
+    path: 'clusters/:id/plugins',
     loadComponent: () =>
       import('./cluster-plugins/cluster-plugins.component').then((m) => m.ClusterPluginsComponent),
   },

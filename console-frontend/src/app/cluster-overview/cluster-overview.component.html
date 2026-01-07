@@ -312,7 +312,7 @@
         <h3 class="mb-4 text-lg font-medium dark:text-white">
           Node pools
           <a
-            routerLink="/cluster-nodes"
+            [routerLink]="['/clusters', clusterData.basics.id, 'nodes']"
             class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
           >
             <app-edit-icon class="mr-1 h-4 w-4" /> Edit
@@ -361,7 +361,7 @@
         <h3 class="mb-4 text-lg font-medium dark:text-white">
           Plugins
           <a
-            routerLink="/cluster-plugins"
+            [routerLink]="['/clusters', clusterData.basics.id, 'plugins']"
             class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
           >
             <app-edit-icon class="mr-1 h-4 w-4" /> Edit

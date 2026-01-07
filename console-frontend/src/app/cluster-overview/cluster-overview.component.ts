@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import {
   EditIconComponent,
@@ -24,10 +24,12 @@ import {
 })
 export class ClusterOverviewComponent {
   private titleService = inject(TitleService);
+  private route = inject(ActivatedRoute);
 
   // Hardcoded overview data
   clusterData = {
     basics: {
+      id: this.route.snapshot.params['id'],
       name: 'my-production-cluster',
       region: 'NL1',
       kubernetesVersion: '1.34.2',
