@@ -1,12 +1,14 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
+import { OrganizationApiService } from '../organization-api.service';
 import {
   EditIconComponent,
   TerminalIconComponent,
   DownloadIconComponent,
   UpgradeIconComponent,
+  ErrorIconComponent,
 } from '../icons';
 
 @Component({
@@ -19,23 +21,28 @@ import {
     TerminalIconComponent,
     DownloadIconComponent,
     UpgradeIconComponent,
+    ErrorIconComponent,
   ],
   templateUrl: './cluster-overview.component.html',
 })
-export class ClusterOverviewComponent {
+export class ClusterOverviewComponent implements OnInit {
   private titleService = inject(TitleService);
   private route = inject(ActivatedRoute);
+  private organizationApi = inject(OrganizationApiService);
 
-  // Hardcoded overview data
+  errorMessage = signal<string | null>(null);
+  isLoading = signal<boolean>(true);
+
+  // Cluster data with API-fetched and mock data
   clusterData = {
     basics: {
-      id: this.route.snapshot.params['id'],
-      name: 'my-production-cluster',
-      region: 'NL1',
-      kubernetesVersion: '1.34.2',
+      id: '',
+      name: '',
+      region: '',
+      kubernetesVersion: '',
     },
-    status: 'running',
-    creationDate: '2024-11-15T10:30:00Z',
+    status: '',
+    creationDate: '2024-11-15T10:30:00Z', // Mock data - not available from API
     activity: [
       {
         timestamp: '2024-12-06T14:30:00Z',
@@ -121,8 +128,35 @@ export class ClusterOverviewComponent {
     ],
   };
 
-  constructor() {
-    this.titleService.setTitle(this.clusterData.basics.name);
+  async ngOnInit() {
+    const clusterId = this.route.snapshot.params['id'];
+
+    try {
+      this.isLoading.set(true);
+      this.errorMessage.set(null);
+
+      const cluster = await this.organizationApi.getCluster(clusterId);
+
+      // Update cluster data with API response
+      this.clusterData.basics = {
+        id: cluster.id,
+        name: cluster.name,
+        region: cluster.region,
+        kubernetesVersion: cluster.kubernetesVersion,
+      };
+      this.clusterData.status = cluster.status;
+
+      this.titleService.setTitle(cluster.name);
+    } catch (error) {
+      console.error('Failed to fetch cluster data:', error);
+      this.errorMessage.set(
+        error instanceof Error
+          ? `Failed to load cluster: ${error.message}`
+          : 'Failed to load cluster data',
+      );
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   getStatusColor(status: string): string {
