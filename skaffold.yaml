@@ -32,10 +32,10 @@ build:
       docker:
         dockerfile: Dockerfile
 
-    - image: login-frontend
-      context: login-frontend
+    - image: console-frontend
+      context: .
       docker:
-        dockerfile: Dockerfile
+        dockerfile: console-frontend/Dockerfile
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheckDeadlineSeconds: 300
@@ -50,7 +50,7 @@ deploy:
           images.appstoreApi: "{{.IMAGE_FULLY_QUALIFIED_appstore_api}}"
           images.authnApi: "{{.IMAGE_FULLY_QUALIFIED_authn_api}}"
           images.organizationApi: "{{.IMAGE_FULLY_QUALIFIED_organization_api}}"
-          images.loginFrontend: "{{.IMAGE_FULLY_QUALIFIED_login_frontend}}"
+          images.consoleFrontend: "{{.IMAGE_FULLY_QUALIFIED_console_frontend}}"
 
 profiles:
   - name: env-local

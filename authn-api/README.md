@@ -98,11 +98,11 @@ The **frontend is responsible** for refreshing tokens before they expire by call
 | `OIDC_ISSUER` | No | `http://localhost:5556` | URL of the OIDC provider (e.g., Dex, Keycloak, Auth0). |
 | `OIDC_CLIENT_ID` | No | `authn-api` | OAuth2 client ID registered with the OIDC provider. |
 | `OIDC_REDIRECT_URL` | No | `http://authn.127.0.0.1.nip.io:8080/callback` | Callback URL registered with the OIDC provider. Must match exactly. |
-| `FRONTEND_URL` | No | `http://login.127.0.0.1.nip.io:8080` | Default URL to redirect users after successful login. |
+| `FRONTEND_URL` | No | `http://console.127.0.0.1.nip.io:8080` | Default URL to redirect users after successful login. |
 | `DATABASE_URL` | No | `postgres://authn_api:password@localhost:5432/fundament` | PostgreSQL connection string. |
 | `LISTEN_ADDR` | No | `:8080` | Address and port for the HTTP server to listen on. |
 | `LOG_LEVEL` | No | `info` | Logging level: `debug`, `info`, `warn`, or `error`. |
-| `CORS_ALLOWED_ORIGINS` | No | `http://login.127.0.0.1.nip.io:8080` | Comma-separated list of allowed CORS origins. |
+| `CORS_ALLOWED_ORIGINS` | No | `http://console.127.0.0.1.nip.io:8080` | Comma-separated list of allowed CORS origins. |
 | `COOKIE_DOMAIN` | No | `localhost` | Domain for auth cookies. Leave as `localhost` for local dev. |
 | `COOKIE_SECURE` | No | `false` | Set to `true` to require HTTPS for cookies (use in production). |
 

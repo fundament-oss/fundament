@@ -17,7 +17,7 @@ images:
   organizationApi: organization-api:latest
   appstoreApi: appstore-api:latest
   frontend: frontend:latest
-  loginFrontend: login-frontend:latest
+  consoleFrontend: console-frontend:latest
 
 # Database (CloudNativePG)
 db:
@@ -50,7 +50,7 @@ frontend:
   replicas: 1
 
 # Login Frontend
-loginFrontend:
+consoleFrontend:
   enabled: false
   replicas: 1
 

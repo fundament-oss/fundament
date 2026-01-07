@@ -83,10 +83,10 @@ Optional with defaults:
 - `OIDC_DISCOVERY_URL` (defaults to OIDC_ISSUER) - Internal URL for OIDC discovery in k8s
 - `OIDC_CLIENT_ID` (authn-api)
 - `OIDC_REDIRECT_URL` (http://authn.127.0.0.1.nip.io:8080/callback)
-- `FRONTEND_URL` (http://login.127.0.0.1.nip.io:8080)
+- `FRONTEND_URL` (http://console.127.0.0.1.nip.io:8080)
 - `DATABASE_URL` (postgres://authn_api:password@localhost:5432/fundament)
 - `LISTEN_ADDR` (:8080)
 - `LOG_LEVEL` (info)
-- `CORS_ALLOWED_ORIGINS` (http://localhost:5173,http://localhost:4200,http://login.127.0.0.1.nip.io:8080)
+- `CORS_ALLOWED_ORIGINS` (http://localhost:5173,http://localhost:4200,http://console.127.0.0.1.nip.io:8080)
 - `COOKIE_DOMAIN` (localhost)
 - `COOKIE_SECURE` (false)
