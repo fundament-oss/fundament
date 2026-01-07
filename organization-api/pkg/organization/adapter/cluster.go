@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"fmt"
+	"time"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/models"
@@ -58,7 +59,7 @@ func FromClusterDetail(c db.OrganizationCluster) *organizationv1.ClusterDetails 
 		KubernetesVersion: c.KubernetesVersion,
 		Status:            FromClusterStatus(c.Status),
 		CreatedAt: &organizationv1.Timestamp{
-			Value: c.Created.Time.Format("2006-01-02T15:04:05Z07:00"),
+			Value: c.Created.Time.Format(time.RFC3339),
 		},
 		ResourceUsage: nil, // Stub
 		NodePools:     nil, // Stub

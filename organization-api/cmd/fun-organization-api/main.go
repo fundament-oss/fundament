@@ -76,10 +76,15 @@ func run() error {
 		logging.WithLogOnEvents(logging.FinishCall),
 	)
 
-	orgPath, orgHandler := organizationv1connect.NewOrganizationServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
+	interceptors := connect.WithInterceptors(
+		server.AuthInterceptor(),    // First: authenticate and enrich context
+		loggingInterceptor,           // Second: log with enriched context
+	)
+
+	orgPath, orgHandler := organizationv1connect.NewOrganizationServiceHandler(server, interceptors)
 	mux.Handle(orgPath, orgHandler)
 
-	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
+	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(server, interceptors)
 	mux.Handle(clusterPath, clusterHandler)
 
 	corsHandler := cors.New(cors.Options{
