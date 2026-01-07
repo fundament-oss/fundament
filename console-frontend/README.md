@@ -10,6 +10,14 @@ ng serve
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
+## Linting and formatting
+
+To lint or format the code, use:
+```bash
+pnpm lint
+pnpm format
+```
+
 ## Building
 
 To build the project run:

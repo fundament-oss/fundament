@@ -22,7 +22,9 @@
     <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
       <div class="grid items-center gap-3 lg:grid-cols-2">
         <div>
-          <h1 class="text-2xl font-bold dark:text-white">{{ clusterData.basics.name }}</h1>
+          <h1 class="text-2xl font-bold dark:text-white">
+            {{ clusterData.basics.name || 'Unknown cluster' }}
+          </h1>
           <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
             Created {{ formatDate(clusterData.creationDate) }}
           </p>
