@@ -11,6 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
+const resetTenantContext = `-- name: ResetTenantContext :exec
+RESET app.current_tenant_id
+`
+
+func (q *Queries) ResetTenantContext(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, resetTenantContext)
+	return err
+}
+
 const setTenantContext = `-- name: SetTenantContext :exec
 SELECT set_config('app.current_tenant_id', $1, false)
 `

@@ -14,12 +14,11 @@ type Config struct {
 }
 
 type OrganizationServer struct {
-	config        *Config
-	db            *psqldb.DB
-	queries       *db.Queries
-	queryProvider *QueryProvider
-	logger        *slog.Logger
-	validator     *validate.Validator
+	config    *Config
+	db        *psqldb.DB
+	queries   *db.Queries
+	logger    *slog.Logger
+	validator *validate.Validator
 }
 
 func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*OrganizationServer, error) {
@@ -29,11 +28,10 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*OrganizationSe
 	}
 
 	return &OrganizationServer{
-		logger:        logger,
-		config:        cfg,
-		db:            database,
-		queries:       db.New(database.Pool),
-		queryProvider: NewQueryProvider(database.Pool, logger),
-		validator:     validator,
+		logger:    logger,
+		config:    cfg,
+		db:        database,
+		queries:   db.New(database.Pool),
+		validator: validator,
 	}, nil
 }

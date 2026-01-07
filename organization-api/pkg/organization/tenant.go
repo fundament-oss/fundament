@@ -29,14 +29,7 @@ func (s *OrganizationServer) GetTenant(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	queries, release, err := s.queryProvider.obtainQueries(ctx)
-	if err != nil {
-		s.logger.ErrorContext(ctx, "failed to obtain queries", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to obtain queries: %w", err))
-	}
-	defer release()
-
-	tenant, err := queries.TenantGetByID(ctx, input.ID)
+	tenant, err := s.queries.TenantGetByID(ctx, input.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("tenant not found"))
@@ -63,18 +56,12 @@ func (s *OrganizationServer) UpdateTenant(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	queries, release, err := s.queryProvider.obtainQueries(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to obtain queries: %w", err))
-	}
-	defer release()
-
 	params := db.TenantUpdateParams{
 		ID:   input.ID,
 		Name: input.Name,
 	}
 
-	tenant, err := queries.TenantUpdate(ctx, params)
+	tenant, err := s.queries.TenantUpdate(ctx, params)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("tenant not found"))

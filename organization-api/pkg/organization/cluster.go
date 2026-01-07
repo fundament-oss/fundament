@@ -25,13 +25,7 @@ func (s *OrganizationServer) ListClusters(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("tenant_id missing from context"))
 	}
 
-	queries, release, err := s.queryProvider.obtainQueries(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to obtain queries: %w", err))
-	}
-	defer release()
-
-	clusters, err := queries.ClusterListByTenantID(ctx, tenantID)
+	clusters, err := s.queries.ClusterListByTenantID(ctx, tenantID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list clusters: %w", err))
 	}
@@ -55,13 +49,7 @@ func (s *OrganizationServer) GetCluster(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	queries, release, err := s.queryProvider.obtainQueries(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to obtain queries: %w", err))
-	}
-	defer release()
-
-	cluster, err := queries.ClusterGetByID(ctx, input.ClusterID)
+	cluster, err := s.queries.ClusterGetByID(ctx, input.ClusterID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
@@ -88,10 +76,11 @@ func (s *OrganizationServer) CreateCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("tenant_id missing from context"))
 	}
 
-	queries, tx, err := s.queryProvider.WithTransaction(ctx)
+	tx, err := s.db.Pool.Begin(ctx)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("pool begin"))
 	}
+
 	defer tx.Rollback(ctx)
 
 	params := db.ClusterCreateParams{
@@ -103,7 +92,7 @@ func (s *OrganizationServer) CreateCluster(
 		Status:            "unspecified",
 	}
 
-	cluster, err := queries.ClusterCreate(ctx, params)
+	cluster, err := s.queries.WithTx(tx).ClusterCreate(ctx, params)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
 	}
@@ -138,12 +127,6 @@ func (s *OrganizationServer) UpdateCluster(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	queries, release, err := s.queryProvider.obtainQueries(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
-	}
-	defer release()
-
 	params := db.ClusterUpdateParams{
 		ID: input.ClusterID,
 	}
@@ -152,7 +135,7 @@ func (s *OrganizationServer) UpdateCluster(
 		params.KubernetesVersion = pgtype.Text{String: *req.Msg.KubernetesVersion, Valid: true}
 	}
 
-	cluster, err := queries.ClusterUpdate(ctx, params)
+	cluster, err := s.queries.ClusterUpdate(ctx, params)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
@@ -176,13 +159,7 @@ func (s *OrganizationServer) DeleteCluster(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	queries, release, err := s.queryProvider.obtainQueries(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
-	}
-	defer release()
-
-	if err := queries.ClusterDelete(ctx, clusterID); err != nil {
+	if err := s.queries.ClusterDelete(ctx, clusterID); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete cluster: %w", err))
 	}
 
@@ -207,14 +184,8 @@ func (s *OrganizationServer) GetClusterActivity(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	queries, release, err := s.queryProvider.obtainQueries(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to obtain queries: %w", err))
-	}
-	defer release()
-
 	// Verify cluster exists and belongs to tenant
-	_, err = queries.ClusterGetByID(ctx, input.ClusterID)
+	_, err = s.queries.ClusterGetByID(ctx, input.ClusterID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
@@ -242,13 +213,7 @@ func (s *OrganizationServer) GetKubeconfig(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	queries, release, err := s.queryProvider.obtainQueries(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to obtain queries: %w", err))
-	}
-	defer release()
-
-	cluster, err := queries.ClusterGetByID(ctx, input.ClusterID)
+	cluster, err := s.queries.ClusterGetByID(ctx, input.ClusterID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))

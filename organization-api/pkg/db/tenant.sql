@@ -1,6 +1,9 @@
 -- name: SetTenantContext :exec
 SELECT set_config('app.current_tenant_id', $1, false);
 
+-- name: ResetTenantContext :exec
+RESET app.current_tenant_id;
+
 -- name: TenantGetByID :one
 SELECT id, name, created
 FROM organization.tenants

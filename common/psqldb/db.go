@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -14,7 +13,9 @@ type DB struct {
 	logger *slog.Logger
 }
 
-func New(ctx context.Context, logger *slog.Logger, databaseURL string) (*DB, error) {
+type Option = func(ctx context.Context, config *pgxpool.Config)
+
+func New(ctx context.Context, logger *slog.Logger, databaseURL string, options ...Option) (*DB, error) {
 	logger.Debug("creating database connection pool")
 
 	// Parse the database URL into a config
@@ -24,16 +25,8 @@ func New(ctx context.Context, logger *slog.Logger, databaseURL string) (*DB, err
 		return nil, fmt.Errorf("parsing database URL: %w", err)
 	}
 
-	// Set up AfterRelease callback to reset session-level settings
-	// This ensures tenant isolation when connections are reused from the pool
-	config.AfterRelease = func(conn *pgx.Conn) bool {
-		// Reset any session-level settings before returning to pool
-		_, err := conn.Exec(context.Background(), "RESET app.current_tenant_id")
-		if err != nil {
-			logger.Warn("failed to reset tenant context on connection release, destroying connection", "error", err)
-			return false // Destroy connection to prevent tenant data leakage
-		}
-		return true // Keep connection in pool
+	for _, option := range options {
+		option(ctx, config)
 	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
