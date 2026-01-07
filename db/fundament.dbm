@@ -5,7 +5,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 -->
 <dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="6"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="264,127" last-zoom="1" scene-rect="0,0,2059.54,1076.8"
+	 last-position="344,417" last-zoom="1" scene-rect="0,0,2140.37,1076.8"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -80,7 +80,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
-<table name="namespaces" layers="0" collapse-mode="1" max-obj-count="7" z-value="0">
+<table name="namespaces" layers="0" collapse-mode="2" max-obj-count="7" z-value="0">
 	<schema name="organization"/>
 	<role name="postgres"/>
 	<position x="1780" y="660"/>
@@ -112,19 +112,6 @@ CAUTION: Do not modify this file unless you know what you are doing.
 		<columns names="project_id,name,deleted" ref-type="src-columns"/>
 	</constraint>
 </table>
-
-<usertype name="ClusterStatus" configuration="enumeration">
-	<schema name="organization"/>
-	<role name="postgres"/>
-	<enumeration label="unspecified"/>
-	<enumeration label="provisioning"/>
-	<enumeration label="starting"/>
-	<enumeration label="running"/>
-	<enumeration label="upgrading"/>
-	<enumeration label="error"/>
-	<enumeration label="stopping"/>
-	<enumeration label="stopped"/>
-</usertype>
 
 <function name="clusters_tr_verify_deleted"
 		window-func="false"
@@ -202,7 +189,7 @@ END;]]> </definition>
 		<type name="text" length="0"/>
 	</column>
 	<column name="status" not-null="true">
-		<type name="organization.&quot;ClusterStatus&quot;" length="0"/>
+		<type name="text" length="0"/>
 	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
@@ -215,6 +202,9 @@ END;]]> </definition>
 	</constraint>
 	<constraint name="clusters_uq_name" type="uq-constr" nulls-not-distinct="true" table="organization.clusters">
 		<columns names="tenant_id,name,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="clusters_ck_status" type="ck-constr" no-inherit="true" table="organization.clusters">
+			<expression> <![CDATA[status IN ('unspecified','provisioning','starting','running','upgrading','error','stopping','stopped')]]> </expression>
 	</constraint>
 </table>
 

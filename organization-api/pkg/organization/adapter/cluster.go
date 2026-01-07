@@ -67,21 +67,21 @@ func FromClusterDetail(c db.OrganizationCluster) *organizationv1.ClusterDetails 
 	}
 }
 
-func FromClusterStatus(status db.OrganizationClusterStatus) organizationv1.ClusterStatus {
+func FromClusterStatus(status string) organizationv1.ClusterStatus {
 	switch status {
-	case db.OrganizationClusterStatusProvisioning:
+	case "provisioning":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
-	case db.OrganizationClusterStatusStarting:
+	case "starting":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING
-	case db.OrganizationClusterStatusRunning:
+	case "running":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING
-	case db.OrganizationClusterStatusUpgrading:
+	case "upgrading":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING
-	case db.OrganizationClusterStatusError:
+	case "error":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR
-	case db.OrganizationClusterStatusStopping:
+	case "stopping":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING
-	case db.OrganizationClusterStatusStopped:
+	case "stopped":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED
 	default:
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED

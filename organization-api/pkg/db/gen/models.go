@@ -5,60 +5,9 @@
 package db
 
 import (
-	"database/sql/driver"
-	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
-
-type OrganizationClusterStatus string
-
-const (
-	OrganizationClusterStatusUnspecified  OrganizationClusterStatus = "unspecified"
-	OrganizationClusterStatusProvisioning OrganizationClusterStatus = "provisioning"
-	OrganizationClusterStatusStarting     OrganizationClusterStatus = "starting"
-	OrganizationClusterStatusRunning      OrganizationClusterStatus = "running"
-	OrganizationClusterStatusUpgrading    OrganizationClusterStatus = "upgrading"
-	OrganizationClusterStatusError        OrganizationClusterStatus = "error"
-	OrganizationClusterStatusStopping     OrganizationClusterStatus = "stopping"
-	OrganizationClusterStatusStopped      OrganizationClusterStatus = "stopped"
-)
-
-func (e *OrganizationClusterStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = OrganizationClusterStatus(s)
-	case string:
-		*e = OrganizationClusterStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for OrganizationClusterStatus: %T", src)
-	}
-	return nil
-}
-
-type NullOrganizationClusterStatus struct {
-	OrganizationClusterStatus OrganizationClusterStatus
-	Valid                     bool // Valid is true if OrganizationClusterStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullOrganizationClusterStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.OrganizationClusterStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.OrganizationClusterStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullOrganizationClusterStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.OrganizationClusterStatus), nil
-}
 
 type OrganizationCluster struct {
 	ID                uuid.UUID
@@ -66,7 +15,7 @@ type OrganizationCluster struct {
 	Name              string
 	Region            string
 	KubernetesVersion string
-	Status            OrganizationClusterStatus
+	Status            string
 	Created           pgtype.Timestamptz
 	Deleted           pgtype.Timestamptz
 }

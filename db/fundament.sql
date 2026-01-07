@@ -61,14 +61,6 @@ CREATE TABLE organization.namespaces (
 ALTER TABLE organization.namespaces OWNER TO postgres;
 -- ddl-end --
 
--- object: organization."ClusterStatus" | type: TYPE --
--- DROP TYPE IF EXISTS organization."ClusterStatus" CASCADE;
-CREATE TYPE organization."ClusterStatus" AS
-ENUM ('unspecified','provisioning','starting','running','upgrading','error','stopping','stopped');
--- ddl-end --
-ALTER TYPE organization."ClusterStatus" OWNER TO postgres;
--- ddl-end --
-
 -- object: organization.clusters_tr_verify_deleted | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS organization.clusters_tr_verify_deleted() CASCADE;
 CREATE OR REPLACE FUNCTION organization.clusters_tr_verify_deleted ()
@@ -121,11 +113,12 @@ CREATE TABLE organization.clusters (
 	name text NOT NULL,
 	region text NOT NULL,
 	kubernetes_version text NOT NULL,
-	status organization."ClusterStatus" NOT NULL,
+	status text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
-	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (tenant_id,name,deleted)
+	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (tenant_id,name,deleted),
+	CONSTRAINT clusters_ck_status CHECK (status IN ('unspecified','provisioning','starting','running','upgrading','error','stopping','stopped')) NO INHERIT
 );
 -- ddl-end --
 ALTER TABLE organization.clusters OWNER TO postgres;

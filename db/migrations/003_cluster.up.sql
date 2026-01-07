@@ -1,10 +1,8 @@
-create type "organization"."ClusterStatus" as enum ('unspecified', 'provisioning', 'starting', 'running', 'upgrading', 'error', 'stopping', 'stopped');
-
 alter table "organization"."clusters" add column "kubernetes_version" text not null;
 
 alter table "organization"."clusters" add column "region" text not null;
 
-alter table "organization"."clusters" add column "status" organization."ClusterStatus" not null;
+alter table "organization"."clusters" add column "status" text not null;
 
 alter table "organization"."clusters" enable row level security;
 
@@ -13,6 +11,8 @@ alter table "organization"."clusters" add constraint "clusters_kubernetes_versio
 alter table "organization"."clusters" add constraint "clusters_region_not_null" NOT NULL region;
 
 alter table "organization"."clusters" add constraint "clusters_status_not_null" NOT NULL status;
+
+alter table "organization"."clusters" add constraint "clusters_ck_status" CHECK ((status = ANY (ARRAY['unspecified'::text, 'provisioning'::text, 'starting'::text, 'running'::text, 'upgrading'::text, 'error'::text, 'stopping'::text, 'stopped'::text]))) NO INHERIT;
 
 create policy "tenant_isolation"
 on "organization"."clusters"

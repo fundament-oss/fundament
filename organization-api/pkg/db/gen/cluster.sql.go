@@ -24,7 +24,7 @@ type ClusterCreateParams struct {
 	Name              string
 	Region            string
 	KubernetesVersion string
-	Status            OrganizationClusterStatus
+	Status            string
 }
 
 func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (OrganizationCluster, error) {

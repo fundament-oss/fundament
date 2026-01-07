@@ -101,7 +101,7 @@ func (s *OrganizationServer) CreateCluster(
 			Name:              req.Msg.Name,
 			Region:            req.Msg.Region,
 			KubernetesVersion: req.Msg.KubernetesVersion,
-			Status:            db.OrganizationClusterStatusUnspecified,
+			Status:            "unspecified",
 		}
 
 		cluster, err = q.ClusterCreate(ctx, params)
