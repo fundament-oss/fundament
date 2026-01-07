@@ -18,7 +18,7 @@
       </dl>
       <dl>
         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
-        <dd class="mt-1 text-sm dark:text-white">{{ state().region || 'N/A' }}</dd>
+        <dd class="mt-1 text-sm dark:text-white">{{ state().region?.toUpperCase() || 'N/A' }}</dd>
       </dl>
       <dl>
         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
@@ -45,11 +45,15 @@
                 <dd class="mt-1 text-sm dark:text-white">{{ nodePool.machineType }}</dd>
               </dl>
               <dl>
-                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Min autoscaling</dt>
+                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  Min autoscaling
+                </dt>
                 <dd class="mt-1 text-sm dark:text-white">{{ nodePool.autoscaleMin }} nodes</dd>
               </dl>
               <dl>
-                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Max autoscaling</dt>
+                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  Max autoscaling
+                </dt>
                 <dd class="mt-1 text-sm dark:text-white">{{ nodePool.autoscaleMax }} nodes</dd>
               </dl>
             </div>
@@ -92,25 +96,43 @@
     }
   </div>
 
-  <!-- Creation Notice -->
-  <div
-    class="rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
-  >
-    <div class="mb-2 flex">
-      <app-info-circle-icon class="mr-2 h-5 w-5 shrink-0 text-blue-400 dark:text-indigo-400" />
-      <h3 class="text-sm font-medium text-blue-800 dark:text-indigo-300">Cluster creation</h3>
+  <!-- Error Message -->
+  @if (errorMessage()) {
+    <div class="rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
+      <div class="flex items-center">
+        <app-error-icon class="mr-3 h-5 w-5 shrink-0 text-rose-400 dark:text-rose-500" />
+        <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
+      </div>
     </div>
-    <div class="text-sm text-blue-700 dark:text-indigo-200">
-      <p>
-        Creating your cluster will take approximately 1-5 minutes. Keep this page open to view the
-        progress.
-      </p>
+  } @else {
+    <!-- Creation Notice -->
+    <div
+      class="rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
+    >
+      <div class="mb-2 flex">
+        <app-info-circle-icon class="mr-2 h-5 w-5 shrink-0 text-blue-400 dark:text-indigo-400" />
+        <h3 class="text-sm font-medium text-blue-800 dark:text-indigo-300">Cluster creation</h3>
+      </div>
+      <div class="text-sm text-blue-700 dark:text-indigo-200">
+        <p>
+          Creating your cluster will take approximately 1-5 minutes. Keep this page open to view the
+          progress.
+        </p>
+      </div>
     </div>
-  </div>
+  }
 
   <!-- Form Actions -->
   <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-    <a routerLink="/add-cluster/plugins" class="btn-secondary">Previous step</a>
-    <button type="button" (click)="onCreateCluster()" class="btn-primary">Create cluster</button>
+    <a
+      routerLink="/add-cluster/plugins"
+      class="btn-secondary"
+      [class.pointer-events-none]="isCreating()"
+      [class.opacity-50]="isCreating()"
+      >Previous step</a
+    >
+    <button type="button" (click)="onCreateCluster()" class="btn-primary" [disabled]="isCreating()">
+      {{ isCreating() ? 'Creating...' : 'Create cluster' }}
+    </button>
   </div>
 </div>

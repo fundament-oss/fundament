@@ -5,7 +5,7 @@ export interface ClusterWizardState {
   clusterName?: string;
   region?: string;
   kubernetesVersion?: string;
-  
+
   // Node pools (step 2)
   nodePools?: {
     name: string;
@@ -13,21 +13,21 @@ export interface ClusterWizardState {
     autoscaleMin: number;
     autoscaleMax: number;
   }[];
-  
+
   // Plugins (step 3)
   preset?: string;
   plugins?: string[];
-  
+
   // Track which steps are completed
   completedSteps: Set<number>;
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ClusterWizardStateService {
   private state = signal<ClusterWizardState>({
-    completedSteps: new Set<number>()
+    completedSteps: new Set<number>(),
   });
 
   getState() {
@@ -35,34 +35,34 @@ export class ClusterWizardStateService {
   }
 
   updateBasicInfo(data: { clusterName?: string; region?: string; kubernetesVersion?: string }) {
-    this.state.update(current => ({
+    this.state.update((current) => ({
       ...current,
-      ...data
+      ...data,
     }));
   }
 
   updateNodePools(nodePools: ClusterWizardState['nodePools']) {
-    this.state.update(current => ({
+    this.state.update((current) => ({
       ...current,
-      nodePools
+      nodePools,
     }));
   }
 
   updatePlugins(data: { preset?: string; plugins?: string[] }) {
-    this.state.update(current => ({
+    this.state.update((current) => ({
       ...current,
       preset: data.preset,
-      plugins: data.plugins
+      plugins: data.plugins,
     }));
   }
 
   markStepCompleted(stepIndex: number) {
-    this.state.update(current => {
+    this.state.update((current) => {
       const newCompletedSteps = new Set(current.completedSteps);
       newCompletedSteps.add(stepIndex);
       return {
         ...current,
-        completedSteps: newCompletedSteps
+        completedSteps: newCompletedSteps,
       };
     });
   }
@@ -83,7 +83,7 @@ export class ClusterWizardStateService {
 
   reset() {
     this.state.set({
-      completedSteps: new Set<number>()
+      completedSteps: new Set<number>(),
     });
   }
 }
