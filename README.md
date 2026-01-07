@@ -16,6 +16,7 @@ The focus of the project is currently on research and ideation. Some initial PoC
 - [Infrastructure](docs/infrastructure.md)
 - [Organizations](docs/organizations.md)
 - [Tools](docs/tools.md)
+- [Development setup](docs/development-setup.md)
 
 ## Contributing
 
