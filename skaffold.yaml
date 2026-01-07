@@ -15,17 +15,17 @@ build:
     - image: appstore-api
       context: .
       docker:
-        dockerfile: appstore-api/Dockerfile
+        dockerfile: api-appstore/Dockerfile
 
     - image: authn-api
       context: .
       docker:
-        dockerfile: authn-api/Dockerfile
+        dockerfile: api-authn/Dockerfile
 
     - image: organization-api
       context: .
       docker:
-        dockerfile: organization-api/Dockerfile
+        dockerfile: api-organization/Dockerfile
 
     - image: db-migrations
       context: db
@@ -33,7 +33,7 @@ build:
         dockerfile: Dockerfile
 
     - image: login-frontend
-      context: login-frontend
+      context: web-login
       docker:
         dockerfile: Dockerfile
 deploy:
@@ -76,19 +76,19 @@ profiles:
     patches:
       - op: replace
         path: /build/artifacts/0/docker/dockerfile
-        value: appstore-api/hotreload/Dockerfile
+        value: api-appstore/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/0/sync
         value: {}
       - op: replace
         path: /build/artifacts/1/docker/dockerfile
-        value: authn-api/hotreload/Dockerfile
+        value: api-authn/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/1/sync
         value: {}
       - op: replace
         path: /build/artifacts/2/docker/dockerfile
-        value: organization-api/hotreload/Dockerfile
+        value: api-organization/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/2/sync
         value: {}
