@@ -1,0 +1,16 @@
+root = "/src"
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o tmp/appstore-api ./cmd/appstore-api"
+entrypoint = "tmp/appstore-api"
+include_ext = ["go", "mod", "sum"]
+include_dir = ["cmd/appstore-api", "internal/appstore", "pkg", "gen"]
+exclude_dir = ["tmp"]
+delay = 500
+
+[log]
+time = false
+
+[misc]
+clean_on_exit = true

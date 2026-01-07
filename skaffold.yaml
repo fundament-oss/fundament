@@ -15,17 +15,17 @@ build:
     - image: appstore-api
       context: .
       docker:
-        dockerfile: appstore-api/Dockerfile
+        dockerfile: build/docker/appstore-api.Dockerfile
 
     - image: authn-api
       context: .
       docker:
-        dockerfile: authn-api/Dockerfile
+        dockerfile: build/docker/authn-api.Dockerfile
 
     - image: organization-api
       context: .
       docker:
-        dockerfile: organization-api/Dockerfile
+        dockerfile: build/docker/organization-api.Dockerfile
 
     - image: db-migrations
       context: db
@@ -33,7 +33,7 @@ build:
         dockerfile: Dockerfile
 
     - image: login-frontend
-      context: login-frontend
+      context: web/login
       docker:
         dockerfile: Dockerfile
 deploy:
@@ -42,7 +42,7 @@ deploy:
   helm:
     releases:
       - name: fundament
-        chartPath: charts/fundament
+        chartPath: deployments/charts/fundament
         namespace: fundament
         createNamespace: true
         setValueTemplates:
@@ -60,7 +60,7 @@ profiles:
       - op: add
         path: /deploy/helm/releases/0/valuesFiles
         value:
-          - charts/fundament/values-local.yaml
+          - deployments/charts/fundament/values-local.yaml
 
   - name: env-production
     deploy:
@@ -69,26 +69,26 @@ profiles:
       - op: add
         path: /deploy/helm/releases/0/valuesFiles
         value:
-          - charts/fundament/values-production.yaml
+          - deployments/charts/fundament/values-production.yaml
 
   # Hot reload profile for local development
   - name: hotreload
     patches:
       - op: replace
         path: /build/artifacts/0/docker/dockerfile
-        value: appstore-api/hotreload/Dockerfile
+        value: build/hotreload/appstore-api/Dockerfile
       - op: add
         path: /build/artifacts/0/sync
         value: {}
       - op: replace
         path: /build/artifacts/1/docker/dockerfile
-        value: authn-api/hotreload/Dockerfile
+        value: build/hotreload/authn-api/Dockerfile
       - op: add
         path: /build/artifacts/1/sync
         value: {}
       - op: replace
         path: /build/artifacts/2/docker/dockerfile
-        value: organization-api/hotreload/Dockerfile
+        value: build/hotreload/organization-api/Dockerfile
       - op: add
         path: /build/artifacts/2/sync
         value: {}

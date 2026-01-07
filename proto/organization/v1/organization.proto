@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package organization.v1;
+
+option go_package = "github.com/fundament-oss/fundament/gen/proto/organization/v1;organizationv1";
+
+service OrganizationService {
+  // GetTenant retrieves the user's tenant by ID
+  rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+
+  // UpdateTenant updates the user's tenant
+  rpc UpdateTenant(UpdateTenantRequest) returns (UpdateTenantResponse);
+}
+
+message Tenant {
+  // Tenant ID (UUID)
+  string id = 1;
+  // Tenant name
+  string name = 2;
+  // Creation timestamp (RFC3339)
+  string created = 3;
+}
+
+message GetTenantRequest {
+  // ID of the tenant to retrieve
+  string id = 1;
+}
+
+message GetTenantResponse {
+  // The requested tenant
+  Tenant tenant = 1;
+}
+
+message UpdateTenantRequest {
+  // ID of the tenant to update
+  string id = 1;
+  // New name for the tenant
+  string name = 2;
+}
+
+message UpdateTenantResponse {
+  // The updated tenant
+  Tenant tenant = 1;
+}

@@ -16,7 +16,7 @@ fmt:
 
 # Create a local k3d cluster for development with local registry
 cluster-create:
-    k3d cluster create --config=deploy/k3d/config.yaml
+    k3d cluster create --config=deployments/k3d/config.yaml
 
 # Start the cluster (creates if it doesn't exist)
 cluster-start:
@@ -35,9 +35,9 @@ cluster-delete:
 
 # Update helm dependencies
 helm-deps:
-    helm dependency update deploy/charts/ingress-nginx
-    helm dependency update deploy/charts/db
-    helm dependency update deploy/charts/fundament
+    helm dependency update deployments/charts/ingress-nginx
+    helm dependency update deployments/charts/db
+    helm dependency update deployments/charts/fundament
 
 # Deploy to local k3d cluster (development mode with hot-reload, keeps resources on exit)
 dev *flags:
