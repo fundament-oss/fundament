@@ -1,24 +1,24 @@
-{{- if $.Values.loginFrontend.enabled }}
+{{- if $.Values.consoleFrontend.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $.Release.Name }}-login-frontend
+  name: {{ $.Release.Name }}-console-frontend
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: login-frontend
+    app.kubernetes.io/component: console-frontend
 spec:
-  replicas: {{ $.Values.loginFrontend.replicas }}
+  replicas: {{ $.Values.consoleFrontend.replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: login-frontend
+      app.kubernetes.io/component: console-frontend
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: login-frontend
+        app.kubernetes.io/component: console-frontend
     spec:
       containers:
-        - name: login-frontend
-          image: {{ $.Values.images.loginFrontend }}
+        - name: console-frontend
+          image: {{ $.Values.images.consoleFrontend }}
           ports:
             - name: http
               containerPort: 80
@@ -26,10 +26,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $.Release.Name }}-login-frontend
+  name: {{ $.Release.Name }}-console-frontend
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: login-frontend
+    app.kubernetes.io/component: console-frontend
 spec:
   type: ClusterIP
   ports:
@@ -37,27 +37,27 @@ spec:
       targetPort: http
       name: http
   selector:
-    app.kubernetes.io/component: login-frontend
+    app.kubernetes.io/component: console-frontend
 {{- if $.Values.ingress.enabled }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ $.Release.Name }}-login-frontend
+  name: {{ $.Release.Name }}-console-frontend
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: login-frontend
+    app.kubernetes.io/component: console-frontend
 spec:
   ingressClassName: {{ $.Values.ingress.className }}
   rules:
-    - host: login.{{ $.Values.ingress.domain }}
+    - host: console.{{ $.Values.ingress.domain }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ $.Release.Name }}-login-frontend
+                name: {{ $.Release.Name }}-console-frontend
                 port:
                   name: http
 {{- end }}

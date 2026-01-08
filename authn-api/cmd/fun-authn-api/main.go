@@ -32,13 +32,14 @@ type config struct {
 	OIDCDiscoveryURL   string        `env:"OIDC_DISCOVERY_URL"` // URL to fetch OIDC discovery document (defaults to OIDCIssuer)
 	ClientID           string        `env:"OIDC_CLIENT_ID,required,notEmpty" envDefault:"authn-api"`
 	RedirectURL        string        `env:"OIDC_REDIRECT_URL,required,notEmpty" envDefault:"http://authn.127.0.0.1.nip.io:8080/callback"`
-	FrontendURL        string        `env:"FRONTEND_URL,required,notEmpty" envDefault:"http://login.127.0.0.1.nip.io:8080"`
+	FrontendURL        string        `env:"FRONTEND_URL,required,notEmpty" envDefault:"http://console.127.0.0.1.nip.io:8080"`
 	CookieDomain       string        `env:"COOKIE_DOMAIN,required,notEmpty" envDefault:"localhost"`
 	CookieSecure       bool          `env:"COOKIE_SECURE,required,notEmpty"`
+	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
 	ListenAddr         string        `env:"LISTEN_ADDR" envDefault:":8080"`
 	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,http://login.127.0.0.1.nip.io:8080"`
+	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,http://console.127.0.0.1.nip.io:8080"`
 }
 
 func main() {
