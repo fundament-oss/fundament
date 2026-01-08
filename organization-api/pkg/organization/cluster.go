@@ -20,12 +20,12 @@ func (s *OrganizationServer) ListClusters(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListClustersRequest],
 ) (*connect.Response[organizationv1.ListClustersResponse], error) {
-	tenantID, ok := TenantIDFromContext(ctx)
+	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("tenant_id missing from context"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	clusters, err := s.queries.ClusterListByTenantID(ctx, tenantID)
+	clusters, err := s.queries.ClusterListByOrganizationID(ctx, organizationID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list clusters: %w", err))
 	}
@@ -71,9 +71,9 @@ func (s *OrganizationServer) CreateCluster(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	tenantID, ok := TenantIDFromContext(ctx)
+	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("tenant_id missing from context"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
 	tx, err := s.db.Pool.Begin(ctx)
@@ -85,7 +85,7 @@ func (s *OrganizationServer) CreateCluster(
 
 	params := db.ClusterCreateParams{
 		ID:                uuid.New(),
-		TenantID:          tenantID,
+		OrganizationID:    organizationID,
 		Name:              req.Msg.Name,
 		Region:            req.Msg.Region,
 		KubernetesVersion: req.Msg.KubernetesVersion,
@@ -103,7 +103,7 @@ func (s *OrganizationServer) CreateCluster(
 
 	s.logger.InfoContext(ctx, "cluster created",
 		"cluster_id", cluster.ID,
-		"tenant_id", tenantID,
+		"organization_id", organizationID,
 		"name", cluster.Name,
 		"region", cluster.Region,
 	)

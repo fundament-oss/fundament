@@ -3,11 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { ApiService } from '../api.service';
-import { OrganizationApiService, Tenant } from '../organization-api.service';
+import { OrganizationApiService, Organization } from '../organization-api.service';
 import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '../icons';
 
 @Component({
-  selector: 'app-tenant',
+  selector: 'app-organization',
   standalone: true,
   imports: [
     CommonModule,
@@ -16,50 +16,52 @@ import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '.
     CloseIconComponent,
     EditIconComponent,
   ],
-  templateUrl: './tenant.component.html',
+  templateUrl: './organization.component.html',
 })
-export class TenantComponent implements OnInit {
+export class OrganizationComponent implements OnInit {
   private titleService = inject(TitleService);
   private apiService = inject(ApiService);
   private organizationApiService = inject(OrganizationApiService);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
-  tenant = signal<Tenant | null>(null);
+  organization = signal<Organization | null>(null);
   isEditing = signal(false);
   editingName = signal('');
   loading = signal(false);
   error = signal<string | null>(null);
 
   constructor() {
-    this.titleService.setTitle('Tenant details');
+    this.titleService.setTitle('Organization details');
   }
 
   async ngOnInit() {
-    await this.loadTenant();
+    await this.loadOrganization();
   }
 
-  async loadTenant() {
+  async loadOrganization() {
     this.loading.set(true);
     this.error.set(null);
 
     try {
-      // Get current user to retrieve tenant ID
+      // Get current user to retrieve organization ID
       const userInfo = await this.apiService.getUserInfo();
-      this.tenant.set(await this.organizationApiService.getTenant(userInfo.tenantId));
+      this.organization.set(
+        await this.organizationApiService.getOrganization(userInfo.organizationId),
+      );
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to load tenant');
-      console.error('Error loading tenant:', err);
+      this.error.set(err instanceof Error ? err.message : 'Failed to load organization');
+      console.error('Error loading organization:', err);
     } finally {
       this.loading.set(false);
     }
   }
 
   startEdit() {
-    const currentTenant = this.tenant();
-    if (currentTenant) {
+    const currentOrganization = this.organization();
+    if (currentOrganization) {
       this.isEditing.set(true);
-      this.editingName.set(currentTenant.name);
+      this.editingName.set(currentOrganization.name);
 
       // Focus the input field after Angular updates the view
       setTimeout(() => {
@@ -74,10 +76,10 @@ export class TenantComponent implements OnInit {
   }
 
   async saveEdit() {
-    const currentTenant = this.tenant();
+    const currentOrganization = this.organization();
     const nameToSave = this.editingName();
 
-    if (!nameToSave.trim() || !currentTenant) {
+    if (!nameToSave.trim() || !currentOrganization) {
       return;
     }
 
@@ -85,14 +87,17 @@ export class TenantComponent implements OnInit {
     this.error.set(null);
 
     try {
-      this.tenant.set(
-        await this.organizationApiService.updateTenant(currentTenant.id, nameToSave.trim()),
+      this.organization.set(
+        await this.organizationApiService.updateOrganization(
+          currentOrganization.id,
+          nameToSave.trim(),
+        ),
       );
       this.isEditing.set(false);
       this.editingName.set('');
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to update tenant');
-      console.error('Error updating tenant:', err);
+      this.error.set(err instanceof Error ? err.message : 'Failed to update organization');
+      console.error('Error updating organization:', err);
     } finally {
       this.loading.set(false);
     }

@@ -1,9 +1,9 @@
 <div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
   <!-- Header -->
   <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-    <h1 class="text-2xl font-bold dark:text-white">Tenant</h1>
+    <h1 class="text-2xl font-bold dark:text-white">Organization</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-      Manage your organization's tenant information
+      Manage your organization's information
     </p>
   </div>
 
@@ -18,26 +18,26 @@
     <!-- Loading State -->
     @if (loading()) {
       <div class="py-8 text-center">
-        <p class="text-gray-600 dark:text-gray-300">Loading tenant...</p>
+        <p class="text-gray-600 dark:text-gray-300">Loading organization...</p>
       </div>
     }
 
-    <!-- Tenant Information -->
-    @if (tenant()) {
+    <!-- Organization Information -->
+    @if (organization()) {
       <div class="space-y-6">
-        <!-- Tenant ID -->
+        <!-- Organization ID -->
         <div>
           <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Tenant ID
+            Organization ID
           </div>
           <p
             class="rounded-md bg-gray-50 px-4 py-2 font-mono text-sm text-gray-900 dark:bg-gray-900 dark:text-white"
           >
-            {{ tenant()!.id }}
+            {{ organization()!.id }}
           </p>
         </div>
 
-        <!-- Tenant Name -->
+        <!-- Organization Name -->
         <div>
           <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Name</div>
           @if (isEditing()) {
@@ -70,7 +70,7 @@
             </div>
           } @else {
             <div class="flex items-center justify-between">
-              <p class="text-sm text-gray-900 dark:text-white">{{ tenant()!.name }}</p>
+              <p class="text-sm text-gray-900 dark:text-white">{{ organization()!.name }}</p>
               <button
                 type="button"
                 (click)="startEdit()"
@@ -87,16 +87,16 @@
         <div>
           <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Created</div>
           <p class="text-sm text-gray-900 dark:text-white">
-            {{ formatDate(tenant()!.created) }}
+            {{ formatDate(organization()!.created) }}
           </p>
         </div>
       </div>
     }
 
     <!-- Empty State -->
-    @if (!loading() && !tenant() && !error()) {
+    @if (!loading() && !organization() && !error()) {
       <div class="py-8 text-center">
-        <p class="text-gray-600 dark:text-gray-300">No tenant information available</p>
+        <p class="text-gray-600 dark:text-gray-300">No organization information available</p>
       </div>
     }
   </div>

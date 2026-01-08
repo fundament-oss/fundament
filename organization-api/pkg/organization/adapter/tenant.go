@@ -7,10 +7,10 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-func FromTenant(t db.OrganizationTenant) *organizationv1.Tenant {
-	return &organizationv1.Tenant{
-		Id:      t.ID.String(),
-		Name:    t.Name,
-		Created: t.Created.Time.Format(time.RFC3339),
+func FromOrganization(o db.TenantOrganization) *organizationv1.Organization {
+	return &organizationv1.Organization{
+		Id:      o.ID.String(),
+		Name:    o.Name,
+		Created: o.Created.Time.Format(time.RFC3339),
 	}
 }

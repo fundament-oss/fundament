@@ -80,26 +80,26 @@ spec:
                   -- Grant connect to database
                   GRANT CONNECT ON DATABASE fundament TO $ROLE_NAME;
 
-                  -- Grant usage on organization schema
-                  GRANT USAGE ON SCHEMA organization TO $ROLE_NAME;
+                  -- Grant usage on tenant schema
+                  GRANT USAGE ON SCHEMA tenant TO $ROLE_NAME;
 
-                  -- Grant access to all tables in organization schema
-                  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA organization TO $ROLE_NAME;
+                  -- Grant access to all tables in tenant schema
+                  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA tenant TO $ROLE_NAME;
 
                   -- Grant access to sequences
-                  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA organization TO $ROLE_NAME;
+                  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA tenant TO $ROLE_NAME;
 
                   -- Set default privileges for future tables
-                  ALTER DEFAULT PRIVILEGES IN SCHEMA organization
+                  ALTER DEFAULT PRIVILEGES IN SCHEMA tenant
                     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO $ROLE_NAME;
-                  ALTER DEFAULT PRIVILEGES IN SCHEMA organization
+                  ALTER DEFAULT PRIVILEGES IN SCHEMA tenant
                     GRANT USAGE, SELECT ON SEQUENCES TO $ROLE_NAME;
                 "
               }
 
               # Grant access to each role (roles are managed by CNPG declarative role management)
               grant_access "fun_authn_api"
-              grant_access "fun_organization_api"
+              grant_access "fun_fundament_api"
 
               echo "Access granted to all roles!"
           env:
@@ -133,26 +133,26 @@ type: kubernetes.io/basic-auth
 stringData:
   username: fun_authn_api
   password: {{ $authnPassword | quote }}
-  uri: postgresql://fun_authn_api:{{ $authnPassword }}@{{ include "fundament.db.host" . }}:5432/fundament?search_path=organization
+  uri: postgresql://fun_authn_api:{{ $authnPassword }}@{{ include "fundament.db.host" . }}:5432/fundament
 ---
-{{- $organizationSecretName := printf "%s-db-fun-organization-api" $.Release.Name }}
-{{- $organizationExisting := lookup "v1" "Secret" $.Release.Namespace $organizationSecretName }}
-{{- $organizationPassword := "" }}
-{{- if $organizationExisting }}
-{{- $organizationPassword = index $organizationExisting.data "password" | b64dec }}
+{{- $fundamentApiSecretName := printf "%s-db-fun-fundament-api" $.Release.Name }}
+{{- $fundamentApiExisting := lookup "v1" "Secret" $.Release.Namespace $fundamentApiSecretName }}
+{{- $fundamentApiPassword := "" }}
+{{- if $fundamentApiExisting }}
+{{- $fundamentApiPassword = index $fundamentApiExisting.data "password" | b64dec }}
 {{- else }}
-{{- $organizationPassword = randAlphaNum 32 }}
+{{- $fundamentApiPassword = randAlphaNum 32 }}
 {{- end }}
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ $organizationSecretName }}
+  name: {{ $fundamentApiSecretName }}
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
     app.kubernetes.io/component: database
 type: kubernetes.io/basic-auth
 stringData:
-  username: fun_organization_api
-  password: {{ $organizationPassword | quote }}
-  uri: postgresql://fun_organization_api:{{ $organizationPassword }}@{{ include "fundament.db.host" . }}:5432/fundament?search_path=organization
+  username: fun_fundament_api
+  password: {{ $fundamentApiPassword | quote }}
+  uri: postgresql://fun_fundament_api:{{ $fundamentApiPassword }}@{{ include "fundament.db.host" . }}:5432/fundament
 {{- end }}

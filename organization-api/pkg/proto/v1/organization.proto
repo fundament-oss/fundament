@@ -1,50 +1,50 @@
 syntax = "proto3";
 
-package organization.v1;
+package organization.v1; // TODO: Should maybe be renamed to `fundament.v1`?
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
-// OrganizationService manages tenants
+// OrganizationService manages organizations
 service OrganizationService {
-  // GetTenant retrieves the user's tenant by ID
-  rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+  // GetOrganization retrieves the user's organization by ID
+  rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse);
 
-  // UpdateTenant updates the user's tenant
-  rpc UpdateTenant(UpdateTenantRequest) returns (UpdateTenantResponse);
+  // UpdateOrganization updates the user's organization
+  rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse);
 }
 
-// Tenant information
-message Tenant {
-  // Tenant ID (UUID)
+// Organization information
+message Organization {
+  // Organization ID (UUID)
   string id = 1;
-  // Tenant name
+  // Organization name
   string name = 2;
   // Creation timestamp (RFC3339)
   string created = 3;
 }
 
-// GetTenant request
-message GetTenantRequest {
-  // ID of the tenant to retrieve
+// GetOrganization request
+message GetOrganizationRequest {
+  // ID of the organization to retrieve
   string id = 1;
 }
 
-// GetTenant response
-message GetTenantResponse {
-  // The requested tenant
-  Tenant tenant = 1;
+// GetOrganization response
+message GetOrganizationResponse {
+  // The requested organization
+  Organization organization = 1;
 }
 
-// UpdateTenant request
-message UpdateTenantRequest {
-  // ID of the tenant to update
+// UpdateOrganization request
+message UpdateOrganizationRequest {
+  // ID of the organization to update
   string id = 1;
-  // New name for the tenant
+  // New name for the organization
   string name = 2;
 }
 
-// UpdateTenant response
-message UpdateTenantResponse {
-  // The updated tenant
-  Tenant tenant = 1;
+// UpdateOrganization response
+message UpdateOrganizationResponse {
+  // The updated organization
+  Organization organization = 1;
 }
