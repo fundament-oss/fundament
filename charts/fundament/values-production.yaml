@@ -3,6 +3,7 @@
 db:
   enabled: true
   instances: 2
+  reset: false
   storageSize: 5Gi
 
 authnApi:
@@ -10,10 +11,6 @@ authnApi:
   replicas: 2
 
 organizationApi:
-  enabled: true
-  replicas: 2
-
-appstoreApi:
   enabled: true
   replicas: 2
 

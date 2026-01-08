@@ -27,7 +27,7 @@ func NewSessionStore(secret []byte) *SessionStore {
 		MaxAge:   600, // 10 minutes for OAuth state
 		HttpOnly: true,
 		Secure:   false, // Set to true in production, this can be set with: ConfigureOptions
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 	}
 	return &SessionStore{store: store}
 }

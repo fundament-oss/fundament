@@ -12,11 +12,6 @@ build:
     push: true
 
   artifacts:
-    - image: appstore-api
-      context: .
-      docker:
-        dockerfile: appstore-api/Dockerfile
-
     - image: authn-api
       context: .
       docker:
@@ -32,10 +27,10 @@ build:
       docker:
         dockerfile: Dockerfile
 
-    - image: login-frontend
-      context: login-frontend
+    - image: console-frontend
+      context: .
       docker:
-        dockerfile: Dockerfile
+        dockerfile: console-frontend/Dockerfile
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheckDeadlineSeconds: 300
@@ -47,10 +42,9 @@ deploy:
         createNamespace: true
         setValueTemplates:
           images.dbMigrations: "{{.IMAGE_FULLY_QUALIFIED_db_migrations}}"
-          images.appstoreApi: "{{.IMAGE_FULLY_QUALIFIED_appstore_api}}"
           images.authnApi: "{{.IMAGE_FULLY_QUALIFIED_authn_api}}"
           images.organizationApi: "{{.IMAGE_FULLY_QUALIFIED_organization_api}}"
-          images.loginFrontend: "{{.IMAGE_FULLY_QUALIFIED_login_frontend}}"
+          images.consoleFrontend: "{{.IMAGE_FULLY_QUALIFIED_console_frontend}}"
 
 profiles:
   - name: env-local
@@ -76,19 +70,13 @@ profiles:
     patches:
       - op: replace
         path: /build/artifacts/0/docker/dockerfile
-        value: appstore-api/hotreload/Dockerfile
+        value: authn-api/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/0/sync
         value: {}
       - op: replace
         path: /build/artifacts/1/docker/dockerfile
-        value: authn-api/hotreload/Dockerfile
-      - op: add
-        path: /build/artifacts/1/sync
-        value: {}
-      - op: replace
-        path: /build/artifacts/2/docker/dockerfile
         value: organization-api/hotreload/Dockerfile
       - op: add
-        path: /build/artifacts/2/sync
+        path: /build/artifacts/1/sync
         value: {}

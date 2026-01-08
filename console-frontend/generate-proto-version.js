@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Find all proto files in the organization API proto directory
-const protoDir = path.join(__dirname, '..', 'organization-api', 'pkg', 'proto', 'organization');
+const protoDir = path.join(__dirname, '..', 'organization-api', 'pkg', 'proto', 'v1');
 
 function findProtoFiles(dir) {
   let results = [];

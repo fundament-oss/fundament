@@ -10,11 +10,14 @@ import (
 )
 
 type OrganizationCluster struct {
-	ID       uuid.UUID
-	TenantID uuid.UUID
-	Name     string
-	Created  pgtype.Timestamptz
-	Deleted  pgtype.Timestamptz
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	Name              string
+	Region            string
+	KubernetesVersion string
+	Status            string
+	Created           pgtype.Timestamptz
+	Deleted           pgtype.Timestamptz
 }
 
 type OrganizationNamespace struct {

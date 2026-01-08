@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package organization.v1;
+
+option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
+
+// Common timestamp message
+message Timestamp {
+  string value = 10;  // ISO 8601 format
+}
+
+// Resource usage information
+message ResourceUsage {
+  double used = 10;
+  double total = 20;
+  string unit = 30;
+}
+
+// Status enumeration for clusters
+enum ClusterStatus {
+  CLUSTER_STATUS_UNSPECIFIED = 0;
+  CLUSTER_STATUS_PROVISIONING = 1;
+  CLUSTER_STATUS_STARTING = 2;
+  CLUSTER_STATUS_RUNNING = 3;
+  CLUSTER_STATUS_UPGRADING = 4;
+  CLUSTER_STATUS_ERROR = 5;
+  CLUSTER_STATUS_STOPPING = 6;
+  CLUSTER_STATUS_STOPPED = 7;
+}
+
+// Node pool status
+enum NodePoolStatus {
+  NODE_POOL_STATUS_UNSPECIFIED = 0;
+  NODE_POOL_STATUS_HEALTHY = 1;
+  NODE_POOL_STATUS_DEGRADED = 2;
+  NODE_POOL_STATUS_UNHEALTHY = 3;
+}

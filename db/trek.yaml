@@ -1,6 +1,5 @@
 model_name: fundament
 db_name: fundament
-db_users:
-  - fun_authn_api
-  - fun_appstore_api
-  - fun_organization_api
+roles:
+  - name: fun_authn_api
+  - name: fun_organization_api
