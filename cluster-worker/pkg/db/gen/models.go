@@ -9,15 +9,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type OrganizationCluster struct {
-	ID       uuid.UUID
-	TenantID uuid.UUID
-	Name     string
-	Created  pgtype.Timestamptz
-	Deleted  pgtype.Timestamptz
+type TenantCluster struct {
+	ID                uuid.UUID
+	OrganizationID    uuid.UUID
+	Name              string
+	Region            string
+	KubernetesVersion string
+	Status            string
+	Created           pgtype.Timestamptz
+	Deleted           pgtype.Timestamptz
 }
 
-type OrganizationClusterSync struct {
+type TenantClusterSync struct {
 	ClusterID          uuid.UUID
 	Synced             pgtype.Timestamptz
 	SyncError          pgtype.Text
@@ -28,7 +31,7 @@ type OrganizationClusterSync struct {
 	ShootStatusUpdated pgtype.Timestamptz
 }
 
-type OrganizationNamespace struct {
+type TenantNamespace struct {
 	ID        uuid.UUID
 	ProjectID uuid.UUID
 	ClusterID uuid.UUID
@@ -37,23 +40,23 @@ type OrganizationNamespace struct {
 	Deleted   pgtype.Timestamptz
 }
 
-type OrganizationProject struct {
-	ID       uuid.UUID
-	TenantID uuid.UUID
-	Name     string
-	Created  pgtype.Timestamptz
-}
-
-type OrganizationTenant struct {
+type TenantOrganization struct {
 	ID      uuid.UUID
 	Name    string
 	Created pgtype.Timestamptz
 }
 
-type OrganizationUser struct {
-	ID         uuid.UUID
-	TenantID   uuid.UUID
-	Name       string
-	ExternalID string
-	Created    pgtype.Timestamptz
+type TenantProject struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	Created        pgtype.Timestamptz
+}
+
+type TenantUser struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     string
+	Created        pgtype.Timestamptz
 }

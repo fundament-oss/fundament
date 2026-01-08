@@ -87,7 +87,7 @@ func NewReal(kubeconfigPath string, namespace string, provider ProviderConfig, l
 
 // ApplyShoot creates or updates a Shoot in Gardener.
 func (r *RealClient) ApplyShoot(ctx context.Context, cluster ClusterToSync) error {
-	shootName := ShootName(cluster.TenantName, cluster.Name)
+	shootName := ShootName(cluster.OrganizationName, cluster.Name)
 
 	// Check if Shoot already exists
 	existing := &gardencorev1beta1.Shoot{}
@@ -131,7 +131,7 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster ClusterToSync) erro
 
 // DeleteShoot deletes a Shoot by cluster info.
 func (r *RealClient) DeleteShoot(ctx context.Context, cluster ClusterToSync) error {
-	shootName := ShootName(cluster.TenantName, cluster.Name)
+	shootName := ShootName(cluster.OrganizationName, cluster.Name)
 	return r.DeleteShootByName(ctx, shootName)
 }
 
@@ -194,7 +194,7 @@ func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 
 // GetShootStatus returns the current reconciliation status of a Shoot.
 func (r *RealClient) GetShootStatus(ctx context.Context, cluster ClusterToSync) (string, string, error) {
-	shootName := ShootName(cluster.TenantName, cluster.Name)
+	shootName := ShootName(cluster.OrganizationName, cluster.Name)
 
 	shoot := &gardencorev1beta1.Shoot{}
 	err := r.client.Get(ctx, client.ObjectKey{
@@ -263,7 +263,7 @@ func (r *RealClient) isShootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 
 // buildShootSpec creates a Shoot spec from cluster info using provider config.
 func (r *RealClient) buildShootSpec(cluster ClusterToSync) *gardencorev1beta1.Shoot {
-	shootName := ShootName(cluster.TenantName, cluster.Name)
+	shootName := ShootName(cluster.OrganizationName, cluster.Name)
 
 	// TODO: Make these configurable per-cluster once we extend the DB schema
 	minWorkers := int32(1)
@@ -295,7 +295,7 @@ func (r *RealClient) buildShootSpec(cluster ClusterToSync) *gardencorev1beta1.Sh
 			Namespace: r.namespace,
 			Labels: map[string]string{
 				"fundament.io/cluster-id": cluster.ID.String(),
-				"fundament.io/tenant":     cluster.TenantName,
+				"fundament.io/organization": cluster.OrganizationName,
 			},
 		},
 		Spec: gardencorev1beta1.ShootSpec{

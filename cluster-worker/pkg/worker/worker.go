@@ -195,7 +195,7 @@ func (w *Worker) reconcileAll(ctx context.Context) {
 		}
 
 		// Compare key fields (expand as schema grows)
-		expectedName := gardener.ShootName(cluster.TenantName, cluster.Name)
+		expectedName := gardener.ShootName(cluster.OrganizationName, cluster.Name)
 		if shoot.Name != expectedName {
 			w.logger.Warn("drift detected: shoot name mismatch",
 				"cluster_id", cluster.ID,
@@ -247,18 +247,18 @@ func (w *Worker) processOne(ctx context.Context) (bool, error) {
 	w.logger.Info("processing cluster",
 		"cluster_id", cluster.ID,
 		"name", cluster.Name,
-		"tenant", cluster.TenantName,
+		"organization", cluster.OrganizationName,
 		"deleted", cluster.Deleted != nil,
 		"attempt", cluster.SyncAttempts+1)
 
 	// 2. Sync to Gardener (no DB lock held - allows other workers to proceed)
 	var syncErr error
 	clusterToSync := gardener.ClusterToSync{
-		ID:           cluster.ID,
-		Name:         cluster.Name,
-		TenantName:   cluster.TenantName,
-		Deleted:      cluster.Deleted,
-		SyncAttempts: int(cluster.SyncAttempts),
+		ID:               cluster.ID,
+		Name:             cluster.Name,
+		OrganizationName: cluster.OrganizationName,
+		Deleted:          cluster.Deleted,
+		SyncAttempts:     int(cluster.SyncAttempts),
 	}
 
 	if cluster.Deleted != nil {
@@ -311,11 +311,11 @@ func (w *Worker) processOne(ctx context.Context) (bool, error) {
 
 // claimedCluster holds a claimed cluster's info.
 type claimedCluster struct {
-	ID           uuid.UUID
-	Name         string
-	TenantName   string
-	Deleted      *time.Time
-	SyncAttempts int32
+	ID               uuid.UUID
+	Name             string
+	OrganizationName string
+	Deleted          *time.Time
+	SyncAttempts     int32
 }
 
 // claimCluster atomically claims one unsynced cluster.
@@ -346,11 +346,11 @@ func (w *Worker) claimCluster(ctx context.Context) (*claimedCluster, error) {
 	}
 
 	return &claimedCluster{
-		ID:           row.ID,
-		Name:         row.Name,
-		TenantName:   row.TenantName,
-		Deleted:      deleted,
-		SyncAttempts: row.SyncAttempts,
+		ID:               row.ID,
+		Name:             row.Name,
+		OrganizationName: row.OrganizationName,
+		Deleted:          deleted,
+		SyncAttempts:     row.SyncAttempts,
 	}, nil
 }
 
