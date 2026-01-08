@@ -32,7 +32,7 @@ func TestMockClient_ApplyShoot(t *testing.T) {
 	cluster := gardener.ClusterToSync{
 		ID:         uuid.New(),
 		Name:       "test-cluster",
-		TenantName: "test-tenant",
+		OrganizationName: "test-tenant",
 	}
 
 	err := mock.ApplyShoot(ctx, cluster)
@@ -62,7 +62,7 @@ func TestMockClient_DeleteShoot(t *testing.T) {
 	cluster := gardener.ClusterToSync{
 		ID:         uuid.New(),
 		Name:       "test-cluster",
-		TenantName: "test-tenant",
+		OrganizationName: "test-tenant",
 	}
 
 	// Create shoot first
@@ -96,7 +96,7 @@ func TestMockClient_ListShoots(t *testing.T) {
 		cluster := gardener.ClusterToSync{
 			ID:         uuid.New(),
 			Name:       "cluster-" + string(rune('a'+i)),
-			TenantName: "tenant",
+			OrganizationName: "tenant",
 		}
 		_ = mock.ApplyShoot(ctx, cluster)
 	}
@@ -120,7 +120,7 @@ func TestMockClient_GetShootStatus(t *testing.T) {
 	cluster := gardener.ClusterToSync{
 		ID:         uuid.New(),
 		Name:       "test-cluster",
-		TenantName: "test-tenant",
+		OrganizationName: "test-tenant",
 	}
 
 	// Before shoot exists - should return pending
@@ -156,7 +156,7 @@ func TestMockClient_StatusOverride(t *testing.T) {
 	cluster := gardener.ClusterToSync{
 		ID:         uuid.New(),
 		Name:       "test-cluster",
-		TenantName: "test-tenant",
+		OrganizationName: "test-tenant",
 	}
 
 	// Set override
@@ -186,7 +186,7 @@ func TestMockClient_ApplyError(t *testing.T) {
 	cluster := gardener.ClusterToSync{
 		ID:         uuid.New(),
 		Name:       "test-cluster",
-		TenantName: "test-tenant",
+		OrganizationName: "test-tenant",
 	}
 
 	// Set error
@@ -211,7 +211,7 @@ func TestMockClient_Reset(t *testing.T) {
 	cluster := gardener.ClusterToSync{
 		ID:         uuid.New(),
 		Name:       "test-cluster",
-		TenantName: "test-tenant",
+		OrganizationName: "test-tenant",
 	}
 
 	// Create shoot and set error
@@ -485,7 +485,7 @@ func TestClusterConversion(t *testing.T) {
 		Name:         "test-cluster",
 		Deleted:      toPgTimestamp(now),
 		SyncAttempts: 3,
-		TenantName:   "test-tenant",
+		OrganizationName:   "test-tenant",
 	}
 
 	// Simulate what worker.claimCluster does
@@ -497,7 +497,7 @@ func TestClusterConversion(t *testing.T) {
 	cluster := gardener.ClusterToSync{
 		ID:           dbRow.ID,
 		Name:         dbRow.Name,
-		TenantName:   dbRow.TenantName,
+		OrganizationName:   dbRow.OrganizationName,
 		Deleted:      deleted,
 		SyncAttempts: int(dbRow.SyncAttempts),
 	}
@@ -509,8 +509,8 @@ func TestClusterConversion(t *testing.T) {
 	if cluster.Name != dbRow.Name {
 		t.Error("Name mismatch")
 	}
-	if cluster.TenantName != dbRow.TenantName {
-		t.Error("TenantName mismatch")
+	if cluster.OrganizationName != dbRow.OrganizationName {
+		t.Error("OrganizationName mismatch")
 	}
 	if cluster.Deleted == nil {
 		t.Error("Deleted should not be nil")

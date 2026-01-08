@@ -35,11 +35,11 @@ type Client interface {
 
 // ClusterToSync contains all the information needed to sync a cluster to Gardener.
 type ClusterToSync struct {
-	ID           uuid.UUID
-	Name         string
-	TenantName   string
-	Deleted      *time.Time
-	SyncAttempts int
+	ID               uuid.UUID
+	Name             string
+	OrganizationName string
+	Deleted          *time.Time
+	SyncAttempts     int
 }
 
 // ShootInfo contains information about a Shoot retrieved from Gardener.
@@ -50,9 +50,9 @@ type ShootInfo struct {
 }
 
 // ShootName returns the Gardener Shoot name for a cluster.
-// Format: {tenant}-{cluster}
-func ShootName(tenantName, clusterName string) string {
-	return tenantName + "-" + clusterName
+// Format: {organization}-{cluster}
+func ShootName(organizationName, clusterName string) string {
+	return organizationName + "-" + clusterName
 }
 
 // Hardcoded defaults (AWS-style values for MVP)

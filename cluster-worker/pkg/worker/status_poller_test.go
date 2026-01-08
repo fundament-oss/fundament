@@ -44,7 +44,7 @@ func TestStatusPoller_MockGardenerInteraction(t *testing.T) {
 	cluster := gardener.ClusterToSync{
 		ID:         uuid.New(),
 		Name:       "test-cluster",
-		TenantName: "test-tenant",
+		OrganizationName: "test-tenant",
 	}
 
 	// Before shoot exists
@@ -96,7 +96,7 @@ func TestStatusPoller_ProgressingStatus(t *testing.T) {
 	cluster := gardener.ClusterToSync{
 		ID:         uuid.New(),
 		Name:       "test-cluster",
-		TenantName: "test-tenant",
+		OrganizationName: "test-tenant",
 	}
 
 	// Create shoot
@@ -127,7 +127,7 @@ func TestStatusPoller_ErrorStatus(t *testing.T) {
 	cluster := gardener.ClusterToSync{
 		ID:         uuid.New(),
 		Name:       "test-cluster",
-		TenantName: "test-tenant",
+		OrganizationName: "test-tenant",
 	}
 
 	// Create shoot
@@ -159,7 +159,7 @@ func TestStatusPoller_DeletingStatus(t *testing.T) {
 	cluster := gardener.ClusterToSync{
 		ID:         uuid.New(),
 		Name:       "test-cluster",
-		TenantName: "test-tenant",
+		OrganizationName: "test-tenant",
 		Deleted:    &now, // Mark as deleted in DB
 	}
 
@@ -269,17 +269,17 @@ func TestStatusPoller_MultipleStatusOverrides(t *testing.T) {
 		message string
 	}{
 		{
-			cluster: gardener.ClusterToSync{ID: uuid.New(), Name: "cluster-1", TenantName: "tenant"},
+			cluster: gardener.ClusterToSync{ID: uuid.New(), Name: "cluster-1", OrganizationName: "tenant"},
 			status:  "ready",
 			message: "Cluster is ready",
 		},
 		{
-			cluster: gardener.ClusterToSync{ID: uuid.New(), Name: "cluster-2", TenantName: "tenant"},
+			cluster: gardener.ClusterToSync{ID: uuid.New(), Name: "cluster-2", OrganizationName: "tenant"},
 			status:  "progressing",
 			message: "Creating workers",
 		},
 		{
-			cluster: gardener.ClusterToSync{ID: uuid.New(), Name: "cluster-3", TenantName: "tenant"},
+			cluster: gardener.ClusterToSync{ID: uuid.New(), Name: "cluster-3", OrganizationName: "tenant"},
 			status:  "error",
 			message: "Infrastructure provisioning failed",
 		},

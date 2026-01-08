@@ -18,10 +18,10 @@ SELECT
     c.name,
     c.deleted,
     cs.sync_attempts,
-    t.name as tenant_name
-FROM organization.clusters c
-JOIN organization.cluster_sync cs ON cs.cluster_id = c.id
-JOIN organization.tenants t ON t.id = c.tenant_id
+    o.name as organization_name
+FROM tenant.clusters c
+JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
+JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE cs.synced IS NULL
   AND (
     cs.sync_last_attempt IS NULL
@@ -33,11 +33,11 @@ LIMIT 1
 `
 
 type ClaimUnsyncedClusterRow struct {
-	ID           uuid.UUID
-	Name         string
-	Deleted      pgtype.Timestamptz
-	SyncAttempts int32
-	TenantName   string
+	ID               uuid.UUID
+	Name             string
+	Deleted          pgtype.Timestamptz
+	SyncAttempts     int32
+	OrganizationName string
 }
 
 // Claims the oldest unsynced cluster for processing (atomic with SKIP LOCKED).
@@ -52,7 +52,7 @@ func (q *Queries) ClaimUnsyncedCluster(ctx context.Context) (ClaimUnsyncedCluste
 		&i.Name,
 		&i.Deleted,
 		&i.SyncAttempts,
-		&i.TenantName,
+		&i.OrganizationName,
 	)
 	return i, err
 }
@@ -69,10 +69,10 @@ SELECT
     cs.shoot_status,
     cs.shoot_status_message,
     cs.shoot_status_updated,
-    t.name as tenant_name
-FROM organization.clusters c
-JOIN organization.cluster_sync cs ON cs.cluster_id = c.id
-JOIN organization.tenants t ON t.id = c.tenant_id
+    o.name as organization_name
+FROM tenant.clusters c
+JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
+JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE c.id = $1
 `
 
@@ -87,7 +87,7 @@ type GetClusterByIDRow struct {
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
-	TenantName         string
+	OrganizationName   string
 }
 
 // Get a single cluster by ID with sync state (for testing).
@@ -105,7 +105,7 @@ func (q *Queries) GetClusterByID(ctx context.Context, id uuid.UUID) (GetClusterB
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
-		&i.TenantName,
+		&i.OrganizationName,
 	)
 	return i, err
 }
@@ -120,14 +120,14 @@ SELECT
     shoot_status,
     shoot_status_message,
     shoot_status_updated
-FROM organization.cluster_sync
+FROM tenant.cluster_sync
 WHERE cluster_id = $1
 `
 
 // Get just the sync state for a cluster.
-func (q *Queries) GetClusterSyncState(ctx context.Context, clusterID uuid.UUID) (OrganizationClusterSync, error) {
+func (q *Queries) GetClusterSyncState(ctx context.Context, clusterID uuid.UUID) (TenantClusterSync, error) {
 	row := q.db.QueryRow(ctx, getClusterSyncState, clusterID)
-	var i OrganizationClusterSync
+	var i TenantClusterSync
 	err := row.Scan(
 		&i.ClusterID,
 		&i.Synced,
@@ -147,19 +147,19 @@ SELECT
     c.name,
     c.deleted,
     cs.synced,
-    t.name as tenant_name
-FROM organization.clusters c
-JOIN organization.cluster_sync cs ON cs.cluster_id = c.id
-JOIN organization.tenants t ON t.id = c.tenant_id
+    o.name as organization_name
+FROM tenant.clusters c
+JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
+JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE c.deleted IS NULL
 `
 
 type ListActiveClustersRow struct {
-	ID         uuid.UUID
-	Name       string
-	Deleted    pgtype.Timestamptz
-	Synced     pgtype.Timestamptz
-	TenantName string
+	ID               uuid.UUID
+	Name             string
+	Deleted          pgtype.Timestamptz
+	Synced           pgtype.Timestamptz
+	OrganizationName string
 }
 
 // Used by periodic reconciliation to compare with Gardener state.
@@ -177,7 +177,7 @@ func (q *Queries) ListActiveClusters(ctx context.Context) ([]ListActiveClustersR
 			&i.Name,
 			&i.Deleted,
 			&i.Synced,
-			&i.TenantName,
+			&i.OrganizationName,
 		); err != nil {
 			return nil, err
 		}
@@ -190,10 +190,10 @@ func (q *Queries) ListActiveClusters(ctx context.Context) ([]ListActiveClustersR
 }
 
 const listClustersNeedingStatusCheck = `-- name: ListClustersNeedingStatusCheck :many
-SELECT c.id, c.name, c.deleted, t.name as tenant_name
-FROM organization.clusters c
-JOIN organization.cluster_sync cs ON cs.cluster_id = c.id
-JOIN organization.tenants t ON t.id = c.tenant_id
+SELECT c.id, c.name, c.deleted, o.name as organization_name
+FROM tenant.clusters c
+JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
+JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE cs.synced IS NOT NULL                           -- Manifest was applied
   AND c.deleted IS NULL                               -- Active (not deleted)
   AND (cs.shoot_status IS NULL                        -- Never checked
@@ -205,10 +205,10 @@ LIMIT $1
 `
 
 type ListClustersNeedingStatusCheckRow struct {
-	ID         uuid.UUID
-	Name       string
-	Deleted    pgtype.Timestamptz
-	TenantName string
+	ID               uuid.UUID
+	Name             string
+	Deleted          pgtype.Timestamptz
+	OrganizationName string
 }
 
 // Get clusters where we need to check Gardener status (active clusters).
@@ -225,7 +225,7 @@ func (q *Queries) ListClustersNeedingStatusCheck(ctx context.Context, limit int3
 			&i.ID,
 			&i.Name,
 			&i.Deleted,
-			&i.TenantName,
+			&i.OrganizationName,
 		); err != nil {
 			return nil, err
 		}
@@ -238,10 +238,10 @@ func (q *Queries) ListClustersNeedingStatusCheck(ctx context.Context, limit int3
 }
 
 const listDeletedClustersNeedingVerification = `-- name: ListDeletedClustersNeedingVerification :many
-SELECT c.id, c.name, c.deleted, t.name as tenant_name
-FROM organization.clusters c
-JOIN organization.cluster_sync cs ON cs.cluster_id = c.id
-JOIN organization.tenants t ON t.id = c.tenant_id
+SELECT c.id, c.name, c.deleted, o.name as organization_name
+FROM tenant.clusters c
+JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
+JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE cs.synced IS NOT NULL                           -- Delete was synced
   AND c.deleted IS NOT NULL                           -- Soft-deleted
   AND (cs.shoot_status IS NULL OR cs.shoot_status != 'deleted') -- Not yet confirmed deleted
@@ -252,10 +252,10 @@ LIMIT $1
 `
 
 type ListDeletedClustersNeedingVerificationRow struct {
-	ID         uuid.UUID
-	Name       string
-	Deleted    pgtype.Timestamptz
-	TenantName string
+	ID               uuid.UUID
+	Name             string
+	Deleted          pgtype.Timestamptz
+	OrganizationName string
 }
 
 // Get deleted clusters where we need to verify Shoot is actually gone.
@@ -272,7 +272,7 @@ func (q *Queries) ListDeletedClustersNeedingVerification(ctx context.Context, li
 			&i.ID,
 			&i.Name,
 			&i.Deleted,
-			&i.TenantName,
+			&i.OrganizationName,
 		); err != nil {
 			return nil, err
 		}
@@ -290,19 +290,19 @@ SELECT
     c.name,
     cs.sync_error,
     cs.sync_attempts,
-    t.name as tenant_name
-FROM organization.clusters c
-JOIN organization.cluster_sync cs ON cs.cluster_id = c.id
-JOIN organization.tenants t ON t.id = c.tenant_id
+    o.name as organization_name
+FROM tenant.clusters c
+JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
+JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE cs.sync_attempts >= $1
 `
 
 type ListFailingClustersRow struct {
-	ID           uuid.UUID
-	Name         string
-	SyncError    pgtype.Text
-	SyncAttempts int32
-	TenantName   string
+	ID               uuid.UUID
+	Name             string
+	SyncError        pgtype.Text
+	SyncAttempts     int32
+	OrganizationName string
 }
 
 // Used for alerting - clusters that have failed multiple times.
@@ -320,7 +320,7 @@ func (q *Queries) ListFailingClusters(ctx context.Context, syncAttempts int32) (
 			&i.Name,
 			&i.SyncError,
 			&i.SyncAttempts,
-			&i.TenantName,
+			&i.OrganizationName,
 		); err != nil {
 			return nil, err
 		}
@@ -333,7 +333,7 @@ func (q *Queries) ListFailingClusters(ctx context.Context, syncAttempts int32) (
 }
 
 const markClusterSyncFailed = `-- name: MarkClusterSyncFailed :exec
-UPDATE organization.cluster_sync
+UPDATE tenant.cluster_sync
 SET sync_error = $2,
     sync_attempts = sync_attempts + 1,
     sync_last_attempt = now()
@@ -352,7 +352,7 @@ func (q *Queries) MarkClusterSyncFailed(ctx context.Context, arg MarkClusterSync
 }
 
 const markClusterSynced = `-- name: MarkClusterSynced :exec
-UPDATE organization.cluster_sync
+UPDATE tenant.cluster_sync
 SET synced = now(),
     sync_error = NULL,
     sync_attempts = 0,
@@ -367,7 +367,7 @@ func (q *Queries) MarkClusterSynced(ctx context.Context, clusterID uuid.UUID) er
 }
 
 const resetClusterSynced = `-- name: ResetClusterSynced :exec
-UPDATE organization.cluster_sync
+UPDATE tenant.cluster_sync
 SET synced = NULL
 WHERE cluster_id = $1
 `
@@ -379,7 +379,7 @@ func (q *Queries) ResetClusterSynced(ctx context.Context, clusterID uuid.UUID) e
 }
 
 const updateShootStatus = `-- name: UpdateShootStatus :exec
-UPDATE organization.cluster_sync
+UPDATE tenant.cluster_sync
 SET shoot_status = $2,
     shoot_status_message = $3,
     shoot_status_updated = now()

@@ -75,9 +75,9 @@ func (p *StatusPoller) pollActiveClusters(ctx context.Context) {
 
 	for _, cluster := range clusters {
 		clusterToSync := gardener.ClusterToSync{
-			ID:         cluster.ID,
-			Name:       cluster.Name,
-			TenantName: cluster.TenantName,
+			ID:               cluster.ID,
+			Name:             cluster.Name,
+			OrganizationName: cluster.OrganizationName,
 		}
 
 		status, message, err := p.gardener.GetShootStatus(ctx, clusterToSync)
@@ -128,10 +128,10 @@ func (p *StatusPoller) pollDeletedClusters(ctx context.Context) {
 		}
 
 		clusterToSync := gardener.ClusterToSync{
-			ID:         cluster.ID,
-			Name:       cluster.Name,
-			TenantName: cluster.TenantName,
-			Deleted:    deleted,
+			ID:               cluster.ID,
+			Name:             cluster.Name,
+			OrganizationName: cluster.OrganizationName,
+			Deleted:          deleted,
 		}
 
 		status, message, err := p.gardener.GetShootStatus(ctx, clusterToSync)

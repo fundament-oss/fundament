@@ -57,13 +57,13 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster ClusterToSync) erro
 		return m.ApplyError
 	}
 
-	shootName := ShootName(cluster.TenantName, cluster.Name)
+	shootName := ShootName(cluster.OrganizationName, cluster.Name)
 	m.shoots[shootName] = ShootInfo{
 		Name:      shootName,
 		ClusterID: cluster.ID,
 		Labels: map[string]string{
-			"fundament.io/cluster-id": cluster.ID.String(),
-			"fundament.io/tenant":     cluster.TenantName,
+			"fundament.io/cluster-id":   cluster.ID.String(),
+			"fundament.io/organization": cluster.OrganizationName,
 		},
 	}
 	m.logger.Info("MOCK: applied shoot", "shoot", shootName, "cluster_id", cluster.ID)
@@ -81,7 +81,7 @@ func (m *MockClient) DeleteShoot(ctx context.Context, cluster ClusterToSync) err
 		return m.DeleteError
 	}
 
-	shootName := ShootName(cluster.TenantName, cluster.Name)
+	shootName := ShootName(cluster.OrganizationName, cluster.Name)
 	delete(m.shoots, shootName)
 	m.logger.Info("MOCK: deleted shoot", "shoot", shootName, "cluster_id", cluster.ID)
 	return nil
@@ -139,7 +139,7 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster ClusterToSync) 
 		return override.Status, override.Message, nil
 	}
 
-	shootName := ShootName(cluster.TenantName, cluster.Name)
+	shootName := ShootName(cluster.OrganizationName, cluster.Name)
 	if _, exists := m.shoots[shootName]; exists {
 		return "ready", "Mock shoot is ready", nil
 	}
