@@ -55,6 +55,8 @@ spec:
               value: fundament
             - name: TREK_POSTGRES_SSLMODE
               value: disable
+            - name: TREK_RESET_DATABASE
+              value: {{ $.Values.db.reset | quote }}
             - name: TREK_INSERT_TEST_DATA
               value: {{ $.Values.db.insertTestData | quote }}
       containers:

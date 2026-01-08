@@ -3,6 +3,7 @@
 db:
   enabled: true
   instances: 2
+  reset: false
   storageSize: 5Gi
 
 authnApi:
