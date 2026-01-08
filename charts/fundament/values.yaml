@@ -23,8 +23,8 @@ db:
   enabled: true
   instances: 1
   storageSize: 1Gi
-  insertTestData: false
   reset: false
+  insertTestData: false
 
 # Authentication API
 authnApi:
