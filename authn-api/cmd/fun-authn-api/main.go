@@ -26,6 +26,7 @@ import (
 )
 
 type config struct {
+	Database           psqldb.Config
 	JWTSecret          string        `env:"JWT_SECRET,required,notEmpty" `
 	OIDCIssuer         string        `env:"OIDC_ISSUER,required,notEmpty" envDefault:"http://localhost:5556"`
 	OIDCDiscoveryURL   string        `env:"OIDC_DISCOVERY_URL"` // URL to fetch OIDC discovery document (defaults to OIDCIssuer)
@@ -34,7 +35,6 @@ type config struct {
 	FrontendURL        string        `env:"FRONTEND_URL,required,notEmpty" envDefault:"http://login.127.0.0.1.nip.io:8080"`
 	CookieDomain       string        `env:"COOKIE_DOMAIN,required,notEmpty" envDefault:"localhost"`
 	CookieSecure       bool          `env:"COOKIE_SECURE,required,notEmpty"`
-	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
 	ListenAddr         string        `env:"LISTEN_ADDR" envDefault:":8080"`
 	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
@@ -110,7 +110,7 @@ func run() error {
 	}
 
 	logger.Debug("connecting to database")
-	db, err := psqldb.New(ctx, logger, cfg.DatabaseURL)
+	db, err := psqldb.New(ctx, logger, cfg.Database)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}

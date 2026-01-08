@@ -8,15 +8,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type Config struct {
+	URL string `env:"DATABASE_URL,required,notEmpty"`
+}
+
 type DB struct {
 	Pool   *pgxpool.Pool
 	logger *slog.Logger
 }
 
-func New(ctx context.Context, logger *slog.Logger, databaseURL string) (*DB, error) {
+func New(ctx context.Context, logger *slog.Logger, config Config) (*DB, error) {
 	logger.Debug("creating database connection pool")
 
-	pool, err := pgxpool.New(ctx, databaseURL)
+	pool, err := pgxpool.New(ctx, config.URL)
 	if err != nil {
 		logger.Error("failed to create connection pool", "error", err)
 		return nil, fmt.Errorf("creating connection pool: %w", err)
