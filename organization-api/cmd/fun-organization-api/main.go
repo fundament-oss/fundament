@@ -11,14 +11,17 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/caarlos0/env/v11"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/cors"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
+	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
-	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/organization/v1/organizationv1connect"
+	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
 type config struct {
@@ -54,7 +57,37 @@ func run() error {
 	ctx := context.Background()
 
 	logger.Debug("connecting to database")
-	db, err := psqldb.New(ctx, logger, cfg.Database)
+
+	options := []psqldb.Option{
+		func(ctx context.Context, config *pgxpool.Config) {
+			config.PrepareConn = func(ctx context.Context, conn *pgx.Conn) (bool, error) {
+				queries := db.New(conn)
+
+				// Extract tenant_id from context and set it in PostgreSQL session for RLS
+				tenantID, ok := organization.TenantIDFromContext(ctx)
+				if ok {
+					if err := queries.SetTenantContext(ctx, tenantID.String()); err != nil {
+						return false, err
+					}
+				}
+
+				return true, nil
+			}
+			config.AfterRelease = func(c *pgx.Conn) bool {
+				queries := db.New(c)
+
+				if err := queries.ResetTenantContext(ctx); err != nil {
+					logger.Warn("failed to reset tenant context on connection release, destroying connection", "error", err)
+					return false // Destroy connection to prevent tenant data leakage
+				}
+
+				return true // Keep connection in pool
+
+			}
+		},
+	}
+
+	db, err := psqldb.New(ctx, logger, cfg.Database, options...)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -75,8 +108,17 @@ func run() error {
 		}),
 		logging.WithLogOnEvents(logging.FinishCall),
 	)
-	path, handler := organizationv1connect.NewOrganizationServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
-	mux.Handle(path, handler)
+
+	interceptors := connect.WithInterceptors(
+		server.AuthInterceptor(), // First: authenticate and enrich context
+		loggingInterceptor,       // Second: log with enriched context
+	)
+
+	orgPath, orgHandler := organizationv1connect.NewOrganizationServiceHandler(server, interceptors)
+	mux.Handle(orgPath, orgHandler)
+
+	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(server, interceptors)
+	mux.Handle(clusterPath, clusterHandler)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,

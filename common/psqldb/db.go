@@ -17,10 +17,23 @@ type DB struct {
 	logger *slog.Logger
 }
 
-func New(ctx context.Context, logger *slog.Logger, config Config) (*DB, error) {
+type Option = func(ctx context.Context, config *pgxpool.Config)
+
+func New(ctx context.Context, logger *slog.Logger, cfg Config, options ...Option) (*DB, error) {
 	logger.Debug("creating database connection pool")
 
-	pool, err := pgxpool.New(ctx, config.URL)
+	// Parse the database URL into a config
+	pgxcfg, err := pgxpool.ParseConfig(cfg.URL)
+	if err != nil {
+		logger.Error("failed to parse database URL", "error", err)
+		return nil, fmt.Errorf("parsing database URL: %w", err)
+	}
+
+	for _, option := range options {
+		option(ctx, pgxcfg)
+	}
+
+	pool, err := pgxpool.NewWithConfig(ctx, pgxcfg)
 	if err != nil {
 		logger.Error("failed to create connection pool", "error", err)
 		return nil, fmt.Errorf("creating connection pool: %w", err)
