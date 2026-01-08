@@ -33,20 +33,20 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// OrganizationServiceGetTenantProcedure is the fully-qualified name of the OrganizationService's
-	// GetTenant RPC.
-	OrganizationServiceGetTenantProcedure = "/organization.v1.OrganizationService/GetTenant"
-	// OrganizationServiceUpdateTenantProcedure is the fully-qualified name of the OrganizationService's
-	// UpdateTenant RPC.
-	OrganizationServiceUpdateTenantProcedure = "/organization.v1.OrganizationService/UpdateTenant"
+	// OrganizationServiceGetOrganizationProcedure is the fully-qualified name of the
+	// OrganizationService's GetOrganization RPC.
+	OrganizationServiceGetOrganizationProcedure = "/organization.v1.OrganizationService/GetOrganization"
+	// OrganizationServiceUpdateOrganizationProcedure is the fully-qualified name of the
+	// OrganizationService's UpdateOrganization RPC.
+	OrganizationServiceUpdateOrganizationProcedure = "/organization.v1.OrganizationService/UpdateOrganization"
 )
 
 // OrganizationServiceClient is a client for the organization.v1.OrganizationService service.
 type OrganizationServiceClient interface {
-	// GetTenant retrieves the user's tenant by ID
-	GetTenant(context.Context, *connect.Request[v1.GetTenantRequest]) (*connect.Response[v1.GetTenantResponse], error)
-	// UpdateTenant updates the user's tenant
-	UpdateTenant(context.Context, *connect.Request[v1.UpdateTenantRequest]) (*connect.Response[v1.UpdateTenantResponse], error)
+	// GetOrganization retrieves the user's organization by ID
+	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
+	// UpdateOrganization updates the user's organization
+	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
 }
 
 // NewOrganizationServiceClient constructs a client for the organization.v1.OrganizationService
@@ -60,16 +60,16 @@ func NewOrganizationServiceClient(httpClient connect.HTTPClient, baseURL string,
 	baseURL = strings.TrimRight(baseURL, "/")
 	organizationServiceMethods := v1.File_v1_organization_proto.Services().ByName("OrganizationService").Methods()
 	return &organizationServiceClient{
-		getTenant: connect.NewClient[v1.GetTenantRequest, v1.GetTenantResponse](
+		getOrganization: connect.NewClient[v1.GetOrganizationRequest, v1.GetOrganizationResponse](
 			httpClient,
-			baseURL+OrganizationServiceGetTenantProcedure,
-			connect.WithSchema(organizationServiceMethods.ByName("GetTenant")),
+			baseURL+OrganizationServiceGetOrganizationProcedure,
+			connect.WithSchema(organizationServiceMethods.ByName("GetOrganization")),
 			connect.WithClientOptions(opts...),
 		),
-		updateTenant: connect.NewClient[v1.UpdateTenantRequest, v1.UpdateTenantResponse](
+		updateOrganization: connect.NewClient[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse](
 			httpClient,
-			baseURL+OrganizationServiceUpdateTenantProcedure,
-			connect.WithSchema(organizationServiceMethods.ByName("UpdateTenant")),
+			baseURL+OrganizationServiceUpdateOrganizationProcedure,
+			connect.WithSchema(organizationServiceMethods.ByName("UpdateOrganization")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -77,27 +77,27 @@ func NewOrganizationServiceClient(httpClient connect.HTTPClient, baseURL string,
 
 // organizationServiceClient implements OrganizationServiceClient.
 type organizationServiceClient struct {
-	getTenant    *connect.Client[v1.GetTenantRequest, v1.GetTenantResponse]
-	updateTenant *connect.Client[v1.UpdateTenantRequest, v1.UpdateTenantResponse]
+	getOrganization    *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
+	updateOrganization *connect.Client[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse]
 }
 
-// GetTenant calls organization.v1.OrganizationService.GetTenant.
-func (c *organizationServiceClient) GetTenant(ctx context.Context, req *connect.Request[v1.GetTenantRequest]) (*connect.Response[v1.GetTenantResponse], error) {
-	return c.getTenant.CallUnary(ctx, req)
+// GetOrganization calls organization.v1.OrganizationService.GetOrganization.
+func (c *organizationServiceClient) GetOrganization(ctx context.Context, req *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
+	return c.getOrganization.CallUnary(ctx, req)
 }
 
-// UpdateTenant calls organization.v1.OrganizationService.UpdateTenant.
-func (c *organizationServiceClient) UpdateTenant(ctx context.Context, req *connect.Request[v1.UpdateTenantRequest]) (*connect.Response[v1.UpdateTenantResponse], error) {
-	return c.updateTenant.CallUnary(ctx, req)
+// UpdateOrganization calls organization.v1.OrganizationService.UpdateOrganization.
+func (c *organizationServiceClient) UpdateOrganization(ctx context.Context, req *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
+	return c.updateOrganization.CallUnary(ctx, req)
 }
 
 // OrganizationServiceHandler is an implementation of the organization.v1.OrganizationService
 // service.
 type OrganizationServiceHandler interface {
-	// GetTenant retrieves the user's tenant by ID
-	GetTenant(context.Context, *connect.Request[v1.GetTenantRequest]) (*connect.Response[v1.GetTenantResponse], error)
-	// UpdateTenant updates the user's tenant
-	UpdateTenant(context.Context, *connect.Request[v1.UpdateTenantRequest]) (*connect.Response[v1.UpdateTenantResponse], error)
+	// GetOrganization retrieves the user's organization by ID
+	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
+	// UpdateOrganization updates the user's organization
+	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
 }
 
 // NewOrganizationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -107,24 +107,24 @@ type OrganizationServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewOrganizationServiceHandler(svc OrganizationServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	organizationServiceMethods := v1.File_v1_organization_proto.Services().ByName("OrganizationService").Methods()
-	organizationServiceGetTenantHandler := connect.NewUnaryHandler(
-		OrganizationServiceGetTenantProcedure,
-		svc.GetTenant,
-		connect.WithSchema(organizationServiceMethods.ByName("GetTenant")),
+	organizationServiceGetOrganizationHandler := connect.NewUnaryHandler(
+		OrganizationServiceGetOrganizationProcedure,
+		svc.GetOrganization,
+		connect.WithSchema(organizationServiceMethods.ByName("GetOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
-	organizationServiceUpdateTenantHandler := connect.NewUnaryHandler(
-		OrganizationServiceUpdateTenantProcedure,
-		svc.UpdateTenant,
-		connect.WithSchema(organizationServiceMethods.ByName("UpdateTenant")),
+	organizationServiceUpdateOrganizationHandler := connect.NewUnaryHandler(
+		OrganizationServiceUpdateOrganizationProcedure,
+		svc.UpdateOrganization,
+		connect.WithSchema(organizationServiceMethods.ByName("UpdateOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/organization.v1.OrganizationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case OrganizationServiceGetTenantProcedure:
-			organizationServiceGetTenantHandler.ServeHTTP(w, r)
-		case OrganizationServiceUpdateTenantProcedure:
-			organizationServiceUpdateTenantHandler.ServeHTTP(w, r)
+		case OrganizationServiceGetOrganizationProcedure:
+			organizationServiceGetOrganizationHandler.ServeHTTP(w, r)
+		case OrganizationServiceUpdateOrganizationProcedure:
+			organizationServiceUpdateOrganizationHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -134,10 +134,10 @@ func NewOrganizationServiceHandler(svc OrganizationServiceHandler, opts ...conne
 // UnimplementedOrganizationServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedOrganizationServiceHandler struct{}
 
-func (UnimplementedOrganizationServiceHandler) GetTenant(context.Context, *connect.Request[v1.GetTenantRequest]) (*connect.Response[v1.GetTenantResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.GetTenant is not implemented"))
+func (UnimplementedOrganizationServiceHandler) GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.GetOrganization is not implemented"))
 }
 
-func (UnimplementedOrganizationServiceHandler) UpdateTenant(context.Context, *connect.Request[v1.UpdateTenantRequest]) (*connect.Response[v1.UpdateTenantResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.UpdateTenant is not implemented"))
+func (UnimplementedOrganizationServiceHandler) UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.UpdateOrganization is not implemented"))
 }

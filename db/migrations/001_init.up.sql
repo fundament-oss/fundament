@@ -1,83 +1,39 @@
-CREATE SCHEMA organization;
+SET SESSION statement_timeout = 3000;
+SET SESSION lock_timeout = 3000;
+
+CREATE SCHEMA "tenant";
 
 
-CREATE TABLE organization.tenants (
-    id uuid NOT NULL DEFAULT uuidv7(),
-    name text not null,
-    created timestamptz NOT NULL DEFAULT now()
+CREATE TABLE "tenant"."clusters" (
+	"id" uuid DEFAULT uuidv7() NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"name" text COLLATE "pg_catalog"."default" NOT NULL,
+	"region" text COLLATE "pg_catalog"."default" NOT NULL,
+	"kubernetes_version" text COLLATE "pg_catalog"."default" NOT NULL,
+	"status" text COLLATE "pg_catalog"."default" NOT NULL,
+	"created" timestamp with time zone DEFAULT now() NOT NULL,
+	"deleted" timestamp with time zone
 );
 
-CREATE UNIQUE INDEX tenants_pk ON organization.tenants USING btree (id);
+ALTER TABLE "tenant"."clusters" ADD CONSTRAINT "clusters_ck_status" CHECK((status = ANY (ARRAY['unspecified'::text, 'provisioning'::text, 'starting'::text, 'running'::text, 'upgrading'::text, 'error'::text, 'stopping'::text, 'stopped'::text])));
 
-ALTER TABLE organization.tenants ADD CONSTRAINT tenants_pk PRIMARY KEY USING INDEX tenants_pk;
+CREATE POLICY "organization_isolation" ON "tenant"."clusters"
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING ((organization_id = (current_setting('app.current_organization_id'::text))::uuid));
 
-CREATE UNIQUE INDEX tenants_uq_name ON organization.tenants USING btree (name);
+ALTER TABLE "tenant"."clusters" ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE organization.tenants ADD CONSTRAINT tenants_uq_name UNIQUE USING INDEX tenants_uq_name;
+CREATE UNIQUE INDEX clusters_pk ON tenant.clusters USING btree (id);
 
+ALTER TABLE "tenant"."clusters" ADD CONSTRAINT "clusters_pk" PRIMARY KEY USING INDEX "clusters_pk";
 
-CREATE TABLE organization.projects (
-    id uuid NOT NULL DEFAULT uuidv7(),
-    tenant_id uuid not null,
-    name text not null,
-    created timestamptz NOT NULL DEFAULT now()
-);
+CREATE UNIQUE INDEX clusters_uq_name ON tenant.clusters USING btree (organization_id, name, deleted) NULLS NOT DISTINCT;
 
-CREATE UNIQUE INDEX projects_pk ON organization.projects USING btree (id);
+ALTER TABLE "tenant"."clusters" ADD CONSTRAINT "clusters_uq_name" UNIQUE USING INDEX "clusters_uq_name";
 
-ALTER TABLE organization.projects ADD CONSTRAINT projects_pk PRIMARY KEY USING INDEX projects_pk;
-
-ALTER TABLE organization.projects ADD CONSTRAINT projects_fk_tenant FOREIGN KEY (tenant_id) REFERENCES organization.tenants(id);
-
-CREATE UNIQUE INDEX projects_uq_tenant_name ON organization.projects USING btree (tenant_id, name);
-
-ALTER TABLE organization.projects ADD CONSTRAINT projects_uq_tenant_name UNIQUE USING INDEX projects_uq_tenant_name;
-
-
-CREATE TABLE organization.clusters (
-    id uuid NOT NULL DEFAULT uuidv7(),
-    tenant_id uuid not null,
-    name text not null,
-    created timestamptz NOT NULL DEFAULT now(),
-    deleted timestamptz
-);
-
-CREATE UNIQUE INDEX clusters_pk ON organization.clusters USING btree (id);
-
-ALTER TABLE organization.clusters ADD CONSTRAINT clusters_pk PRIMARY KEY USING INDEX clusters_pk;
-
-CREATE UNIQUE INDEX clusters_uq_name ON organization.clusters USING btree (tenant_id, name, deleted) NULLS NOT DISTINCT;
-
-ALTER TABLE organization.clusters ADD CONSTRAINT clusters_fk_tenant FOREIGN KEY (tenant_id) REFERENCES organization.tenants(id);
-
-ALTER TABLE organization.clusters ADD CONSTRAINT clusters_uq_name UNIQUE USING INDEX clusters_uq_name;
-
-
-CREATE TABLE organization.namespaces (
-    id uuid NOT NULL DEFAULT uuidv7(),
-    project_id uuid not null,
-    cluster_id uuid not null,
-    name text not null,
-    created timestamptz NOT NULL DEFAULT now(),
-    deleted timestamptz
-);
-
-CREATE UNIQUE INDEX namespaces_pk ON organization.namespaces USING btree (id);
-
-ALTER TABLE organization.namespaces ADD CONSTRAINT namespaces_pk PRIMARY KEY USING INDEX namespaces_pk;
-
-CREATE UNIQUE INDEX namespaces_uq_name ON organization.namespaces USING btree (project_id, name, deleted) NULLS NOT DISTINCT;
-
-ALTER TABLE organization.namespaces ADD CONSTRAINT namespaces_uq_name UNIQUE USING INDEX namespaces_uq_name;
-
-ALTER TABLE organization.namespaces ADD CONSTRAINT namespaces_ck_name CHECK ((name = name));
-
-ALTER TABLE organization.namespaces ADD CONSTRAINT namespaces_fk_cluster FOREIGN KEY (cluster_id) REFERENCES organization.clusters(id);
-
-ALTER TABLE organization.namespaces ADD CONSTRAINT namespaces_fk_project FOREIGN KEY (project_id) REFERENCES organization.projects(id);
-
-
-CREATE OR REPLACE FUNCTION organization.clusters_tr_verify_deleted()
+CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_deleted()
  RETURNS trigger
  LANGUAGE plpgsql
  COST 1
@@ -85,20 +41,104 @@ AS $function$
 BEGIN
 	IF EXISTS (
 		SELECT 1
-		FROM organization.namespaces
+		FROM tenant.namespaces
 		WHERE
 			cluster_id = NEW.id
 			AND deleted IS NULL
 	) THEN
 		RAISE EXCEPTION 'Cannot delete cluster with undeleted namespaces';
 	END IF;
+	RETURN NEW;
 END;
 $function$
 ;
 
 CREATE CONSTRAINT TRIGGER verify_deleted
-AFTER INSERT OR UPDATE
-ON organization.clusters
+AFTER INSERT OR UPDATE ON tenant.clusters
 NOT DEFERRABLE INITIALLY IMMEDIATE
 FOR EACH ROW
-EXECUTE FUNCTION organization.clusters_tr_verify_deleted();
+EXECUTE FUNCTION tenant.clusters_tr_verify_deleted();
+
+CREATE TABLE "tenant"."namespaces" (
+	"id" uuid DEFAULT uuidv7() NOT NULL,
+	"project_id" uuid NOT NULL,
+	"cluster_id" uuid NOT NULL,
+	"name" text COLLATE "pg_catalog"."default" NOT NULL,
+	"created" timestamp with time zone DEFAULT now() NOT NULL,
+	"deleted" timestamp with time zone
+);
+
+ALTER TABLE "tenant"."namespaces" ADD CONSTRAINT "namespaces_ck_name" CHECK((name = name));
+
+ALTER TABLE "tenant"."namespaces" ADD CONSTRAINT "namespaces_fk_cluster" FOREIGN KEY (cluster_id) REFERENCES tenant.clusters(id) NOT VALID;
+
+ALTER TABLE "tenant"."namespaces" VALIDATE CONSTRAINT "namespaces_fk_cluster";
+
+CREATE UNIQUE INDEX namespaces_pk ON tenant.namespaces USING btree (id);
+
+ALTER TABLE "tenant"."namespaces" ADD CONSTRAINT "namespaces_pk" PRIMARY KEY USING INDEX "namespaces_pk";
+
+CREATE UNIQUE INDEX namespaces_uq_name ON tenant.namespaces USING btree (project_id, name, deleted) NULLS NOT DISTINCT;
+
+ALTER TABLE "tenant"."namespaces" ADD CONSTRAINT "namespaces_uq_name" UNIQUE USING INDEX "namespaces_uq_name";
+
+CREATE TABLE "tenant"."organizations" (
+	"id" uuid DEFAULT uuidv7() NOT NULL,
+	"name" text COLLATE "pg_catalog"."default" NOT NULL,
+	"created" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE UNIQUE INDEX organizations_pk ON tenant.organizations USING btree (id);
+
+ALTER TABLE "tenant"."organizations" ADD CONSTRAINT "organizations_pk" PRIMARY KEY USING INDEX "organizations_pk";
+
+CREATE UNIQUE INDEX organizations_uq_name ON tenant.organizations USING btree (name);
+
+ALTER TABLE "tenant"."organizations" ADD CONSTRAINT "organizations_uq_name" UNIQUE USING INDEX "organizations_uq_name";
+
+ALTER TABLE "tenant"."clusters" ADD CONSTRAINT "clusters_fk_organization" FOREIGN KEY (organization_id) REFERENCES tenant.organizations(id) NOT VALID;
+
+ALTER TABLE "tenant"."clusters" VALIDATE CONSTRAINT "clusters_fk_organization";
+
+CREATE TABLE "tenant"."projects" (
+	"id" uuid DEFAULT uuidv7() NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"name" text COLLATE "pg_catalog"."default" NOT NULL,
+	"created" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE "tenant"."projects" ADD CONSTRAINT "projects_fk_organization" FOREIGN KEY (organization_id) REFERENCES tenant.organizations(id) NOT VALID;
+
+ALTER TABLE "tenant"."projects" VALIDATE CONSTRAINT "projects_fk_organization";
+
+CREATE UNIQUE INDEX projects_pk ON tenant.projects USING btree (id);
+
+ALTER TABLE "tenant"."projects" ADD CONSTRAINT "projects_pk" PRIMARY KEY USING INDEX "projects_pk";
+
+CREATE UNIQUE INDEX projects_uq_organization_name ON tenant.projects USING btree (organization_id, name);
+
+ALTER TABLE "tenant"."projects" ADD CONSTRAINT "projects_uq_organization_name" UNIQUE USING INDEX "projects_uq_organization_name";
+
+ALTER TABLE "tenant"."namespaces" ADD CONSTRAINT "namespaces_fk_project" FOREIGN KEY (project_id) REFERENCES tenant.projects(id) NOT VALID;
+
+ALTER TABLE "tenant"."namespaces" VALIDATE CONSTRAINT "namespaces_fk_project";
+
+CREATE TABLE "tenant"."users" (
+	"id" uuid DEFAULT uuidv7() NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"name" text COLLATE "pg_catalog"."default" NOT NULL,
+	"external_id" text COLLATE "pg_catalog"."default" NOT NULL,
+	"created" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE "tenant"."users" ADD CONSTRAINT "users_fk_organization" FOREIGN KEY (organization_id) REFERENCES tenant.organizations(id) NOT VALID;
+
+ALTER TABLE "tenant"."users" VALIDATE CONSTRAINT "users_fk_organization";
+
+CREATE UNIQUE INDEX users_pk ON tenant.users USING btree (id);
+
+ALTER TABLE "tenant"."users" ADD CONSTRAINT "users_pk" PRIMARY KEY USING INDEX "users_pk";
+
+CREATE UNIQUE INDEX users_uq_external_id ON tenant.users USING btree (external_id);
+
+ALTER TABLE "tenant"."users" ADD CONSTRAINT "users_uq_external_id" UNIQUE USING INDEX "users_uq_external_id";

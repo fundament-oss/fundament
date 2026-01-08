@@ -15,10 +15,10 @@ import (
 
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID   uuid.UUID `json:"user_id"`
-	TenantID uuid.UUID `json:"tenant_id"`
-	Groups   []string  `json:"groups"`
-	Name     string    `json:"name"`
+	UserID         uuid.UUID `json:"user_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Groups         []string  `json:"groups"`
+	Name           string    `json:"name"`
 }
 
 const AuthCookieName = "fundament_auth"
@@ -81,6 +81,6 @@ func (s *OrganizationServer) validateRequest(header http.Header) (*Claims, error
 		return nil, fmt.Errorf("invalid token claims")
 	}
 
-	s.logger.Debug("token validated", "user_id", claims.UserID, "tenant_id", claims.TenantID)
+	s.logger.Debug("token validated", "user_id", claims.UserID, "organization_id", claims.OrganizationID)
 	return claims, nil
 }

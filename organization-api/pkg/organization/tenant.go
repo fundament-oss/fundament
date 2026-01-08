@@ -15,63 +15,63 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-func (s *OrganizationServer) GetTenant(
+func (s *OrganizationServer) GetOrganization(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetTenantRequest],
-) (*connect.Response[organizationv1.GetTenantResponse], error) {
-	tenantID, err := uuid.Parse(req.Msg.Id)
+	req *connect.Request[organizationv1.GetOrganizationRequest],
+) (*connect.Response[organizationv1.GetOrganizationResponse], error) {
+	organizationID, err := uuid.Parse(req.Msg.Id)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid tenant id: %w", err))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid organization id: %w", err))
 	}
 
-	input := models.TenantGet{ID: tenantID}
+	input := models.OrganizationGet{ID: organizationID}
 	if err := s.validator.Validate(input); err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	tenant, err := s.queries.TenantGetByID(ctx, input.ID)
+	organization, err := s.queries.OrganizationGetByID(ctx, input.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("tenant not found"))
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("organization not found"))
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get tenant: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get organization: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.GetTenantResponse{
-		Tenant: adapter.FromTenant(tenant),
+	return connect.NewResponse(&organizationv1.GetOrganizationResponse{
+		Organization: adapter.FromOrganization(organization),
 	}), nil
 }
 
-func (s *OrganizationServer) UpdateTenant(
+func (s *OrganizationServer) UpdateOrganization(
 	ctx context.Context,
-	req *connect.Request[organizationv1.UpdateTenantRequest],
-) (*connect.Response[organizationv1.UpdateTenantResponse], error) {
-	tenantID, err := uuid.Parse(req.Msg.Id)
+	req *connect.Request[organizationv1.UpdateOrganizationRequest],
+) (*connect.Response[organizationv1.UpdateOrganizationResponse], error) {
+	organizationID, err := uuid.Parse(req.Msg.Id)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid tenant id: %w", err))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid organization id: %w", err))
 	}
 
-	input := models.TenantUpdate{ID: tenantID, Name: req.Msg.Name}
+	input := models.OrganizationUpdate{ID: organizationID, Name: req.Msg.Name}
 	if err := s.validator.Validate(input); err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	params := db.TenantUpdateParams{
+	params := db.OrganizationUpdateParams{
 		ID:   input.ID,
 		Name: input.Name,
 	}
 
-	tenant, err := s.queries.TenantUpdate(ctx, params)
+	organization, err := s.queries.OrganizationUpdate(ctx, params)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("tenant not found"))
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("organization not found"))
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update tenant: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update organization: %w", err))
 	}
 
-	s.logger.InfoContext(ctx, "tenant updated", "tenant_id", tenant.ID, "name", tenant.Name)
+	s.logger.InfoContext(ctx, "organization updated", "organization_id", organization.ID, "name", organization.Name)
 
-	return connect.NewResponse(&organizationv1.UpdateTenantResponse{
-		Tenant: adapter.FromTenant(tenant),
+	return connect.NewResponse(&organizationv1.UpdateOrganizationResponse{
+		Organization: adapter.FromOrganization(organization),
 	}), nil
 }

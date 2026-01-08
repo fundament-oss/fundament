@@ -22,8 +22,8 @@ spec:
         login: true
         passwordSecret:
           name: {{ $.Release.Name }}-db-fun-authn-api
-      - name: fun_organization_api
+      - name: fun_fundament_api
         login: true
         passwordSecret:
-          name: {{ $.Release.Name }}-db-fun-organization-api
+          name: {{ $.Release.Name }}-db-fun-fundament-api
 {{- end }}

@@ -106,8 +106,8 @@ type User struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// User ID
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Tenant ID
-	TenantId string `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Organization ID
+	OrganizationId string `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	// User name
 	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	// External ID from OIDC provider
@@ -155,9 +155,9 @@ func (x *User) GetId() string {
 	return ""
 }
 
-func (x *User) GetTenantId() string {
+func (x *User) GetOrganizationId() string {
 	if x != nil {
-		return x.TenantId
+		return x.OrganizationId
 	}
 	return ""
 }
@@ -190,10 +190,10 @@ const file_authn_v1_authn_proto_rawDesc = "" +
 	"\x14authn/v1/authn.proto\x12\bauthn.v1\"\x14\n" +
 	"\x12GetUserInfoRequest\"9\n" +
 	"\x13GetUserInfoResponse\x12\"\n" +
-	"\x04user\x18\x01 \x01(\v2\x0e.authn.v1.UserR\x04user\"\x80\x01\n" +
+	"\x04user\x18\x01 \x01(\v2\x0e.authn.v1.UserR\x04user\"\x8c\x01\n" +
 	"\x04User\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
-	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x12\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1f\n" +
 	"\vexternal_id\x18\x04 \x01(\tR\n" +
 	"externalId\x12\x16\n" +

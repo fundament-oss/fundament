@@ -13,33 +13,33 @@ import (
 )
 
 const clusterCreate = `-- name: ClusterCreate :one
-INSERT INTO organization.clusters (id, tenant_id, name, region, kubernetes_version, status)
+INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version, status)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, tenant_id, name, region, kubernetes_version, status, created, deleted
+RETURNING id, organization_id, name, region, kubernetes_version, status, created, deleted
 `
 
 type ClusterCreateParams struct {
 	ID                uuid.UUID
-	TenantID          uuid.UUID
+	OrganizationID    uuid.UUID
 	Name              string
 	Region            string
 	KubernetesVersion string
 	Status            string
 }
 
-func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (OrganizationCluster, error) {
+func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (TenantCluster, error) {
 	row := q.db.QueryRow(ctx, clusterCreate,
 		arg.ID,
-		arg.TenantID,
+		arg.OrganizationID,
 		arg.Name,
 		arg.Region,
 		arg.KubernetesVersion,
 		arg.Status,
 	)
-	var i OrganizationCluster
+	var i TenantCluster
 	err := row.Scan(
 		&i.ID,
-		&i.TenantID,
+		&i.OrganizationID,
 		&i.Name,
 		&i.Region,
 		&i.KubernetesVersion,
@@ -51,7 +51,7 @@ func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (O
 }
 
 const clusterDelete = `-- name: ClusterDelete :exec
-UPDATE organization.clusters
+UPDATE tenant.clusters
 SET deleted = NOW()
 WHERE id = $1 AND deleted IS NULL
 `
@@ -62,17 +62,17 @@ func (q *Queries) ClusterDelete(ctx context.Context, id uuid.UUID) error {
 }
 
 const clusterGetByID = `-- name: ClusterGetByID :one
-SELECT id, tenant_id, name, region, kubernetes_version, status, created, deleted
-FROM organization.clusters
+SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
+FROM tenant.clusters
 WHERE id = $1 AND deleted IS NULL
 `
 
-func (q *Queries) ClusterGetByID(ctx context.Context, id uuid.UUID) (OrganizationCluster, error) {
+func (q *Queries) ClusterGetByID(ctx context.Context, id uuid.UUID) (TenantCluster, error) {
 	row := q.db.QueryRow(ctx, clusterGetByID, id)
-	var i OrganizationCluster
+	var i TenantCluster
 	err := row.Scan(
 		&i.ID,
-		&i.TenantID,
+		&i.OrganizationID,
 		&i.Name,
 		&i.Region,
 		&i.KubernetesVersion,
@@ -83,25 +83,25 @@ func (q *Queries) ClusterGetByID(ctx context.Context, id uuid.UUID) (Organizatio
 	return i, err
 }
 
-const clusterListByTenantID = `-- name: ClusterListByTenantID :many
-SELECT id, tenant_id, name, region, kubernetes_version, status, created, deleted
-FROM organization.clusters
-WHERE tenant_id = $1 AND deleted IS NULL
+const clusterListByOrganizationID = `-- name: ClusterListByOrganizationID :many
+SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
+FROM tenant.clusters
+WHERE organization_id = $1 AND deleted IS NULL
 ORDER BY created DESC
 `
 
-func (q *Queries) ClusterListByTenantID(ctx context.Context, tenantID uuid.UUID) ([]OrganizationCluster, error) {
-	rows, err := q.db.Query(ctx, clusterListByTenantID, tenantID)
+func (q *Queries) ClusterListByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]TenantCluster, error) {
+	rows, err := q.db.Query(ctx, clusterListByOrganizationID, organizationID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []OrganizationCluster
+	var items []TenantCluster
 	for rows.Next() {
-		var i OrganizationCluster
+		var i TenantCluster
 		if err := rows.Scan(
 			&i.ID,
-			&i.TenantID,
+			&i.OrganizationID,
 			&i.Name,
 			&i.Region,
 			&i.KubernetesVersion,
@@ -120,10 +120,10 @@ func (q *Queries) ClusterListByTenantID(ctx context.Context, tenantID uuid.UUID)
 }
 
 const clusterUpdate = `-- name: ClusterUpdate :one
-UPDATE organization.clusters
+UPDATE tenant.clusters
 SET kubernetes_version = COALESCE($2, kubernetes_version)
 WHERE id = $1 AND deleted IS NULL
-RETURNING id, tenant_id, name, region, kubernetes_version, status, created, deleted
+RETURNING id, organization_id, name, region, kubernetes_version, status, created, deleted
 `
 
 type ClusterUpdateParams struct {
@@ -131,12 +131,12 @@ type ClusterUpdateParams struct {
 	KubernetesVersion pgtype.Text
 }
 
-func (q *Queries) ClusterUpdate(ctx context.Context, arg ClusterUpdateParams) (OrganizationCluster, error) {
+func (q *Queries) ClusterUpdate(ctx context.Context, arg ClusterUpdateParams) (TenantCluster, error) {
 	row := q.db.QueryRow(ctx, clusterUpdate, arg.ID, arg.KubernetesVersion)
-	var i OrganizationCluster
+	var i TenantCluster
 	err := row.Scan(
 		&i.ID,
-		&i.TenantID,
+		&i.OrganizationID,
 		&i.Name,
 		&i.Region,
 		&i.KubernetesVersion,

@@ -8,7 +8,7 @@ const CONFIG = {
 
 export interface UserInfo {
   id: string;
-  tenantId: string;
+  organizationId: string;
   name: string;
   externalId: string;
   groups: string[];

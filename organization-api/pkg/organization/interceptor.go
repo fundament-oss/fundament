@@ -26,11 +26,11 @@ func (s *OrganizationServer) AuthInterceptor() connect.UnaryInterceptorFunc {
 			}
 
 			// Inject into context
-			ctx = WithTenantID(ctx, claims.TenantID)
+			ctx = WithOrganizationID(ctx, claims.OrganizationID)
 			ctx = WithClaims(ctx, claims)
 
 			s.logger.DebugContext(ctx, "request authenticated",
-				"tenant_id", claims.TenantID,
+				"organization_id", claims.OrganizationID,
 				"user_id", claims.UserID,
 			)
 

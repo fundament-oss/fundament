@@ -11,37 +11,37 @@ import (
 	"github.com/google/uuid"
 )
 
-const tenantCreate = `-- name: TenantCreate :one
-INSERT INTO organization.tenants (name)
+const organizationCreate = `-- name: OrganizationCreate :one
+INSERT INTO tenant.organizations (name)
 VALUES ($1)
 RETURNING id, name, created
 `
 
-func (q *Queries) TenantCreate(ctx context.Context, name string) (OrganizationTenant, error) {
-	row := q.db.QueryRow(ctx, tenantCreate, name)
-	var i OrganizationTenant
+func (q *Queries) OrganizationCreate(ctx context.Context, name string) (TenantOrganization, error) {
+	row := q.db.QueryRow(ctx, organizationCreate, name)
+	var i TenantOrganization
 	err := row.Scan(&i.ID, &i.Name, &i.Created)
 	return i, err
 }
 
 const userCreate = `-- name: UserCreate :one
-INSERT INTO organization.users (tenant_id, name, external_id)
+INSERT INTO tenant.users (organization_id, name, external_id)
 VALUES ($1, $2, $3)
-RETURNING id, tenant_id, name, external_id, created
+RETURNING id, organization_id, name, external_id, created
 `
 
 type UserCreateParams struct {
-	TenantID   uuid.UUID
-	Name       string
-	ExternalID string
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     string
 }
 
-func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (OrganizationUser, error) {
-	row := q.db.QueryRow(ctx, userCreate, arg.TenantID, arg.Name, arg.ExternalID)
-	var i OrganizationUser
+func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (TenantUser, error) {
+	row := q.db.QueryRow(ctx, userCreate, arg.OrganizationID, arg.Name, arg.ExternalID)
+	var i TenantUser
 	err := row.Scan(
 		&i.ID,
-		&i.TenantID,
+		&i.OrganizationID,
 		&i.Name,
 		&i.ExternalID,
 		&i.Created,
@@ -50,17 +50,17 @@ func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (Organiz
 }
 
 const userGetByExternalID = `-- name: UserGetByExternalID :one
-SELECT id, tenant_id, name, external_id, created
-FROM organization.users
+SELECT id, organization_id, name, external_id, created
+FROM tenant.users
 WHERE external_id = $1
 `
 
-func (q *Queries) UserGetByExternalID(ctx context.Context, externalID string) (OrganizationUser, error) {
+func (q *Queries) UserGetByExternalID(ctx context.Context, externalID string) (TenantUser, error) {
 	row := q.db.QueryRow(ctx, userGetByExternalID, externalID)
-	var i OrganizationUser
+	var i TenantUser
 	err := row.Scan(
 		&i.ID,
-		&i.TenantID,
+		&i.OrganizationID,
 		&i.Name,
 		&i.ExternalID,
 		&i.Created,
@@ -69,17 +69,17 @@ func (q *Queries) UserGetByExternalID(ctx context.Context, externalID string) (O
 }
 
 const userGetByID = `-- name: UserGetByID :one
-SELECT id, tenant_id, name, external_id, created
-FROM organization.users
+SELECT id, organization_id, name, external_id, created
+FROM tenant.users
 WHERE id = $1
 `
 
-func (q *Queries) UserGetByID(ctx context.Context, id uuid.UUID) (OrganizationUser, error) {
+func (q *Queries) UserGetByID(ctx context.Context, id uuid.UUID) (TenantUser, error) {
 	row := q.db.QueryRow(ctx, userGetByID, id)
-	var i OrganizationUser
+	var i TenantUser
 	err := row.Scan(
 		&i.ID,
-		&i.TenantID,
+		&i.OrganizationID,
 		&i.Name,
 		&i.ExternalID,
 		&i.Created,
@@ -88,10 +88,10 @@ func (q *Queries) UserGetByID(ctx context.Context, id uuid.UUID) (OrganizationUs
 }
 
 const userUpdate = `-- name: UserUpdate :one
-UPDATE organization.users
+UPDATE tenant.users
 SET name = $2
 WHERE external_id = $1
-RETURNING id, tenant_id, name, external_id, created
+RETURNING id, organization_id, name, external_id, created
 `
 
 type UserUpdateParams struct {
@@ -99,12 +99,12 @@ type UserUpdateParams struct {
 	Name       string
 }
 
-func (q *Queries) UserUpdate(ctx context.Context, arg UserUpdateParams) (OrganizationUser, error) {
+func (q *Queries) UserUpdate(ctx context.Context, arg UserUpdateParams) (TenantUser, error) {
 	row := q.db.QueryRow(ctx, userUpdate, arg.ExternalID, arg.Name)
-	var i OrganizationUser
+	var i TenantUser
 	err := row.Scan(
 		&i.ID,
-		&i.TenantID,
+		&i.OrganizationID,
 		&i.Name,
 		&i.ExternalID,
 		&i.Created,
@@ -113,25 +113,25 @@ func (q *Queries) UserUpdate(ctx context.Context, arg UserUpdateParams) (Organiz
 }
 
 const userUpsert = `-- name: UserUpsert :one
-INSERT INTO organization.users (tenant_id, name, external_id)
+INSERT INTO tenant.users (organization_id, name, external_id)
 VALUES ($1, $2, $3)
 ON CONFLICT (external_id)
 DO UPDATE SET name = EXCLUDED.name
-RETURNING id, tenant_id, name, external_id, created
+RETURNING id, organization_id, name, external_id, created
 `
 
 type UserUpsertParams struct {
-	TenantID   uuid.UUID
-	Name       string
-	ExternalID string
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     string
 }
 
-func (q *Queries) UserUpsert(ctx context.Context, arg UserUpsertParams) (OrganizationUser, error) {
-	row := q.db.QueryRow(ctx, userUpsert, arg.TenantID, arg.Name, arg.ExternalID)
-	var i OrganizationUser
+func (q *Queries) UserUpsert(ctx context.Context, arg UserUpsertParams) (TenantUser, error) {
+	row := q.db.QueryRow(ctx, userUpsert, arg.OrganizationID, arg.Name, arg.ExternalID)
+	var i TenantUser
 	err := row.Scan(
 		&i.ID,
-		&i.TenantID,
+		&i.OrganizationID,
 		&i.Name,
 		&i.ExternalID,
 		&i.Created,

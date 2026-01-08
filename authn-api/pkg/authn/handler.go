@@ -32,10 +32,10 @@ func (s *AuthnServer) GetUserInfo(
 
 	return connect.NewResponse(&authnv1.GetUserInfoResponse{
 		User: &authnv1.User{
-			Id:       claims.UserID.String(),
-			TenantId: claims.TenantID.String(),
-			Name:     claims.Name,
-			Groups:   claims.Groups,
+			Id:             claims.UserID.String(),
+			OrganizationId: claims.OrganizationID.String(),
+			Name:           claims.Name,
+			Groups:         claims.Groups,
 		},
 	}), nil
 }
@@ -157,7 +157,7 @@ func (s *AuthnServer) HandleCallback(w http.ResponseWriter, r *http.Request, par
 
 	s.logger.Info("user logged in",
 		"user_id", user.ID,
-		"tenant_id", user.TenantID,
+		"organization_id", user.OrganizationID,
 		"name", user.Name,
 		"groups", groups,
 	)
@@ -189,10 +189,10 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := &db.OrganizationUser{
-		ID:       claims.UserID,
-		TenantID: claims.TenantID,
-		Name:     claims.Name,
+	user := &db.TenantUser{
+		ID:             claims.UserID,
+		OrganizationID: claims.OrganizationID,
+		Name:           claims.Name,
 	}
 
 	accessToken, err := s.generateJWT(user, claims.Groups)
@@ -292,7 +292,7 @@ func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request
 
 	s.logger.Info("user logged in via password",
 		"user_id", user.ID,
-		"tenant_id", user.TenantID,
+		"organization_id", user.OrganizationID,
 		"name", user.Name,
 		"groups", groups,
 	)
@@ -303,10 +303,10 @@ func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request
 		TokenType:   "Bearer",
 		ExpiresIn:   int(s.config.TokenExpiry.Seconds()),
 		User: authnhttp.User{
-			Id:       user.ID,
-			TenantId: user.TenantID,
-			Name:     user.Name,
-			Groups:   groups,
+			Id:             user.ID,
+			OrganizationId: user.OrganizationID,
+			Name:           user.Name,
+			Groups:         groups,
 		},
 	}); err != nil {
 		s.logger.Error("failed to write JSON response", "error", err)
@@ -325,15 +325,15 @@ type oidcClaims struct {
 // processOIDCLogin handles the common logic for processing an OIDC login,
 // including user lookup/creation and JWT generation.
 // Returns the user, groups, and access token on success.
-func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, loginMethod string) (*db.OrganizationUser, []string, string, error) {
+func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, loginMethod string) (*db.TenantUser, []string, string, error) {
 	// Dex staticPasswords doesn't support groups, so fall back to email-based mapping for dev
 	groups := claims.Groups
 	if len(groups) == 0 {
 		groups = getDevGroups(claims.Email)
 	}
 
-	// Check if user exists to determine if we need to create a tenant
-	var tenantID uuid.UUID
+	// Check if user exists to determine if we need to create an organization
+	var organizationID uuid.UUID
 	existingUser, err := s.queries.UserGetByExternalID(ctx, claims.Sub)
 	isNewUser := errors.Is(err, pgx.ErrNoRows)
 
@@ -343,26 +343,26 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 	}
 
 	if isNewUser {
-		// New user - create tenant first
-		tenantName := claims.Name
-		if tenantName == "" {
-			tenantName = claims.Email
+		// New user - create organization first
+		organizationName := claims.Name
+		if organizationName == "" {
+			organizationName = claims.Email
 		}
 
-		tenant, err := s.queries.TenantCreate(ctx, tenantName)
+		organization, err := s.queries.OrganizationCreate(ctx, organizationName)
 		if err != nil {
-			s.logger.Error("failed to create tenant", "error", err)
-			return nil, nil, "", fmt.Errorf("failed to create tenant")
+			s.logger.Error("failed to create organization", "error", err)
+			return nil, nil, "", fmt.Errorf("failed to create organization")
 		}
-		tenantID = tenant.ID
+		organizationID = organization.ID
 	} else {
-		tenantID = existingUser.TenantID
+		organizationID = existingUser.OrganizationID
 	}
 
 	params := db.UserUpsertParams{
-		TenantID:   tenantID,
-		Name:       claims.Name,
-		ExternalID: claims.Sub,
+		OrganizationID: organizationID,
+		Name:           claims.Name,
+		ExternalID:     claims.Sub,
 	}
 
 	// Upsert user (creates if new, updates name if existing)
@@ -376,7 +376,7 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 		s.logger.Info("new user registered",
 			"login_method", loginMethod,
 			"user_id", user.ID,
-			"tenant_id", tenantID,
+			"organization_id", organizationID,
 			"name", user.Name,
 		)
 	}
