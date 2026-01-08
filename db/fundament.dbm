@@ -16,10 +16,6 @@ CAUTION: Do not modify this file unless you know what you are doing.
  sql-disabled="true">
 </role>
 
-<role name="fun_appstore_api"
- sql-disabled="true">
-</role>
-
 <role name="fun_organization_api"
  sql-disabled="true">
 </role>
