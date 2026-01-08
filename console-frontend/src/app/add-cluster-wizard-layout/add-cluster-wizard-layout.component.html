@@ -7,8 +7,11 @@
       [class.grow]="!isLast"
     >
       <a
-        class="relative flex items-center hover:text-indigo-700 dark:hover:text-indigo-400"
-        [routerLink]="step.route"
+        class="relative flex items-center"
+        [class.hover:text-indigo-700]="canNavigate(i)"
+        [class.dark:hover:text-indigo-400]="canNavigate(i)"
+        [routerLink]="canNavigate(i) ? step.route : null"
+        [attr.aria-disabled]="!canNavigate(i) ? 'true' : null"
       >
         <span
           class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-3 border-gray-200 text-sm font-semibold text-gray-400 group-data-[active=true]:border-emerald-500 group-data-[active=true]:text-emerald-500 group-data-[completed=true]:border-emerald-500 group-data-[completed=true]:text-emerald-500 dark:border-gray-700 dark:text-gray-500"

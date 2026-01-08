@@ -80,3 +80,9 @@ profiles:
       - op: add
         path: /build/artifacts/1/sync
         value: {}
+      - op: replace
+        path: /build/artifacts/3/docker/dockerfile
+        value: console-frontend/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/3/sync
+        value: {}

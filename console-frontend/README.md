@@ -12,8 +12,16 @@ Once the server is running, open your browser and navigate to `http://localhost:
 
 Credentials:
 
-Un: `admin@example.com`
-Pw: `password`
+- Un: `admin@example.com`
+- Pw: `password`
+
+## Linting and formatting
+
+To lint or format the code, use:
+```bash
+pnpm lint
+pnpm format
+```
 
 ## Building
 

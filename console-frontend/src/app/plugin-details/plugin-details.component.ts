@@ -61,11 +61,6 @@ Grafana is the open source analytics and monitoring solution for every database.
 - IoT data visualization
   `;
 
-  pricing = {
-    type: 'free',
-    details: 'Open source and free to use',
-  };
-
   author = {
     name: 'Grafana Labs',
     website: 'https://grafana.com',

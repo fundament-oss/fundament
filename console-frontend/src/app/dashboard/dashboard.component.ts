@@ -1,38 +1,37 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
-import { PlusIconComponent, EyeIconComponent } from '../icons';
+import { PlusIconComponent, EyeIconComponent, ErrorIconComponent } from '../icons';
+import { OrganizationApiService, ClusterSummary } from '../organization-api.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, PlusIconComponent, EyeIconComponent],
+  imports: [CommonModule, RouterLink, PlusIconComponent, EyeIconComponent, ErrorIconComponent],
   templateUrl: './dashboard.component.html',
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   private titleService = inject(TitleService);
+  private organizationApi = inject(OrganizationApiService);
 
-  // Mock data for existing clusters
-  clusters = [
-    {
-      name: 'production-cluster',
-      status: 'running',
-      region: 'NL1',
-      projectCount: 3,
-      nodePoolCount: 2,
-    },
-    {
-      name: 'staging-cluster',
-      status: 'provisioning',
-      region: 'NL2',
-      projectCount: 1,
-      nodePoolCount: 2,
-    },
-  ];
+  clusters = signal<ClusterSummary[]>([]);
+  errorMessage = signal<string>('');
 
   constructor() {
     this.titleService.setTitle('Dashboard');
+  }
+
+  async ngOnInit() {
+    try {
+      const clusters = await this.organizationApi.listClusters();
+      this.clusters.set(clusters);
+    } catch (error) {
+      console.error('Failed to load clusters:', error);
+      this.errorMessage.set(
+        error instanceof Error ? error.message : 'Failed to load clusters. Please try again later.',
+      );
+    }
   }
 
   getStatusColor(status: string): string {

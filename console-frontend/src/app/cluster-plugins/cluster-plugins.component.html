@@ -9,10 +9,29 @@
 
   <!-- Form -->
   <div class="px-6 py-6">
+    @if (errorMessage()) {
+      <div class="mb-4 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
+        <app-error-icon class="mr-3 h-5 w-5 shrink-0 text-rose-400 dark:text-rose-500" />
+        <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
+      </div>
+    }
     <app-shared-plugins-form (formSubmit)="onFormSubmit($event)">
       <div class="flex space-x-3">
-        <button type="button" (click)="onCancel()" class="btn-secondary">Cancel</button>
-        <button type="submit" class="btn-primary">Save changes</button>
+        <button
+          type="button"
+          (click)="onCancel()"
+          class="btn-secondary"
+          [disabled]="isSubmitting()"
+        >
+          Cancel
+        </button>
+        <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+          @if (isSubmitting()) {
+            Saving...
+          } @else {
+            Save changes
+          }
+        </button>
       </div>
     </app-shared-plugins-form>
   </div>

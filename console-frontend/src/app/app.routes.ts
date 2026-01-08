@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './auth.guard';
+import { clusterWizardGuard } from './add-cluster-wizard-layout/cluster-wizard.guard';
 
 export const routes: Routes = [
   {
@@ -17,6 +18,7 @@ export const routes: Routes = [
         path: '',
         loadComponent: () =>
           import('./add-cluster/add-cluster.component').then((m) => m.AddClusterComponent),
+        canActivate: [clusterWizardGuard],
       },
       {
         path: 'nodes',
@@ -24,6 +26,7 @@ export const routes: Routes = [
           import('./add-cluster-nodes/add-cluster-nodes.component').then(
             (m) => m.AddClusterNodesComponent,
           ),
+        canActivate: [clusterWizardGuard],
       },
       {
         path: 'plugins',
@@ -31,6 +34,7 @@ export const routes: Routes = [
           import('./add-cluster-plugins/add-cluster-plugins.component').then(
             (m) => m.AddClusterPluginsComponent,
           ),
+        canActivate: [clusterWizardGuard],
       },
       {
         path: 'summary',
@@ -38,16 +42,17 @@ export const routes: Routes = [
           import('./add-cluster-summary/add-cluster-summary.component').then(
             (m) => m.AddClusterSummaryComponent,
           ),
+        canActivate: [clusterWizardGuard],
       },
     ],
   },
   {
-    path: 'cluster-nodes',
+    path: 'clusters/:id/nodes',
     loadComponent: () =>
       import('./cluster-nodes/cluster-nodes.component').then((m) => m.ClusterNodesComponent),
   },
   {
-    path: 'cluster-plugins',
+    path: 'clusters/:id/plugins',
     loadComponent: () =>
       import('./cluster-plugins/cluster-plugins.component').then((m) => m.ClusterPluginsComponent),
   },
@@ -56,7 +61,7 @@ export const routes: Routes = [
     loadComponent: () => import('./projects/projects.component').then((m) => m.ProjectsComponent),
   },
   {
-    path: 'cluster-overview',
+    path: 'clusters/:id',
     loadComponent: () =>
       import('./cluster-overview/cluster-overview.component').then(
         (m) => m.ClusterOverviewComponent,

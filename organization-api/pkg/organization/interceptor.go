@@ -19,7 +19,7 @@ func (s *OrganizationServer) AuthInterceptor() connect.UnaryInterceptorFunc {
 				return next(ctx, req)
 			}
 
-			// Extract and validate JWT
+			// Extract and validate JWT from Authorization header or Cookie
 			claims, err := s.validateRequest(req.Header())
 			if err != nil {
 				return nil, connect.NewError(connect.CodeUnauthenticated, err)

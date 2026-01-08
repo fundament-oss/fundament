@@ -3,9 +3,12 @@ package organization
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+
+	"github.com/fundament-oss/fundament/common/auth"
 )
 
 // Claims represents the JWT claims from the authn-api.
@@ -18,15 +21,47 @@ type Claims struct {
 	Name     string    `json:"name"`
 }
 
+const AuthCookieName = "fundament_auth"
+
+// validateRequest validates auth from either Authorization header or Cookie header
 func (s *OrganizationServer) validateRequest(header http.Header) (*Claims, error) {
+	var tokenString string
+
+	// First try Authorization header
 	authHeader := header.Get("Authorization")
-	if len(authHeader) < 8 || authHeader[:7] != "Bearer " {
-		s.logger.Debug("missing or invalid authorization header")
-		return nil, fmt.Errorf("missing or invalid authorization header")
+	if len(authHeader) >= 8 && authHeader[:7] == "Bearer " {
+		tokenString = authHeader[7:]
+	} else {
+		// Fall back to cookie from Cookie header
+		cookieHeader := header.Get("Cookie")
+		if cookieHeader == "" {
+			return nil, fmt.Errorf("no authorization header or cookie found")
+		}
+
+		// Parse cookies from header
+		// Cookie header format: "name1=value1; name2=value2"
+		tokenValue := ""
+		for _, part := range strings.Split(cookieHeader, ";") {
+			part = strings.TrimSpace(part)
+			if strings.HasPrefix(part, AuthCookieName+"=") {
+				tokenValue = strings.TrimPrefix(part, AuthCookieName+"=")
+				break
+			}
+		}
+
+		if tokenValue == "" {
+			return nil, fmt.Errorf("auth cookie not found")
+		}
+
+		// Verify cookie signature
+		var err error
+		tokenString, err = auth.VerifyCookieValue(tokenValue, s.config.JWTSecret)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cookie signature: %w", err)
+		}
 	}
 
-	tokenString := authHeader[7:]
-
+	// Parse and validate JWT
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			s.logger.Debug("unexpected signing method", "alg", token.Header["alg"])

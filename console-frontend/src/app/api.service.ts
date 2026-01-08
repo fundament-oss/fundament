@@ -24,23 +24,15 @@ export interface UserResponse {
 export class ApiService {
   private currentUserSubject = new BehaviorSubject<UserInfo | null>(null);
   public currentUser$: Observable<UserInfo | null> = this.currentUserSubject.asObservable();
-  private accessToken: string | null = null;
 
   private async connectRpc<T>(method: string, request: object = {}): Promise<T> {
     const url = `${CONFIG.apiBaseUrl}${CONFIG.servicePath}/${method}`;
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    // Add Authorization header if we have a token
-    if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
-    }
-
     const response = await fetch(url, {
       method: 'POST',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+      },
       credentials: 'include', // Important: send cookies with requests
       body: JSON.stringify(request),
     });
@@ -80,13 +72,7 @@ export class ApiService {
       throw new Error(error.message || `Login failed: ${response.status}`);
     }
 
-    // Extract and store the JWT token from the response
-    const loginData = await response.json();
-    if (loginData.access_token) {
-      this.accessToken = loginData.access_token;
-      localStorage.setItem('access_token', loginData.access_token);
-    }
-
+    // Backend sets HTTP-only cookie, no need to handle token in frontend
     // Set hint flag (optimization to avoid unnecessary 401s on page load)
     localStorage.setItem('auth_hint', 'true');
 
@@ -101,12 +87,6 @@ export class ApiService {
   }
 
   async initializeAuth(): Promise<void> {
-    // Restore token from localStorage if available
-    const storedToken = localStorage.getItem('access_token');
-    if (storedToken) {
-      this.accessToken = storedToken;
-    }
-
     // Check hint flag to avoid unnecessary API calls when we know user isn't logged in
     // This is just an optimization - the server (via HTTP-only cookie) is still the source of truth
     if (!this.hasAuthHint()) {
@@ -115,15 +95,13 @@ export class ApiService {
     }
 
     try {
-      // Try to fetch user info - if successful, user is authenticated
+      // Try to fetch user info - if successful, user is authenticated via HTTP-only cookie
       const userInfo = await this.getUserInfo();
       this.currentUserSubject.next(userInfo);
     } catch {
-      // Not authenticated or session expired - clear the hint and token
+      // Not authenticated or session expired - clear the hint
       this.currentUserSubject.next(null);
-      this.accessToken = null;
       localStorage.removeItem('auth_hint');
-      localStorage.removeItem('access_token');
     }
   }
 
@@ -149,20 +127,14 @@ export class ApiService {
       throw new Error(`Logout failed: ${response.status}`);
     }
 
-    // Clear user state, token, and hint
+    // Clear user state and hint
     this.currentUserSubject.next(null);
-    this.accessToken = null;
     localStorage.removeItem('auth_hint');
-    localStorage.removeItem('access_token');
   }
 
   isAuthenticated(): boolean {
     // Check if we have a current user in our state
     return this.currentUserSubject.value !== null;
-  }
-
-  getAccessToken(): string | null {
-    return this.accessToken;
   }
 
   private hasAuthHint(): boolean {

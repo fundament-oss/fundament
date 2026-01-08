@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, OnInit, ViewChild, ElementRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
@@ -22,15 +22,14 @@ export class TenantComponent implements OnInit {
   private titleService = inject(TitleService);
   private apiService = inject(ApiService);
   private organizationApiService = inject(OrganizationApiService);
-  private cdr = inject(ChangeDetectorRef);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
-  tenant: Tenant | null = null;
-  isEditing = false;
-  editingName = '';
-  loading = false;
-  error: string | null = null;
+  tenant = signal<Tenant | null>(null);
+  isEditing = signal(false);
+  editingName = signal('');
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   constructor() {
     this.titleService.setTitle('Tenant details');
@@ -41,26 +40,26 @@ export class TenantComponent implements OnInit {
   }
 
   async loadTenant() {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
 
     try {
       // Get current user to retrieve tenant ID
       const userInfo = await this.apiService.getUserInfo();
-      this.tenant = await this.organizationApiService.getTenant(userInfo.tenantId);
+      this.tenant.set(await this.organizationApiService.getTenant(userInfo.tenantId));
     } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Failed to load tenant';
+      this.error.set(err instanceof Error ? err.message : 'Failed to load tenant');
       console.error('Error loading tenant:', err);
     } finally {
-      this.loading = false;
-      this.cdr.detectChanges();
+      this.loading.set(false);
     }
   }
 
   startEdit() {
-    if (this.tenant) {
-      this.isEditing = true;
-      this.editingName = this.tenant.name;
+    const currentTenant = this.tenant();
+    if (currentTenant) {
+      this.isEditing.set(true);
+      this.editingName.set(currentTenant.name);
 
       // Focus the input field after Angular updates the view
       setTimeout(() => {
@@ -70,31 +69,32 @@ export class TenantComponent implements OnInit {
   }
 
   cancelEdit() {
-    this.isEditing = false;
-    this.editingName = '';
+    this.isEditing.set(false);
+    this.editingName.set('');
   }
 
   async saveEdit() {
-    if (!this.editingName.trim() || !this.tenant) {
+    const currentTenant = this.tenant();
+    const nameToSave = this.editingName();
+
+    if (!nameToSave.trim() || !currentTenant) {
       return;
     }
 
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
 
     try {
-      this.tenant = await this.organizationApiService.updateTenant(
-        this.tenant.id,
-        this.editingName.trim(),
+      this.tenant.set(
+        await this.organizationApiService.updateTenant(currentTenant.id, nameToSave.trim()),
       );
-      this.isEditing = false;
-      this.editingName = '';
+      this.isEditing.set(false);
+      this.editingName.set('');
     } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Failed to update tenant';
+      this.error.set(err instanceof Error ? err.message : 'Failed to update tenant');
       console.error('Error updating tenant:', err);
     } finally {
-      this.loading = false;
-      this.cdr.detectChanges();
+      this.loading.set(false);
     }
   }
 

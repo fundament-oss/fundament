@@ -56,6 +56,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "allowedHosts": ["console.127.0.0.1.nip.io"]
+          },
           "configurations": {
             "production": {
               "buildTarget": "fundament-console:build:production"
