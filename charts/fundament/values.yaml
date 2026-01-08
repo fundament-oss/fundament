@@ -19,6 +19,7 @@ images:
   organizationApi: organization-api:latest
   consoleFrontend: console-frontend:latest
   docsFrontend: docs-frontend:latest
+  clusterWorker: cluster-worker:latest
 
 # Database (CloudNativePG)
 db:
@@ -40,6 +41,15 @@ organizationApi:
   enabled: false
   replicas: 1
   logLevel: info
+
+# Cluster Worker
+clusterWorker:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  gardenerMode: mock  # mock or real
+  gardenerNamespace: garden-fundament  # Gardener project namespace
+  gardenerKubeconfigSecret: ""  # Secret name containing kubeconfig for real mode
 
 # Console Frontend
 consoleFrontend:

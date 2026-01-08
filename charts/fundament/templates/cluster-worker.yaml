@@ -1,0 +1,65 @@
+{{- if $.Values.clusterWorker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-cluster-worker
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cluster-worker
+spec:
+  replicas: {{ $.Values.clusterWorker.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: cluster-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: cluster-worker
+    spec:
+      containers:
+        - name: cluster-worker
+          image: {{ $.Values.images.clusterWorker }}
+          ports:
+            - name: health
+              containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}-db-fun-cluster-worker
+                  key: uri
+            - name: GARDENER_MODE
+              value: {{ $.Values.clusterWorker.gardenerMode }}
+            - name: GARDENER_NAMESPACE
+              value: {{ $.Values.clusterWorker.gardenerNamespace }}
+            - name: LOG_LEVEL
+              value: {{ $.Values.clusterWorker.logLevel }}
+            {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+            - name: GARDENER_KUBECONFIG
+              value: /etc/gardener/kubeconfig
+            {{- end }}
+          {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+          volumeMounts:
+            - name: gardener-kubeconfig
+              mountPath: /etc/gardener
+              readOnly: true
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+      volumes:
+        - name: gardener-kubeconfig
+          secret:
+            secretName: {{ $.Values.clusterWorker.gardenerKubeconfigSecret }}
+      {{- end }}
+{{- end }}

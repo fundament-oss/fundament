@@ -1,0 +1,13 @@
+root = "/src"
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o tmp/cluster-worker ./cluster-worker/cmd/cluster-worker"
+entrypoint = "tmp/cluster-worker"
+include_ext = ["go", "mod", "sum"]
+include_dir = ["cluster-worker"]
+exclude_dir = ["tmp"]
+delay = 500
+
+[log]
+time = false
