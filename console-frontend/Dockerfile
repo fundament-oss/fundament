@@ -11,8 +11,8 @@ COPY console-frontend/package.json console-frontend/pnpm-lock.yaml ./
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# # Copy proto files first (needed for generate-proto-version.js)
-# COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/
+# Copy proto files first (needed for generate-proto-version.js)
+COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/
 
 # Copy source files
 COPY console-frontend/ .
