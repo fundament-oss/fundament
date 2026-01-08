@@ -66,8 +66,11 @@ func run() error {
 				// Extract organization_id from context and set it in PostgreSQL session for RLS
 				organizationID, ok := organization.OrganizationIDFromContext(ctx)
 				if ok {
-					if err := queries.SetOrganizationContext(ctx, organizationID.String()); err != nil {
-						return false, err
+					err := queries.SetOrganizationContext(ctx, db.SetOrganizationContextParams{
+						SetConfig: organizationID.String(),
+					})
+					if err != nil {
+						return false, fmt.Errorf("failed to set organization context: %w", err)
 					}
 				}
 

@@ -17,8 +17,12 @@ FROM tenant.organizations
 WHERE id = $1
 `
 
-func (q *Queries) OrganizationGetByID(ctx context.Context, id uuid.UUID) (TenantOrganization, error) {
-	row := q.db.QueryRow(ctx, organizationGetByID, id)
+type OrganizationGetByIDParams struct {
+	ID uuid.UUID
+}
+
+func (q *Queries) OrganizationGetByID(ctx context.Context, arg OrganizationGetByIDParams) (TenantOrganization, error) {
+	row := q.db.QueryRow(ctx, organizationGetByID, arg.ID)
 	var i TenantOrganization
 	err := row.Scan(&i.ID, &i.Name, &i.Created)
 	return i, err

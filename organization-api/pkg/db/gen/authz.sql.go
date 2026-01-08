@@ -22,7 +22,11 @@ const setOrganizationContext = `-- name: SetOrganizationContext :exec
 SELECT set_config('app.current_organization_id', $1, false)
 `
 
-func (q *Queries) SetOrganizationContext(ctx context.Context, setConfig string) error {
-	_, err := q.db.Exec(ctx, setOrganizationContext, setConfig)
+type SetOrganizationContextParams struct {
+	SetConfig string
+}
+
+func (q *Queries) SetOrganizationContext(ctx context.Context, arg SetOrganizationContextParams) error {
+	_, err := q.db.Exec(ctx, setOrganizationContext, arg.SetConfig)
 	return err
 }
