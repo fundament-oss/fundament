@@ -15,7 +15,6 @@ images:
   dbMigrations: db-migrations:latest
   authnApi: authn-api:latest
   organizationApi: organization-api:latest
-  appstoreApi: appstore-api:latest
   frontend: frontend:latest
   loginFrontend: login-frontend:latest
 
@@ -35,12 +34,6 @@ authnApi:
 
 # Organization API
 organizationApi:
-  enabled: false
-  replicas: 1
-  logLevel: info
-
-# Appstore API
-appstoreApi:
   enabled: false
   replicas: 1
   logLevel: info

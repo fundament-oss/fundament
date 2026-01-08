@@ -99,7 +99,6 @@ spec:
 
               # Grant access to each role (roles are managed by CNPG declarative role management)
               grant_access "fun_authn_api"
-              grant_access "fun_appstore_api"
               grant_access "fun_organization_api"
 
               echo "Access granted to all roles!"
@@ -135,27 +134,6 @@ stringData:
   username: fun_authn_api
   password: {{ $authnPassword | quote }}
   uri: postgresql://fun_authn_api:{{ $authnPassword }}@{{ include "fundament.db.host" . }}:5432/fundament?search_path=organization
----
-{{- $appstoreSecretName := printf "%s-db-fun-appstore-api" $.Release.Name }}
-{{- $appstoreExisting := lookup "v1" "Secret" $.Release.Namespace $appstoreSecretName }}
-{{- $appstorePassword := "" }}
-{{- if $appstoreExisting }}
-{{- $appstorePassword = index $appstoreExisting.data "password" | b64dec }}
-{{- else }}
-{{- $appstorePassword = randAlphaNum 32 }}
-{{- end }}
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{ $appstoreSecretName }}
-  labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: database
-type: kubernetes.io/basic-auth
-stringData:
-  username: fun_appstore_api
-  password: {{ $appstorePassword | quote }}
-  uri: postgresql://fun_appstore_api:{{ $appstorePassword }}@{{ include "fundament.db.host" . }}:5432/fundament?search_path=organization
 ---
 {{- $organizationSecretName := printf "%s-db-fun-organization-api" $.Release.Name }}
 {{- $organizationExisting := lookup "v1" "Secret" $.Release.Namespace $organizationSecretName }}

@@ -24,10 +24,6 @@ organizationApi:
   enabled: true
   replicas: 1
 
-appstoreApi:
-  enabled: true
-  replicas: 1
-
 frontend:
   enabled: false
 
