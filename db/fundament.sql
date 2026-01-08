@@ -470,6 +470,15 @@ CREATE POLICY organization_isolation ON tenant.clusters
 	USING (organization_id = authn.current_organization_id());
 -- ddl-end --
 
+-- object: cluster_worker_all_access | type: POLICY --
+-- DROP POLICY IF EXISTS cluster_worker_all_access ON tenant.clusters CASCADE;
+CREATE POLICY cluster_worker_all_access ON tenant.clusters
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
 -- object: tenant.node_pools | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.node_pools CASCADE;
 CREATE TABLE tenant.node_pools (
