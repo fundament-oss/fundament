@@ -102,22 +102,6 @@
       <app-error-icon class="mr-3 h-5 w-5 shrink-0 text-rose-400 dark:text-rose-500" />
       <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
     </div>
-  } @else {
-    <!-- Creation Notice -->
-    <div
-      class="rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
-    >
-      <div class="mb-2 flex">
-        <app-info-circle-icon class="mr-2 h-5 w-5 shrink-0 text-blue-400 dark:text-indigo-400" />
-        <h3 class="text-sm font-medium text-blue-800 dark:text-indigo-300">Cluster creation</h3>
-      </div>
-      <div class="text-sm text-blue-700 dark:text-indigo-200">
-        <p>
-          Creating your cluster will take approximately 1-5 minutes. Keep this page open to view the
-          progress.
-        </p>
-      </div>
-    </div>
   }
 
   <!-- Form Actions -->

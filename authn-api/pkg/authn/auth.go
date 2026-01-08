@@ -19,6 +19,7 @@ import (
 	"golang.org/x/oauth2"
 
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )
 
@@ -183,24 +184,7 @@ func (s *AuthnServer) signCookieValue(value string) string {
 // verifyCookieValue verifies a signed cookie value and returns the original value
 // Format is: <value>.<signature> where value may contain dots (e.g., JWT)
 func (s *AuthnServer) verifyCookieValue(signedValue string) (string, error) {
-	// Find the last dot to separate value from signature
-	lastDot := strings.LastIndex(signedValue, ".")
-	if lastDot == -1 {
-		return "", fmt.Errorf("invalid signed value format: no signature separator")
-	}
-
-	value := signedValue[:lastDot]
-	signature := signedValue[lastDot+1:]
-
-	mac := hmac.New(sha256.New, s.config.JWTSecret)
-	mac.Write([]byte(value))
-	expectedSig := base64.URLEncoding.EncodeToString(mac.Sum(nil))
-
-	if !hmac.Equal([]byte(signature), []byte(expectedSig)) {
-		return "", fmt.Errorf("invalid signature")
-	}
-
-	return value, nil
+	return auth.VerifyCookieValue(signedValue, s.config.JWTSecret)
 }
 
 // getCookieDomain returns the domain for cookies, empty for localhost
