@@ -2,6 +2,8 @@
 JUST_ONE = true
 # Local k3d registry for Skaffold image builds
 SKAFFOLD_DEFAULT_REPO = "k3d-registry.localhost:5111"
+# Force kubectl to use local k3d cluster (prevents accidental production changes)
+KUBECONFIG = "{{config_root}}/deploy/k3d/kubeconfig.yaml"
 
 [tools]
 # Scripting & Meta
@@ -17,6 +19,7 @@ kubectl = "1.31.4"
 helm = "3.16.3"
 skaffold = "2.17.0"
 k3d = "5.7.5"
+kind = "0.27.0"
 
 # Protobuf
 "aqua:bufbuild/buf" = "1.61.0"
