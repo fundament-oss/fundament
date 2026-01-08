@@ -80,7 +80,7 @@ func (s *Server) GetKubeconfig(
 	}), nil
 }
 
-func clusterDetailsFromRow(row *db.TenantCluster) *organizationv1.ClusterDetails {
+func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
 	return &organizationv1.ClusterDetails{
 		Id:                row.ID.String(),
 		Name:              row.Name,
@@ -89,6 +89,15 @@ func clusterDetailsFromRow(row *db.TenantCluster) *organizationv1.ClusterDetails
 		Status:            clusterStatusFromDB(row.Status),
 		Created:           timestamppb.New(row.Created.Time),
 		ResourceUsage:     nil, // Stub
+		SyncState: syncStateFromRow(
+			row.Synced,
+			row.SyncError,
+			row.SyncAttempts,
+			row.SyncLastAttempt,
+			row.ShootStatus,
+			row.ShootStatusMessage,
+			row.ShootStatusUpdated,
+		),
 	}
 }
 

@@ -56,6 +56,17 @@ const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
   return labels[status];
 };
 
+// Temporary local type until protos are regenerated
+interface SyncState {
+  syncedAt?: string;
+  syncError?: string;
+  syncAttempts?: number;
+  lastAttemptAt?: string;
+  shootStatus?: string;
+  shootMessage?: string;
+  statusUpdatedAt?: string;
+}
+
 @Component({
   selector: 'app-cluster-details',
   imports: [RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent, ModalComponent],
@@ -145,6 +156,7 @@ export default class ClusterDetailsComponent implements OnInit {
       kubernetesVersion: '',
     },
     status: ClusterStatus.UNSPECIFIED,
+    syncState: null as SyncState | null,
     creationDate: '2024-11-15T10:30:00Z', // Mock data - not available from API
     activity: [
       {
@@ -220,6 +232,7 @@ export default class ClusterDetailsComponent implements OnInit {
         kubernetesVersion: response.cluster.kubernetesVersion,
       };
       this.clusterData.status = response.cluster.status;
+      // TODO: Map syncState from response.cluster.syncState when protos are regenerated
 
       this.titleService.setTitle(response.cluster.name);
 
@@ -288,7 +301,7 @@ export default class ClusterDetailsComponent implements OnInit {
     }
   }
 
-  // Namespace management methods
+// Namespace management methods
   async loadNamespaces(clusterId: string): Promise<void> {
     try {
       const request = create(ListClusterNamespacesRequestSchema, { clusterId });
@@ -439,5 +452,25 @@ export default class ClusterDetailsComponent implements OnInit {
     } finally {
       this.isLoadingPlugins.set(false);
     }
+  }
+
+  // Sync status methods
+  getSyncStatusColor(status: string | undefined): string {
+    const colors: Record<string, string> = {
+      ready: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200',
+      progressing: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
+      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200',
+      error: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
+      deleting: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200',
+    };
+    return colors[status ?? ''] || 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200';
+  }
+
+  getSyncStatusLabel(syncState: SyncState | null): string {
+    if (!syncState) return 'Unknown';
+    if (syncState.shootStatus) return syncState.shootStatus;
+    if (syncState.syncedAt) return 'Synced';
+    if (syncState.syncError) return 'Error';
+    return 'Pending';
   }
 }

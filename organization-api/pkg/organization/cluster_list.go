@@ -36,11 +36,22 @@ func (s *Server) ListClusters(
 	}), nil
 }
 
-func clusterSummaryFromListRow(row *db.TenantCluster) *organizationv1.ClusterSummary {
+func clusterSummaryFromListRow(row *db.ClusterListByOrganizationIDRow) *organizationv1.ClusterSummary {
 	return &organizationv1.ClusterSummary{
-		Id:     row.ID.String(),
-		Name:   row.Name,
-		Status: clusterStatusFromDB(row.Status),
-		Region: row.Region,
+		Id:            row.ID.String(),
+		Name:          row.Name,
+		Status:        clusterStatusFromDB(row.Status),
+		Region:        row.Region,
+		ProjectCount:  0, // Stub
+		NodePoolCount: 0, // Stub
+		SyncState: syncStateFromRow(
+			row.Synced,
+			row.SyncError,
+			row.SyncAttempts,
+			row.SyncLastAttempt,
+			row.ShootStatus,
+			row.ShootStatusMessage,
+			row.ShootStatusUpdated,
+		),
 	}
 }

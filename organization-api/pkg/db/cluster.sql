@@ -1,14 +1,18 @@
 
 -- name: ClusterListByOrganizationID :many
-SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
-FROM tenant.clusters
-WHERE organization_id = $1 AND deleted IS NULL
-ORDER BY created DESC;
+SELECT c.id, c.organization_id, c.name, c.region, c.kubernetes_version, c.status, c.created, c.deleted,
+       s.synced, s.sync_error, s.sync_attempts, s.sync_last_attempt, s.shoot_status, s.shoot_status_message, s.shoot_status_updated
+FROM tenant.clusters c
+LEFT JOIN tenant.cluster_sync s ON c.id = s.cluster_id
+WHERE c.organization_id = $1 AND c.deleted IS NULL
+ORDER BY c.created DESC;
 
 -- name: ClusterGetByID :one
-SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
-FROM tenant.clusters
-WHERE id = $1 AND deleted IS NULL;
+SELECT c.id, c.organization_id, c.name, c.region, c.kubernetes_version, c.status, c.created, c.deleted,
+       s.synced, s.sync_error, s.sync_attempts, s.sync_last_attempt, s.shoot_status, s.shoot_status_message, s.shoot_status_updated
+FROM tenant.clusters c
+LEFT JOIN tenant.cluster_sync s ON c.id = s.cluster_id
+WHERE c.id = $1 AND c.deleted IS NULL;
 
 -- name: ClusterCreate :one
 INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, status)

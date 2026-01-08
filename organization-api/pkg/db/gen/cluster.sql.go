@@ -14,12 +14,13 @@ import (
 )
 
 const clusterCreate = `-- name: ClusterCreate :one
-INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, status)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id
+INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version, status)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, organization_id, name, region, kubernetes_version, status, created, deleted
 `
 
 type ClusterCreateParams struct {
+	ID                uuid.UUID
 	OrganizationID    uuid.UUID
 	Name              string
 	Region            string
@@ -27,49 +28,15 @@ type ClusterCreateParams struct {
 	Status            dbconst.ClusterStatus
 }
 
-func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (uuid.UUID, error) {
+func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (TenantCluster, error) {
 	row := q.db.QueryRow(ctx, clusterCreate,
+		arg.ID,
 		arg.OrganizationID,
 		arg.Name,
 		arg.Region,
 		arg.KubernetesVersion,
 		arg.Status,
 	)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
-}
-
-const clusterDelete = `-- name: ClusterDelete :execrows
-UPDATE tenant.clusters
-SET deleted = NOW()
-WHERE id = $1 AND deleted IS NULL
-`
-
-type ClusterDeleteParams struct {
-	ID uuid.UUID
-}
-
-func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) (int64, error) {
-	result, err := q.db.Exec(ctx, clusterDelete, arg.ID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const clusterGetByID = `-- name: ClusterGetByID :one
-SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
-FROM tenant.clusters
-WHERE id = $1 AND deleted IS NULL
-`
-
-type ClusterGetByIDParams struct {
-	ID uuid.UUID
-}
-
-func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) (TenantCluster, error) {
-	row := q.db.QueryRow(ctx, clusterGetByID, arg.ID)
 	var i TenantCluster
 	err := row.Scan(
 		&i.ID,
@@ -84,26 +51,102 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 	return i, err
 }
 
-const clusterListByOrganizationID = `-- name: ClusterListByOrganizationID :many
-SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
-FROM tenant.clusters
-WHERE organization_id = $1 AND deleted IS NULL
-ORDER BY created DESC
+const clusterDelete = `-- name: ClusterDelete :exec
+UPDATE tenant.clusters
+SET deleted = NOW()
+WHERE id = $1 AND deleted IS NULL
 `
 
-type ClusterListByOrganizationIDParams struct {
-	OrganizationID uuid.UUID
+func (q *Queries) ClusterDelete(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clusterDelete, id)
+	return err
 }
 
-func (q *Queries) ClusterListByOrganizationID(ctx context.Context, arg ClusterListByOrganizationIDParams) ([]TenantCluster, error) {
-	rows, err := q.db.Query(ctx, clusterListByOrganizationID, arg.OrganizationID)
+const clusterGetByID = `-- name: ClusterGetByID :one
+SELECT c.id, c.organization_id, c.name, c.region, c.kubernetes_version, c.status, c.created, c.deleted,
+       s.synced, s.sync_error, s.sync_attempts, s.sync_last_attempt, s.shoot_status, s.shoot_status_message, s.shoot_status_updated
+FROM tenant.clusters c
+LEFT JOIN tenant.cluster_sync s ON c.id = s.cluster_id
+WHERE c.id = $1 AND c.deleted IS NULL
+`
+
+type ClusterGetByIDRow struct {
+	ID                 uuid.UUID
+	OrganizationID     uuid.UUID
+	Name               string
+	Region             string
+	KubernetesVersion  string
+	Status             string
+	Created            pgtype.Timestamptz
+	Deleted            pgtype.Timestamptz
+	Synced             pgtype.Timestamptz
+	SyncError          pgtype.Text
+	SyncAttempts       pgtype.Int4
+	SyncLastAttempt    pgtype.Timestamptz
+	ShootStatus        pgtype.Text
+	ShootStatusMessage pgtype.Text
+	ShootStatusUpdated pgtype.Timestamptz
+}
+
+func (q *Queries) ClusterGetByID(ctx context.Context, id uuid.UUID) (ClusterGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, clusterGetByID, id)
+	var i ClusterGetByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Region,
+		&i.KubernetesVersion,
+		&i.Status,
+		&i.Created,
+		&i.Deleted,
+		&i.Synced,
+		&i.SyncError,
+		&i.SyncAttempts,
+		&i.SyncLastAttempt,
+		&i.ShootStatus,
+		&i.ShootStatusMessage,
+		&i.ShootStatusUpdated,
+	)
+	return i, err
+}
+
+const clusterListByOrganizationID = `-- name: ClusterListByOrganizationID :many
+SELECT c.id, c.organization_id, c.name, c.region, c.kubernetes_version, c.status, c.created, c.deleted,
+       s.synced, s.sync_error, s.sync_attempts, s.sync_last_attempt, s.shoot_status, s.shoot_status_message, s.shoot_status_updated
+FROM tenant.clusters c
+LEFT JOIN tenant.cluster_sync s ON c.id = s.cluster_id
+WHERE c.organization_id = $1 AND c.deleted IS NULL
+ORDER BY c.created DESC
+`
+
+type ClusterListByOrganizationIDRow struct {
+	ID                 uuid.UUID
+	OrganizationID     uuid.UUID
+	Name               string
+	Region             string
+	KubernetesVersion  string
+	Status             string
+	Created            pgtype.Timestamptz
+	Deleted            pgtype.Timestamptz
+	Synced             pgtype.Timestamptz
+	SyncError          pgtype.Text
+	SyncAttempts       pgtype.Int4
+	SyncLastAttempt    pgtype.Timestamptz
+	ShootStatus        pgtype.Text
+	ShootStatusMessage pgtype.Text
+	ShootStatusUpdated pgtype.Timestamptz
+}
+
+func (q *Queries) ClusterListByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]ClusterListByOrganizationIDRow, error) {
+	rows, err := q.db.Query(ctx, clusterListByOrganizationID, organizationID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TenantCluster
+	var items []ClusterListByOrganizationIDRow
 	for rows.Next() {
-		var i TenantCluster
+		var i ClusterListByOrganizationIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
@@ -113,6 +156,13 @@ func (q *Queries) ClusterListByOrganizationID(ctx context.Context, arg ClusterLi
 			&i.Status,
 			&i.Created,
 			&i.Deleted,
+			&i.Synced,
+			&i.SyncError,
+			&i.SyncAttempts,
+			&i.SyncLastAttempt,
+			&i.ShootStatus,
+			&i.ShootStatusMessage,
+			&i.ShootStatusUpdated,
 		); err != nil {
 			return nil, err
 		}
@@ -124,10 +174,11 @@ func (q *Queries) ClusterListByOrganizationID(ctx context.Context, arg ClusterLi
 	return items, nil
 }
 
-const clusterUpdate = `-- name: ClusterUpdate :execrows
+const clusterUpdate = `-- name: ClusterUpdate :one
 UPDATE tenant.clusters
 SET kubernetes_version = COALESCE($2, kubernetes_version)
 WHERE id = $1 AND deleted IS NULL
+RETURNING id, organization_id, name, region, kubernetes_version, status, created, deleted
 `
 
 type ClusterUpdateParams struct {
@@ -135,10 +186,18 @@ type ClusterUpdateParams struct {
 	KubernetesVersion pgtype.Text
 }
 
-func (q *Queries) ClusterUpdate(ctx context.Context, arg ClusterUpdateParams) (int64, error) {
-	result, err := q.db.Exec(ctx, clusterUpdate, arg.ID, arg.KubernetesVersion)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+func (q *Queries) ClusterUpdate(ctx context.Context, arg ClusterUpdateParams) (TenantCluster, error) {
+	row := q.db.QueryRow(ctx, clusterUpdate, arg.ID, arg.KubernetesVersion)
+	var i TenantCluster
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Region,
+		&i.KubernetesVersion,
+		&i.Status,
+		&i.Created,
+		&i.Deleted,
+	)
+	return i, err
 }

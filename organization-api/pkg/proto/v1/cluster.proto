@@ -85,6 +85,9 @@ message ClusterSummary {
   string name = 20;
   ClusterStatus status = 30;
   string region = 40;
+  int32 project_count = 50;
+  int32 node_pool_count = 60;
+  SyncState sync_state = 70;
 }
 
 // Get cluster request
@@ -106,6 +109,10 @@ message ClusterDetails {
   ClusterStatus status = 50;
   google.protobuf.Timestamp created = 60;
   ResourceUsageInfo resource_usage = 70;
+  repeated NodePool node_pools = 80;
+  repeated ClusterMember members = 90;
+  repeated ClusterProject projects = 100;
+  SyncState sync_state = 110;
 }
 
 // Resource usage information for a cluster

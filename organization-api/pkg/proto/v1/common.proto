@@ -30,3 +30,14 @@ enum NodePoolStatus {
   NODE_POOL_STATUS_DEGRADED = 2;
   NODE_POOL_STATUS_UNHEALTHY = 3;
 }
+
+// Cluster sync state from Gardener
+message SyncState {
+  optional Timestamp synced_at = 10;       // When the cluster was last successfully synced
+  optional string sync_error = 20;          // Error message if sync failed
+  int32 sync_attempts = 30;                 // Number of sync attempts
+  optional Timestamp last_attempt_at = 40;  // When the last sync attempt was made
+  optional string shoot_status = 50;        // Gardener shoot status (pending, progressing, ready, error, deleting)
+  optional string shoot_message = 60;       // Human-readable status message from Gardener
+  optional Timestamp status_updated_at = 70; // When the shoot status was last updated
+}
