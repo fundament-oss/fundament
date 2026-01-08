@@ -113,20 +113,12 @@ export class OrganizationApiService {
   ): Promise<T> {
     const url = `${CONFIG.apiBaseUrl}${servicePath}/${method}`;
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    // Get the access token from ApiService
-    const token = this.apiService.getAccessToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
     const response = await fetch(url, {
       method: 'POST',
-      headers,
-      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Authentication via HTTP-only cookies
       body: JSON.stringify(request),
     });
 
