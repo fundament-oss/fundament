@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/models"
@@ -31,7 +32,7 @@ func ToClusterUpdate(req *organizationv1.UpdateClusterRequest) (models.ClusterUp
 	}, nil
 }
 
-func FromClustersSummary(clusters []db.TenantCluster) []*organizationv1.ClusterSummary {
+func FromClustersSummary(clusters []db.ClusterListByOrganizationIDRow) []*organizationv1.ClusterSummary {
 	summaries := make([]*organizationv1.ClusterSummary, 0, len(clusters))
 	for _, c := range clusters {
 		summaries = append(summaries, FromClusterSummary(c))
@@ -39,16 +40,19 @@ func FromClustersSummary(clusters []db.TenantCluster) []*organizationv1.ClusterS
 	return summaries
 }
 
-func FromClusterSummary(c db.TenantCluster) *organizationv1.ClusterSummary {
+func FromClusterSummary(c db.ClusterListByOrganizationIDRow) *organizationv1.ClusterSummary {
 	return &organizationv1.ClusterSummary{
-		Id:     c.ID.String(),
-		Name:   c.Name,
-		Status: FromClusterStatus(c.Status),
-		Region: c.Region,
+		Id:            c.ID.String(),
+		Name:          c.Name,
+		Status:        FromClusterStatus(c.Status),
+		Region:        c.Region,
+		ProjectCount:  0, // Stub
+		NodePoolCount: 0, // Stub
+		SyncState:     FromSyncState(c.Synced, c.SyncError, c.SyncAttempts, c.SyncLastAttempt, c.ShootStatus, c.ShootStatusMessage, c.ShootStatusUpdated),
 	}
 }
 
-func FromClusterDetail(c db.TenantCluster) *organizationv1.ClusterDetails {
+func FromClusterDetail(c db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
 	return &organizationv1.ClusterDetails{
 		Id:                c.ID.String(),
 		Name:              c.Name,
@@ -59,7 +63,67 @@ func FromClusterDetail(c db.TenantCluster) *organizationv1.ClusterDetails {
 			Value: c.Created.Time.Format(time.RFC3339),
 		},
 		ResourceUsage: nil, // Stub
+		NodePools:     nil, // Stub
+		Members:       nil, // Stub
+		Projects:      nil, // Stub
+		SyncState:     FromSyncState(c.Synced, c.SyncError, c.SyncAttempts, c.SyncLastAttempt, c.ShootStatus, c.ShootStatusMessage, c.ShootStatusUpdated),
 	}
+}
+
+// FromClusterDetailBasic converts a TenantCluster (without sync state) to ClusterDetails.
+// Used for update responses where we don't have sync state.
+func FromClusterDetailBasic(c db.TenantCluster) *organizationv1.ClusterDetails {
+	return &organizationv1.ClusterDetails{
+		Id:                c.ID.String(),
+		Name:              c.Name,
+		Region:            c.Region,
+		KubernetesVersion: c.KubernetesVersion,
+		Status:            FromClusterStatus(c.Status),
+		CreatedAt: &organizationv1.Timestamp{
+			Value: c.Created.Time.Format(time.RFC3339),
+		},
+		ResourceUsage: nil, // Stub
+		NodePools:     nil, // Stub
+		Members:       nil, // Stub
+		Projects:      nil, // Stub
+		SyncState:     nil, // Not available for basic cluster data
+	}
+}
+
+func FromSyncState(
+	synced pgtype.Timestamptz,
+	syncError pgtype.Text,
+	syncAttempts pgtype.Int4,
+	syncLastAttempt pgtype.Timestamptz,
+	shootStatus pgtype.Text,
+	shootStatusMessage pgtype.Text,
+	shootStatusUpdated pgtype.Timestamptz,
+) *organizationv1.SyncState {
+	state := &organizationv1.SyncState{}
+
+	if synced.Valid {
+		state.SyncedAt = &organizationv1.Timestamp{Value: synced.Time.Format(time.RFC3339)}
+	}
+	if syncError.Valid {
+		state.SyncError = &syncError.String
+	}
+	if syncAttempts.Valid {
+		state.SyncAttempts = syncAttempts.Int32
+	}
+	if syncLastAttempt.Valid {
+		state.LastAttemptAt = &organizationv1.Timestamp{Value: syncLastAttempt.Time.Format(time.RFC3339)}
+	}
+	if shootStatus.Valid {
+		state.ShootStatus = &shootStatus.String
+	}
+	if shootStatusMessage.Valid {
+		state.ShootMessage = &shootStatusMessage.String
+	}
+	if shootStatusUpdated.Valid {
+		state.StatusUpdatedAt = &organizationv1.Timestamp{Value: shootStatusUpdated.Time.Format(time.RFC3339)}
+	}
+
+	return state
 }
 
 func FromClusterStatus(status string) organizationv1.ClusterStatus {

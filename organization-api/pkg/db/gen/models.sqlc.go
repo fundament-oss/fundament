@@ -9,6 +9,14 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AppstoreInstall struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	PluginID  uuid.UUID
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
+}
+
 type TenantCluster struct {
 	ID                uuid.UUID
 	OrganizationID    uuid.UUID
@@ -18,6 +26,17 @@ type TenantCluster struct {
 	Status            string
 	Created           pgtype.Timestamptz
 	Deleted           pgtype.Timestamptz
+}
+
+type TenantClusterSync struct {
+	ClusterID          uuid.UUID
+	Synced             pgtype.Timestamptz
+	SyncError          pgtype.Text
+	SyncAttempts       int32
+	SyncLastAttempt    pgtype.Timestamptz
+	ShootStatus        pgtype.Text
+	ShootStatusMessage pgtype.Text
+	ShootStatusUpdated pgtype.Timestamptz
 }
 
 type TenantNamespace struct {
@@ -51,32 +70,12 @@ type TenantProject struct {
 	OrganizationID uuid.UUID
 	Name           string
 	Created        pgtype.Timestamptz
-	Deleted        pgtype.Timestamptz
 }
 
-type ZappstoreInstall struct {
-	ID        uuid.UUID
-	ClusterID uuid.UUID
-	PluginID  uuid.UUID
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-}
-
-type ZappstorePluginDocumentationLink struct {
-	ID       uuid.UUID
-	PluginID uuid.UUID
-	Title    string
-	UrlName  string
-	Url      string
-}
-
-type ZappstorePreset struct {
-	ID          uuid.UUID
-	Name        string
-	Description pgtype.Text
-}
-
-type ZappstorePresetPlugin struct {
-	PresetID uuid.UUID
-	PluginID uuid.UUID
+type TenantUser struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     string
+	Created        pgtype.Timestamptz
 }
