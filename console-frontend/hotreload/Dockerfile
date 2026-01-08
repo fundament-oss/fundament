@@ -1,5 +1,4 @@
-# Build stage
-FROM node:24-alpine AS build
+FROM node:24-alpine
 WORKDIR /app
 
 # Install pnpm
@@ -11,18 +10,15 @@ COPY console-frontend/package.json console-frontend/pnpm-lock.yaml ./
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# Copy proto files first (needed for generate-proto-version.js)
+# Copy proto files (needed for generate-proto-version.js)
 COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/
 
 # Copy source files
 COPY console-frontend/ .
 
-# Build the application
-RUN pnpm build
-
-# Production stage
-FROM nginx:alpine
-COPY --from=build /app/dist/fundament-console/browser /usr/share/nginx/html
-COPY console-frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Expose Angular dev server port (using 80 to match production service port)
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+
+# Start development server with hot reload
+# Configure dev server to listen on 0.0.0.0:80 for pod accessibility
+CMD ["pnpm", "start", "--host", "0.0.0.0", "--port", "80"]

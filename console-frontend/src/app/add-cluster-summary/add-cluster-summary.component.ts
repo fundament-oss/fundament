@@ -2,14 +2,14 @@ import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
-import { InfoCircleIconComponent, ErrorIconComponent } from '../icons';
+import { ErrorIconComponent } from '../icons';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationApiService, CreateClusterRequest } from '../organization-api.service';
 
 @Component({
   selector: 'app-add-cluster-summary',
   standalone: true,
-  imports: [CommonModule, RouterLink, InfoCircleIconComponent, ErrorIconComponent],
+  imports: [CommonModule, RouterLink, ErrorIconComponent],
   templateUrl: './add-cluster-summary.component.html',
 })
 export class AddClusterSummaryComponent {
