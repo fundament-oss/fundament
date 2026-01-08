@@ -50,7 +50,7 @@ metadata:
 spec:
   ingressClassName: {{ $.Values.ingress.className }}
   rules:
-    - host: login.{{ $.Values.ingress.domain }}
+    - host: console.{{ $.Values.ingress.domain }}
       http:
         paths:
           - path: /

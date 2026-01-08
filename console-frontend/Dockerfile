@@ -22,7 +22,7 @@ RUN pnpm build
 
 # Production stage
 FROM nginx:alpine
-COPY --from=build /app/dist/fundament-console /usr/share/nginx/html
+COPY --from=build /app/dist/fundament-console/browser /usr/share/nginx/html
 COPY console-frontend/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
