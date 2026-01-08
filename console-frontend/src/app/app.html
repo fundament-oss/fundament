@@ -1,4 +1,42 @@
 <div class="min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-white">
+  <!-- Toast Message -->
+  @if (toastService.toast()) {
+    <div
+      class="flex items-center justify-between px-4 py-3 text-white shadow-md"
+      [class]="
+        toastService.toast()?.type === 'success'
+          ? 'bg-green-500 dark:bg-green-600'
+          : toastService.toast()?.type === 'error'
+            ? 'bg-red-500 dark:bg-red-600'
+            : toastService.toast()?.type === 'warning'
+              ? 'bg-amber-500 dark:bg-amber-600'
+              : 'bg-blue-500 dark:bg-blue-600'
+      "
+      role="alert"
+    >
+      <div class="flex items-center">
+        @if (toastService.toast()?.type === 'success') {
+          <app-checkmark-icon class="mr-3 h-6 w-6 shrink-0" />
+        } @else if (toastService.toast()?.type === 'error') {
+          <app-error-icon class="mr-3 h-6 w-6 shrink-0" />
+        } @else if (toastService.toast()?.type === 'warning') {
+          <app-warning-icon class="mr-3 h-6 w-6 shrink-0" />
+        } @else {
+          <app-info-circle-icon class="mr-3 h-6 w-6 shrink-0" />
+        }
+        <p class="text-sm">{{ toastService.toast()?.message }}</p>
+      </div>
+      <button
+        (click)="toastService.dismiss()"
+        type="button"
+        aria-label="Dismiss notification"
+        class="ml-4 shrink-0 cursor-pointer rounded-md p-1 text-white transition-colors hover:bg-white/20 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:outline-none"
+      >
+        <app-close-icon class="h-5 w-5" />
+      </button>
+    </div>
+  }
+
   <!-- API Version Mismatch Banner -->
   @if (apiVersionMismatch()) {
     <div

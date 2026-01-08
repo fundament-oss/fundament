@@ -3,6 +3,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 import { CommonModule } from '@angular/common';
 import { ApiService, UserInfo } from './api.service';
 import { OrganizationApiService } from './organization-api.service';
+import { ToastService } from './toast.service';
 import {
   WarningIconComponent,
   MenuIconComponent,
@@ -18,6 +19,9 @@ import {
   PuzzleIconComponent,
   UsersIconComponent,
   ChartIconComponent,
+  CheckmarkIconComponent,
+  ErrorIconComponent,
+  InfoCircleIconComponent,
 } from './icons';
 
 @Component({
@@ -41,6 +45,9 @@ import {
     PuzzleIconComponent,
     UsersIconComponent,
     ChartIconComponent,
+    CheckmarkIconComponent,
+    ErrorIconComponent,
+    InfoCircleIconComponent,
   ],
   templateUrl: './app.html',
 })
@@ -49,6 +56,7 @@ export class App implements OnInit {
   private router = inject(Router);
   private apiService = inject(ApiService);
   private organizationApiService = inject(OrganizationApiService);
+  protected toastService = inject(ToastService);
 
   // Version mismatch state
   apiVersionMismatch = signal(false);

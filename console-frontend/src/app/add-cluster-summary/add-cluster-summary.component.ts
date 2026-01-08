@@ -2,6 +2,7 @@ import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
+import { ToastService } from '../toast.service';
 import { ErrorIconComponent } from '../icons';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationApiService, CreateClusterRequest } from '../organization-api.service';
@@ -16,6 +17,7 @@ export class AddClusterSummaryComponent {
   private titleService = inject(TitleService);
   private router = inject(Router);
   private organizationApi = inject(OrganizationApiService);
+  private toastService = inject(ToastService);
   protected stateService = inject(ClusterWizardStateService);
 
   // Computed signal to access state
@@ -58,9 +60,14 @@ export class AddClusterSummaryComponent {
 
       console.log('Cluster created successfully:', response);
 
-      // Reset wizard state and navigate to dashboard
+      // Reset wizard state
       this.stateService.reset();
-      this.router.navigate(['/']);
+
+      // Set toast message
+      this.toastService.info('Your cluster is being provisioned. This may take a few minutes.');
+
+      // Navigate to the cluster detail page
+      this.router.navigate(['/clusters', response.clusterId]);
     } catch (error) {
       console.error('Failed to create cluster:', error);
       this.errorMessage.set(
