@@ -2,9 +2,10 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
-import { AuthnApiService } from '../authn-api.service';
+import { AUTHN } from '../../connect/tokens';
 import type { User } from '../../generated/authn/v1/authn_pb';
 import { TitleService } from '../title.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-profile',
@@ -15,7 +16,7 @@ import { TitleService } from '../title.service';
 export class ProfileComponent implements OnInit {
   private titleService = inject(TitleService);
   private fb = inject(FormBuilder);
-  private apiService = inject(AuthnApiService);
+  private client = inject(AUTHN);
   private router = inject(Router);
 
   profileForm: FormGroup;
@@ -39,7 +40,8 @@ export class ProfileComponent implements OnInit {
 
   private async loadUserInfo() {
     try {
-      const user = await this.apiService.getUserInfo();
+      const response = await firstValueFrom(this.client.getUserInfo({}));
+      const user = response.user;
       this.userInfo.set(user);
       this.profileForm.patchValue({
         fullName: user?.name || '',
