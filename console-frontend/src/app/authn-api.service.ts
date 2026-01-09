@@ -1,38 +1,19 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import type { User, GetUserInfoResponse } from '../generated/authn/v1/authn_pb';
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
+import type { User } from '../generated/authn/v1/authn_pb';
+import { AUTHN } from '../connect/tokens';
 
 const CONFIG = {
   apiBaseUrl: 'http://authn.127.0.0.1.nip.io:8080',
-  servicePath: '/authn.v1.AuthnService',
 };
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthnApiService {
+  private client = inject(AUTHN);
   private currentUserSubject = new BehaviorSubject<User | undefined>(undefined);
   public currentUser$: Observable<User | undefined> = this.currentUserSubject.asObservable();
-
-  private async connectRpc<T>(method: string, request: object = {}): Promise<T> {
-    const url = `${CONFIG.apiBaseUrl}${CONFIG.servicePath}/${method}`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include', // Important: send cookies with requests
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(error.message || `Request failed: ${response.status}`);
-    }
-
-    return response.json();
-  }
 
   getLoginUrl(): string {
     return `${CONFIG.apiBaseUrl}/login`;
@@ -70,7 +51,7 @@ export class AuthnApiService {
   }
 
   async getUserInfo(): Promise<User | undefined> {
-    const response = await this.connectRpc<GetUserInfoResponse>('GetUserInfo', {});
+    const response = await firstValueFrom(this.client.getUserInfo({}));
     this.currentUserSubject.next(response.user);
     return response.user;
   }
