@@ -1,9 +1,0 @@
-version: v2
-plugins:
-  - remote: buf.build/bufbuild/es:v2.10.2
-    out: console-frontend/src/generated
-    opt:
-      - target=ts
-inputs:
-  - directory: authn-api/pkg/proto
-  - directory: organization-api/pkg/proto
