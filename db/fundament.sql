@@ -116,6 +116,7 @@ CREATE TABLE tenant.clusters (
 	status text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
+	node_pool_count integer NOT NULL DEFAULT 0,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
 	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted),
 	CONSTRAINT clusters_ck_status CHECK (status IN ('unspecified','provisioning','starting','running','upgrading','error','stopping','stopped'))
@@ -143,6 +144,81 @@ CREATE POLICY organization_isolation ON tenant.clusters
 	FOR ALL
 	TO fun_fundament_api
 	USING (organization_id = current_setting('app.current_organization_id')::uuid);
+-- ddl-end --
+
+-- object: tenant.node_pools | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.node_pools CASCADE;
+CREATE TABLE tenant.node_pools (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	cluster_id uuid NOT NULL,
+	name text NOT NULL,
+	machine_type text NOT NULL,
+	autoscale_min integer NOT NULL,
+	autoscale_max integer NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT node_pools_pk PRIMARY KEY (id),
+	CONSTRAINT node_pools_uq_name UNIQUE (cluster_id,name,deleted)
+);
+-- ddl-end --
+ALTER TABLE tenant.node_pools OWNER TO postgres;
+-- ddl-end --
+ALTER TABLE tenant.node_pools ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: node_pools_organization_policy | type: POLICY --
+-- DROP POLICY IF EXISTS node_pools_organization_policy ON tenant.node_pools CASCADE;
+CREATE POLICY node_pools_organization_policy ON tenant.node_pools
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (EXISTS (
+      SELECT 1 FROM clusters
+      WHERE clusters.id = node_pools.cluster_id
+      AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
+));
+-- ddl-end --
+
+-- object: tenant.cluster_node_pool_counter | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_node_pool_counter() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_node_pool_counter ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+      IF TG_OP = 'INSERT' THEN
+            UPDATE tenant.clusters
+            SET node_pool_count = node_pool_count + 1
+            WHERE id = NEW.cluster_id;
+            RETURN NEW;
+      ELSIF TG_OP = 'UPDATE' THEN
+            IF OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+                  UPDATE tenant.clusters
+                  SET node_pool_count = node_pool_count  - 1
+                  WHERE id = NEW.cluster_id;
+            END IF;
+            RETURN NEW;
+      END IF;
+      RETURN NULL;
+END
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_node_pool_counter() OWNER TO postgres;
+-- ddl-end --
+
+-- object: node_pool_count | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS node_pool_count ON tenant.node_pools CASCADE;
+CREATE OR REPLACE TRIGGER node_pool_count
+	AFTER INSERT OR UPDATE OF deleted
+	ON tenant.node_pools
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.cluster_node_pool_counter();
 -- ddl-end --
 
 -- object: projects_fk_organization | type: CONSTRAINT --
@@ -177,6 +253,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.clusters DROP CONSTRAINT IF EXISTS clusters_fk_organization CASCADE;
 ALTER TABLE tenant.clusters ADD CONSTRAINT clusters_fk_organization FOREIGN KEY (organization_id)
 REFERENCES tenant.organizations (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: node_pools_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.node_pools DROP CONSTRAINT IF EXISTS node_pools_fk_cluster CASCADE;
+ALTER TABLE tenant.node_pools ADD CONSTRAINT node_pools_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 

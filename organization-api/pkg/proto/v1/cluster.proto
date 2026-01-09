@@ -28,6 +28,15 @@ service ClusterService {
 
   // Download kubeconfig for a cluster
   rpc GetKubeconfig(GetKubeconfigRequest) returns (GetKubeconfigResponse);
+
+  // Create a node pool in a cluster
+  rpc CreateNodePool(CreateNodePoolRequest) returns (CreateNodePoolResponse);
+
+  // Update a node pool
+  rpc UpdateNodePool(UpdateNodePoolRequest) returns (UpdateNodePoolResponse);
+
+  // Delete a node pool
+  rpc DeleteNodePool(DeleteNodePoolRequest) returns (DeleteNodePoolResponse);
 }
 
 // List clusters request
@@ -137,7 +146,6 @@ message CreateClusterResponse {
 message UpdateClusterRequest {
   string cluster_id = 10;
   optional string kubernetes_version = 20;
-  repeated NodePoolSpec node_pools = 30;
 }
 
 // Update cluster response
@@ -180,4 +188,40 @@ message GetKubeconfigRequest {
 // Get kubeconfig response
 message GetKubeconfigResponse {
   string kubeconfig_content = 10;
+}
+
+// Create node pool request
+message CreateNodePoolRequest {
+  string cluster_id = 10;
+  string name = 20;
+  string machine_type = 30;
+  int32 autoscale_min = 40;
+  int32 autoscale_max = 50;
+}
+
+// Create node pool response
+message CreateNodePoolResponse {
+  NodePool node_pool = 10;
+}
+
+// Update node pool request
+message UpdateNodePoolRequest {
+  string node_pool_id = 10;
+  int32 autoscale_min = 20;
+  int32 autoscale_max = 30;
+}
+
+// Update node pool response
+message UpdateNodePoolResponse {
+  NodePool node_pool = 10;
+}
+
+// Delete node pool request
+message DeleteNodePoolRequest {
+  string node_pool_id = 10;
+}
+
+// Delete node pool response
+message DeleteNodePoolResponse {
+  bool success = 10;
 }

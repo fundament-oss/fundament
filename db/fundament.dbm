@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="6"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="7"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="0,209" last-zoom="1" scene-rect="0,0,2059.54,1076.8"
+	 last-position="383,500" last-zoom="1" scene-rect="0,0,2178.81,1121.32"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -34,7 +34,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="organizations" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="480" y="380"/>
+	<position x="480" y="360"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -55,7 +55,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="projects" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1040" y="400"/>
+	<position x="1040" y="380"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -79,7 +79,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="namespaces" layers="0" collapse-mode="1" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1780" y="660"/>
+	<position x="1760" y="380"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -141,7 +141,7 @@ END;]]> </definition>
 <table name="users" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="460" y="680"/>
+	<position x="460" y="660"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -165,10 +165,10 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="clusters" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="9" z-value="0">
+<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="10" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1040" y="640"/>
+	<position x="1040" y="620"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -193,6 +193,9 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
+	<column name="node_pool_count" not-null="true" default-value="0">
+		<type name="integer" length="0"/>
+	</column>
 	<constraint name="clusters_pk" type="pk-constr" table="tenant.clusters">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
@@ -213,6 +216,90 @@ END;]]> </definition>
 <policy name="organization_isolation" table="tenant.clusters" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid]]> </expression>
 </policy>
+
+<table name="node_pools" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
+	<schema name="tenant"/>
+	<role name="postgres"/>
+	<position x="1640" y="660"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="cluster_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="machine_type" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="autoscale_min" not-null="true">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="autoscale_max" not-null="true">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="node_pools_pk" type="pk-constr" table="tenant.node_pools">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="node_pools_uq_name" type="uq-constr" table="tenant.node_pools">
+		<columns names="cluster_id,name,deleted" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<policy name="node_pools_organization_policy" table="tenant.node_pools" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (
+      SELECT 1 FROM clusters
+      WHERE clusters.id = node_pools.cluster_id
+      AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
+)]]> </expression>
+</policy>
+
+<function name="cluster_node_pool_counter"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="postgres"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+      IF TG_OP = 'INSERT' THEN
+            UPDATE tenant.clusters
+            SET node_pool_count = node_pool_count + 1
+            WHERE id = NEW.cluster_id;
+            RETURN NEW;
+      ELSIF TG_OP = 'UPDATE' THEN
+            IF OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+                  UPDATE tenant.clusters
+                  SET node_pool_count = node_pool_count  - 1
+                  WHERE id = NEW.cluster_id;
+            END IF;
+            RETURN NEW;
+      END IF;
+      RETURN NULL;
+END]]> </definition>
+</function>
+
+<trigger name="node_pool_count" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.node_pools">
+		<function signature="tenant.cluster_node_pool_counter()"/>
+		<columns names="deleted"/>
+</trigger>
 
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.projects">
@@ -244,6 +331,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="node_pools_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.node_pools">
+	<columns names="cluster_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <relationship name="rel_projects_organizations" type="relfk" layers="0"
 	 src-table="tenant.projects"
 	 dst-table="tenant.organizations" reference-fk="projects_fk_organization"
@@ -267,6 +360,11 @@ END;]]> </definition>
 <relationship name="rel_clusters_organizations" type="relfk" layers="0"
 	 src-table="tenant.clusters"
 	 dst-table="tenant.organizations" reference-fk="clusters_fk_organization"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_cluster_worker_nodes_clusters" type="relfk" layers="0"
+	 src-table="tenant.node_pools"
+	 dst-table="tenant.clusters" reference-fk="node_pools_fk_cluster"
 	 src-required="false" dst-required="true"/>
 
 </dbmodel>
