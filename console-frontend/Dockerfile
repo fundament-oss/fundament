@@ -17,8 +17,9 @@ COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/
 # Copy source files
 COPY console-frontend/ .
 
-# Build the application
-RUN pnpm build
+# Build the application with environment variables
+ARG APP_CONFIGURATION
+RUN ["sh", "-c", "pnpm build --configuration $APP_CONFIGURATION"]
 
 # Production stage
 FROM nginx:alpine

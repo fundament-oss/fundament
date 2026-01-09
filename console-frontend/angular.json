@@ -47,7 +47,13 @@
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.local.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -62,6 +68,9 @@
               "buildTarget": "fundament-console:build:production"
             },
             "development": {
+              "buildTarget": "fundament-console:build:development"
+            },
+            "local": {
               "buildTarget": "fundament-console:build:development"
             }
           },

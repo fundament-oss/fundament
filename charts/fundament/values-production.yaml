@@ -1,5 +1,7 @@
 # Sandbox environment values
 
+environment: production
+
 db:
   enabled: true
   instances: 2

@@ -21,4 +21,5 @@ EXPOSE 80
 
 # Start development server with hot reload
 # Configure dev server to listen on 0.0.0.0:80 for pod accessibility
-CMD ["pnpm", "start", "--host", "0.0.0.0", "--port", "80"]
+ARG APP_CONFIGURATION
+CMD ["sh", "-c", "pnpm start --host 0.0.0.0 --port 80 --configuration $APP_CONFIGURATION"]

@@ -4,7 +4,7 @@ import { createConnectTransport } from '@connectrpc/connect-web';
 import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
 import { PROTO_API_VERSION } from '../proto-version';
 import { BehaviorSubject } from 'rxjs';
-
+import {environment} from '../environments/environment';
 import { routes } from './app.routes';
 
 const EXPECTED_API_VERSION = PROTO_API_VERSION;
@@ -28,7 +28,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: AUTHN_TRANSPORT,
       useValue: createConnectTransport({
-        baseUrl: 'http://authn.127.0.0.1.nip.io:8080',
+        baseUrl: environment.authnApiUrl,
         fetch: (input, init) => {
           return fetch(input, {
             ...init,
@@ -41,7 +41,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: ORGANIZATION_TRANSPORT,
       useValue: createConnectTransport({
-        baseUrl: 'http://organization.127.0.0.1.nip.io:8080',
+        baseUrl: environment.organizationApiUrl,
         fetch: async (input, init) => {
           const response = await fetch(input, {
             ...init,

@@ -2,10 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { AUTHN } from '../connect/tokens';
-
-const CONFIG = {
-  apiBaseUrl: 'http://authn.127.0.0.1.nip.io:8080',
-};
+import {environment} from '../environments/environment';
 
 @Injectable({
   providedIn: 'root',
@@ -15,21 +12,17 @@ export class AuthnApiService {
   private currentUserSubject = new BehaviorSubject<User | undefined>(undefined);
   public currentUser$: Observable<User | undefined> = this.currentUserSubject.asObservable();
 
-  getLoginUrl(): string {
-    return `${CONFIG.apiBaseUrl}/login`;
-  }
-
   async login(email: string, password: string): Promise<void> {
     // Submit credentials to Dex local connector endpoint
     const returnUrl = `${window.location.origin}/`;
 
-    const response = await fetch(`${CONFIG.apiBaseUrl}/login/password`, {
+    const response = await fetch(`${environment.authnApiUrl}/login/password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      credentials: 'include', // Important: allow cookies to be set
+      credentials: 'include', // Allow cookies to be set
       body: JSON.stringify({
         email,
         password,
@@ -76,7 +69,7 @@ export class AuthnApiService {
   }
 
   async refreshToken(): Promise<void> {
-    const response = await fetch(`${CONFIG.apiBaseUrl}/refresh`, {
+    const response = await fetch(`${environment.authnApiUrl}/refresh`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -88,7 +81,7 @@ export class AuthnApiService {
   }
 
   async logout(): Promise<void> {
-    const response = await fetch(`${CONFIG.apiBaseUrl}/logout`, {
+    const response = await fetch(`${environment.authnApiUrl}/logout`, {
       method: 'POST',
       credentials: 'include',
     });

@@ -1,5 +1,8 @@
 # Fundament Helm Chart - Default Values
 
+# Environment name (local, production, etc.)
+environment: ""
+
 # JWT Secret - required for token signing/validation across services
 # Must be set in production (no default for security)
 jwtSecret: ""
@@ -7,6 +10,7 @@ jwtSecret: ""
 # External URLs - must be set for your environment
 externalUrls:
   authn: "" # e.g., https://authn.example.com
+  organization: "" # e.g., https://organization.example.com
   frontend: "" # e.g., https://app.example.com
   cookieDomain: "" # e.g., example.com
 

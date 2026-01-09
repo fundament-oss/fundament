@@ -16,10 +16,18 @@ export const authGuard: CanActivateFn = async (route, state) => {
     await apiService.getUserInfo();
     return true;
   } catch {
-    // Not authenticated, store return URL and redirect to login
-    localStorage.setItem('returnUrl', state.url);
+    // Access token might be expired, try to refresh it
+    try {
+      await apiService.refreshToken();
+      // Retry getting user info after successful refresh
+      await apiService.getUserInfo();
+      return true;
+    } catch {
+      // Refresh failed - not authenticated, store return URL and redirect to login
+      localStorage.setItem('returnUrl', state.url);
 
-    router.navigate(['/login']);
-    return false;
+      router.navigate(['/login']);
+      return false;
+    }
   }
 };
