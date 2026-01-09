@@ -39,12 +39,15 @@ export class DashboardComponent implements OnInit {
 
   getStatusColor(status: ClusterStatus): string {
     const colors: Record<ClusterStatus, string> = {
-      [ClusterStatus.PROVISIONING]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200',
+      [ClusterStatus.PROVISIONING]:
+        'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200',
       [ClusterStatus.STARTING]: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
       [ClusterStatus.RUNNING]: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200',
-      [ClusterStatus.UPGRADING]: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200',
+      [ClusterStatus.UPGRADING]:
+        'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200',
       [ClusterStatus.ERROR]: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
-      [ClusterStatus.STOPPING]: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200',
+      [ClusterStatus.STOPPING]:
+        'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200',
       [ClusterStatus.STOPPED]: 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200',
       [ClusterStatus.UNSPECIFIED]: 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200',
     };

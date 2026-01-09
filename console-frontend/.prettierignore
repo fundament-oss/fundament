@@ -1,0 +1,5 @@
+# Dependency lock files
+pnpm-lock.yaml
+
+# Generated code
+src/generated/

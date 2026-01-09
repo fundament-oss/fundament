@@ -99,7 +99,8 @@ export const routes: Routes = [
   },
   {
     path: 'organization',
-    loadComponent: () => import('./organization/organization.component').then((m) => m.OrganizationComponent),
+    loadComponent: () =>
+      import('./organization/organization.component').then((m) => m.OrganizationComponent),
   },
   {
     path: '',

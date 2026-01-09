@@ -53,14 +53,15 @@ export class AddClusterSummaryComponent {
         name: wizardState.clusterName,
         region: wizardState.region,
         kubernetesVersion: wizardState.kubernetesVersion,
-        nodePools: wizardState.nodePools?.map((pool) =>
-          create(NodePoolSpecSchema, {
-            name: pool.name,
-            machineType: pool.machineType,
-            autoscaleMin: pool.autoscaleMin,
-            autoscaleMax: pool.autoscaleMax,
-          }),
-        ) ?? [],
+        nodePools:
+          wizardState.nodePools?.map((pool) =>
+            create(NodePoolSpecSchema, {
+              name: pool.name,
+              machineType: pool.machineType,
+              autoscaleMin: pool.autoscaleMin,
+              autoscaleMax: pool.autoscaleMax,
+            }),
+          ) ?? [],
         pluginIds: wizardState.plugins ?? [],
         pluginPreset: wizardState.preset ?? '',
       });

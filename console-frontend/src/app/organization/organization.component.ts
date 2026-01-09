@@ -4,7 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { AUTHN, ORGANIZATION } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { GetOrganizationRequestSchema, UpdateOrganizationRequestSchema, Organization } from '../../generated/v1/organization_pb';
+import {
+  GetOrganizationRequestSchema,
+  UpdateOrganizationRequestSchema,
+  Organization,
+} from '../../generated/v1/organization_pb';
 import { firstValueFrom } from 'rxjs';
 import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '../icons';
 
@@ -52,13 +56,15 @@ export class OrganizationComponent implements OnInit {
         throw new Error('Organization ID not found');
       }
 
-      const request = create(GetOrganizationRequestSchema, { id: userResponse.user.organizationId });
+      const request = create(GetOrganizationRequestSchema, {
+        id: userResponse.user.organizationId,
+      });
       const response = await firstValueFrom(this.organizationClient.getOrganization(request));
-      
+
       if (!response.organization) {
         throw new Error('Organization not found');
       }
-      
+
       this.organization.set(response.organization);
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Failed to load organization');
@@ -102,13 +108,13 @@ export class OrganizationComponent implements OnInit {
         id: currentOrganization.id,
         name: nameToSave.trim(),
       });
-      
+
       const response = await firstValueFrom(this.organizationClient.updateOrganization(request));
-      
+
       if (!response.organization) {
         throw new Error('Failed to update organization');
       }
-      
+
       this.organization.set(response.organization);
       this.isEditing.set(false);
       this.editingName.set('');

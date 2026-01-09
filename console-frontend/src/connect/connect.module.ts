@@ -1,22 +1,16 @@
 // Adapted from: https://github.com/connectrpc/examples-es/blob/main/angular/src/connect/connect.module.ts
 
-import { inject, InjectionToken, Provider } from "@angular/core";
-import { Interceptor, Transport } from "@connectrpc/connect";
-import {
-  createConnectTransport,
-  createGrpcWebTransport,
-} from "@connectrpc/connect-web";
-import { DescService } from "@bufbuild/protobuf";
-import { createObservableClient, ObservableClient } from "./observable-client";
+import { inject, InjectionToken, Provider } from '@angular/core';
+import { Interceptor, Transport } from '@connectrpc/connect';
+import { createConnectTransport, createGrpcWebTransport } from '@connectrpc/connect-web';
+import { DescService } from '@bufbuild/protobuf';
+import { createObservableClient, ObservableClient } from './observable-client';
 
-const TRANSPORT = new InjectionToken<Transport>("connect.transport");
+const TRANSPORT = new InjectionToken<Transport>('connect.transport');
 
-export const INTERCEPTORS = new InjectionToken<Interceptor[]>(
-  "connect.interceptors",
-  {
-    factory: () => [],
-  },
-);
+export const INTERCEPTORS = new InjectionToken<Interceptor[]>('connect.interceptors', {
+  factory: () => [],
+});
 
 // Create a named transport token
 function createTransportToken(name: string): InjectionToken<Transport> {
@@ -24,8 +18,8 @@ function createTransportToken(name: string): InjectionToken<Transport> {
 }
 
 // Named transports for different services
-export const AUTHN_TRANSPORT = createTransportToken("authn");
-export const ORGANIZATION_TRANSPORT = createTransportToken("organization");
+export const AUTHN_TRANSPORT = createTransportToken('authn');
+export const ORGANIZATION_TRANSPORT = createTransportToken('organization');
 
 export function createClientToken<T extends DescService>(
   service: T,
@@ -39,7 +33,7 @@ export function createClientToken<T extends DescService>(
 }
 
 export function provideConnect(
-  options: Omit<Parameters<typeof createConnectTransport>[0], "interceptors">,
+  options: Omit<Parameters<typeof createConnectTransport>[0], 'interceptors'>,
 ): Provider[] {
   return [
     {
@@ -55,7 +49,7 @@ export function provideConnect(
 }
 
 export function provideGrpcWeb(
-  options: Omit<Parameters<typeof createGrpcWebTransport>[0], "interceptors">,
+  options: Omit<Parameters<typeof createGrpcWebTransport>[0], 'interceptors'>,
 ): Provider[] {
   return [
     {
