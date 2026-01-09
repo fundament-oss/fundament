@@ -11,10 +11,17 @@ import (
 )
 
 func ToClusterCreate(req *organizationv1.CreateClusterRequest) models.ClusterCreate {
+	nodePools := make([]models.NodePoolCreate, 0, len(req.NodePools))
+
+	for _, nodePool := range req.NodePools {
+		nodePools = append(nodePools, ToNodePoolCreate(nodePool))
+	}
+
 	return models.ClusterCreate{
 		Name:              req.Name,
 		Region:            req.Region,
 		KubernetesVersion: req.KubernetesVersion,
+		NodePools:         nodePools,
 	}
 }
 
@@ -26,7 +33,7 @@ func ToClusterUpdate(req *organizationv1.UpdateClusterRequest) (models.ClusterUp
 
 	return models.ClusterUpdate{
 		ClusterID:         clusterID,
-		KubernetesVersion: *req.KubernetesVersion,
+		KubernetesVersion: req.KubernetesVersion,
 	}, nil
 }
 
@@ -35,9 +42,7 @@ func FromClustersSummary(clusters []db.TenantCluster) []*organizationv1.ClusterS
 	for _, c := range clusters {
 		summaries = append(summaries, FromClusterSummary(c))
 	}
-
 	return summaries
-
 }
 
 func FromClusterSummary(c db.TenantCluster) *organizationv1.ClusterSummary {
@@ -47,7 +52,7 @@ func FromClusterSummary(c db.TenantCluster) *organizationv1.ClusterSummary {
 		Status:        FromClusterStatus(c.Status),
 		Region:        c.Region,
 		ProjectCount:  0, // Stub
-		NodePoolCount: 0, // Stub
+		NodePoolCount: c.NodePoolCount,
 	}
 }
 
@@ -86,5 +91,26 @@ func FromClusterStatus(status string) organizationv1.ClusterStatus {
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED
 	default:
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED
+	}
+}
+
+func FromNodePools(nodePools []db.TenantNodePool) []*organizationv1.NodePool {
+	result := make([]*organizationv1.NodePool, 0, len(nodePools))
+	for _, np := range nodePools {
+		result = append(result, FromNodePool(np))
+	}
+	return result
+}
+
+func FromNodePool(np db.TenantNodePool) *organizationv1.NodePool {
+	return &organizationv1.NodePool{
+		Id:           np.ID.String(),
+		Name:         np.Name,
+		MachineType:  np.MachineType,
+		CurrentNodes: 0, // Stub: would come from actual cluster state
+		MinNodes:     np.AutoscaleMin,
+		MaxNodes:     np.AutoscaleMax,
+		Status:       organizationv1.NodePoolStatus_NODE_POOL_STATUS_UNSPECIFIED, // Stub
+		Version:      "",                                                         // Stub: would come from actual cluster state
 	}
 }

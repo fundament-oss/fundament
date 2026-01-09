@@ -61,8 +61,16 @@ func (s *OrganizationServer) GetCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
+	nodePools, err := s.queries.NodePoolListByClusterID(ctx, input.ClusterID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pools: %w", err))
+	}
+
+	clusterDetails := adapter.FromClusterDetail(cluster)
+	clusterDetails.NodePools = adapter.FromNodePools(nodePools)
+
 	return connect.NewResponse(&organizationv1.GetClusterResponse{
-		Cluster: adapter.FromClusterDetail(cluster),
+		Cluster: clusterDetails,
 	}), nil
 }
 
@@ -88,17 +96,33 @@ func (s *OrganizationServer) CreateCluster(
 	defer tx.Rollback(ctx)
 
 	params := db.ClusterCreateParams{
-		ID:                uuid.New(),
 		OrganizationID:    organizationID,
-		Name:              req.Msg.Name,
-		Region:            req.Msg.Region,
-		KubernetesVersion: req.Msg.KubernetesVersion,
+		Name:              input.Name,
+		Region:            input.Region,
+		KubernetesVersion: input.KubernetesVersion,
 		Status:            "unspecified",
 	}
 
-	cluster, err := s.queries.WithTx(tx).ClusterCreate(ctx, params)
+	queries := s.queries.WithTx(tx)
+
+	cluster, err := queries.ClusterCreate(ctx, params)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
+	}
+
+	// Create node pools
+	for _, spec := range req.Msg.NodePools {
+		params := db.NodePoolCreateParams{
+			ClusterID:    cluster.ID,
+			Name:         spec.Name,
+			MachineType:  spec.MachineType,
+			AutoscaleMin: spec.AutoscaleMin,
+			AutoscaleMax: spec.AutoscaleMax,
+		}
+
+		if _, err := queries.NodePoolCreate(ctx, params); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create node pool %q: %w", spec.Name, err))
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -110,6 +134,7 @@ func (s *OrganizationServer) CreateCluster(
 		"organization_id", organizationID,
 		"name", cluster.Name,
 		"region", cluster.Region,
+		"node_pool_count", len(req.Msg.NodePools),
 	)
 
 	return connect.NewResponse(&organizationv1.CreateClusterResponse{
@@ -135,8 +160,8 @@ func (s *OrganizationServer) UpdateCluster(
 		ID: input.ClusterID,
 	}
 
-	if req.Msg.KubernetesVersion != nil {
-		params.KubernetesVersion = pgtype.Text{String: *req.Msg.KubernetesVersion, Valid: true}
+	if input.KubernetesVersion != nil {
+		params.KubernetesVersion = pgtype.Text{String: *input.KubernetesVersion, Valid: true}
 	}
 
 	cluster, err := s.queries.ClusterUpdate(ctx, params)
@@ -147,10 +172,18 @@ func (s *OrganizationServer) UpdateCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update cluster: %w", err))
 	}
 
+	nodePools, err := s.queries.NodePoolListByClusterID(ctx, cluster.ID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pools: %w", err))
+	}
+
 	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", cluster.ID, "name", cluster.Name)
 
+	clusterDetails := adapter.FromClusterDetail(cluster)
+	clusterDetails.NodePools = adapter.FromNodePools(nodePools)
+
 	return connect.NewResponse(&organizationv1.UpdateClusterResponse{
-		Cluster: adapter.FromClusterDetail(cluster),
+		Cluster: clusterDetails,
 	}), nil
 }
 
@@ -186,14 +219,9 @@ func (s *OrganizationServer) GetClusterActivity(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	input := models.ClusterGetActivity{ClusterID: clusterID}
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
 	// Verify cluster exists and belongs to tenant
 	_, err = s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
-		ID: input.ClusterID,
+		ID: clusterID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -217,13 +245,8 @@ func (s *OrganizationServer) GetKubeconfig(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	input := models.ClusterGetKubeconfig{ClusterID: clusterID}
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
-		ID: input.ClusterID,
+		ID: clusterID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

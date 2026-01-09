@@ -13,13 +13,12 @@ import (
 )
 
 const clusterCreate = `-- name: ClusterCreate :one
-INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version, status)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, organization_id, name, region, kubernetes_version, status, created, deleted
+INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, status)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, organization_id, name, region, kubernetes_version, status, created, deleted, node_pool_count
 `
 
 type ClusterCreateParams struct {
-	ID                uuid.UUID
 	OrganizationID    uuid.UUID
 	Name              string
 	Region            string
@@ -29,7 +28,6 @@ type ClusterCreateParams struct {
 
 func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (TenantCluster, error) {
 	row := q.db.QueryRow(ctx, clusterCreate,
-		arg.ID,
 		arg.OrganizationID,
 		arg.Name,
 		arg.Region,
@@ -46,6 +44,7 @@ func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (T
 		&i.Status,
 		&i.Created,
 		&i.Deleted,
+		&i.NodePoolCount,
 	)
 	return i, err
 }
@@ -66,7 +65,7 @@ func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) er
 }
 
 const clusterGetByID = `-- name: ClusterGetByID :one
-SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
+SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted, node_pool_count
 FROM tenant.clusters
 WHERE id = $1 AND deleted IS NULL
 `
@@ -87,12 +86,13 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.Status,
 		&i.Created,
 		&i.Deleted,
+		&i.NodePoolCount,
 	)
 	return i, err
 }
 
 const clusterListByOrganizationID = `-- name: ClusterListByOrganizationID :many
-SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
+SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted, node_pool_count
 FROM tenant.clusters
 WHERE organization_id = $1 AND deleted IS NULL
 ORDER BY created DESC
@@ -120,6 +120,7 @@ func (q *Queries) ClusterListByOrganizationID(ctx context.Context, arg ClusterLi
 			&i.Status,
 			&i.Created,
 			&i.Deleted,
+			&i.NodePoolCount,
 		); err != nil {
 			return nil, err
 		}
@@ -135,7 +136,7 @@ const clusterUpdate = `-- name: ClusterUpdate :one
 UPDATE tenant.clusters
 SET kubernetes_version = COALESCE($2, kubernetes_version)
 WHERE id = $1 AND deleted IS NULL
-RETURNING id, organization_id, name, region, kubernetes_version, status, created, deleted
+RETURNING id, organization_id, name, region, kubernetes_version, status, created, deleted, node_pool_count
 `
 
 type ClusterUpdateParams struct {
@@ -155,6 +156,7 @@ func (q *Queries) ClusterUpdate(ctx context.Context, arg ClusterUpdateParams) (T
 		&i.Status,
 		&i.Created,
 		&i.Deleted,
+		&i.NodePoolCount,
 	)
 	return i, err
 }
