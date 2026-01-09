@@ -63,10 +63,10 @@ func run() error {
 			config.PrepareConn = func(ctx context.Context, conn *pgx.Conn) (bool, error) {
 				queries := db.New(conn)
 
-				// Extract tenant_id from context and set it in PostgreSQL session for RLS
-				tenantID, ok := organization.TenantIDFromContext(ctx)
+				// Extract organization_id from context and set it in PostgreSQL session for RLS
+				organizationID, ok := organization.OrganizationIDFromContext(ctx)
 				if ok {
-					if err := queries.SetTenantContext(ctx, tenantID.String()); err != nil {
+					if err := queries.SetOrganizationContext(ctx, organizationID.String()); err != nil {
 						return false, err
 					}
 				}
@@ -76,9 +76,9 @@ func run() error {
 			config.AfterRelease = func(c *pgx.Conn) bool {
 				queries := db.New(c)
 
-				if err := queries.ResetTenantContext(ctx); err != nil {
-					logger.Warn("failed to reset tenant context on connection release, destroying connection", "error", err)
-					return false // Destroy connection to prevent tenant data leakage
+				if err := queries.ResetOrganizationContext(ctx); err != nil {
+					logger.Warn("failed to reset organization context on connection release, destroying connection", "error", err)
+					return false // Destroy connection to prevent organization data leakage
 				}
 
 				return true // Keep connection in pool

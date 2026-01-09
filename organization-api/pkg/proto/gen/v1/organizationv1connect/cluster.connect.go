@@ -58,7 +58,7 @@ const (
 
 // ClusterServiceClient is a client for the organization.v1.ClusterService service.
 type ClusterServiceClient interface {
-	// List all clusters for the current tenant
+	// List all clusters for the current organization
 	ListClusters(context.Context, *connect.Request[v1.ListClustersRequest]) (*connect.Response[v1.ListClustersResponse], error)
 	// Get detailed information about a specific cluster
 	GetCluster(context.Context, *connect.Request[v1.GetClusterRequest]) (*connect.Response[v1.GetClusterResponse], error)
@@ -178,7 +178,7 @@ func (c *clusterServiceClient) GetKubeconfig(ctx context.Context, req *connect.R
 
 // ClusterServiceHandler is an implementation of the organization.v1.ClusterService service.
 type ClusterServiceHandler interface {
-	// List all clusters for the current tenant
+	// List all clusters for the current organization
 	ListClusters(context.Context, *connect.Request[v1.ListClustersRequest]) (*connect.Response[v1.ListClustersResponse], error)
 	// Get detailed information about a specific cluster
 	GetCluster(context.Context, *connect.Request[v1.GetClusterRequest]) (*connect.Response[v1.GetClusterResponse], error)

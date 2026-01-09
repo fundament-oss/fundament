@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package organization.v1;
+package organization.v1; // TODO: Should maybe be renamed to `fundament.v1`?
 
 import "v1/common.proto";
 
@@ -8,7 +8,7 @@ option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/pro
 
 // ClusterService manages Kubernetes clusters
 service ClusterService {
-  // List all clusters for the current tenant
+  // List all clusters for the current organization
   rpc ListClusters(ListClustersRequest) returns (ListClustersResponse);
 
   // Get detailed information about a specific cluster
@@ -32,7 +32,7 @@ service ClusterService {
 
 // List clusters request
 message ListClustersRequest {
-  string project_id = 10;  // Optional: filter by project
+  string project_id = 10; // Optional: filter by project
 }
 
 // List clusters response
@@ -116,7 +116,7 @@ message CreateClusterRequest {
   string kubernetes_version = 30;
   repeated NodePoolSpec node_pools = 40;
   repeated string plugin_ids = 50;
-  string plugin_preset = 60;  // e.g., "havenplus", "preset2", "custom"
+  string plugin_preset = 60; // e.g., "havenplus", "preset2", "custom"
 }
 
 // Node pool specification

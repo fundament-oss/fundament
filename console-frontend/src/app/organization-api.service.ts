@@ -11,27 +11,27 @@ const CONFIG = {
 
 const EXPECTED_API_VERSION = PROTO_API_VERSION;
 
-export interface Tenant {
+export interface Organization {
   id: string;
   name: string;
   created: string;
 }
 
-export interface GetTenantRequest {
+export interface GetOrganizationRequest {
   id: string;
 }
 
-export interface GetTenantResponse {
-  tenant: Tenant;
+export interface GetOrganizationResponse {
+  organization: Organization;
 }
 
-export interface UpdateTenantRequest {
+export interface UpdateOrganizationRequest {
   id: string;
   name: string;
 }
 
-export interface UpdateTenantResponse {
-  tenant: Tenant;
+export interface UpdateOrganizationResponse {
+  organization: Organization;
 }
 
 export interface NodePoolSpec {
@@ -137,22 +137,22 @@ export class OrganizationApiService {
     return response.json();
   }
 
-  async getTenant(id: string): Promise<Tenant> {
-    const response = await this.connectRpc<GetTenantResponse>(
+  async getOrganization(id: string): Promise<Organization> {
+    const response = await this.connectRpc<GetOrganizationResponse>(
       CONFIG.organizationServicePath,
-      'GetTenant',
+      'GetOrganization',
       { id },
     );
-    return response.tenant;
+    return response.organization;
   }
 
-  async updateTenant(id: string, name: string): Promise<Tenant> {
-    const response = await this.connectRpc<UpdateTenantResponse>(
+  async updateOrganization(id: string, name: string): Promise<Organization> {
+    const response = await this.connectRpc<UpdateOrganizationResponse>(
       CONFIG.organizationServicePath,
-      'UpdateTenant',
+      'UpdateOrganization',
       { id, name },
     );
-    return response.tenant;
+    return response.organization;
   }
 
   async createCluster(request: CreateClusterRequest): Promise<CreateClusterResponse> {

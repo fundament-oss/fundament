@@ -278,10 +278,10 @@ components:
           type: string
           format: uuid
           description: User ID
-        tenant_id:
+        organization_id:
           type: string
           format: uuid
-          description: Tenant ID
+          description: Organization ID
         name:
           type: string
           description: User's display name
@@ -292,7 +292,7 @@ components:
           description: Groups the user belongs to
       required:
         - id
-        - tenant_id
+        - organization_id
         - name
         - groups
     PasswordLoginRequest:

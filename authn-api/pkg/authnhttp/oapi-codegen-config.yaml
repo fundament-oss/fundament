@@ -1,5 +1,5 @@
 package: authnhttp
-output: ./server.go
+output: ./server.gen.go
 generate:
   strict-server: true
   std-http-server: true

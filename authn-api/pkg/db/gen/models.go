@@ -9,9 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type OrganizationCluster struct {
+type TenantCluster struct {
 	ID                uuid.UUID
-	TenantID          uuid.UUID
+	OrganizationID    uuid.UUID
 	Name              string
 	Region            string
 	KubernetesVersion string
@@ -20,7 +20,7 @@ type OrganizationCluster struct {
 	Deleted           pgtype.Timestamptz
 }
 
-type OrganizationNamespace struct {
+type TenantNamespace struct {
 	ID        uuid.UUID
 	ProjectID uuid.UUID
 	ClusterID uuid.UUID
@@ -29,23 +29,23 @@ type OrganizationNamespace struct {
 	Deleted   pgtype.Timestamptz
 }
 
-type OrganizationProject struct {
-	ID       uuid.UUID
-	TenantID uuid.UUID
-	Name     string
-	Created  pgtype.Timestamptz
-}
-
-type OrganizationTenant struct {
+type TenantOrganization struct {
 	ID      uuid.UUID
 	Name    string
 	Created pgtype.Timestamptz
 }
 
-type OrganizationUser struct {
-	ID         uuid.UUID
-	TenantID   uuid.UUID
-	Name       string
-	ExternalID string
-	Created    pgtype.Timestamptz
+type TenantProject struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	Created        pgtype.Timestamptz
+}
+
+type TenantUser struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     string
+	Created        pgtype.Timestamptz
 }

@@ -5,7 +5,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 -->
 <dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="6"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="257,124" last-zoom="1" scene-rect="0,0,2059.54,1076.8"
+	 last-position="0,209" last-zoom="1" scene-rect="0,0,2059.54,1076.8"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -16,7 +16,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
  sql-disabled="true">
 </role>
 
-<role name="fun_organization_api"
+<role name="fun_fundament_api"
  sql-disabled="true">
 </role>
 
@@ -27,12 +27,12 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<role name="postgres"/>
 </schema>
 
-<schema name="organization" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
+<schema name="tenant" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
 	<role name="postgres"/>
 </schema>
 
-<table name="tenants" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
-	<schema name="organization"/>
+<table name="organizations" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
+	<schema name="tenant"/>
 	<role name="postgres"/>
 	<position x="480" y="380"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
@@ -44,22 +44,22 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<constraint name="tenants_pk" type="pk-constr" table="organization.tenants">
+	<constraint name="organizations_pk" type="pk-constr" table="tenant.organizations">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="tenants_uq_name" type="uq-constr" table="organization.tenants">
+	<constraint name="organizations_uq_name" type="uq-constr" table="tenant.organizations">
 		<columns names="name" ref-type="src-columns"/>
 	</constraint>
 </table>
 
 <table name="projects" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
-	<schema name="organization"/>
+	<schema name="tenant"/>
 	<role name="postgres"/>
 	<position x="1040" y="400"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="tenant_id" not-null="true">
+	<column name="organization_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="name" not-null="true">
@@ -68,16 +68,16 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<constraint name="projects_pk" type="pk-constr" table="organization.projects">
+	<constraint name="projects_pk" type="pk-constr" table="tenant.projects">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="projects_uq_tenant_name" type="uq-constr" table="organization.projects">
-		<columns names="tenant_id,name" ref-type="src-columns"/>
+	<constraint name="projects_uq_organization_name" type="uq-constr" table="tenant.projects">
+		<columns names="organization_id,name" ref-type="src-columns"/>
 	</constraint>
 </table>
 
 <table name="namespaces" layers="0" collapse-mode="1" max-obj-count="7" z-value="0">
-	<schema name="organization"/>
+	<schema name="tenant"/>
 	<role name="postgres"/>
 	<position x="1780" y="660"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
@@ -98,13 +98,13 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<constraint name="namespaces_pk" type="pk-constr" table="organization.namespaces">
+	<constraint name="namespaces_pk" type="pk-constr" table="tenant.namespaces">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="namespaces_ck_name" type="ck-constr" table="organization.namespaces">
+	<constraint name="namespaces_ck_name" type="ck-constr" table="tenant.namespaces">
 			<expression> <![CDATA[name = name]]> </expression>
 	</constraint>
-	<constraint name="namespaces_uq_name" type="uq-constr" nulls-not-distinct="true" table="organization.namespaces">
+	<constraint name="namespaces_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.namespaces">
 		<columns names="project_id,name,deleted" ref-type="src-columns"/>
 	</constraint>
 </table>
@@ -118,7 +118,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 		parallel-type="PARALLEL UNSAFE"
 		execution-cost="1"
 		row-amount="0">
-	<schema name="organization"/>
+	<schema name="tenant"/>
 	<role name="postgres"/>
 	<language name="plpgsql"/>
 	<return-type>
@@ -127,7 +127,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<definition> <![CDATA[BEGIN
 	IF EXISTS (
 		SELECT 1
-		FROM organization.namespaces
+		FROM tenant.namespaces
 		WHERE
 			cluster_id = NEW.id
 			AND deleted IS NULL
@@ -138,14 +138,14 @@ CAUTION: Do not modify this file unless you know what you are doing.
 END;]]> </definition>
 </function>
 
-<table name="users" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
-	<schema name="organization"/>
+<table name="users" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
+	<schema name="tenant"/>
 	<role name="postgres"/>
 	<position x="460" y="680"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="tenant_id" not-null="true">
+	<column name="organization_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="name" not-null="true">
@@ -157,22 +157,22 @@ END;]]> </definition>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<constraint name="users_pk" type="pk-constr" table="organization.users">
+	<constraint name="users_pk" type="pk-constr" table="tenant.users">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="users_uq_external_id" type="uq-constr" table="organization.users">
+	<constraint name="users_uq_external_id" type="uq-constr" table="tenant.users">
 		<columns names="external_id" ref-type="src-columns"/>
 	</constraint>
 </table>
 
-<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
-	<schema name="organization"/>
+<table name="clusters" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="9" z-value="0">
+	<schema name="tenant"/>
 	<role name="postgres"/>
 	<position x="1040" y="640"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="tenant_id" not-null="true">
+	<column name="organization_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="name" not-null="true">
@@ -193,80 +193,80 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<constraint name="clusters_pk" type="pk-constr" table="organization.clusters">
+	<constraint name="clusters_pk" type="pk-constr" table="tenant.clusters">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="clusters_uq_name" type="uq-constr" nulls-not-distinct="true" table="organization.clusters">
-		<columns names="tenant_id,name,deleted" ref-type="src-columns"/>
+	<constraint name="clusters_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.clusters">
+		<columns names="organization_id,name,deleted" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="clusters_ck_status" type="ck-constr" table="organization.clusters">
+	<constraint name="clusters_ck_status" type="ck-constr" table="tenant.clusters">
 			<expression> <![CDATA[status IN ('unspecified','provisioning','starting','running','upgrading','error','stopping','stopped')]]> </expression>
 	</constraint>
 </table>
 
 <trigger name="verify_deleted" firing-type="AFTER" per-line="true" constraint="true"
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
-	 table="organization.clusters">
-		<function signature="organization.clusters_tr_verify_deleted()"/>
+	 table="tenant.clusters">
+		<function signature="tenant.clusters_tr_verify_deleted()"/>
 </trigger>
 
-<policy name="tenant_isolation" table="organization.clusters" command="ALL" permissive="true">	<roles names="fun_organization_api"/>
-	<expression type="using-exp"> <![CDATA[tenant_id = current_setting('app.current_tenant_id')::uuid]]> </expression>
+<policy name="organization_isolation" table="tenant.clusters" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid]]> </expression>
 </policy>
 
-<constraint name="projects_fk_tenant" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="organization.tenants" table="organization.projects">
-	<columns names="tenant_id" ref-type="src-columns"/>
+<constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.projects">
+	<columns names="organization_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="namespaces_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="organization.projects" table="organization.namespaces">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.namespaces">
 	<columns names="project_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="namespaces_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="organization.clusters" table="organization.namespaces">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.namespaces">
 	<columns names="cluster_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
-<constraint name="users_fk_tenant" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="organization.tenants" table="organization.users">
-	<columns names="tenant_id" ref-type="src-columns"/>
+<constraint name="users_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.users">
+	<columns names="organization_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
-<constraint name="clusters_fk_tenant" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="organization.tenants" table="organization.clusters">
-	<columns names="tenant_id" ref-type="src-columns"/>
+<constraint name="clusters_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.clusters">
+	<columns names="organization_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
-<relationship name="rel_projects_tenants" type="relfk" layers="0"
-	 src-table="organization.projects"
-	 dst-table="organization.tenants" reference-fk="projects_fk_tenant"
+<relationship name="rel_projects_organizations" type="relfk" layers="0"
+	 src-table="tenant.projects"
+	 dst-table="tenant.organizations" reference-fk="projects_fk_organization"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_namespaces_projects" type="relfk" layers="0"
-	 src-table="organization.namespaces"
-	 dst-table="organization.projects" reference-fk="namespaces_fk_project"
+	 src-table="tenant.namespaces"
+	 dst-table="tenant.projects" reference-fk="namespaces_fk_project"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_namespaces_clusters" type="relfk" layers="0"
-	 src-table="organization.namespaces"
-	 dst-table="organization.clusters" reference-fk="namespaces_fk_cluster"
+	 src-table="tenant.namespaces"
+	 dst-table="tenant.clusters" reference-fk="namespaces_fk_cluster"
 	 src-required="false" dst-required="true"/>
 
-<relationship name="rel_users_tenants" type="relfk" layers="0"
-	 src-table="organization.users"
-	 dst-table="organization.tenants" reference-fk="users_fk_tenant"
+<relationship name="rel_users_organizations" type="relfk" layers="0"
+	 src-table="tenant.users"
+	 dst-table="tenant.organizations" reference-fk="users_fk_organization"
 	 src-required="false" dst-required="true"/>
 
-<relationship name="rel_clusters_tenants" type="relfk" layers="0"
-	 src-table="organization.clusters"
-	 dst-table="organization.tenants" reference-fk="clusters_fk_tenant"
+<relationship name="rel_clusters_organizations" type="relfk" layers="0"
+	 src-table="tenant.clusters"
+	 dst-table="tenant.organizations" reference-fk="clusters_fk_organization"
 	 src-required="false" dst-required="true"/>
 
 </dbmodel>

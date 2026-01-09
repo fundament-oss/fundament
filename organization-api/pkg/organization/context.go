@@ -6,19 +6,19 @@ import (
 	"github.com/google/uuid"
 )
 
-type contextKeyTenantID struct{}
+type contextKeyOrganizationID struct{}
 type contextKeyClaims struct{}
 
-// WithTenantID stores tenant_id in context.
-func WithTenantID(ctx context.Context, tenantID uuid.UUID) context.Context {
-	return context.WithValue(ctx, contextKeyTenantID{}, tenantID)
+// WithOrganizationID stores organization_id in context.
+func WithOrganizationID(ctx context.Context, organizationID uuid.UUID) context.Context {
+	return context.WithValue(ctx, contextKeyOrganizationID{}, organizationID)
 }
 
-// TenantIDFromContext extracts tenant_id from context.
-// Returns the tenant ID and true if found, or zero UUID and false if not found.
-func TenantIDFromContext(ctx context.Context) (uuid.UUID, bool) {
-	tenantID, ok := ctx.Value(contextKeyTenantID{}).(uuid.UUID)
-	return tenantID, ok
+// OrganizationIDFromContext extracts organization_id from context.
+// Returns the organization ID and true if found, or zero UUID and false if not found.
+func OrganizationIDFromContext(ctx context.Context) (uuid.UUID, bool) {
+	organizationID, ok := ctx.Value(contextKeyOrganizationID{}).(uuid.UUID)
+	return organizationID, ok
 }
 
 // WithClaims stores full claims in context for additional metadata like Groups.

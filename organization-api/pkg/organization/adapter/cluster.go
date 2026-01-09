@@ -30,7 +30,7 @@ func ToClusterUpdate(req *organizationv1.UpdateClusterRequest) (models.ClusterUp
 	}, nil
 }
 
-func FromClustersSummary(clusters []db.OrganizationCluster) []*organizationv1.ClusterSummary {
+func FromClustersSummary(clusters []db.TenantCluster) []*organizationv1.ClusterSummary {
 	summaries := make([]*organizationv1.ClusterSummary, 0, len(clusters))
 	for _, c := range clusters {
 		summaries = append(summaries, FromClusterSummary(c))
@@ -40,7 +40,7 @@ func FromClustersSummary(clusters []db.OrganizationCluster) []*organizationv1.Cl
 
 }
 
-func FromClusterSummary(c db.OrganizationCluster) *organizationv1.ClusterSummary {
+func FromClusterSummary(c db.TenantCluster) *organizationv1.ClusterSummary {
 	return &organizationv1.ClusterSummary{
 		Id:            c.ID.String(),
 		Name:          c.Name,
@@ -51,7 +51,7 @@ func FromClusterSummary(c db.OrganizationCluster) *organizationv1.ClusterSummary
 	}
 }
 
-func FromClusterDetail(c db.OrganizationCluster) *organizationv1.ClusterDetails {
+func FromClusterDetail(c db.TenantCluster) *organizationv1.ClusterDetails {
 	return &organizationv1.ClusterDetails{
 		Id:                c.ID.String(),
 		Name:              c.Name,

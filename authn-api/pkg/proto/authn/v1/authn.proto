@@ -20,8 +20,8 @@ message GetUserInfoResponse {
 message User {
   // User ID
   string id = 1;
-  // Tenant ID
-  string tenant_id = 2;
+  // Organization ID
+  string organization_id = 2;
   // User name
   string name = 3;
   // External ID from OIDC provider

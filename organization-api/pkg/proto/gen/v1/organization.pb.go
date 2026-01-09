@@ -21,12 +21,12 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Tenant information
-type Tenant struct {
+// Organization information
+type Organization struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Tenant ID (UUID)
+	// Organization ID (UUID)
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Tenant name
+	// Organization name
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// Creation timestamp (RFC3339)
 	Created       string `protobuf:"bytes,3,opt,name=created,proto3" json:"created,omitempty"`
@@ -34,20 +34,20 @@ type Tenant struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Tenant) Reset() {
-	*x = Tenant{}
+func (x *Organization) Reset() {
+	*x = Organization{}
 	mi := &file_v1_organization_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Tenant) String() string {
+func (x *Organization) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Tenant) ProtoMessage() {}
+func (*Organization) ProtoMessage() {}
 
-func (x *Tenant) ProtoReflect() protoreflect.Message {
+func (x *Organization) ProtoReflect() protoreflect.Message {
 	mi := &file_v1_organization_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -59,55 +59,55 @@ func (x *Tenant) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Tenant.ProtoReflect.Descriptor instead.
-func (*Tenant) Descriptor() ([]byte, []int) {
+// Deprecated: Use Organization.ProtoReflect.Descriptor instead.
+func (*Organization) Descriptor() ([]byte, []int) {
 	return file_v1_organization_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Tenant) GetId() string {
+func (x *Organization) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *Tenant) GetName() string {
+func (x *Organization) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *Tenant) GetCreated() string {
+func (x *Organization) GetCreated() string {
 	if x != nil {
 		return x.Created
 	}
 	return ""
 }
 
-// GetTenant request
-type GetTenantRequest struct {
+// GetOrganization request
+type GetOrganizationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// ID of the tenant to retrieve
+	// ID of the organization to retrieve
 	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetTenantRequest) Reset() {
-	*x = GetTenantRequest{}
+func (x *GetOrganizationRequest) Reset() {
+	*x = GetOrganizationRequest{}
 	mi := &file_v1_organization_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetTenantRequest) String() string {
+func (x *GetOrganizationRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetTenantRequest) ProtoMessage() {}
+func (*GetOrganizationRequest) ProtoMessage() {}
 
-func (x *GetTenantRequest) ProtoReflect() protoreflect.Message {
+func (x *GetOrganizationRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_v1_organization_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -119,41 +119,41 @@ func (x *GetTenantRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetTenantRequest.ProtoReflect.Descriptor instead.
-func (*GetTenantRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetOrganizationRequest.ProtoReflect.Descriptor instead.
+func (*GetOrganizationRequest) Descriptor() ([]byte, []int) {
 	return file_v1_organization_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *GetTenantRequest) GetId() string {
+func (x *GetOrganizationRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-// GetTenant response
-type GetTenantResponse struct {
+// GetOrganization response
+type GetOrganizationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The requested tenant
-	Tenant        *Tenant `protobuf:"bytes,1,opt,name=tenant,proto3" json:"tenant,omitempty"`
+	// The requested organization
+	Organization  *Organization `protobuf:"bytes,1,opt,name=organization,proto3" json:"organization,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetTenantResponse) Reset() {
-	*x = GetTenantResponse{}
+func (x *GetOrganizationResponse) Reset() {
+	*x = GetOrganizationResponse{}
 	mi := &file_v1_organization_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetTenantResponse) String() string {
+func (x *GetOrganizationResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetTenantResponse) ProtoMessage() {}
+func (*GetOrganizationResponse) ProtoMessage() {}
 
-func (x *GetTenantResponse) ProtoReflect() protoreflect.Message {
+func (x *GetOrganizationResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_v1_organization_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -165,43 +165,43 @@ func (x *GetTenantResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetTenantResponse.ProtoReflect.Descriptor instead.
-func (*GetTenantResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetOrganizationResponse.ProtoReflect.Descriptor instead.
+func (*GetOrganizationResponse) Descriptor() ([]byte, []int) {
 	return file_v1_organization_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *GetTenantResponse) GetTenant() *Tenant {
+func (x *GetOrganizationResponse) GetOrganization() *Organization {
 	if x != nil {
-		return x.Tenant
+		return x.Organization
 	}
 	return nil
 }
 
-// UpdateTenant request
-type UpdateTenantRequest struct {
+// UpdateOrganization request
+type UpdateOrganizationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// ID of the tenant to update
+	// ID of the organization to update
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// New name for the tenant
+	// New name for the organization
 	Name          string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UpdateTenantRequest) Reset() {
-	*x = UpdateTenantRequest{}
+func (x *UpdateOrganizationRequest) Reset() {
+	*x = UpdateOrganizationRequest{}
 	mi := &file_v1_organization_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateTenantRequest) String() string {
+func (x *UpdateOrganizationRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateTenantRequest) ProtoMessage() {}
+func (*UpdateOrganizationRequest) ProtoMessage() {}
 
-func (x *UpdateTenantRequest) ProtoReflect() protoreflect.Message {
+func (x *UpdateOrganizationRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_v1_organization_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -213,48 +213,48 @@ func (x *UpdateTenantRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateTenantRequest.ProtoReflect.Descriptor instead.
-func (*UpdateTenantRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateOrganizationRequest.ProtoReflect.Descriptor instead.
+func (*UpdateOrganizationRequest) Descriptor() ([]byte, []int) {
 	return file_v1_organization_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *UpdateTenantRequest) GetId() string {
+func (x *UpdateOrganizationRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *UpdateTenantRequest) GetName() string {
+func (x *UpdateOrganizationRequest) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-// UpdateTenant response
-type UpdateTenantResponse struct {
+// UpdateOrganization response
+type UpdateOrganizationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The updated tenant
-	Tenant        *Tenant `protobuf:"bytes,1,opt,name=tenant,proto3" json:"tenant,omitempty"`
+	// The updated organization
+	Organization  *Organization `protobuf:"bytes,1,opt,name=organization,proto3" json:"organization,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UpdateTenantResponse) Reset() {
-	*x = UpdateTenantResponse{}
+func (x *UpdateOrganizationResponse) Reset() {
+	*x = UpdateOrganizationResponse{}
 	mi := &file_v1_organization_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateTenantResponse) String() string {
+func (x *UpdateOrganizationResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateTenantResponse) ProtoMessage() {}
+func (*UpdateOrganizationResponse) ProtoMessage() {}
 
-func (x *UpdateTenantResponse) ProtoReflect() protoreflect.Message {
+func (x *UpdateOrganizationResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_v1_organization_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -266,14 +266,14 @@ func (x *UpdateTenantResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateTenantResponse.ProtoReflect.Descriptor instead.
-func (*UpdateTenantResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateOrganizationResponse.ProtoReflect.Descriptor instead.
+func (*UpdateOrganizationResponse) Descriptor() ([]byte, []int) {
 	return file_v1_organization_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *UpdateTenantResponse) GetTenant() *Tenant {
+func (x *UpdateOrganizationResponse) GetOrganization() *Organization {
 	if x != nil {
-		return x.Tenant
+		return x.Organization
 	}
 	return nil
 }
@@ -282,23 +282,23 @@ var File_v1_organization_proto protoreflect.FileDescriptor
 
 const file_v1_organization_proto_rawDesc = "" +
 	"\n" +
-	"\x15v1/organization.proto\x12\x0forganization.v1\"F\n" +
-	"\x06Tenant\x12\x0e\n" +
+	"\x15v1/organization.proto\x12\x0forganization.v1\"L\n" +
+	"\fOrganization\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
-	"\acreated\x18\x03 \x01(\tR\acreated\"\"\n" +
-	"\x10GetTenantRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"D\n" +
-	"\x11GetTenantResponse\x12/\n" +
-	"\x06tenant\x18\x01 \x01(\v2\x17.organization.v1.TenantR\x06tenant\"9\n" +
-	"\x13UpdateTenantRequest\x12\x0e\n" +
+	"\acreated\x18\x03 \x01(\tR\acreated\"(\n" +
+	"\x16GetOrganizationRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\\\n" +
+	"\x17GetOrganizationResponse\x12A\n" +
+	"\forganization\x18\x01 \x01(\v2\x1d.organization.v1.OrganizationR\forganization\"?\n" +
+	"\x19UpdateOrganizationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"G\n" +
-	"\x14UpdateTenantResponse\x12/\n" +
-	"\x06tenant\x18\x01 \x01(\v2\x17.organization.v1.TenantR\x06tenant2\xc6\x01\n" +
-	"\x13OrganizationService\x12R\n" +
-	"\tGetTenant\x12!.organization.v1.GetTenantRequest\x1a\".organization.v1.GetTenantResponse\x12[\n" +
-	"\fUpdateTenant\x12$.organization.v1.UpdateTenantRequest\x1a%.organization.v1.UpdateTenantResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
+	"\x04name\x18\x02 \x01(\tR\x04name\"_\n" +
+	"\x1aUpdateOrganizationResponse\x12A\n" +
+	"\forganization\x18\x01 \x01(\v2\x1d.organization.v1.OrganizationR\forganization2\xea\x01\n" +
+	"\x13OrganizationService\x12d\n" +
+	"\x0fGetOrganization\x12'.organization.v1.GetOrganizationRequest\x1a(.organization.v1.GetOrganizationResponse\x12m\n" +
+	"\x12UpdateOrganization\x12*.organization.v1.UpdateOrganizationRequest\x1a+.organization.v1.UpdateOrganizationResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
 
 var (
 	file_v1_organization_proto_rawDescOnce sync.Once
@@ -314,19 +314,19 @@ func file_v1_organization_proto_rawDescGZIP() []byte {
 
 var file_v1_organization_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_v1_organization_proto_goTypes = []any{
-	(*Tenant)(nil),               // 0: organization.v1.Tenant
-	(*GetTenantRequest)(nil),     // 1: organization.v1.GetTenantRequest
-	(*GetTenantResponse)(nil),    // 2: organization.v1.GetTenantResponse
-	(*UpdateTenantRequest)(nil),  // 3: organization.v1.UpdateTenantRequest
-	(*UpdateTenantResponse)(nil), // 4: organization.v1.UpdateTenantResponse
+	(*Organization)(nil),               // 0: organization.v1.Organization
+	(*GetOrganizationRequest)(nil),     // 1: organization.v1.GetOrganizationRequest
+	(*GetOrganizationResponse)(nil),    // 2: organization.v1.GetOrganizationResponse
+	(*UpdateOrganizationRequest)(nil),  // 3: organization.v1.UpdateOrganizationRequest
+	(*UpdateOrganizationResponse)(nil), // 4: organization.v1.UpdateOrganizationResponse
 }
 var file_v1_organization_proto_depIdxs = []int32{
-	0, // 0: organization.v1.GetTenantResponse.tenant:type_name -> organization.v1.Tenant
-	0, // 1: organization.v1.UpdateTenantResponse.tenant:type_name -> organization.v1.Tenant
-	1, // 2: organization.v1.OrganizationService.GetTenant:input_type -> organization.v1.GetTenantRequest
-	3, // 3: organization.v1.OrganizationService.UpdateTenant:input_type -> organization.v1.UpdateTenantRequest
-	2, // 4: organization.v1.OrganizationService.GetTenant:output_type -> organization.v1.GetTenantResponse
-	4, // 5: organization.v1.OrganizationService.UpdateTenant:output_type -> organization.v1.UpdateTenantResponse
+	0, // 0: organization.v1.GetOrganizationResponse.organization:type_name -> organization.v1.Organization
+	0, // 1: organization.v1.UpdateOrganizationResponse.organization:type_name -> organization.v1.Organization
+	1, // 2: organization.v1.OrganizationService.GetOrganization:input_type -> organization.v1.GetOrganizationRequest
+	3, // 3: organization.v1.OrganizationService.UpdateOrganization:input_type -> organization.v1.UpdateOrganizationRequest
+	2, // 4: organization.v1.OrganizationService.GetOrganization:output_type -> organization.v1.GetOrganizationResponse
+	4, // 5: organization.v1.OrganizationService.UpdateOrganization:output_type -> organization.v1.UpdateOrganizationResponse
 	4, // [4:6] is the sub-list for method output_type
 	2, // [2:4] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name

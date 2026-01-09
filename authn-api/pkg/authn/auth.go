@@ -55,13 +55,13 @@ const AuthCookieName = "fundament_auth"
 
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID   uuid.UUID `json:"user_id"`
-	TenantID uuid.UUID `json:"tenant_id"`
-	Groups   []string  `json:"groups"`
-	Name     string    `json:"name"`
+	UserID         uuid.UUID `json:"user_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Groups         []string  `json:"groups"`
+	Name           string    `json:"name"`
 }
 
-func (s *AuthnServer) generateJWT(user *db.OrganizationUser, groups []string) (string, error) {
+func (s *AuthnServer) generateJWT(user *db.TenantUser, groups []string) (string, error) {
 	now := time.Now()
 
 	claims := Claims{
@@ -71,10 +71,10 @@ func (s *AuthnServer) generateJWT(user *db.OrganizationUser, groups []string) (s
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.config.TokenExpiry)),
 		},
-		UserID:   user.ID,
-		TenantID: user.TenantID,
-		Name:     user.Name,
-		Groups:   groups,
+		UserID:         user.ID,
+		OrganizationID: user.OrganizationID,
+		Name:           user.Name,
+		Groups:         groups,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -113,7 +113,7 @@ func (s *AuthnServer) validateRequest(header http.Header) (*Claims, error) {
 		return nil, fmt.Errorf("invalid token claims")
 	}
 
-	s.logger.Debug("token validated", "user_id", claims.UserID, "tenant_id", claims.TenantID)
+	s.logger.Debug("token validated", "user_id", claims.UserID, "organization_id", claims.OrganizationID)
 	return claims, nil
 }
 
