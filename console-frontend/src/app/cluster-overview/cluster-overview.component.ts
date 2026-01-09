@@ -2,7 +2,10 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
-import { OrganizationApiService } from '../organization-api.service';
+import { CLUSTER } from '../../connect/tokens';
+import { create } from '@bufbuild/protobuf';
+import { GetClusterRequestSchema } from '../../generated/v1/cluster_pb';
+import { firstValueFrom } from 'rxjs';
 import {
   EditIconComponent,
   TerminalIconComponent,
@@ -28,7 +31,7 @@ import {
 export class ClusterOverviewComponent implements OnInit {
   private titleService = inject(TitleService);
   private route = inject(ActivatedRoute);
-  private organizationApi = inject(OrganizationApiService);
+  private client = inject(CLUSTER);
 
   errorMessage = signal<string | null>(null);
   isLoading = signal<boolean>(true);
@@ -135,18 +138,23 @@ export class ClusterOverviewComponent implements OnInit {
       this.isLoading.set(true);
       this.errorMessage.set(null);
 
-      const cluster = await this.organizationApi.getCluster(clusterId);
+      const request = create(GetClusterRequestSchema, { clusterId });
+      const response = await firstValueFrom(this.client.getCluster(request));
+
+      if (!response.cluster) {
+        throw new Error('Cluster not found');
+      }
 
       // Update cluster data with API response
       this.clusterData.basics = {
-        id: cluster.id,
-        name: cluster.name,
-        region: cluster.region,
-        kubernetesVersion: cluster.kubernetesVersion,
+        id: response.cluster.id,
+        name: response.cluster.name,
+        region: response.cluster.region,
+        kubernetesVersion: response.cluster.kubernetesVersion,
       };
-      this.clusterData.status = cluster.status;
+      this.clusterData.status = response.cluster.status.toString();
 
-      this.titleService.setTitle(cluster.name);
+      this.titleService.setTitle(response.cluster.name);
     } catch (error) {
       console.error('Failed to fetch cluster data:', error);
       this.errorMessage.set(

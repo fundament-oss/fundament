@@ -5,7 +5,10 @@ import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { ErrorIconComponent } from '../icons';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
-import { OrganizationApiService, CreateClusterRequest } from '../organization-api.service';
+import { CLUSTER } from '../../connect/tokens';
+import { create } from '@bufbuild/protobuf';
+import { CreateClusterRequestSchema, NodePoolSpecSchema } from '../../generated/v1/cluster_pb';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-add-cluster-summary',
@@ -16,7 +19,7 @@ import { OrganizationApiService, CreateClusterRequest } from '../organization-ap
 export class AddClusterSummaryComponent {
   private titleService = inject(TitleService);
   private router = inject(Router);
-  private organizationApi = inject(OrganizationApiService);
+  private client = inject(CLUSTER);
   private toastService = inject(ToastService);
   protected stateService = inject(ClusterWizardStateService);
 
@@ -46,17 +49,24 @@ export class AddClusterSummaryComponent {
 
     try {
       // Build the request
-      const request: CreateClusterRequest = {
+      const request = create(CreateClusterRequestSchema, {
         name: wizardState.clusterName,
         region: wizardState.region,
         kubernetesVersion: wizardState.kubernetesVersion,
-        nodePools: wizardState.nodePools,
-        pluginIds: wizardState.plugins,
-        pluginPreset: wizardState.preset,
-      };
+        nodePools: wizardState.nodePools?.map((pool) =>
+          create(NodePoolSpecSchema, {
+            name: pool.name,
+            machineType: pool.machineType,
+            autoscaleMin: pool.autoscaleMin,
+            autoscaleMax: pool.autoscaleMax,
+          }),
+        ) ?? [],
+        pluginIds: wizardState.plugins ?? [],
+        pluginPreset: wizardState.preset ?? '',
+      });
 
       // Call the API
-      const response = await this.organizationApi.createCluster(request);
+      const response = await firstValueFrom(this.client.createCluster(request));
 
       // Reset wizard state
       this.stateService.reset();

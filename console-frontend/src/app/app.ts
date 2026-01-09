@@ -3,8 +3,8 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 import { CommonModule } from '@angular/common';
 import { AuthnApiService } from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
-import { OrganizationApiService } from './organization-api.service';
 import { ToastService } from './toast.service';
+import { versionMismatch$ } from './app.config';
 import {
   WarningIconComponent,
   MenuIconComponent,
@@ -56,7 +56,6 @@ export class App implements OnInit {
   protected readonly title = signal('fundament-console');
   private router = inject(Router);
   private apiService = inject(AuthnApiService);
-  private organizationApiService = inject(OrganizationApiService);
   protected toastService = inject(ToastService);
 
   // Version mismatch state
@@ -86,7 +85,7 @@ export class App implements OnInit {
     });
 
     // Subscribe to API version mismatch
-    this.organizationApiService.versionMismatch$.subscribe((mismatch) => {
+    versionMismatch$.subscribe((mismatch) => {
       this.apiVersionMismatch.set(mismatch);
     });
   }

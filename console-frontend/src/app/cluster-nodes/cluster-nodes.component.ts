@@ -6,7 +6,10 @@ import {
   SharedNodePoolsFormComponent,
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
-import { OrganizationApiService, NodePoolSpec } from '../organization-api.service';
+import { CLUSTER } from '../../connect/tokens';
+import { create } from '@bufbuild/protobuf';
+import { UpdateClusterRequestSchema, NodePoolSpecSchema } from '../../generated/v1/cluster_pb';
+import { firstValueFrom } from 'rxjs';
 import { ErrorIconComponent } from '../icons';
 
 @Component({
@@ -19,7 +22,7 @@ export class ClusterNodesComponent {
   private titleService = inject(TitleService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-  private organizationApi = inject(OrganizationApiService);
+  private client = inject(CLUSTER);
 
   private clusterId = '';
   errorMessage = signal<string | null>(null);
@@ -37,18 +40,20 @@ export class ClusterNodesComponent {
     this.isSubmitting.set(true);
 
     try {
-      // NodePoolData already has the correct structure for NodePoolSpec
-      const nodePools: NodePoolSpec[] = data.nodePools.map((pool) => ({
-        name: pool.name,
-        machineType: pool.machineType,
-        autoscaleMin: pool.autoscaleMin,
-        autoscaleMax: pool.autoscaleMax,
-      }));
-
-      await this.organizationApi.updateCluster({
+      // Build the update request
+      const request = create(UpdateClusterRequestSchema, {
         clusterId: this.clusterId,
-        nodePools,
+        nodePools: data.nodePools.map((pool) =>
+          create(NodePoolSpecSchema, {
+            name: pool.name,
+            machineType: pool.machineType,
+            autoscaleMin: pool.autoscaleMin,
+            autoscaleMax: pool.autoscaleMax,
+          }),
+        ),
       });
+
+      await firstValueFrom(this.client.updateCluster(request));
 
       // Navigate back to cluster overview on success
       this.router.navigate(['/clusters', this.clusterId]);
