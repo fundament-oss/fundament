@@ -16,35 +16,35 @@ service OrganizationService {
 // Organization information
 message Organization {
   // Organization ID (UUID)
-  string id = 1;
+  string id = 10;
   // Organization name
-  string name = 2;
+  string name = 20;
   // Creation timestamp (RFC3339)
-  string created = 3;
+  string created = 30;
 }
 
 // GetOrganization request
 message GetOrganizationRequest {
   // ID of the organization to retrieve
-  string id = 1;
+  string id = 10;
 }
 
 // GetOrganization response
 message GetOrganizationResponse {
   // The requested organization
-  Organization organization = 1;
+  Organization organization = 10;
 }
 
 // UpdateOrganization request
 message UpdateOrganizationRequest {
   // ID of the organization to update
-  string id = 1;
+  string id = 10;
   // New name for the organization
-  string name = 2;
+  string name = 20;
 }
 
 // UpdateOrganization response
 message UpdateOrganizationResponse {
   // The updated organization
-  Organization organization = 1;
+  Organization organization = 10;
 }

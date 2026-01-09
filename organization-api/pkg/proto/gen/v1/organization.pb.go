@@ -25,11 +25,11 @@ const (
 type Organization struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Organization ID (UUID)
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	// Organization name
-	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Name string `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	// Creation timestamp (RFC3339)
-	Created       string `protobuf:"bytes,3,opt,name=created,proto3" json:"created,omitempty"`
+	Created       string `protobuf:"bytes,30,opt,name=created,proto3" json:"created,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -89,7 +89,7 @@ func (x *Organization) GetCreated() string {
 type GetOrganizationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// ID of the organization to retrieve
-	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -135,7 +135,7 @@ func (x *GetOrganizationRequest) GetId() string {
 type GetOrganizationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The requested organization
-	Organization  *Organization `protobuf:"bytes,1,opt,name=organization,proto3" json:"organization,omitempty"`
+	Organization  *Organization `protobuf:"bytes,10,opt,name=organization,proto3" json:"organization,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -181,9 +181,9 @@ func (x *GetOrganizationResponse) GetOrganization() *Organization {
 type UpdateOrganizationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// ID of the organization to update
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	// New name for the organization
-	Name          string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Name          string `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -236,7 +236,7 @@ func (x *UpdateOrganizationRequest) GetName() string {
 type UpdateOrganizationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The updated organization
-	Organization  *Organization `protobuf:"bytes,1,opt,name=organization,proto3" json:"organization,omitempty"`
+	Organization  *Organization `protobuf:"bytes,10,opt,name=organization,proto3" json:"organization,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -284,18 +284,23 @@ const file_v1_organization_proto_rawDesc = "" +
 	"\n" +
 	"\x15v1/organization.proto\x12\x0forganization.v1\"L\n" +
 	"\fOrganization\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
-	"\acreated\x18\x03 \x01(\tR\acreated\"(\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12\x18\n" +
+	"\acreated\x18\x1e \x01(\tR\acreated\"(\n" +
 	"\x16GetOrganizationRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\\\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\"\\\n" +
 	"\x17GetOrganizationResponse\x12A\n" +
-	"\forganization\x18\x01 \x01(\v2\x1d.organization.v1.OrganizationR\forganization\"?\n" +
+	"\forganization\x18\n" +
+	" \x01(\v2\x1d.organization.v1.OrganizationR\forganization\"?\n" +
 	"\x19UpdateOrganizationRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"_\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\"_\n" +
 	"\x1aUpdateOrganizationResponse\x12A\n" +
-	"\forganization\x18\x01 \x01(\v2\x1d.organization.v1.OrganizationR\forganization2\xea\x01\n" +
+	"\forganization\x18\n" +
+	" \x01(\v2\x1d.organization.v1.OrganizationR\forganization2\xea\x01\n" +
 	"\x13OrganizationService\x12d\n" +
 	"\x0fGetOrganization\x12'.organization.v1.GetOrganizationRequest\x1a(.organization.v1.GetOrganizationResponse\x12m\n" +
 	"\x12UpdateOrganization\x12*.organization.v1.UpdateOrganizationRequest\x1a+.organization.v1.UpdateOrganizationResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
