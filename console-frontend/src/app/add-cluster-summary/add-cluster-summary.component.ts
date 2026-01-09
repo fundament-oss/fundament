@@ -58,8 +58,6 @@ export class AddClusterSummaryComponent {
       // Call the API
       const response = await this.organizationApi.createCluster(request);
 
-      console.log('Cluster created successfully:', response);
-
       // Reset wizard state
       this.stateService.reset();
 

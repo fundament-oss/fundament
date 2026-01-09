@@ -1,5 +1,5 @@
 import { Injectable, signal, inject } from '@angular/core';
-import { Router, NavigationEnd } from '@angular/router';
+import { Router, NavigationStart } from '@angular/router';
 
 export interface Toast {
   message: string;
@@ -14,19 +14,19 @@ export class ToastService {
   private toastIdCounter = 0;
   private currentToast = signal<Toast | null>(null);
   private router = inject(Router);
-  // When true, the next navigation will NOT auto-dismiss the current toast
-  private skipNextDismiss = false;
+  // When true, preserve the current toast through the next navigation
+  private preserveThroughNextNavigation = false;
 
   // Expose the toast as a readonly signal
   toast = this.currentToast.asReadonly();
 
   constructor() {
-    // Dismiss any toast after successful navigation to a new page
+    // Dismiss any toast when navigating to a new page
     this.router.events.subscribe((event) => {
-      if (event instanceof NavigationEnd) {
-        if (this.skipNextDismiss) {
-          // Clear the flag and keep the toast visible on the first navigation
-          this.skipNextDismiss = false;
+      if (event instanceof NavigationStart) {
+        if (this.preserveThroughNextNavigation) {
+          // Clear the flag and keep the toast visible through the first navigation
+          this.preserveThroughNextNavigation = false;
           return;
         }
 
@@ -45,7 +45,7 @@ export class ToastService {
 
     // Mark that we should preserve this toast across one navigation cycle
     // This covers the common pattern where code shows a toast and then immediately navigates to a details page (set-then-navigate)
-    this.skipNextDismiss = true;
+    this.preserveThroughNextNavigation = true;
     // Ensure the toast is visible to the user by scrolling to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
