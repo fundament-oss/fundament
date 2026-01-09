@@ -7,12 +7,13 @@
 package organizationv1
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
@@ -1762,7 +1763,7 @@ func file_v1_cluster_proto_rawDescGZIP() []byte {
 	return file_v1_cluster_proto_rawDescData
 }
 
-var file_v1_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_v1_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_v1_cluster_proto_goTypes = []any{
 	(*ListClustersRequest)(nil),        // 0: organization.v1.ListClustersRequest
 	(*ListClustersResponse)(nil),       // 1: organization.v1.ListClustersResponse
@@ -1800,10 +1801,10 @@ var file_v1_cluster_proto_goTypes = []any{
 }
 var file_v1_cluster_proto_depIdxs = []int32{
 	2,  // 0: organization.v1.ListClustersResponse.clusters:type_name -> organization.v1.ClusterSummary
-	28, // 1: organization.v1.ClusterSummary.status:type_name -> organization.v1.ClusterStatus
+	35, // 1: organization.v1.ClusterSummary.status:type_name -> organization.v1.ClusterStatus
 	5,  // 2: organization.v1.GetClusterResponse.cluster:type_name -> organization.v1.ClusterDetails
-	28, // 3: organization.v1.ClusterDetails.status:type_name -> organization.v1.ClusterStatus
-	29, // 4: organization.v1.ClusterDetails.created_at:type_name -> organization.v1.Timestamp
+	35, // 3: organization.v1.ClusterDetails.status:type_name -> organization.v1.ClusterStatus
+	36, // 4: organization.v1.ClusterDetails.created_at:type_name -> organization.v1.Timestamp
 	6,  // 5: organization.v1.ClusterDetails.resource_usage:type_name -> organization.v1.ResourceUsageInfo
 	30, // 6: organization.v1.ResourceUsageInfo.cpu:type_name -> organization.v1.ResourceUsage
 	30, // 7: organization.v1.ResourceUsageInfo.memory:type_name -> organization.v1.ResourceUsage
@@ -1859,7 +1860,7 @@ func file_v1_cluster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_cluster_proto_rawDesc), len(file_v1_cluster_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   28,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

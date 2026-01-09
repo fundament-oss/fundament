@@ -36,3 +36,26 @@ type TenantOrganization struct {
 	Name    string
 	Created pgtype.Timestamptz
 }
+
+type TenantPlugin struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	PluginID  string
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
+}
+
+type TenantProject struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	Created        pgtype.Timestamptz
+}
+
+type TenantUser struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     string
+	Created        pgtype.Timestamptz
+}

@@ -178,6 +178,23 @@ CREATE POLICY node_pools_organization_policy ON tenant.node_pools
 ));
 -- ddl-end --
 
+-- object: tenant.plugins | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.plugins CASCADE;
+CREATE TABLE tenant.plugins (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	cluster_id uuid NOT NULL,
+	plugin_id text NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT plugins_pk PRIMARY KEY (id),
+	CONSTRAINT plugins_uq UNIQUE NULLS NOT DISTINCT (cluster_id,plugin_id,deleted)
+);
+-- ddl-end --
+ALTER TABLE tenant.plugins OWNER TO fun_fundament_api;
+-- ddl-end --
+ALTER TABLE tenant.plugins ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
 -- object: projects_fk_organization | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_organization CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_organization FOREIGN KEY (organization_id)
@@ -216,6 +233,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- object: node_pools_fk_cluster | type: CONSTRAINT --
 -- ALTER TABLE tenant.node_pools DROP CONSTRAINT IF EXISTS node_pools_fk_cluster CASCADE;
 ALTER TABLE tenant.node_pools ADD CONSTRAINT node_pools_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: plugins_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.plugins DROP CONSTRAINT IF EXISTS plugins_fk_cluster CASCADE;
+ALTER TABLE tenant.plugins ADD CONSTRAINT plugins_fk_cluster FOREIGN KEY (cluster_id)
 REFERENCES tenant.clusters (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --

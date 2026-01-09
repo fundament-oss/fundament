@@ -44,6 +44,15 @@ service ClusterService {
 
   // Delete a node pool
   rpc DeleteNodePool(DeleteNodePoolRequest) returns (google.protobuf.Empty);
+
+  // List plugins for a cluster
+  rpc ListPlugins(ListPluginsRequest) returns (ListPluginsResponse);
+
+  // Add a plugin to a cluster
+  rpc AddPlugin(AddPluginRequest) returns (AddPluginResponse);
+
+  // Remove a plugin from a cluster
+  rpc RemovePlugin(RemovePluginRequest) returns (RemovePluginResponse);
 }
 
 // List clusters request
@@ -222,4 +231,42 @@ message GetNodePoolRequest {
 // Get node pool response
 message GetNodePoolResponse {
   NodePool node_pool = 10;
+}
+
+// Plugin information
+message Plugin {
+  string id = 10;
+  string plugin_id = 20;
+  Timestamp created_at = 30;
+}
+
+// List plugins request
+message ListPluginsRequest {
+  string cluster_id = 10;
+}
+
+// List plugins response
+message ListPluginsResponse {
+  repeated Plugin plugins = 10;
+}
+
+// Add plugin request
+message AddPluginRequest {
+  string cluster_id = 10;
+  string plugin_id = 20;
+}
+
+// Add plugin response
+message AddPluginResponse {
+  Plugin plugin = 10;
+}
+
+// Remove plugin request
+message RemovePluginRequest {
+  string id = 10;  // The UUID of the plugin record
+}
+
+// Remove plugin response
+message RemovePluginResponse {
+  bool success = 10;
 }
