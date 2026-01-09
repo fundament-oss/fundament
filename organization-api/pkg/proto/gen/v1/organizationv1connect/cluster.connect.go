@@ -63,6 +63,15 @@ const (
 	// ClusterServiceDeleteNodePoolProcedure is the fully-qualified name of the ClusterService's
 	// DeleteNodePool RPC.
 	ClusterServiceDeleteNodePoolProcedure = "/organization.v1.ClusterService/DeleteNodePool"
+	// ClusterServiceListPluginsProcedure is the fully-qualified name of the ClusterService's
+	// ListPlugins RPC.
+	ClusterServiceListPluginsProcedure = "/organization.v1.ClusterService/ListPlugins"
+	// ClusterServiceAddPluginProcedure is the fully-qualified name of the ClusterService's AddPlugin
+	// RPC.
+	ClusterServiceAddPluginProcedure = "/organization.v1.ClusterService/AddPlugin"
+	// ClusterServiceRemovePluginProcedure is the fully-qualified name of the ClusterService's
+	// RemovePlugin RPC.
+	ClusterServiceRemovePluginProcedure = "/organization.v1.ClusterService/RemovePlugin"
 )
 
 // ClusterServiceClient is a client for the organization.v1.ClusterService service.
@@ -87,6 +96,12 @@ type ClusterServiceClient interface {
 	UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error)
 	// Delete a node pool
 	DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error)
+	// List plugins for a cluster
+	ListPlugins(context.Context, *connect.Request[v1.ListPluginsRequest]) (*connect.Response[v1.ListPluginsResponse], error)
+	// Add a plugin to a cluster
+	AddPlugin(context.Context, *connect.Request[v1.AddPluginRequest]) (*connect.Response[v1.AddPluginResponse], error)
+	// Remove a plugin from a cluster
+	RemovePlugin(context.Context, *connect.Request[v1.RemovePluginRequest]) (*connect.Response[v1.RemovePluginResponse], error)
 }
 
 // NewClusterServiceClient constructs a client for the organization.v1.ClusterService service. By
@@ -160,6 +175,24 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(clusterServiceMethods.ByName("DeleteNodePool")),
 			connect.WithClientOptions(opts...),
 		),
+		listPlugins: connect.NewClient[v1.ListPluginsRequest, v1.ListPluginsResponse](
+			httpClient,
+			baseURL+ClusterServiceListPluginsProcedure,
+			connect.WithSchema(clusterServiceMethods.ByName("ListPlugins")),
+			connect.WithClientOptions(opts...),
+		),
+		addPlugin: connect.NewClient[v1.AddPluginRequest, v1.AddPluginResponse](
+			httpClient,
+			baseURL+ClusterServiceAddPluginProcedure,
+			connect.WithSchema(clusterServiceMethods.ByName("AddPlugin")),
+			connect.WithClientOptions(opts...),
+		),
+		removePlugin: connect.NewClient[v1.RemovePluginRequest, v1.RemovePluginResponse](
+			httpClient,
+			baseURL+ClusterServiceRemovePluginProcedure,
+			connect.WithSchema(clusterServiceMethods.ByName("RemovePlugin")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -175,6 +208,9 @@ type clusterServiceClient struct {
 	createNodePool     *connect.Client[v1.CreateNodePoolRequest, v1.CreateNodePoolResponse]
 	updateNodePool     *connect.Client[v1.UpdateNodePoolRequest, v1.UpdateNodePoolResponse]
 	deleteNodePool     *connect.Client[v1.DeleteNodePoolRequest, v1.DeleteNodePoolResponse]
+	listPlugins        *connect.Client[v1.ListPluginsRequest, v1.ListPluginsResponse]
+	addPlugin          *connect.Client[v1.AddPluginRequest, v1.AddPluginResponse]
+	removePlugin       *connect.Client[v1.RemovePluginRequest, v1.RemovePluginResponse]
 }
 
 // ListClusters calls organization.v1.ClusterService.ListClusters.
@@ -227,6 +263,21 @@ func (c *clusterServiceClient) DeleteNodePool(ctx context.Context, req *connect.
 	return c.deleteNodePool.CallUnary(ctx, req)
 }
 
+// ListPlugins calls organization.v1.ClusterService.ListPlugins.
+func (c *clusterServiceClient) ListPlugins(ctx context.Context, req *connect.Request[v1.ListPluginsRequest]) (*connect.Response[v1.ListPluginsResponse], error) {
+	return c.listPlugins.CallUnary(ctx, req)
+}
+
+// AddPlugin calls organization.v1.ClusterService.AddPlugin.
+func (c *clusterServiceClient) AddPlugin(ctx context.Context, req *connect.Request[v1.AddPluginRequest]) (*connect.Response[v1.AddPluginResponse], error) {
+	return c.addPlugin.CallUnary(ctx, req)
+}
+
+// RemovePlugin calls organization.v1.ClusterService.RemovePlugin.
+func (c *clusterServiceClient) RemovePlugin(ctx context.Context, req *connect.Request[v1.RemovePluginRequest]) (*connect.Response[v1.RemovePluginResponse], error) {
+	return c.removePlugin.CallUnary(ctx, req)
+}
+
 // ClusterServiceHandler is an implementation of the organization.v1.ClusterService service.
 type ClusterServiceHandler interface {
 	// List all clusters for the current organization
@@ -249,6 +300,12 @@ type ClusterServiceHandler interface {
 	UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error)
 	// Delete a node pool
 	DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error)
+	// List plugins for a cluster
+	ListPlugins(context.Context, *connect.Request[v1.ListPluginsRequest]) (*connect.Response[v1.ListPluginsResponse], error)
+	// Add a plugin to a cluster
+	AddPlugin(context.Context, *connect.Request[v1.AddPluginRequest]) (*connect.Response[v1.AddPluginResponse], error)
+	// Remove a plugin from a cluster
+	RemovePlugin(context.Context, *connect.Request[v1.RemovePluginRequest]) (*connect.Response[v1.RemovePluginResponse], error)
 }
 
 // NewClusterServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -318,6 +375,24 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 		connect.WithSchema(clusterServiceMethods.ByName("DeleteNodePool")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clusterServiceListPluginsHandler := connect.NewUnaryHandler(
+		ClusterServiceListPluginsProcedure,
+		svc.ListPlugins,
+		connect.WithSchema(clusterServiceMethods.ByName("ListPlugins")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clusterServiceAddPluginHandler := connect.NewUnaryHandler(
+		ClusterServiceAddPluginProcedure,
+		svc.AddPlugin,
+		connect.WithSchema(clusterServiceMethods.ByName("AddPlugin")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clusterServiceRemovePluginHandler := connect.NewUnaryHandler(
+		ClusterServiceRemovePluginProcedure,
+		svc.RemovePlugin,
+		connect.WithSchema(clusterServiceMethods.ByName("RemovePlugin")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/organization.v1.ClusterService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ClusterServiceListClustersProcedure:
@@ -340,6 +415,12 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 			clusterServiceUpdateNodePoolHandler.ServeHTTP(w, r)
 		case ClusterServiceDeleteNodePoolProcedure:
 			clusterServiceDeleteNodePoolHandler.ServeHTTP(w, r)
+		case ClusterServiceListPluginsProcedure:
+			clusterServiceListPluginsHandler.ServeHTTP(w, r)
+		case ClusterServiceAddPluginProcedure:
+			clusterServiceAddPluginHandler.ServeHTTP(w, r)
+		case ClusterServiceRemovePluginProcedure:
+			clusterServiceRemovePluginHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -387,4 +468,16 @@ func (UnimplementedClusterServiceHandler) UpdateNodePool(context.Context, *conne
 
 func (UnimplementedClusterServiceHandler) DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.DeleteNodePool is not implemented"))
+}
+
+func (UnimplementedClusterServiceHandler) ListPlugins(context.Context, *connect.Request[v1.ListPluginsRequest]) (*connect.Response[v1.ListPluginsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.ListPlugins is not implemented"))
+}
+
+func (UnimplementedClusterServiceHandler) AddPlugin(context.Context, *connect.Request[v1.AddPluginRequest]) (*connect.Response[v1.AddPluginResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.AddPlugin is not implemented"))
+}
+
+func (UnimplementedClusterServiceHandler) RemovePlugin(context.Context, *connect.Request[v1.RemovePluginRequest]) (*connect.Response[v1.RemovePluginResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.RemovePlugin is not implemented"))
 }

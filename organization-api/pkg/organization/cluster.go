@@ -62,8 +62,14 @@ func (s *OrganizationServer) GetCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pools: %w", err))
 	}
 
+	plugins, err := s.queries.PluginListByClusterID(ctx, input.ClusterID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get plugins: %w", err))
+	}
+
 	clusterDetails := adapter.FromClusterDetail(cluster)
 	clusterDetails.NodePools = adapter.FromNodePools(nodePools)
+	clusterDetails.Plugins = adapter.FromPlugins(plugins)
 
 	return connect.NewResponse(&organizationv1.GetClusterResponse{
 		Cluster: clusterDetails,
@@ -121,6 +127,18 @@ func (s *OrganizationServer) CreateCluster(
 		}
 	}
 
+	// Create plugins
+	for _, pluginID := range req.Msg.PluginIds {
+		params := db.PluginCreateParams{
+			ClusterID: cluster.ID,
+			PluginID:  pluginID,
+		}
+
+		if _, err := queries.PluginCreate(ctx, params); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create plugin %q: %w", pluginID, err))
+		}
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
 	}
@@ -131,6 +149,7 @@ func (s *OrganizationServer) CreateCluster(
 		"name", cluster.Name,
 		"region", cluster.Region,
 		"node_pool_count", len(req.Msg.NodePools),
+		"plugin_count", len(req.Msg.PluginIds),
 	)
 
 	return connect.NewResponse(&organizationv1.CreateClusterResponse{
@@ -173,10 +192,16 @@ func (s *OrganizationServer) UpdateCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pools: %w", err))
 	}
 
+	plugins, err := s.queries.PluginListByClusterID(ctx, cluster.ID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get plugins: %w", err))
+	}
+
 	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", cluster.ID, "name", cluster.Name)
 
 	clusterDetails := adapter.FromClusterDetail(cluster)
 	clusterDetails.NodePools = adapter.FromNodePools(nodePools)
+	clusterDetails.Plugins = adapter.FromPlugins(plugins)
 
 	return connect.NewResponse(&organizationv1.UpdateClusterResponse{
 		Cluster: clusterDetails,

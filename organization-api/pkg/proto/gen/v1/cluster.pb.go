@@ -299,6 +299,7 @@ type ClusterDetails struct {
 	NodePools         []*NodePool            `protobuf:"bytes,80,rep,name=node_pools,json=nodePools,proto3" json:"node_pools,omitempty"`
 	Members           []*ClusterMember       `protobuf:"bytes,90,rep,name=members,proto3" json:"members,omitempty"`
 	Projects          []*ClusterProject      `protobuf:"bytes,100,rep,name=projects,proto3" json:"projects,omitempty"`
+	Plugins           []*Plugin              `protobuf:"bytes,110,rep,name=plugins,proto3" json:"plugins,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -399,6 +400,13 @@ func (x *ClusterDetails) GetMembers() []*ClusterMember {
 func (x *ClusterDetails) GetProjects() []*ClusterProject {
 	if x != nil {
 		return x.Projects
+	}
+	return nil
+}
+
+func (x *ClusterDetails) GetPlugins() []*Plugin {
+	if x != nil {
+		return x.Plugins
 	}
 	return nil
 }
@@ -915,7 +923,6 @@ type UpdateClusterRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	ClusterId         string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
 	KubernetesVersion *string                `protobuf:"bytes,20,opt,name=kubernetes_version,json=kubernetesVersion,proto3,oneof" json:"kubernetes_version,omitempty"`
-	NodePools         []*NodePoolSpec        `protobuf:"bytes,30,rep,name=node_pools,json=nodePools,proto3" json:"node_pools,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -962,13 +969,6 @@ func (x *UpdateClusterRequest) GetKubernetesVersion() string {
 		return *x.KubernetesVersion
 	}
 	return ""
-}
-
-func (x *UpdateClusterRequest) GetNodePools() []*NodePoolSpec {
-	if x != nil {
-		return x.NodePools
-	}
-	return nil
 }
 
 // Update cluster response
@@ -1665,6 +1665,345 @@ func (x *DeleteNodePoolResponse) GetSuccess() bool {
 	return false
 }
 
+// Plugin information
+type Plugin struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	PluginId      string                 `protobuf:"bytes,20,opt,name=plugin_id,json=pluginId,proto3" json:"plugin_id,omitempty"`
+	CreatedAt     *Timestamp             `protobuf:"bytes,30,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Plugin) Reset() {
+	*x = Plugin{}
+	mi := &file_v1_cluster_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Plugin) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Plugin) ProtoMessage() {}
+
+func (x *Plugin) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Plugin.ProtoReflect.Descriptor instead.
+func (*Plugin) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *Plugin) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Plugin) GetPluginId() string {
+	if x != nil {
+		return x.PluginId
+	}
+	return ""
+}
+
+func (x *Plugin) GetCreatedAt() *Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+// List plugins request
+type ListPluginsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClusterId     string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPluginsRequest) Reset() {
+	*x = ListPluginsRequest{}
+	mi := &file_v1_cluster_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPluginsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPluginsRequest) ProtoMessage() {}
+
+func (x *ListPluginsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPluginsRequest.ProtoReflect.Descriptor instead.
+func (*ListPluginsRequest) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ListPluginsRequest) GetClusterId() string {
+	if x != nil {
+		return x.ClusterId
+	}
+	return ""
+}
+
+// List plugins response
+type ListPluginsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Plugins       []*Plugin              `protobuf:"bytes,10,rep,name=plugins,proto3" json:"plugins,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPluginsResponse) Reset() {
+	*x = ListPluginsResponse{}
+	mi := &file_v1_cluster_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPluginsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPluginsResponse) ProtoMessage() {}
+
+func (x *ListPluginsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPluginsResponse.ProtoReflect.Descriptor instead.
+func (*ListPluginsResponse) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ListPluginsResponse) GetPlugins() []*Plugin {
+	if x != nil {
+		return x.Plugins
+	}
+	return nil
+}
+
+// Add plugin request
+type AddPluginRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClusterId     string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	PluginId      string                 `protobuf:"bytes,20,opt,name=plugin_id,json=pluginId,proto3" json:"plugin_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddPluginRequest) Reset() {
+	*x = AddPluginRequest{}
+	mi := &file_v1_cluster_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddPluginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddPluginRequest) ProtoMessage() {}
+
+func (x *AddPluginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddPluginRequest.ProtoReflect.Descriptor instead.
+func (*AddPluginRequest) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *AddPluginRequest) GetClusterId() string {
+	if x != nil {
+		return x.ClusterId
+	}
+	return ""
+}
+
+func (x *AddPluginRequest) GetPluginId() string {
+	if x != nil {
+		return x.PluginId
+	}
+	return ""
+}
+
+// Add plugin response
+type AddPluginResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Plugin        *Plugin                `protobuf:"bytes,10,opt,name=plugin,proto3" json:"plugin,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddPluginResponse) Reset() {
+	*x = AddPluginResponse{}
+	mi := &file_v1_cluster_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddPluginResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddPluginResponse) ProtoMessage() {}
+
+func (x *AddPluginResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddPluginResponse.ProtoReflect.Descriptor instead.
+func (*AddPluginResponse) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *AddPluginResponse) GetPlugin() *Plugin {
+	if x != nil {
+		return x.Plugin
+	}
+	return nil
+}
+
+// Remove plugin request
+type RemovePluginRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"` // The UUID of the plugin record
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemovePluginRequest) Reset() {
+	*x = RemovePluginRequest{}
+	mi := &file_v1_cluster_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemovePluginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemovePluginRequest) ProtoMessage() {}
+
+func (x *RemovePluginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemovePluginRequest.ProtoReflect.Descriptor instead.
+func (*RemovePluginRequest) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *RemovePluginRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// Remove plugin response
+type RemovePluginResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,10,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemovePluginResponse) Reset() {
+	*x = RemovePluginResponse{}
+	mi := &file_v1_cluster_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemovePluginResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemovePluginResponse) ProtoMessage() {}
+
+func (x *RemovePluginResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemovePluginResponse.ProtoReflect.Descriptor instead.
+func (*RemovePluginResponse) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *RemovePluginResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 var File_v1_cluster_proto protoreflect.FileDescriptor
 
 const file_v1_cluster_proto_rawDesc = "" +
@@ -1691,7 +2030,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	" \x01(\tR\tclusterId\"O\n" +
 	"\x12GetClusterResponse\x129\n" +
 	"\acluster\x18\n" +
-	" \x01(\v2\x1f.organization.v1.ClusterDetailsR\acluster\"\xea\x03\n" +
+	" \x01(\v2\x1f.organization.v1.ClusterDetailsR\acluster\"\x9d\x04\n" +
 	"\x0eClusterDetails\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -1705,7 +2044,8 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
 	"node_pools\x18P \x03(\v2\x19.organization.v1.NodePoolR\tnodePools\x128\n" +
 	"\amembers\x18Z \x03(\v2\x1e.organization.v1.ClusterMemberR\amembers\x12;\n" +
-	"\bprojects\x18d \x03(\v2\x1f.organization.v1.ClusterProjectR\bprojects\"\xe5\x01\n" +
+	"\bprojects\x18d \x03(\v2\x1f.organization.v1.ClusterProjectR\bprojects\x121\n" +
+	"\aplugins\x18n \x03(\v2\x17.organization.v1.PluginR\aplugins\"\xe5\x01\n" +
 	"\x11ResourceUsageInfo\x120\n" +
 	"\x03cpu\x18\n" +
 	" \x01(\v2\x1e.organization.v1.ResourceUsageR\x03cpu\x126\n" +
@@ -1757,14 +2097,12 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
 	"cluster_id\x18\n" +
 	" \x01(\tR\tclusterId\x126\n" +
-	"\x06status\x18\x14 \x01(\x0e2\x1e.organization.v1.ClusterStatusR\x06status\"\xbe\x01\n" +
+	"\x06status\x18\x14 \x01(\x0e2\x1e.organization.v1.ClusterStatusR\x06status\"\x80\x01\n" +
 	"\x14UpdateClusterRequest\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
 	" \x01(\tR\tclusterId\x122\n" +
-	"\x12kubernetes_version\x18\x14 \x01(\tH\x00R\x11kubernetesVersion\x88\x01\x01\x12<\n" +
-	"\n" +
-	"node_pools\x18\x1e \x03(\v2\x1d.organization.v1.NodePoolSpecR\tnodePoolsB\x15\n" +
+	"\x12kubernetes_version\x18\x14 \x01(\tH\x00R\x11kubernetesVersion\x88\x01\x01B\x15\n" +
 	"\x13_kubernetes_version\"R\n" +
 	"\x15UpdateClusterResponse\x129\n" +
 	"\acluster\x18\n" +
@@ -1823,7 +2161,34 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"nodePoolId\"2\n" +
 	"\x16DeleteNodePoolResponse\x12\x18\n" +
 	"\asuccess\x18\n" +
-	" \x01(\bR\asuccess2\xdc\a\n" +
+	" \x01(\bR\asuccess\"p\n" +
+	"\x06Plugin\x12\x0e\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x1b\n" +
+	"\tplugin_id\x18\x14 \x01(\tR\bpluginId\x129\n" +
+	"\n" +
+	"created_at\x18\x1e \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAt\"3\n" +
+	"\x12ListPluginsRequest\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18\n" +
+	" \x01(\tR\tclusterId\"H\n" +
+	"\x13ListPluginsResponse\x121\n" +
+	"\aplugins\x18\n" +
+	" \x03(\v2\x17.organization.v1.PluginR\aplugins\"N\n" +
+	"\x10AddPluginRequest\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18\n" +
+	" \x01(\tR\tclusterId\x12\x1b\n" +
+	"\tplugin_id\x18\x14 \x01(\tR\bpluginId\"D\n" +
+	"\x11AddPluginResponse\x12/\n" +
+	"\x06plugin\x18\n" +
+	" \x01(\v2\x17.organization.v1.PluginR\x06plugin\"%\n" +
+	"\x13RemovePluginRequest\x12\x0e\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\"0\n" +
+	"\x14RemovePluginResponse\x12\x18\n" +
+	"\asuccess\x18\n" +
+	" \x01(\bR\asuccess2\xe7\t\n" +
 	"\x0eClusterService\x12[\n" +
 	"\fListClusters\x12$.organization.v1.ListClustersRequest\x1a%.organization.v1.ListClustersResponse\x12U\n" +
 	"\n" +
@@ -1835,7 +2200,10 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\rGetKubeconfig\x12%.organization.v1.GetKubeconfigRequest\x1a&.organization.v1.GetKubeconfigResponse\x12a\n" +
 	"\x0eCreateNodePool\x12&.organization.v1.CreateNodePoolRequest\x1a'.organization.v1.CreateNodePoolResponse\x12a\n" +
 	"\x0eUpdateNodePool\x12&.organization.v1.UpdateNodePoolRequest\x1a'.organization.v1.UpdateNodePoolResponse\x12a\n" +
-	"\x0eDeleteNodePool\x12&.organization.v1.DeleteNodePoolRequest\x1a'.organization.v1.DeleteNodePoolResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
+	"\x0eDeleteNodePool\x12&.organization.v1.DeleteNodePoolRequest\x1a'.organization.v1.DeleteNodePoolResponse\x12X\n" +
+	"\vListPlugins\x12#.organization.v1.ListPluginsRequest\x1a$.organization.v1.ListPluginsResponse\x12R\n" +
+	"\tAddPlugin\x12!.organization.v1.AddPluginRequest\x1a\".organization.v1.AddPluginResponse\x12[\n" +
+	"\fRemovePlugin\x12$.organization.v1.RemovePluginRequest\x1a%.organization.v1.RemovePluginResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
 
 var (
 	file_v1_cluster_proto_rawDescOnce sync.Once
@@ -1849,7 +2217,7 @@ func file_v1_cluster_proto_rawDescGZIP() []byte {
 	return file_v1_cluster_proto_rawDescData
 }
 
-var file_v1_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_v1_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_v1_cluster_proto_goTypes = []any{
 	(*ListClustersRequest)(nil),        // 0: organization.v1.ListClustersRequest
 	(*ListClustersResponse)(nil),       // 1: organization.v1.ListClustersResponse
@@ -1879,60 +2247,76 @@ var file_v1_cluster_proto_goTypes = []any{
 	(*UpdateNodePoolResponse)(nil),     // 25: organization.v1.UpdateNodePoolResponse
 	(*DeleteNodePoolRequest)(nil),      // 26: organization.v1.DeleteNodePoolRequest
 	(*DeleteNodePoolResponse)(nil),     // 27: organization.v1.DeleteNodePoolResponse
-	(ClusterStatus)(0),                 // 28: organization.v1.ClusterStatus
-	(*Timestamp)(nil),                  // 29: organization.v1.Timestamp
-	(*ResourceUsage)(nil),              // 30: organization.v1.ResourceUsage
-	(NodePoolStatus)(0),                // 31: organization.v1.NodePoolStatus
+	(*Plugin)(nil),                     // 28: organization.v1.Plugin
+	(*ListPluginsRequest)(nil),         // 29: organization.v1.ListPluginsRequest
+	(*ListPluginsResponse)(nil),        // 30: organization.v1.ListPluginsResponse
+	(*AddPluginRequest)(nil),           // 31: organization.v1.AddPluginRequest
+	(*AddPluginResponse)(nil),          // 32: organization.v1.AddPluginResponse
+	(*RemovePluginRequest)(nil),        // 33: organization.v1.RemovePluginRequest
+	(*RemovePluginResponse)(nil),       // 34: organization.v1.RemovePluginResponse
+	(ClusterStatus)(0),                 // 35: organization.v1.ClusterStatus
+	(*Timestamp)(nil),                  // 36: organization.v1.Timestamp
+	(*ResourceUsage)(nil),              // 37: organization.v1.ResourceUsage
+	(NodePoolStatus)(0),                // 38: organization.v1.NodePoolStatus
 }
 var file_v1_cluster_proto_depIdxs = []int32{
 	2,  // 0: organization.v1.ListClustersResponse.clusters:type_name -> organization.v1.ClusterSummary
-	28, // 1: organization.v1.ClusterSummary.status:type_name -> organization.v1.ClusterStatus
+	35, // 1: organization.v1.ClusterSummary.status:type_name -> organization.v1.ClusterStatus
 	5,  // 2: organization.v1.GetClusterResponse.cluster:type_name -> organization.v1.ClusterDetails
-	28, // 3: organization.v1.ClusterDetails.status:type_name -> organization.v1.ClusterStatus
-	29, // 4: organization.v1.ClusterDetails.created_at:type_name -> organization.v1.Timestamp
+	35, // 3: organization.v1.ClusterDetails.status:type_name -> organization.v1.ClusterStatus
+	36, // 4: organization.v1.ClusterDetails.created_at:type_name -> organization.v1.Timestamp
 	6,  // 5: organization.v1.ClusterDetails.resource_usage:type_name -> organization.v1.ResourceUsageInfo
 	7,  // 6: organization.v1.ClusterDetails.node_pools:type_name -> organization.v1.NodePool
 	8,  // 7: organization.v1.ClusterDetails.members:type_name -> organization.v1.ClusterMember
 	9,  // 8: organization.v1.ClusterDetails.projects:type_name -> organization.v1.ClusterProject
-	30, // 9: organization.v1.ResourceUsageInfo.cpu:type_name -> organization.v1.ResourceUsage
-	30, // 10: organization.v1.ResourceUsageInfo.memory:type_name -> organization.v1.ResourceUsage
-	30, // 11: organization.v1.ResourceUsageInfo.disk:type_name -> organization.v1.ResourceUsage
-	30, // 12: organization.v1.ResourceUsageInfo.pods:type_name -> organization.v1.ResourceUsage
-	31, // 13: organization.v1.NodePool.status:type_name -> organization.v1.NodePoolStatus
-	29, // 14: organization.v1.ClusterMember.last_active:type_name -> organization.v1.Timestamp
-	11, // 15: organization.v1.CreateClusterRequest.node_pools:type_name -> organization.v1.NodePoolSpec
-	28, // 16: organization.v1.CreateClusterResponse.status:type_name -> organization.v1.ClusterStatus
-	11, // 17: organization.v1.UpdateClusterRequest.node_pools:type_name -> organization.v1.NodePoolSpec
+	28, // 9: organization.v1.ClusterDetails.plugins:type_name -> organization.v1.Plugin
+	37, // 10: organization.v1.ResourceUsageInfo.cpu:type_name -> organization.v1.ResourceUsage
+	37, // 11: organization.v1.ResourceUsageInfo.memory:type_name -> organization.v1.ResourceUsage
+	37, // 12: organization.v1.ResourceUsageInfo.disk:type_name -> organization.v1.ResourceUsage
+	37, // 13: organization.v1.ResourceUsageInfo.pods:type_name -> organization.v1.ResourceUsage
+	38, // 14: organization.v1.NodePool.status:type_name -> organization.v1.NodePoolStatus
+	36, // 15: organization.v1.ClusterMember.last_active:type_name -> organization.v1.Timestamp
+	11, // 16: organization.v1.CreateClusterRequest.node_pools:type_name -> organization.v1.NodePoolSpec
+	35, // 17: organization.v1.CreateClusterResponse.status:type_name -> organization.v1.ClusterStatus
 	5,  // 18: organization.v1.UpdateClusterResponse.cluster:type_name -> organization.v1.ClusterDetails
 	19, // 19: organization.v1.GetClusterActivityResponse.activities:type_name -> organization.v1.ActivityEntry
-	29, // 20: organization.v1.ActivityEntry.timestamp:type_name -> organization.v1.Timestamp
+	36, // 20: organization.v1.ActivityEntry.timestamp:type_name -> organization.v1.Timestamp
 	7,  // 21: organization.v1.CreateNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
 	7,  // 22: organization.v1.UpdateNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
-	0,  // 23: organization.v1.ClusterService.ListClusters:input_type -> organization.v1.ListClustersRequest
-	3,  // 24: organization.v1.ClusterService.GetCluster:input_type -> organization.v1.GetClusterRequest
-	10, // 25: organization.v1.ClusterService.CreateCluster:input_type -> organization.v1.CreateClusterRequest
-	13, // 26: organization.v1.ClusterService.UpdateCluster:input_type -> organization.v1.UpdateClusterRequest
-	15, // 27: organization.v1.ClusterService.DeleteCluster:input_type -> organization.v1.DeleteClusterRequest
-	17, // 28: organization.v1.ClusterService.GetClusterActivity:input_type -> organization.v1.GetClusterActivityRequest
-	20, // 29: organization.v1.ClusterService.GetKubeconfig:input_type -> organization.v1.GetKubeconfigRequest
-	22, // 30: organization.v1.ClusterService.CreateNodePool:input_type -> organization.v1.CreateNodePoolRequest
-	24, // 31: organization.v1.ClusterService.UpdateNodePool:input_type -> organization.v1.UpdateNodePoolRequest
-	26, // 32: organization.v1.ClusterService.DeleteNodePool:input_type -> organization.v1.DeleteNodePoolRequest
-	1,  // 33: organization.v1.ClusterService.ListClusters:output_type -> organization.v1.ListClustersResponse
-	4,  // 34: organization.v1.ClusterService.GetCluster:output_type -> organization.v1.GetClusterResponse
-	12, // 35: organization.v1.ClusterService.CreateCluster:output_type -> organization.v1.CreateClusterResponse
-	14, // 36: organization.v1.ClusterService.UpdateCluster:output_type -> organization.v1.UpdateClusterResponse
-	16, // 37: organization.v1.ClusterService.DeleteCluster:output_type -> organization.v1.DeleteClusterResponse
-	18, // 38: organization.v1.ClusterService.GetClusterActivity:output_type -> organization.v1.GetClusterActivityResponse
-	21, // 39: organization.v1.ClusterService.GetKubeconfig:output_type -> organization.v1.GetKubeconfigResponse
-	23, // 40: organization.v1.ClusterService.CreateNodePool:output_type -> organization.v1.CreateNodePoolResponse
-	25, // 41: organization.v1.ClusterService.UpdateNodePool:output_type -> organization.v1.UpdateNodePoolResponse
-	27, // 42: organization.v1.ClusterService.DeleteNodePool:output_type -> organization.v1.DeleteNodePoolResponse
-	33, // [33:43] is the sub-list for method output_type
-	23, // [23:33] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	36, // 23: organization.v1.Plugin.created_at:type_name -> organization.v1.Timestamp
+	28, // 24: organization.v1.ListPluginsResponse.plugins:type_name -> organization.v1.Plugin
+	28, // 25: organization.v1.AddPluginResponse.plugin:type_name -> organization.v1.Plugin
+	0,  // 26: organization.v1.ClusterService.ListClusters:input_type -> organization.v1.ListClustersRequest
+	3,  // 27: organization.v1.ClusterService.GetCluster:input_type -> organization.v1.GetClusterRequest
+	10, // 28: organization.v1.ClusterService.CreateCluster:input_type -> organization.v1.CreateClusterRequest
+	13, // 29: organization.v1.ClusterService.UpdateCluster:input_type -> organization.v1.UpdateClusterRequest
+	15, // 30: organization.v1.ClusterService.DeleteCluster:input_type -> organization.v1.DeleteClusterRequest
+	17, // 31: organization.v1.ClusterService.GetClusterActivity:input_type -> organization.v1.GetClusterActivityRequest
+	20, // 32: organization.v1.ClusterService.GetKubeconfig:input_type -> organization.v1.GetKubeconfigRequest
+	22, // 33: organization.v1.ClusterService.CreateNodePool:input_type -> organization.v1.CreateNodePoolRequest
+	24, // 34: organization.v1.ClusterService.UpdateNodePool:input_type -> organization.v1.UpdateNodePoolRequest
+	26, // 35: organization.v1.ClusterService.DeleteNodePool:input_type -> organization.v1.DeleteNodePoolRequest
+	29, // 36: organization.v1.ClusterService.ListPlugins:input_type -> organization.v1.ListPluginsRequest
+	31, // 37: organization.v1.ClusterService.AddPlugin:input_type -> organization.v1.AddPluginRequest
+	33, // 38: organization.v1.ClusterService.RemovePlugin:input_type -> organization.v1.RemovePluginRequest
+	1,  // 39: organization.v1.ClusterService.ListClusters:output_type -> organization.v1.ListClustersResponse
+	4,  // 40: organization.v1.ClusterService.GetCluster:output_type -> organization.v1.GetClusterResponse
+	12, // 41: organization.v1.ClusterService.CreateCluster:output_type -> organization.v1.CreateClusterResponse
+	14, // 42: organization.v1.ClusterService.UpdateCluster:output_type -> organization.v1.UpdateClusterResponse
+	16, // 43: organization.v1.ClusterService.DeleteCluster:output_type -> organization.v1.DeleteClusterResponse
+	18, // 44: organization.v1.ClusterService.GetClusterActivity:output_type -> organization.v1.GetClusterActivityResponse
+	21, // 45: organization.v1.ClusterService.GetKubeconfig:output_type -> organization.v1.GetKubeconfigResponse
+	23, // 46: organization.v1.ClusterService.CreateNodePool:output_type -> organization.v1.CreateNodePoolResponse
+	25, // 47: organization.v1.ClusterService.UpdateNodePool:output_type -> organization.v1.UpdateNodePoolResponse
+	27, // 48: organization.v1.ClusterService.DeleteNodePool:output_type -> organization.v1.DeleteNodePoolResponse
+	30, // 49: organization.v1.ClusterService.ListPlugins:output_type -> organization.v1.ListPluginsResponse
+	32, // 50: organization.v1.ClusterService.AddPlugin:output_type -> organization.v1.AddPluginResponse
+	34, // 51: organization.v1.ClusterService.RemovePlugin:output_type -> organization.v1.RemovePluginResponse
+	39, // [39:52] is the sub-list for method output_type
+	26, // [26:39] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_v1_cluster_proto_init() }
@@ -1948,7 +2332,7 @@ func file_v1_cluster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_cluster_proto_rawDesc), len(file_v1_cluster_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   28,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
