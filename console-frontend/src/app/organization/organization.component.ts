@@ -2,7 +2,7 @@ import { Component, inject, OnInit, ViewChild, ElementRef, signal } from '@angul
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
-import { ApiService } from '../api.service';
+import { AuthnApiService } from '../authn-api.service';
 import { OrganizationApiService, Organization } from '../organization-api.service';
 import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '../icons';
 
@@ -20,7 +20,7 @@ import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '.
 })
 export class OrganizationComponent implements OnInit {
   private titleService = inject(TitleService);
-  private apiService = inject(ApiService);
+  private apiService = inject(AuthnApiService);
   private organizationApiService = inject(OrganizationApiService);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
@@ -46,8 +46,11 @@ export class OrganizationComponent implements OnInit {
     try {
       // Get current user to retrieve organization ID
       const userInfo = await this.apiService.getUserInfo();
+      if (!userInfo?.organizationId) {
+        throw new Error('Organization ID not found');
+      }
       this.organization.set(
-        await this.organizationApiService.getOrganization(userInfo.organizationId),
+        await this.organizationApiService.getOrganization(userInfo?.organizationId),
       );
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Failed to load organization');

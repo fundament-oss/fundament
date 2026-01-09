@@ -1,6 +1,5 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { ApiService } from './api.service';
 import { PROTO_API_VERSION } from '../proto-version';
 
 const CONFIG = {
@@ -102,7 +101,6 @@ export interface GetClusterResponse {
   providedIn: 'root',
 })
 export class OrganizationApiService {
-  private apiService = inject(ApiService);
   private versionMismatchSubject = new BehaviorSubject<boolean>(false);
   public versionMismatch$ = this.versionMismatchSubject.asObservable();
 

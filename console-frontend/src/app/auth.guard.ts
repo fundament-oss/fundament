@@ -1,9 +1,9 @@
 import { inject } from '@angular/core';
 import { Router, CanActivateFn } from '@angular/router';
-import { ApiService } from './api.service';
+import { AuthnApiService } from './authn-api.service';
 
 export const authGuard: CanActivateFn = async (route, state) => {
-  const apiService = inject(ApiService);
+  const apiService = inject(AuthnApiService);
   const router = inject(Router);
 
   // If we already have user info in state, allow access

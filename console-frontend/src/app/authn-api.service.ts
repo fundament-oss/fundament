@@ -1,29 +1,18 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import type { User, GetUserInfoResponse } from '../generated/authn/v1/authn_pb';
 
 const CONFIG = {
   apiBaseUrl: 'http://authn.127.0.0.1.nip.io:8080',
   servicePath: '/authn.v1.AuthnService',
 };
 
-export interface UserInfo {
-  id: string;
-  organizationId: string;
-  name: string;
-  externalId: string;
-  groups: string[];
-}
-
-export interface UserResponse {
-  user: UserInfo;
-}
-
 @Injectable({
   providedIn: 'root',
 })
-export class ApiService {
-  private currentUserSubject = new BehaviorSubject<UserInfo | null>(null);
-  public currentUser$: Observable<UserInfo | null> = this.currentUserSubject.asObservable();
+export class AuthnApiService {
+  private currentUserSubject = new BehaviorSubject<User | undefined>(undefined);
+  public currentUser$: Observable<User | undefined> = this.currentUserSubject.asObservable();
 
   private async connectRpc<T>(method: string, request: object = {}): Promise<T> {
     const url = `${CONFIG.apiBaseUrl}${CONFIG.servicePath}/${method}`;
@@ -80,8 +69,8 @@ export class ApiService {
     await this.getUserInfo();
   }
 
-  async getUserInfo(): Promise<UserInfo> {
-    const response = await this.connectRpc<UserResponse>('GetUserInfo', {});
+  async getUserInfo(): Promise<User | undefined> {
+    const response = await this.connectRpc<GetUserInfoResponse>('GetUserInfo', {});
     this.currentUserSubject.next(response.user);
     return response.user;
   }
@@ -90,7 +79,7 @@ export class ApiService {
     // Check hint flag to avoid unnecessary API calls when we know user isn't logged in
     // This is just an optimization - the server (via HTTP-only cookie) is still the source of truth
     if (!this.hasAuthHint()) {
-      this.currentUserSubject.next(null);
+      this.currentUserSubject.next(undefined);
       return;
     }
 
@@ -100,7 +89,7 @@ export class ApiService {
       this.currentUserSubject.next(userInfo);
     } catch {
       // Not authenticated or session expired - clear the hint
-      this.currentUserSubject.next(null);
+      this.currentUserSubject.next(undefined);
       localStorage.removeItem('auth_hint');
     }
   }
@@ -128,13 +117,13 @@ export class ApiService {
     }
 
     // Clear user state and hint
-    this.currentUserSubject.next(null);
+    this.currentUserSubject.next(undefined);
     localStorage.removeItem('auth_hint');
   }
 
   isAuthenticated(): boolean {
     // Check if we have a current user in our state
-    return this.currentUserSubject.value !== null;
+    return this.currentUserSubject.value !== undefined;
   }
 
   private hasAuthHint(): boolean {

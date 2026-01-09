@@ -1,7 +1,8 @@
 import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { ApiService, UserInfo } from './api.service';
+import { AuthnApiService } from './authn-api.service';
+import type { User } from '../generated/authn/v1/authn_pb';
 import { OrganizationApiService } from './organization-api.service';
 import { ToastService } from './toast.service';
 import {
@@ -54,7 +55,7 @@ import {
 export class App implements OnInit {
   protected readonly title = signal('fundament-console');
   private router = inject(Router);
-  private apiService = inject(ApiService);
+  private apiService = inject(AuthnApiService);
   private organizationApiService = inject(OrganizationApiService);
   protected toastService = inject(ToastService);
 
@@ -71,7 +72,7 @@ export class App implements OnInit {
   isDarkMode = signal(false);
 
   // User state
-  currentUser = signal<UserInfo | null>(null);
+  currentUser = signal<User | undefined>(undefined);
 
   async ngOnInit() {
     this.initializeTheme();
