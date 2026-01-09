@@ -334,7 +334,9 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 
 	// Check if user exists to determine if we need to create an organization
 	var organizationID uuid.UUID
-	existingUser, err := s.queries.UserGetByExternalID(ctx, claims.Sub)
+	existingUser, err := s.queries.UserGetByExternalID(ctx, db.UserGetByExternalIDParams{
+		ExternalID: claims.Sub,
+	})
 	isNewUser := errors.Is(err, pgx.ErrNoRows)
 
 	if err != nil && !isNewUser {
@@ -349,7 +351,9 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 			organizationName = claims.Email
 		}
 
-		organization, err := s.queries.OrganizationCreate(ctx, organizationName)
+		organization, err := s.queries.OrganizationCreate(ctx, db.OrganizationCreateParams{
+			Name: organizationName,
+		})
 		if err != nil {
 			s.logger.Error("failed to create organization", "error", err)
 			return nil, nil, "", fmt.Errorf("failed to create organization")

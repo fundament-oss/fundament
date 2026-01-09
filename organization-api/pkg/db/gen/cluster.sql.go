@@ -56,8 +56,12 @@ SET deleted = NOW()
 WHERE id = $1 AND deleted IS NULL
 `
 
-func (q *Queries) ClusterDelete(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, clusterDelete, id)
+type ClusterDeleteParams struct {
+	ID uuid.UUID
+}
+
+func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) error {
+	_, err := q.db.Exec(ctx, clusterDelete, arg.ID)
 	return err
 }
 
@@ -67,8 +71,12 @@ FROM tenant.clusters
 WHERE id = $1 AND deleted IS NULL
 `
 
-func (q *Queries) ClusterGetByID(ctx context.Context, id uuid.UUID) (TenantCluster, error) {
-	row := q.db.QueryRow(ctx, clusterGetByID, id)
+type ClusterGetByIDParams struct {
+	ID uuid.UUID
+}
+
+func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) (TenantCluster, error) {
+	row := q.db.QueryRow(ctx, clusterGetByID, arg.ID)
 	var i TenantCluster
 	err := row.Scan(
 		&i.ID,
@@ -90,8 +98,12 @@ WHERE organization_id = $1 AND deleted IS NULL
 ORDER BY created DESC
 `
 
-func (q *Queries) ClusterListByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]TenantCluster, error) {
-	rows, err := q.db.Query(ctx, clusterListByOrganizationID, organizationID)
+type ClusterListByOrganizationIDParams struct {
+	OrganizationID uuid.UUID
+}
+
+func (q *Queries) ClusterListByOrganizationID(ctx context.Context, arg ClusterListByOrganizationIDParams) ([]TenantCluster, error) {
+	rows, err := q.db.Query(ctx, clusterListByOrganizationID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}

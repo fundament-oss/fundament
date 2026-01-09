@@ -29,7 +29,9 @@ func (s *OrganizationServer) GetOrganization(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	organization, err := s.queries.OrganizationGetByID(ctx, input.ID)
+	organization, err := s.queries.OrganizationGetByID(ctx, db.OrganizationGetByIDParams{
+		ID: input.ID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("organization not found"))

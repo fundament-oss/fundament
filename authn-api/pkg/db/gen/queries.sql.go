@@ -17,8 +17,12 @@ VALUES ($1)
 RETURNING id, name, created
 `
 
-func (q *Queries) OrganizationCreate(ctx context.Context, name string) (TenantOrganization, error) {
-	row := q.db.QueryRow(ctx, organizationCreate, name)
+type OrganizationCreateParams struct {
+	Name string
+}
+
+func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreateParams) (TenantOrganization, error) {
+	row := q.db.QueryRow(ctx, organizationCreate, arg.Name)
 	var i TenantOrganization
 	err := row.Scan(&i.ID, &i.Name, &i.Created)
 	return i, err
@@ -55,8 +59,12 @@ FROM tenant.users
 WHERE external_id = $1
 `
 
-func (q *Queries) UserGetByExternalID(ctx context.Context, externalID string) (TenantUser, error) {
-	row := q.db.QueryRow(ctx, userGetByExternalID, externalID)
+type UserGetByExternalIDParams struct {
+	ExternalID string
+}
+
+func (q *Queries) UserGetByExternalID(ctx context.Context, arg UserGetByExternalIDParams) (TenantUser, error) {
+	row := q.db.QueryRow(ctx, userGetByExternalID, arg.ExternalID)
 	var i TenantUser
 	err := row.Scan(
 		&i.ID,
@@ -74,8 +82,12 @@ FROM tenant.users
 WHERE id = $1
 `
 
-func (q *Queries) UserGetByID(ctx context.Context, id uuid.UUID) (TenantUser, error) {
-	row := q.db.QueryRow(ctx, userGetByID, id)
+type UserGetByIDParams struct {
+	ID uuid.UUID
+}
+
+func (q *Queries) UserGetByID(ctx context.Context, arg UserGetByIDParams) (TenantUser, error) {
+	row := q.db.QueryRow(ctx, userGetByID, arg.ID)
 	var i TenantUser
 	err := row.Scan(
 		&i.ID,

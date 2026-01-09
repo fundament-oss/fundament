@@ -25,7 +25,9 @@ func (s *OrganizationServer) ListClusters(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	clusters, err := s.queries.ClusterListByOrganizationID(ctx, organizationID)
+	clusters, err := s.queries.ClusterListByOrganizationID(ctx, db.ClusterListByOrganizationIDParams{
+		OrganizationID: organizationID,
+	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list clusters: %w", err))
 	}
@@ -49,7 +51,9 @@ func (s *OrganizationServer) GetCluster(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	cluster, err := s.queries.ClusterGetByID(ctx, input.ClusterID)
+	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
+		ID: input.ClusterID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
@@ -159,7 +163,10 @@ func (s *OrganizationServer) DeleteCluster(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	if err := s.queries.ClusterDelete(ctx, clusterID); err != nil {
+	err = s.queries.ClusterDelete(ctx, db.ClusterDeleteParams{
+		ID: clusterID,
+	})
+	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete cluster: %w", err))
 	}
 
@@ -185,7 +192,9 @@ func (s *OrganizationServer) GetClusterActivity(
 	}
 
 	// Verify cluster exists and belongs to tenant
-	_, err = s.queries.ClusterGetByID(ctx, input.ClusterID)
+	_, err = s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
+		ID: input.ClusterID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
@@ -213,7 +222,9 @@ func (s *OrganizationServer) GetKubeconfig(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	cluster, err := s.queries.ClusterGetByID(ctx, input.ClusterID)
+	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
+		ID: input.ClusterID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
