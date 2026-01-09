@@ -44,6 +44,15 @@ service ClusterService {
 
   // Delete a node pool
   rpc DeleteNodePool(DeleteNodePoolRequest) returns (google.protobuf.Empty);
+
+  // List installs for a cluster
+  rpc ListInstalls(ListInstallsRequest) returns (ListInstallsResponse);
+
+  // Add an install to a cluster
+  rpc AddInstall(AddInstallRequest) returns (AddInstallResponse);
+
+  // Remove an install from a cluster
+  rpc RemoveInstall(RemoveInstallRequest) returns (google.protobuf.Empty);
 }
 
 // List clusters request
@@ -222,4 +231,37 @@ message GetNodePoolRequest {
 // Get node pool response
 message GetNodePoolResponse {
   NodePool node_pool = 10;
+}
+
+// Install information
+message Install {
+  string id = 10;
+  string plugin_id = 20;
+  Timestamp created_at = 30;
+}
+
+// List installs request
+message ListInstallsRequest {
+  string cluster_id = 10;
+}
+
+// List installs response
+message ListInstallsResponse {
+  repeated Install installs = 10;
+}
+
+// Add install request
+message AddInstallRequest {
+  string cluster_id = 10;
+  string plugin_id = 20;
+}
+
+// Add install response
+message AddInstallResponse {
+  string install_id = 10;
+}
+
+// Remove install request
+message RemoveInstallRequest {
+  string install_id = 10;  // The UUID of the install record
 }

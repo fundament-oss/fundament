@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="7"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="9"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="271,458" last-zoom="1" scene-rect="0,0,2058.81,1076.8"
+	 last-position="0,359" last-zoom="1" scene-rect="0,0,2058.81,1301.32"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -34,7 +34,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="organizations" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="480" y="360"/>
+	<position x="460" y="360"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -55,7 +55,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="projects" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1040" y="380"/>
+	<position x="1020" y="380"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -79,7 +79,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="namespaces" layers="0" collapse-mode="1" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1760" y="380"/>
+	<position x="1740" y="380"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -141,7 +141,7 @@ END;]]> </definition>
 <table name="users" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="460" y="660"/>
+	<position x="440" y="660"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -168,7 +168,7 @@ END;]]> </definition>
 <table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1040" y="620"/>
+	<position x="1020" y="620"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -258,6 +258,59 @@ END;]]> </definition>
 )]]> </expression>
 </policy>
 
+<table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_fundament_api"/>
+	<position x="440" y="880"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="cluster_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="plugin_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="installs_pk" type="pk-constr" table="tenant.installs">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="installs_uq" type="uq-constr" nulls-not-distinct="true" table="tenant.installs">
+		<columns names="cluster_id,plugin_id,deleted" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="plugins" layers="0" collapse-mode="2" max-obj-count="2" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_fundament_api"/>
+	<position x="1020" y="1120"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="plugins_uq_name" type="uq-constr" table="tenant.plugins">
+		<columns names="name" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="plugins_pk" type="pk-constr" table="tenant.plugins">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<policy name="install_organization_policy" table="tenant.installs" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (
+      SELECT 1 FROM clusters
+      WHERE clusters.id = installs.cluster_id
+      AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
+)]]> </expression>
+</policy>
+
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.projects">
 	<columns names="organization_id" ref-type="src-columns"/>
@@ -294,6 +347,18 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="installs_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.installs">
+	<columns names="cluster_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="installs_fk_plugin" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.plugins" table="tenant.installs">
+	<columns names="plugin_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <relationship name="rel_projects_organizations" type="relfk" layers="0"
 	 src-table="tenant.projects"
 	 dst-table="tenant.organizations" reference-fk="projects_fk_organization"
@@ -322,6 +387,16 @@ END;]]> </definition>
 <relationship name="rel_cluster_worker_nodes_clusters" type="relfk" layers="0"
 	 src-table="tenant.node_pools"
 	 dst-table="tenant.clusters" reference-fk="node_pools_fk_cluster"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_plugins_clusters" type="relfk" layers="0"
+	 src-table="tenant.installs"
+	 dst-table="tenant.clusters" reference-fk="installs_fk_cluster"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_installs_plugins" type="relfk" layers="0"
+	 src-table="tenant.installs"
+	 dst-table="tenant.plugins" reference-fk="installs_fk_plugin"
 	 src-required="false" dst-required="true"/>
 
 </dbmodel>

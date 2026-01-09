@@ -25,14 +25,7 @@ func (s *OrganizationServer) GetOrganization(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid organization id: %w", err))
 	}
 
-	input := models.OrganizationGet{ID: organizationID}
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	organization, err := s.queries.OrganizationGetByID(ctx, db.OrganizationGetByIDParams{
-		ID: input.ID,
-	})
+	organization, err := s.queries.OrganizationGetByID(ctx, db.OrganizationGetByIDParams{ID: organizationID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("organization not found"))
