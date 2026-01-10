@@ -17,9 +17,10 @@ COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/
 # Copy source files
 COPY console-frontend/ .
 
-# Build the application with environment variables
-ARG APP_CONFIGURATION
-RUN ["sh", "-c", "pnpm build --configuration $APP_CONFIGURATION"]
+# Build the application
+# APP_CONFIGURATION environment variable is set by Kubernetes deployment
+ARG APP_CONFIGURATION=development
+RUN ["sh", "-c", "pnpm build --configuration ${APP_CONFIGURATION}"]
 
 # Production stage
 FROM nginx:alpine
