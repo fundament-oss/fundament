@@ -1,6 +1,5 @@
 # Local development environment values
 
-environment: local
 jwtSecret: "local-dev-jwt-secret"
 
 externalUrls:
@@ -32,6 +31,7 @@ frontend:
 consoleFrontend:
   enabled: true
   replicas: 1
+  configuration: development
 
 dex:
   enabled: true

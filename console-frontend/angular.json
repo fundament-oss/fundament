@@ -51,7 +51,7 @@
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.local.ts"
+                  "with": "src/environments/environment.development.ts"
                 }
               ]
             }
@@ -68,9 +68,6 @@
               "buildTarget": "fundament-console:build:production"
             },
             "development": {
-              "buildTarget": "fundament-console:build:development"
-            },
-            "local": {
               "buildTarget": "fundament-console:build:development"
             }
           },

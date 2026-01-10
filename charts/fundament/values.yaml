@@ -1,8 +1,5 @@
 # Fundament Helm Chart - Default Values
 
-# Environment name (local, production, etc.)
-environment: ""
-
 # JWT Secret - required for token signing/validation across services
 # Must be set in production (no default for security)
 jwtSecret: ""
@@ -51,6 +48,7 @@ frontend:
 consoleFrontend:
   enabled: false
   replicas: 1
+  configuration: ""
 
 # Dex (OIDC Identity Provider)
 dex:

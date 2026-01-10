@@ -24,7 +24,7 @@ spec:
               containerPort: 80
           env:
             - name: APP_CONFIGURATION
-              value: {{ $.Values.environment }}
+              value: {{ $.Values.consoleFrontend.configuration }}
 ---
 apiVersion: v1
 kind: Service

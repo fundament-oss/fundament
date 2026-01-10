@@ -1,5 +1,5 @@
 // This file can be replaced during build using the --configuration flag
-// `ng build --configuration local` replaces `environment.ts` with `environment.local.ts`
+// `ng build --configuration development` replaces `environment.ts` with `environment.development.ts`
 // The list of file replacements can be found in `angular.json`
 
 export const environment = {
