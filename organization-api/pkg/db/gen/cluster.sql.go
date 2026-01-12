@@ -15,7 +15,7 @@ import (
 const clusterCreate = `-- name: ClusterCreate :one
 INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, status)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, organization_id, name, region, kubernetes_version, status, created, deleted
+RETURNING id
 `
 
 type ClusterCreateParams struct {
@@ -26,7 +26,7 @@ type ClusterCreateParams struct {
 	Status            string
 }
 
-func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (TenantCluster, error) {
+func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, clusterCreate,
 		arg.OrganizationID,
 		arg.Name,
@@ -34,21 +34,12 @@ func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (T
 		arg.KubernetesVersion,
 		arg.Status,
 	)
-	var i TenantCluster
-	err := row.Scan(
-		&i.ID,
-		&i.OrganizationID,
-		&i.Name,
-		&i.Region,
-		&i.KubernetesVersion,
-		&i.Status,
-		&i.Created,
-		&i.Deleted,
-	)
-	return i, err
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
-const clusterDelete = `-- name: ClusterDelete :exec
+const clusterDelete = `-- name: ClusterDelete :execrows
 UPDATE tenant.clusters
 SET deleted = NOW()
 WHERE id = $1 AND deleted IS NULL
@@ -58,9 +49,12 @@ type ClusterDeleteParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) error {
-	_, err := q.db.Exec(ctx, clusterDelete, arg.ID)
-	return err
+func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clusterDelete, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const clusterGetByID = `-- name: ClusterGetByID :one
@@ -129,11 +123,10 @@ func (q *Queries) ClusterListByOrganizationID(ctx context.Context, arg ClusterLi
 	return items, nil
 }
 
-const clusterUpdate = `-- name: ClusterUpdate :one
+const clusterUpdate = `-- name: ClusterUpdate :execrows
 UPDATE tenant.clusters
 SET kubernetes_version = COALESCE($2, kubernetes_version)
 WHERE id = $1 AND deleted IS NULL
-RETURNING id, organization_id, name, region, kubernetes_version, status, created, deleted
 `
 
 type ClusterUpdateParams struct {
@@ -141,18 +134,10 @@ type ClusterUpdateParams struct {
 	KubernetesVersion pgtype.Text
 }
 
-func (q *Queries) ClusterUpdate(ctx context.Context, arg ClusterUpdateParams) (TenantCluster, error) {
-	row := q.db.QueryRow(ctx, clusterUpdate, arg.ID, arg.KubernetesVersion)
-	var i TenantCluster
-	err := row.Scan(
-		&i.ID,
-		&i.OrganizationID,
-		&i.Name,
-		&i.Region,
-		&i.KubernetesVersion,
-		&i.Status,
-		&i.Created,
-		&i.Deleted,
-	)
-	return i, err
+func (q *Queries) ClusterUpdate(ctx context.Context, arg ClusterUpdateParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clusterUpdate, arg.ID, arg.KubernetesVersion)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

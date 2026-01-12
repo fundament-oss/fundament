@@ -3,6 +3,7 @@ syntax = "proto3";
 package organization.v1; // TODO: Should maybe be renamed to `fundament.v1`?
 
 import "v1/common.proto";
+import "google/protobuf/empty.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
@@ -18,10 +19,10 @@ service ClusterService {
   rpc CreateCluster(CreateClusterRequest) returns (CreateClusterResponse);
 
   // Update cluster configuration
-  rpc UpdateCluster(UpdateClusterRequest) returns (UpdateClusterResponse);
+  rpc UpdateCluster(UpdateClusterRequest) returns (google.protobuf.Empty);
 
   // Delete a cluster
-  rpc DeleteCluster(DeleteClusterRequest) returns (DeleteClusterResponse);
+  rpc DeleteCluster(DeleteClusterRequest) returns (google.protobuf.Empty);
 
   // Get cluster activity log
   rpc GetClusterActivity(GetClusterActivityRequest) returns (GetClusterActivityResponse);
@@ -29,14 +30,20 @@ service ClusterService {
   // Download kubeconfig for a cluster
   rpc GetKubeconfig(GetKubeconfigRequest) returns (GetKubeconfigResponse);
 
+  // List node pools for a cluster
+  rpc ListNodePools(ListNodePoolsRequest) returns (ListNodePoolsResponse);
+
+  // Get a node pool by ID
+  rpc GetNodePool(GetNodePoolRequest) returns (GetNodePoolResponse);
+
   // Create a node pool in a cluster
   rpc CreateNodePool(CreateNodePoolRequest) returns (CreateNodePoolResponse);
 
   // Update a node pool
-  rpc UpdateNodePool(UpdateNodePoolRequest) returns (UpdateNodePoolResponse);
+  rpc UpdateNodePool(UpdateNodePoolRequest) returns (google.protobuf.Empty);
 
   // Delete a node pool
-  rpc DeleteNodePool(DeleteNodePoolRequest) returns (DeleteNodePoolResponse);
+  rpc DeleteNodePool(DeleteNodePoolRequest) returns (google.protobuf.Empty);
 }
 
 // List clusters request
@@ -55,8 +62,6 @@ message ClusterSummary {
   string name = 20;
   ClusterStatus status = 30;
   string region = 40;
-  int32 project_count = 50;
-  int32 node_pool_count = 60;
 }
 
 // Get cluster request
@@ -78,9 +83,6 @@ message ClusterDetails {
   ClusterStatus status = 50;
   Timestamp created_at = 60;
   ResourceUsageInfo resource_usage = 70;
-  repeated NodePool node_pools = 80;
-  repeated ClusterMember members = 90;
-  repeated ClusterProject projects = 100;
 }
 
 // Resource usage information for a cluster
@@ -123,9 +125,6 @@ message CreateClusterRequest {
   string name = 10;
   string region = 20;
   string kubernetes_version = 30;
-  repeated NodePoolSpec node_pools = 40;
-  repeated string plugin_ids = 50;
-  string plugin_preset = 60; // e.g., "havenplus", "preset2", "custom"
 }
 
 // Node pool specification
@@ -139,7 +138,6 @@ message NodePoolSpec {
 // Create cluster response
 message CreateClusterResponse {
   string cluster_id = 10;
-  ClusterStatus status = 20;
 }
 
 // Update cluster request
@@ -148,19 +146,9 @@ message UpdateClusterRequest {
   optional string kubernetes_version = 20;
 }
 
-// Update cluster response
-message UpdateClusterResponse {
-  ClusterDetails cluster = 10;
-}
-
 // Delete cluster request
 message DeleteClusterRequest {
   string cluster_id = 10;
-}
-
-// Delete cluster response
-message DeleteClusterResponse {
-  bool success = 10;
 }
 
 // Get cluster activity request
@@ -201,7 +189,7 @@ message CreateNodePoolRequest {
 
 // Create node pool response
 message CreateNodePoolResponse {
-  NodePool node_pool = 10;
+  string node_pool_id = 10;
 }
 
 // Update node pool request
@@ -211,17 +199,27 @@ message UpdateNodePoolRequest {
   int32 autoscale_max = 30;
 }
 
-// Update node pool response
-message UpdateNodePoolResponse {
-  NodePool node_pool = 10;
-}
-
 // Delete node pool request
 message DeleteNodePoolRequest {
   string node_pool_id = 10;
 }
 
-// Delete node pool response
-message DeleteNodePoolResponse {
-  bool success = 10;
+// List node pools request
+message ListNodePoolsRequest {
+  string cluster_id = 10;
+}
+
+// List node pools response
+message ListNodePoolsResponse {
+  repeated NodePool node_pools = 10;
+}
+
+// Get node pool request
+message GetNodePoolRequest {
+  string node_pool_id = 10;
+}
+
+// Get node pool response
+message GetNodePoolResponse {
+  NodePool node_pool = 10;
 }

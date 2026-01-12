@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
@@ -55,16 +56,8 @@ func (s *OrganizationServer) GetCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	nodePools, err := s.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{ClusterID: clusterID})
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pools: %w", err))
-	}
-
-	clusterDetails := adapter.FromClusterDetail(cluster)
-	clusterDetails.NodePools = adapter.FromNodePools(nodePools)
-
 	return connect.NewResponse(&organizationv1.GetClusterResponse{
-		Cluster: clusterDetails,
+		Cluster: adapter.FromClusterDetail(cluster),
 	}), nil
 }
 
@@ -82,13 +75,6 @@ func (s *OrganizationServer) CreateCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	tx, err := s.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("pool begin"))
-	}
-
-	defer tx.Rollback(ctx)
-
 	params := db.ClusterCreateParams{
 		OrganizationID:    organizationID,
 		Name:              input.Name,
@@ -97,50 +83,27 @@ func (s *OrganizationServer) CreateCluster(
 		Status:            "unspecified",
 	}
 
-	txQueries := s.queries.WithTx(tx)
-
-	cluster, err := txQueries.ClusterCreate(ctx, params)
+	clusterID, err := s.queries.ClusterCreate(ctx, params)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
 	}
 
-	// Create node pools
-	for _, spec := range req.Msg.NodePools {
-		params := db.NodePoolCreateParams{
-			ClusterID:    cluster.ID,
-			Name:         spec.Name,
-			MachineType:  spec.MachineType,
-			AutoscaleMin: spec.AutoscaleMin,
-			AutoscaleMax: spec.AutoscaleMax,
-		}
-
-		if _, err := txQueries.NodePoolCreate(ctx, params); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create node pool %q: %w", spec.Name, err))
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
-	}
-
 	s.logger.InfoContext(ctx, "cluster created",
-		"cluster_id", cluster.ID,
+		"cluster_id", clusterID,
 		"organization_id", organizationID,
-		"name", cluster.Name,
-		"region", cluster.Region,
-		"node_pool_count", len(req.Msg.NodePools),
+		"name", input.Name,
+		"region", input.Region,
 	)
 
 	return connect.NewResponse(&organizationv1.CreateClusterResponse{
-		ClusterId: cluster.ID.String(),
-		Status:    adapter.FromClusterStatus(cluster.Status),
+		ClusterId: clusterID.String(),
 	}), nil
 }
 
 func (s *OrganizationServer) UpdateCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateClusterRequest],
-) (*connect.Response[organizationv1.UpdateClusterResponse], error) {
+) (*connect.Response[emptypb.Empty], error) {
 	input, err := adapter.ToClusterUpdate(req.Msg)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
@@ -158,50 +121,41 @@ func (s *OrganizationServer) UpdateCluster(
 		params.KubernetesVersion = pgtype.Text{String: *input.KubernetesVersion, Valid: true}
 	}
 
-	cluster, err := s.queries.ClusterUpdate(ctx, params)
+	rowsAffected, err := s.queries.ClusterUpdate(ctx, params)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
-		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update cluster: %w", err))
 	}
 
-	nodePools, err := s.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{ClusterID: input.ClusterID})
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pools: %w", err))
+	if rowsAffected != 1 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 	}
 
-	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", cluster.ID, "name", cluster.Name)
+	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", input.ClusterID)
 
-	clusterDetails := adapter.FromClusterDetail(cluster)
-	clusterDetails.NodePools = adapter.FromNodePools(nodePools)
-
-	return connect.NewResponse(&organizationv1.UpdateClusterResponse{
-		Cluster: clusterDetails,
-	}), nil
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 func (s *OrganizationServer) DeleteCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteClusterRequest],
-) (*connect.Response[organizationv1.DeleteClusterResponse], error) {
+) (*connect.Response[emptypb.Empty], error) {
 	clusterID, err := uuid.Parse(req.Msg.ClusterId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	err = s.queries.ClusterDelete(ctx, db.ClusterDeleteParams{
-		ID: clusterID,
-	})
+	rowsAffected, err := s.queries.ClusterDelete(ctx, db.ClusterDeleteParams{ID: clusterID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete cluster: %w", err))
 	}
 
+	if rowsAffected != 1 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+	}
+
 	s.logger.InfoContext(ctx, "cluster deleted", "cluster_id", clusterID)
 
-	return connect.NewResponse(&organizationv1.DeleteClusterResponse{
-		Success: true,
-	}), nil
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 func (s *OrganizationServer) GetClusterActivity(

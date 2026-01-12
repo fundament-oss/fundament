@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/models"
@@ -47,7 +48,7 @@ func (s *OrganizationServer) GetOrganization(
 func (s *OrganizationServer) UpdateOrganization(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateOrganizationRequest],
-) (*connect.Response[organizationv1.UpdateOrganizationResponse], error) {
+) (*connect.Response[emptypb.Empty], error) {
 	organizationID, err := uuid.Parse(req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid organization id: %w", err))
@@ -73,7 +74,5 @@ func (s *OrganizationServer) UpdateOrganization(
 
 	s.logger.InfoContext(ctx, "organization updated", "organization_id", organization.ID, "name", organization.Name)
 
-	return connect.NewResponse(&organizationv1.UpdateOrganizationResponse{
-		Organization: adapter.FromOrganization(organization),
-	}), nil
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }

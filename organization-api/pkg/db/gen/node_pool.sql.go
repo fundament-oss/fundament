@@ -15,7 +15,7 @@ import (
 const nodePoolCreate = `-- name: NodePoolCreate :one
 INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted
+RETURNING id
 `
 
 type NodePoolCreateParams struct {
@@ -26,7 +26,7 @@ type NodePoolCreateParams struct {
 	AutoscaleMax int32
 }
 
-func (q *Queries) NodePoolCreate(ctx context.Context, arg NodePoolCreateParams) (TenantNodePool, error) {
+func (q *Queries) NodePoolCreate(ctx context.Context, arg NodePoolCreateParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, nodePoolCreate,
 		arg.ClusterID,
 		arg.Name,
@@ -34,21 +34,12 @@ func (q *Queries) NodePoolCreate(ctx context.Context, arg NodePoolCreateParams) 
 		arg.AutoscaleMin,
 		arg.AutoscaleMax,
 	)
-	var i TenantNodePool
-	err := row.Scan(
-		&i.ID,
-		&i.ClusterID,
-		&i.Name,
-		&i.MachineType,
-		&i.AutoscaleMin,
-		&i.AutoscaleMax,
-		&i.Created,
-		&i.Deleted,
-	)
-	return i, err
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
-const nodePoolDelete = `-- name: NodePoolDelete :exec
+const nodePoolDelete = `-- name: NodePoolDelete :execrows
 UPDATE tenant.node_pools
 SET deleted = NOW()
 WHERE id = $1 AND deleted IS NULL
@@ -58,9 +49,12 @@ type NodePoolDeleteParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) NodePoolDelete(ctx context.Context, arg NodePoolDeleteParams) error {
-	_, err := q.db.Exec(ctx, nodePoolDelete, arg.ID)
-	return err
+func (q *Queries) NodePoolDelete(ctx context.Context, arg NodePoolDeleteParams) (int64, error) {
+	result, err := q.db.Exec(ctx, nodePoolDelete, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const nodePoolGetByID = `-- name: NodePoolGetByID :one
@@ -129,12 +123,11 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 	return items, nil
 }
 
-const nodePoolUpdate = `-- name: NodePoolUpdate :one
+const nodePoolUpdate = `-- name: NodePoolUpdate :execrows
 UPDATE tenant.node_pools
 SET autoscale_min = COALESCE($2, autoscale_min),
     autoscale_max = COALESCE($3, autoscale_max)
 WHERE id = $1 AND deleted IS NULL
-RETURNING id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted
 `
 
 type NodePoolUpdateParams struct {
@@ -143,18 +136,10 @@ type NodePoolUpdateParams struct {
 	AutoscaleMax pgtype.Int4
 }
 
-func (q *Queries) NodePoolUpdate(ctx context.Context, arg NodePoolUpdateParams) (TenantNodePool, error) {
-	row := q.db.QueryRow(ctx, nodePoolUpdate, arg.ID, arg.AutoscaleMin, arg.AutoscaleMax)
-	var i TenantNodePool
-	err := row.Scan(
-		&i.ID,
-		&i.ClusterID,
-		&i.Name,
-		&i.MachineType,
-		&i.AutoscaleMin,
-		&i.AutoscaleMax,
-		&i.Created,
-		&i.Deleted,
-	)
-	return i, err
+func (q *Queries) NodePoolUpdate(ctx context.Context, arg NodePoolUpdateParams) (int64, error) {
+	result, err := q.db.Exec(ctx, nodePoolUpdate, arg.ID, arg.AutoscaleMin, arg.AutoscaleMax)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
