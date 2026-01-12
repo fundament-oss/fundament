@@ -20,6 +20,14 @@ type TenantCluster struct {
 	Deleted           pgtype.Timestamptz
 }
 
+type TenantInstall struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	PluginID  uuid.UUID
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
+}
+
 type TenantNodePool struct {
 	ID           uuid.UUID
 	ClusterID    uuid.UUID
@@ -35,4 +43,9 @@ type TenantOrganization struct {
 	ID      uuid.UUID
 	Name    string
 	Created pgtype.Timestamptz
+}
+
+type TenantPlugin struct {
+	ID   uuid.UUID
+	Name string
 }

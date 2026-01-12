@@ -123,6 +123,9 @@ func run() error {
 	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(server, interceptors)
 	mux.Handle(clusterPath, clusterHandler)
 
+	pluginPath, pluginHandler := organizationv1connect.NewPluginServiceHandler(server, interceptors)
+	mux.Handle(pluginPath, pluginHandler)
+
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
