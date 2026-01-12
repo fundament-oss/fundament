@@ -6,6 +6,8 @@
 SELECT
     c.id,
     c.name,
+    c.region,
+    c.kubernetes_version,
     c.deleted,
     cs.sync_attempts,
     o.name as organization_name
@@ -72,7 +74,7 @@ WHERE cs.sync_attempts >= $1;
 
 -- name: ListClustersNeedingStatusCheck :many
 -- Get clusters where we need to check Gardener status (active clusters).
-SELECT c.id, c.name, c.deleted, o.name as organization_name
+SELECT c.id, c.name, c.region, c.kubernetes_version, c.deleted, o.name as organization_name
 FROM tenant.clusters c
 JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
 JOIN tenant.organizations o ON o.id = c.organization_id
@@ -87,7 +89,7 @@ LIMIT $1;
 
 -- name: ListDeletedClustersNeedingVerification :many
 -- Get deleted clusters where we need to verify Shoot is actually gone.
-SELECT c.id, c.name, c.deleted, o.name as organization_name
+SELECT c.id, c.name, c.region, c.kubernetes_version, c.deleted, o.name as organization_name
 FROM tenant.clusters c
 JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
 JOIN tenant.organizations o ON o.id = c.organization_id
@@ -139,3 +141,15 @@ SELECT
     shoot_status_updated
 FROM tenant.cluster_sync
 WHERE cluster_id = $1;
+
+-- name: HasActiveClusterWithSameName :one
+-- Check if there's an active (non-deleted) cluster with the same name in the same organization.
+-- Used to prevent deleting a shoot that's been recreated.
+SELECT EXISTS (
+    SELECT 1
+    FROM tenant.clusters c
+    JOIN tenant.organizations o ON o.id = c.organization_id
+    WHERE o.name = $1
+      AND c.name = $2
+      AND c.deleted IS NULL
+) AS exists;

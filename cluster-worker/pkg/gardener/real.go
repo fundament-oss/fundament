@@ -19,15 +19,20 @@ import (
 
 // ProviderConfig holds cloud provider-specific configuration.
 type ProviderConfig struct {
-	Type              string // e.g., "metal", "local"
-	CloudProfile      string // e.g., "metal", "local"
-	SecretBindingName string // e.g., "metal-credentials", "" for local
-	Region            string // e.g., "nl-central-1", "local"
-	MachineType       string // e.g., "m5.xlarge", "local"
-	MachineImageName  string // e.g., "gardenlinux", "local"
-	MachineImageVer   string // e.g., "1592.1.0", "1.0.0"
-	KubernetesVersion string // e.g., "1.29.4", "1.31.1"
-	Zone              string // e.g., "nl-central-1a", "0" for local
+	Type                   string // e.g., "local", "metal", "aws"
+	CloudProfile           string // e.g., "local", "metal", "aws"
+	CredentialsBindingName string // e.g., "", "metal-credentials" (empty for local provider)
+	MaxShootNameLen        int    // Max shoot name length (21 for local provider, up to 63 for others)
+}
+
+// NewProviderConfig creates a ProviderConfig with defaults for the local provider.
+// Override fields as needed for other providers.
+func NewProviderConfig() ProviderConfig {
+	return ProviderConfig{
+		Type:            "local",
+		CloudProfile:    "local",
+		MaxShootNameLen: 21,
+	}
 }
 
 // RealClient implements Client using the actual Gardener API.
@@ -40,7 +45,7 @@ type RealClient struct {
 
 // NewReal creates a new RealClient that connects to Gardener.
 // If kubeconfigPath is empty, it uses in-cluster config.
-func NewReal(kubeconfigPath string, namespace string, provider ProviderConfig, logger *slog.Logger) (*RealClient, error) {
+func NewReal(kubeconfigPath, namespace string, provider ProviderConfig, logger *slog.Logger) (*RealClient, error) {
 	// Build REST config
 	var clientConfig clientcmd.ClientConfig
 
@@ -85,9 +90,14 @@ func NewReal(kubeconfigPath string, namespace string, provider ProviderConfig, l
 	}, nil
 }
 
+// MaxShootNameLength returns the configured max shoot name length.
+func (r *RealClient) MaxShootNameLength() int {
+	return r.provider.MaxShootNameLen
+}
+
 // ApplyShoot creates or updates a Shoot in Gardener.
-func (r *RealClient) ApplyShoot(ctx context.Context, cluster ClusterToSync) error {
-	shootName := ShootName(cluster.OrganizationName, cluster.Name)
+func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) error {
+	shootName := ShootName(cluster.OrganizationName, cluster.Name, r.MaxShootNameLength())
 
 	// Check if Shoot already exists
 	existing := &gardencorev1beta1.Shoot{}
@@ -130,18 +140,34 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster ClusterToSync) erro
 }
 
 // DeleteShoot deletes a Shoot by cluster info.
-func (r *RealClient) DeleteShoot(ctx context.Context, cluster ClusterToSync) error {
-	shootName := ShootName(cluster.OrganizationName, cluster.Name)
+func (r *RealClient) DeleteShoot(ctx context.Context, cluster *ClusterToSync) error {
+	shootName := ShootName(cluster.OrganizationName, cluster.Name, r.MaxShootNameLength())
 	return r.DeleteShootByName(ctx, shootName)
 }
 
 // DeleteShootByName deletes a Shoot by name.
+// Gardener requires a confirmation annotation before deletion.
 func (r *RealClient) DeleteShootByName(ctx context.Context, name string) error {
-	shoot := &gardencorev1beta1.Shoot{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.namespace,
-		},
+	shoot := &gardencorev1beta1.Shoot{}
+	key := client.ObjectKey{Name: name, Namespace: r.namespace}
+
+	// Get the shoot first to add the confirmation annotation
+	if err := r.client.Get(ctx, key, shoot); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Debug("shoot already deleted", "shoot", name)
+			return nil
+		}
+		return fmt.Errorf("failed to get shoot for deletion: %w", err)
+	}
+
+	// Add the required confirmation annotation
+	if shoot.Annotations == nil {
+		shoot.Annotations = make(map[string]string)
+	}
+	shoot.Annotations["confirmation.gardener.cloud/deletion"] = "true"
+
+	if err := r.client.Update(ctx, shoot); err != nil {
+		return fmt.Errorf("failed to add deletion confirmation annotation: %w", err)
 	}
 
 	r.logger.Info("deleting shoot",
@@ -171,8 +197,9 @@ func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 		return nil, fmt.Errorf("failed to list shoots: %w", err)
 	}
 
-	var shoots []ShootInfo
-	for _, shoot := range shootList.Items {
+	shoots := make([]ShootInfo, 0, len(shootList.Items))
+	for i := range shootList.Items {
+		shoot := &shootList.Items[i]
 		clusterIDStr := shoot.Labels["fundament.io/cluster-id"]
 		clusterID, err := uuid.Parse(clusterIDStr)
 		if err != nil {
@@ -193,8 +220,8 @@ func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 }
 
 // GetShootStatus returns the current reconciliation status of a Shoot.
-func (r *RealClient) GetShootStatus(ctx context.Context, cluster ClusterToSync) (string, string, error) {
-	shootName := ShootName(cluster.OrganizationName, cluster.Name)
+func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync) (string, string, error) {
+	shootName := ShootName(cluster.OrganizationName, cluster.Name, r.MaxShootNameLength())
 
 	shoot := &gardencorev1beta1.Shoot{}
 	err := r.client.Get(ctx, client.ObjectKey{
@@ -219,7 +246,7 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster ClusterToSync) 
 		op := shoot.Status.LastOperation
 
 		switch op.State {
-		case gardencorev1beta1.LastOperationStateProcessing:
+		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
 			return "progressing", fmt.Sprintf("%s: %s", op.Type, op.Description), nil
 		case gardencorev1beta1.LastOperationStateError, gardencorev1beta1.LastOperationStateFailed:
 			return "error", op.Description, nil
@@ -247,7 +274,8 @@ func (r *RealClient) isShootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 	}
 
 	conditionMap := make(map[gardencorev1beta1.ConditionType]gardencorev1beta1.ConditionStatus)
-	for _, c := range shoot.Status.Conditions {
+	for i := range shoot.Status.Conditions {
+		c := &shoot.Status.Conditions[i]
 		conditionMap[c.Type] = c.Status
 	}
 
@@ -262,39 +290,25 @@ func (r *RealClient) isShootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 // buildShootSpec creates a Shoot spec from cluster info using provider config.
-func (r *RealClient) buildShootSpec(cluster ClusterToSync) *gardencorev1beta1.Shoot {
-	shootName := ShootName(cluster.OrganizationName, cluster.Name)
+func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.Shoot {
+	shootName := ShootName(cluster.OrganizationName, cluster.Name, r.MaxShootNameLength())
 
 	// TODO: Make these configurable per-cluster once we extend the DB schema
+	machineType := "local"
+	machineImageName := "local"
+	machineImageVer := "1.0.0"
+	zone := "" // Empty for local provider, e.g. "eu-central-1a" for AWS
 	minWorkers := int32(1)
 	maxWorkers := int32(3)
 	maxSurge := intstr.FromInt32(1)
 	maxUnavailable := intstr.FromInt32(0)
-
-	// Use provider config values, falling back to defaults
-	machineType := r.provider.MachineType
-	if machineType == "" {
-		machineType = DefaultMachineType
-	}
-	machineImageName := r.provider.MachineImageName
-	if machineImageName == "" {
-		machineImageName = DefaultMachineImageName
-	}
-	machineImageVer := r.provider.MachineImageVer
-	if machineImageVer == "" {
-		machineImageVer = DefaultMachineImageVersion
-	}
-	k8sVersion := r.provider.KubernetesVersion
-	if k8sVersion == "" {
-		k8sVersion = DefaultKubernetesVersion
-	}
 
 	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      shootName,
 			Namespace: r.namespace,
 			Labels: map[string]string{
-				"fundament.io/cluster-id": cluster.ID.String(),
+				"fundament.io/cluster-id":   cluster.ID.String(),
 				"fundament.io/organization": cluster.OrganizationName,
 			},
 		},
@@ -303,9 +317,9 @@ func (r *RealClient) buildShootSpec(cluster ClusterToSync) *gardencorev1beta1.Sh
 				Kind: "CloudProfile",
 				Name: r.provider.CloudProfile,
 			},
-			Region: r.provider.Region,
+			Region: cluster.Region,
 			Kubernetes: gardencorev1beta1.Kubernetes{
-				Version: k8sVersion,
+				Version: cluster.KubernetesVersion,
 			},
 			Provider: gardencorev1beta1.Provider{
 				Type: r.provider.Type,
@@ -333,14 +347,14 @@ func (r *RealClient) buildShootSpec(cluster ClusterToSync) *gardencorev1beta1.Sh
 		},
 	}
 
-	// Only set SecretBindingName if configured (local provider doesn't need it)
-	if r.provider.SecretBindingName != "" {
-		shoot.Spec.SecretBindingName = ptr.To(r.provider.SecretBindingName)
+	// Only set CredentialsBindingName if configured (local provider doesn't need it)
+	if r.provider.CredentialsBindingName != "" {
+		shoot.Spec.CredentialsBindingName = ptr.To(r.provider.CredentialsBindingName)
 	}
 
 	// Only set zones if configured (local provider doesn't support zones)
-	if r.provider.Zone != "" {
-		shoot.Spec.Provider.Workers[0].Zones = []string{r.provider.Zone}
+	if zone != "" {
+		shoot.Spec.Provider.Workers[0].Zones = []string{zone}
 	}
 
 	return shoot

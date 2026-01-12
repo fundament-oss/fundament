@@ -30,19 +30,20 @@ func TestMockClient_ApplyShoot(t *testing.T) {
 
 	ctx := context.Background()
 	cluster := gardener.ClusterToSync{
-		ID:         uuid.New(),
-		Name:       "test-cluster",
+		ID:               uuid.New(),
+		Name:             "test-cluster",
 		OrganizationName: "test-tenant",
 	}
 
-	err := mock.ApplyShoot(ctx, cluster)
+	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
-	// Verify shoot was created
-	if !mock.HasShoot("test-tenant-test-cluster") {
-		t.Error("expected shoot to exist")
+	// Verify shoot was created (use ShootName to get the expected name)
+	expectedName := gardener.ShootName(cluster.OrganizationName, cluster.Name, 21)
+	if !mock.HasShoot(expectedName) {
+		t.Errorf("expected shoot %q to exist", expectedName)
 	}
 
 	// Verify call was recorded
@@ -60,16 +61,16 @@ func TestMockClient_DeleteShoot(t *testing.T) {
 
 	ctx := context.Background()
 	cluster := gardener.ClusterToSync{
-		ID:         uuid.New(),
-		Name:       "test-cluster",
+		ID:               uuid.New(),
+		Name:             "test-cluster",
 		OrganizationName: "test-tenant",
 	}
 
 	// Create shoot first
-	_ = mock.ApplyShoot(ctx, cluster)
+	_ = mock.ApplyShoot(ctx, &cluster)
 
 	// Now delete
-	err := mock.DeleteShoot(ctx, cluster)
+	err := mock.DeleteShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("DeleteShoot failed: %v", err)
 	}
@@ -94,11 +95,11 @@ func TestMockClient_ListShoots(t *testing.T) {
 	// Create multiple shoots
 	for i := 0; i < 3; i++ {
 		cluster := gardener.ClusterToSync{
-			ID:         uuid.New(),
-			Name:       "cluster-" + string(rune('a'+i)),
+			ID:               uuid.New(),
+			Name:             "cluster-" + string(rune('a'+i)),
 			OrganizationName: "tenant",
 		}
-		_ = mock.ApplyShoot(ctx, cluster)
+		_ = mock.ApplyShoot(ctx, &cluster)
 	}
 
 	// List shoots
@@ -118,13 +119,13 @@ func TestMockClient_GetShootStatus(t *testing.T) {
 
 	ctx := context.Background()
 	cluster := gardener.ClusterToSync{
-		ID:         uuid.New(),
-		Name:       "test-cluster",
+		ID:               uuid.New(),
+		Name:             "test-cluster",
 		OrganizationName: "test-tenant",
 	}
 
 	// Before shoot exists - should return pending
-	status, _, err := mock.GetShootStatus(ctx, cluster)
+	status, _, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
@@ -133,10 +134,10 @@ func TestMockClient_GetShootStatus(t *testing.T) {
 	}
 
 	// Create shoot
-	_ = mock.ApplyShoot(ctx, cluster)
+	_ = mock.ApplyShoot(ctx, &cluster)
 
 	// After shoot exists - should return ready
-	status, msg, err := mock.GetShootStatus(ctx, cluster)
+	status, msg, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
@@ -154,8 +155,8 @@ func TestMockClient_StatusOverride(t *testing.T) {
 
 	ctx := context.Background()
 	cluster := gardener.ClusterToSync{
-		ID:         uuid.New(),
-		Name:       "test-cluster",
+		ID:               uuid.New(),
+		Name:             "test-cluster",
 		OrganizationName: "test-tenant",
 	}
 
@@ -163,10 +164,10 @@ func TestMockClient_StatusOverride(t *testing.T) {
 	mock.SetStatusOverride(cluster.ID, "progressing", "Creating infrastructure")
 
 	// Create shoot
-	_ = mock.ApplyShoot(ctx, cluster)
+	_ = mock.ApplyShoot(ctx, &cluster)
 
 	// Should return override status, not default "ready"
-	status, msg, err := mock.GetShootStatus(ctx, cluster)
+	status, msg, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
@@ -184,15 +185,15 @@ func TestMockClient_ApplyError(t *testing.T) {
 
 	ctx := context.Background()
 	cluster := gardener.ClusterToSync{
-		ID:         uuid.New(),
-		Name:       "test-cluster",
+		ID:               uuid.New(),
+		Name:             "test-cluster",
 		OrganizationName: "test-tenant",
 	}
 
 	// Set error
 	mock.SetApplyError(gardener.ErrMockApplyFailed)
 
-	err := mock.ApplyShoot(ctx, cluster)
+	err := mock.ApplyShoot(ctx, &cluster)
 	if !errors.Is(err, gardener.ErrMockApplyFailed) {
 		t.Errorf("expected ErrMockApplyFailed, got %v", err)
 	}
@@ -209,13 +210,13 @@ func TestMockClient_Reset(t *testing.T) {
 
 	ctx := context.Background()
 	cluster := gardener.ClusterToSync{
-		ID:         uuid.New(),
-		Name:       "test-cluster",
+		ID:               uuid.New(),
+		Name:             "test-cluster",
 		OrganizationName: "test-tenant",
 	}
 
 	// Create shoot and set error
-	_ = mock.ApplyShoot(ctx, cluster)
+	_ = mock.ApplyShoot(ctx, &cluster)
 	mock.SetApplyError(gardener.ErrMockApplyFailed)
 
 	// Reset
@@ -230,7 +231,7 @@ func TestMockClient_Reset(t *testing.T) {
 	}
 
 	// Should be able to apply again without error
-	err := mock.ApplyShoot(ctx, cluster)
+	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Errorf("expected no error after reset, got %v", err)
 	}
@@ -280,17 +281,110 @@ func TestTruncateError(t *testing.T) {
 }
 
 func TestShootName(t *testing.T) {
-	name := gardener.ShootName("my-tenant", "my-cluster")
-	expected := "my-tenant-my-cluster"
-	if name != expected {
-		t.Errorf("expected %q, got %q", expected, name)
+	tests := []struct {
+		name         string
+		org          string
+		cluster      string
+		wantExact    string // if set, expect this exact value
+		wantPrefix   string // if set, expect name to start with this
+		wantMaxLen   int    // if set, expect name to be at most this length
+		wantContains string // if set, expect name to contain this
+	}{
+		{
+			name:      "short name unchanged",
+			org:       "my-tenant",
+			cluster:   "my-cluster",
+			wantExact: "my-tenant-my-cluster",
+		},
+		{
+			name:      "exactly 21 chars unchanged",
+			org:       "org",
+			cluster:   "exactly-21-chars-ok",
+			wantExact: "org-exactly-21-chars-ok", // 23 chars, will be hashed
+		},
+		{
+			name:       "long name is hashed",
+			org:        "my-organization",
+			cluster:    "very-long-cluster-name",
+			wantPrefix: "my-organizat", // 12 chars prefix
+			wantMaxLen: 21,
+		},
+		{
+			name:       "very long names stay within limit",
+			org:        "extremely-long-organization-name",
+			cluster:    "and-an-extremely-long-cluster-name-too",
+			wantMaxLen: 21,
+		},
 	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := gardener.ShootName(tt.org, tt.cluster, 21)
+
+			if tt.wantExact != "" {
+				// For short names, check if they'd be hashed or not
+				fullName := tt.org + "-" + tt.cluster
+				if len(fullName) <= 21 {
+					if got != fullName {
+						t.Errorf("expected exact %q, got %q", fullName, got)
+					}
+				}
+			}
+
+			if tt.wantPrefix != "" && len(got) > len(tt.wantPrefix) {
+				if got[:len(tt.wantPrefix)] != tt.wantPrefix {
+					t.Errorf("expected prefix %q, got %q", tt.wantPrefix, got)
+				}
+			}
+
+			if tt.wantMaxLen > 0 && len(got) > tt.wantMaxLen {
+				t.Errorf("expected max length %d, got %d (%q)", tt.wantMaxLen, len(got), got)
+			}
+
+			if tt.wantContains != "" && !contains(got, tt.wantContains) {
+				t.Errorf("expected %q to contain %q", got, tt.wantContains)
+			}
+		})
+	}
+}
+
+func TestShootName_Deterministic(t *testing.T) {
+	// Same inputs should always produce same output
+	name1 := gardener.ShootName("long-organization", "long-cluster-name", 21)
+	name2 := gardener.ShootName("long-organization", "long-cluster-name", 21)
+
+	if name1 != name2 {
+		t.Errorf("ShootName is not deterministic: %q != %q", name1, name2)
+	}
+}
+
+func TestShootName_DifferentHashForDifferentInputs(t *testing.T) {
+	// Different inputs should produce different outputs even with same prefix
+	name1 := gardener.ShootName("my-organization", "cluster-aaaaaaaaa", 21)
+	name2 := gardener.ShootName("my-organization", "cluster-bbbbbbbbb", 21)
+
+	if name1 == name2 {
+		t.Errorf("different inputs produced same output: %q", name1)
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || s != "" && containsHelper(s, substr))
+}
+
+func containsHelper(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
 
 // Integration tests that require a real PostgreSQL connection
 // These are skipped unless DATABASE_URL is set
 
-func TestWorker_Integration(t *testing.T) {
+func TestSyncWorker_Integration(t *testing.T) {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		t.Skip("DATABASE_URL not set, skipping integration tests")
@@ -307,7 +401,7 @@ func TestWorker_Integration(t *testing.T) {
 	logger := testLogger()
 	mock := gardener.NewMock(logger)
 
-	w := New(pool, mock, logger, Config{
+	w := NewSyncWorker(pool, mock, logger, Config{
 		PollInterval:      30 * time.Second,
 		ReconcileInterval: 5 * time.Minute,
 	})
@@ -400,12 +494,12 @@ func TestStatusPoller_Timing(t *testing.T) {
 	})
 }
 
-func TestWorker_ShutdownTimeout(t *testing.T) {
+func TestSyncWorker_ShutdownTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		logger := testLogger()
 
 		// Create a worker (without real DB connection, just test shutdown logic)
-		w := &Worker{
+		w := &SyncWorker{
 			logger: logger,
 		}
 
@@ -436,11 +530,11 @@ func TestWorker_ShutdownTimeout(t *testing.T) {
 	})
 }
 
-func TestWorker_ShutdownTimeoutExceeded(t *testing.T) {
+func TestSyncWorker_ShutdownTimeoutExceeded(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		logger := testLogger()
 
-		w := &Worker{
+		w := &SyncWorker{
 			logger: logger,
 		}
 
@@ -481,11 +575,11 @@ func TestClusterConversion(t *testing.T) {
 
 	// Test conversion from db.ClaimUnsyncedClusterRow to gardener.ClusterToSync
 	dbRow := db.ClaimUnsyncedClusterRow{
-		ID:           uuid.New(),
-		Name:         "test-cluster",
-		Deleted:      toPgTimestamp(now),
-		SyncAttempts: 3,
-		OrganizationName:   "test-tenant",
+		ID:               uuid.New(),
+		Name:             "test-cluster",
+		Deleted:          toPgTimestamp(now),
+		SyncAttempts:     3,
+		OrganizationName: "test-tenant",
 	}
 
 	// Simulate what worker.claimCluster does
@@ -495,11 +589,11 @@ func TestClusterConversion(t *testing.T) {
 	}
 
 	cluster := gardener.ClusterToSync{
-		ID:           dbRow.ID,
-		Name:         dbRow.Name,
-		OrganizationName:   dbRow.OrganizationName,
-		Deleted:      deleted,
-		SyncAttempts: int(dbRow.SyncAttempts),
+		ID:               dbRow.ID,
+		Name:             dbRow.Name,
+		OrganizationName: dbRow.OrganizationName,
+		Deleted:          deleted,
+		SyncAttempts:     int(dbRow.SyncAttempts),
 	}
 
 	// Verify conversion

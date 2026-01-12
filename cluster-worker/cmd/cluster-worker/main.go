@@ -22,7 +22,7 @@ import (
 
 type config struct {
 	DatabaseURL         string        `env:"DATABASE_URL,required,notEmpty"`
-	GardenerMode        string        `env:"GARDENER_MODE" envDefault:"mock"` // mock, local, real
+	GardenerMode        string        `env:"GARDENER_MODE" envDefault:"mock"` // mock or real
 	GardenerKubeconfig  string        `env:"GARDENER_KUBECONFIG"`             // Required for real mode
 	GardenerNamespace   string        `env:"GARDENER_NAMESPACE" envDefault:"garden-fundament"`
 	LogLevel            slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
@@ -33,16 +33,26 @@ type config struct {
 	HealthPort          int           `env:"HEALTH_PORT" envDefault:"8097"`
 	ShutdownTimeout     time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 
-	// Provider configuration for real Gardener mode
-	ProviderType              string `env:"GARDENER_PROVIDER_TYPE" envDefault:"metal"`
-	ProviderCloudProfile      string `env:"GARDENER_CLOUD_PROFILE" envDefault:"metal"`
-	ProviderSecretBindingName string `env:"GARDENER_SECRET_BINDING_NAME"` // Empty means no secret binding (local provider)
-	ProviderRegion            string `env:"GARDENER_REGION" envDefault:"nl-central-1"`
-	ProviderMachineType       string `env:"GARDENER_MACHINE_TYPE"`       // Default from client.go
-	ProviderMachineImageName  string `env:"GARDENER_MACHINE_IMAGE_NAME"` // Default from client.go
-	ProviderMachineImageVer   string `env:"GARDENER_MACHINE_IMAGE_VER"`  // Default from client.go
-	ProviderKubernetesVersion string `env:"GARDENER_KUBERNETES_VERSION"` // Default from client.go
-	ProviderZone              string `env:"GARDENER_ZONE"`               // Default from client.go
+	// Provider configuration for real Gardener mode.
+	// These configure how Shoots are created in Gardener and depend on the target infrastructure.
+
+	// ProviderType is the infrastructure provider (e.g., "local", "metal", "aws", "gcp", "azure").
+	// Determines which Gardener extension is used to provision the cluster infrastructure.
+	ProviderType string `env:"GARDENER_PROVIDER_TYPE"`
+
+	// ProviderCloudProfile references a Gardener CloudProfile that defines available machine types,
+	// images, and regions for the provider. Must exist in Gardener before creating Shoots.
+	ProviderCloudProfile string `env:"GARDENER_CLOUD_PROFILE"`
+
+	// ProviderCredentialsBindingName references a Gardener CredentialsBinding that contains
+	// cloud provider credentials (e.g., AWS access keys, GCP service account).
+	// Not needed for local provider. Required for real cloud providers.
+	ProviderCredentialsBindingName string `env:"GARDENER_CREDENTIALS_BINDING_NAME"`
+
+	// ProviderMaxShootNameLen limits Shoot names due to infrastructure constraints.
+	// Local provider requires 21 chars max (node name length limits).
+	// Cloud providers typically allow up to 63 chars.
+	ProviderMaxShootNameLen int `env:"GARDENER_MAX_SHOOT_NAME_LEN"`
 }
 
 func main() {
@@ -73,20 +83,20 @@ func run() error {
 	}
 	defer db.Close()
 
-	// Gardener client (mock, local, or real)
+	// Gardener client (mock or real)
 	gardenerClient, err := createGardenerClient(&cfg, logger)
 	if err != nil {
 		return err
 	}
 
-	// Worker (syncs manifests)
-	w := worker.New(db.Pool, gardenerClient, logger, worker.Config{
+	// SyncWorker (syncs manifests to Gardener)
+	w := worker.NewSyncWorker(db.Pool, gardenerClient, logger, worker.Config{
 		PollInterval:      cfg.PollInterval,
 		ReconcileInterval: cfg.ReconcileInterval,
 	})
 
-	// Status poller (monitors Gardener reconciliation)
-	sp := worker.NewStatusPoller(db.Pool, gardenerClient, logger, worker.StatusPollerConfig{
+	// StatusWorker (monitors Gardener reconciliation)
+	sp := worker.NewStatusWorker(db.Pool, gardenerClient, logger, worker.StatusConfig{
 		PollInterval: cfg.StatusPollInterval,
 		BatchSize:    cfg.StatusPollBatchSize,
 	})
@@ -135,40 +145,42 @@ func createGardenerClient(cfg *config, logger *slog.Logger) (gardener.Client, er
 		logger.Info("using mock Gardener client (in-memory)")
 		return gardener.NewMock(logger), nil
 
-	case "local":
-		// Phase 2: LocalClient will be implemented here
-		// For now, fall back to mock
-		logger.Warn("local mode not yet implemented, using mock")
-		return gardener.NewMock(logger), nil
-
 	case "real":
 		if cfg.GardenerKubeconfig == "" {
 			return nil, fmt.Errorf("GARDENER_KUBECONFIG required for real mode")
 		}
-		providerCfg := gardener.ProviderConfig{
-			Type:              cfg.ProviderType,
-			CloudProfile:      cfg.ProviderCloudProfile,
-			SecretBindingName: cfg.ProviderSecretBindingName,
-			Region:            cfg.ProviderRegion,
-			MachineType:       cfg.ProviderMachineType,
-			MachineImageName:  cfg.ProviderMachineImageName,
-			MachineImageVer:   cfg.ProviderMachineImageVer,
-			KubernetesVersion: cfg.ProviderKubernetesVersion,
-			Zone:              cfg.ProviderZone,
+		// Start with defaults for local provider, override with env values
+		providerCfg := gardener.NewProviderConfig()
+		if cfg.ProviderType != "" {
+			providerCfg.Type = cfg.ProviderType
 		}
+		if cfg.ProviderCloudProfile != "" {
+			providerCfg.CloudProfile = cfg.ProviderCloudProfile
+		}
+		if cfg.ProviderCredentialsBindingName != "" {
+			providerCfg.CredentialsBindingName = cfg.ProviderCredentialsBindingName
+		}
+		if cfg.ProviderMaxShootNameLen > 0 {
+			providerCfg.MaxShootNameLen = cfg.ProviderMaxShootNameLen
+		}
+
 		logger.Info("using real Gardener client",
 			"kubeconfig", cfg.GardenerKubeconfig,
 			"namespace", cfg.GardenerNamespace,
 			"provider", providerCfg.Type,
 			"cloudProfile", providerCfg.CloudProfile)
-		return gardener.NewReal(cfg.GardenerKubeconfig, cfg.GardenerNamespace, providerCfg, logger)
+		client, err := gardener.NewReal(cfg.GardenerKubeconfig, cfg.GardenerNamespace, providerCfg, logger)
+		if err != nil {
+			return nil, fmt.Errorf("create gardener client: %w", err)
+		}
+		return client, nil
 
 	default:
-		return nil, fmt.Errorf("invalid GARDENER_MODE: %s (must be mock, local, or real)", cfg.GardenerMode)
+		return nil, fmt.Errorf("invalid GARDENER_MODE: %s (must be mock or real)", cfg.GardenerMode)
 	}
 }
 
-func startHealthServer(cfg *config, w *worker.Worker, logger *slog.Logger) *http.Server {
+func startHealthServer(cfg *config, w *worker.SyncWorker, logger *slog.Logger) *http.Server {
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/healthz", func(resp http.ResponseWriter, _ *http.Request) {
 		resp.WriteHeader(http.StatusOK)

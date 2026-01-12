@@ -1,0 +1,23 @@
+# Kustomize overlay for testing cluster-worker with local Gardener
+#
+# Usage:
+#   kubectl apply -k cluster-worker/deploy/overlays/local-gardener
+#
+# Prerequisites:
+#   1. Local Gardener running: just gardener-up
+#   2. Networks connected: just gardener-connect-k3d
+#   3. Kubeconfig secret created (done by: just local-gardener)
+#
+# Note: This overlay patches an existing deployment. The base deployment
+# must already exist in the cluster (deployed via Helm or other means).
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: fundament
+
+patches:
+  - path: deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: fundament-cluster-worker

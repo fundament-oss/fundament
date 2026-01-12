@@ -1,0 +1,232 @@
+# Cluster Worker Development Tasks
+# Run with: just <recipe> (from cluster-worker directory)
+
+set shell := ["bash", "-uc"]
+
+GARDENER_DIR := env_var_or_default("GARDENER_DIR", "~/gardener")
+KUBECONFIG_PATH := GARDENER_DIR / "example/provider-local/seed-kind/base/kubeconfig"
+
+# List available recipes
+default:
+    @just --list
+
+# ============================================================================
+# Local Gardener (Optional)
+# ============================================================================
+
+# Check if prerequisites for local Gardener are installed
+check-prerequisites:
+    #!/usr/bin/env bash
+    set -e
+    missing=()
+    command -v docker >/dev/null || missing+=("docker")
+    command -v kind >/dev/null || missing+=("kind (mise use -g kind)")
+    command -v kubectl >/dev/null || missing+=("kubectl")
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed --version 2>/dev/null | grep -q GNU || missing+=("GNU sed (brew install gnu-sed)")
+        tar --version 2>/dev/null | grep -q GNU || missing+=("GNU tar (brew install gnu-tar)")
+        command -v ip >/dev/null || missing+=("iproute2mac (brew install iproute2mac)")
+    fi
+    if [ ${#missing[@]} -gt 0 ]; then
+        echo "Missing prerequisites:"
+        printf '  - %s\n' "${missing[@]}"
+        echo ""
+        echo "Install missing tools and try again"
+        exit 1
+    fi
+    echo "All prerequisites installed"
+
+# Start local Gardener (~15 min first time, instant if already running)
+gardener-up: check-prerequisites
+    #!/usr/bin/env bash
+    set -e
+    GARDENER_DIR="{{GARDENER_DIR}}"
+    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
+
+    if kind get clusters 2>/dev/null | grep -q gardener-local; then
+        echo "Gardener already running"
+        echo "Check status: just gardener-status"
+        exit 0
+    fi
+
+    # Clone repo if needed
+    if [ ! -d "$GARDENER_DIR" ]; then
+        echo "Cloning Gardener repository..."
+        git clone --depth 1 https://github.com/gardener/gardener.git "$GARDENER_DIR"
+    fi
+
+    # Ensure hosts entry
+    if ! grep -q "registry.local.gardener.cloud" /etc/hosts; then
+        echo "Adding registry.local.gardener.cloud to /etc/hosts (requires sudo)..."
+        echo "127.0.0.1 registry.local.gardener.cloud" | sudo tee -a /etc/hosts
+    fi
+
+    echo "Starting Gardener (this takes 10-15 minutes on first run)..."
+    cd "$GARDENER_DIR"
+    make kind-up
+    make gardener-up
+    echo ""
+    echo "Gardener started! Next: just gardener-connect-k3d"
+
+# Stop local Gardener
+gardener-down:
+    #!/usr/bin/env bash
+    set -e
+    GARDENER_DIR="{{GARDENER_DIR}}"
+    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
+
+    if ! kind get clusters 2>/dev/null | grep -q gardener-local; then
+        echo "Gardener is not running"
+        exit 0
+    fi
+
+    cd "$GARDENER_DIR"
+    make gardener-down 2>/dev/null || true
+    make kind-down
+    echo "Gardener stopped"
+
+# Check Gardener status
+gardener-status:
+    #!/usr/bin/env bash
+    GARDENER_DIR="{{GARDENER_DIR}}"
+    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
+    KUBECONFIG="$GARDENER_DIR/example/provider-local/seed-kind/base/kubeconfig"
+
+    echo "=== Local Gardener Status ==="
+    echo ""
+
+    if ! kind get clusters 2>/dev/null | grep -q gardener-local; then
+        echo "Status: NOT RUNNING"
+        echo "Start with: just gardener-up"
+        exit 1
+    fi
+
+    echo "Status: RUNNING"
+    KIND_IP=$(docker inspect gardener-local-control-plane --format '{{{{range $net, $conf := .NetworkSettings.Networks}}{{{{if eq $net "kind"}}{{{{$conf.IPAddress}}{{{{end}}{{{{end}}' 2>/dev/null || echo "unknown")
+    echo "API Server: https://$KIND_IP:6443"
+    echo ""
+
+    echo "=== Shoots ==="
+    kubectl --kubeconfig "$KUBECONFIG" get shoots -n garden-local 2>/dev/null || echo "No shoots"
+    echo ""
+
+    echo "=== Network ==="
+    if docker network inspect k3d-fundament --format '{{{{range .Containers}}{{{{.Name}} {{{{end}}' 2>/dev/null | grep -q gardener-local-control-plane; then
+        echo "k3d network: Connected"
+    else
+        echo "k3d network: NOT connected (run: just gardener-connect-k3d)"
+    fi
+
+# Connect Docker networks so k3d can reach Gardener
+gardener-connect-k3d:
+    #!/usr/bin/env bash
+    set -e
+
+    KIND_CONTAINER="gardener-local-control-plane"
+    K3D_NETWORK="k3d-fundament"
+    KIND_NETWORK="kind"
+
+    if ! docker ps --format '{{{{.Names}}' | grep -q "$KIND_CONTAINER"; then
+        echo "Error: Gardener is not running. Start with: just gardener-up"
+        exit 1
+    fi
+
+    if ! docker network ls --format '{{{{.Name}}' | grep -q "^${K3D_NETWORK}$"; then
+        echo "Error: k3d network not found. Is the k3d cluster running?"
+        exit 1
+    fi
+
+    # Connect kind to k3d network
+    if docker network inspect "$K3D_NETWORK" --format '{{{{range .Containers}}{{{{.Name}} {{{{end}}' | grep -q "$KIND_CONTAINER"; then
+        echo "- $KIND_CONTAINER already connected to $K3D_NETWORK"
+    else
+        docker network connect "$K3D_NETWORK" "$KIND_CONTAINER"
+        echo "- Connected $KIND_CONTAINER to $K3D_NETWORK"
+    fi
+
+    # Connect k3d to kind network
+    K3D_SERVER=$(docker ps --filter "name=k3d-fundament-server" --format "{{{{.Names}}" | head -1)
+    if [ -n "$K3D_SERVER" ]; then
+        if docker network inspect "$KIND_NETWORK" --format '{{{{range .Containers}}{{{{.Name}} {{{{end}}' | grep -q "$K3D_SERVER"; then
+            echo "- $K3D_SERVER already connected to $KIND_NETWORK"
+        else
+            docker network connect "$KIND_NETWORK" "$K3D_SERVER"
+            echo "- Connected $K3D_SERVER to $KIND_NETWORK"
+        fi
+    fi
+
+    KIND_IP=$(docker inspect "$KIND_CONTAINER" --format '{{{{range $net, $conf := .NetworkSettings.Networks}}{{{{if eq $net "kind"}}{{{{$conf.IPAddress}}{{{{end}}{{{{end}}')
+    echo ""
+    echo "Gardener API: https://$KIND_IP:6443"
+
+# ============================================================================
+# Local Gardener Setup
+# ============================================================================
+
+# Full setup: start Gardener + create kubeconfig secret for skaffold
+local-gardener: gardener-up gardener-connect-k3d
+    #!/usr/bin/env bash
+    set -e
+    GARDENER_DIR="{{GARDENER_DIR}}"
+    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
+    KUBECONFIG_PATH="$GARDENER_DIR/example/provider-local/seed-kind/base/kubeconfig"
+
+    # Get kind IP
+    KIND_IP=$(docker inspect gardener-local-control-plane --format '{{{{range $net, $conf := .NetworkSettings.Networks}}{{{{if eq $net "kind"}}{{{{$conf.IPAddress}}{{{{end}}{{{{end}}')
+
+    # Create kubeconfig secret with internal IP
+    echo "Creating kubeconfig secret..."
+    TEMP_KUBECONFIG=$(mktemp)
+    sed "s|https://127.0.0.1:[0-9]*|https://$KIND_IP:6443|g" "$KUBECONFIG_PATH" > "$TEMP_KUBECONFIG"
+    kubectl create secret generic gardener-kubeconfig \
+        --from-file=kubeconfig="$TEMP_KUBECONFIG" \
+        -n fundament --dry-run=client -o yaml | kubectl apply -f -
+    rm "$TEMP_KUBECONFIG"
+
+    echo ""
+    echo "=== Gardener Ready ==="
+    echo "Gardener API: https://$KIND_IP:6443"
+    echo ""
+    echo "Run skaffold with local-gardener profile (from repo root):"
+    echo "  just dev -p local-gardener"
+
+# ============================================================================
+# Testing Helpers
+# ============================================================================
+
+# Create a test cluster with short name (required due to 21-char limit)
+create-test-cluster name:
+    #!/usr/bin/env bash
+    set -e
+    name="{{name}}"
+    if [ ${#name} -gt 10 ]; then
+        echo "Error: Name '$name' is too long. Use ≤10 chars (shoot names have 21-char limit)"
+        exit 1
+    fi
+    result=$(kubectl exec -n fundament fundament-db-1 -- psql -U postgres -d fundament -t -c "INSERT INTO tenant.clusters (name, organization_id, region, kubernetes_version, status) SELECT '{{name}}', id, 'local', '1.31.1', 'unspecified' FROM tenant.organizations LIMIT 1 ON CONFLICT (organization_id, name, deleted) DO NOTHING RETURNING id, name;")
+    echo ""
+    if echo "$result" | grep -q '{{name}}'; then
+        echo "Cluster '{{name}}' created. Watch progress:"
+    else
+        echo "Cluster '{{name}}' already exists. Watch progress:"
+    fi
+    echo "  just watch-shoots"
+    echo "  just logs"
+
+# Delete a test cluster
+delete-test-cluster name:
+    kubectl exec -n fundament fundament-db-1 -- psql -U postgres -d fundament -c \
+        "UPDATE tenant.clusters SET deleted = NOW() WHERE name = '{{name}}' AND deleted IS NULL;"
+
+# Watch cluster-worker logs
+logs:
+    kubectl logs -n fundament -l app.kubernetes.io/component=cluster-worker -f
+
+# Watch shoots in Gardener
+watch-shoots:
+    #!/usr/bin/env bash
+    GARDENER_DIR="{{GARDENER_DIR}}"
+    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
+    kubectl --kubeconfig "$GARDENER_DIR/example/provider-local/seed-kind/base/kubeconfig" \
+        get shoots -n garden-local -w
+

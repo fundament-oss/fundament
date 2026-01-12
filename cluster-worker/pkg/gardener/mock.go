@@ -47,17 +47,17 @@ func NewMock(logger *slog.Logger) *MockClient {
 }
 
 // ApplyShoot records the call and stores the shoot in memory.
-func (m *MockClient) ApplyShoot(ctx context.Context, cluster ClusterToSync) error {
+func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.ApplyCalls = append(m.ApplyCalls, cluster)
+	m.ApplyCalls = append(m.ApplyCalls, *cluster)
 
 	if m.ApplyError != nil {
 		return m.ApplyError
 	}
 
-	shootName := ShootName(cluster.OrganizationName, cluster.Name)
+	shootName := ShootName(cluster.OrganizationName, cluster.Name, m.MaxShootNameLength())
 	m.shoots[shootName] = ShootInfo{
 		Name:      shootName,
 		ClusterID: cluster.ID,
@@ -71,17 +71,17 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster ClusterToSync) erro
 }
 
 // DeleteShoot records the call and removes the shoot from memory.
-func (m *MockClient) DeleteShoot(ctx context.Context, cluster ClusterToSync) error {
+func (m *MockClient) DeleteShoot(ctx context.Context, cluster *ClusterToSync) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.DeleteCalls = append(m.DeleteCalls, cluster)
+	m.DeleteCalls = append(m.DeleteCalls, *cluster)
 
 	if m.DeleteError != nil {
 		return m.DeleteError
 	}
 
-	shootName := ShootName(cluster.OrganizationName, cluster.Name)
+	shootName := ShootName(cluster.OrganizationName, cluster.Name, m.MaxShootNameLength())
 	delete(m.shoots, shootName)
 	m.logger.Info("MOCK: deleted shoot", "shoot", shootName, "cluster_id", cluster.ID)
 	return nil
@@ -124,11 +124,11 @@ func (m *MockClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 // GetShootStatus returns the status of a shoot.
 // By default returns "ready" for existing shoots and "pending" (not found) for non-existing.
 // Use StatusOverrides to customize per-cluster behavior.
-func (m *MockClient) GetShootStatus(ctx context.Context, cluster ClusterToSync) (string, string, error) {
+func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync) (string, string, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	m.StatusCalls = append(m.StatusCalls, cluster)
+	m.StatusCalls = append(m.StatusCalls, *cluster)
 
 	if m.GetStatusError != nil {
 		return "", "", m.GetStatusError
@@ -139,7 +139,7 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster ClusterToSync) 
 		return override.Status, override.Message, nil
 	}
 
-	shootName := ShootName(cluster.OrganizationName, cluster.Name)
+	shootName := ShootName(cluster.OrganizationName, cluster.Name, m.MaxShootNameLength())
 	if _, exists := m.shoots[shootName]; exists {
 		return "ready", "Mock shoot is ready", nil
 	}
@@ -199,6 +199,11 @@ func (m *MockClient) ShootCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return len(m.shoots)
+}
+
+// MaxShootNameLength returns the max shoot name length (21 for local provider compatibility).
+func (m *MockClient) MaxShootNameLength() int {
+	return 21
 }
 
 // Verify MockClient implements Client interface.

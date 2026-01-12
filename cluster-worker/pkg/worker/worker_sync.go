@@ -20,8 +20,8 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
 )
 
-// Worker syncs cluster state from PostgreSQL to Gardener.
-type Worker struct {
+// SyncWorker syncs cluster state from PostgreSQL to Gardener.
+type SyncWorker struct {
 	pool     *pgxpool.Pool
 	queries  *db.Queries
 	gardener gardener.Client
@@ -38,9 +38,9 @@ type Config struct {
 	ReconcileInterval time.Duration // How often to run full reconciliation (e.g., 5m)
 }
 
-// New creates a new Worker.
-func New(pool *pgxpool.Pool, gardenerClient gardener.Client, logger *slog.Logger, cfg Config) *Worker {
-	return &Worker{
+// NewSyncWorker creates a new SyncWorker.
+func NewSyncWorker(pool *pgxpool.Pool, gardenerClient gardener.Client, logger *slog.Logger, cfg Config) *SyncWorker {
+	return &SyncWorker{
 		pool:     pool,
 		queries:  db.New(pool),
 		gardener: gardenerClient,
@@ -50,7 +50,7 @@ func New(pool *pgxpool.Pool, gardenerClient gardener.Client, logger *slog.Logger
 }
 
 // Run starts the worker with automatic reconnection on LISTEN connection loss.
-func (w *Worker) Run(ctx context.Context) error {
+func (w *SyncWorker) Run(ctx context.Context) error {
 	for {
 		err := w.runWithConnection(ctx)
 		if ctx.Err() != nil {
@@ -63,7 +63,7 @@ func (w *Worker) Run(ctx context.Context) error {
 }
 
 // runWithConnection handles a single LISTEN connection lifecycle.
-func (w *Worker) runWithConnection(ctx context.Context) error {
+func (w *SyncWorker) runWithConnection(ctx context.Context) error {
 	conn, err := w.pool.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("acquire listen connection: %w", err)
@@ -109,7 +109,7 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 }
 
 // Shutdown waits for in-flight operations to complete.
-func (w *Worker) Shutdown(timeout time.Duration) {
+func (w *SyncWorker) Shutdown(timeout time.Duration) {
 	done := make(chan struct{})
 	go func() {
 		w.inFlight.Wait()
@@ -125,11 +125,11 @@ func (w *Worker) Shutdown(timeout time.Duration) {
 }
 
 // IsReady returns true if the worker is connected and processing.
-func (w *Worker) IsReady() bool {
+func (w *SyncWorker) IsReady() bool {
 	return w.ready.Load()
 }
 
-func (w *Worker) processAllPending(ctx context.Context) {
+func (w *SyncWorker) processAllPending(ctx context.Context) {
 	for {
 		processed, err := w.processOne(ctx)
 		if err != nil {
@@ -145,7 +145,7 @@ func (w *Worker) processAllPending(ctx context.Context) {
 
 // reconcileAll performs a full comparison between DB state and Gardener state
 // to detect and fix any drift. This runs periodically as a safety net.
-func (w *Worker) reconcileAll(ctx context.Context) {
+func (w *SyncWorker) reconcileAll(ctx context.Context) {
 	w.logger.Info("starting full reconciliation")
 
 	// 1. Get all active clusters from DB
@@ -195,7 +195,7 @@ func (w *Worker) reconcileAll(ctx context.Context) {
 		}
 
 		// Compare key fields (expand as schema grows)
-		expectedName := gardener.ShootName(cluster.OrganizationName, cluster.Name)
+		expectedName := gardener.ShootName(cluster.OrganizationName, cluster.Name, w.gardener.MaxShootNameLength())
 		if shoot.Name != expectedName {
 			w.logger.Warn("drift detected: shoot name mismatch",
 				"cluster_id", cluster.ID,
@@ -231,7 +231,7 @@ func (w *Worker) reconcileAll(ctx context.Context) {
 	}
 }
 
-func (w *Worker) processOne(ctx context.Context) (bool, error) {
+func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 	w.inFlight.Add(1)
 	defer w.inFlight.Done()
 
@@ -254,17 +254,36 @@ func (w *Worker) processOne(ctx context.Context) (bool, error) {
 	// 2. Sync to Gardener (no DB lock held - allows other workers to proceed)
 	var syncErr error
 	clusterToSync := gardener.ClusterToSync{
-		ID:               cluster.ID,
-		Name:             cluster.Name,
-		OrganizationName: cluster.OrganizationName,
-		Deleted:          cluster.Deleted,
-		SyncAttempts:     int(cluster.SyncAttempts),
+		ID:                cluster.ID,
+		Name:              cluster.Name,
+		OrganizationName:  cluster.OrganizationName,
+		Region:            cluster.Region,
+		KubernetesVersion: cluster.KubernetesVersion,
+		Deleted:           cluster.Deleted,
+		SyncAttempts:      int(cluster.SyncAttempts),
 	}
 
 	if cluster.Deleted != nil {
-		syncErr = w.gardener.DeleteShoot(ctx, clusterToSync)
+		// Check if there's a new active cluster with the same name before deleting
+		// This prevents deleting a shoot that's been recreated
+		hasActive, err := w.queries.HasActiveClusterWithSameName(ctx, db.HasActiveClusterWithSameNameParams{
+			Name:   cluster.OrganizationName,
+			Name_2: cluster.Name,
+		})
+		if err != nil {
+			return false, fmt.Errorf("check active cluster: %w", err)
+		}
+		if hasActive {
+			w.logger.Info("skipping shoot deletion - active cluster with same name exists",
+				"cluster_id", cluster.ID,
+				"name", cluster.Name)
+			// Mark as synced without actually deleting
+			syncErr = nil
+		} else {
+			syncErr = w.gardener.DeleteShoot(ctx, &clusterToSync)
+		}
 	} else {
-		syncErr = w.gardener.ApplyShoot(ctx, clusterToSync)
+		syncErr = w.gardener.ApplyShoot(ctx, &clusterToSync)
 	}
 
 	// 3. Update status in new transaction
@@ -311,15 +330,17 @@ func (w *Worker) processOne(ctx context.Context) (bool, error) {
 
 // claimedCluster holds a claimed cluster's info.
 type claimedCluster struct {
-	ID               uuid.UUID
-	Name             string
-	OrganizationName string
-	Deleted          *time.Time
-	SyncAttempts     int32
+	ID                uuid.UUID
+	Name              string
+	OrganizationName  string
+	Region            string
+	KubernetesVersion string
+	Deleted           *time.Time
+	SyncAttempts      int32
 }
 
 // claimCluster atomically claims one unsynced cluster.
-func (w *Worker) claimCluster(ctx context.Context) (*claimedCluster, error) {
+func (w *SyncWorker) claimCluster(ctx context.Context) (*claimedCluster, error) {
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("begin tx: %w", err)
@@ -346,11 +367,13 @@ func (w *Worker) claimCluster(ctx context.Context) (*claimedCluster, error) {
 	}
 
 	return &claimedCluster{
-		ID:               row.ID,
-		Name:             row.Name,
-		OrganizationName: row.OrganizationName,
-		Deleted:          deleted,
-		SyncAttempts:     row.SyncAttempts,
+		ID:                row.ID,
+		Name:              row.Name,
+		OrganizationName:  row.OrganizationName,
+		Region:            row.Region,
+		KubernetesVersion: row.KubernetesVersion,
+		Deleted:           deleted,
+		SyncAttempts:      row.SyncAttempts,
 	}, nil
 }
 
