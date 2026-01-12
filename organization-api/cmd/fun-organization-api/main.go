@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/grpcreflect"
 	"github.com/caarlos0/env/v11"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -125,6 +126,17 @@ func run() error {
 
 	pluginPath, pluginHandler := organizationv1connect.NewPluginServiceHandler(server, interceptors)
 	mux.Handle(pluginPath, pluginHandler)
+
+	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)
+	reflector := grpcreflect.NewStaticReflector(
+		"organization.v1.OrganizationService",
+		"organization.v1.ClusterService",
+		"organization.v1.PluginService",
+	)
+	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
+	mux.Handle(reflectPath, reflectHandler)
+	reflectPathAlpha, reflectHandlerAlpha := grpcreflect.NewHandlerV1Alpha(reflector)
+	mux.Handle(reflectPathAlpha, reflectHandlerAlpha)
 
 	projectPath, projectHandler := organizationv1connect.NewProjectServiceHandler(server, interceptors)
 	mux.Handle(projectPath, projectHandler)

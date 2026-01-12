@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/grpcreflect"
 	"github.com/caarlos0/env/v11"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/rs/cors"
@@ -148,6 +149,15 @@ func run() error {
 	)
 	path, handler := authnv1connect.NewAuthnServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
 	mux.Handle(path, handler)
+
+	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)
+	reflector := grpcreflect.NewStaticReflector(
+		"authn.v1.AuthnService",
+	)
+	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
+	mux.Handle(reflectPath, reflectHandler)
+	reflectPathAlpha, reflectHandlerAlpha := grpcreflect.NewHandlerV1Alpha(reflector)
+	mux.Handle(reflectPathAlpha, reflectHandlerAlpha)
 
 	// HTTP endpoints for authentication flow (registers routes on mux)
 	_ = authnhttp.HandlerFromMux(server, mux)

@@ -1,0 +1,51 @@
+meta {
+  name: Create
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ClusterService/CreateCluster
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "my-new-cluster-4",
+    "region": "eu-west-1",
+    "kubernetesVersion": "1.28",
+    "nodePools": [
+      {
+        "name": "default-pool",
+        "machineType": "n1-standard-4",
+        "nodeCount": 3,
+        "autoscale_min": 1,
+        "autoscale_max": 10,
+        "autoscalingEnabled": true
+      }
+    ],
+    "pluginIds": [
+      "plugin-1",
+      "plugin-2"
+    ],
+    "pluginPreset": "havenplus"
+  }
+}
+
+script:post-response {
+  // If the response is JSON, you can also parse and extract specific fields
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setEnvVar("clusterId", res.body.clusterId);
+  }
+    
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

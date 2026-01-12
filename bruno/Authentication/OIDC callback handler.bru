@@ -1,0 +1,16 @@
+meta {
+  name: OIDC callback handler
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{authnUrl}}/callback
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~error: 
+  ~error_description: 
+}

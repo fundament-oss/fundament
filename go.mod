@@ -4,6 +4,7 @@ go 1.25.5
 
 require (
 	connectrpc.com/connect v1.19.1
+	connectrpc.com/grpcreflect v1.3.0
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/go-playground/locales v0.14.1
