@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="9"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="10"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="0,359" last-zoom="1" scene-rect="0,0,2058.81,1301.32"
+	 last-position="411,454" last-zoom="1" scene-rect="0,0,2198.81,1343.12"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -34,7 +34,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="organizations" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="460" y="360"/>
+	<position x="440" y="360"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -52,10 +52,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
-<table name="projects" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
+<table name="projects" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="4" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1020" y="380"/>
+	<position x="1000" y="380"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -76,14 +76,11 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
-<table name="namespaces" layers="0" collapse-mode="1" max-obj-count="7" z-value="0">
+<table name="namespaces" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1740" y="380"/>
+	<position x="1660" y="760"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="project_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="cluster_id" not-null="true">
@@ -105,7 +102,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 			<expression> <![CDATA[name = name]]> </expression>
 	</constraint>
 	<constraint name="namespaces_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.namespaces">
-		<columns names="project_id,name,deleted" ref-type="src-columns"/>
+		<columns names="cluster_id,name,deleted" ref-type="src-columns"/>
 	</constraint>
 </table>
 
@@ -141,7 +138,7 @@ END;]]> </definition>
 <table name="users" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="440" y="660"/>
+	<position x="420" y="660"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -168,7 +165,7 @@ END;]]> </definition>
 <table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1020" y="620"/>
+	<position x="1000" y="620"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -217,7 +214,7 @@ END;]]> </definition>
 <table name="node_pools" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1640" y="640"/>
+	<position x="1620" y="1020"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -261,7 +258,7 @@ END;]]> </definition>
 <table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_fundament_api"/>
-	<position x="440" y="880"/>
+	<position x="420" y="880"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -288,7 +285,7 @@ END;]]> </definition>
 <table name="plugins" layers="0" collapse-mode="2" max-obj-count="2" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_fundament_api"/>
-	<position x="1020" y="1120"/>
+	<position x="1000" y="1120"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -311,15 +308,67 @@ END;]]> </definition>
 )]]> </expression>
 </policy>
 
+<table name="namespaces_projects" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_fundament_api"/>
+	<position x="1660" y="360"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="namespace_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="project_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<constraint name="namespaces_projects_pk" type="pk-constr" table="tenant.namespaces_projects">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="namespaces_projects_uq" type="uq-constr" nulls-not-distinct="true" table="tenant.namespaces_projects">
+		<columns names="project_id,namespace_id,deleted" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<policy name="projects_organization_isolation" table="tenant.projects" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid]]> </expression>
+</policy>
+
+<policy name="nss_projects_project_organization_isolation" table="tenant.namespaces_projects" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (
+      SELECT 1 FROM projects
+      WHERE projects.id = namespaces_projects.project_id
+      AND projects.organization_id = current_setting('app.current_organization_id')::uuid
+)]]> </expression>
+</policy>
+
+<policy name="nss_projects_namespace_organization_isolation" table="tenant.namespaces_projects" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (
+      SELECT 1 FROM namespaces
+      LEFT JOIN clusters
+            ON namespaces.cluster_id=clusters.id
+      WHERE namespaces.id = namespaces_projects.namespace_id
+      AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
+)]]> </expression>
+</policy>
+
+<index name="nss_projects_idx_active" table="tenant.namespaces_projects"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<expression> <![CDATA[deleted IS NULL]]> </expression>
+		</idxelement>
+	<columns names="namespace_id,project_id"/>
+</index>
+
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.projects">
 	<columns names="organization_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="namespaces_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.namespaces">
-	<columns names="project_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
@@ -359,14 +408,21 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="namespaces_projects_fk_namespace" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.namespaces" table="tenant.namespaces_projects">
+	<columns names="namespace_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="namespaces_projects_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.namespaces_projects">
+	<columns names="project_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <relationship name="rel_projects_organizations" type="relfk" layers="0"
 	 src-table="tenant.projects"
 	 dst-table="tenant.organizations" reference-fk="projects_fk_organization"
-	 src-required="false" dst-required="true"/>
-
-<relationship name="rel_namespaces_projects" type="relfk" layers="0"
-	 src-table="tenant.namespaces"
-	 dst-table="tenant.projects" reference-fk="namespaces_fk_project"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_namespaces_clusters" type="relfk" layers="0"
@@ -397,6 +453,20 @@ END;]]> </definition>
 <relationship name="rel_installs_plugins" type="relfk" layers="0"
 	 src-table="tenant.installs"
 	 dst-table="tenant.plugins" reference-fk="installs_fk_plugin"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_namespaces_projects_namespaces" type="relfk" layers="0"
+	 src-table="tenant.namespaces_projects"
+	 dst-table="tenant.namespaces" reference-fk="namespaces_projects_fk_namespace"
+	 src-required="false" dst-required="true">
+	<label ref-type="name-label">
+		<position x="-47.8278" y="-30.953"/>
+	</label>
+</relationship>
+
+<relationship name="rel_namespaces_projects_projects" type="relfk" layers="0"
+	 src-table="tenant.namespaces_projects"
+	 dst-table="tenant.projects" reference-fk="namespaces_projects_fk_project"
 	 src-required="false" dst-required="true"/>
 
 </dbmodel>

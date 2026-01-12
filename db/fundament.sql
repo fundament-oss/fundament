@@ -43,19 +43,20 @@ CREATE TABLE tenant.projects (
 -- ddl-end --
 ALTER TABLE tenant.projects OWNER TO postgres;
 -- ddl-end --
+ALTER TABLE tenant.projects ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
 
 -- object: tenant.namespaces | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.namespaces CASCADE;
 CREATE TABLE tenant.namespaces (
 	id uuid NOT NULL DEFAULT uuidv7(),
-	project_id uuid NOT NULL,
 	cluster_id uuid NOT NULL,
 	name text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT namespaces_pk PRIMARY KEY (id),
 	CONSTRAINT namespaces_ck_name CHECK (name = name),
-	CONSTRAINT namespaces_uq_name UNIQUE NULLS NOT DISTINCT (project_id,name,deleted)
+	CONSTRAINT namespaces_uq_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted)
 );
 -- ddl-end --
 ALTER TABLE tenant.namespaces OWNER TO postgres;
@@ -220,17 +221,74 @@ CREATE POLICY install_organization_policy ON tenant.installs
 ));
 -- ddl-end --
 
+-- object: tenant.namespaces_projects | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.namespaces_projects CASCADE;
+CREATE TABLE tenant.namespaces_projects (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	namespace_id uuid,
+	project_id uuid,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted uuid DEFAULT uuidv7(),
+	CONSTRAINT namespaces_projects_pk PRIMARY KEY (id),
+	CONSTRAINT namespaces_projects_uq UNIQUE NULLS NOT DISTINCT (project_id,namespace_id,deleted)
+);
+-- ddl-end --
+ALTER TABLE tenant.namespaces_projects OWNER TO fun_fundament_api;
+-- ddl-end --
+ALTER TABLE tenant.namespaces_projects ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: projects_organization_isolation | type: POLICY --
+-- DROP POLICY IF EXISTS projects_organization_isolation ON tenant.projects CASCADE;
+CREATE POLICY projects_organization_isolation ON tenant.projects
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (organization_id = current_setting('app.current_organization_id')::uuid);
+-- ddl-end --
+
+-- object: nss_projects_project_organization_isolation | type: POLICY --
+-- DROP POLICY IF EXISTS nss_projects_project_organization_isolation ON tenant.namespaces_projects CASCADE;
+CREATE POLICY nss_projects_project_organization_isolation ON tenant.namespaces_projects
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (EXISTS (
+      SELECT 1 FROM projects
+      WHERE projects.id = namespaces_projects.project_id
+      AND projects.organization_id = current_setting('app.current_organization_id')::uuid
+));
+-- ddl-end --
+
+-- object: nss_projects_namespace_organization_isolation | type: POLICY --
+-- DROP POLICY IF EXISTS nss_projects_namespace_organization_isolation ON tenant.namespaces_projects CASCADE;
+CREATE POLICY nss_projects_namespace_organization_isolation ON tenant.namespaces_projects
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (EXISTS (
+      SELECT 1 FROM namespaces
+      LEFT JOIN clusters
+            ON namespaces.cluster_id=clusters.id
+      WHERE namespaces.id = namespaces_projects.namespace_id
+      AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
+));
+-- ddl-end --
+
+-- object: nss_projects_idx_active | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.nss_projects_idx_active CASCADE;
+CREATE INDEX nss_projects_idx_active ON tenant.namespaces_projects
+USING btree
+(
+	(deleted IS NULL)
+)
+INCLUDE (namespace_id,project_id);
+-- ddl-end --
+
 -- object: projects_fk_organization | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_organization CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_organization FOREIGN KEY (organization_id)
 REFERENCES tenant.organizations (id) MATCH SIMPLE
-ON DELETE NO ACTION ON UPDATE NO ACTION;
--- ddl-end --
-
--- object: namespaces_fk_project | type: CONSTRAINT --
--- ALTER TABLE tenant.namespaces DROP CONSTRAINT IF EXISTS namespaces_fk_project CASCADE;
-ALTER TABLE tenant.namespaces ADD CONSTRAINT namespaces_fk_project FOREIGN KEY (project_id)
-REFERENCES tenant.projects (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -273,6 +331,20 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.installs DROP CONSTRAINT IF EXISTS installs_fk_plugin CASCADE;
 ALTER TABLE tenant.installs ADD CONSTRAINT installs_fk_plugin FOREIGN KEY (plugin_id)
 REFERENCES tenant.plugins (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: namespaces_projects_fk_namespace | type: CONSTRAINT --
+-- ALTER TABLE tenant.namespaces_projects DROP CONSTRAINT IF EXISTS namespaces_projects_fk_namespace CASCADE;
+ALTER TABLE tenant.namespaces_projects ADD CONSTRAINT namespaces_projects_fk_namespace FOREIGN KEY (namespace_id)
+REFERENCES tenant.namespaces (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: namespaces_projects_fk_project | type: CONSTRAINT --
+-- ALTER TABLE tenant.namespaces_projects DROP CONSTRAINT IF EXISTS namespaces_projects_fk_project CASCADE;
+ALTER TABLE tenant.namespaces_projects ADD CONSTRAINT namespaces_projects_fk_project FOREIGN KEY (project_id)
+REFERENCES tenant.projects (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
