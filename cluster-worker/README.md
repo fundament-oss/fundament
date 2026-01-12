@@ -264,7 +264,7 @@ Run the complete stack with local Gardener:
 just cluster-start
 
 # 2. Start local Gardener + configure secrets (first time ~15 min)
-cd cluster-worker && just local-gardener
+just local-gardener
 
 # 3. Deploy all services with local Gardener mode
 just dev -p local-gardener
