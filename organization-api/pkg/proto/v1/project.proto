@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package organization.v1;
+
+import "v1/common.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
+
+// ProjectService manages projects within an organization
+service ProjectService {
+  // List all projects for the current organization
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+
+  // Get detailed information about a specific project
+  rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+
+  // Create a new project
+  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
+
+  // Update project configuration
+  rpc UpdateProject(UpdateProjectRequest) returns (google.protobuf.Empty);
+
+  // Delete a project
+  rpc DeleteProject(DeleteProjectRequest) returns (google.protobuf.Empty);
+}
+
+// List projects request
+message ListProjectsRequest {}
+
+// List projects response
+message ListProjectsResponse {
+  repeated Project projects = 10;
+}
+
+// Get project request
+message GetProjectRequest {
+  string project_id = 10;
+}
+
+// Get project response
+message GetProjectResponse {
+  Project project = 10;
+}
+
+// Project information
+message Project {
+  string id = 10;
+  string name = 20;
+  Timestamp created_at = 30;
+}
+
+// Create project request
+message CreateProjectRequest {
+  string name = 10;
+}
+
+// Create project response
+message CreateProjectResponse {
+  string project_id = 10;
+}
+
+// Update project request
+message UpdateProjectRequest {
+  string project_id = 10;
+  optional string name = 20;
+}
+
+// Delete project request
+message DeleteProjectRequest {
+  string project_id = 10;
+}

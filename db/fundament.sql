@@ -44,11 +44,14 @@ CREATE TABLE tenant.projects (
 	organization_id uuid NOT NULL,
 	name text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
 	CONSTRAINT projects_pk PRIMARY KEY (id),
-	CONSTRAINT projects_uq_organization_name UNIQUE (organization_id,name)
+	CONSTRAINT projects_uq_organization_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
 -- ddl-end --
 ALTER TABLE tenant.projects OWNER TO postgres;
+-- ddl-end --
+ALTER TABLE tenant.projects ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
 
 -- object: tenant.namespaces | type: TABLE --
@@ -280,6 +283,15 @@ CREATE TABLE zappstore.categories_plugins (
 ALTER TABLE zappstore.categories_plugins OWNER TO fun_fundament_api;
 -- ddl-end --
 
+-- object: projects_organization_isolation | type: POLICY --
+-- DROP POLICY IF EXISTS projects_organization_isolation ON tenant.projects CASCADE;
+CREATE POLICY projects_organization_isolation ON tenant.projects
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (organization_id = current_setting('app.current_organization_id')::uuid);
+-- ddl-end --
+
 -- object: projects_fk_organization | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_organization CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_organization FOREIGN KEY (organization_id)
@@ -287,17 +299,17 @@ REFERENCES tenant.organizations (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
--- object: namespaces_fk_project | type: CONSTRAINT --
--- ALTER TABLE tenant.namespaces DROP CONSTRAINT IF EXISTS namespaces_fk_project CASCADE;
-ALTER TABLE tenant.namespaces ADD CONSTRAINT namespaces_fk_project FOREIGN KEY (project_id)
-REFERENCES tenant.projects (id) MATCH SIMPLE
-ON DELETE NO ACTION ON UPDATE NO ACTION;
--- ddl-end --
-
 -- object: namespaces_fk_cluster | type: CONSTRAINT --
 -- ALTER TABLE tenant.namespaces DROP CONSTRAINT IF EXISTS namespaces_fk_cluster CASCADE;
 ALTER TABLE tenant.namespaces ADD CONSTRAINT namespaces_fk_cluster FOREIGN KEY (cluster_id)
 REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: namespaces_fk_project | type: CONSTRAINT --
+-- ALTER TABLE tenant.namespaces DROP CONSTRAINT IF EXISTS namespaces_fk_project CASCADE;
+ALTER TABLE tenant.namespaces ADD CONSTRAINT namespaces_fk_project FOREIGN KEY (project_id)
+REFERENCES tenant.projects (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
