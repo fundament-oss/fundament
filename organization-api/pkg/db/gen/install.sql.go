@@ -12,7 +12,7 @@ import (
 )
 
 const installCreate = `-- name: InstallCreate :one
-INSERT INTO appstore.installs (cluster_id, plugin_id)
+INSERT INTO zappstore.installs (cluster_id, plugin_id)
 VALUES ($1, $2)
 RETURNING id
 `
@@ -30,7 +30,7 @@ func (q *Queries) InstallCreate(ctx context.Context, arg InstallCreateParams) (u
 }
 
 const installDelete = `-- name: InstallDelete :execrows
-UPDATE appstore.installs
+UPDATE zappstore.installs
 SET deleted = NOW()
 WHERE id = $1 AND deleted IS NULL
 `
@@ -49,7 +49,7 @@ func (q *Queries) InstallDelete(ctx context.Context, arg InstallDeleteParams) (i
 
 const installGetByID = `-- name: InstallGetByID :one
 SELECT id, cluster_id, plugin_id, created, deleted
-FROM appstore.installs
+FROM zappstore.installs
 WHERE id = $1 AND deleted IS NULL
 `
 
@@ -57,9 +57,9 @@ type InstallGetByIDParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) InstallGetByID(ctx context.Context, arg InstallGetByIDParams) (AppstoreInstall, error) {
+func (q *Queries) InstallGetByID(ctx context.Context, arg InstallGetByIDParams) (ZappstoreInstall, error) {
 	row := q.db.QueryRow(ctx, installGetByID, arg.ID)
-	var i AppstoreInstall
+	var i ZappstoreInstall
 	err := row.Scan(
 		&i.ID,
 		&i.ClusterID,
@@ -72,7 +72,7 @@ func (q *Queries) InstallGetByID(ctx context.Context, arg InstallGetByIDParams) 
 
 const installListByClusterID = `-- name: InstallListByClusterID :many
 SELECT id, cluster_id, plugin_id, created, deleted
-FROM appstore.installs
+FROM zappstore.installs
 WHERE cluster_id = $1 AND deleted IS NULL
 ORDER BY created DESC
 `
@@ -81,15 +81,15 @@ type InstallListByClusterIDParams struct {
 	ClusterID uuid.UUID
 }
 
-func (q *Queries) InstallListByClusterID(ctx context.Context, arg InstallListByClusterIDParams) ([]AppstoreInstall, error) {
+func (q *Queries) InstallListByClusterID(ctx context.Context, arg InstallListByClusterIDParams) ([]ZappstoreInstall, error) {
 	rows, err := q.db.Query(ctx, installListByClusterID, arg.ClusterID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []AppstoreInstall
+	var items []ZappstoreInstall
 	for rows.Next() {
-		var i AppstoreInstall
+		var i ZappstoreInstall
 		if err := rows.Scan(
 			&i.ID,
 			&i.ClusterID,

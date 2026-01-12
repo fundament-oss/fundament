@@ -126,6 +126,9 @@ func run() error {
 	pluginPath, pluginHandler := organizationv1connect.NewPluginServiceHandler(server, interceptors)
 	mux.Handle(pluginPath, pluginHandler)
 
+	projectPath, projectHandler := organizationv1connect.NewProjectServiceHandler(server, interceptors)
+	mux.Handle(projectPath, projectHandler)
+
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
