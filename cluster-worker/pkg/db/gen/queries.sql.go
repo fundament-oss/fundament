@@ -16,6 +16,8 @@ const claimUnsyncedCluster = `-- name: ClaimUnsyncedCluster :one
 SELECT
     c.id,
     c.name,
+    c.region,
+    c.kubernetes_version,
     c.deleted,
     cs.sync_attempts,
     o.name as organization_name
@@ -33,11 +35,13 @@ LIMIT 1
 `
 
 type ClaimUnsyncedClusterRow struct {
-	ID               uuid.UUID
-	Name             string
-	Deleted          pgtype.Timestamptz
-	SyncAttempts     int32
-	OrganizationName string
+	ID                uuid.UUID
+	Name              string
+	Region            string
+	KubernetesVersion string
+	Deleted           pgtype.Timestamptz
+	SyncAttempts      int32
+	OrganizationName  string
 }
 
 // Claims the oldest unsynced cluster for processing (atomic with SKIP LOCKED).
@@ -50,6 +54,8 @@ func (q *Queries) ClaimUnsyncedCluster(ctx context.Context) (ClaimUnsyncedCluste
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Region,
+		&i.KubernetesVersion,
 		&i.Deleted,
 		&i.SyncAttempts,
 		&i.OrganizationName,
@@ -141,6 +147,31 @@ func (q *Queries) GetClusterSyncState(ctx context.Context, clusterID uuid.UUID) 
 	return i, err
 }
 
+const hasActiveClusterWithSameName = `-- name: HasActiveClusterWithSameName :one
+SELECT EXISTS (
+    SELECT 1
+    FROM tenant.clusters c
+    JOIN tenant.organizations o ON o.id = c.organization_id
+    WHERE o.name = $1
+      AND c.name = $2
+      AND c.deleted IS NULL
+) AS exists
+`
+
+type HasActiveClusterWithSameNameParams struct {
+	Name   string
+	Name_2 string
+}
+
+// Check if there's an active (non-deleted) cluster with the same name in the same organization.
+// Used to prevent deleting a shoot that's been recreated.
+func (q *Queries) HasActiveClusterWithSameName(ctx context.Context, arg HasActiveClusterWithSameNameParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasActiveClusterWithSameName, arg.Name, arg.Name_2)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listActiveClusters = `-- name: ListActiveClusters :many
 SELECT
     c.id,
@@ -190,7 +221,7 @@ func (q *Queries) ListActiveClusters(ctx context.Context) ([]ListActiveClustersR
 }
 
 const listClustersNeedingStatusCheck = `-- name: ListClustersNeedingStatusCheck :many
-SELECT c.id, c.name, c.deleted, o.name as organization_name
+SELECT c.id, c.name, c.region, c.kubernetes_version, c.deleted, o.name as organization_name
 FROM tenant.clusters c
 JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
 JOIN tenant.organizations o ON o.id = c.organization_id
@@ -205,10 +236,12 @@ LIMIT $1
 `
 
 type ListClustersNeedingStatusCheckRow struct {
-	ID               uuid.UUID
-	Name             string
-	Deleted          pgtype.Timestamptz
-	OrganizationName string
+	ID                uuid.UUID
+	Name              string
+	Region            string
+	KubernetesVersion string
+	Deleted           pgtype.Timestamptz
+	OrganizationName  string
 }
 
 // Get clusters where we need to check Gardener status (active clusters).
@@ -224,6 +257,8 @@ func (q *Queries) ListClustersNeedingStatusCheck(ctx context.Context, limit int3
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Region,
+			&i.KubernetesVersion,
 			&i.Deleted,
 			&i.OrganizationName,
 		); err != nil {
@@ -238,7 +273,7 @@ func (q *Queries) ListClustersNeedingStatusCheck(ctx context.Context, limit int3
 }
 
 const listDeletedClustersNeedingVerification = `-- name: ListDeletedClustersNeedingVerification :many
-SELECT c.id, c.name, c.deleted, o.name as organization_name
+SELECT c.id, c.name, c.region, c.kubernetes_version, c.deleted, o.name as organization_name
 FROM tenant.clusters c
 JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
 JOIN tenant.organizations o ON o.id = c.organization_id
@@ -252,10 +287,12 @@ LIMIT $1
 `
 
 type ListDeletedClustersNeedingVerificationRow struct {
-	ID               uuid.UUID
-	Name             string
-	Deleted          pgtype.Timestamptz
-	OrganizationName string
+	ID                uuid.UUID
+	Name              string
+	Region            string
+	KubernetesVersion string
+	Deleted           pgtype.Timestamptz
+	OrganizationName  string
 }
 
 // Get deleted clusters where we need to verify Shoot is actually gone.
@@ -271,6 +308,8 @@ func (q *Queries) ListDeletedClustersNeedingVerification(ctx context.Context, li
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Region,
+			&i.KubernetesVersion,
 			&i.Deleted,
 			&i.OrganizationName,
 		); err != nil {

@@ -13,25 +13,25 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
 )
 
-// StatusPoller monitors Shoot reconciliation status in Gardener.
+// StatusWorker monitors Shoot reconciliation status in Gardener.
 // It runs separately from the main worker to avoid blocking sync operations.
-type StatusPoller struct {
+type StatusWorker struct {
 	pool     *pgxpool.Pool
 	queries  *db.Queries
 	gardener gardener.Client
 	logger   *slog.Logger
-	cfg      StatusPollerConfig
+	cfg      StatusConfig
 }
 
-// StatusPollerConfig holds configuration for the status poller.
-type StatusPollerConfig struct {
+// StatusConfig holds configuration for the status poller.
+type StatusConfig struct {
 	PollInterval time.Duration // How often to poll (e.g., 30s)
 	BatchSize    int32         // Max clusters to check per poll cycle (e.g., 50)
 }
 
-// NewStatusPoller creates a new StatusPoller.
-func NewStatusPoller(pool *pgxpool.Pool, gardenerClient gardener.Client, logger *slog.Logger, cfg StatusPollerConfig) *StatusPoller {
-	return &StatusPoller{
+// NewStatusWorker creates a new StatusWorker.
+func NewStatusWorker(pool *pgxpool.Pool, gardenerClient gardener.Client, logger *slog.Logger, cfg StatusConfig) *StatusWorker {
+	return &StatusWorker{
 		pool:     pool,
 		queries:  db.New(pool),
 		gardener: gardenerClient,
@@ -41,7 +41,7 @@ func NewStatusPoller(pool *pgxpool.Pool, gardenerClient gardener.Client, logger 
 }
 
 // Run starts the status polling loop.
-func (p *StatusPoller) Run(ctx context.Context) error {
+func (p *StatusWorker) Run(ctx context.Context) error {
 	ticker := time.NewTicker(p.cfg.PollInterval)
 	defer ticker.Stop()
 
@@ -58,7 +58,7 @@ func (p *StatusPoller) Run(ctx context.Context) error {
 	}
 }
 
-func (p *StatusPoller) pollBatch(ctx context.Context) {
+func (p *StatusWorker) pollBatch(ctx context.Context) {
 	// 1. Check active clusters for readiness
 	p.pollActiveClusters(ctx)
 
@@ -66,7 +66,7 @@ func (p *StatusPoller) pollBatch(ctx context.Context) {
 	p.pollDeletedClusters(ctx)
 }
 
-func (p *StatusPoller) pollActiveClusters(ctx context.Context) {
+func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 	clusters, err := p.queries.ListClustersNeedingStatusCheck(ctx, p.cfg.BatchSize)
 	if err != nil {
 		p.logger.Error("failed to list clusters for status check", "error", err)
@@ -74,10 +74,12 @@ func (p *StatusPoller) pollActiveClusters(ctx context.Context) {
 	}
 
 	for _, cluster := range clusters {
-		clusterToSync := gardener.ClusterToSync{
-			ID:               cluster.ID,
-			Name:             cluster.Name,
-			OrganizationName: cluster.OrganizationName,
+		clusterToSync := &gardener.ClusterToSync{
+			ID:                cluster.ID,
+			Name:              cluster.Name,
+			OrganizationName:  cluster.OrganizationName,
+			Region:            cluster.Region,
+			KubernetesVersion: cluster.KubernetesVersion,
 		}
 
 		status, message, err := p.gardener.GetShootStatus(ctx, clusterToSync)
@@ -113,7 +115,7 @@ func (p *StatusPoller) pollActiveClusters(ctx context.Context) {
 	}
 }
 
-func (p *StatusPoller) pollDeletedClusters(ctx context.Context) {
+func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 	clusters, err := p.queries.ListDeletedClustersNeedingVerification(ctx, p.cfg.BatchSize)
 	if err != nil {
 		p.logger.Error("failed to list deleted clusters for verification", "error", err)
@@ -127,11 +129,13 @@ func (p *StatusPoller) pollDeletedClusters(ctx context.Context) {
 			deleted = &cluster.Deleted.Time
 		}
 
-		clusterToSync := gardener.ClusterToSync{
-			ID:               cluster.ID,
-			Name:             cluster.Name,
-			OrganizationName: cluster.OrganizationName,
-			Deleted:          deleted,
+		clusterToSync := &gardener.ClusterToSync{
+			ID:                cluster.ID,
+			Name:              cluster.Name,
+			OrganizationName:  cluster.OrganizationName,
+			Region:            cluster.Region,
+			KubernetesVersion: cluster.KubernetesVersion,
+			Deleted:           deleted,
 		}
 
 		status, message, err := p.gardener.GetShootStatus(ctx, clusterToSync)
@@ -145,7 +149,7 @@ func (p *StatusPoller) pollDeletedClusters(ctx context.Context) {
 		// If status is "pending" with "not found", the Shoot is confirmed deleted
 		if status == "pending" && message == "Shoot not found in Gardener" {
 			if err := p.queries.UpdateShootStatus(ctx, db.UpdateShootStatusParams{
-				ClusterID:                 cluster.ID,
+				ClusterID:          cluster.ID,
 				ShootStatus:        pgtype.Text{String: "deleted", Valid: true},
 				ShootStatusMessage: pgtype.Text{String: "Shoot confirmed deleted", Valid: true},
 			}); err != nil {
@@ -160,7 +164,7 @@ func (p *StatusPoller) pollDeletedClusters(ctx context.Context) {
 		} else {
 			// Shoot still exists or is being deleted
 			if err := p.queries.UpdateShootStatus(ctx, db.UpdateShootStatusParams{
-				ClusterID:                 cluster.ID,
+				ClusterID:          cluster.ID,
 				ShootStatus:        pgtype.Text{String: "deleting", Valid: true},
 				ShootStatusMessage: pgtype.Text{String: message, Valid: true},
 			}); err != nil {
