@@ -38,6 +38,11 @@ consoleFrontend:
   enabled: true
   replicas: 1
 
+clusterWorker:
+  enabled: true
+  replicas: 1
+  gardenerMode: mock
+
 docsFrontend:
   enabled: true
   replicas: 1

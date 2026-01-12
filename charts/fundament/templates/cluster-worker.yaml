@@ -21,7 +21,7 @@ spec:
           image: {{ $.Values.images.clusterWorker }}
           ports:
             - name: health
-              containerPort: 8080
+              containerPort: 8097
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -37,6 +37,12 @@ spec:
             {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
             - name: GARDENER_KUBECONFIG
               value: /etc/gardener/kubeconfig
+            - name: GARDENER_PROVIDER_TYPE
+              value: {{ $.Values.clusterWorker.gardenerProviderType | default "local" }}
+            - name: GARDENER_CLOUD_PROFILE
+              value: {{ $.Values.clusterWorker.gardenerCloudProfile | default "local" }}
+            - name: GARDENER_CREDENTIALS_BINDING_NAME
+              value: {{ $.Values.clusterWorker.gardenerCredentialsBindingName | default "" }}
             {{- end }}
           {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
           volumeMounts:

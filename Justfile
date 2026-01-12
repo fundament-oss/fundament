@@ -118,6 +118,11 @@ fundament *args:
 
 # --- Local Gardener (for testing real client) ---
 
+# Set up local Gardener and create kubeconfig secret for skaffold
+# Uses mise/brew instead of nix - see cluster-worker/justfile for details
+local-gardener:
+    just -f cluster-worker/justfile local-gardener
+
 # Directory where gardener repo is cloned
 gardener_dir := justfile_directory() / ".dev/gardener"
 gardener_kubeconfig := justfile_directory() / ".dev/gardener-kubeconfig.yaml"

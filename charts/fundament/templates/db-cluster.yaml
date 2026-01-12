@@ -33,6 +33,10 @@ spec:
         login: true
         passwordSecret:
           name: {{ $.Release.Name }}-db-fun-fundament-api
+      - name: fun_cluster_worker
+        login: true
+        passwordSecret:
+          name: {{ $.Release.Name }}-db-fun-cluster-worker
       - name: fun_operator
         login: true
         superuser: true
@@ -72,5 +76,4 @@ spec:
       protocol: TCP
       targetPort: 5432
 {{- end }}
-
 {{- end }}
