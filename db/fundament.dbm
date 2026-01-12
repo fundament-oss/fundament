@@ -5,7 +5,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 -->
 <dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="7"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="383,58" last-zoom="1" scene-rect="0,0,2178.81,1121.32"
+	 last-position="271,458" last-zoom="1" scene-rect="0,0,2058.81,1076.8"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -165,7 +165,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="10" z-value="0">
+<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
 	<position x="1040" y="620"/>
@@ -193,9 +193,6 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<column name="node_pool_count" not-null="true" default-value="0">
-		<type name="integer" length="0"/>
-	</column>
 	<constraint name="clusters_pk" type="pk-constr" table="tenant.clusters">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
@@ -220,7 +217,7 @@ END;]]> </definition>
 <table name="node_pools" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1640" y="660"/>
+	<position x="1640" y="640"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -260,46 +257,6 @@ END;]]> </definition>
       AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
 )]]> </expression>
 </policy>
-
-<function name="cluster_node_pool_counter"
-		window-func="false"
-		returns-setof="false"
-		behavior-type="CALLED ON NULL INPUT"
-		function-type="VOLATILE"
-		security-type="SECURITY INVOKER"
-		parallel-type="PARALLEL UNSAFE"
-		execution-cost="1"
-		row-amount="0">
-	<schema name="tenant"/>
-	<role name="postgres"/>
-	<language name="plpgsql"/>
-	<return-type>
-	<type name="trigger" length="0"/>
-	</return-type>
-	<definition> <![CDATA[BEGIN
-      IF TG_OP = 'INSERT' THEN
-            UPDATE tenant.clusters
-            SET node_pool_count = node_pool_count + 1
-            WHERE id = NEW.cluster_id;
-            RETURN NEW;
-      ELSIF TG_OP = 'UPDATE' THEN
-            IF OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
-                  UPDATE tenant.clusters
-                  SET node_pool_count = node_pool_count  - 1
-                  WHERE id = NEW.cluster_id;
-            END IF;
-            RETURN NEW;
-      END IF;
-      RETURN NULL;
-END]]> </definition>
-</function>
-
-<trigger name="node_pool_count" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
-	 table="tenant.node_pools">
-		<function signature="tenant.cluster_node_pool_counter()"/>
-		<columns names="deleted"/>
-</trigger>
 
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.projects">

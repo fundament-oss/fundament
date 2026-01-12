@@ -54,8 +54,12 @@ SET deleted = NOW()
 WHERE id = $1 AND deleted IS NULL
 `
 
-func (q *Queries) NodePoolDelete(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, nodePoolDelete, id)
+type NodePoolDeleteParams struct {
+	ID uuid.UUID
+}
+
+func (q *Queries) NodePoolDelete(ctx context.Context, arg NodePoolDeleteParams) error {
+	_, err := q.db.Exec(ctx, nodePoolDelete, arg.ID)
 	return err
 }
 
@@ -65,8 +69,12 @@ FROM tenant.node_pools
 WHERE id = $1 AND deleted IS NULL
 `
 
-func (q *Queries) NodePoolGetByID(ctx context.Context, id uuid.UUID) (TenantNodePool, error) {
-	row := q.db.QueryRow(ctx, nodePoolGetByID, id)
+type NodePoolGetByIDParams struct {
+	ID uuid.UUID
+}
+
+func (q *Queries) NodePoolGetByID(ctx context.Context, arg NodePoolGetByIDParams) (TenantNodePool, error) {
+	row := q.db.QueryRow(ctx, nodePoolGetByID, arg.ID)
 	var i TenantNodePool
 	err := row.Scan(
 		&i.ID,
@@ -88,8 +96,12 @@ WHERE cluster_id = $1 AND deleted IS NULL
 ORDER BY created DESC
 `
 
-func (q *Queries) NodePoolListByClusterID(ctx context.Context, clusterID uuid.UUID) ([]TenantNodePool, error) {
-	rows, err := q.db.Query(ctx, nodePoolListByClusterID, clusterID)
+type NodePoolListByClusterIDParams struct {
+	ClusterID uuid.UUID
+}
+
+func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListByClusterIDParams) ([]TenantNodePool, error) {
+	rows, err := q.db.Query(ctx, nodePoolListByClusterID, arg.ClusterID)
 	if err != nil {
 		return nil, err
 	}

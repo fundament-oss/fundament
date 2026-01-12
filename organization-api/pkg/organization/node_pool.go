@@ -37,7 +37,7 @@ func (s *OrganizationServer) CreateNodePool(
 	}
 
 	// Verify cluster exists
-	if _, err := s.queries.ClusterGetByID(ctx, clusterID); err != nil {
+	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 		}
@@ -109,7 +109,7 @@ func (s *OrganizationServer) DeleteNodePool(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid node pool id: %w", err))
 	}
 
-	if err := s.queries.NodePoolDelete(ctx, nodePoolID); err != nil {
+	if err := s.queries.NodePoolDelete(ctx, db.NodePoolDeleteParams{ID: nodePoolID}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete node pool: %w", err))
 	}
 

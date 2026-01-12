@@ -52,7 +52,7 @@ func FromClusterSummary(c db.TenantCluster) *organizationv1.ClusterSummary {
 		Status:        FromClusterStatus(c.Status),
 		Region:        c.Region,
 		ProjectCount:  0, // Stub
-		NodePoolCount: c.NodePoolCount,
+		NodePoolCount: 0,
 	}
 }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/organization-api/pkg/models"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -46,13 +45,8 @@ func (s *OrganizationServer) GetCluster(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	input := models.ClusterGet{ClusterID: clusterID}
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
-		ID: input.ClusterID,
+		ID: clusterID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -61,7 +55,7 @@ func (s *OrganizationServer) GetCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	nodePools, err := s.queries.NodePoolListByClusterID(ctx, input.ClusterID)
+	nodePools, err := s.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{ClusterID: clusterID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pools: %w", err))
 	}
@@ -103,9 +97,9 @@ func (s *OrganizationServer) CreateCluster(
 		Status:            "unspecified",
 	}
 
-	queries := s.queries.WithTx(tx)
+	txQueries := s.queries.WithTx(tx)
 
-	cluster, err := queries.ClusterCreate(ctx, params)
+	cluster, err := txQueries.ClusterCreate(ctx, params)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
 	}
@@ -120,7 +114,7 @@ func (s *OrganizationServer) CreateCluster(
 			AutoscaleMax: spec.AutoscaleMax,
 		}
 
-		if _, err := queries.NodePoolCreate(ctx, params); err != nil {
+		if _, err := txQueries.NodePoolCreate(ctx, params); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create node pool %q: %w", spec.Name, err))
 		}
 	}
@@ -172,7 +166,7 @@ func (s *OrganizationServer) UpdateCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update cluster: %w", err))
 	}
 
-	nodePools, err := s.queries.NodePoolListByClusterID(ctx, cluster.ID)
+	nodePools, err := s.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{ClusterID: input.ClusterID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pools: %w", err))
 	}

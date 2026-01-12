@@ -915,7 +915,6 @@ type UpdateClusterRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	ClusterId         string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
 	KubernetesVersion *string                `protobuf:"bytes,20,opt,name=kubernetes_version,json=kubernetesVersion,proto3,oneof" json:"kubernetes_version,omitempty"`
-	NodePools         []*NodePoolSpec        `protobuf:"bytes,30,rep,name=node_pools,json=nodePools,proto3" json:"node_pools,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -962,13 +961,6 @@ func (x *UpdateClusterRequest) GetKubernetesVersion() string {
 		return *x.KubernetesVersion
 	}
 	return ""
-}
-
-func (x *UpdateClusterRequest) GetNodePools() []*NodePoolSpec {
-	if x != nil {
-		return x.NodePools
-	}
-	return nil
 }
 
 // Update cluster response
@@ -1757,14 +1749,12 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
 	"cluster_id\x18\n" +
 	" \x01(\tR\tclusterId\x126\n" +
-	"\x06status\x18\x14 \x01(\x0e2\x1e.organization.v1.ClusterStatusR\x06status\"\xbe\x01\n" +
+	"\x06status\x18\x14 \x01(\x0e2\x1e.organization.v1.ClusterStatusR\x06status\"\x80\x01\n" +
 	"\x14UpdateClusterRequest\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
 	" \x01(\tR\tclusterId\x122\n" +
-	"\x12kubernetes_version\x18\x14 \x01(\tH\x00R\x11kubernetesVersion\x88\x01\x01\x12<\n" +
-	"\n" +
-	"node_pools\x18\x1e \x03(\v2\x1d.organization.v1.NodePoolSpecR\tnodePoolsB\x15\n" +
+	"\x12kubernetes_version\x18\x14 \x01(\tH\x00R\x11kubernetesVersion\x88\x01\x01B\x15\n" +
 	"\x13_kubernetes_version\"R\n" +
 	"\x15UpdateClusterResponse\x129\n" +
 	"\acluster\x18\n" +
@@ -1902,37 +1892,36 @@ var file_v1_cluster_proto_depIdxs = []int32{
 	29, // 14: organization.v1.ClusterMember.last_active:type_name -> organization.v1.Timestamp
 	11, // 15: organization.v1.CreateClusterRequest.node_pools:type_name -> organization.v1.NodePoolSpec
 	28, // 16: organization.v1.CreateClusterResponse.status:type_name -> organization.v1.ClusterStatus
-	11, // 17: organization.v1.UpdateClusterRequest.node_pools:type_name -> organization.v1.NodePoolSpec
-	5,  // 18: organization.v1.UpdateClusterResponse.cluster:type_name -> organization.v1.ClusterDetails
-	19, // 19: organization.v1.GetClusterActivityResponse.activities:type_name -> organization.v1.ActivityEntry
-	29, // 20: organization.v1.ActivityEntry.timestamp:type_name -> organization.v1.Timestamp
-	7,  // 21: organization.v1.CreateNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
-	7,  // 22: organization.v1.UpdateNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
-	0,  // 23: organization.v1.ClusterService.ListClusters:input_type -> organization.v1.ListClustersRequest
-	3,  // 24: organization.v1.ClusterService.GetCluster:input_type -> organization.v1.GetClusterRequest
-	10, // 25: organization.v1.ClusterService.CreateCluster:input_type -> organization.v1.CreateClusterRequest
-	13, // 26: organization.v1.ClusterService.UpdateCluster:input_type -> organization.v1.UpdateClusterRequest
-	15, // 27: organization.v1.ClusterService.DeleteCluster:input_type -> organization.v1.DeleteClusterRequest
-	17, // 28: organization.v1.ClusterService.GetClusterActivity:input_type -> organization.v1.GetClusterActivityRequest
-	20, // 29: organization.v1.ClusterService.GetKubeconfig:input_type -> organization.v1.GetKubeconfigRequest
-	22, // 30: organization.v1.ClusterService.CreateNodePool:input_type -> organization.v1.CreateNodePoolRequest
-	24, // 31: organization.v1.ClusterService.UpdateNodePool:input_type -> organization.v1.UpdateNodePoolRequest
-	26, // 32: organization.v1.ClusterService.DeleteNodePool:input_type -> organization.v1.DeleteNodePoolRequest
-	1,  // 33: organization.v1.ClusterService.ListClusters:output_type -> organization.v1.ListClustersResponse
-	4,  // 34: organization.v1.ClusterService.GetCluster:output_type -> organization.v1.GetClusterResponse
-	12, // 35: organization.v1.ClusterService.CreateCluster:output_type -> organization.v1.CreateClusterResponse
-	14, // 36: organization.v1.ClusterService.UpdateCluster:output_type -> organization.v1.UpdateClusterResponse
-	16, // 37: organization.v1.ClusterService.DeleteCluster:output_type -> organization.v1.DeleteClusterResponse
-	18, // 38: organization.v1.ClusterService.GetClusterActivity:output_type -> organization.v1.GetClusterActivityResponse
-	21, // 39: organization.v1.ClusterService.GetKubeconfig:output_type -> organization.v1.GetKubeconfigResponse
-	23, // 40: organization.v1.ClusterService.CreateNodePool:output_type -> organization.v1.CreateNodePoolResponse
-	25, // 41: organization.v1.ClusterService.UpdateNodePool:output_type -> organization.v1.UpdateNodePoolResponse
-	27, // 42: organization.v1.ClusterService.DeleteNodePool:output_type -> organization.v1.DeleteNodePoolResponse
-	33, // [33:43] is the sub-list for method output_type
-	23, // [23:33] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	5,  // 17: organization.v1.UpdateClusterResponse.cluster:type_name -> organization.v1.ClusterDetails
+	19, // 18: organization.v1.GetClusterActivityResponse.activities:type_name -> organization.v1.ActivityEntry
+	29, // 19: organization.v1.ActivityEntry.timestamp:type_name -> organization.v1.Timestamp
+	7,  // 20: organization.v1.CreateNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
+	7,  // 21: organization.v1.UpdateNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
+	0,  // 22: organization.v1.ClusterService.ListClusters:input_type -> organization.v1.ListClustersRequest
+	3,  // 23: organization.v1.ClusterService.GetCluster:input_type -> organization.v1.GetClusterRequest
+	10, // 24: organization.v1.ClusterService.CreateCluster:input_type -> organization.v1.CreateClusterRequest
+	13, // 25: organization.v1.ClusterService.UpdateCluster:input_type -> organization.v1.UpdateClusterRequest
+	15, // 26: organization.v1.ClusterService.DeleteCluster:input_type -> organization.v1.DeleteClusterRequest
+	17, // 27: organization.v1.ClusterService.GetClusterActivity:input_type -> organization.v1.GetClusterActivityRequest
+	20, // 28: organization.v1.ClusterService.GetKubeconfig:input_type -> organization.v1.GetKubeconfigRequest
+	22, // 29: organization.v1.ClusterService.CreateNodePool:input_type -> organization.v1.CreateNodePoolRequest
+	24, // 30: organization.v1.ClusterService.UpdateNodePool:input_type -> organization.v1.UpdateNodePoolRequest
+	26, // 31: organization.v1.ClusterService.DeleteNodePool:input_type -> organization.v1.DeleteNodePoolRequest
+	1,  // 32: organization.v1.ClusterService.ListClusters:output_type -> organization.v1.ListClustersResponse
+	4,  // 33: organization.v1.ClusterService.GetCluster:output_type -> organization.v1.GetClusterResponse
+	12, // 34: organization.v1.ClusterService.CreateCluster:output_type -> organization.v1.CreateClusterResponse
+	14, // 35: organization.v1.ClusterService.UpdateCluster:output_type -> organization.v1.UpdateClusterResponse
+	16, // 36: organization.v1.ClusterService.DeleteCluster:output_type -> organization.v1.DeleteClusterResponse
+	18, // 37: organization.v1.ClusterService.GetClusterActivity:output_type -> organization.v1.GetClusterActivityResponse
+	21, // 38: organization.v1.ClusterService.GetKubeconfig:output_type -> organization.v1.GetKubeconfigResponse
+	23, // 39: organization.v1.ClusterService.CreateNodePool:output_type -> organization.v1.CreateNodePoolResponse
+	25, // 40: organization.v1.ClusterService.UpdateNodePool:output_type -> organization.v1.UpdateNodePoolResponse
+	27, // 41: organization.v1.ClusterService.DeleteNodePool:output_type -> organization.v1.DeleteNodePoolResponse
+	32, // [32:42] is the sub-list for method output_type
+	22, // [22:32] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_v1_cluster_proto_init() }
