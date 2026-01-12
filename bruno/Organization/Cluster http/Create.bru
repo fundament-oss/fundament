@@ -16,7 +16,7 @@ headers {
 
 body:json {
   {
-    "name": "my-new-cluster-4",
+    "name": "my-new-cluster-7",
     "region": "eu-west-1",
     "kubernetesVersion": "1.28",
     "nodePools": [
@@ -40,7 +40,7 @@ body:json {
 script:post-response {
   // If the response is JSON, you can also parse and extract specific fields
   if (res.headers['content-type']?.includes('application/json')) {
-    bru.setEnvVar("clusterId", res.body.clusterId);
+    bru.setVar("clusterId", res.body.clusterId);
   }
     
 }

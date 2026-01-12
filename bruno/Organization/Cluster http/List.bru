@@ -21,7 +21,7 @@ body:json {
 script:post-response {
   // If the response is JSON, you can also parse and extract specific fields
   if (res.headers['content-type']?.includes('application/json')) {
-    bru.setEnvVar("clusterId", res.body.clusters[0].id);
+    bru.setVar("clusterId", res.body.clusters[0].id);
   }
     
 }
