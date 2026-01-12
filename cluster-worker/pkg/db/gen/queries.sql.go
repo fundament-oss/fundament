@@ -25,6 +25,7 @@ FROM tenant.clusters c
 JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
 JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE cs.synced IS NULL
+  AND cs.sync_attempts < $1
   AND (
     cs.sync_last_attempt IS NULL
     OR cs.sync_last_attempt + (LEAST(30 * POWER(2, cs.sync_attempts), 900) * INTERVAL '1 second') < now()
@@ -48,8 +49,9 @@ type ClaimUnsyncedClusterRow struct {
 // Includes deleted clusters so worker can sync deletions to Gardener.
 // Respects backoff: only claim if enough time has passed since last attempt.
 // Backoff formula: 30s * 2^attempts, capped at 15 minutes (900s).
-func (q *Queries) ClaimUnsyncedCluster(ctx context.Context) (ClaimUnsyncedClusterRow, error) {
-	row := q.db.QueryRow(ctx, claimUnsyncedCluster)
+// Excludes clusters that have exhausted max sync attempts.
+func (q *Queries) ClaimUnsyncedCluster(ctx context.Context, syncAttempts int32) (ClaimUnsyncedClusterRow, error) {
+	row := q.db.QueryRow(ctx, claimUnsyncedCluster, syncAttempts)
 	var i ClaimUnsyncedClusterRow
 	err := row.Scan(
 		&i.ID,
@@ -228,7 +230,9 @@ JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE cs.synced IS NOT NULL                           -- Manifest was applied
   AND c.deleted IS NULL                               -- Active (not deleted)
   AND (cs.shoot_status IS NULL                        -- Never checked
-       OR cs.shoot_status = 'progressing')            -- Still in progress
+       OR cs.shoot_status = 'pending'                 -- Shoot not yet visible in Gardener
+       OR cs.shoot_status = 'progressing'             -- Gardener creating/updating
+       OR cs.shoot_status = 'error')                  -- Failed, might recover
   AND (cs.shoot_status_updated IS NULL                -- Never checked
        OR cs.shoot_status_updated < now() - INTERVAL '30 seconds')  -- Not checked recently
 ORDER BY cs.shoot_status_updated NULLS FIRST
@@ -245,6 +249,9 @@ type ListClustersNeedingStatusCheckRow struct {
 }
 
 // Get clusters where we need to check Gardener status (active clusters).
+// Polls clusters in non-terminal states: NULL (never checked), pending, progressing, error.
+// Does NOT poll clusters in terminal state: ready.
+// See gardener.Status* constants for valid values.
 func (q *Queries) ListClustersNeedingStatusCheck(ctx context.Context, limit int32) ([]ListClustersNeedingStatusCheckRow, error) {
 	rows, err := q.db.Query(ctx, listClustersNeedingStatusCheck, limit)
 	if err != nil {
@@ -295,7 +302,10 @@ type ListDeletedClustersNeedingVerificationRow struct {
 	OrganizationName  string
 }
 
-// Get deleted clusters where we need to verify Shoot is actually gone.
+// Get deleted clusters where we need to verify Shoot is actually gone from Gardener.
+// Polls until shoot_status = 'deleted' (confirmed removed).
+// Typical flow: NULL → deleting → deleted
+// See gardener.Status* constants for valid values.
 func (q *Queries) ListDeletedClustersNeedingVerification(ctx context.Context, limit int32) ([]ListDeletedClustersNeedingVerificationRow, error) {
 	rows, err := q.db.Query(ctx, listDeletedClustersNeedingVerification, limit)
 	if err != nil {
@@ -311,6 +321,59 @@ func (q *Queries) ListDeletedClustersNeedingVerification(ctx context.Context, li
 			&i.Region,
 			&i.KubernetesVersion,
 			&i.Deleted,
+			&i.OrganizationName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listExhaustedClusters = `-- name: ListExhaustedClusters :many
+SELECT
+    c.id,
+    c.name,
+    cs.sync_error,
+    cs.sync_attempts,
+    cs.sync_last_attempt,
+    o.name as organization_name
+FROM tenant.clusters c
+JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
+JOIN tenant.organizations o ON o.id = c.organization_id
+WHERE cs.synced IS NULL
+  AND cs.sync_attempts >= $1
+`
+
+type ListExhaustedClustersRow struct {
+	ID               uuid.UUID
+	Name             string
+	SyncError        pgtype.Text
+	SyncAttempts     int32
+	SyncLastAttempt  pgtype.Timestamptz
+	OrganizationName string
+}
+
+// Lists clusters that have exceeded max sync attempts.
+// Used for alerting and admin dashboards.
+func (q *Queries) ListExhaustedClusters(ctx context.Context, syncAttempts int32) ([]ListExhaustedClustersRow, error) {
+	rows, err := q.db.Query(ctx, listExhaustedClusters, syncAttempts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListExhaustedClustersRow
+	for rows.Next() {
+		var i ListExhaustedClustersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.SyncError,
+			&i.SyncAttempts,
+			&i.SyncLastAttempt,
 			&i.OrganizationName,
 		); err != nil {
 			return nil, err
@@ -402,6 +465,20 @@ WHERE cluster_id = $1
 // Called on successful sync - resets error tracking.
 func (q *Queries) MarkClusterSynced(ctx context.Context, clusterID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, markClusterSynced, clusterID)
+	return err
+}
+
+const resetClusterSyncAttempts = `-- name: ResetClusterSyncAttempts :exec
+UPDATE tenant.cluster_sync
+SET sync_attempts = 0,
+    sync_error = NULL
+WHERE cluster_id = $1
+`
+
+// Resets sync attempts for a cluster, allowing it to be retried.
+// Used by admins to manually retry exhausted clusters.
+func (q *Queries) ResetClusterSyncAttempts(ctx context.Context, clusterID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, resetClusterSyncAttempts, clusterID)
 	return err
 }
 

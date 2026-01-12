@@ -36,6 +36,7 @@ type SyncWorker struct {
 type Config struct {
 	PollInterval      time.Duration // Timeout for WaitForNotification (e.g., 30s)
 	ReconcileInterval time.Duration // How often to run full reconciliation (e.g., 5m)
+	MaxSyncAttempts   int32         // Max retries before giving up (e.g., 10)
 }
 
 // NewSyncWorker creates a new SyncWorker.
@@ -63,7 +64,22 @@ func (w *SyncWorker) Run(ctx context.Context) error {
 }
 
 // runWithConnection handles a single LISTEN connection lifecycle.
+//
+// # Event Loop Design
+//
+// The worker uses PostgreSQL LISTEN/NOTIFY for event-driven processing with
+// periodic polling as a fallback. To prevent missed notifications and detect drift between DB and Gardener
+//
+// # Timing
+//
+// The loop wakes up on whichever comes first:
+//   - A pg_notify('cluster_sync', cluster_id) notification
+//   - PollInterval timeout (default 30s) - fallback if notifications missed
+//
+// Reconciliation runs every ReconcileInterval (default 5m), checked after each
+// loop iteration. Actual interval is ReconcileInterval ± PollInterval.
 func (w *SyncWorker) runWithConnection(ctx context.Context) error {
+	// --- Setup: establish LISTEN connection ---
 	conn, err := w.pool.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("acquire listen connection: %w", err)
@@ -76,35 +92,67 @@ func (w *SyncWorker) runWithConnection(ctx context.Context) error {
 	w.logger.Info("listening for cluster_sync notifications")
 	w.ready.Store(true)
 
-	// Initial poll on startup (catch any missed during downtime)
+	// --- Startup: process any work missed while offline ---
 	w.processAllPending(ctx)
-
 	lastReconcile := time.Now()
 
+	// --- Main event loop ---
 	for {
-		waitCtx, cancel := context.WithTimeout(ctx, w.cfg.PollInterval)
-		notification, err := conn.Conn().WaitForNotification(waitCtx)
-		cancel()
-
+		// Wait for trigger: notification OR timeout (whichever comes first)
+		_, err := w.waitForTrigger(ctx, conn)
 		if err != nil {
-			if errors.Is(err, context.Canceled) && ctx.Err() != nil {
-				return fmt.Errorf("wait interrupted: %w", ctx.Err())
-			}
-			// Check if connection is still alive
-			if conn.Conn().IsClosed() {
-				return fmt.Errorf("connection closed")
-			}
-			w.logger.Debug("poll timeout, checking for work")
-		} else {
-			w.logger.Debug("received notification", "cluster_id", notification.Payload)
+			return err
 		}
 
+		// Process all pending clusters (may be none)
 		w.processAllPending(ctx)
 
+		// Periodic full reconciliation to detect drift
 		if time.Since(lastReconcile) >= w.cfg.ReconcileInterval {
 			w.reconcileAll(ctx)
 			lastReconcile = time.Now()
 		}
+	}
+}
+
+// triggerType indicates what caused the event loop to wake up.
+type triggerType int
+
+const (
+	triggerNotification triggerType = iota
+	triggerTimeout
+)
+
+// waitForTrigger blocks until a notification arrives or PollInterval elapses.
+// Returns the trigger type, or an error if the context is canceled or connection dies.
+func (w *SyncWorker) waitForTrigger(ctx context.Context, conn *pgxpool.Conn) (triggerType, error) {
+	waitCtx, cancel := context.WithTimeout(ctx, w.cfg.PollInterval)
+	defer cancel()
+
+	notification, err := conn.Conn().WaitForNotification(waitCtx)
+
+	switch {
+	case err == nil:
+		// Notification received
+		w.logger.Debug("received notification", "cluster_id", notification.Payload)
+		return triggerNotification, nil
+
+	case errors.Is(err, context.DeadlineExceeded):
+		// PollInterval timeout - normal, just means no notifications
+		return triggerTimeout, nil
+
+	case errors.Is(err, context.Canceled) && ctx.Err() != nil:
+		// Parent context canceled - shutdown requested
+		return 0, fmt.Errorf("shutdown requested: %w", ctx.Err())
+
+	case conn.Conn().IsClosed():
+		// Connection died - caller should reconnect
+		return 0, fmt.Errorf("connection closed")
+
+	default:
+		// Unexpected error - log and treat as timeout to continue processing
+		w.logger.Warn("unexpected error waiting for notification", "error", err)
+		return triggerTimeout, nil
 	}
 }
 
@@ -302,11 +350,12 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 			"attempt", attempts,
 			"error", syncErr)
 
-		if attempts >= 5 {
-			w.logger.Error("ALERT: cluster sync failing repeatedly",
+		if attempts >= w.cfg.MaxSyncAttempts {
+			w.logger.Error("ALERT: cluster sync exhausted, will not retry",
 				"cluster_id", cluster.ID,
 				"name", cluster.Name,
-				"attempts", attempts)
+				"attempts", attempts,
+				"max_attempts", w.cfg.MaxSyncAttempts)
 		}
 
 		return true, nil // Continue processing other clusters
@@ -347,7 +396,7 @@ func (w *SyncWorker) claimCluster(ctx context.Context) (*claimedCluster, error) 
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	row, err := w.queries.WithTx(tx).ClaimUnsyncedCluster(ctx)
+	row, err := w.queries.WithTx(tx).ClaimUnsyncedCluster(ctx, w.cfg.MaxSyncAttempts)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil

@@ -239,6 +239,7 @@ The worker supports two Gardener client implementations:
 | `STATUS_POLL_BATCH_SIZE` | No | `50` | Max clusters to check per poll cycle |
 | `HEALTH_PORT` | No | `8097` | Port for health check endpoints |
 | `SHUTDOWN_TIMEOUT` | No | `30s` | Max time to wait for graceful shutdown |
+| `MAX_SYNC_ATTEMPTS` | No | `5` | Max sync retries before giving up (requires manual reset) |
 
 ## Running
 

@@ -13,6 +13,22 @@ import (
 	"github.com/google/uuid"
 )
 
+// Shoot status constants returned by GetShootStatus.
+const (
+	StatusPending     = "pending"
+	StatusProgressing = "progressing"
+	StatusReady       = "ready"
+	StatusError       = "error"
+	StatusDeleting    = "deleting"
+	StatusDeleted     = "deleted"
+)
+
+// Status message constants for consistent messaging.
+const (
+	MsgShootNotFound = "Shoot not found in Gardener"
+	MsgShootReady    = "Shoot is ready"
+)
+
 // Client is the interface that all Gardener client implementations must satisfy.
 // This allows swapping between mock (tests) and real (production/local Gardener).
 type Client interface {
