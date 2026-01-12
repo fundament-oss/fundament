@@ -2,6 +2,3 @@ node_modules/
 dist/
 
 .gitignore
-
-Dockerfile
-hotreload/Dockerfile

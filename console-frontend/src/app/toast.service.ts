@@ -46,8 +46,6 @@ export class ToastService {
     // Mark that we should preserve this toast across one navigation cycle
     // This covers the common pattern where code shows a toast and then immediately navigates to a details page (set-then-navigate)
     this.preserveThroughNextNavigation = true;
-    // Ensure the toast is visible to the user by scrolling to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   dismiss() {
