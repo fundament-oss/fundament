@@ -1,12 +1,14 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { TitleService } from '../title.service';
+import { ToastService } from '../toast.service';
 import { CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
+  DeleteClusterRequestSchema,
   NodePool,
 } from '../../generated/v1/cluster_pb';
 import { NodePoolStatus } from '../../generated/v1/common_pb';
@@ -17,6 +19,7 @@ import {
   DownloadIconComponent,
   UpgradeIconComponent,
   ErrorIconComponent,
+  WarningIconComponent,
 } from '../icons';
 
 @Component({
@@ -30,19 +33,23 @@ import {
     DownloadIconComponent,
     UpgradeIconComponent,
     ErrorIconComponent,
+    WarningIconComponent,
   ],
   templateUrl: './cluster-overview.component.html',
 })
 export class ClusterOverviewComponent implements OnInit {
   private titleService = inject(TitleService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private client = inject(CLUSTER);
+  private toastService = inject(ToastService);
 
   // Expose enum for use in template
   NodePoolStatus = NodePoolStatus;
 
   errorMessage = signal<string | null>(null);
   isLoading = signal<boolean>(true);
+  showDeleteModal = signal<boolean>(false);
 
   // Cluster data with API-fetched and mock data
   clusterData = {
@@ -214,5 +221,27 @@ export class ClusterOverviewComponent implements OnInit {
       [NodePoolStatus.UNHEALTHY]: 'Unhealthy',
     };
     return labels[status] || 'Unknown';
+  }
+
+  async deleteCluster(): Promise<void> {
+    try {
+      const request = create(DeleteClusterRequestSchema, {
+        clusterId: this.clusterData.basics.id,
+      });
+
+      await firstValueFrom(this.client.deleteCluster(request));
+
+      this.showDeleteModal.set(false);
+      this.toastService.info(`The cluster '${this.clusterData.basics.name}' has been deleted`);
+      this.router.navigate(['/']);
+    } catch (error) {
+      console.error('Failed to delete cluster:', error);
+      this.showDeleteModal.set(false);
+      this.errorMessage.set(
+        error instanceof Error
+          ? `Failed to delete cluster: ${error.message}`
+          : 'Failed to delete cluster',
+      );
+    }
   }
 }
