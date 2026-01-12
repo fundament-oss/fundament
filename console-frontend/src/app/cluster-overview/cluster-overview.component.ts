@@ -4,7 +4,11 @@ import { RouterLink, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { GetClusterRequestSchema, ListNodePoolsRequestSchema, NodePool } from '../../generated/v1/cluster_pb';
+import {
+  GetClusterRequestSchema,
+  ListNodePoolsRequestSchema,
+  NodePool,
+} from '../../generated/v1/cluster_pb';
 import { NodePoolStatus } from '../../generated/v1/common_pb';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -144,7 +148,7 @@ export class ClusterOverviewComponent implements OnInit {
       // Fetch node pools
       const nodePoolsRequest = create(ListNodePoolsRequestSchema, { clusterId });
       const nodePoolsResponse = await firstValueFrom(this.client.listNodePools(nodePoolsRequest));
-      
+
       // Map node pools to the expected format
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
     } catch (error) {

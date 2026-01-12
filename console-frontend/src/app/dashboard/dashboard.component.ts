@@ -30,7 +30,7 @@ export class DashboardComponent implements OnInit {
     try {
       const response = await firstValueFrom(this.client.listClusters({}));
       this.clusters.set(response.clusters);
-      
+
       // Fetch node pools for each cluster
       for (const cluster of response.clusters) {
         try {

@@ -81,8 +81,14 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
         ],
       ],
       machineType: [data?.machineType || 'n1-standard-1', Validators.required],
-      autoscaleMin: [data?.autoscaleMin || 1, [Validators.required, Validators.min(1), Validators.max(100)]],
-      autoscaleMax: [data?.autoscaleMax || 3, [Validators.required, Validators.min(1), Validators.max(100)]],
+      autoscaleMin: [
+        data?.autoscaleMin || 1,
+        [Validators.required, Validators.min(1), Validators.max(100)],
+      ],
+      autoscaleMax: [
+        data?.autoscaleMax || 3,
+        [Validators.required, Validators.min(1), Validators.max(100)],
+      ],
     });
   }
 
@@ -91,9 +97,9 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     while (this.nodePools.length > 0) {
       this.nodePools.removeAt(0);
     }
-    
+
     // Add all initial node pools
-    data.forEach(pool => {
+    data.forEach((pool) => {
       this.nodePools.push(this.createNodePoolFormGroup(pool));
     });
   }

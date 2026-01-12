@@ -4,7 +4,7 @@ import { createConnectTransport } from '@connectrpc/connect-web';
 import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
 import { PROTO_API_VERSION } from '../proto-version';
 import { BehaviorSubject } from 'rxjs';
-import {environment} from '../environments/environment';
+import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 
 const EXPECTED_API_VERSION = PROTO_API_VERSION;

@@ -7,7 +7,11 @@ import { ErrorIconComponent } from '../icons';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { CreateClusterRequestSchema, CreateNodePoolRequestSchema } from '../../generated/v1/cluster_pb';
+import {
+  CreateClusterRequestSchema,
+  CreateNodePoolRequestSchema,
+  AddInstallRequestSchema,
+} from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -69,6 +73,17 @@ export class AddClusterSummaryComponent {
             autoscaleMax: pool.autoscaleMax,
           });
           await firstValueFrom(this.client.createNodePool(nodePoolRequest));
+        }
+      }
+
+      // Install plugins if any are configured
+      if (wizardState.plugins && wizardState.plugins.length > 0) {
+        for (const pluginId of wizardState.plugins) {
+          const installRequest = create(AddInstallRequestSchema, {
+            clusterId: response.clusterId,
+            pluginId: pluginId,
+          });
+          await firstValueFrom(this.client.addInstall(installRequest));
         }
       }
 

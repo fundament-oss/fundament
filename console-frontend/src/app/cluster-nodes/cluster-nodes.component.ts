@@ -2,7 +2,10 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
-import { SharedNodePoolsFormComponent, NodePoolData } from '../shared-node-pools-form/shared-node-pools-form.component';
+import {
+  SharedNodePoolsFormComponent,
+  NodePoolData,
+} from '../shared-node-pools-form/shared-node-pools-form.component';
 import { CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
@@ -10,7 +13,7 @@ import {
   CreateNodePoolRequestSchema,
   UpdateNodePoolRequestSchema,
   DeleteNodePoolRequestSchema,
-  NodePool
+  NodePool,
 } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
 import { ErrorIconComponent } from '../icons';
@@ -51,15 +54,15 @@ export class ClusterNodesComponent implements OnInit {
       });
       const response = await firstValueFrom(this.client.listNodePools(request));
       this.existingNodePools = response.nodePools;
-      
+
       // Convert to NodePoolData format for the form
       this.initialNodePools.set(
-        response.nodePools.map(pool => ({
+        response.nodePools.map((pool) => ({
           name: pool.name,
           machineType: pool.machineType,
           autoscaleMin: pool.minNodes,
           autoscaleMax: pool.maxNodes,
-        }))
+        })),
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load node pools';
@@ -77,8 +80,8 @@ export class ClusterNodesComponent implements OnInit {
 
     try {
       const newPools = data.nodePools;
-      const existingPoolsMap = new Map(this.existingNodePools.map(p => [p.name, p]));
-      const newPoolsMap = new Map(newPools.map(p => [p.name, p]));
+      const existingPoolsMap = new Map(this.existingNodePools.map((p) => [p.name, p]));
+      const newPoolsMap = new Map(newPools.map((p) => [p.name, p]));
 
       // Delete pools that no longer exist
       for (const existingPool of this.existingNodePools) {
@@ -93,7 +96,7 @@ export class ClusterNodesComponent implements OnInit {
       // Create or update pools
       for (const newPool of newPools) {
         const existingPool = existingPoolsMap.get(newPool.name);
-        
+
         if (existingPool) {
           // Update if values changed
           if (
