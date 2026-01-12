@@ -7,10 +7,9 @@ type ClusterGet struct {
 }
 
 type ClusterCreate struct {
-	Name              string           `validate:"required,min=1,max=255"`
-	Region            string           `validate:"required"`
-	KubernetesVersion string           `validate:"required"`
-	NodePools         []NodePoolCreate `validate:"dive"`
+	Name              string `validate:"required,min=1,max=255"`
+	Region            string `validate:"required"`
+	KubernetesVersion string `validate:"required"`
 }
 
 type ClusterUpdate struct {

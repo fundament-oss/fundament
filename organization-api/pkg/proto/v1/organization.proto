@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package organization.v1; // TODO: Should maybe be renamed to `fundament.v1`?
 
+import "google/protobuf/empty.proto";
+
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
 // OrganizationService manages organizations
@@ -10,7 +12,7 @@ service OrganizationService {
   rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse);
 
   // UpdateOrganization updates the user's organization
-  rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse);
+  rpc UpdateOrganization(UpdateOrganizationRequest) returns (google.protobuf.Empty);
 }
 
 // Organization information
@@ -41,10 +43,4 @@ message UpdateOrganizationRequest {
   string id = 10;
   // New name for the organization
   string name = 20;
-}
-
-// UpdateOrganization response
-message UpdateOrganizationResponse {
-  // The updated organization
-  Organization organization = 10;
 }

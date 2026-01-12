@@ -4,24 +4,18 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/models"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	"github.com/google/uuid"
 )
 
 func ToClusterCreate(req *organizationv1.CreateClusterRequest) models.ClusterCreate {
-	nodePools := make([]models.NodePoolCreate, 0, len(req.NodePools))
-
-	for _, nodePool := range req.NodePools {
-		nodePools = append(nodePools, ToNodePoolCreate(nodePool))
-	}
-
 	return models.ClusterCreate{
 		Name:              req.Name,
 		Region:            req.Region,
 		KubernetesVersion: req.KubernetesVersion,
-		NodePools:         nodePools,
 	}
 }
 
@@ -47,12 +41,10 @@ func FromClustersSummary(clusters []db.TenantCluster) []*organizationv1.ClusterS
 
 func FromClusterSummary(c db.TenantCluster) *organizationv1.ClusterSummary {
 	return &organizationv1.ClusterSummary{
-		Id:            c.ID.String(),
-		Name:          c.Name,
-		Status:        FromClusterStatus(c.Status),
-		Region:        c.Region,
-		ProjectCount:  0, // Stub
-		NodePoolCount: 0,
+		Id:     c.ID.String(),
+		Name:   c.Name,
+		Status: FromClusterStatus(c.Status),
+		Region: c.Region,
 	}
 }
 
@@ -67,9 +59,6 @@ func FromClusterDetail(c db.TenantCluster) *organizationv1.ClusterDetails {
 			Value: c.Created.Time.Format(time.RFC3339),
 		},
 		ResourceUsage: nil, // Stub
-		NodePools:     nil, // Stub
-		Members:       nil, // Stub
-		Projects:      nil, // Stub
 	}
 }
 
