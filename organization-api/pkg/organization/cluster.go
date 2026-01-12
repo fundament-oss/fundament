@@ -9,9 +9,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/organization-api/pkg/models"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -46,13 +46,8 @@ func (s *OrganizationServer) GetCluster(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	input := models.ClusterGet{ClusterID: clusterID}
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
-		ID: input.ClusterID,
+		ID: clusterID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -80,48 +75,35 @@ func (s *OrganizationServer) CreateCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	tx, err := s.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("pool begin"))
-	}
-
-	defer tx.Rollback(ctx)
-
 	params := db.ClusterCreateParams{
-		ID:                uuid.New(),
 		OrganizationID:    organizationID,
-		Name:              req.Msg.Name,
-		Region:            req.Msg.Region,
-		KubernetesVersion: req.Msg.KubernetesVersion,
+		Name:              input.Name,
+		Region:            input.Region,
+		KubernetesVersion: input.KubernetesVersion,
 		Status:            "unspecified",
 	}
 
-	cluster, err := s.queries.WithTx(tx).ClusterCreate(ctx, params)
+	clusterID, err := s.queries.ClusterCreate(ctx, params)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
-	}
-
 	s.logger.InfoContext(ctx, "cluster created",
-		"cluster_id", cluster.ID,
+		"cluster_id", clusterID,
 		"organization_id", organizationID,
-		"name", cluster.Name,
-		"region", cluster.Region,
+		"name", input.Name,
+		"region", input.Region,
 	)
 
 	return connect.NewResponse(&organizationv1.CreateClusterResponse{
-		ClusterId: cluster.ID.String(),
-		Status:    adapter.FromClusterStatus(cluster.Status),
+		ClusterId: clusterID.String(),
 	}), nil
 }
 
 func (s *OrganizationServer) UpdateCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateClusterRequest],
-) (*connect.Response[organizationv1.UpdateClusterResponse], error) {
+) (*connect.Response[emptypb.Empty], error) {
 	input, err := adapter.ToClusterUpdate(req.Msg)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
@@ -135,46 +117,45 @@ func (s *OrganizationServer) UpdateCluster(
 		ID: input.ClusterID,
 	}
 
-	if req.Msg.KubernetesVersion != nil {
-		params.KubernetesVersion = pgtype.Text{String: *req.Msg.KubernetesVersion, Valid: true}
+	if input.KubernetesVersion != nil {
+		params.KubernetesVersion = pgtype.Text{String: *input.KubernetesVersion, Valid: true}
 	}
 
-	cluster, err := s.queries.ClusterUpdate(ctx, params)
+	rowsAffected, err := s.queries.ClusterUpdate(ctx, params)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
-		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update cluster: %w", err))
 	}
 
-	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", cluster.ID, "name", cluster.Name)
+	if rowsAffected != 1 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+	}
 
-	return connect.NewResponse(&organizationv1.UpdateClusterResponse{
-		Cluster: adapter.FromClusterDetail(cluster),
-	}), nil
+	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", input.ClusterID)
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 func (s *OrganizationServer) DeleteCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteClusterRequest],
-) (*connect.Response[organizationv1.DeleteClusterResponse], error) {
+) (*connect.Response[emptypb.Empty], error) {
 	clusterID, err := uuid.Parse(req.Msg.ClusterId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	err = s.queries.ClusterDelete(ctx, db.ClusterDeleteParams{
-		ID: clusterID,
-	})
+	rowsAffected, err := s.queries.ClusterDelete(ctx, db.ClusterDeleteParams{ID: clusterID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete cluster: %w", err))
 	}
 
+	if rowsAffected != 1 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+	}
+
 	s.logger.InfoContext(ctx, "cluster deleted", "cluster_id", clusterID)
 
-	return connect.NewResponse(&organizationv1.DeleteClusterResponse{
-		Success: true,
-	}), nil
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 func (s *OrganizationServer) GetClusterActivity(
@@ -186,14 +167,9 @@ func (s *OrganizationServer) GetClusterActivity(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	input := models.ClusterGetActivity{ClusterID: clusterID}
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
 	// Verify cluster exists and belongs to tenant
 	_, err = s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
-		ID: input.ClusterID,
+		ID: clusterID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -217,13 +193,8 @@ func (s *OrganizationServer) GetKubeconfig(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	input := models.ClusterGetKubeconfig{ClusterID: clusterID}
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
-		ID: input.ClusterID,
+		ID: clusterID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

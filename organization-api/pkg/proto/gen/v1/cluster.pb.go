@@ -9,6 +9,7 @@ package organizationv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -118,8 +119,6 @@ type ClusterSummary struct {
 	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	Status        ClusterStatus          `protobuf:"varint,30,opt,name=status,proto3,enum=organization.v1.ClusterStatus" json:"status,omitempty"`
 	Region        string                 `protobuf:"bytes,40,opt,name=region,proto3" json:"region,omitempty"`
-	ProjectCount  int32                  `protobuf:"varint,50,opt,name=project_count,json=projectCount,proto3" json:"project_count,omitempty"`
-	NodePoolCount int32                  `protobuf:"varint,60,opt,name=node_pool_count,json=nodePoolCount,proto3" json:"node_pool_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -180,20 +179,6 @@ func (x *ClusterSummary) GetRegion() string {
 		return x.Region
 	}
 	return ""
-}
-
-func (x *ClusterSummary) GetProjectCount() int32 {
-	if x != nil {
-		return x.ProjectCount
-	}
-	return 0
-}
-
-func (x *ClusterSummary) GetNodePoolCount() int32 {
-	if x != nil {
-		return x.NodePoolCount
-	}
-	return 0
 }
 
 // Get cluster request
@@ -296,9 +281,6 @@ type ClusterDetails struct {
 	Status            ClusterStatus          `protobuf:"varint,50,opt,name=status,proto3,enum=organization.v1.ClusterStatus" json:"status,omitempty"`
 	CreatedAt         *Timestamp             `protobuf:"bytes,60,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	ResourceUsage     *ResourceUsageInfo     `protobuf:"bytes,70,opt,name=resource_usage,json=resourceUsage,proto3" json:"resource_usage,omitempty"`
-	NodePools         []*NodePool            `protobuf:"bytes,80,rep,name=node_pools,json=nodePools,proto3" json:"node_pools,omitempty"`
-	Members           []*ClusterMember       `protobuf:"bytes,90,rep,name=members,proto3" json:"members,omitempty"`
-	Projects          []*ClusterProject      `protobuf:"bytes,100,rep,name=projects,proto3" json:"projects,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -378,27 +360,6 @@ func (x *ClusterDetails) GetCreatedAt() *Timestamp {
 func (x *ClusterDetails) GetResourceUsage() *ResourceUsageInfo {
 	if x != nil {
 		return x.ResourceUsage
-	}
-	return nil
-}
-
-func (x *ClusterDetails) GetNodePools() []*NodePool {
-	if x != nil {
-		return x.NodePools
-	}
-	return nil
-}
-
-func (x *ClusterDetails) GetMembers() []*ClusterMember {
-	if x != nil {
-		return x.Members
-	}
-	return nil
-}
-
-func (x *ClusterDetails) GetProjects() []*ClusterProject {
-	if x != nil {
-		return x.Projects
 	}
 	return nil
 }
@@ -709,9 +670,6 @@ type CreateClusterRequest struct {
 	Name              string                 `protobuf:"bytes,10,opt,name=name,proto3" json:"name,omitempty"`
 	Region            string                 `protobuf:"bytes,20,opt,name=region,proto3" json:"region,omitempty"`
 	KubernetesVersion string                 `protobuf:"bytes,30,opt,name=kubernetes_version,json=kubernetesVersion,proto3" json:"kubernetes_version,omitempty"`
-	NodePools         []*NodePoolSpec        `protobuf:"bytes,40,rep,name=node_pools,json=nodePools,proto3" json:"node_pools,omitempty"`
-	PluginIds         []string               `protobuf:"bytes,50,rep,name=plugin_ids,json=pluginIds,proto3" json:"plugin_ids,omitempty"`
-	PluginPreset      string                 `protobuf:"bytes,60,opt,name=plugin_preset,json=pluginPreset,proto3" json:"plugin_preset,omitempty"` // e.g., "havenplus", "preset2", "custom"
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -763,27 +721,6 @@ func (x *CreateClusterRequest) GetRegion() string {
 func (x *CreateClusterRequest) GetKubernetesVersion() string {
 	if x != nil {
 		return x.KubernetesVersion
-	}
-	return ""
-}
-
-func (x *CreateClusterRequest) GetNodePools() []*NodePoolSpec {
-	if x != nil {
-		return x.NodePools
-	}
-	return nil
-}
-
-func (x *CreateClusterRequest) GetPluginIds() []string {
-	if x != nil {
-		return x.PluginIds
-	}
-	return nil
-}
-
-func (x *CreateClusterRequest) GetPluginPreset() string {
-	if x != nil {
-		return x.PluginPreset
 	}
 	return ""
 }
@@ -861,7 +798,6 @@ func (x *NodePoolSpec) GetAutoscaleMax() int32 {
 type CreateClusterResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ClusterId     string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
-	Status        ClusterStatus          `protobuf:"varint,20,opt,name=status,proto3,enum=organization.v1.ClusterStatus" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -903,19 +839,11 @@ func (x *CreateClusterResponse) GetClusterId() string {
 	return ""
 }
 
-func (x *CreateClusterResponse) GetStatus() ClusterStatus {
-	if x != nil {
-		return x.Status
-	}
-	return ClusterStatus_CLUSTER_STATUS_UNSPECIFIED
-}
-
 // Update cluster request
 type UpdateClusterRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	ClusterId         string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
 	KubernetesVersion *string                `protobuf:"bytes,20,opt,name=kubernetes_version,json=kubernetesVersion,proto3,oneof" json:"kubernetes_version,omitempty"`
-	NodePools         []*NodePoolSpec        `protobuf:"bytes,30,rep,name=node_pools,json=nodePools,proto3" json:"node_pools,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -964,58 +892,6 @@ func (x *UpdateClusterRequest) GetKubernetesVersion() string {
 	return ""
 }
 
-func (x *UpdateClusterRequest) GetNodePools() []*NodePoolSpec {
-	if x != nil {
-		return x.NodePools
-	}
-	return nil
-}
-
-// Update cluster response
-type UpdateClusterResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cluster       *ClusterDetails        `protobuf:"bytes,10,opt,name=cluster,proto3" json:"cluster,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateClusterResponse) Reset() {
-	*x = UpdateClusterResponse{}
-	mi := &file_v1_cluster_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateClusterResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateClusterResponse) ProtoMessage() {}
-
-func (x *UpdateClusterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateClusterResponse.ProtoReflect.Descriptor instead.
-func (*UpdateClusterResponse) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *UpdateClusterResponse) GetCluster() *ClusterDetails {
-	if x != nil {
-		return x.Cluster
-	}
-	return nil
-}
-
 // Delete cluster request
 type DeleteClusterRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1026,7 +902,7 @@ type DeleteClusterRequest struct {
 
 func (x *DeleteClusterRequest) Reset() {
 	*x = DeleteClusterRequest{}
-	mi := &file_v1_cluster_proto_msgTypes[15]
+	mi := &file_v1_cluster_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1038,7 +914,7 @@ func (x *DeleteClusterRequest) String() string {
 func (*DeleteClusterRequest) ProtoMessage() {}
 
 func (x *DeleteClusterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[15]
+	mi := &file_v1_cluster_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1051,7 +927,7 @@ func (x *DeleteClusterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteClusterRequest.ProtoReflect.Descriptor instead.
 func (*DeleteClusterRequest) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{15}
+	return file_v1_cluster_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteClusterRequest) GetClusterId() string {
@@ -1059,51 +935,6 @@ func (x *DeleteClusterRequest) GetClusterId() string {
 		return x.ClusterId
 	}
 	return ""
-}
-
-// Delete cluster response
-type DeleteClusterResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,10,opt,name=success,proto3" json:"success,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteClusterResponse) Reset() {
-	*x = DeleteClusterResponse{}
-	mi := &file_v1_cluster_proto_msgTypes[16]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteClusterResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteClusterResponse) ProtoMessage() {}
-
-func (x *DeleteClusterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[16]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteClusterResponse.ProtoReflect.Descriptor instead.
-func (*DeleteClusterResponse) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{16}
-}
-
-func (x *DeleteClusterResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
 }
 
 // Get cluster activity request
@@ -1116,7 +947,7 @@ type GetClusterActivityRequest struct {
 
 func (x *GetClusterActivityRequest) Reset() {
 	*x = GetClusterActivityRequest{}
-	mi := &file_v1_cluster_proto_msgTypes[17]
+	mi := &file_v1_cluster_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1128,7 +959,7 @@ func (x *GetClusterActivityRequest) String() string {
 func (*GetClusterActivityRequest) ProtoMessage() {}
 
 func (x *GetClusterActivityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[17]
+	mi := &file_v1_cluster_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1141,7 +972,7 @@ func (x *GetClusterActivityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClusterActivityRequest.ProtoReflect.Descriptor instead.
 func (*GetClusterActivityRequest) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{17}
+	return file_v1_cluster_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetClusterActivityRequest) GetClusterId() string {
@@ -1161,7 +992,7 @@ type GetClusterActivityResponse struct {
 
 func (x *GetClusterActivityResponse) Reset() {
 	*x = GetClusterActivityResponse{}
-	mi := &file_v1_cluster_proto_msgTypes[18]
+	mi := &file_v1_cluster_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1173,7 +1004,7 @@ func (x *GetClusterActivityResponse) String() string {
 func (*GetClusterActivityResponse) ProtoMessage() {}
 
 func (x *GetClusterActivityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[18]
+	mi := &file_v1_cluster_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1186,7 +1017,7 @@ func (x *GetClusterActivityResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClusterActivityResponse.ProtoReflect.Descriptor instead.
 func (*GetClusterActivityResponse) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{18}
+	return file_v1_cluster_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetClusterActivityResponse) GetActivities() []*ActivityEntry {
@@ -1208,7 +1039,7 @@ type ActivityEntry struct {
 
 func (x *ActivityEntry) Reset() {
 	*x = ActivityEntry{}
-	mi := &file_v1_cluster_proto_msgTypes[19]
+	mi := &file_v1_cluster_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1220,7 +1051,7 @@ func (x *ActivityEntry) String() string {
 func (*ActivityEntry) ProtoMessage() {}
 
 func (x *ActivityEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[19]
+	mi := &file_v1_cluster_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1233,7 +1064,7 @@ func (x *ActivityEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActivityEntry.ProtoReflect.Descriptor instead.
 func (*ActivityEntry) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{19}
+	return file_v1_cluster_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ActivityEntry) GetTimestamp() *Timestamp {
@@ -1267,7 +1098,7 @@ type GetKubeconfigRequest struct {
 
 func (x *GetKubeconfigRequest) Reset() {
 	*x = GetKubeconfigRequest{}
-	mi := &file_v1_cluster_proto_msgTypes[20]
+	mi := &file_v1_cluster_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1279,7 +1110,7 @@ func (x *GetKubeconfigRequest) String() string {
 func (*GetKubeconfigRequest) ProtoMessage() {}
 
 func (x *GetKubeconfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[20]
+	mi := &file_v1_cluster_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1292,7 +1123,7 @@ func (x *GetKubeconfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetKubeconfigRequest.ProtoReflect.Descriptor instead.
 func (*GetKubeconfigRequest) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{20}
+	return file_v1_cluster_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetKubeconfigRequest) GetClusterId() string {
@@ -1312,7 +1143,7 @@ type GetKubeconfigResponse struct {
 
 func (x *GetKubeconfigResponse) Reset() {
 	*x = GetKubeconfigResponse{}
-	mi := &file_v1_cluster_proto_msgTypes[21]
+	mi := &file_v1_cluster_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1324,7 +1155,7 @@ func (x *GetKubeconfigResponse) String() string {
 func (*GetKubeconfigResponse) ProtoMessage() {}
 
 func (x *GetKubeconfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[21]
+	mi := &file_v1_cluster_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1337,7 +1168,7 @@ func (x *GetKubeconfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetKubeconfigResponse.ProtoReflect.Descriptor instead.
 func (*GetKubeconfigResponse) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{21}
+	return file_v1_cluster_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetKubeconfigResponse) GetKubeconfigContent() string {
@@ -1347,33 +1178,439 @@ func (x *GetKubeconfigResponse) GetKubeconfigContent() string {
 	return ""
 }
 
+// Create node pool request
+type CreateNodePoolRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClusterId     string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
+	MachineType   string                 `protobuf:"bytes,30,opt,name=machine_type,json=machineType,proto3" json:"machine_type,omitempty"`
+	AutoscaleMin  int32                  `protobuf:"varint,40,opt,name=autoscale_min,json=autoscaleMin,proto3" json:"autoscale_min,omitempty"`
+	AutoscaleMax  int32                  `protobuf:"varint,50,opt,name=autoscale_max,json=autoscaleMax,proto3" json:"autoscale_max,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateNodePoolRequest) Reset() {
+	*x = CreateNodePoolRequest{}
+	mi := &file_v1_cluster_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateNodePoolRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateNodePoolRequest) ProtoMessage() {}
+
+func (x *CreateNodePoolRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateNodePoolRequest.ProtoReflect.Descriptor instead.
+func (*CreateNodePoolRequest) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *CreateNodePoolRequest) GetClusterId() string {
+	if x != nil {
+		return x.ClusterId
+	}
+	return ""
+}
+
+func (x *CreateNodePoolRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateNodePoolRequest) GetMachineType() string {
+	if x != nil {
+		return x.MachineType
+	}
+	return ""
+}
+
+func (x *CreateNodePoolRequest) GetAutoscaleMin() int32 {
+	if x != nil {
+		return x.AutoscaleMin
+	}
+	return 0
+}
+
+func (x *CreateNodePoolRequest) GetAutoscaleMax() int32 {
+	if x != nil {
+		return x.AutoscaleMax
+	}
+	return 0
+}
+
+// Create node pool response
+type CreateNodePoolResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodePoolId    string                 `protobuf:"bytes,10,opt,name=node_pool_id,json=nodePoolId,proto3" json:"node_pool_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateNodePoolResponse) Reset() {
+	*x = CreateNodePoolResponse{}
+	mi := &file_v1_cluster_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateNodePoolResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateNodePoolResponse) ProtoMessage() {}
+
+func (x *CreateNodePoolResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateNodePoolResponse.ProtoReflect.Descriptor instead.
+func (*CreateNodePoolResponse) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *CreateNodePoolResponse) GetNodePoolId() string {
+	if x != nil {
+		return x.NodePoolId
+	}
+	return ""
+}
+
+// Update node pool request
+type UpdateNodePoolRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodePoolId    string                 `protobuf:"bytes,10,opt,name=node_pool_id,json=nodePoolId,proto3" json:"node_pool_id,omitempty"`
+	AutoscaleMin  int32                  `protobuf:"varint,20,opt,name=autoscale_min,json=autoscaleMin,proto3" json:"autoscale_min,omitempty"`
+	AutoscaleMax  int32                  `protobuf:"varint,30,opt,name=autoscale_max,json=autoscaleMax,proto3" json:"autoscale_max,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateNodePoolRequest) Reset() {
+	*x = UpdateNodePoolRequest{}
+	mi := &file_v1_cluster_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateNodePoolRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateNodePoolRequest) ProtoMessage() {}
+
+func (x *UpdateNodePoolRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateNodePoolRequest.ProtoReflect.Descriptor instead.
+func (*UpdateNodePoolRequest) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *UpdateNodePoolRequest) GetNodePoolId() string {
+	if x != nil {
+		return x.NodePoolId
+	}
+	return ""
+}
+
+func (x *UpdateNodePoolRequest) GetAutoscaleMin() int32 {
+	if x != nil {
+		return x.AutoscaleMin
+	}
+	return 0
+}
+
+func (x *UpdateNodePoolRequest) GetAutoscaleMax() int32 {
+	if x != nil {
+		return x.AutoscaleMax
+	}
+	return 0
+}
+
+// Delete node pool request
+type DeleteNodePoolRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodePoolId    string                 `protobuf:"bytes,10,opt,name=node_pool_id,json=nodePoolId,proto3" json:"node_pool_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteNodePoolRequest) Reset() {
+	*x = DeleteNodePoolRequest{}
+	mi := &file_v1_cluster_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteNodePoolRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteNodePoolRequest) ProtoMessage() {}
+
+func (x *DeleteNodePoolRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteNodePoolRequest.ProtoReflect.Descriptor instead.
+func (*DeleteNodePoolRequest) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *DeleteNodePoolRequest) GetNodePoolId() string {
+	if x != nil {
+		return x.NodePoolId
+	}
+	return ""
+}
+
+// List node pools request
+type ListNodePoolsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClusterId     string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListNodePoolsRequest) Reset() {
+	*x = ListNodePoolsRequest{}
+	mi := &file_v1_cluster_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListNodePoolsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListNodePoolsRequest) ProtoMessage() {}
+
+func (x *ListNodePoolsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListNodePoolsRequest.ProtoReflect.Descriptor instead.
+func (*ListNodePoolsRequest) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *ListNodePoolsRequest) GetClusterId() string {
+	if x != nil {
+		return x.ClusterId
+	}
+	return ""
+}
+
+// List node pools response
+type ListNodePoolsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodePools     []*NodePool            `protobuf:"bytes,10,rep,name=node_pools,json=nodePools,proto3" json:"node_pools,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListNodePoolsResponse) Reset() {
+	*x = ListNodePoolsResponse{}
+	mi := &file_v1_cluster_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListNodePoolsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListNodePoolsResponse) ProtoMessage() {}
+
+func (x *ListNodePoolsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListNodePoolsResponse.ProtoReflect.Descriptor instead.
+func (*ListNodePoolsResponse) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ListNodePoolsResponse) GetNodePools() []*NodePool {
+	if x != nil {
+		return x.NodePools
+	}
+	return nil
+}
+
+// Get node pool request
+type GetNodePoolRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodePoolId    string                 `protobuf:"bytes,10,opt,name=node_pool_id,json=nodePoolId,proto3" json:"node_pool_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetNodePoolRequest) Reset() {
+	*x = GetNodePoolRequest{}
+	mi := &file_v1_cluster_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNodePoolRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNodePoolRequest) ProtoMessage() {}
+
+func (x *GetNodePoolRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNodePoolRequest.ProtoReflect.Descriptor instead.
+func (*GetNodePoolRequest) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *GetNodePoolRequest) GetNodePoolId() string {
+	if x != nil {
+		return x.NodePoolId
+	}
+	return ""
+}
+
+// Get node pool response
+type GetNodePoolResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodePool      *NodePool              `protobuf:"bytes,10,opt,name=node_pool,json=nodePool,proto3" json:"node_pool,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetNodePoolResponse) Reset() {
+	*x = GetNodePoolResponse{}
+	mi := &file_v1_cluster_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNodePoolResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNodePoolResponse) ProtoMessage() {}
+
+func (x *GetNodePoolResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_cluster_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNodePoolResponse.ProtoReflect.Descriptor instead.
+func (*GetNodePoolResponse) Descriptor() ([]byte, []int) {
+	return file_v1_cluster_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *GetNodePoolResponse) GetNodePool() *NodePool {
+	if x != nil {
+		return x.NodePool
+	}
+	return nil
+}
+
 var File_v1_cluster_proto protoreflect.FileDescriptor
 
 const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x0fv1/common.proto\"4\n" +
+	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x0fv1/common.proto\x1a\x1bgoogle/protobuf/empty.proto\"4\n" +
 	"\x13ListClustersRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\n" +
 	" \x01(\tR\tprojectId\"S\n" +
 	"\x14ListClustersResponse\x12;\n" +
 	"\bclusters\x18\n" +
-	" \x03(\v2\x1f.organization.v1.ClusterSummaryR\bclusters\"\xd1\x01\n" +
+	" \x03(\v2\x1f.organization.v1.ClusterSummaryR\bclusters\"\x84\x01\n" +
 	"\x0eClusterSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x126\n" +
 	"\x06status\x18\x1e \x01(\x0e2\x1e.organization.v1.ClusterStatusR\x06status\x12\x16\n" +
-	"\x06region\x18( \x01(\tR\x06region\x12#\n" +
-	"\rproject_count\x182 \x01(\x05R\fprojectCount\x12&\n" +
-	"\x0fnode_pool_count\x18< \x01(\x05R\rnodePoolCount\"2\n" +
+	"\x06region\x18( \x01(\tR\x06region\"2\n" +
 	"\x11GetClusterRequest\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
 	" \x01(\tR\tclusterId\"O\n" +
 	"\x12GetClusterResponse\x129\n" +
 	"\acluster\x18\n" +
-	" \x01(\v2\x1f.organization.v1.ClusterDetailsR\acluster\"\xea\x03\n" +
+	" \x01(\v2\x1f.organization.v1.ClusterDetailsR\acluster\"\xb9\x02\n" +
 	"\x0eClusterDetails\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -1383,11 +1620,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\x06status\x182 \x01(\x0e2\x1e.organization.v1.ClusterStatusR\x06status\x129\n" +
 	"\n" +
 	"created_at\x18< \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAt\x12I\n" +
-	"\x0eresource_usage\x18F \x01(\v2\".organization.v1.ResourceUsageInfoR\rresourceUsage\x128\n" +
-	"\n" +
-	"node_pools\x18P \x03(\v2\x19.organization.v1.NodePoolR\tnodePools\x128\n" +
-	"\amembers\x18Z \x03(\v2\x1e.organization.v1.ClusterMemberR\amembers\x12;\n" +
-	"\bprojects\x18d \x03(\v2\x1f.organization.v1.ClusterProjectR\bprojects\"\xe5\x01\n" +
+	"\x0eresource_usage\x18F \x01(\v2\".organization.v1.ResourceUsageInfoR\rresourceUsage\"\xe5\x01\n" +
 	"\x11ResourceUsageInfo\x120\n" +
 	"\x03cpu\x18\n" +
 	" \x01(\v2\x1e.organization.v1.ResourceUsageR\x03cpu\x126\n" +
@@ -1418,46 +1651,32 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12\x1e\n" +
 	"\n" +
 	"namespaces\x18\x1e \x03(\tR\n" +
-	"namespaces\"\xf3\x01\n" +
+	"namespaces\"q\n" +
 	"\x14CreateClusterRequest\x12\x12\n" +
 	"\x04name\x18\n" +
 	" \x01(\tR\x04name\x12\x16\n" +
 	"\x06region\x18\x14 \x01(\tR\x06region\x12-\n" +
-	"\x12kubernetes_version\x18\x1e \x01(\tR\x11kubernetesVersion\x12<\n" +
-	"\n" +
-	"node_pools\x18( \x03(\v2\x1d.organization.v1.NodePoolSpecR\tnodePools\x12\x1d\n" +
-	"\n" +
-	"plugin_ids\x182 \x03(\tR\tpluginIds\x12#\n" +
-	"\rplugin_preset\x18< \x01(\tR\fpluginPreset\"\x8f\x01\n" +
+	"\x12kubernetes_version\x18\x1e \x01(\tR\x11kubernetesVersion\"\x8f\x01\n" +
 	"\fNodePoolSpec\x12\x12\n" +
 	"\x04name\x18\n" +
 	" \x01(\tR\x04name\x12!\n" +
 	"\fmachine_type\x18\x14 \x01(\tR\vmachineType\x12#\n" +
 	"\rautoscale_min\x18\x1e \x01(\x05R\fautoscaleMin\x12#\n" +
-	"\rautoscale_max\x18( \x01(\x05R\fautoscaleMax\"n\n" +
+	"\rautoscale_max\x18( \x01(\x05R\fautoscaleMax\"6\n" +
 	"\x15CreateClusterResponse\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\x126\n" +
-	"\x06status\x18\x14 \x01(\x0e2\x1e.organization.v1.ClusterStatusR\x06status\"\xbe\x01\n" +
+	" \x01(\tR\tclusterId\"\x80\x01\n" +
 	"\x14UpdateClusterRequest\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
 	" \x01(\tR\tclusterId\x122\n" +
-	"\x12kubernetes_version\x18\x14 \x01(\tH\x00R\x11kubernetesVersion\x88\x01\x01\x12<\n" +
-	"\n" +
-	"node_pools\x18\x1e \x03(\v2\x1d.organization.v1.NodePoolSpecR\tnodePoolsB\x15\n" +
-	"\x13_kubernetes_version\"R\n" +
-	"\x15UpdateClusterResponse\x129\n" +
-	"\acluster\x18\n" +
-	" \x01(\v2\x1f.organization.v1.ClusterDetailsR\acluster\"5\n" +
+	"\x12kubernetes_version\x18\x14 \x01(\tH\x00R\x11kubernetesVersion\x88\x01\x01B\x15\n" +
+	"\x13_kubernetes_version\"5\n" +
 	"\x14DeleteClusterRequest\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\"1\n" +
-	"\x15DeleteClusterResponse\x12\x18\n" +
-	"\asuccess\x18\n" +
-	" \x01(\bR\asuccess\":\n" +
+	" \x01(\tR\tclusterId\":\n" +
 	"\x19GetClusterActivityRequest\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -1478,16 +1697,58 @@ const file_v1_cluster_proto_rawDesc = "" +
 	" \x01(\tR\tclusterId\"F\n" +
 	"\x15GetKubeconfigResponse\x12-\n" +
 	"\x12kubeconfig_content\x18\n" +
-	" \x01(\tR\x11kubeconfigContent2\xb3\x05\n" +
+	" \x01(\tR\x11kubeconfigContent\"\xb7\x01\n" +
+	"\x15CreateNodePoolRequest\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18\n" +
+	" \x01(\tR\tclusterId\x12\x12\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12!\n" +
+	"\fmachine_type\x18\x1e \x01(\tR\vmachineType\x12#\n" +
+	"\rautoscale_min\x18( \x01(\x05R\fautoscaleMin\x12#\n" +
+	"\rautoscale_max\x182 \x01(\x05R\fautoscaleMax\":\n" +
+	"\x16CreateNodePoolResponse\x12 \n" +
+	"\fnode_pool_id\x18\n" +
+	" \x01(\tR\n" +
+	"nodePoolId\"\x83\x01\n" +
+	"\x15UpdateNodePoolRequest\x12 \n" +
+	"\fnode_pool_id\x18\n" +
+	" \x01(\tR\n" +
+	"nodePoolId\x12#\n" +
+	"\rautoscale_min\x18\x14 \x01(\x05R\fautoscaleMin\x12#\n" +
+	"\rautoscale_max\x18\x1e \x01(\x05R\fautoscaleMax\"9\n" +
+	"\x15DeleteNodePoolRequest\x12 \n" +
+	"\fnode_pool_id\x18\n" +
+	" \x01(\tR\n" +
+	"nodePoolId\"5\n" +
+	"\x14ListNodePoolsRequest\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18\n" +
+	" \x01(\tR\tclusterId\"Q\n" +
+	"\x15ListNodePoolsResponse\x128\n" +
+	"\n" +
+	"node_pools\x18\n" +
+	" \x03(\v2\x19.organization.v1.NodePoolR\tnodePools\"6\n" +
+	"\x12GetNodePoolRequest\x12 \n" +
+	"\fnode_pool_id\x18\n" +
+	" \x01(\tR\n" +
+	"nodePoolId\"M\n" +
+	"\x13GetNodePoolResponse\x126\n" +
+	"\tnode_pool\x18\n" +
+	" \x01(\v2\x19.organization.v1.NodePoolR\bnodePool2\xd4\b\n" +
 	"\x0eClusterService\x12[\n" +
 	"\fListClusters\x12$.organization.v1.ListClustersRequest\x1a%.organization.v1.ListClustersResponse\x12U\n" +
 	"\n" +
 	"GetCluster\x12\".organization.v1.GetClusterRequest\x1a#.organization.v1.GetClusterResponse\x12^\n" +
-	"\rCreateCluster\x12%.organization.v1.CreateClusterRequest\x1a&.organization.v1.CreateClusterResponse\x12^\n" +
-	"\rUpdateCluster\x12%.organization.v1.UpdateClusterRequest\x1a&.organization.v1.UpdateClusterResponse\x12^\n" +
-	"\rDeleteCluster\x12%.organization.v1.DeleteClusterRequest\x1a&.organization.v1.DeleteClusterResponse\x12m\n" +
+	"\rCreateCluster\x12%.organization.v1.CreateClusterRequest\x1a&.organization.v1.CreateClusterResponse\x12N\n" +
+	"\rUpdateCluster\x12%.organization.v1.UpdateClusterRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
+	"\rDeleteCluster\x12%.organization.v1.DeleteClusterRequest\x1a\x16.google.protobuf.Empty\x12m\n" +
 	"\x12GetClusterActivity\x12*.organization.v1.GetClusterActivityRequest\x1a+.organization.v1.GetClusterActivityResponse\x12^\n" +
-	"\rGetKubeconfig\x12%.organization.v1.GetKubeconfigRequest\x1a&.organization.v1.GetKubeconfigResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
+	"\rGetKubeconfig\x12%.organization.v1.GetKubeconfigRequest\x1a&.organization.v1.GetKubeconfigResponse\x12^\n" +
+	"\rListNodePools\x12%.organization.v1.ListNodePoolsRequest\x1a&.organization.v1.ListNodePoolsResponse\x12X\n" +
+	"\vGetNodePool\x12#.organization.v1.GetNodePoolRequest\x1a$.organization.v1.GetNodePoolResponse\x12a\n" +
+	"\x0eCreateNodePool\x12&.organization.v1.CreateNodePoolRequest\x1a'.organization.v1.CreateNodePoolResponse\x12P\n" +
+	"\x0eUpdateNodePool\x12&.organization.v1.UpdateNodePoolRequest\x1a\x16.google.protobuf.Empty\x12P\n" +
+	"\x0eDeleteNodePool\x12&.organization.v1.DeleteNodePoolRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
 
 var (
 	file_v1_cluster_proto_rawDescOnce sync.Once
@@ -1501,7 +1762,7 @@ func file_v1_cluster_proto_rawDescGZIP() []byte {
 	return file_v1_cluster_proto_rawDescData
 }
 
-var file_v1_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_v1_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_v1_cluster_proto_goTypes = []any{
 	(*ListClustersRequest)(nil),        // 0: organization.v1.ListClustersRequest
 	(*ListClustersResponse)(nil),       // 1: organization.v1.ListClustersResponse
@@ -1517,60 +1778,72 @@ var file_v1_cluster_proto_goTypes = []any{
 	(*NodePoolSpec)(nil),               // 11: organization.v1.NodePoolSpec
 	(*CreateClusterResponse)(nil),      // 12: organization.v1.CreateClusterResponse
 	(*UpdateClusterRequest)(nil),       // 13: organization.v1.UpdateClusterRequest
-	(*UpdateClusterResponse)(nil),      // 14: organization.v1.UpdateClusterResponse
-	(*DeleteClusterRequest)(nil),       // 15: organization.v1.DeleteClusterRequest
-	(*DeleteClusterResponse)(nil),      // 16: organization.v1.DeleteClusterResponse
-	(*GetClusterActivityRequest)(nil),  // 17: organization.v1.GetClusterActivityRequest
-	(*GetClusterActivityResponse)(nil), // 18: organization.v1.GetClusterActivityResponse
-	(*ActivityEntry)(nil),              // 19: organization.v1.ActivityEntry
-	(*GetKubeconfigRequest)(nil),       // 20: organization.v1.GetKubeconfigRequest
-	(*GetKubeconfigResponse)(nil),      // 21: organization.v1.GetKubeconfigResponse
-	(ClusterStatus)(0),                 // 22: organization.v1.ClusterStatus
-	(*Timestamp)(nil),                  // 23: organization.v1.Timestamp
-	(*ResourceUsage)(nil),              // 24: organization.v1.ResourceUsage
-	(NodePoolStatus)(0),                // 25: organization.v1.NodePoolStatus
+	(*DeleteClusterRequest)(nil),       // 14: organization.v1.DeleteClusterRequest
+	(*GetClusterActivityRequest)(nil),  // 15: organization.v1.GetClusterActivityRequest
+	(*GetClusterActivityResponse)(nil), // 16: organization.v1.GetClusterActivityResponse
+	(*ActivityEntry)(nil),              // 17: organization.v1.ActivityEntry
+	(*GetKubeconfigRequest)(nil),       // 18: organization.v1.GetKubeconfigRequest
+	(*GetKubeconfigResponse)(nil),      // 19: organization.v1.GetKubeconfigResponse
+	(*CreateNodePoolRequest)(nil),      // 20: organization.v1.CreateNodePoolRequest
+	(*CreateNodePoolResponse)(nil),     // 21: organization.v1.CreateNodePoolResponse
+	(*UpdateNodePoolRequest)(nil),      // 22: organization.v1.UpdateNodePoolRequest
+	(*DeleteNodePoolRequest)(nil),      // 23: organization.v1.DeleteNodePoolRequest
+	(*ListNodePoolsRequest)(nil),       // 24: organization.v1.ListNodePoolsRequest
+	(*ListNodePoolsResponse)(nil),      // 25: organization.v1.ListNodePoolsResponse
+	(*GetNodePoolRequest)(nil),         // 26: organization.v1.GetNodePoolRequest
+	(*GetNodePoolResponse)(nil),        // 27: organization.v1.GetNodePoolResponse
+	(ClusterStatus)(0),                 // 28: organization.v1.ClusterStatus
+	(*Timestamp)(nil),                  // 29: organization.v1.Timestamp
+	(*ResourceUsage)(nil),              // 30: organization.v1.ResourceUsage
+	(NodePoolStatus)(0),                // 31: organization.v1.NodePoolStatus
+	(*emptypb.Empty)(nil),              // 32: google.protobuf.Empty
 }
 var file_v1_cluster_proto_depIdxs = []int32{
 	2,  // 0: organization.v1.ListClustersResponse.clusters:type_name -> organization.v1.ClusterSummary
-	22, // 1: organization.v1.ClusterSummary.status:type_name -> organization.v1.ClusterStatus
+	28, // 1: organization.v1.ClusterSummary.status:type_name -> organization.v1.ClusterStatus
 	5,  // 2: organization.v1.GetClusterResponse.cluster:type_name -> organization.v1.ClusterDetails
-	22, // 3: organization.v1.ClusterDetails.status:type_name -> organization.v1.ClusterStatus
-	23, // 4: organization.v1.ClusterDetails.created_at:type_name -> organization.v1.Timestamp
+	28, // 3: organization.v1.ClusterDetails.status:type_name -> organization.v1.ClusterStatus
+	29, // 4: organization.v1.ClusterDetails.created_at:type_name -> organization.v1.Timestamp
 	6,  // 5: organization.v1.ClusterDetails.resource_usage:type_name -> organization.v1.ResourceUsageInfo
-	7,  // 6: organization.v1.ClusterDetails.node_pools:type_name -> organization.v1.NodePool
-	8,  // 7: organization.v1.ClusterDetails.members:type_name -> organization.v1.ClusterMember
-	9,  // 8: organization.v1.ClusterDetails.projects:type_name -> organization.v1.ClusterProject
-	24, // 9: organization.v1.ResourceUsageInfo.cpu:type_name -> organization.v1.ResourceUsage
-	24, // 10: organization.v1.ResourceUsageInfo.memory:type_name -> organization.v1.ResourceUsage
-	24, // 11: organization.v1.ResourceUsageInfo.disk:type_name -> organization.v1.ResourceUsage
-	24, // 12: organization.v1.ResourceUsageInfo.pods:type_name -> organization.v1.ResourceUsage
-	25, // 13: organization.v1.NodePool.status:type_name -> organization.v1.NodePoolStatus
-	23, // 14: organization.v1.ClusterMember.last_active:type_name -> organization.v1.Timestamp
-	11, // 15: organization.v1.CreateClusterRequest.node_pools:type_name -> organization.v1.NodePoolSpec
-	22, // 16: organization.v1.CreateClusterResponse.status:type_name -> organization.v1.ClusterStatus
-	11, // 17: organization.v1.UpdateClusterRequest.node_pools:type_name -> organization.v1.NodePoolSpec
-	5,  // 18: organization.v1.UpdateClusterResponse.cluster:type_name -> organization.v1.ClusterDetails
-	19, // 19: organization.v1.GetClusterActivityResponse.activities:type_name -> organization.v1.ActivityEntry
-	23, // 20: organization.v1.ActivityEntry.timestamp:type_name -> organization.v1.Timestamp
-	0,  // 21: organization.v1.ClusterService.ListClusters:input_type -> organization.v1.ListClustersRequest
-	3,  // 22: organization.v1.ClusterService.GetCluster:input_type -> organization.v1.GetClusterRequest
-	10, // 23: organization.v1.ClusterService.CreateCluster:input_type -> organization.v1.CreateClusterRequest
-	13, // 24: organization.v1.ClusterService.UpdateCluster:input_type -> organization.v1.UpdateClusterRequest
-	15, // 25: organization.v1.ClusterService.DeleteCluster:input_type -> organization.v1.DeleteClusterRequest
-	17, // 26: organization.v1.ClusterService.GetClusterActivity:input_type -> organization.v1.GetClusterActivityRequest
-	20, // 27: organization.v1.ClusterService.GetKubeconfig:input_type -> organization.v1.GetKubeconfigRequest
+	30, // 6: organization.v1.ResourceUsageInfo.cpu:type_name -> organization.v1.ResourceUsage
+	30, // 7: organization.v1.ResourceUsageInfo.memory:type_name -> organization.v1.ResourceUsage
+	30, // 8: organization.v1.ResourceUsageInfo.disk:type_name -> organization.v1.ResourceUsage
+	30, // 9: organization.v1.ResourceUsageInfo.pods:type_name -> organization.v1.ResourceUsage
+	31, // 10: organization.v1.NodePool.status:type_name -> organization.v1.NodePoolStatus
+	29, // 11: organization.v1.ClusterMember.last_active:type_name -> organization.v1.Timestamp
+	17, // 12: organization.v1.GetClusterActivityResponse.activities:type_name -> organization.v1.ActivityEntry
+	29, // 13: organization.v1.ActivityEntry.timestamp:type_name -> organization.v1.Timestamp
+	7,  // 14: organization.v1.ListNodePoolsResponse.node_pools:type_name -> organization.v1.NodePool
+	7,  // 15: organization.v1.GetNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
+	0,  // 16: organization.v1.ClusterService.ListClusters:input_type -> organization.v1.ListClustersRequest
+	3,  // 17: organization.v1.ClusterService.GetCluster:input_type -> organization.v1.GetClusterRequest
+	10, // 18: organization.v1.ClusterService.CreateCluster:input_type -> organization.v1.CreateClusterRequest
+	13, // 19: organization.v1.ClusterService.UpdateCluster:input_type -> organization.v1.UpdateClusterRequest
+	14, // 20: organization.v1.ClusterService.DeleteCluster:input_type -> organization.v1.DeleteClusterRequest
+	15, // 21: organization.v1.ClusterService.GetClusterActivity:input_type -> organization.v1.GetClusterActivityRequest
+	18, // 22: organization.v1.ClusterService.GetKubeconfig:input_type -> organization.v1.GetKubeconfigRequest
+	24, // 23: organization.v1.ClusterService.ListNodePools:input_type -> organization.v1.ListNodePoolsRequest
+	26, // 24: organization.v1.ClusterService.GetNodePool:input_type -> organization.v1.GetNodePoolRequest
+	20, // 25: organization.v1.ClusterService.CreateNodePool:input_type -> organization.v1.CreateNodePoolRequest
+	22, // 26: organization.v1.ClusterService.UpdateNodePool:input_type -> organization.v1.UpdateNodePoolRequest
+	23, // 27: organization.v1.ClusterService.DeleteNodePool:input_type -> organization.v1.DeleteNodePoolRequest
 	1,  // 28: organization.v1.ClusterService.ListClusters:output_type -> organization.v1.ListClustersResponse
 	4,  // 29: organization.v1.ClusterService.GetCluster:output_type -> organization.v1.GetClusterResponse
 	12, // 30: organization.v1.ClusterService.CreateCluster:output_type -> organization.v1.CreateClusterResponse
-	14, // 31: organization.v1.ClusterService.UpdateCluster:output_type -> organization.v1.UpdateClusterResponse
-	16, // 32: organization.v1.ClusterService.DeleteCluster:output_type -> organization.v1.DeleteClusterResponse
-	18, // 33: organization.v1.ClusterService.GetClusterActivity:output_type -> organization.v1.GetClusterActivityResponse
-	21, // 34: organization.v1.ClusterService.GetKubeconfig:output_type -> organization.v1.GetKubeconfigResponse
-	28, // [28:35] is the sub-list for method output_type
-	21, // [21:28] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	32, // 31: organization.v1.ClusterService.UpdateCluster:output_type -> google.protobuf.Empty
+	32, // 32: organization.v1.ClusterService.DeleteCluster:output_type -> google.protobuf.Empty
+	16, // 33: organization.v1.ClusterService.GetClusterActivity:output_type -> organization.v1.GetClusterActivityResponse
+	19, // 34: organization.v1.ClusterService.GetKubeconfig:output_type -> organization.v1.GetKubeconfigResponse
+	25, // 35: organization.v1.ClusterService.ListNodePools:output_type -> organization.v1.ListNodePoolsResponse
+	27, // 36: organization.v1.ClusterService.GetNodePool:output_type -> organization.v1.GetNodePoolResponse
+	21, // 37: organization.v1.ClusterService.CreateNodePool:output_type -> organization.v1.CreateNodePoolResponse
+	32, // 38: organization.v1.ClusterService.UpdateNodePool:output_type -> google.protobuf.Empty
+	32, // 39: organization.v1.ClusterService.DeleteNodePool:output_type -> google.protobuf.Empty
+	28, // [28:40] is the sub-list for method output_type
+	16, // [16:28] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_v1_cluster_proto_init() }
@@ -1586,7 +1859,7 @@ func file_v1_cluster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_cluster_proto_rawDesc), len(file_v1_cluster_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

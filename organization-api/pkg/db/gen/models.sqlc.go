@@ -20,6 +20,17 @@ type TenantCluster struct {
 	Deleted           pgtype.Timestamptz
 }
 
+type TenantNodePool struct {
+	ID           uuid.UUID
+	ClusterID    uuid.UUID
+	Name         string
+	MachineType  string
+	AutoscaleMin int32
+	AutoscaleMax int32
+	Created      pgtype.Timestamptz
+	Deleted      pgtype.Timestamptz
+}
+
 type TenantOrganization struct {
 	ID      uuid.UUID
 	Name    string

@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/models"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	"github.com/google/uuid"
 )
 
 func ToClusterCreate(req *organizationv1.CreateClusterRequest) models.ClusterCreate {
@@ -26,7 +27,7 @@ func ToClusterUpdate(req *organizationv1.UpdateClusterRequest) (models.ClusterUp
 
 	return models.ClusterUpdate{
 		ClusterID:         clusterID,
-		KubernetesVersion: *req.KubernetesVersion,
+		KubernetesVersion: req.KubernetesVersion,
 	}, nil
 }
 
@@ -35,19 +36,15 @@ func FromClustersSummary(clusters []db.TenantCluster) []*organizationv1.ClusterS
 	for _, c := range clusters {
 		summaries = append(summaries, FromClusterSummary(c))
 	}
-
 	return summaries
-
 }
 
 func FromClusterSummary(c db.TenantCluster) *organizationv1.ClusterSummary {
 	return &organizationv1.ClusterSummary{
-		Id:            c.ID.String(),
-		Name:          c.Name,
-		Status:        FromClusterStatus(c.Status),
-		Region:        c.Region,
-		ProjectCount:  0, // Stub
-		NodePoolCount: 0, // Stub
+		Id:     c.ID.String(),
+		Name:   c.Name,
+		Status: FromClusterStatus(c.Status),
+		Region: c.Region,
 	}
 }
 
@@ -62,9 +59,6 @@ func FromClusterDetail(c db.TenantCluster) *organizationv1.ClusterDetails {
 			Value: c.Created.Time.Format(time.RFC3339),
 		},
 		ResourceUsage: nil, // Stub
-		NodePools:     nil, // Stub
-		Members:       nil, // Stub
-		Projects:      nil, // Stub
 	}
 }
 
@@ -86,5 +80,26 @@ func FromClusterStatus(status string) organizationv1.ClusterStatus {
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED
 	default:
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED
+	}
+}
+
+func FromNodePools(nodePools []db.TenantNodePool) []*organizationv1.NodePool {
+	result := make([]*organizationv1.NodePool, 0, len(nodePools))
+	for _, np := range nodePools {
+		result = append(result, FromNodePool(np))
+	}
+	return result
+}
+
+func FromNodePool(np db.TenantNodePool) *organizationv1.NodePool {
+	return &organizationv1.NodePool{
+		Id:           np.ID.String(),
+		Name:         np.Name,
+		MachineType:  np.MachineType,
+		CurrentNodes: 0, // Stub: would come from actual cluster state
+		MinNodes:     np.AutoscaleMin,
+		MaxNodes:     np.AutoscaleMax,
+		Status:       organizationv1.NodePoolStatus_NODE_POOL_STATUS_UNSPECIFIED, // Stub
+		Version:      "",                                                         // Stub: would come from actual cluster state
 	}
 }
