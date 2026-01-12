@@ -66,8 +66,11 @@ func run() error {
 				// Extract organization_id from context and set it in PostgreSQL session for RLS
 				organizationID, ok := organization.OrganizationIDFromContext(ctx)
 				if ok {
-					if err := queries.SetOrganizationContext(ctx, organizationID.String()); err != nil {
-						return false, err
+					err := queries.SetOrganizationContext(ctx, db.SetOrganizationContextParams{
+						SetConfig: organizationID.String(),
+					})
+					if err != nil {
+						return false, fmt.Errorf("failed to set organization context: %w", err)
 					}
 				}
 
@@ -119,6 +122,9 @@ func run() error {
 
 	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(server, interceptors)
 	mux.Handle(clusterPath, clusterHandler)
+
+	pluginPath, pluginHandler := organizationv1connect.NewPluginServiceHandler(server, interceptors)
+	mux.Handle(pluginPath, pluginHandler)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,

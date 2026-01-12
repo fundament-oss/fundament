@@ -145,6 +145,81 @@ CREATE POLICY organization_isolation ON tenant.clusters
 	USING (organization_id = current_setting('app.current_organization_id')::uuid);
 -- ddl-end --
 
+-- object: tenant.node_pools | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.node_pools CASCADE;
+CREATE TABLE tenant.node_pools (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	cluster_id uuid NOT NULL,
+	name text NOT NULL,
+	machine_type text NOT NULL,
+	autoscale_min integer NOT NULL,
+	autoscale_max integer NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT node_pools_pk PRIMARY KEY (id),
+	CONSTRAINT node_pools_uq_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted)
+);
+-- ddl-end --
+ALTER TABLE tenant.node_pools OWNER TO postgres;
+-- ddl-end --
+ALTER TABLE tenant.node_pools ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: node_pools_organization_policy | type: POLICY --
+-- DROP POLICY IF EXISTS node_pools_organization_policy ON tenant.node_pools CASCADE;
+CREATE POLICY node_pools_organization_policy ON tenant.node_pools
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (EXISTS (
+      SELECT 1 FROM clusters
+      WHERE clusters.id = node_pools.cluster_id
+      AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
+));
+-- ddl-end --
+
+-- object: tenant.installs | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.installs CASCADE;
+CREATE TABLE tenant.installs (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	cluster_id uuid NOT NULL,
+	plugin_id uuid NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT installs_pk PRIMARY KEY (id),
+	CONSTRAINT installs_uq UNIQUE NULLS NOT DISTINCT (cluster_id,plugin_id,deleted)
+);
+-- ddl-end --
+ALTER TABLE tenant.installs OWNER TO fun_fundament_api;
+-- ddl-end --
+ALTER TABLE tenant.installs ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: tenant.plugins | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.plugins CASCADE;
+CREATE TABLE tenant.plugins (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	name text NOT NULL,
+	CONSTRAINT plugins_uq_name UNIQUE (name),
+	CONSTRAINT plugins_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE tenant.plugins OWNER TO fun_fundament_api;
+-- ddl-end --
+
+-- object: install_organization_policy | type: POLICY --
+-- DROP POLICY IF EXISTS install_organization_policy ON tenant.installs CASCADE;
+CREATE POLICY install_organization_policy ON tenant.installs
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (EXISTS (
+      SELECT 1 FROM clusters
+      WHERE clusters.id = installs.cluster_id
+      AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
+));
+-- ddl-end --
+
 -- object: projects_fk_organization | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_organization CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_organization FOREIGN KEY (organization_id)
@@ -177,6 +252,27 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.clusters DROP CONSTRAINT IF EXISTS clusters_fk_organization CASCADE;
 ALTER TABLE tenant.clusters ADD CONSTRAINT clusters_fk_organization FOREIGN KEY (organization_id)
 REFERENCES tenant.organizations (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: node_pools_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.node_pools DROP CONSTRAINT IF EXISTS node_pools_fk_cluster CASCADE;
+ALTER TABLE tenant.node_pools ADD CONSTRAINT node_pools_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: installs_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.installs DROP CONSTRAINT IF EXISTS installs_fk_cluster CASCADE;
+ALTER TABLE tenant.installs ADD CONSTRAINT installs_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: installs_fk_plugin | type: CONSTRAINT --
+-- ALTER TABLE tenant.installs DROP CONSTRAINT IF EXISTS installs_fk_plugin CASCADE;
+ALTER TABLE tenant.installs ADD CONSTRAINT installs_fk_plugin FOREIGN KEY (plugin_id)
+REFERENCES tenant.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 

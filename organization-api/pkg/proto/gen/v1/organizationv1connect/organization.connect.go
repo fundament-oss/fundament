@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -46,7 +47,7 @@ type OrganizationServiceClient interface {
 	// GetOrganization retrieves the user's organization by ID
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
 	// UpdateOrganization updates the user's organization
-	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
+	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewOrganizationServiceClient constructs a client for the organization.v1.OrganizationService
@@ -66,7 +67,7 @@ func NewOrganizationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(organizationServiceMethods.ByName("GetOrganization")),
 			connect.WithClientOptions(opts...),
 		),
-		updateOrganization: connect.NewClient[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse](
+		updateOrganization: connect.NewClient[v1.UpdateOrganizationRequest, emptypb.Empty](
 			httpClient,
 			baseURL+OrganizationServiceUpdateOrganizationProcedure,
 			connect.WithSchema(organizationServiceMethods.ByName("UpdateOrganization")),
@@ -78,7 +79,7 @@ func NewOrganizationServiceClient(httpClient connect.HTTPClient, baseURL string,
 // organizationServiceClient implements OrganizationServiceClient.
 type organizationServiceClient struct {
 	getOrganization    *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
-	updateOrganization *connect.Client[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse]
+	updateOrganization *connect.Client[v1.UpdateOrganizationRequest, emptypb.Empty]
 }
 
 // GetOrganization calls organization.v1.OrganizationService.GetOrganization.
@@ -87,7 +88,7 @@ func (c *organizationServiceClient) GetOrganization(ctx context.Context, req *co
 }
 
 // UpdateOrganization calls organization.v1.OrganizationService.UpdateOrganization.
-func (c *organizationServiceClient) UpdateOrganization(ctx context.Context, req *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
+func (c *organizationServiceClient) UpdateOrganization(ctx context.Context, req *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updateOrganization.CallUnary(ctx, req)
 }
 
@@ -97,7 +98,7 @@ type OrganizationServiceHandler interface {
 	// GetOrganization retrieves the user's organization by ID
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
 	// UpdateOrganization updates the user's organization
-	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
+	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewOrganizationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -138,6 +139,6 @@ func (UnimplementedOrganizationServiceHandler) GetOrganization(context.Context, 
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.GetOrganization is not implemented"))
 }
 
-func (UnimplementedOrganizationServiceHandler) UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
+func (UnimplementedOrganizationServiceHandler) UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.UpdateOrganization is not implemented"))
 }

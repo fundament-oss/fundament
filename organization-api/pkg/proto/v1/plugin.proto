@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package organization.v1;
+
+option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
+
+// PluginService provides information about available plugins
+service PluginService {
+  // List all available plugins
+  rpc ListPlugins(ListPluginsRequest) returns (ListPluginsResponse);
+}
+
+// Plugin information
+message Plugin {
+  string id = 10;
+  string name = 20;
+}
+
+// List plugins request
+message ListPluginsRequest {}
+
+// List plugins response
+message ListPluginsResponse {
+  repeated Plugin plugins = 10;
+}
