@@ -109,13 +109,13 @@ export class OrganizationComponent implements OnInit {
         name: nameToSave.trim(),
       });
 
-      const response = await firstValueFrom(this.organizationClient.updateOrganization(request));
+      await firstValueFrom(this.organizationClient.updateOrganization(request));
 
-      if (!response.organization) {
-        throw new Error('Failed to update organization');
-      }
-
-      this.organization.set(response.organization);
+      // Update the local organization with the new name
+      this.organization.set({
+        ...currentOrganization,
+        name: nameToSave.trim(),
+      });
       this.isEditing.set(false);
       this.editingName.set('');
     } catch (err) {

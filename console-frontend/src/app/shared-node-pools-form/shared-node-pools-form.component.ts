@@ -37,6 +37,11 @@ export interface NodePoolData {
 export class SharedNodePoolsFormComponent implements AfterViewInit {
   @ViewChildren('nodePoolNameInput') nodePoolNameInputs!: QueryList<ElementRef<HTMLInputElement>>;
   @Input() submitButtonText = 'Next step';
+  @Input() set initialData(data: NodePoolData[] | null) {
+    if (data && data.length > 0) {
+      this.loadInitialData(data);
+    }
+  }
   @Output() formSubmit = new EventEmitter<{ nodePools: NodePoolData[] }>();
 
   private fb = inject(FormBuilder);
@@ -64,10 +69,10 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     return this.nodePoolsForm.get('nodePools') as FormArray;
   }
 
-  createNodePoolFormGroup(): FormGroup {
+  createNodePoolFormGroup(data?: NodePoolData): FormGroup {
     return this.fb.group({
       name: [
-        this.generateNodePoolName(),
+        data?.name || this.generateNodePoolName(),
         [
           Validators.required,
           Validators.maxLength(63),
@@ -75,9 +80,21 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
           this.uniqueNodePoolNameValidator.bind(this),
         ],
       ],
-      machineType: ['n1-standard-1', Validators.required],
-      autoscaleMin: [1, [Validators.required, Validators.min(1), Validators.max(100)]],
-      autoscaleMax: [3, [Validators.required, Validators.min(1), Validators.max(100)]],
+      machineType: [data?.machineType || 'n1-standard-1', Validators.required],
+      autoscaleMin: [data?.autoscaleMin || 1, [Validators.required, Validators.min(1), Validators.max(100)]],
+      autoscaleMax: [data?.autoscaleMax || 3, [Validators.required, Validators.min(1), Validators.max(100)]],
+    });
+  }
+
+  private loadInitialData(data: NodePoolData[]) {
+    // Clear existing form array
+    while (this.nodePools.length > 0) {
+      this.nodePools.removeAt(0);
+    }
+    
+    // Add all initial node pools
+    data.forEach(pool => {
+      this.nodePools.push(this.createNodePoolFormGroup(pool));
     });
   }
 

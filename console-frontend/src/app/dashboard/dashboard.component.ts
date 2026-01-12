@@ -20,6 +20,7 @@ export class DashboardComponent implements OnInit {
 
   clusters = signal<ClusterSummary[]>([]);
   errorMessage = signal<string>('');
+  nodePoolCounts = signal<Map<string, number>>(new Map());
 
   constructor() {
     this.titleService.setTitle('Dashboard');
@@ -29,12 +30,30 @@ export class DashboardComponent implements OnInit {
     try {
       const response = await firstValueFrom(this.client.listClusters({}));
       this.clusters.set(response.clusters);
+      
+      // Fetch node pools for each cluster
+      for (const cluster of response.clusters) {
+        try {
+          const poolsResponse = await firstValueFrom(
+            this.client.listNodePools({ clusterId: cluster.id }),
+          );
+          const counts = new Map(this.nodePoolCounts());
+          counts.set(cluster.id, poolsResponse.nodePools.length);
+          this.nodePoolCounts.set(counts);
+        } catch (error) {
+          console.error(`Failed to load node pools for cluster ${cluster.id}:`, error);
+        }
+      }
     } catch (error) {
       console.error('Failed to load clusters:', error);
       this.errorMessage.set(
         error instanceof Error ? error.message : 'Failed to load clusters. Please try again later.',
       );
     }
+  }
+
+  getNodePoolCount(clusterId: string): number {
+    return this.nodePoolCounts().get(clusterId) || 0;
   }
 
   getStatusColor(status: ClusterStatus): string {
