@@ -231,14 +231,14 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return "pending", "Shoot not found in Gardener", nil
+			return StatusPending, MsgShootNotFound, nil
 		}
 		return "", "", fmt.Errorf("failed to get shoot: %w", err)
 	}
 
 	// Check if being deleted
 	if shoot.DeletionTimestamp != nil {
-		return "deleting", "Shoot is being deleted", nil
+		return StatusDeleting, "Shoot is being deleted", nil
 	}
 
 	// Check last operation status
@@ -247,22 +247,22 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 		switch op.State {
 		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
-			return "progressing", fmt.Sprintf("%s: %s", op.Type, op.Description), nil
+			return StatusProgressing, fmt.Sprintf("%s: %s", op.Type, op.Description), nil
 		case gardencorev1beta1.LastOperationStateError, gardencorev1beta1.LastOperationStateFailed:
-			return "error", op.Description, nil
+			return StatusError, op.Description, nil
 		case gardencorev1beta1.LastOperationStateSucceeded:
 			// Check if all conditions are healthy
 			if r.isShootHealthy(shoot) {
-				return "ready", "Shoot is ready", nil
+				return StatusReady, MsgShootReady, nil
 			}
-			return "progressing", "Shoot reconciled but not all conditions healthy", nil
+			return StatusProgressing, "Shoot reconciled but not all conditions healthy", nil
 		case gardencorev1beta1.LastOperationStateAborted:
-			return "error", "Operation was aborted: " + op.Description, nil
+			return StatusError, "Operation was aborted: " + op.Description, nil
 		}
 	}
 
 	// No last operation, likely still being created
-	return "progressing", "Shoot is being created", nil
+	return StatusProgressing, "Shoot is being created", nil
 }
 
 // isShootHealthy checks if all key conditions are True.
@@ -293,7 +293,7 @@ func (r *RealClient) isShootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.Shoot {
 	shootName := ShootName(cluster.OrganizationName, cluster.Name, r.MaxShootNameLength())
 
-	// TODO: Make these configurable per-cluster once we extend the DB schema
+	// TODO: TB: Make these configurable per-cluster once we extend the DB schema
 	machineType := "local"
 	machineImageName := "local"
 	machineImageVer := "1.0.0"

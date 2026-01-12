@@ -32,6 +32,7 @@ type config struct {
 	StatusPollBatchSize int32         `env:"STATUS_POLL_BATCH_SIZE" envDefault:"50"`
 	HealthPort          int           `env:"HEALTH_PORT" envDefault:"8097"`
 	ShutdownTimeout     time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
+	MaxSyncAttempts     int32         `env:"MAX_SYNC_ATTEMPTS" envDefault:"5"`
 
 	// Provider configuration for real Gardener mode.
 	// These configure how Shoots are created in Gardener and depend on the target infrastructure.
@@ -93,6 +94,7 @@ func run() error {
 	w := worker.NewSyncWorker(db.Pool, gardenerClient, logger, worker.Config{
 		PollInterval:      cfg.PollInterval,
 		ReconcileInterval: cfg.ReconcileInterval,
+		MaxSyncAttempts:   cfg.MaxSyncAttempts,
 	})
 
 	// StatusWorker (monitors Gardener reconciliation)
@@ -108,6 +110,7 @@ func run() error {
 		"poll_interval", cfg.PollInterval,
 		"reconcile_interval", cfg.ReconcileInterval,
 		"status_poll_interval", cfg.StatusPollInterval,
+		"max_sync_attempts", cfg.MaxSyncAttempts,
 		"gardener_mode", cfg.GardenerMode,
 		"gardener_namespace", cfg.GardenerNamespace)
 

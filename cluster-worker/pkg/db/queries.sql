@@ -3,6 +3,7 @@
 -- Includes deleted clusters so worker can sync deletions to Gardener.
 -- Respects backoff: only claim if enough time has passed since last attempt.
 -- Backoff formula: 30s * 2^attempts, capped at 15 minutes (900s).
+-- Excludes clusters that have exhausted max sync attempts.
 SELECT
     c.id,
     c.name,
@@ -15,6 +16,7 @@ FROM tenant.clusters c
 JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
 JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE cs.synced IS NULL
+  AND cs.sync_attempts < $1
   AND (
     cs.sync_last_attempt IS NULL
     OR cs.sync_last_attempt + (LEAST(30 * POWER(2, cs.sync_attempts), 900) * INTERVAL '1 second') < now()
@@ -74,6 +76,9 @@ WHERE cs.sync_attempts >= $1;
 
 -- name: ListClustersNeedingStatusCheck :many
 -- Get clusters where we need to check Gardener status (active clusters).
+-- Polls clusters in non-terminal states: NULL (never checked), pending, progressing, error.
+-- Does NOT poll clusters in terminal state: ready.
+-- See gardener.Status* constants for valid values.
 SELECT c.id, c.name, c.region, c.kubernetes_version, c.deleted, o.name as organization_name
 FROM tenant.clusters c
 JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
@@ -81,14 +86,19 @@ JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE cs.synced IS NOT NULL                           -- Manifest was applied
   AND c.deleted IS NULL                               -- Active (not deleted)
   AND (cs.shoot_status IS NULL                        -- Never checked
-       OR cs.shoot_status = 'progressing')            -- Still in progress
+       OR cs.shoot_status = 'pending'                 -- Shoot not yet visible in Gardener
+       OR cs.shoot_status = 'progressing'             -- Gardener creating/updating
+       OR cs.shoot_status = 'error')                  -- Failed, might recover
   AND (cs.shoot_status_updated IS NULL                -- Never checked
        OR cs.shoot_status_updated < now() - INTERVAL '30 seconds')  -- Not checked recently
 ORDER BY cs.shoot_status_updated NULLS FIRST
 LIMIT $1;
 
 -- name: ListDeletedClustersNeedingVerification :many
--- Get deleted clusters where we need to verify Shoot is actually gone.
+-- Get deleted clusters where we need to verify Shoot is actually gone from Gardener.
+-- Polls until shoot_status = 'deleted' (confirmed removed).
+-- Typical flow: NULL → deleting → deleted
+-- See gardener.Status* constants for valid values.
 SELECT c.id, c.name, c.region, c.kubernetes_version, c.deleted, o.name as organization_name
 FROM tenant.clusters c
 JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
@@ -153,3 +163,27 @@ SELECT EXISTS (
       AND c.name = $2
       AND c.deleted IS NULL
 ) AS exists;
+
+-- name: ListExhaustedClusters :many
+-- Lists clusters that have exceeded max sync attempts.
+-- Used for alerting and admin dashboards.
+SELECT
+    c.id,
+    c.name,
+    cs.sync_error,
+    cs.sync_attempts,
+    cs.sync_last_attempt,
+    o.name as organization_name
+FROM tenant.clusters c
+JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
+JOIN tenant.organizations o ON o.id = c.organization_id
+WHERE cs.synced IS NULL
+  AND cs.sync_attempts >= $1;
+
+-- name: ResetClusterSyncAttempts :exec
+-- Resets sync attempts for a cluster, allowing it to be retried.
+-- Used by admins to manually retry exhausted clusters.
+UPDATE tenant.cluster_sync
+SET sync_attempts = 0,
+    sync_error = NULL
+WHERE cluster_id = $1;

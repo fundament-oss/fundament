@@ -105,8 +105,8 @@ func (m *MockClient) DeleteShootByName(ctx context.Context, name string) error {
 
 // ListShoots returns all shoots stored in memory.
 func (m *MockClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	m.ListCallCount++
 
@@ -125,8 +125,8 @@ func (m *MockClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 // By default returns "ready" for existing shoots and "pending" (not found) for non-existing.
 // Use StatusOverrides to customize per-cluster behavior.
 func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync) (string, string, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	m.StatusCalls = append(m.StatusCalls, *cluster)
 
@@ -141,9 +141,9 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 	shootName := ShootName(cluster.OrganizationName, cluster.Name, m.MaxShootNameLength())
 	if _, exists := m.shoots[shootName]; exists {
-		return "ready", "Mock shoot is ready", nil
+		return StatusReady, MsgShootReady, nil
 	}
-	return "pending", "Shoot not found in Gardener", nil
+	return StatusPending, MsgShootNotFound, nil
 }
 
 // Reset clears all recorded calls and stored shoots.
