@@ -40,7 +40,7 @@ func clusterSummaryFromListRow(row *db.ClusterListByOrganizationIDRow) *organiza
 	return &organizationv1.ClusterSummary{
 		Id:            row.ID.String(),
 		Name:          row.Name,
-		Status:        clusterStatusFromDB(row.Status),
+		Status:        clusterStatusFromDB(row.ShootStatus),
 		Region:        row.Region,
 		ProjectCount:  0, // Stub
 		NodePoolCount: 0, // Stub

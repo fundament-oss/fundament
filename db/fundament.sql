@@ -438,12 +438,10 @@ CREATE TABLE tenant.clusters (
 	name text NOT NULL,
 	region text NOT NULL,
 	kubernetes_version text NOT NULL,
-	status text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
-	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted),
-	CONSTRAINT clusters_ck_status CHECK (status IN ('unspecified','provisioning','starting','running','upgrading','error','stopping','stopped'))
+	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
 -- ddl-end --
 ALTER TABLE tenant.clusters OWNER TO fun_owner;

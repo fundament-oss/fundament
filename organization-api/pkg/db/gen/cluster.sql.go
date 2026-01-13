@@ -8,14 +8,13 @@ package db
 import (
 	"context"
 
-	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const clusterCreate = `-- name: ClusterCreate :one
-INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, status)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version)
+VALUES ($1, $2, $3, $4)
 RETURNING id
 `
 
@@ -24,7 +23,6 @@ type ClusterCreateParams struct {
 	Name              string
 	Region            string
 	KubernetesVersion string
-	Status            dbconst.ClusterStatus
 }
 
 func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (uuid.UUID, error) {
@@ -33,7 +31,6 @@ func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (u
 		arg.Name,
 		arg.Region,
 		arg.KubernetesVersion,
-		arg.Status,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -59,7 +56,7 @@ func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) (i
 }
 
 const clusterGetByID = `-- name: ClusterGetByID :one
-SELECT c.id, c.organization_id, c.name, c.region, c.kubernetes_version, c.status, c.created, c.deleted,
+SELECT c.id, c.organization_id, c.name, c.region, c.kubernetes_version, c.created, c.deleted,
        s.synced, s.sync_error, s.sync_attempts, s.sync_last_attempt, s.shoot_status, s.shoot_status_message, s.shoot_status_updated
 FROM tenant.clusters c
 LEFT JOIN tenant.cluster_sync s ON c.id = s.cluster_id
@@ -76,7 +73,6 @@ type ClusterGetByIDRow struct {
 	Name               string
 	Region             string
 	KubernetesVersion  string
-	Status             string
 	Created            pgtype.Timestamptz
 	Deleted            pgtype.Timestamptz
 	Synced             pgtype.Timestamptz
@@ -97,7 +93,6 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.Name,
 		&i.Region,
 		&i.KubernetesVersion,
-		&i.Status,
 		&i.Created,
 		&i.Deleted,
 		&i.Synced,
@@ -112,7 +107,7 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 }
 
 const clusterListByOrganizationID = `-- name: ClusterListByOrganizationID :many
-SELECT c.id, c.organization_id, c.name, c.region, c.kubernetes_version, c.status, c.created, c.deleted,
+SELECT c.id, c.organization_id, c.name, c.region, c.kubernetes_version, c.created, c.deleted,
        s.synced, s.sync_error, s.sync_attempts, s.sync_last_attempt, s.shoot_status, s.shoot_status_message, s.shoot_status_updated
 FROM tenant.clusters c
 LEFT JOIN tenant.cluster_sync s ON c.id = s.cluster_id
@@ -130,7 +125,6 @@ type ClusterListByOrganizationIDRow struct {
 	Name               string
 	Region             string
 	KubernetesVersion  string
-	Status             string
 	Created            pgtype.Timestamptz
 	Deleted            pgtype.Timestamptz
 	Synced             pgtype.Timestamptz
@@ -157,7 +151,6 @@ func (q *Queries) ClusterListByOrganizationID(ctx context.Context, arg ClusterLi
 			&i.Name,
 			&i.Region,
 			&i.KubernetesVersion,
-			&i.Status,
 			&i.Created,
 			&i.Deleted,
 			&i.Synced,

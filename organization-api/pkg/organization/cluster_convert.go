@@ -7,21 +7,21 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-func clusterStatusFromDB(status string) organizationv1.ClusterStatus {
-	switch status {
-	case "provisioning":
+// clusterStatusFromDB derives cluster status from Gardener shoot status.
+func clusterStatusFromDB(shootStatus pgtype.Text) organizationv1.ClusterStatus {
+	if !shootStatus.Valid {
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
-	case "starting":
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING
-	case "running":
+	}
+	switch shootStatus.String {
+	case "pending", "progressing":
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
+	case "ready":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING
-	case "upgrading":
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING
 	case "error":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR
-	case "stopping":
+	case "deleting":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING
-	case "stopped":
+	case "deleted":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED
 	default:
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED

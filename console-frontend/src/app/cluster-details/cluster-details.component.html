@@ -76,8 +76,11 @@
           <dl>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
             <dd class="mt-1">
-              <span class="badge" [class]="getStatusColor(clusterData.status)">
-                {{ getStatusLabel(clusterData.status) }}
+              <span
+                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                [class]="getClusterStatusColor(clusterData.status)"
+              >
+                {{ getClusterStatusLabel(clusterData.status) }}
               </span>
             </dd>
           </dl>

@@ -86,7 +86,7 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 		Name:              row.Name,
 		Region:            row.Region,
 		KubernetesVersion: row.KubernetesVersion,
-		Status:            clusterStatusFromDB(row.Status),
+		Status:            clusterStatusFromDB(row.ShootStatus),
 		Created:           timestamppb.New(row.Created.Time),
 		ResourceUsage:     nil, // Stub
 		SyncState: syncStateFromRow(
