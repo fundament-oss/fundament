@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { CLUSTER } from '../../connect/tokens';
@@ -9,7 +10,11 @@ import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
   DeleteClusterRequestSchema,
+  ListClusterNamespacesRequestSchema,
+  CreateNamespaceRequestSchema,
+  DeleteNamespaceRequestSchema,
   NodePool,
+  ClusterNamespace,
 } from '../../generated/v1/cluster_pb';
 import { NodePoolStatus } from '../../generated/v1/common_pb';
 import { firstValueFrom } from 'rxjs';
@@ -20,6 +25,8 @@ import {
   UpgradeIconComponent,
   ErrorIconComponent,
   WarningIconComponent,
+  PlusIconComponent,
+  TrashIconComponent,
 } from '../icons';
 
 @Component({
@@ -28,12 +35,15 @@ import {
   imports: [
     CommonModule,
     RouterLink,
+    ReactiveFormsModule,
     EditIconComponent,
     TerminalIconComponent,
     DownloadIconComponent,
     UpgradeIconComponent,
     ErrorIconComponent,
     WarningIconComponent,
+    PlusIconComponent,
+    TrashIconComponent,
   ],
   templateUrl: './cluster-overview.component.html',
 })
@@ -43,6 +53,7 @@ export class ClusterOverviewComponent implements OnInit {
   private router = inject(Router);
   private client = inject(CLUSTER);
   private toastService = inject(ToastService);
+  private fb = inject(FormBuilder);
 
   // Expose enum for use in template
   NodePoolStatus = NodePoolStatus;
@@ -50,6 +61,18 @@ export class ClusterOverviewComponent implements OnInit {
   errorMessage = signal<string | null>(null);
   isLoading = signal<boolean>(true);
   showDeleteModal = signal<boolean>(false);
+
+  // Namespace management
+  namespaces = signal<ClusterNamespace[]>([]);
+  showAddNamespaceModal = signal<boolean>(false);
+  isCreatingNamespace = signal<boolean>(false);
+  namespaceForm: FormGroup;
+
+  constructor() {
+    this.namespaceForm = this.fb.group({
+      name: ['', [Validators.required, Validators.maxLength(63), Validators.pattern(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/)]],
+    });
+  }
 
   // Cluster data with API-fetched and mock data
   clusterData = {
@@ -158,6 +181,9 @@ export class ClusterOverviewComponent implements OnInit {
 
       // Map node pools to the expected format
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
+
+      // Fetch namespaces
+      await this.loadNamespaces();
     } catch (error) {
       console.error('Failed to fetch cluster data:', error);
       this.errorMessage.set(
@@ -241,6 +267,73 @@ export class ClusterOverviewComponent implements OnInit {
         error instanceof Error
           ? `Failed to delete cluster: ${error.message}`
           : 'Failed to delete cluster',
+      );
+    }
+  }
+
+  async loadNamespaces(): Promise<void> {
+    try {
+      const request = create(ListClusterNamespacesRequestSchema, {
+        clusterId: this.clusterData.basics.id,
+      });
+      const response = await firstValueFrom(this.client.listClusterNamespaces(request));
+      this.namespaces.set(response.namespaces);
+    } catch (error) {
+      console.error('Failed to load namespaces:', error);
+    }
+  }
+
+  openAddNamespaceModal(): void {
+    this.namespaceForm.reset();
+    this.showAddNamespaceModal.set(true);
+  }
+
+  async createNamespace(): Promise<void> {
+    if (this.namespaceForm.invalid) {
+      this.namespaceForm.markAllAsTouched();
+      return;
+    }
+
+    this.isCreatingNamespace.set(true);
+
+    try {
+      const request = create(CreateNamespaceRequestSchema, {
+        clusterId: this.clusterData.basics.id,
+        name: this.namespaceForm.value.name.trim(),
+      });
+
+      await firstValueFrom(this.client.createNamespace(request));
+
+      this.showAddNamespaceModal.set(false);
+      this.namespaceForm.reset();
+      this.toastService.info('Namespace created successfully');
+      await this.loadNamespaces();
+    } catch (error) {
+      console.error('Failed to create namespace:', error);
+      this.errorMessage.set(
+        error instanceof Error
+          ? `Failed to create namespace: ${error.message}`
+          : 'Failed to create namespace',
+      );
+      this.showAddNamespaceModal.set(false);
+    } finally {
+      this.isCreatingNamespace.set(false);
+    }
+  }
+
+  async deleteNamespace(namespaceId: string): Promise<void> {
+    try {
+      const request = create(DeleteNamespaceRequestSchema, { namespaceId });
+      await firstValueFrom(this.client.deleteNamespace(request));
+
+      this.toastService.info('Namespace deleted successfully');
+      await this.loadNamespaces();
+    } catch (error) {
+      console.error('Failed to delete namespace:', error);
+      this.errorMessage.set(
+        error instanceof Error
+          ? `Failed to delete namespace: ${error.message}`
+          : 'Failed to delete namespace',
       );
     }
   }

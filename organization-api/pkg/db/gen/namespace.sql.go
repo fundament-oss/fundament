@@ -11,6 +11,42 @@ import (
 	"github.com/google/uuid"
 )
 
+const namespaceCreate = `-- name: NamespaceCreate :one
+INSERT INTO tenant.namespaces (cluster_id, name)
+VALUES ($1, $2)
+RETURNING id
+`
+
+type NamespaceCreateParams struct {
+	ClusterID uuid.UUID
+	Name      string
+}
+
+func (q *Queries) NamespaceCreate(ctx context.Context, arg NamespaceCreateParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, namespaceCreate, arg.ClusterID, arg.Name)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const namespaceDelete = `-- name: NamespaceDelete :execrows
+UPDATE tenant.namespaces
+SET deleted = NOW()
+WHERE id = $1 AND deleted IS NULL
+`
+
+type NamespaceDeleteParams struct {
+	ID uuid.UUID
+}
+
+func (q *Queries) NamespaceDelete(ctx context.Context, arg NamespaceDeleteParams) (int64, error) {
+	result, err := q.db.Exec(ctx, namespaceDelete, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const namespaceGetByID = `-- name: NamespaceGetByID :one
 SELECT id, cluster_id, name, created, deleted
 FROM tenant.namespaces

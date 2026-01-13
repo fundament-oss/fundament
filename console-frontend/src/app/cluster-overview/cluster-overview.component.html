@@ -389,6 +389,51 @@
           }
         </div>
 
+        <!-- Namespaces Block -->
+        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-medium dark:text-white">Namespaces</h3>
+            <button
+              type="button"
+              (click)="openAddNamespaceModal()"
+              class="btn-primary inline-flex items-center text-sm"
+            >
+              <app-plus-icon class="mr-1.5 h-4 w-4" />
+              Add namespace
+            </button>
+          </div>
+          @if (namespaces().length === 0) {
+            <div class="py-8 text-center">
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                No namespaces have been created yet.
+              </p>
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (ns of namespaces(); track ns.id) {
+                <div
+                  class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
+                >
+                  <div>
+                    <p class="font-mono text-sm dark:text-white">{{ ns.name }}</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Created {{ formatDate(ns.createdAt?.value || '') }}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="deleteNamespace(ns.id)"
+                    class="inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white"
+                  >
+                    <app-trash-icon class="mr-1.5 h-4 w-4" />
+                    Delete
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
         <!-- Plugins Block -->
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
@@ -508,6 +553,82 @@
           Yes, delete this cluster
         </button>
       </div>
+    </div>
+  </div>
+}
+
+<!-- Add Namespace Modal -->
+@if (showAddNamespaceModal()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      class="w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-950"
+      role="dialog"
+      aria-labelledby="add-namespace-modal-title"
+      aria-modal="true"
+    >
+      <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-950">
+          <h3
+            class="text-lg leading-6 font-semibold text-gray-900 dark:text-white"
+            id="add-namespace-modal-title"
+          >
+            Add namespace
+          </h3>
+          <div class="mt-4">
+            <label
+              for="namespaceName"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+            >
+              Namespace name
+            </label>
+            <input
+              id="namespaceName"
+              formControlName="name"
+              type="text"
+              placeholder="Enter namespace name"
+              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Lowercase letters, numbers, and hyphens only. Max 63 characters.
+            </p>
+            @if (
+              namespaceForm.get('name')?.invalid &&
+              (namespaceForm.get('name')?.dirty || namespaceForm.get('name')?.touched)
+            ) {
+              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+                @if (namespaceForm.get('name')?.errors?.['required']) {
+                  Namespace name is required.
+                } @else if (namespaceForm.get('name')?.errors?.['maxlength']) {
+                  Namespace name must be 63 characters or less.
+                } @else if (namespaceForm.get('name')?.errors?.['pattern']) {
+                  Namespace name must be lowercase alphanumeric with hyphens.
+                }
+              </p>
+            }
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 dark:bg-gray-900">
+          <button
+            type="button"
+            (click)="showAddNamespaceModal.set(false)"
+            class="btn-secondary mr-3"
+            [disabled]="isCreatingNamespace()"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="isCreatingNamespace() || namespaceForm.invalid"
+          >
+            @if (isCreatingNamespace()) {
+              Creating...
+            } @else {
+              Create namespace
+            }
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 }

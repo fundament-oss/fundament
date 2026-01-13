@@ -56,6 +56,12 @@ service ClusterService {
 
   // List namespaces for a cluster
   rpc ListClusterNamespaces(ListClusterNamespacesRequest) returns (ListClusterNamespacesResponse);
+
+  // Create a namespace in a cluster
+  rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse);
+
+  // Delete a namespace
+  rpc DeleteNamespace(DeleteNamespaceRequest) returns (google.protobuf.Empty);
 }
 
 // List clusters request
@@ -284,4 +290,20 @@ message ClusterNamespace {
   string id = 10;
   string name = 20;
   Timestamp created_at = 30;
+}
+
+// Create namespace request
+message CreateNamespaceRequest {
+  string cluster_id = 10;
+  string name = 20;
+}
+
+// Create namespace response
+message CreateNamespaceResponse {
+  string namespace_id = 10;
+}
+
+// Delete namespace request
+message DeleteNamespaceRequest {
+  string namespace_id = 10;
 }
