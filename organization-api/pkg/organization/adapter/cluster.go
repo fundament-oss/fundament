@@ -44,7 +44,7 @@ func FromClusterSummary(c *db.ClusterListByOrganizationIDRow) *organizationv1.Cl
 	return &organizationv1.ClusterSummary{
 		Id:            c.ID.String(),
 		Name:          c.Name,
-		Status:        FromClusterStatus(c.Status),
+		Status:        StatusFromShootStatus(c.ShootStatus),
 		Region:        c.Region,
 		ProjectCount:  0, // Stub
 		NodePoolCount: 0, // Stub
@@ -58,7 +58,7 @@ func FromClusterDetail(c *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
 		Name:              c.Name,
 		Region:            c.Region,
 		KubernetesVersion: c.KubernetesVersion,
-		Status:            FromClusterStatus(c.Status),
+		Status:            StatusFromShootStatus(c.ShootStatus),
 		CreatedAt: &organizationv1.Timestamp{
 			Value: c.Created.Time.Format(time.RFC3339),
 		},
@@ -106,21 +106,22 @@ func FromSyncState(
 	return state
 }
 
-func FromClusterStatus(status string) organizationv1.ClusterStatus {
-	switch status {
-	case "provisioning":
+// StatusFromShootStatus derives ClusterStatus from Gardener's shoot_status.
+// This is the source of truth for cluster state since clusters.status is not updated.
+func StatusFromShootStatus(shootStatus pgtype.Text) organizationv1.ClusterStatus {
+	if !shootStatus.Valid {
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
-	case "starting":
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING
-	case "running":
+	}
+	switch shootStatus.String {
+	case "pending", "progressing":
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
+	case "ready":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING
-	case "upgrading":
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING
 	case "error":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR
-	case "stopping":
+	case "deleting":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING
-	case "stopped":
+	case "deleted":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED
 	default:
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED

@@ -192,7 +192,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
+<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
 	<position x="780" y="560"/>
@@ -211,9 +211,6 @@ END;]]> </definition>
 	<column name="kubernetes_version" not-null="true">
 		<type name="text" length="0"/>
 	</column>
-	<column name="status" not-null="true">
-		<type name="text" length="0"/>
-	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
@@ -225,9 +222,6 @@ END;]]> </definition>
 	</constraint>
 	<constraint name="clusters_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.clusters">
 		<columns names="organization_id,name,deleted" ref-type="src-columns"/>
-	</constraint>
-	<constraint name="clusters_ck_status" type="ck-constr" table="tenant.clusters">
-			<expression> <![CDATA[status IN ('unspecified','provisioning','starting','running','upgrading','error','stopping','stopped')]]> </expression>
 	</constraint>
 </table>
 

@@ -80,7 +80,6 @@ func (s *OrganizationServer) CreateCluster(
 		Name:              input.Name,
 		Region:            input.Region,
 		KubernetesVersion: input.KubernetesVersion,
-		Status:            "unspecified",
 	}
 
 	clusterID, err := s.queries.ClusterCreate(ctx, params)

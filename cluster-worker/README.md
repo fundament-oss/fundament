@@ -265,6 +265,7 @@ Run the complete stack with local Gardener:
 just cluster-start
 
 # 2. Start local Gardener + configure secrets (first time ~15 min)
+# (requires just dev to have been run before to setup namespace)
 just local-gardener
 
 # 3. Deploy all services with local Gardener mode
