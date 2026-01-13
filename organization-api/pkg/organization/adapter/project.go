@@ -29,15 +29,25 @@ func ToProjectUpdate(req *organizationv1.UpdateProjectRequest) (models.ProjectUp
 	}, nil
 }
 
-func FromProjects(projects []db.TenantProject) []*organizationv1.Project {
+func FromProjects(projects []db.ProjectListByOrganizationIDRow) []*organizationv1.Project {
 	result := make([]*organizationv1.Project, 0, len(projects))
 	for i := range projects {
-		result = append(result, FromProject(&projects[i]))
+		result = append(result, FromProjectFromList(&projects[i]))
 	}
 	return result
 }
 
-func FromProject(p *db.TenantProject) *organizationv1.Project {
+func FromProjectFromList(p *db.ProjectListByOrganizationIDRow) *organizationv1.Project {
+	return &organizationv1.Project{
+		Id:   p.ID.String(),
+		Name: p.Name,
+		CreatedAt: &organizationv1.Timestamp{
+			Value: p.Created.Time.Format(time.RFC3339),
+		},
+	}
+}
+
+func FromProject(p *db.ProjectGetByIDRow) *organizationv1.Project {
 	return &organizationv1.Project{
 		Id:   p.ID.String(),
 		Name: p.Name,

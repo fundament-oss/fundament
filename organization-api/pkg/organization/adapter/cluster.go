@@ -103,3 +103,21 @@ func FromNodePool(np db.TenantNodePool) *organizationv1.NodePool {
 		Version:      "",                                                         // Stub: would come from actual cluster state
 	}
 }
+
+func FromClusterNamespaces(namespaces []db.TenantNamespace) []*organizationv1.ClusterNamespace {
+	result := make([]*organizationv1.ClusterNamespace, 0, len(namespaces))
+	for _, ns := range namespaces {
+		result = append(result, FromClusterNamespace(ns))
+	}
+	return result
+}
+
+func FromClusterNamespace(ns db.TenantNamespace) *organizationv1.ClusterNamespace {
+	return &organizationv1.ClusterNamespace{
+		Id:   ns.ID.String(),
+		Name: ns.Name,
+		CreatedAt: &organizationv1.Timestamp{
+			Value: ns.Created.Time.Format(time.RFC3339),
+		},
+	}
+}

@@ -53,6 +53,9 @@ service ClusterService {
 
   // Remove an install from a cluster
   rpc RemoveInstall(RemoveInstallRequest) returns (google.protobuf.Empty);
+
+  // List namespaces for a cluster
+  rpc ListClusterNamespaces(ListClusterNamespacesRequest) returns (ListClusterNamespacesResponse);
 }
 
 // List clusters request
@@ -264,4 +267,21 @@ message AddInstallResponse {
 // Remove install request
 message RemoveInstallRequest {
   string install_id = 10;  // The UUID of the install record
+}
+
+// List cluster namespaces request
+message ListClusterNamespacesRequest {
+  string cluster_id = 10;
+}
+
+// List cluster namespaces response
+message ListClusterNamespacesResponse {
+  repeated ClusterNamespace namespaces = 10;
+}
+
+// Cluster namespace information
+message ClusterNamespace {
+  string id = 10;
+  string name = 20;
+  Timestamp created_at = 30;
 }
