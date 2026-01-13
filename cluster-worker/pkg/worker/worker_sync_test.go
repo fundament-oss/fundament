@@ -24,16 +24,23 @@ func testLogger() *slog.Logger {
 	}))
 }
 
+// testCluster creates a valid ClusterToSync for testing.
+func testCluster(name, org string) gardener.ClusterToSync {
+	return gardener.ClusterToSync{
+		ID:                uuid.New(),
+		Name:              name,
+		OrganizationName:  org,
+		Region:            "local",
+		KubernetesVersion: "1.31.1",
+	}
+}
+
 func TestMockClient_ApplyShoot(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := gardener.ClusterToSync{
-		ID:               uuid.New(),
-		Name:             "test-cluster",
-		OrganizationName: "test-tenant",
-	}
+	cluster := testCluster("test-cluster", "test-tenant")
 
 	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
@@ -57,14 +64,10 @@ func TestMockClient_ApplyShoot(t *testing.T) {
 
 func TestMockClient_DeleteShoot(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := gardener.ClusterToSync{
-		ID:               uuid.New(),
-		Name:             "test-cluster",
-		OrganizationName: "test-tenant",
-	}
+	cluster := testCluster("test-cluster", "test-tenant")
 
 	// Create shoot first
 	_ = mock.ApplyShoot(ctx, &cluster)
@@ -75,9 +78,9 @@ func TestMockClient_DeleteShoot(t *testing.T) {
 		t.Fatalf("DeleteShoot failed: %v", err)
 	}
 
-	// Verify shoot was deleted
-	if mock.HasShoot("test-tenant-test-cluster") {
-		t.Error("expected shoot to be deleted")
+	// Verify shoot is marked for deletion (HasShoot returns false for deleted)
+	if mock.HasShoot(gardener.ShootName(cluster.OrganizationName, cluster.Name, 21)) {
+		t.Error("expected shoot to be marked deleted")
 	}
 
 	// Verify call was recorded
@@ -88,17 +91,13 @@ func TestMockClient_DeleteShoot(t *testing.T) {
 
 func TestMockClient_ListShoots(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
 
 	// Create multiple shoots
 	for i := 0; i < 3; i++ {
-		cluster := gardener.ClusterToSync{
-			ID:               uuid.New(),
-			Name:             "cluster-" + string(rune('a'+i)),
-			OrganizationName: "tenant",
-		}
+		cluster := testCluster("cluster-"+string(rune('a'+i)), "tenant")
 		_ = mock.ApplyShoot(ctx, &cluster)
 	}
 
@@ -115,14 +114,10 @@ func TestMockClient_ListShoots(t *testing.T) {
 
 func TestMockClient_GetShootStatus(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger) // Instant transitions for this test
 
 	ctx := context.Background()
-	cluster := gardener.ClusterToSync{
-		ID:               uuid.New(),
-		Name:             "test-cluster",
-		OrganizationName: "test-tenant",
-	}
+	cluster := testCluster("test-cluster", "test-tenant")
 
 	// Before shoot exists - should return pending
 	status, _, err := mock.GetShootStatus(ctx, &cluster)
@@ -136,7 +131,7 @@ func TestMockClient_GetShootStatus(t *testing.T) {
 	// Create shoot
 	_ = mock.ApplyShoot(ctx, &cluster)
 
-	// After shoot exists - should return ready
+	// After shoot exists - should return ready (instant mock skips progression)
 	status, msg, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
@@ -151,14 +146,10 @@ func TestMockClient_GetShootStatus(t *testing.T) {
 
 func TestMockClient_StatusOverride(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := gardener.ClusterToSync{
-		ID:               uuid.New(),
-		Name:             "test-cluster",
-		OrganizationName: "test-tenant",
-	}
+	cluster := testCluster("test-cluster", "test-tenant")
 
 	// Set override
 	mock.SetStatusOverride(cluster.ID, "progressing", "Creating infrastructure")
@@ -181,14 +172,10 @@ func TestMockClient_StatusOverride(t *testing.T) {
 
 func TestMockClient_ApplyError(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := gardener.ClusterToSync{
-		ID:               uuid.New(),
-		Name:             "test-cluster",
-		OrganizationName: "test-tenant",
-	}
+	cluster := testCluster("test-cluster", "test-tenant")
 
 	// Set error
 	mock.SetApplyError(gardener.ErrMockApplyFailed)
@@ -199,21 +186,18 @@ func TestMockClient_ApplyError(t *testing.T) {
 	}
 
 	// Shoot should not exist
-	if mock.HasShoot("test-tenant-test-cluster") {
+	shootName := gardener.ShootName(cluster.OrganizationName, cluster.Name, 21)
+	if mock.HasShoot(shootName) {
 		t.Error("shoot should not exist after error")
 	}
 }
 
 func TestMockClient_Reset(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := gardener.ClusterToSync{
-		ID:               uuid.New(),
-		Name:             "test-cluster",
-		OrganizationName: "test-tenant",
-	}
+	cluster := testCluster("test-cluster", "test-tenant")
 
 	// Create shoot and set error
 	_ = mock.ApplyShoot(ctx, &cluster)

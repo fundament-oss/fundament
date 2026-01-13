@@ -85,6 +85,59 @@ gardener-down:
     make kind-down
     echo "Gardener stopped"
 
+# Delete Gardener kind cluster (for clean restart)
+gardener-delete:
+    #!/usr/bin/env bash
+    if kind get clusters 2>/dev/null | grep -q gardener-local; then
+        echo "Deleting existing gardener-local cluster..."
+        kind delete cluster --name gardener-local
+    fi
+
+# Fix stale port mappings by starting a socat port forward
+gardener-fix-ports:
+    #!/usr/bin/env bash
+    set -e
+
+    # Check if gardener is running
+    if ! docker ps --format '{{{{.Names}}' | grep -q gardener-local-control-plane; then
+        echo "Error: Gardener not running. Start with: just local-gardener"
+        exit 1
+    fi
+
+    # Get the port from existing kubeconfig
+    GARDENER_DIR="{{GARDENER_DIR}}"
+    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
+    KUBECONFIG="$GARDENER_DIR/example/provider-local/seed-kind/base/kubeconfig"
+    PORT=$(grep -oE 'server: https://127.0.0.1:[0-9]+' "$KUBECONFIG" | grep -oE '[0-9]+$' || echo "6443")
+
+    # Check if connection already works
+    if timeout 3 kubectl --kubeconfig "$KUBECONFIG" cluster-info &>/dev/null; then
+        echo "Connection already working. Nothing to fix."
+        exit 0
+    fi
+
+    # Check if port is in use (by broken docker mapping)
+    if lsof -i :$PORT &>/dev/null; then
+        echo "Port $PORT is allocated but not working."
+        echo "This usually means Docker needs a restart or the kind cluster needs recreation."
+        echo ""
+        echo "Options:"
+        echo "  1. Restart Docker Desktop"
+        echo "  2. Recreate: just gardener-delete && just local-gardener"
+        exit 1
+    fi
+
+    # Port is free, start socat forward
+    docker rm -f gardener-port-forward 2>/dev/null || true
+    echo "Starting port forward: localhost:$PORT -> gardener-local-control-plane:6443"
+    docker run -d --rm --name gardener-port-forward \
+        --network kind \
+        -p $PORT:6443 \
+        alpine/socat TCP-LISTEN:6443,fork,reuseaddr TCP:gardener-local-control-plane:6443
+
+    echo "Port forward active. Test with: just gardener-status"
+    echo "Stop with: docker rm -f gardener-port-forward"
+
 # Check Gardener status
 gardener-status:
     #!/usr/bin/env bash
@@ -103,11 +156,11 @@ gardener-status:
 
     echo "Status: RUNNING"
     KIND_IP=$(docker inspect gardener-local-control-plane --format '{{{{range $net, $conf := .NetworkSettings.Networks}}{{{{if eq $net "kind"}}{{{{$conf.IPAddress}}{{{{end}}{{{{end}}' 2>/dev/null || echo "unknown")
-    echo "API Server: https://$KIND_IP:6443"
+    echo "API Server: https://$KIND_IP:6443 (internal)"
     echo ""
 
     echo "=== Shoots ==="
-    kubectl --kubeconfig "$KUBECONFIG" get shoots -n garden-local 2>/dev/null || echo "No shoots"
+    kubectl --kubeconfig "$KUBECONFIG" get shoots -n garden-local 2>/dev/null || echo "No shoots (run 'just gardener-fix-ports' if connection refused)"
     echo ""
 
     echo "=== Network ==="

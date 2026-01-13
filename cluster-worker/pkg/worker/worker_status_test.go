@@ -7,7 +7,6 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
@@ -38,14 +37,10 @@ func TestStatusWorker_Creation(t *testing.T) {
 
 func TestStatusWorker_MockGardenerInteraction(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := gardener.ClusterToSync{
-		ID:               uuid.New(),
-		Name:             "test-cluster",
-		OrganizationName: "test-tenant",
-	}
+	cluster := testCluster("test-cluster", "test-tenant")
 
 	// Before shoot exists
 	status, msg, err := mock.GetShootStatus(ctx, &cluster)
@@ -64,7 +59,7 @@ func TestStatusWorker_MockGardenerInteraction(t *testing.T) {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
-	// After shoot exists - default is "ready"
+	// After shoot exists - instant mock returns "ready"
 	status, _, err = mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
@@ -78,26 +73,22 @@ func TestStatusWorker_MockGardenerInteraction(t *testing.T) {
 		t.Fatalf("DeleteShoot failed: %v", err)
 	}
 
-	// After shoot deleted
+	// After shoot deleted - instant mock returns "deleted"
 	status, _, err = mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
-	if status != "pending" {
-		t.Errorf("expected 'pending' status for deleted shoot, got %q", status)
+	if status != "deleted" {
+		t.Errorf("expected 'deleted' status for deleted shoot, got %q", status)
 	}
 }
 
 func TestStatusWorker_ProgressingStatus(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := gardener.ClusterToSync{
-		ID:               uuid.New(),
-		Name:             "test-cluster",
-		OrganizationName: "test-tenant",
-	}
+	cluster := testCluster("test-cluster", "test-tenant")
 
 	// Create shoot
 	if err := mock.ApplyShoot(ctx, &cluster); err != nil {
@@ -121,14 +112,10 @@ func TestStatusWorker_ProgressingStatus(t *testing.T) {
 
 func TestStatusWorker_ErrorStatus(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := gardener.ClusterToSync{
-		ID:               uuid.New(),
-		Name:             "test-cluster",
-		OrganizationName: "test-tenant",
-	}
+	cluster := testCluster("test-cluster", "test-tenant")
 
 	// Create shoot
 	if err := mock.ApplyShoot(ctx, &cluster); err != nil {
@@ -152,16 +139,12 @@ func TestStatusWorker_ErrorStatus(t *testing.T) {
 
 func TestStatusWorker_DeletingStatus(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
 	now := time.Now()
-	cluster := gardener.ClusterToSync{
-		ID:               uuid.New(),
-		Name:             "test-cluster",
-		OrganizationName: "test-tenant",
-		Deleted:          &now, // Mark as deleted in DB
-	}
+	cluster := testCluster("test-cluster", "test-tenant")
+	cluster.Deleted = &now // Mark as deleted in DB
 
 	// Create shoot (simulating a shoot that's being deleted)
 	if err := mock.ApplyShoot(ctx, &cluster); err != nil {
@@ -258,7 +241,7 @@ func TestStatusWorker_RunLoop(t *testing.T) {
 
 func TestStatusWorker_MultipleStatusOverrides(t *testing.T) {
 	logger := testLogger()
-	mock := gardener.NewMock(logger)
+	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
 
@@ -269,17 +252,17 @@ func TestStatusWorker_MultipleStatusOverrides(t *testing.T) {
 		message string
 	}{
 		{
-			cluster: gardener.ClusterToSync{ID: uuid.New(), Name: "cluster-1", OrganizationName: "tenant"},
+			cluster: testCluster("cluster-1", "tenant"),
 			status:  "ready",
 			message: "Cluster is ready",
 		},
 		{
-			cluster: gardener.ClusterToSync{ID: uuid.New(), Name: "cluster-2", OrganizationName: "tenant"},
+			cluster: testCluster("cluster-2", "tenant"),
 			status:  "progressing",
 			message: "Creating workers",
 		},
 		{
-			cluster: gardener.ClusterToSync{ID: uuid.New(), Name: "cluster-3", OrganizationName: "tenant"},
+			cluster: testCluster("cluster-3", "tenant"),
 			status:  "error",
 			message: "Infrastructure provisioning failed",
 		},

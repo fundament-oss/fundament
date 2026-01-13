@@ -230,7 +230,7 @@ The worker supports two Gardener client implementations:
 | `GARDENER_NAMESPACE` | No | `garden-fundament` | Gardener project namespace |
 | `GARDENER_PROVIDER_TYPE` | No | `local` | Provider type: `local`, `metal`, `aws`, etc. |
 | `GARDENER_CLOUD_PROFILE` | No | `local` | Cloud profile name |
-| `GARDENER_CREDENTIALS_BINDING_NAME` | No | - | Credentials binding name (not needed for local provider) |
+| `GARDENER_CREDENTIALS_BINDING_NAME` | No | `local` | Credentials binding name (defaults to `local` for local provider) |
 | `GARDENER_MAX_SHOOT_NAME_LEN` | No | `21` | Max shoot name length (21 for local, up to 63 for others) |
 | `LOG_LEVEL` | No | `info` | Log level (debug, info, warn, error) |
 | `POLL_INTERVAL` | No | `30s` | LISTEN timeout / fallback poll interval |
@@ -270,10 +270,10 @@ just local-gardener
 # 3. Deploy all services with local Gardener mode
 just dev -p local-gardener
 
-# 4. Start console frontend (separate terminal)
-cd console-frontend && npm start
+# 4. Access the console frontend
+open http://console.127.0.0.1.nip.io:8080
 
-# 5. Create a test cluster via console (http://localhost:4200) or CLI:
+# 5. Create a test cluster via console or CLI:
 cd cluster-worker && just create-test-cluster t1
 
 # Watch progress:
@@ -303,21 +303,21 @@ First Gardener run takes ~15 minutes to build. Subsequent runs are instant.
 ```
 cluster-worker/
 ├── cmd/cluster-worker/
-│   └── main.go              # Entry point, config, health server
+│   └── main.go                # Entry point, config, health server
 ├── pkg/
 │   ├── worker/
-│   │   ├── worker.go        # Main sync loop with LISTEN/NOTIFY
-│   │   ├── worker_test.go   # Unit tests
-│   │   ├── status_poller.go # Gardener status polling
-│   │   └── status_poller_test.go
+│   │   ├── worker_sync.go     # Main sync loop with LISTEN/NOTIFY
+│   │   ├── worker_sync_test.go
+│   │   ├── worker_status.go   # Gardener status polling
+│   │   └── worker_status_test.go
 │   ├── gardener/
-│   │   ├── client.go        # Interface and types
-│   │   ├── mock.go          # MockClient for testing
-│   │   └── real.go          # RealClient for Gardener API
+│   │   ├── client.go          # Interface and types
+│   │   ├── mock.go            # MockClient for testing
+│   │   └── real.go            # RealClient for Gardener API
 │   └── db/
-│       ├── queries.sql      # sqlc queries
-│       ├── sqlc.yaml        # sqlc config
-│       └── gen/             # Generated code
+│       ├── queries.sql        # sqlc queries (EntityAction naming convention)
+│       ├── sqlc.yaml          # sqlc config
+│       └── gen/               # Generated code
 └── README.md
 ```
 
