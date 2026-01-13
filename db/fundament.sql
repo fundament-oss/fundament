@@ -37,8 +37,9 @@ CREATE TABLE tenant.projects (
 	organization_id uuid NOT NULL,
 	name text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
 	CONSTRAINT projects_pk PRIMARY KEY (id),
-	CONSTRAINT projects_uq_organization_name UNIQUE (organization_id,name)
+	CONSTRAINT projects_uq_organization_name UNIQUE (organization_id,name,deleted)
 );
 -- ddl-end --
 ALTER TABLE tenant.projects OWNER TO postgres;
@@ -228,7 +229,7 @@ CREATE TABLE tenant.namespaces_projects (
 	namespace_id uuid,
 	project_id uuid,
 	created timestamptz NOT NULL DEFAULT now(),
-	deleted uuid DEFAULT uuidv7(),
+	deleted timestamptz,
 	CONSTRAINT namespaces_projects_pk PRIMARY KEY (id),
 	CONSTRAINT namespaces_projects_uq UNIQUE NULLS NOT DISTINCT (project_id,namespace_id,deleted)
 );

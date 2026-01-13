@@ -1,14 +1,16 @@
 SET SESSION statement_timeout = 3000;
 SET SESSION lock_timeout = 3000;
 
-ALTER INDEX "tenant"."namespaces_uq_name" RENAME TO "pgschemadiff_tmpidx_namespaces_uq_name_MVxh2raxSXS9CQ9rNI9Vjg";
+ALTER INDEX "tenant"."namespaces_uq_name" RENAME TO "pgschemadiff_tmpidx_namespaces_uq_name_KlPi0e0UQIesqenGttfPzQ";
+
+ALTER INDEX "tenant"."projects_uq_organization_name" RENAME TO "pgschemadiff_tmpidx_projects_uq_organiza_Ufkr$ahvTRas_rORdnO$UQ";
 
 CREATE TABLE "tenant"."namespaces_projects" (
 	"id" uuid DEFAULT uuidv7() NOT NULL,
 	"namespace_id" uuid,
 	"project_id" uuid,
 	"created" timestamp with time zone DEFAULT now() NOT NULL,
-	"deleted" uuid DEFAULT uuidv7()
+	"deleted" timestamp with time zone
 );
 
 CREATE POLICY "nss_projects_namespace_organization_isolation" ON "tenant"."namespaces_projects"
@@ -42,6 +44,8 @@ CREATE INDEX nss_projects_idx_active ON tenant.namespaces_projects USING btree (
 
 ALTER TABLE "tenant"."namespaces" DROP CONSTRAINT "namespaces_fk_project";
 
+ALTER TABLE "tenant"."projects" ADD COLUMN "deleted" timestamp with time zone;
+
 /* Hazards:
  - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
 */
@@ -56,6 +60,13 @@ CREATE POLICY "projects_organization_isolation" ON "tenant"."projects"
 */
 ALTER TABLE "tenant"."projects" ENABLE ROW LEVEL SECURITY;
 
+/* Hazards:
+ - ACQUIRES_SHARE_LOCK: Non-concurrent index creates will lock out writes to the table during the duration of the index build.
+*/
+CREATE UNIQUE INDEX projects_uq_organization_name ON tenant.projects USING btree (organization_id, name, deleted);
+
+ALTER TABLE "tenant"."projects" ADD CONSTRAINT "projects_uq_organization_name" UNIQUE USING INDEX "projects_uq_organization_name";
+
 ALTER TABLE "tenant"."namespaces_projects" ADD CONSTRAINT "namespaces_projects_fk_project" FOREIGN KEY (project_id) REFERENCES tenant.projects(id) NOT VALID;
 
 ALTER TABLE "tenant"."namespaces_projects" VALIDATE CONSTRAINT "namespaces_projects_fk_project";
@@ -64,7 +75,7 @@ ALTER TABLE "tenant"."namespaces_projects" VALIDATE CONSTRAINT "namespaces_proje
  - ACQUIRES_ACCESS_EXCLUSIVE_LOCK: Index drops will lock out all accesses to the table. They should be fast.
  - INDEX_DROPPED: Dropping this index means queries that use this index might perform worse because they will no longer will be able to leverage it.
 */
-ALTER TABLE "tenant"."namespaces" DROP CONSTRAINT "pgschemadiff_tmpidx_namespaces_uq_name_MVxh2raxSXS9CQ9rNI9Vjg";
+ALTER TABLE "tenant"."namespaces" DROP CONSTRAINT "pgschemadiff_tmpidx_namespaces_uq_name_KlPi0e0UQIesqenGttfPzQ";
 
 /* Hazards:
  - DELETES_DATA: Deletes all values in the column
@@ -81,6 +92,12 @@ ALTER TABLE "tenant"."namespaces" ADD CONSTRAINT "namespaces_uq_name" UNIQUE USI
 ALTER TABLE "tenant"."namespaces_projects" ADD CONSTRAINT "namespaces_projects_fk_namespace" FOREIGN KEY (namespace_id) REFERENCES tenant.namespaces(id) NOT VALID;
 
 ALTER TABLE "tenant"."namespaces_projects" VALIDATE CONSTRAINT "namespaces_projects_fk_namespace";
+
+/* Hazards:
+ - ACQUIRES_ACCESS_EXCLUSIVE_LOCK: Index drops will lock out all accesses to the table. They should be fast.
+ - INDEX_DROPPED: Dropping this index means queries that use this index might perform worse because they will no longer will be able to leverage it.
+*/
+ALTER TABLE "tenant"."projects" DROP CONSTRAINT "pgschemadiff_tmpidx_projects_uq_organiza_Ufkr$ahvTRas_rORdnO$UQ";
 
 
 -- Statements generated automatically, please review:

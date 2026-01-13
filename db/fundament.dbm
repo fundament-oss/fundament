@@ -5,7 +5,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 -->
 <dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="10"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="411,454" last-zoom="1" scene-rect="0,0,2198.81,1343.12"
+	 last-position="0,0" last-zoom="1" scene-rect="0,0,2198.81,1343.12"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -52,7 +52,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
-<table name="projects" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="4" z-value="0">
+<table name="projects" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
 	<position x="1000" y="380"/>
@@ -68,11 +68,14 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
 	<constraint name="projects_pk" type="pk-constr" table="tenant.projects">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="projects_uq_organization_name" type="uq-constr" table="tenant.projects">
-		<columns names="organization_id,name" ref-type="src-columns"/>
+		<columns names="organization_id,name,deleted" ref-type="src-columns"/>
 	</constraint>
 </table>
 
@@ -324,8 +327,8 @@ END;]]> </definition>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<column name="deleted" default-value="uuidv7()">
-		<type name="uuid" length="0"/>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
 	</column>
 	<constraint name="namespaces_projects_pk" type="pk-constr" table="tenant.namespaces_projects">
 		<columns names="id" ref-type="src-columns"/>
