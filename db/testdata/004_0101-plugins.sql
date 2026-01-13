@@ -1,7 +1,7 @@
--- Test data for appstore plugins, tags, and categories
+-- Test data for zappstore plugins, tags, and categories
 
 -- Categories
-INSERT INTO appstore.categories (id, name) VALUES
+INSERT INTO zappstore.categories (id, name) VALUES
     ('019b4000-4000-7000-8000-000000000001', 'observability'),
     ('019b4000-4000-7000-8000-000000000002', 'security'),
     ('019b4000-4000-7000-8000-000000000003', 'networking'),
@@ -9,7 +9,7 @@ INSERT INTO appstore.categories (id, name) VALUES
     ('019b4000-4000-7000-8000-000000000005', 'identity');
 
 -- Tags
-INSERT INTO appstore.tags (id, name) VALUES
+INSERT INTO zappstore.tags (id, name) VALUES
     ('019b4000-5000-7000-8000-000000000001', 'metrics'),
     ('019b4000-5000-7000-8000-000000000002', 'logging'),
     ('019b4000-5000-7000-8000-000000000003', 'tracing'),
@@ -22,7 +22,7 @@ INSERT INTO appstore.tags (id, name) VALUES
     ('019b4000-5000-7000-8000-00000000000a', 'grafana-stack');
 
 -- Plugins
-INSERT INTO appstore.plugins (id, name, description) VALUES
+INSERT INTO zappstore.plugins (id, name, description) VALUES
     ('019b4000-3000-7000-8000-000000000001', 'alloy', 'Grafana Alloy is a flexible, high performance OpenTelemetry Collector distribution'),
     ('019b4000-3000-7000-8000-000000000002', 'cert-manager', 'Automatically provision and manage TLS certificates in Kubernetes'),
     ('019b4000-3000-7000-8000-000000000003', 'cloudnative-pg', 'CloudNativePG is an open source operator for PostgreSQL workloads'),
@@ -38,7 +38,7 @@ INSERT INTO appstore.plugins (id, name, description) VALUES
     ('019b4000-3000-7000-8000-00000000000d', 'tempo', 'High-scale distributed tracing backend');
 
 -- Plugin-Category associations
-INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
+INSERT INTO zappstore.categories_plugins (plugin_id, category_id) VALUES
     -- alloy -> observability
     ('019b4000-3000-7000-8000-000000000001', '019b4000-4000-7000-8000-000000000001'),
     -- cert-manager -> security
@@ -67,7 +67,7 @@ INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
     ('019b4000-3000-7000-8000-00000000000d', '019b4000-4000-7000-8000-000000000001');
 
 -- Plugin-Tag associations
-INSERT INTO appstore.plugins_tags (plugin_id, tag_id) VALUES
+INSERT INTO zappstore.plugins_tags (plugin_id, tag_id) VALUES
     -- alloy: metrics, logging, tracing, grafana-stack
     ('019b4000-3000-7000-8000-000000000001', '019b4000-5000-7000-8000-000000000001'),
     ('019b4000-3000-7000-8000-000000000001', '019b4000-5000-7000-8000-000000000002'),
