@@ -1,0 +1,96 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: prediscussion
+
+= FUN-6 API-First Design
+
+== Introduction
+
+This FUN documents the decision to adopt an API-first design approach for Fundament. In API-first development, the API specification is written before implementing any code. The specification becomes the contract that drives both backend implementation and client generation.
+
+== Why API-First
+
+=== Multiple Clients, Single Source of Truth
+
+Fundament needs to support multiple clients:
+
+* Console UI (web interface)
+* CLI tooling
+* Infrastructure-as-code integrations
+* Third-party integrations
+
+Without a well-defined API contract, each client would interpret the backend differently, leading to inconsistencies and integration bugs. By defining the API first, all clients work from the same specification.
+
+=== Developer Experience
+
+API-first enables:
+
+* Generated client libraries in multiple languages
+* Auto-generated documentation
+* Contract-based testing
+* Parallel development (frontend and backend can work simultaneously)
+
+=== Change Management
+
+When the API specification is the source of truth:
+
+* Breaking changes are explicit and visible in the spec diff
+* Versioning is enforced at the API level
+* Deprecation can be communicated through the spec
+
+== Technology Choices
+
+=== Protocol Buffers and gRPC
+
+For service-to-service communication and the primary API definition, we use Protocol Buffers (protobuf) with gRPC:
+
+* Strong typing with code generation
+* Efficient binary serialization
+* Built-in versioning through protobuf evolution rules
+* gRPC-Gateway for REST/JSON translation
+
+=== OpenAPI for HTTP APIs
+
+Where HTTP/REST is more appropriate (authentication, webhooks), OpenAPI specifications are used:
+
+* Wide tooling ecosystem
+* Human-readable documentation
+* Client generation for languages without good gRPC support
+
+== Workflow
+
+1. **Design the API** - Write the protobuf or OpenAPI specification
+2. **Review the specification** - API changes go through PR review
+3. **Generate code** - Use `go generate ./...` or `just generate` to produce server stubs and client libraries
+4. **Implement** - Write the business logic against the generated interfaces
+5. **Test** - Contract tests verify the implementation matches the spec
+
+== Implications
+
+=== No Hand-Written API Code
+
+Generated code must not be manually edited. All API types, server interfaces, and client code come from the specification. This ensures the spec and implementation cannot drift.
+
+=== Specification Lives in Version Control
+
+API specifications are tracked in git alongside the code. This provides:
+
+* History of API evolution
+* Code review for API changes
+* Single source of truth
+
+=== Breaking Changes Require Consideration
+
+Because the API is a contract with multiple clients, breaking changes must be:
+
+* Discussed before implementation
+* Versioned appropriately (new version or deprecation period)
+* Communicated to API consumers
+
+== Related
+
+* FUN-4: Plugins expose resources through the API
+* https://swagger.io/resources/articles/adopting-an-api-first-approach/[Adopting an API-First Approach]
+* https://buf.build/docs/best-practices/style-guide[Buf Style Guide for Protocol Buffers]
