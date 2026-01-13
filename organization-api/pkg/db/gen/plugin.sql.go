@@ -7,24 +7,101 @@ package db
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
+const pluginCategoriesList = `-- name: PluginCategoriesList :many
+SELECT cp.plugin_id, c.id, c.name
+FROM appstore.categories_plugins cp
+JOIN appstore.categories c ON c.id = cp.tag_id
+WHERE c.deleted IS NULL
+ORDER BY c.name
+`
+
+type PluginCategoriesListRow struct {
+	PluginID uuid.UUID
+	ID       uuid.UUID
+	Name     string
+}
+
+func (q *Queries) PluginCategoriesList(ctx context.Context) ([]PluginCategoriesListRow, error) {
+	rows, err := q.db.Query(ctx, pluginCategoriesList)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PluginCategoriesListRow
+	for rows.Next() {
+		var i PluginCategoriesListRow
+		if err := rows.Scan(&i.PluginID, &i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const pluginList = `-- name: PluginList :many
-SELECT id, name
-FROM tenant.plugins
+SELECT id, name, description
+FROM appstore.plugins
+WHERE deleted IS NULL
 ORDER BY name
 `
 
-func (q *Queries) PluginList(ctx context.Context) ([]TenantPlugin, error) {
+type PluginListRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description string
+}
+
+func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
 	rows, err := q.db.Query(ctx, pluginList)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TenantPlugin
+	var items []PluginListRow
 	for rows.Next() {
-		var i TenantPlugin
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		var i PluginListRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Description); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pluginTagsList = `-- name: PluginTagsList :many
+SELECT pt.plugin_id, t.id, t.name
+FROM appstore.plugins_tags pt
+JOIN appstore.tags t ON t.id = pt.tag_id
+WHERE t.deleted IS NULL
+ORDER BY t.name
+`
+
+type PluginTagsListRow struct {
+	PluginID uuid.UUID
+	ID       uuid.UUID
+	Name     string
+}
+
+func (q *Queries) PluginTagsList(ctx context.Context) ([]PluginTagsListRow, error) {
+	rows, err := q.db.Query(ctx, pluginTagsList)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PluginTagsListRow
+	for rows.Next() {
+		var i PluginTagsListRow
+		if err := rows.Scan(&i.PluginID, &i.ID, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

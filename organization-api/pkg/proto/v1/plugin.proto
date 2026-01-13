@@ -10,10 +10,25 @@ service PluginService {
   rpc ListPlugins(ListPluginsRequest) returns (ListPluginsResponse);
 }
 
+// Tag information
+message Tag {
+  string id = 10;
+  string name = 20;
+}
+
+// Category information
+message Category {
+  string id = 10;
+  string name = 20;
+}
+
 // Plugin information
 message Plugin {
   string id = 10;
   string name = 20;
+  string description = 30;
+  repeated Tag tags = 40;
+  repeated Category categories = 50;
 }
 
 // List plugins request

@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="9"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="14"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="0,359" last-zoom="1" scene-rect="0,0,2058.81,1301.32"
+	 last-position="0,853" last-zoom="1" scene-rect="0,0,2058.81,1839.52"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -29,6 +29,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 
 <schema name="tenant" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
 	<role name="postgres"/>
+</schema>
+
+<schema name="appstore" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
+	<role name="fun_fundament_api"/>
 </schema>
 
 <table name="organizations" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
@@ -259,9 +263,9 @@ END;]]> </definition>
 </policy>
 
 <table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
-	<schema name="tenant"/>
+	<schema name="appstore"/>
 	<role name="fun_fundament_api"/>
-	<position x="440" y="880"/>
+	<position x="1020" y="1160"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -277,39 +281,120 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<constraint name="installs_pk" type="pk-constr" table="tenant.installs">
+	<constraint name="installs_pk" type="pk-constr" table="appstore.installs">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="installs_uq" type="uq-constr" nulls-not-distinct="true" table="tenant.installs">
+	<constraint name="installs_uq" type="uq-constr" nulls-not-distinct="true" table="appstore.installs">
 		<columns names="cluster_id,plugin_id,deleted" ref-type="src-columns"/>
 	</constraint>
 </table>
 
-<table name="plugins" layers="0" collapse-mode="2" max-obj-count="2" z-value="0">
-	<schema name="tenant"/>
+<table name="plugins" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
+	<schema name="appstore"/>
 	<role name="fun_fundament_api"/>
-	<position x="1020" y="1120"/>
+	<position x="540" y="1440"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
 	</column>
-	<constraint name="plugins_uq_name" type="uq-constr" table="tenant.plugins">
-		<columns names="name" ref-type="src-columns"/>
+	<column name="description" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="plugins_uq_name" type="uq-constr" nulls-not-distinct="true" table="appstore.plugins">
+		<columns names="name,deleted" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="plugins_pk" type="pk-constr" table="tenant.plugins">
+	<constraint name="plugins_pk" type="pk-constr" table="appstore.plugins">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 </table>
 
-<policy name="install_organization_policy" table="tenant.installs" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+<policy name="install_organization_policy" table="appstore.installs" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[EXISTS (
       SELECT 1 FROM clusters
       WHERE clusters.id = installs.cluster_id
       AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
 )]]> </expression>
 </policy>
+
+<table name="tags" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
+	<schema name="appstore"/>
+	<role name="fun_fundament_api"/>
+	<position x="1620" y="1440"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="tags_uq_name" type="uq-constr" nulls-not-distinct="true" table="appstore.tags">
+		<columns names="name,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="tags_pk" type="pk-constr" table="appstore.tags">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="plugins_tags" layers="0" collapse-mode="2" max-obj-count="2" z-value="-4">
+	<schema name="appstore"/>
+	<role name="fun_fundament_api"/>
+	<position x="1040" y="1460"/>
+	<column name="plugin_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="tag_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+</table>
+
+<table name="categories" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
+	<schema name="appstore"/>
+	<role name="fun_fundament_api"/>
+	<position x="1620" y="1640"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="categories_uq_name" type="uq-constr" nulls-not-distinct="true" table="appstore.categories">
+		<columns names="name,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="categories_pk" type="pk-constr" table="appstore.categories">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="categories_plugins" layers="0" collapse-mode="2" max-obj-count="2" z-value="-4">
+	<schema name="appstore"/>
+	<role name="fun_fundament_api"/>
+	<position x="1040" y="1640"/>
+	<column name="plugin_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="category_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+</table>
 
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.projects">
@@ -348,14 +433,38 @@ END;]]> </definition>
 </constraint>
 
 <constraint name="installs_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.installs">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="appstore.installs">
 	<columns names="cluster_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="installs_fk_plugin" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.plugins" table="tenant.installs">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.installs">
 	<columns names="plugin_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="plugins_tags_plugin_id" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.plugins_tags">
+	<columns names="plugin_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="plugins_tags_tag_id" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.tags" table="appstore.plugins_tags">
+	<columns names="tag_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="plugins_categories_plugin_id" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.categories_plugins">
+	<columns names="plugin_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="plugins_categories_category_id" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.categories" table="appstore.categories_plugins">
+	<columns names="category_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
@@ -390,13 +499,33 @@ END;]]> </definition>
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_plugins_clusters" type="relfk" layers="0"
-	 src-table="tenant.installs"
+	 src-table="appstore.installs"
 	 dst-table="tenant.clusters" reference-fk="installs_fk_cluster"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_installs_plugins" type="relfk" layers="0"
-	 src-table="tenant.installs"
-	 dst-table="tenant.plugins" reference-fk="installs_fk_plugin"
+	 src-table="appstore.installs"
+	 dst-table="appstore.plugins" reference-fk="installs_fk_plugin"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_plugins_tags_plugins" type="relfk" layers="0"
+	 src-table="appstore.plugins_tags"
+	 dst-table="appstore.plugins" reference-fk="plugins_tags_plugin_id"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_plugins_tags_tags" type="relfk" layers="0"
+	 src-table="appstore.plugins_tags"
+	 dst-table="appstore.tags" reference-fk="plugins_tags_tag_id"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_categories_plugins_plugins" type="relfk" layers="0"
+	 src-table="appstore.categories_plugins"
+	 dst-table="appstore.plugins" reference-fk="plugins_categories_plugin_id"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_categories_plugins_categories" type="relfk" layers="0"
+	 src-table="appstore.categories_plugins"
+	 dst-table="appstore.categories" reference-fk="plugins_categories_category_id"
 	 src-required="false" dst-required="true"/>
 
 </dbmodel>
