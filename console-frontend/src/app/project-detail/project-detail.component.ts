@@ -4,7 +4,7 @@ import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { PROJECT } from '../../connect/tokens';
+import { PROJECT, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
   GetProjectRequestSchema,
@@ -15,6 +15,12 @@ import {
   Project,
   ProjectNamespace,
 } from '../../generated/v1/project_pb';
+import {
+  ListClustersRequestSchema,
+  ListClusterNamespacesRequestSchema,
+  ClusterSummary,
+  ClusterNamespace,
+} from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
 import {
   ErrorIconComponent,
@@ -42,6 +48,7 @@ export class ProjectDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private client = inject(PROJECT);
+  private clusterClient = inject(CLUSTER);
   private toastService = inject(ToastService);
   private fb = inject(FormBuilder);
 
@@ -50,14 +57,20 @@ export class ProjectDetailComponent implements OnInit {
   showDeleteModal = signal<boolean>(false);
   showAttachModal = signal<boolean>(false);
   isAttaching = signal<boolean>(false);
+  isLoadingClusters = signal<boolean>(false);
+  isLoadingClusterNamespaces = signal<boolean>(false);
 
   project = signal<Project | null>(null);
   namespaces = signal<ProjectNamespace[]>([]);
+  clusters = signal<ClusterSummary[]>([]);
+  availableNamespaces = signal<ClusterNamespace[]>([]);
+  selectedClusterId = signal<string>('');
 
   attachForm: FormGroup;
 
   constructor() {
     this.attachForm = this.fb.group({
+      clusterId: ['', [Validators.required]],
       namespaceId: ['', [Validators.required]],
     });
   }
@@ -130,13 +143,15 @@ export class ProjectDetailComponent implements OnInit {
     try {
       const request = create(AttachNamespaceRequestSchema, {
         projectId: currentProject.id,
-        namespaceId: this.attachForm.value.namespaceId.trim(),
+        namespaceId: this.attachForm.value.namespaceId,
       });
 
       await firstValueFrom(this.client.attachNamespace(request));
 
       this.showAttachModal.set(false);
       this.attachForm.reset();
+      this.availableNamespaces.set([]);
+      this.selectedClusterId.set('');
       this.toastService.info('Namespace attached successfully');
       await this.loadNamespaces();
     } catch (error) {
@@ -149,6 +164,27 @@ export class ProjectDetailComponent implements OnInit {
       this.showAttachModal.set(false);
     } finally {
       this.isAttaching.set(false);
+    }
+  }
+
+  async onClusterChange(clusterId: string): Promise<void> {
+    this.selectedClusterId.set(clusterId);
+    this.attachForm.patchValue({ namespaceId: '' });
+    this.availableNamespaces.set([]);
+
+    if (!clusterId) return;
+
+    this.isLoadingClusterNamespaces.set(true);
+
+    try {
+      const request = create(ListClusterNamespacesRequestSchema, { clusterId });
+      const response = await firstValueFrom(this.clusterClient.listClusterNamespaces(request));
+      this.availableNamespaces.set(response.namespaces);
+    } catch (error) {
+      console.error('Failed to load cluster namespaces:', error);
+      this.availableNamespaces.set([]);
+    } finally {
+      this.isLoadingClusterNamespaces.set(false);
     }
   }
 
@@ -201,8 +237,22 @@ export class ProjectDetailComponent implements OnInit {
     }
   }
 
-  openAttachModal(): void {
+  async openAttachModal(): Promise<void> {
     this.attachForm.reset();
+    this.availableNamespaces.set([]);
+    this.selectedClusterId.set('');
     this.showAttachModal.set(true);
+
+    this.isLoadingClusters.set(true);
+    try {
+      const request = create(ListClustersRequestSchema, {});
+      const response = await firstValueFrom(this.clusterClient.listClusters(request));
+      this.clusters.set(response.clusters);
+    } catch (error) {
+      console.error('Failed to load clusters:', error);
+      this.clusters.set([]);
+    } finally {
+      this.isLoadingClusters.set(false);
+    }
   }
 }

@@ -141,25 +141,90 @@
           >
             Attach namespace
           </h3>
+
+          <!-- Cluster Selection -->
+          <div class="mt-4">
+            <label
+              for="clusterId"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+            >
+              Cluster
+            </label>
+            @if (isLoadingClusters()) {
+              <div class="flex items-center py-2">
+                <div
+                  class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
+                ></div>
+                <span class="text-sm text-gray-500 dark:text-gray-400">Loading clusters...</span>
+              </div>
+            } @else {
+              <select
+                id="clusterId"
+                formControlName="clusterId"
+                (change)="onClusterChange($any($event.target).value)"
+                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              >
+                <option value="">Select a cluster</option>
+                @for (cluster of clusters(); track cluster.id) {
+                  <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
+                }
+              </select>
+              @if (clusters().length === 0) {
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  No clusters available. Create a cluster first.
+                </p>
+              }
+            }
+            @if (
+              attachForm.get('clusterId')?.invalid &&
+              (attachForm.get('clusterId')?.dirty || attachForm.get('clusterId')?.touched)
+            ) {
+              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a cluster.</p>
+            }
+          </div>
+
+          <!-- Namespace Selection -->
           <div class="mt-4">
             <label
               for="namespaceId"
               class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
             >
-              Namespace ID
+              Namespace
             </label>
-            <input
-              id="namespaceId"
-              formControlName="namespaceId"
-              type="text"
-              placeholder="Enter namespace ID (UUID)"
-            />
+            @if (isLoadingClusterNamespaces()) {
+              <div class="flex items-center py-2">
+                <div
+                  class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
+                ></div>
+                <span class="text-sm text-gray-500 dark:text-gray-400">Loading namespaces...</span>
+              </div>
+            } @else if (!selectedClusterId()) {
+              <p class="py-2 text-sm text-gray-500 dark:text-gray-400">
+                Select a cluster to see available namespaces.
+              </p>
+            } @else {
+              <select
+                id="namespaceId"
+                formControlName="namespaceId"
+                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              >
+                <option value="">Select a namespace</option>
+                @for (ns of availableNamespaces(); track ns.id) {
+                  <option [value]="ns.id">{{ ns.name }}</option>
+                }
+              </select>
+              @if (availableNamespaces().length === 0) {
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  No namespaces available in this cluster.
+                </p>
+              }
+            }
             @if (
               attachForm.get('namespaceId')?.invalid &&
               (attachForm.get('namespaceId')?.dirty || attachForm.get('namespaceId')?.touched)
             ) {
               <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
-                Namespace ID is required.
+                Please select a namespace.
               </p>
             }
           </div>
@@ -173,7 +238,11 @@
           >
             Cancel
           </button>
-          <button type="submit" class="btn-primary" [disabled]="isAttaching()">
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="isAttaching() || !attachForm.valid"
+          >
             @if (isAttaching()) {
               Attaching...
             } @else {
