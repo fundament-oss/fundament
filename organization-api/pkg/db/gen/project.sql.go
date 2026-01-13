@@ -57,9 +57,16 @@ type ProjectGetByIDParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) ProjectGetByID(ctx context.Context, arg ProjectGetByIDParams) (TenantProject, error) {
+type ProjectGetByIDRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) ProjectGetByID(ctx context.Context, arg ProjectGetByIDParams) (ProjectGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, projectGetByID, arg.ID)
-	var i TenantProject
+	var i ProjectGetByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
@@ -80,15 +87,22 @@ type ProjectListByOrganizationIDParams struct {
 	OrganizationID uuid.UUID
 }
 
-func (q *Queries) ProjectListByOrganizationID(ctx context.Context, arg ProjectListByOrganizationIDParams) ([]TenantProject, error) {
+type ProjectListByOrganizationIDRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) ProjectListByOrganizationID(ctx context.Context, arg ProjectListByOrganizationIDParams) ([]ProjectListByOrganizationIDRow, error) {
 	rows, err := q.db.Query(ctx, projectListByOrganizationID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TenantProject
+	var items []ProjectListByOrganizationIDRow
 	for rows.Next() {
-		var i TenantProject
+		var i ProjectListByOrganizationIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,

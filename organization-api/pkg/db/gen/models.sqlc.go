@@ -49,10 +49,3 @@ type TenantPlugin struct {
 	ID   uuid.UUID
 	Name string
 }
-
-type TenantProject struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	Name           string
-	Created        pgtype.Timestamptz
-}
