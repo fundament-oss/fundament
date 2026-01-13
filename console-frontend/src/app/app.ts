@@ -1,8 +1,10 @@
 import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { ApiService, UserInfo } from './api.service';
-import { OrganizationApiService } from './organization-api.service';
+import { AuthnApiService } from './authn-api.service';
+import type { User } from '../generated/authn/v1/authn_pb';
+import { ToastService } from './toast.service';
+import { versionMismatch$ } from './app.config';
 import {
   WarningIconComponent,
   MenuIconComponent,
@@ -18,6 +20,9 @@ import {
   PuzzleIconComponent,
   UsersIconComponent,
   ChartIconComponent,
+  CheckmarkIconComponent,
+  ErrorIconComponent,
+  InfoCircleIconComponent,
 } from './icons';
 
 @Component({
@@ -41,14 +46,17 @@ import {
     PuzzleIconComponent,
     UsersIconComponent,
     ChartIconComponent,
+    CheckmarkIconComponent,
+    ErrorIconComponent,
+    InfoCircleIconComponent,
   ],
   templateUrl: './app.html',
 })
 export class App implements OnInit {
   protected readonly title = signal('fundament-console');
   private router = inject(Router);
-  private apiService = inject(ApiService);
-  private organizationApiService = inject(OrganizationApiService);
+  private apiService = inject(AuthnApiService);
+  protected toastService = inject(ToastService);
 
   // Version mismatch state
   apiVersionMismatch = signal(false);
@@ -63,7 +71,7 @@ export class App implements OnInit {
   isDarkMode = signal(false);
 
   // User state
-  currentUser = signal<UserInfo | null>(null);
+  currentUser = signal<User | undefined>(undefined);
 
   async ngOnInit() {
     this.initializeTheme();
@@ -77,7 +85,7 @@ export class App implements OnInit {
     });
 
     // Subscribe to API version mismatch
-    this.organizationApiService.versionMismatch$.subscribe((mismatch) => {
+    versionMismatch$.subscribe((mismatch) => {
       this.apiVersionMismatch.set(mismatch);
     });
   }

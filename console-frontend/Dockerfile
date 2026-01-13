@@ -18,7 +18,9 @@ COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/
 COPY console-frontend/ .
 
 # Build the application
-RUN pnpm build
+# APP_CONFIGURATION environment variable is set by Kubernetes deployment
+ARG APP_CONFIGURATION=development
+RUN ["sh", "-c", "pnpm build --configuration ${APP_CONFIGURATION}"]
 
 # Production stage
 FROM nginx:alpine

@@ -2,8 +2,10 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
-import { ApiService, UserInfo } from '../api.service';
+import { AUTHN } from '../../connect/tokens';
+import type { User } from '../../generated/authn/v1/authn_pb';
 import { TitleService } from '../title.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-profile',
@@ -14,11 +16,11 @@ import { TitleService } from '../title.service';
 export class ProfileComponent implements OnInit {
   private titleService = inject(TitleService);
   private fb = inject(FormBuilder);
-  private apiService = inject(ApiService);
+  private client = inject(AUTHN);
   private router = inject(Router);
 
   profileForm: FormGroup;
-  userInfo = signal<UserInfo | null>(null);
+  userInfo = signal<User | undefined>(undefined);
   isLoading = signal(true);
   error = signal<string | null>(null);
 
@@ -38,10 +40,11 @@ export class ProfileComponent implements OnInit {
 
   private async loadUserInfo() {
     try {
-      const user = await this.apiService.getUserInfo();
+      const response = await firstValueFrom(this.client.getUserInfo({}));
+      const user = response.user;
       this.userInfo.set(user);
       this.profileForm.patchValue({
-        fullName: user.name || '',
+        fullName: user?.name || '',
       });
       this.isLoading.set(false);
     } catch (error) {

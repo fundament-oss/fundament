@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
-import { ApiService } from '../api.service';
+import { AuthnApiService } from '../authn-api.service';
 
 @Component({
   selector: 'app-login',
@@ -24,7 +24,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
   private titleService = inject(TitleService);
   private router = inject(Router);
-  private apiService = inject(ApiService);
+  private apiService = inject(AuthnApiService);
   private fb = inject(FormBuilder);
 
   loginForm!: FormGroup;

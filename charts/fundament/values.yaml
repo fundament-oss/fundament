@@ -7,6 +7,7 @@ jwtSecret: ""
 # External URLs - must be set for your environment
 externalUrls:
   authn: "" # e.g., https://authn.example.com
+  organization: "" # e.g., https://organization.example.com
   frontend: "" # e.g., https://app.example.com
   cookieDomain: "" # e.g., example.com
 
@@ -47,6 +48,7 @@ frontend:
 consoleFrontend:
   enabled: false
   replicas: 1
+  configuration: ""
 
 # Dex (OIDC Identity Provider)
 dex:

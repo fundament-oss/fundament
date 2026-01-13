@@ -1,4 +1,42 @@
 <div class="min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-white">
+  <!-- Toast Message -->
+  @if (toastService.toast()) {
+    <div
+      class="fixed top-2 right-4 left-4 z-100 flex items-center justify-between rounded-md px-4 py-3 text-white shadow-md"
+      [class]="
+        toastService.toast()?.type === 'success'
+          ? 'bg-green-500/90 dark:bg-green-600/90'
+          : toastService.toast()?.type === 'error'
+            ? 'bg-red-500/90 dark:bg-red-600/90'
+            : toastService.toast()?.type === 'warning'
+              ? 'bg-amber-500/90 dark:bg-amber-600/90'
+              : 'bg-blue-500/90 dark:bg-blue-600/90'
+      "
+      role="alert"
+    >
+      <div class="flex items-center">
+        @if (toastService.toast()?.type === 'success') {
+          <app-checkmark-icon class="mr-3 h-6 w-6 shrink-0" />
+        } @else if (toastService.toast()?.type === 'error') {
+          <app-error-icon class="mr-3 h-6 w-6 shrink-0" />
+        } @else if (toastService.toast()?.type === 'warning') {
+          <app-warning-icon class="mr-3 h-6 w-6 shrink-0" />
+        } @else {
+          <app-info-circle-icon class="mr-3 h-6 w-6 shrink-0" />
+        }
+        <p class="text-sm">{{ toastService.toast()?.message }}</p>
+      </div>
+      <button
+        (click)="toastService.dismiss()"
+        type="button"
+        aria-label="Dismiss notification"
+        class="ml-4 shrink-0 cursor-pointer rounded-md p-1 text-white transition-colors hover:bg-white/20 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:outline-none"
+      >
+        <app-close-icon class="h-5 w-5" />
+      </button>
+    </div>
+  }
+
   <!-- API Version Mismatch Banner -->
   @if (apiVersionMismatch()) {
     <div
@@ -54,10 +92,10 @@
             role="switch"
             aria-label="Toggle dark mode"
             [attr.aria-checked]="isDarkMode()"
-            class="group h-[25px] w-[42px] cursor-pointer rounded-full border border-gray-300 bg-gray-200 text-indigo-600 ring-indigo-500 outline-none focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:ring-offset-gray-950"
+            class="group h-6.25 w-10.5 cursor-pointer rounded-full border border-gray-300 bg-gray-200 text-indigo-600 ring-indigo-500 outline-none focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:ring-offset-gray-950"
           >
             <span
-              class="flex h-[21px] w-[21px] translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow transition-transform group-aria-checked:translate-x-[19px] dark:bg-gray-950 dark:text-gray-300"
+              class="flex h-5.25 w-5.25 translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow transition-transform group-aria-checked:translate-x-4.75 dark:bg-gray-950 dark:text-gray-300"
             >
               @if (isDarkMode()) {
                 <app-moon-icon class="h-4 w-4" />

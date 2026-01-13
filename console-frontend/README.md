@@ -2,13 +2,7 @@
 
 ## Development server
 
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Run the cluster with `just dev` or `just dev-hotreload`, open your browser, and navigate to `http://console.127.0.0.1.nip.io:8080/`. When using `just dev-hotreload`, the application will automatically reload whenever you modify any of the source files.
 
 Credentials:
 
@@ -18,6 +12,7 @@ Credentials:
 ## Linting and formatting
 
 To lint or format the code, use:
+
 ```bash
 pnpm lint
 pnpm format
@@ -25,7 +20,7 @@ pnpm format
 
 ## Building
 
-To build the project run:
+To build the project (automatically done with `just dev`), run:
 
 ```bash
 ng build

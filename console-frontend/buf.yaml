@@ -1,0 +1,10 @@
+version: v2
+modules:
+  - path: authn-api/pkg/proto
+  - path: organization-api/pkg/proto
+lint:
+  use:
+    - DEFAULT
+breaking:
+  use:
+    - FILE

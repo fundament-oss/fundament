@@ -18,6 +18,11 @@ frontend:
   enabled: true
   replicas: 2
 
+consoleFrontend:
+  enabled: true
+  replicas: 2
+  configuration: production
+
 dex:
   enabled: true
   issuer: https://dex.sandbox.example.com

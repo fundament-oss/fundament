@@ -2,9 +2,17 @@ import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
+import { ToastService } from '../toast.service';
 import { ErrorIconComponent } from '../icons';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
-import { OrganizationApiService, CreateClusterRequest } from '../organization-api.service';
+import { CLUSTER } from '../../connect/tokens';
+import { create } from '@bufbuild/protobuf';
+import {
+  CreateClusterRequestSchema,
+  CreateNodePoolRequestSchema,
+  AddInstallRequestSchema,
+} from '../../generated/v1/cluster_pb';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-add-cluster-summary',
@@ -15,7 +23,8 @@ import { OrganizationApiService, CreateClusterRequest } from '../organization-ap
 export class AddClusterSummaryComponent {
   private titleService = inject(TitleService);
   private router = inject(Router);
-  private organizationApi = inject(OrganizationApiService);
+  private client = inject(CLUSTER);
+  private toastService = inject(ToastService);
   protected stateService = inject(ClusterWizardStateService);
 
   // Computed signal to access state
@@ -44,23 +53,48 @@ export class AddClusterSummaryComponent {
 
     try {
       // Build the request
-      const request: CreateClusterRequest = {
+      const request = create(CreateClusterRequestSchema, {
         name: wizardState.clusterName,
         region: wizardState.region,
         kubernetesVersion: wizardState.kubernetesVersion,
-        nodePools: wizardState.nodePools,
-        pluginIds: wizardState.plugins,
-        pluginPreset: wizardState.preset,
-      };
+      });
 
-      // Call the API
-      const response = await this.organizationApi.createCluster(request);
+      // Call the API to create the cluster
+      const response = await firstValueFrom(this.client.createCluster(request));
 
-      console.log('Cluster created successfully:', response);
+      // Create node pools if any are configured
+      if (wizardState.nodePools && wizardState.nodePools.length > 0) {
+        for (const pool of wizardState.nodePools) {
+          const nodePoolRequest = create(CreateNodePoolRequestSchema, {
+            clusterId: response.clusterId,
+            name: pool.name,
+            machineType: pool.machineType,
+            autoscaleMin: pool.autoscaleMin,
+            autoscaleMax: pool.autoscaleMax,
+          });
+          await firstValueFrom(this.client.createNodePool(nodePoolRequest));
+        }
+      }
 
-      // Reset wizard state and navigate to dashboard
+      // Install plugins if any are configured
+      if (wizardState.plugins && wizardState.plugins.length > 0) {
+        for (const pluginId of wizardState.plugins) {
+          const installRequest = create(AddInstallRequestSchema, {
+            clusterId: response.clusterId,
+            pluginId: pluginId,
+          });
+          await firstValueFrom(this.client.addInstall(installRequest));
+        }
+      }
+
+      // Reset wizard state
       this.stateService.reset();
-      this.router.navigate(['/']);
+
+      // Set toast message
+      this.toastService.info('Your cluster is being provisioned. This may take a few minutes.');
+
+      // Navigate to the cluster detail page
+      this.router.navigate(['/clusters', response.clusterId]);
     } catch (error) {
       console.error('Failed to create cluster:', error);
       this.errorMessage.set(

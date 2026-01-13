@@ -1,65 +1,28 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-
-const CONFIG = {
-  apiBaseUrl: 'http://authn.127.0.0.1.nip.io:8080',
-  servicePath: '/authn.v1.AuthnService',
-};
-
-export interface UserInfo {
-  id: string;
-  organizationId: string;
-  name: string;
-  externalId: string;
-  groups: string[];
-}
-
-export interface UserResponse {
-  user: UserInfo;
-}
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
+import type { User } from '../generated/authn/v1/authn_pb';
+import { AUTHN } from '../connect/tokens';
+import { environment } from '../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
-export class ApiService {
-  private currentUserSubject = new BehaviorSubject<UserInfo | null>(null);
-  public currentUser$: Observable<UserInfo | null> = this.currentUserSubject.asObservable();
-
-  private async connectRpc<T>(method: string, request: object = {}): Promise<T> {
-    const url = `${CONFIG.apiBaseUrl}${CONFIG.servicePath}/${method}`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include', // Important: send cookies with requests
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(error.message || `Request failed: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  getLoginUrl(): string {
-    return `${CONFIG.apiBaseUrl}/login`;
-  }
+export class AuthnApiService {
+  private client = inject(AUTHN);
+  private currentUserSubject = new BehaviorSubject<User | undefined>(undefined);
+  public currentUser$: Observable<User | undefined> = this.currentUserSubject.asObservable();
 
   async login(email: string, password: string): Promise<void> {
     // Submit credentials to Dex local connector endpoint
     const returnUrl = `${window.location.origin}/`;
 
-    const response = await fetch(`${CONFIG.apiBaseUrl}/login/password`, {
+    const response = await fetch(`${environment.authnApiUrl}/login/password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      credentials: 'include', // Important: allow cookies to be set
+      credentials: 'include', // Allow cookies to be set
       body: JSON.stringify({
         email,
         password,
@@ -80,8 +43,8 @@ export class ApiService {
     await this.getUserInfo();
   }
 
-  async getUserInfo(): Promise<UserInfo> {
-    const response = await this.connectRpc<UserResponse>('GetUserInfo', {});
+  async getUserInfo(): Promise<User | undefined> {
+    const response = await firstValueFrom(this.client.getUserInfo({}));
     this.currentUserSubject.next(response.user);
     return response.user;
   }
@@ -90,7 +53,7 @@ export class ApiService {
     // Check hint flag to avoid unnecessary API calls when we know user isn't logged in
     // This is just an optimization - the server (via HTTP-only cookie) is still the source of truth
     if (!this.hasAuthHint()) {
-      this.currentUserSubject.next(null);
+      this.currentUserSubject.next(undefined);
       return;
     }
 
@@ -100,13 +63,13 @@ export class ApiService {
       this.currentUserSubject.next(userInfo);
     } catch {
       // Not authenticated or session expired - clear the hint
-      this.currentUserSubject.next(null);
+      this.currentUserSubject.next(undefined);
       localStorage.removeItem('auth_hint');
     }
   }
 
   async refreshToken(): Promise<void> {
-    const response = await fetch(`${CONFIG.apiBaseUrl}/refresh`, {
+    const response = await fetch(`${environment.authnApiUrl}/refresh`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -118,7 +81,7 @@ export class ApiService {
   }
 
   async logout(): Promise<void> {
-    const response = await fetch(`${CONFIG.apiBaseUrl}/logout`, {
+    const response = await fetch(`${environment.authnApiUrl}/logout`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -128,13 +91,13 @@ export class ApiService {
     }
 
     // Clear user state and hint
-    this.currentUserSubject.next(null);
+    this.currentUserSubject.next(undefined);
     localStorage.removeItem('auth_hint');
   }
 
   isAuthenticated(): boolean {
     // Check if we have a current user in our state
-    return this.currentUserSubject.value !== null;
+    return this.currentUserSubject.value !== undefined;
   }
 
   private hasAuthHint(): boolean {

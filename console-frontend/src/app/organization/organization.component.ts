@@ -2,8 +2,14 @@ import { Component, inject, OnInit, ViewChild, ElementRef, signal } from '@angul
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
-import { ApiService } from '../api.service';
-import { OrganizationApiService, Organization } from '../organization-api.service';
+import { AUTHN, ORGANIZATION } from '../../connect/tokens';
+import { create } from '@bufbuild/protobuf';
+import {
+  GetOrganizationRequestSchema,
+  UpdateOrganizationRequestSchema,
+  Organization,
+} from '../../generated/v1/organization_pb';
+import { firstValueFrom } from 'rxjs';
 import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '../icons';
 
 @Component({
@@ -20,8 +26,8 @@ import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '.
 })
 export class OrganizationComponent implements OnInit {
   private titleService = inject(TitleService);
-  private apiService = inject(ApiService);
-  private organizationApiService = inject(OrganizationApiService);
+  private authnClient = inject(AUTHN);
+  private organizationClient = inject(ORGANIZATION);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
@@ -45,10 +51,21 @@ export class OrganizationComponent implements OnInit {
 
     try {
       // Get current user to retrieve organization ID
-      const userInfo = await this.apiService.getUserInfo();
-      this.organization.set(
-        await this.organizationApiService.getOrganization(userInfo.organizationId),
-      );
+      const userResponse = await firstValueFrom(this.authnClient.getUserInfo({}));
+      if (!userResponse.user?.organizationId) {
+        throw new Error('Organization ID not found');
+      }
+
+      const request = create(GetOrganizationRequestSchema, {
+        id: userResponse.user.organizationId,
+      });
+      const response = await firstValueFrom(this.organizationClient.getOrganization(request));
+
+      if (!response.organization) {
+        throw new Error('Organization not found');
+      }
+
+      this.organization.set(response.organization);
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Failed to load organization');
       console.error('Error loading organization:', err);
@@ -87,12 +104,18 @@ export class OrganizationComponent implements OnInit {
     this.error.set(null);
 
     try {
-      this.organization.set(
-        await this.organizationApiService.updateOrganization(
-          currentOrganization.id,
-          nameToSave.trim(),
-        ),
-      );
+      const request = create(UpdateOrganizationRequestSchema, {
+        id: currentOrganization.id,
+        name: nameToSave.trim(),
+      });
+
+      await firstValueFrom(this.organizationClient.updateOrganization(request));
+
+      // Update the local organization with the new name
+      this.organization.set({
+        ...currentOrganization,
+        name: nameToSave.trim(),
+      });
       this.isEditing.set(false);
       this.editingName.set('');
     } catch (err) {
