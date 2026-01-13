@@ -1,4 +1,18 @@
 {{- if $.Values.consoleFrontend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $.Release.Name }}-console-frontend-config
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: console-frontend
+data:
+  config.json: |
+    {
+      "authnApiUrl": "{{ $.Values.externalUrls.authn }}",
+      "organizationApiUrl": "{{ $.Values.externalUrls.organization }}"
+    }
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,9 +36,17 @@ spec:
           ports:
             - name: http
               containerPort: 80
-          env:
-            - name: APP_CONFIGURATION
-              value: {{ $.Values.consoleFrontend.configuration }}
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/nginx/html/assets/config
+              readOnly: true
+            - name: config
+              mountPath: /app/public/assets/config
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $.Release.Name }}-console-frontend-config
 ---
 apiVersion: v1
 kind: Service

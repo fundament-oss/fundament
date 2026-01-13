@@ -21,7 +21,6 @@ frontend:
 consoleFrontend:
   enabled: true
   replicas: 2
-  configuration: production
 
 dex:
   enabled: true
