@@ -66,6 +66,11 @@ export const routes: Routes = [
       import('./add-project/add-project.component').then((m) => m.AddProjectComponent),
   },
   {
+    path: 'projects/:id',
+    loadComponent: () =>
+      import('./project-detail/project-detail.component').then((m) => m.ProjectDetailComponent),
+  },
+  {
     path: 'clusters/:id',
     loadComponent: () =>
       import('./cluster-overview/cluster-overview.component').then(
