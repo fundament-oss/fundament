@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const claimUnsyncedCluster = `-- name: ClaimUnsyncedCluster :one
+const clusterClaimUnsynced = `-- name: ClusterClaimUnsynced :one
 SELECT
     c.id,
     c.name,
@@ -35,7 +35,7 @@ FOR NO KEY UPDATE OF cs SKIP LOCKED
 LIMIT 1
 `
 
-type ClaimUnsyncedClusterRow struct {
+type ClusterClaimUnsyncedRow struct {
 	ID                uuid.UUID
 	Name              string
 	Region            string
@@ -50,9 +50,9 @@ type ClaimUnsyncedClusterRow struct {
 // Respects backoff: only claim if enough time has passed since last attempt.
 // Backoff formula: 30s * 2^attempts, capped at 15 minutes (900s).
 // Excludes clusters that have exhausted max sync attempts.
-func (q *Queries) ClaimUnsyncedCluster(ctx context.Context, syncAttempts int32) (ClaimUnsyncedClusterRow, error) {
-	row := q.db.QueryRow(ctx, claimUnsyncedCluster, syncAttempts)
-	var i ClaimUnsyncedClusterRow
+func (q *Queries) ClusterClaimUnsynced(ctx context.Context, syncAttempts int32) (ClusterClaimUnsyncedRow, error) {
+	row := q.db.QueryRow(ctx, clusterClaimUnsynced, syncAttempts)
+	var i ClusterClaimUnsyncedRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -65,7 +65,7 @@ func (q *Queries) ClaimUnsyncedCluster(ctx context.Context, syncAttempts int32) 
 	return i, err
 }
 
-const getClusterByID = `-- name: GetClusterByID :one
+const clusterGetByID = `-- name: ClusterGetByID :one
 SELECT
     c.id,
     c.name,
@@ -84,7 +84,7 @@ JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE c.id = $1
 `
 
-type GetClusterByIDRow struct {
+type ClusterGetByIDRow struct {
 	ID                 uuid.UUID
 	Name               string
 	Deleted            pgtype.Timestamptz
@@ -99,9 +99,9 @@ type GetClusterByIDRow struct {
 }
 
 // Get a single cluster by ID with sync state (for testing).
-func (q *Queries) GetClusterByID(ctx context.Context, id uuid.UUID) (GetClusterByIDRow, error) {
-	row := q.db.QueryRow(ctx, getClusterByID, id)
-	var i GetClusterByIDRow
+func (q *Queries) ClusterGetByID(ctx context.Context, id uuid.UUID) (ClusterGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, clusterGetByID, id)
+	var i ClusterGetByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -118,38 +118,7 @@ func (q *Queries) GetClusterByID(ctx context.Context, id uuid.UUID) (GetClusterB
 	return i, err
 }
 
-const getClusterSyncState = `-- name: GetClusterSyncState :one
-SELECT
-    cluster_id,
-    synced,
-    sync_error,
-    sync_attempts,
-    sync_last_attempt,
-    shoot_status,
-    shoot_status_message,
-    shoot_status_updated
-FROM tenant.cluster_sync
-WHERE cluster_id = $1
-`
-
-// Get just the sync state for a cluster.
-func (q *Queries) GetClusterSyncState(ctx context.Context, clusterID uuid.UUID) (TenantClusterSync, error) {
-	row := q.db.QueryRow(ctx, getClusterSyncState, clusterID)
-	var i TenantClusterSync
-	err := row.Scan(
-		&i.ClusterID,
-		&i.Synced,
-		&i.SyncError,
-		&i.SyncAttempts,
-		&i.SyncLastAttempt,
-		&i.ShootStatus,
-		&i.ShootStatusMessage,
-		&i.ShootStatusUpdated,
-	)
-	return i, err
-}
-
-const hasActiveClusterWithSameName = `-- name: HasActiveClusterWithSameName :one
+const clusterHasActiveWithSameName = `-- name: ClusterHasActiveWithSameName :one
 SELECT EXISTS (
     SELECT 1
     FROM tenant.clusters c
@@ -160,21 +129,21 @@ SELECT EXISTS (
 ) AS exists
 `
 
-type HasActiveClusterWithSameNameParams struct {
+type ClusterHasActiveWithSameNameParams struct {
 	Name   string
 	Name_2 string
 }
 
 // Check if there's an active (non-deleted) cluster with the same name in the same organization.
 // Used to prevent deleting a shoot that's been recreated.
-func (q *Queries) HasActiveClusterWithSameName(ctx context.Context, arg HasActiveClusterWithSameNameParams) (bool, error) {
-	row := q.db.QueryRow(ctx, hasActiveClusterWithSameName, arg.Name, arg.Name_2)
+func (q *Queries) ClusterHasActiveWithSameName(ctx context.Context, arg ClusterHasActiveWithSameNameParams) (bool, error) {
+	row := q.db.QueryRow(ctx, clusterHasActiveWithSameName, arg.Name, arg.Name_2)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
 }
 
-const listActiveClusters = `-- name: ListActiveClusters :many
+const clusterListActive = `-- name: ClusterListActive :many
 SELECT
     c.id,
     c.name,
@@ -187,7 +156,7 @@ JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE c.deleted IS NULL
 `
 
-type ListActiveClustersRow struct {
+type ClusterListActiveRow struct {
 	ID               uuid.UUID
 	Name             string
 	Deleted          pgtype.Timestamptz
@@ -196,15 +165,15 @@ type ListActiveClustersRow struct {
 }
 
 // Used by periodic reconciliation to compare with Gardener state.
-func (q *Queries) ListActiveClusters(ctx context.Context) ([]ListActiveClustersRow, error) {
-	rows, err := q.db.Query(ctx, listActiveClusters)
+func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow, error) {
+	rows, err := q.db.Query(ctx, clusterListActive)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListActiveClustersRow
+	var items []ClusterListActiveRow
 	for rows.Next() {
-		var i ListActiveClustersRow
+		var i ClusterListActiveRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -222,64 +191,7 @@ func (q *Queries) ListActiveClusters(ctx context.Context) ([]ListActiveClustersR
 	return items, nil
 }
 
-const listClustersNeedingStatusCheck = `-- name: ListClustersNeedingStatusCheck :many
-SELECT c.id, c.name, c.region, c.kubernetes_version, c.deleted, o.name as organization_name
-FROM tenant.clusters c
-JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
-JOIN tenant.organizations o ON o.id = c.organization_id
-WHERE cs.synced IS NOT NULL                           -- Manifest was applied
-  AND c.deleted IS NULL                               -- Active (not deleted)
-  AND (cs.shoot_status IS NULL                        -- Never checked
-       OR cs.shoot_status = 'pending'                 -- Shoot not yet visible in Gardener
-       OR cs.shoot_status = 'progressing'             -- Gardener creating/updating
-       OR cs.shoot_status = 'error')                  -- Failed, might recover
-  AND (cs.shoot_status_updated IS NULL                -- Never checked
-       OR cs.shoot_status_updated < now() - INTERVAL '30 seconds')  -- Not checked recently
-ORDER BY cs.shoot_status_updated NULLS FIRST
-LIMIT $1
-`
-
-type ListClustersNeedingStatusCheckRow struct {
-	ID                uuid.UUID
-	Name              string
-	Region            string
-	KubernetesVersion string
-	Deleted           pgtype.Timestamptz
-	OrganizationName  string
-}
-
-// Get clusters where we need to check Gardener status (active clusters).
-// Polls clusters in non-terminal states: NULL (never checked), pending, progressing, error.
-// Does NOT poll clusters in terminal state: ready.
-// See gardener.Status* constants for valid values.
-func (q *Queries) ListClustersNeedingStatusCheck(ctx context.Context, limit int32) ([]ListClustersNeedingStatusCheckRow, error) {
-	rows, err := q.db.Query(ctx, listClustersNeedingStatusCheck, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListClustersNeedingStatusCheckRow
-	for rows.Next() {
-		var i ListClustersNeedingStatusCheckRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Region,
-			&i.KubernetesVersion,
-			&i.Deleted,
-			&i.OrganizationName,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listDeletedClustersNeedingVerification = `-- name: ListDeletedClustersNeedingVerification :many
+const clusterListDeletedNeedingVerification = `-- name: ClusterListDeletedNeedingVerification :many
 SELECT c.id, c.name, c.region, c.kubernetes_version, c.deleted, o.name as organization_name
 FROM tenant.clusters c
 JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
@@ -293,7 +205,7 @@ ORDER BY cs.shoot_status_updated NULLS FIRST
 LIMIT $1
 `
 
-type ListDeletedClustersNeedingVerificationRow struct {
+type ClusterListDeletedNeedingVerificationRow struct {
 	ID                uuid.UUID
 	Name              string
 	Region            string
@@ -306,15 +218,15 @@ type ListDeletedClustersNeedingVerificationRow struct {
 // Polls until shoot_status = 'deleted' (confirmed removed).
 // Typical flow: NULL → deleting → deleted
 // See gardener.Status* constants for valid values.
-func (q *Queries) ListDeletedClustersNeedingVerification(ctx context.Context, limit int32) ([]ListDeletedClustersNeedingVerificationRow, error) {
-	rows, err := q.db.Query(ctx, listDeletedClustersNeedingVerification, limit)
+func (q *Queries) ClusterListDeletedNeedingVerification(ctx context.Context, limit int32) ([]ClusterListDeletedNeedingVerificationRow, error) {
+	rows, err := q.db.Query(ctx, clusterListDeletedNeedingVerification, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListDeletedClustersNeedingVerificationRow
+	var items []ClusterListDeletedNeedingVerificationRow
 	for rows.Next() {
-		var i ListDeletedClustersNeedingVerificationRow
+		var i ClusterListDeletedNeedingVerificationRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -333,7 +245,7 @@ func (q *Queries) ListDeletedClustersNeedingVerification(ctx context.Context, li
 	return items, nil
 }
 
-const listExhaustedClusters = `-- name: ListExhaustedClusters :many
+const clusterListExhausted = `-- name: ClusterListExhausted :many
 SELECT
     c.id,
     c.name,
@@ -348,7 +260,7 @@ WHERE cs.synced IS NULL
   AND cs.sync_attempts >= $1
 `
 
-type ListExhaustedClustersRow struct {
+type ClusterListExhaustedRow struct {
 	ID               uuid.UUID
 	Name             string
 	SyncError        pgtype.Text
@@ -359,15 +271,15 @@ type ListExhaustedClustersRow struct {
 
 // Lists clusters that have exceeded max sync attempts.
 // Used for alerting and admin dashboards.
-func (q *Queries) ListExhaustedClusters(ctx context.Context, syncAttempts int32) ([]ListExhaustedClustersRow, error) {
-	rows, err := q.db.Query(ctx, listExhaustedClusters, syncAttempts)
+func (q *Queries) ClusterListExhausted(ctx context.Context, syncAttempts int32) ([]ClusterListExhaustedRow, error) {
+	rows, err := q.db.Query(ctx, clusterListExhausted, syncAttempts)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListExhaustedClustersRow
+	var items []ClusterListExhaustedRow
 	for rows.Next() {
-		var i ListExhaustedClustersRow
+		var i ClusterListExhaustedRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -386,7 +298,7 @@ func (q *Queries) ListExhaustedClusters(ctx context.Context, syncAttempts int32)
 	return items, nil
 }
 
-const listFailingClusters = `-- name: ListFailingClusters :many
+const clusterListFailing = `-- name: ClusterListFailing :many
 SELECT
     c.id,
     c.name,
@@ -399,7 +311,7 @@ JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE cs.sync_attempts >= $1
 `
 
-type ListFailingClustersRow struct {
+type ClusterListFailingRow struct {
 	ID               uuid.UUID
 	Name             string
 	SyncError        pgtype.Text
@@ -408,15 +320,15 @@ type ListFailingClustersRow struct {
 }
 
 // Used for alerting - clusters that have failed multiple times.
-func (q *Queries) ListFailingClusters(ctx context.Context, syncAttempts int32) ([]ListFailingClustersRow, error) {
-	rows, err := q.db.Query(ctx, listFailingClusters, syncAttempts)
+func (q *Queries) ClusterListFailing(ctx context.Context, syncAttempts int32) ([]ClusterListFailingRow, error) {
+	rows, err := q.db.Query(ctx, clusterListFailing, syncAttempts)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListFailingClustersRow
+	var items []ClusterListFailingRow
 	for rows.Next() {
-		var i ListFailingClustersRow
+		var i ClusterListFailingRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -434,7 +346,95 @@ func (q *Queries) ListFailingClusters(ctx context.Context, syncAttempts int32) (
 	return items, nil
 }
 
-const markClusterSyncFailed = `-- name: MarkClusterSyncFailed :exec
+const clusterListNeedingStatusCheck = `-- name: ClusterListNeedingStatusCheck :many
+SELECT c.id, c.name, c.region, c.kubernetes_version, c.deleted, o.name as organization_name
+FROM tenant.clusters c
+JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
+JOIN tenant.organizations o ON o.id = c.organization_id
+WHERE cs.synced IS NOT NULL                           -- Manifest was applied
+  AND c.deleted IS NULL                               -- Active (not deleted)
+  AND (cs.shoot_status IS NULL                        -- Never checked
+       OR cs.shoot_status = 'pending'                 -- Shoot not yet visible in Gardener
+       OR cs.shoot_status = 'progressing'             -- Gardener creating/updating
+       OR cs.shoot_status = 'error')                  -- Failed, might recover
+  AND (cs.shoot_status_updated IS NULL                -- Never checked
+       OR cs.shoot_status_updated < now() - INTERVAL '30 seconds')  -- Not checked recently
+ORDER BY cs.shoot_status_updated NULLS FIRST
+LIMIT $1
+`
+
+type ClusterListNeedingStatusCheckRow struct {
+	ID                uuid.UUID
+	Name              string
+	Region            string
+	KubernetesVersion string
+	Deleted           pgtype.Timestamptz
+	OrganizationName  string
+}
+
+// Get clusters where we need to check Gardener status (active clusters).
+// Polls clusters in non-terminal states: NULL (never checked), pending, progressing, error.
+// Does NOT poll clusters in terminal state: ready.
+// See gardener.Status* constants for valid values.
+func (q *Queries) ClusterListNeedingStatusCheck(ctx context.Context, limit int32) ([]ClusterListNeedingStatusCheckRow, error) {
+	rows, err := q.db.Query(ctx, clusterListNeedingStatusCheck, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ClusterListNeedingStatusCheckRow
+	for rows.Next() {
+		var i ClusterListNeedingStatusCheckRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Region,
+			&i.KubernetesVersion,
+			&i.Deleted,
+			&i.OrganizationName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const clusterSyncGetState = `-- name: ClusterSyncGetState :one
+SELECT
+    cluster_id,
+    synced,
+    sync_error,
+    sync_attempts,
+    sync_last_attempt,
+    shoot_status,
+    shoot_status_message,
+    shoot_status_updated
+FROM tenant.cluster_sync
+WHERE cluster_id = $1
+`
+
+// Get just the sync state for a cluster.
+func (q *Queries) ClusterSyncGetState(ctx context.Context, clusterID uuid.UUID) (TenantClusterSync, error) {
+	row := q.db.QueryRow(ctx, clusterSyncGetState, clusterID)
+	var i TenantClusterSync
+	err := row.Scan(
+		&i.ClusterID,
+		&i.Synced,
+		&i.SyncError,
+		&i.SyncAttempts,
+		&i.SyncLastAttempt,
+		&i.ShootStatus,
+		&i.ShootStatusMessage,
+		&i.ShootStatusUpdated,
+	)
+	return i, err
+}
+
+const clusterSyncMarkFailed = `-- name: ClusterSyncMarkFailed :exec
 UPDATE tenant.cluster_sync
 SET sync_error = $2,
     sync_attempts = sync_attempts + 1,
@@ -442,18 +442,18 @@ SET sync_error = $2,
 WHERE cluster_id = $1
 `
 
-type MarkClusterSyncFailedParams struct {
+type ClusterSyncMarkFailedParams struct {
 	ClusterID uuid.UUID
 	SyncError pgtype.Text
 }
 
 // Called on failed sync - tracks error and increments attempt count.
-func (q *Queries) MarkClusterSyncFailed(ctx context.Context, arg MarkClusterSyncFailedParams) error {
-	_, err := q.db.Exec(ctx, markClusterSyncFailed, arg.ClusterID, arg.SyncError)
+func (q *Queries) ClusterSyncMarkFailed(ctx context.Context, arg ClusterSyncMarkFailedParams) error {
+	_, err := q.db.Exec(ctx, clusterSyncMarkFailed, arg.ClusterID, arg.SyncError)
 	return err
 }
 
-const markClusterSynced = `-- name: MarkClusterSynced :exec
+const clusterSyncMarkSynced = `-- name: ClusterSyncMarkSynced :exec
 UPDATE tenant.cluster_sync
 SET synced = now(),
     sync_error = NULL,
@@ -463,12 +463,24 @@ WHERE cluster_id = $1
 `
 
 // Called on successful sync - resets error tracking.
-func (q *Queries) MarkClusterSynced(ctx context.Context, clusterID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, markClusterSynced, clusterID)
+func (q *Queries) ClusterSyncMarkSynced(ctx context.Context, clusterID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clusterSyncMarkSynced, clusterID)
 	return err
 }
 
-const resetClusterSyncAttempts = `-- name: ResetClusterSyncAttempts :exec
+const clusterSyncReset = `-- name: ClusterSyncReset :exec
+UPDATE tenant.cluster_sync
+SET synced = NULL
+WHERE cluster_id = $1
+`
+
+// Used by reconciliation to mark a cluster for re-sync.
+func (q *Queries) ClusterSyncReset(ctx context.Context, clusterID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clusterSyncReset, clusterID)
+	return err
+}
+
+const clusterSyncResetAttempts = `-- name: ClusterSyncResetAttempts :exec
 UPDATE tenant.cluster_sync
 SET sync_attempts = 0,
     sync_error = NULL
@@ -477,24 +489,12 @@ WHERE cluster_id = $1
 
 // Resets sync attempts for a cluster, allowing it to be retried.
 // Used by admins to manually retry exhausted clusters.
-func (q *Queries) ResetClusterSyncAttempts(ctx context.Context, clusterID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, resetClusterSyncAttempts, clusterID)
+func (q *Queries) ClusterSyncResetAttempts(ctx context.Context, clusterID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clusterSyncResetAttempts, clusterID)
 	return err
 }
 
-const resetClusterSynced = `-- name: ResetClusterSynced :exec
-UPDATE tenant.cluster_sync
-SET synced = NULL
-WHERE cluster_id = $1
-`
-
-// Used by reconciliation to mark a cluster for re-sync.
-func (q *Queries) ResetClusterSynced(ctx context.Context, clusterID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, resetClusterSynced, clusterID)
-	return err
-}
-
-const updateShootStatus = `-- name: UpdateShootStatus :exec
+const clusterSyncUpdateShootStatus = `-- name: ClusterSyncUpdateShootStatus :exec
 UPDATE tenant.cluster_sync
 SET shoot_status = $2,
     shoot_status_message = $3,
@@ -502,14 +502,14 @@ SET shoot_status = $2,
 WHERE cluster_id = $1
 `
 
-type UpdateShootStatusParams struct {
+type ClusterSyncUpdateShootStatusParams struct {
 	ClusterID          uuid.UUID
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 }
 
 // Update shoot status from Gardener polling.
-func (q *Queries) UpdateShootStatus(ctx context.Context, arg UpdateShootStatusParams) error {
-	_, err := q.db.Exec(ctx, updateShootStatus, arg.ClusterID, arg.ShootStatus, arg.ShootStatusMessage)
+func (q *Queries) ClusterSyncUpdateShootStatus(ctx context.Context, arg ClusterSyncUpdateShootStatusParams) error {
+	_, err := q.db.Exec(ctx, clusterSyncUpdateShootStatus, arg.ClusterID, arg.ShootStatus, arg.ShootStatusMessage)
 	return err
 }

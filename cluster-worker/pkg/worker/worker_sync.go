@@ -197,7 +197,7 @@ func (w *SyncWorker) reconcileAll(ctx context.Context) {
 	w.logger.Info("starting full reconciliation")
 
 	// 1. Get all active clusters from DB
-	dbClusters, err := w.queries.ListActiveClusters(ctx)
+	dbClusters, err := w.queries.ClusterListActive(ctx)
 	if err != nil {
 		w.logger.Error("failed to list clusters from DB", "error", err)
 		return
@@ -211,7 +211,7 @@ func (w *SyncWorker) reconcileAll(ctx context.Context) {
 	}
 
 	// 3. Build lookup maps
-	dbClusterByID := make(map[uuid.UUID]db.ListActiveClustersRow)
+	dbClusterByID := make(map[uuid.UUID]db.ClusterListActiveRow)
 	for _, c := range dbClusters {
 		dbClusterByID[c.ID] = c
 	}
@@ -235,7 +235,7 @@ func (w *SyncWorker) reconcileAll(ctx context.Context) {
 		if !exists {
 			w.logger.Warn("drift detected: shoot missing in Gardener",
 				"cluster_id", cluster.ID, "name", cluster.Name)
-			if err := w.queries.ResetClusterSynced(ctx, cluster.ID); err != nil {
+			if err := w.queries.ClusterSyncReset(ctx, cluster.ID); err != nil {
 				w.logger.Error("failed to reset cluster synced", "error", err)
 			}
 			driftCount++
@@ -249,7 +249,7 @@ func (w *SyncWorker) reconcileAll(ctx context.Context) {
 				"cluster_id", cluster.ID,
 				"expected", expectedName,
 				"got", shoot.Name)
-			if err := w.queries.ResetClusterSynced(ctx, cluster.ID); err != nil {
+			if err := w.queries.ClusterSyncReset(ctx, cluster.ID); err != nil {
 				w.logger.Error("failed to reset cluster synced", "error", err)
 			}
 			driftCount++
@@ -314,7 +314,7 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 	if cluster.Deleted != nil {
 		// Check if there's a new active cluster with the same name before deleting
 		// This prevents deleting a shoot that's been recreated
-		hasActive, err := w.queries.HasActiveClusterWithSameName(ctx, db.HasActiveClusterWithSameNameParams{
+		hasActive, err := w.queries.ClusterHasActiveWithSameName(ctx, db.ClusterHasActiveWithSameNameParams{
 			Name:   cluster.OrganizationName,
 			Name_2: cluster.Name,
 		})
@@ -336,7 +336,7 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 
 	// 3. Update status in new transaction
 	if syncErr != nil {
-		if err := w.queries.MarkClusterSyncFailed(ctx, db.MarkClusterSyncFailedParams{
+		if err := w.queries.ClusterSyncMarkFailed(ctx, db.ClusterSyncMarkFailedParams{
 			ClusterID: cluster.ID,
 			SyncError: pgtype.Text{String: truncateError(syncErr.Error(), 1000), Valid: true},
 		}); err != nil {
@@ -361,7 +361,7 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 		return true, nil // Continue processing other clusters
 	}
 
-	if err := w.queries.MarkClusterSynced(ctx, cluster.ID); err != nil {
+	if err := w.queries.ClusterSyncMarkSynced(ctx, cluster.ID); err != nil {
 		return false, fmt.Errorf("mark synced: %w", err)
 	}
 
@@ -396,7 +396,7 @@ func (w *SyncWorker) claimCluster(ctx context.Context) (*claimedCluster, error) 
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	row, err := w.queries.WithTx(tx).ClaimUnsyncedCluster(ctx, w.cfg.MaxSyncAttempts)
+	row, err := w.queries.WithTx(tx).ClusterClaimUnsynced(ctx, w.cfg.MaxSyncAttempts)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
