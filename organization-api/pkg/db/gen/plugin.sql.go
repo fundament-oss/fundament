@@ -13,8 +13,8 @@ import (
 
 const pluginCategoriesList = `-- name: PluginCategoriesList :many
 SELECT cp.plugin_id, c.id, c.name
-FROM appstore.categories_plugins cp
-JOIN appstore.categories c ON c.id = cp.tag_id
+FROM zappstore.categories_plugins cp
+JOIN zappstore.categories c ON c.id = cp.tag_id
 WHERE c.deleted IS NULL
 ORDER BY c.name
 `
@@ -47,7 +47,7 @@ func (q *Queries) PluginCategoriesList(ctx context.Context) ([]PluginCategoriesL
 
 const pluginList = `-- name: PluginList :many
 SELECT id, name, description
-FROM appstore.plugins
+FROM zappstore.plugins
 WHERE deleted IS NULL
 ORDER BY name
 `
@@ -80,8 +80,8 @@ func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
 
 const pluginTagsList = `-- name: PluginTagsList :many
 SELECT pt.plugin_id, t.id, t.name
-FROM appstore.plugins_tags pt
-JOIN appstore.tags t ON t.id = pt.tag_id
+FROM zappstore.plugins_tags pt
+JOIN zappstore.tags t ON t.id = pt.tag_id
 WHERE t.deleted IS NULL
 ORDER BY t.name
 `

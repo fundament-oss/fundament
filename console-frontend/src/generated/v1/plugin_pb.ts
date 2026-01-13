@@ -10,7 +10,55 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/plugin.proto.
  */
 export const file_v1_plugin: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9wbHVnaW4ucHJvdG8SD29yZ2FuaXphdGlvbi52MSIiCgZQbHVnaW4SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCSIUChJMaXN0UGx1Z2luc1JlcXVlc3QiPwoTTGlzdFBsdWdpbnNSZXNwb25zZRIoCgdwbHVnaW5zGAogAygLMhcub3JnYW5pemF0aW9uLnYxLlBsdWdpbjJpCg1QbHVnaW5TZXJ2aWNlElgKC0xpc3RQbHVnaW5zEiMub3JnYW5pemF0aW9uLnYxLkxpc3RQbHVnaW5zUmVxdWVzdBokLm9yZ2FuaXphdGlvbi52MS5MaXN0UGx1Z2luc1Jlc3BvbnNlQlVaU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxYgZwcm90bzM");
+  fileDesc("Cg92MS9wbHVnaW4ucHJvdG8SD29yZ2FuaXphdGlvbi52MSIfCgNUYWcSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCSIkCghDYXRlZ29yeRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJIooBCgZQbHVnaW4SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRITCgtkZXNjcmlwdGlvbhgeIAEoCRIiCgR0YWdzGCggAygLMhQub3JnYW5pemF0aW9uLnYxLlRhZxItCgpjYXRlZ29yaWVzGDIgAygLMhkub3JnYW5pemF0aW9uLnYxLkNhdGVnb3J5IhQKEkxpc3RQbHVnaW5zUmVxdWVzdCI/ChNMaXN0UGx1Z2luc1Jlc3BvbnNlEigKB3BsdWdpbnMYCiADKAsyFy5vcmdhbml6YXRpb24udjEuUGx1Z2luMmkKDVBsdWdpblNlcnZpY2USWAoLTGlzdFBsdWdpbnMSIy5vcmdhbml6YXRpb24udjEuTGlzdFBsdWdpbnNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RQbHVnaW5zUmVzcG9uc2VCVVpTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjFiBnByb3RvMw");
+
+/**
+ * Tag information
+ *
+ * @generated from message organization.v1.Tag
+ */
+export type Tag = Message<"organization.v1.Tag"> & {
+  /**
+   * @generated from field: string id = 10;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 20;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message organization.v1.Tag.
+ * Use `create(TagSchema)` to create a new message.
+ */
+export const TagSchema: GenMessage<Tag> = /*@__PURE__*/
+  messageDesc(file_v1_plugin, 0);
+
+/**
+ * Category information
+ *
+ * @generated from message organization.v1.Category
+ */
+export type Category = Message<"organization.v1.Category"> & {
+  /**
+   * @generated from field: string id = 10;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 20;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message organization.v1.Category.
+ * Use `create(CategorySchema)` to create a new message.
+ */
+export const CategorySchema: GenMessage<Category> = /*@__PURE__*/
+  messageDesc(file_v1_plugin, 1);
 
 /**
  * Plugin information
@@ -27,6 +75,21 @@ export type Plugin = Message<"organization.v1.Plugin"> & {
    * @generated from field: string name = 20;
    */
   name: string;
+
+  /**
+   * @generated from field: string description = 30;
+   */
+  description: string;
+
+  /**
+   * @generated from field: repeated organization.v1.Tag tags = 40;
+   */
+  tags: Tag[];
+
+  /**
+   * @generated from field: repeated organization.v1.Category categories = 50;
+   */
+  categories: Category[];
 };
 
 /**
@@ -34,7 +97,7 @@ export type Plugin = Message<"organization.v1.Plugin"> & {
  * Use `create(PluginSchema)` to create a new message.
  */
 export const PluginSchema: GenMessage<Plugin> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 0);
+  messageDesc(file_v1_plugin, 2);
 
 /**
  * List plugins request
@@ -49,7 +112,7 @@ export type ListPluginsRequest = Message<"organization.v1.ListPluginsRequest"> &
  * Use `create(ListPluginsRequestSchema)` to create a new message.
  */
 export const ListPluginsRequestSchema: GenMessage<ListPluginsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 1);
+  messageDesc(file_v1_plugin, 3);
 
 /**
  * List plugins response
@@ -68,7 +131,7 @@ export type ListPluginsResponse = Message<"organization.v1.ListPluginsResponse">
  * Use `create(ListPluginsResponseSchema)` to create a new message.
  */
 export const ListPluginsResponseSchema: GenMessage<ListPluginsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 2);
+  messageDesc(file_v1_plugin, 4);
 
 /**
  * PluginService provides information about available plugins
