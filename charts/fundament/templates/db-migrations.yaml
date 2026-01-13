@@ -20,13 +20,13 @@ spec:
       restartPolicy: OnFailure
       initContainers:
         - name: wait-for-db
-          image: busybox:1.36
+          image: ghcr.io/cloudnative-pg/postgresql:18
           command:
             - sh
             - -c
             - |
               echo "Waiting for database to be ready..."
-              until nc -z {{ include "fundament.db.host" . }} 5432; do
+              until pg_isready -h {{ include "fundament.db.host" . }} -p 5432; do
                 echo "Database not ready, waiting..."
                 sleep 2
               done
@@ -60,67 +60,4 @@ spec:
               value: {{ $.Values.db.reset | quote }}
             - name: TREK_INSERT_TEST_DATA
               value: {{ $.Values.db.insertTestData | quote }}
----
-{{- $authnSecretName := printf "%s-db-fun-authn-api" $.Release.Name }}
-{{- $authnExisting := lookup "v1" "Secret" $.Release.Namespace $authnSecretName }}
-{{- $authnPassword := "" }}
-{{- if $authnExisting }}
-{{- $authnPassword = index $authnExisting.data "password" | b64dec }}
-{{- else }}
-{{- $authnPassword = randAlphaNum 32 }}
-{{- end }}
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{ $authnSecretName }}
-  labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: database
-type: kubernetes.io/basic-auth
-stringData:
-  username: fun_authn_api
-  password: {{ $authnPassword | quote }}
-  uri: postgresql://fun_authn_api:{{ $authnPassword }}@{{ include "fundament.db.host" . }}:5432/fundament
----
-{{- $fundamentApiSecretName := printf "%s-db-fun-fundament-api" $.Release.Name }}
-{{- $fundamentApiExisting := lookup "v1" "Secret" $.Release.Namespace $fundamentApiSecretName }}
-{{- $fundamentApiPassword := "" }}
-{{- if $fundamentApiExisting }}
-{{- $fundamentApiPassword = index $fundamentApiExisting.data "password" | b64dec }}
-{{- else }}
-{{- $fundamentApiPassword = randAlphaNum 32 }}
-{{- end }}
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{ $fundamentApiSecretName }}
-  labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: database
-type: kubernetes.io/basic-auth
-stringData:
-  username: fun_fundament_api
-  password: {{ $fundamentApiPassword | quote }}
-  uri: postgresql://fun_fundament_api:{{ $fundamentApiPassword }}@{{ include "fundament.db.host" . }}:5432/fundament
----
-{{- $operatorSecretName := printf "%s-db-fun-operator" $.Release.Name }}
-{{- $operatorExisting := lookup "v1" "Secret" $.Release.Namespace $operatorSecretName }}
-{{- $operatorPassword := "" }}
-{{- if $operatorExisting }}
-{{- $operatorPassword = index $operatorExisting.data "password" | b64dec }}
-{{- else }}
-{{- $operatorPassword = randAlphaNum 32 }}
-{{- end }}
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{ $operatorSecretName }}
-  labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: database
-type: kubernetes.io/basic-auth
-stringData:
-  username: fun_operator
-  password: {{ $operatorPassword | quote }}
-  uri: postgresql://fun_operator:{{ $operatorPassword }}@{{ include "fundament.db.host" . }}:5432/fundament
 {{- end }}

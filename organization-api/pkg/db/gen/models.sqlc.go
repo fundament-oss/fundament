@@ -9,45 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type TenantCluster struct {
-	ID                uuid.UUID
-	OrganizationID    uuid.UUID
-	Name              string
-	Region            string
-	KubernetesVersion string
-	Status            string
-	Created           pgtype.Timestamptz
-	Deleted           pgtype.Timestamptz
-}
-
-type TenantClusterSync struct {
-	ClusterID          uuid.UUID
-	Synced             pgtype.Timestamptz
-	SyncError          pgtype.Text
-	SyncAttempts       int32
-	SyncLastAttempt    pgtype.Timestamptz
-	ShootStatus        pgtype.Text
-	ShootStatusMessage pgtype.Text
-	ShootStatusUpdated pgtype.Timestamptz
-}
-
-type TenantInstall struct {
-	ID        uuid.UUID
-	ClusterID uuid.UUID
-	PluginID  uuid.UUID
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-}
-
-type TenantNamespace struct {
-	ID        uuid.UUID
-	ProjectID uuid.UUID
-	ClusterID uuid.UUID
-	Name      string
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-}
-
 type TenantNodePool struct {
 	ID           uuid.UUID
 	ClusterID    uuid.UUID
@@ -65,22 +26,10 @@ type TenantOrganization struct {
 	Created pgtype.Timestamptz
 }
 
-type TenantPlugin struct {
-	ID   uuid.UUID
-	Name string
-}
-
-type TenantProject struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	Name           string
-	Created        pgtype.Timestamptz
-}
-
-type TenantUser struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	Name           string
-	ExternalID     string
-	Created        pgtype.Timestamptz
+type ZappstoreInstall struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	PluginID  uuid.UUID
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
 }
