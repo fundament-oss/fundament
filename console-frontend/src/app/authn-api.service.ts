@@ -2,13 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { AUTHN } from '../connect/tokens';
-import { environment } from '../environments/environment';
+import { ConfigService } from './config.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthnApiService {
   private client = inject(AUTHN);
+  private configService = inject(ConfigService);
   private currentUserSubject = new BehaviorSubject<User | undefined>(undefined);
   public currentUser$: Observable<User | undefined> = this.currentUserSubject.asObservable();
 
@@ -16,7 +17,8 @@ export class AuthnApiService {
     // Submit credentials to Dex local connector endpoint
     const returnUrl = `${window.location.origin}/`;
 
-    const response = await fetch(`${environment.authnApiUrl}/login/password`, {
+    const authnApiUrl = this.configService.getConfig().authnApiUrl;
+    const response = await fetch(`${authnApiUrl}/login/password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -69,7 +71,8 @@ export class AuthnApiService {
   }
 
   async refreshToken(): Promise<void> {
-    const response = await fetch(`${environment.authnApiUrl}/refresh`, {
+    const authnApiUrl = this.configService.getConfig().authnApiUrl;
+    const response = await fetch(`${authnApiUrl}/refresh`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -81,7 +84,8 @@ export class AuthnApiService {
   }
 
   async logout(): Promise<void> {
-    const response = await fetch(`${environment.authnApiUrl}/logout`, {
+    const authnApiUrl = this.configService.getConfig().authnApiUrl;
+    const response = await fetch(`${authnApiUrl}/logout`, {
       method: 'POST',
       credentials: 'include',
     });

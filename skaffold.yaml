@@ -31,8 +31,6 @@ build:
       context: .
       docker:
         dockerfile: console-frontend/Dockerfile
-        buildArgs:
-          APP_CONFIGURATION: development
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheckDeadlineSeconds: 300

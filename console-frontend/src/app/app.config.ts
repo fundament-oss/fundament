@@ -1,11 +1,11 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideAppInitializer, inject } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
 import { PROTO_API_VERSION } from '../proto-version';
 import { BehaviorSubject } from 'rxjs';
-import { environment } from '../environments/environment';
 import { routes } from './app.routes';
+import { ConfigService } from './config.service';
 
 const EXPECTED_API_VERSION = PROTO_API_VERSION;
 
@@ -24,39 +24,52 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
+    // Initialize configuration before app starts
+    provideAppInitializer(() => {
+      const configService = inject(ConfigService);
+      return configService.loadConfig();
+    }),
     // Provide the Authn transport
     {
       provide: AUTHN_TRANSPORT,
-      useValue: createConnectTransport({
-        baseUrl: environment.authnApiUrl,
-        fetch: (input, init) => {
-          return fetch(input, {
-            ...init,
-            credentials: 'include', // Include the HTTP-only authentication cookie with requests, also below
-          });
-        },
-      }),
+      useFactory: () => {
+        const configService = inject(ConfigService);
+        const config = configService.getConfig();
+        return createConnectTransport({
+          baseUrl: config.authnApiUrl,
+          fetch: (input, init) => {
+            return fetch(input, {
+              ...init,
+              credentials: 'include', // Include the HTTP-only authentication cookie with requests, also below
+            });
+          },
+        });
+      },
     },
     // Provide the Organization transport
     {
       provide: ORGANIZATION_TRANSPORT,
-      useValue: createConnectTransport({
-        baseUrl: environment.organizationApiUrl,
-        fetch: async (input, init) => {
-          const response = await fetch(input, {
-            ...init,
-            credentials: 'include',
-          });
+      useFactory: () => {
+        const configService = inject(ConfigService);
+        const config = configService.getConfig();
+        return createConnectTransport({
+          baseUrl: config.organizationApiUrl,
+          fetch: async (input, init) => {
+            const response = await fetch(input, {
+              ...init,
+              credentials: 'include',
+            });
 
-          // Check API version from response header
-          const serverVersion = response.headers.get('X-API-Version');
-          if (serverVersion) {
-            handleVersionMismatch(serverVersion);
-          }
+            // Check API version from response header
+            const serverVersion = response.headers.get('X-API-Version');
+            if (serverVersion) {
+              handleVersionMismatch(serverVersion);
+            }
 
-          return response;
-        },
-      }),
+            return response;
+          },
+        });
+      },
     },
   ],
 };

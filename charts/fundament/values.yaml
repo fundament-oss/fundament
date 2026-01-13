@@ -48,7 +48,6 @@ frontend:
 consoleFrontend:
   enabled: false
   replicas: 1
-  configuration: ""
 
 # Dex (OIDC Identity Provider)
 dex:

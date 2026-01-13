@@ -31,7 +31,6 @@ frontend:
 consoleFrontend:
   enabled: true
   replicas: 1
-  configuration: development
 
 dex:
   enabled: true
