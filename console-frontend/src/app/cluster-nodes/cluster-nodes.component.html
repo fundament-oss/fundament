@@ -15,24 +15,33 @@
         <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
       </div>
     }
-    <app-shared-node-pools-form (formSubmit)="onFormSubmit($event)">
-      <div class="flex space-x-3">
-        <button
-          type="button"
-          (click)="onCancel()"
-          class="btn-secondary"
-          [disabled]="isSubmitting()"
-        >
-          Cancel
-        </button>
-        <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
-          @if (isSubmitting()) {
-            Saving...
-          } @else {
-            Save changes
-          }
-        </button>
+    @if (isLoading()) {
+      <div class="flex items-center justify-center py-8">
+        <p class="text-sm text-gray-500 dark:text-gray-400">Loading node pools...</p>
       </div>
-    </app-shared-node-pools-form>
+    } @else {
+      <app-shared-node-pools-form
+        [initialData]="initialNodePools()"
+        (formSubmit)="onFormSubmit($event)"
+      >
+        <div class="flex space-x-3">
+          <button
+            type="button"
+            (click)="onCancel()"
+            class="btn-secondary"
+            [disabled]="isSubmitting()"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+            @if (isSubmitting()) {
+              Saving...
+            } @else {
+              Save changes
+            }
+          </button>
+        </div>
+      </app-shared-node-pools-form>
+    }
   </div>
 </div>

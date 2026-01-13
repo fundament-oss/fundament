@@ -7,7 +7,11 @@ import { ErrorIconComponent } from '../icons';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { CreateClusterRequestSchema, NodePoolSpecSchema } from '../../generated/v1/cluster_pb';
+import {
+  CreateClusterRequestSchema,
+  CreateNodePoolRequestSchema,
+  AddInstallRequestSchema,
+} from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -53,21 +57,35 @@ export class AddClusterSummaryComponent {
         name: wizardState.clusterName,
         region: wizardState.region,
         kubernetesVersion: wizardState.kubernetesVersion,
-        nodePools:
-          wizardState.nodePools?.map((pool) =>
-            create(NodePoolSpecSchema, {
-              name: pool.name,
-              machineType: pool.machineType,
-              autoscaleMin: pool.autoscaleMin,
-              autoscaleMax: pool.autoscaleMax,
-            }),
-          ) ?? [],
-        pluginIds: wizardState.plugins ?? [],
-        pluginPreset: wizardState.preset ?? '',
       });
 
-      // Call the API
+      // Call the API to create the cluster
       const response = await firstValueFrom(this.client.createCluster(request));
+
+      // Create node pools if any are configured
+      if (wizardState.nodePools && wizardState.nodePools.length > 0) {
+        for (const pool of wizardState.nodePools) {
+          const nodePoolRequest = create(CreateNodePoolRequestSchema, {
+            clusterId: response.clusterId,
+            name: pool.name,
+            machineType: pool.machineType,
+            autoscaleMin: pool.autoscaleMin,
+            autoscaleMax: pool.autoscaleMax,
+          });
+          await firstValueFrom(this.client.createNodePool(nodePoolRequest));
+        }
+      }
+
+      // Install plugins if any are configured
+      if (wizardState.plugins && wizardState.plugins.length > 0) {
+        for (const pluginId of wizardState.plugins) {
+          const installRequest = create(AddInstallRequestSchema, {
+            clusterId: response.clusterId,
+            pluginId: pluginId,
+          });
+          await firstValueFrom(this.client.addInstall(installRequest));
+        }
+      }
 
       // Reset wizard state
       this.stateService.reset();

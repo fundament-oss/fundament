@@ -6,13 +6,15 @@ import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegen
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { ClusterStatus, NodePoolStatus, ResourceUsage, Timestamp } from "./common_pb";
 import { file_v1_common } from "./common_pb";
+import type { EmptySchema } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/cluster.proto.
  */
 export const file_v1_cluster: GenFile = /*@__PURE__*/
-  fileDesc("ChB2MS9jbHVzdGVyLnByb3RvEg9vcmdhbml6YXRpb24udjEiKQoTTGlzdENsdXN0ZXJzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJIkkKFExpc3RDbHVzdGVyc1Jlc3BvbnNlEjEKCGNsdXN0ZXJzGAogAygLMh8ub3JnYW5pemF0aW9uLnYxLkNsdXN0ZXJTdW1tYXJ5IpoBCg5DbHVzdGVyU3VtbWFyeRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEi4KBnN0YXR1cxgeIAEoDjIeLm9yZ2FuaXphdGlvbi52MS5DbHVzdGVyU3RhdHVzEg4KBnJlZ2lvbhgoIAEoCRIVCg1wcm9qZWN0X2NvdW50GDIgASgFEhcKD25vZGVfcG9vbF9jb3VudBg8IAEoBSInChFHZXRDbHVzdGVyUmVxdWVzdBISCgpjbHVzdGVyX2lkGAogASgJIkYKEkdldENsdXN0ZXJSZXNwb25zZRIwCgdjbHVzdGVyGAogASgLMh8ub3JnYW5pemF0aW9uLnYxLkNsdXN0ZXJEZXRhaWxzIoUDCg5DbHVzdGVyRGV0YWlscxIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEg4KBnJlZ2lvbhgeIAEoCRIaChJrdWJlcm5ldGVzX3ZlcnNpb24YKCABKAkSLgoGc3RhdHVzGDIgASgOMh4ub3JnYW5pemF0aW9uLnYxLkNsdXN0ZXJTdGF0dXMSLgoKY3JlYXRlZF9hdBg8IAEoCzIaLm9yZ2FuaXphdGlvbi52MS5UaW1lc3RhbXASOgoOcmVzb3VyY2VfdXNhZ2UYRiABKAsyIi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZUluZm8SLQoKbm9kZV9wb29scxhQIAMoCzIZLm9yZ2FuaXphdGlvbi52MS5Ob2RlUG9vbBIvCgdtZW1iZXJzGFogAygLMh4ub3JnYW5pemF0aW9uLnYxLkNsdXN0ZXJNZW1iZXISMQoIcHJvamVjdHMYZCADKAsyHy5vcmdhbml6YXRpb24udjEuQ2x1c3RlclByb2plY3QizAEKEVJlc291cmNlVXNhZ2VJbmZvEisKA2NwdRgKIAEoCzIeLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlEi4KBm1lbW9yeRgUIAEoCzIeLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlEiwKBGRpc2sYHiABKAsyHi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZRIsCgRwb2RzGCggASgLMh4ub3JnYW5pemF0aW9uLnYxLlJlc291cmNlVXNhZ2UiuQEKCE5vZGVQb29sEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMbWFjaGluZV90eXBlGB4gASgJEhUKDWN1cnJlbnRfbm9kZXMYKCABKAUSEQoJbWluX25vZGVzGDIgASgFEhEKCW1heF9ub2Rlcxg8IAEoBRIvCgZzdGF0dXMYRiABKA4yHy5vcmdhbml6YXRpb24udjEuTm9kZVBvb2xTdGF0dXMSDwoHdmVyc2lvbhhQIAEoCSJtCg1DbHVzdGVyTWVtYmVyEg8KB3VzZXJfaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIMCgRyb2xlGB4gASgJEi8KC2xhc3RfYWN0aXZlGCggASgLMhoub3JnYW5pemF0aW9uLnYxLlRpbWVzdGFtcCJGCg5DbHVzdGVyUHJvamVjdBISCgpwcm9qZWN0X2lkGAogASgJEgwKBG5hbWUYFCABKAkSEgoKbmFtZXNwYWNlcxgeIAMoCSKuAQoUQ3JlYXRlQ2x1c3RlclJlcXVlc3QSDAoEbmFtZRgKIAEoCRIOCgZyZWdpb24YFCABKAkSGgoSa3ViZXJuZXRlc192ZXJzaW9uGB4gASgJEjEKCm5vZGVfcG9vbHMYKCADKAsyHS5vcmdhbml6YXRpb24udjEuTm9kZVBvb2xTcGVjEhIKCnBsdWdpbl9pZHMYMiADKAkSFQoNcGx1Z2luX3ByZXNldBg8IAEoCSJgCgxOb2RlUG9vbFNwZWMSDAoEbmFtZRgKIAEoCRIUCgxtYWNoaW5lX3R5cGUYFCABKAkSFQoNYXV0b3NjYWxlX21pbhgeIAEoBRIVCg1hdXRvc2NhbGVfbWF4GCggASgFIlsKFUNyZWF0ZUNsdXN0ZXJSZXNwb25zZRISCgpjbHVzdGVyX2lkGAogASgJEi4KBnN0YXR1cxgUIAEoDjIeLm9yZ2FuaXphdGlvbi52MS5DbHVzdGVyU3RhdHVzIpUBChRVcGRhdGVDbHVzdGVyUmVxdWVzdBISCgpjbHVzdGVyX2lkGAogASgJEh8KEmt1YmVybmV0ZXNfdmVyc2lvbhgUIAEoCUgAiAEBEjEKCm5vZGVfcG9vbHMYHiADKAsyHS5vcmdhbml6YXRpb24udjEuTm9kZVBvb2xTcGVjQhUKE19rdWJlcm5ldGVzX3ZlcnNpb24iSQoVVXBkYXRlQ2x1c3RlclJlc3BvbnNlEjAKB2NsdXN0ZXIYCiABKAsyHy5vcmdhbml6YXRpb24udjEuQ2x1c3RlckRldGFpbHMiKgoURGVsZXRlQ2x1c3RlclJlcXVlc3QSEgoKY2x1c3Rlcl9pZBgKIAEoCSIoChVEZWxldGVDbHVzdGVyUmVzcG9uc2USDwoHc3VjY2VzcxgKIAEoCCIvChlHZXRDbHVzdGVyQWN0aXZpdHlSZXF1ZXN0EhIKCmNsdXN0ZXJfaWQYCiABKAkiUAoaR2V0Q2x1c3RlckFjdGl2aXR5UmVzcG9uc2USMgoKYWN0aXZpdGllcxgKIAMoCzIeLm9yZ2FuaXphdGlvbi52MS5BY3Rpdml0eUVudHJ5Il8KDUFjdGl2aXR5RW50cnkSLQoJdGltZXN0YW1wGAogASgLMhoub3JnYW5pemF0aW9uLnYxLlRpbWVzdGFtcBIOCgZhY3Rpb24YFCABKAkSDwoHZGV0YWlscxgeIAEoCSIqChRHZXRLdWJlY29uZmlnUmVxdWVzdBISCgpjbHVzdGVyX2lkGAogASgJIjMKFUdldEt1YmVjb25maWdSZXNwb25zZRIaChJrdWJlY29uZmlnX2NvbnRlbnQYCiABKAkyswUKDkNsdXN0ZXJTZXJ2aWNlElsKDExpc3RDbHVzdGVycxIkLm9yZ2FuaXphdGlvbi52MS5MaXN0Q2x1c3RlcnNSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkxpc3RDbHVzdGVyc1Jlc3BvbnNlElUKCkdldENsdXN0ZXISIi5vcmdhbml6YXRpb24udjEuR2V0Q2x1c3RlclJlcXVlc3QaIy5vcmdhbml6YXRpb24udjEuR2V0Q2x1c3RlclJlc3BvbnNlEl4KDUNyZWF0ZUNsdXN0ZXISJS5vcmdhbml6YXRpb24udjEuQ3JlYXRlQ2x1c3RlclJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuQ3JlYXRlQ2x1c3RlclJlc3BvbnNlEl4KDVVwZGF0ZUNsdXN0ZXISJS5vcmdhbml6YXRpb24udjEuVXBkYXRlQ2x1c3RlclJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuVXBkYXRlQ2x1c3RlclJlc3BvbnNlEl4KDURlbGV0ZUNsdXN0ZXISJS5vcmdhbml6YXRpb24udjEuRGVsZXRlQ2x1c3RlclJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuRGVsZXRlQ2x1c3RlclJlc3BvbnNlEm0KEkdldENsdXN0ZXJBY3Rpdml0eRIqLm9yZ2FuaXphdGlvbi52MS5HZXRDbHVzdGVyQWN0aXZpdHlSZXF1ZXN0Gisub3JnYW5pemF0aW9uLnYxLkdldENsdXN0ZXJBY3Rpdml0eVJlc3BvbnNlEl4KDUdldEt1YmVjb25maWcSJS5vcmdhbml6YXRpb24udjEuR2V0S3ViZWNvbmZpZ1JlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuR2V0S3ViZWNvbmZpZ1Jlc3BvbnNlQlVaU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxYgZwcm90bzM", [file_v1_common]);
+  fileDesc("ChB2MS9jbHVzdGVyLnByb3RvEg9vcmdhbml6YXRpb24udjEiKQoTTGlzdENsdXN0ZXJzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJIkkKFExpc3RDbHVzdGVyc1Jlc3BvbnNlEjEKCGNsdXN0ZXJzGAogAygLMh8ub3JnYW5pemF0aW9uLnYxLkNsdXN0ZXJTdW1tYXJ5ImoKDkNsdXN0ZXJTdW1tYXJ5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSLgoGc3RhdHVzGB4gASgOMh4ub3JnYW5pemF0aW9uLnYxLkNsdXN0ZXJTdGF0dXMSDgoGcmVnaW9uGCggASgJIicKEUdldENsdXN0ZXJSZXF1ZXN0EhIKCmNsdXN0ZXJfaWQYCiABKAkiRgoSR2V0Q2x1c3RlclJlc3BvbnNlEjAKB2NsdXN0ZXIYCiABKAsyHy5vcmdhbml6YXRpb24udjEuQ2x1c3RlckRldGFpbHMi8gEKDkNsdXN0ZXJEZXRhaWxzEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSDgoGcmVnaW9uGB4gASgJEhoKEmt1YmVybmV0ZXNfdmVyc2lvbhgoIAEoCRIuCgZzdGF0dXMYMiABKA4yHi5vcmdhbml6YXRpb24udjEuQ2x1c3RlclN0YXR1cxIuCgpjcmVhdGVkX2F0GDwgASgLMhoub3JnYW5pemF0aW9uLnYxLlRpbWVzdGFtcBI6Cg5yZXNvdXJjZV91c2FnZRhGIAEoCzIiLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlSW5mbyLMAQoRUmVzb3VyY2VVc2FnZUluZm8SKwoDY3B1GAogASgLMh4ub3JnYW5pemF0aW9uLnYxLlJlc291cmNlVXNhZ2USLgoGbWVtb3J5GBQgASgLMh4ub3JnYW5pemF0aW9uLnYxLlJlc291cmNlVXNhZ2USLAoEZGlzaxgeIAEoCzIeLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlEiwKBHBvZHMYKCABKAsyHi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZSK5AQoITm9kZVBvb2wSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxtYWNoaW5lX3R5cGUYHiABKAkSFQoNY3VycmVudF9ub2RlcxgoIAEoBRIRCgltaW5fbm9kZXMYMiABKAUSEQoJbWF4X25vZGVzGDwgASgFEi8KBnN0YXR1cxhGIAEoDjIfLm9yZ2FuaXphdGlvbi52MS5Ob2RlUG9vbFN0YXR1cxIPCgd2ZXJzaW9uGFAgASgJIm0KDUNsdXN0ZXJNZW1iZXISDwoHdXNlcl9pZBgKIAEoCRIMCgRuYW1lGBQgASgJEgwKBHJvbGUYHiABKAkSLwoLbGFzdF9hY3RpdmUYKCABKAsyGi5vcmdhbml6YXRpb24udjEuVGltZXN0YW1wIkYKDkNsdXN0ZXJQcm9qZWN0EhIKCnByb2plY3RfaWQYCiABKAkSDAoEbmFtZRgUIAEoCRISCgpuYW1lc3BhY2VzGB4gAygJIlAKFENyZWF0ZUNsdXN0ZXJSZXF1ZXN0EgwKBG5hbWUYCiABKAkSDgoGcmVnaW9uGBQgASgJEhoKEmt1YmVybmV0ZXNfdmVyc2lvbhgeIAEoCSJgCgxOb2RlUG9vbFNwZWMSDAoEbmFtZRgKIAEoCRIUCgxtYWNoaW5lX3R5cGUYFCABKAkSFQoNYXV0b3NjYWxlX21pbhgeIAEoBRIVCg1hdXRvc2NhbGVfbWF4GCggASgFIisKFUNyZWF0ZUNsdXN0ZXJSZXNwb25zZRISCgpjbHVzdGVyX2lkGAogASgJImIKFFVwZGF0ZUNsdXN0ZXJSZXF1ZXN0EhIKCmNsdXN0ZXJfaWQYCiABKAkSHwoSa3ViZXJuZXRlc192ZXJzaW9uGBQgASgJSACIAQFCFQoTX2t1YmVybmV0ZXNfdmVyc2lvbiIqChREZWxldGVDbHVzdGVyUmVxdWVzdBISCgpjbHVzdGVyX2lkGAogASgJIi8KGUdldENsdXN0ZXJBY3Rpdml0eVJlcXVlc3QSEgoKY2x1c3Rlcl9pZBgKIAEoCSJQChpHZXRDbHVzdGVyQWN0aXZpdHlSZXNwb25zZRIyCgphY3Rpdml0aWVzGAogAygLMh4ub3JnYW5pemF0aW9uLnYxLkFjdGl2aXR5RW50cnkiXwoNQWN0aXZpdHlFbnRyeRItCgl0aW1lc3RhbXAYCiABKAsyGi5vcmdhbml6YXRpb24udjEuVGltZXN0YW1wEg4KBmFjdGlvbhgUIAEoCRIPCgdkZXRhaWxzGB4gASgJIioKFEdldEt1YmVjb25maWdSZXF1ZXN0EhIKCmNsdXN0ZXJfaWQYCiABKAkiMwoVR2V0S3ViZWNvbmZpZ1Jlc3BvbnNlEhoKEmt1YmVjb25maWdfY29udGVudBgKIAEoCSJ9ChVDcmVhdGVOb2RlUG9vbFJlcXVlc3QSEgoKY2x1c3Rlcl9pZBgKIAEoCRIMCgRuYW1lGBQgASgJEhQKDG1hY2hpbmVfdHlwZRgeIAEoCRIVCg1hdXRvc2NhbGVfbWluGCggASgFEhUKDWF1dG9zY2FsZV9tYXgYMiABKAUiLgoWQ3JlYXRlTm9kZVBvb2xSZXNwb25zZRIUCgxub2RlX3Bvb2xfaWQYCiABKAkiWwoVVXBkYXRlTm9kZVBvb2xSZXF1ZXN0EhQKDG5vZGVfcG9vbF9pZBgKIAEoCRIVCg1hdXRvc2NhbGVfbWluGBQgASgFEhUKDWF1dG9zY2FsZV9tYXgYHiABKAUiLQoVRGVsZXRlTm9kZVBvb2xSZXF1ZXN0EhQKDG5vZGVfcG9vbF9pZBgKIAEoCSIqChRMaXN0Tm9kZVBvb2xzUmVxdWVzdBISCgpjbHVzdGVyX2lkGAogASgJIkYKFUxpc3ROb2RlUG9vbHNSZXNwb25zZRItCgpub2RlX3Bvb2xzGAogAygLMhkub3JnYW5pemF0aW9uLnYxLk5vZGVQb29sIioKEkdldE5vZGVQb29sUmVxdWVzdBIUCgxub2RlX3Bvb2xfaWQYCiABKAkiQwoTR2V0Tm9kZVBvb2xSZXNwb25zZRIsCglub2RlX3Bvb2wYCiABKAsyGS5vcmdhbml6YXRpb24udjEuTm9kZVBvb2wiWAoHSW5zdGFsbBIKCgJpZBgKIAEoCRIRCglwbHVnaW5faWQYFCABKAkSLgoKY3JlYXRlZF9hdBgeIAEoCzIaLm9yZ2FuaXphdGlvbi52MS5UaW1lc3RhbXAiKQoTTGlzdEluc3RhbGxzUmVxdWVzdBISCgpjbHVzdGVyX2lkGAogASgJIkIKFExpc3RJbnN0YWxsc1Jlc3BvbnNlEioKCGluc3RhbGxzGAogAygLMhgub3JnYW5pemF0aW9uLnYxLkluc3RhbGwiOgoRQWRkSW5zdGFsbFJlcXVlc3QSEgoKY2x1c3Rlcl9pZBgKIAEoCRIRCglwbHVnaW5faWQYFCABKAkiKAoSQWRkSW5zdGFsbFJlc3BvbnNlEhIKCmluc3RhbGxfaWQYCiABKAkiKgoUUmVtb3ZlSW5zdGFsbFJlcXVlc3QSEgoKaW5zdGFsbF9pZBgKIAEoCTLYCgoOQ2x1c3RlclNlcnZpY2USWwoMTGlzdENsdXN0ZXJzEiQub3JnYW5pemF0aW9uLnYxLkxpc3RDbHVzdGVyc1JlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuTGlzdENsdXN0ZXJzUmVzcG9uc2USVQoKR2V0Q2x1c3RlchIiLm9yZ2FuaXphdGlvbi52MS5HZXRDbHVzdGVyUmVxdWVzdBojLm9yZ2FuaXphdGlvbi52MS5HZXRDbHVzdGVyUmVzcG9uc2USXgoNQ3JlYXRlQ2x1c3RlchIlLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVDbHVzdGVyUmVxdWVzdBomLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVDbHVzdGVyUmVzcG9uc2USTgoNVXBkYXRlQ2x1c3RlchIlLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVDbHVzdGVyUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJOCg1EZWxldGVDbHVzdGVyEiUub3JnYW5pemF0aW9uLnYxLkRlbGV0ZUNsdXN0ZXJSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Em0KEkdldENsdXN0ZXJBY3Rpdml0eRIqLm9yZ2FuaXphdGlvbi52MS5HZXRDbHVzdGVyQWN0aXZpdHlSZXF1ZXN0Gisub3JnYW5pemF0aW9uLnYxLkdldENsdXN0ZXJBY3Rpdml0eVJlc3BvbnNlEl4KDUdldEt1YmVjb25maWcSJS5vcmdhbml6YXRpb24udjEuR2V0S3ViZWNvbmZpZ1JlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuR2V0S3ViZWNvbmZpZ1Jlc3BvbnNlEl4KDUxpc3ROb2RlUG9vbHMSJS5vcmdhbml6YXRpb24udjEuTGlzdE5vZGVQb29sc1JlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuTGlzdE5vZGVQb29sc1Jlc3BvbnNlElgKC0dldE5vZGVQb29sEiMub3JnYW5pemF0aW9uLnYxLkdldE5vZGVQb29sUmVxdWVzdBokLm9yZ2FuaXphdGlvbi52MS5HZXROb2RlUG9vbFJlc3BvbnNlEmEKDkNyZWF0ZU5vZGVQb29sEiYub3JnYW5pemF0aW9uLnYxLkNyZWF0ZU5vZGVQb29sUmVxdWVzdBonLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVOb2RlUG9vbFJlc3BvbnNlElAKDlVwZGF0ZU5vZGVQb29sEiYub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU5vZGVQb29sUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJQCg5EZWxldGVOb2RlUG9vbBImLm9yZ2FuaXphdGlvbi52MS5EZWxldGVOb2RlUG9vbFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSWwoMTGlzdEluc3RhbGxzEiQub3JnYW5pemF0aW9uLnYxLkxpc3RJbnN0YWxsc1JlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuTGlzdEluc3RhbGxzUmVzcG9uc2USVQoKQWRkSW5zdGFsbBIiLm9yZ2FuaXphdGlvbi52MS5BZGRJbnN0YWxsUmVxdWVzdBojLm9yZ2FuaXphdGlvbi52MS5BZGRJbnN0YWxsUmVzcG9uc2USTgoNUmVtb3ZlSW5zdGFsbBIlLm9yZ2FuaXphdGlvbi52MS5SZW1vdmVJbnN0YWxsUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_v1_common, file_google_protobuf_empty]);
 
 /**
  * List clusters request
@@ -79,16 +81,6 @@ export type ClusterSummary = Message<"organization.v1.ClusterSummary"> & {
    * @generated from field: string region = 40;
    */
   region: string;
-
-  /**
-   * @generated from field: int32 project_count = 50;
-   */
-  projectCount: number;
-
-  /**
-   * @generated from field: int32 node_pool_count = 60;
-   */
-  nodePoolCount: number;
 };
 
 /**
@@ -176,21 +168,6 @@ export type ClusterDetails = Message<"organization.v1.ClusterDetails"> & {
    * @generated from field: organization.v1.ResourceUsageInfo resource_usage = 70;
    */
   resourceUsage?: ResourceUsageInfo;
-
-  /**
-   * @generated from field: repeated organization.v1.NodePool node_pools = 80;
-   */
-  nodePools: NodePool[];
-
-  /**
-   * @generated from field: repeated organization.v1.ClusterMember members = 90;
-   */
-  members: ClusterMember[];
-
-  /**
-   * @generated from field: repeated organization.v1.ClusterProject projects = 100;
-   */
-  projects: ClusterProject[];
 };
 
 /**
@@ -371,23 +348,6 @@ export type CreateClusterRequest = Message<"organization.v1.CreateClusterRequest
    * @generated from field: string kubernetes_version = 30;
    */
   kubernetesVersion: string;
-
-  /**
-   * @generated from field: repeated organization.v1.NodePoolSpec node_pools = 40;
-   */
-  nodePools: NodePoolSpec[];
-
-  /**
-   * @generated from field: repeated string plugin_ids = 50;
-   */
-  pluginIds: string[];
-
-  /**
-   * e.g., "havenplus", "preset2", "custom"
-   *
-   * @generated from field: string plugin_preset = 60;
-   */
-  pluginPreset: string;
 };
 
 /**
@@ -441,11 +401,6 @@ export type CreateClusterResponse = Message<"organization.v1.CreateClusterRespon
    * @generated from field: string cluster_id = 10;
    */
   clusterId: string;
-
-  /**
-   * @generated from field: organization.v1.ClusterStatus status = 20;
-   */
-  status: ClusterStatus;
 };
 
 /**
@@ -470,11 +425,6 @@ export type UpdateClusterRequest = Message<"organization.v1.UpdateClusterRequest
    * @generated from field: optional string kubernetes_version = 20;
    */
   kubernetesVersion?: string;
-
-  /**
-   * @generated from field: repeated organization.v1.NodePoolSpec node_pools = 30;
-   */
-  nodePools: NodePoolSpec[];
 };
 
 /**
@@ -483,25 +433,6 @@ export type UpdateClusterRequest = Message<"organization.v1.UpdateClusterRequest
  */
 export const UpdateClusterRequestSchema: GenMessage<UpdateClusterRequest> = /*@__PURE__*/
   messageDesc(file_v1_cluster, 13);
-
-/**
- * Update cluster response
- *
- * @generated from message organization.v1.UpdateClusterResponse
- */
-export type UpdateClusterResponse = Message<"organization.v1.UpdateClusterResponse"> & {
-  /**
-   * @generated from field: organization.v1.ClusterDetails cluster = 10;
-   */
-  cluster?: ClusterDetails;
-};
-
-/**
- * Describes the message organization.v1.UpdateClusterResponse.
- * Use `create(UpdateClusterResponseSchema)` to create a new message.
- */
-export const UpdateClusterResponseSchema: GenMessage<UpdateClusterResponse> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 14);
 
 /**
  * Delete cluster request
@@ -520,26 +451,7 @@ export type DeleteClusterRequest = Message<"organization.v1.DeleteClusterRequest
  * Use `create(DeleteClusterRequestSchema)` to create a new message.
  */
 export const DeleteClusterRequestSchema: GenMessage<DeleteClusterRequest> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 15);
-
-/**
- * Delete cluster response
- *
- * @generated from message organization.v1.DeleteClusterResponse
- */
-export type DeleteClusterResponse = Message<"organization.v1.DeleteClusterResponse"> & {
-  /**
-   * @generated from field: bool success = 10;
-   */
-  success: boolean;
-};
-
-/**
- * Describes the message organization.v1.DeleteClusterResponse.
- * Use `create(DeleteClusterResponseSchema)` to create a new message.
- */
-export const DeleteClusterResponseSchema: GenMessage<DeleteClusterResponse> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 16);
+  messageDesc(file_v1_cluster, 14);
 
 /**
  * Get cluster activity request
@@ -558,7 +470,7 @@ export type GetClusterActivityRequest = Message<"organization.v1.GetClusterActiv
  * Use `create(GetClusterActivityRequestSchema)` to create a new message.
  */
 export const GetClusterActivityRequestSchema: GenMessage<GetClusterActivityRequest> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 17);
+  messageDesc(file_v1_cluster, 15);
 
 /**
  * Get cluster activity response
@@ -577,7 +489,7 @@ export type GetClusterActivityResponse = Message<"organization.v1.GetClusterActi
  * Use `create(GetClusterActivityResponseSchema)` to create a new message.
  */
 export const GetClusterActivityResponseSchema: GenMessage<GetClusterActivityResponse> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 18);
+  messageDesc(file_v1_cluster, 16);
 
 /**
  * Activity entry
@@ -606,7 +518,7 @@ export type ActivityEntry = Message<"organization.v1.ActivityEntry"> & {
  * Use `create(ActivityEntrySchema)` to create a new message.
  */
 export const ActivityEntrySchema: GenMessage<ActivityEntry> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 19);
+  messageDesc(file_v1_cluster, 17);
 
 /**
  * Get kubeconfig request
@@ -625,7 +537,7 @@ export type GetKubeconfigRequest = Message<"organization.v1.GetKubeconfigRequest
  * Use `create(GetKubeconfigRequestSchema)` to create a new message.
  */
 export const GetKubeconfigRequestSchema: GenMessage<GetKubeconfigRequest> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 20);
+  messageDesc(file_v1_cluster, 18);
 
 /**
  * Get kubeconfig response
@@ -644,7 +556,320 @@ export type GetKubeconfigResponse = Message<"organization.v1.GetKubeconfigRespon
  * Use `create(GetKubeconfigResponseSchema)` to create a new message.
  */
 export const GetKubeconfigResponseSchema: GenMessage<GetKubeconfigResponse> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 19);
+
+/**
+ * Create node pool request
+ *
+ * @generated from message organization.v1.CreateNodePoolRequest
+ */
+export type CreateNodePoolRequest = Message<"organization.v1.CreateNodePoolRequest"> & {
+  /**
+   * @generated from field: string cluster_id = 10;
+   */
+  clusterId: string;
+
+  /**
+   * @generated from field: string name = 20;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string machine_type = 30;
+   */
+  machineType: string;
+
+  /**
+   * @generated from field: int32 autoscale_min = 40;
+   */
+  autoscaleMin: number;
+
+  /**
+   * @generated from field: int32 autoscale_max = 50;
+   */
+  autoscaleMax: number;
+};
+
+/**
+ * Describes the message organization.v1.CreateNodePoolRequest.
+ * Use `create(CreateNodePoolRequestSchema)` to create a new message.
+ */
+export const CreateNodePoolRequestSchema: GenMessage<CreateNodePoolRequest> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 20);
+
+/**
+ * Create node pool response
+ *
+ * @generated from message organization.v1.CreateNodePoolResponse
+ */
+export type CreateNodePoolResponse = Message<"organization.v1.CreateNodePoolResponse"> & {
+  /**
+   * @generated from field: string node_pool_id = 10;
+   */
+  nodePoolId: string;
+};
+
+/**
+ * Describes the message organization.v1.CreateNodePoolResponse.
+ * Use `create(CreateNodePoolResponseSchema)` to create a new message.
+ */
+export const CreateNodePoolResponseSchema: GenMessage<CreateNodePoolResponse> = /*@__PURE__*/
   messageDesc(file_v1_cluster, 21);
+
+/**
+ * Update node pool request
+ *
+ * @generated from message organization.v1.UpdateNodePoolRequest
+ */
+export type UpdateNodePoolRequest = Message<"organization.v1.UpdateNodePoolRequest"> & {
+  /**
+   * @generated from field: string node_pool_id = 10;
+   */
+  nodePoolId: string;
+
+  /**
+   * @generated from field: int32 autoscale_min = 20;
+   */
+  autoscaleMin: number;
+
+  /**
+   * @generated from field: int32 autoscale_max = 30;
+   */
+  autoscaleMax: number;
+};
+
+/**
+ * Describes the message organization.v1.UpdateNodePoolRequest.
+ * Use `create(UpdateNodePoolRequestSchema)` to create a new message.
+ */
+export const UpdateNodePoolRequestSchema: GenMessage<UpdateNodePoolRequest> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 22);
+
+/**
+ * Delete node pool request
+ *
+ * @generated from message organization.v1.DeleteNodePoolRequest
+ */
+export type DeleteNodePoolRequest = Message<"organization.v1.DeleteNodePoolRequest"> & {
+  /**
+   * @generated from field: string node_pool_id = 10;
+   */
+  nodePoolId: string;
+};
+
+/**
+ * Describes the message organization.v1.DeleteNodePoolRequest.
+ * Use `create(DeleteNodePoolRequestSchema)` to create a new message.
+ */
+export const DeleteNodePoolRequestSchema: GenMessage<DeleteNodePoolRequest> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 23);
+
+/**
+ * List node pools request
+ *
+ * @generated from message organization.v1.ListNodePoolsRequest
+ */
+export type ListNodePoolsRequest = Message<"organization.v1.ListNodePoolsRequest"> & {
+  /**
+   * @generated from field: string cluster_id = 10;
+   */
+  clusterId: string;
+};
+
+/**
+ * Describes the message organization.v1.ListNodePoolsRequest.
+ * Use `create(ListNodePoolsRequestSchema)` to create a new message.
+ */
+export const ListNodePoolsRequestSchema: GenMessage<ListNodePoolsRequest> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 24);
+
+/**
+ * List node pools response
+ *
+ * @generated from message organization.v1.ListNodePoolsResponse
+ */
+export type ListNodePoolsResponse = Message<"organization.v1.ListNodePoolsResponse"> & {
+  /**
+   * @generated from field: repeated organization.v1.NodePool node_pools = 10;
+   */
+  nodePools: NodePool[];
+};
+
+/**
+ * Describes the message organization.v1.ListNodePoolsResponse.
+ * Use `create(ListNodePoolsResponseSchema)` to create a new message.
+ */
+export const ListNodePoolsResponseSchema: GenMessage<ListNodePoolsResponse> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 25);
+
+/**
+ * Get node pool request
+ *
+ * @generated from message organization.v1.GetNodePoolRequest
+ */
+export type GetNodePoolRequest = Message<"organization.v1.GetNodePoolRequest"> & {
+  /**
+   * @generated from field: string node_pool_id = 10;
+   */
+  nodePoolId: string;
+};
+
+/**
+ * Describes the message organization.v1.GetNodePoolRequest.
+ * Use `create(GetNodePoolRequestSchema)` to create a new message.
+ */
+export const GetNodePoolRequestSchema: GenMessage<GetNodePoolRequest> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 26);
+
+/**
+ * Get node pool response
+ *
+ * @generated from message organization.v1.GetNodePoolResponse
+ */
+export type GetNodePoolResponse = Message<"organization.v1.GetNodePoolResponse"> & {
+  /**
+   * @generated from field: organization.v1.NodePool node_pool = 10;
+   */
+  nodePool?: NodePool;
+};
+
+/**
+ * Describes the message organization.v1.GetNodePoolResponse.
+ * Use `create(GetNodePoolResponseSchema)` to create a new message.
+ */
+export const GetNodePoolResponseSchema: GenMessage<GetNodePoolResponse> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 27);
+
+/**
+ * Install information
+ *
+ * @generated from message organization.v1.Install
+ */
+export type Install = Message<"organization.v1.Install"> & {
+  /**
+   * @generated from field: string id = 10;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string plugin_id = 20;
+   */
+  pluginId: string;
+
+  /**
+   * @generated from field: organization.v1.Timestamp created_at = 30;
+   */
+  createdAt?: Timestamp;
+};
+
+/**
+ * Describes the message organization.v1.Install.
+ * Use `create(InstallSchema)` to create a new message.
+ */
+export const InstallSchema: GenMessage<Install> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 28);
+
+/**
+ * List installs request
+ *
+ * @generated from message organization.v1.ListInstallsRequest
+ */
+export type ListInstallsRequest = Message<"organization.v1.ListInstallsRequest"> & {
+  /**
+   * @generated from field: string cluster_id = 10;
+   */
+  clusterId: string;
+};
+
+/**
+ * Describes the message organization.v1.ListInstallsRequest.
+ * Use `create(ListInstallsRequestSchema)` to create a new message.
+ */
+export const ListInstallsRequestSchema: GenMessage<ListInstallsRequest> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 29);
+
+/**
+ * List installs response
+ *
+ * @generated from message organization.v1.ListInstallsResponse
+ */
+export type ListInstallsResponse = Message<"organization.v1.ListInstallsResponse"> & {
+  /**
+   * @generated from field: repeated organization.v1.Install installs = 10;
+   */
+  installs: Install[];
+};
+
+/**
+ * Describes the message organization.v1.ListInstallsResponse.
+ * Use `create(ListInstallsResponseSchema)` to create a new message.
+ */
+export const ListInstallsResponseSchema: GenMessage<ListInstallsResponse> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 30);
+
+/**
+ * Add install request
+ *
+ * @generated from message organization.v1.AddInstallRequest
+ */
+export type AddInstallRequest = Message<"organization.v1.AddInstallRequest"> & {
+  /**
+   * @generated from field: string cluster_id = 10;
+   */
+  clusterId: string;
+
+  /**
+   * @generated from field: string plugin_id = 20;
+   */
+  pluginId: string;
+};
+
+/**
+ * Describes the message organization.v1.AddInstallRequest.
+ * Use `create(AddInstallRequestSchema)` to create a new message.
+ */
+export const AddInstallRequestSchema: GenMessage<AddInstallRequest> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 31);
+
+/**
+ * Add install response
+ *
+ * @generated from message organization.v1.AddInstallResponse
+ */
+export type AddInstallResponse = Message<"organization.v1.AddInstallResponse"> & {
+  /**
+   * @generated from field: string install_id = 10;
+   */
+  installId: string;
+};
+
+/**
+ * Describes the message organization.v1.AddInstallResponse.
+ * Use `create(AddInstallResponseSchema)` to create a new message.
+ */
+export const AddInstallResponseSchema: GenMessage<AddInstallResponse> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 32);
+
+/**
+ * Remove install request
+ *
+ * @generated from message organization.v1.RemoveInstallRequest
+ */
+export type RemoveInstallRequest = Message<"organization.v1.RemoveInstallRequest"> & {
+  /**
+   * The UUID of the install record
+   *
+   * @generated from field: string install_id = 10;
+   */
+  installId: string;
+};
+
+/**
+ * Describes the message organization.v1.RemoveInstallRequest.
+ * Use `create(RemoveInstallRequestSchema)` to create a new message.
+ */
+export const RemoveInstallRequestSchema: GenMessage<RemoveInstallRequest> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 33);
 
 /**
  * ClusterService manages Kubernetes clusters
@@ -690,7 +915,7 @@ export const ClusterService: GenService<{
   updateCluster: {
     methodKind: "unary";
     input: typeof UpdateClusterRequestSchema;
-    output: typeof UpdateClusterResponseSchema;
+    output: typeof EmptySchema;
   },
   /**
    * Delete a cluster
@@ -700,7 +925,7 @@ export const ClusterService: GenService<{
   deleteCluster: {
     methodKind: "unary";
     input: typeof DeleteClusterRequestSchema;
-    output: typeof DeleteClusterResponseSchema;
+    output: typeof EmptySchema;
   },
   /**
    * Get cluster activity log
@@ -721,6 +946,86 @@ export const ClusterService: GenService<{
     methodKind: "unary";
     input: typeof GetKubeconfigRequestSchema;
     output: typeof GetKubeconfigResponseSchema;
+  },
+  /**
+   * List node pools for a cluster
+   *
+   * @generated from rpc organization.v1.ClusterService.ListNodePools
+   */
+  listNodePools: {
+    methodKind: "unary";
+    input: typeof ListNodePoolsRequestSchema;
+    output: typeof ListNodePoolsResponseSchema;
+  },
+  /**
+   * Get a node pool by ID
+   *
+   * @generated from rpc organization.v1.ClusterService.GetNodePool
+   */
+  getNodePool: {
+    methodKind: "unary";
+    input: typeof GetNodePoolRequestSchema;
+    output: typeof GetNodePoolResponseSchema;
+  },
+  /**
+   * Create a node pool in a cluster
+   *
+   * @generated from rpc organization.v1.ClusterService.CreateNodePool
+   */
+  createNodePool: {
+    methodKind: "unary";
+    input: typeof CreateNodePoolRequestSchema;
+    output: typeof CreateNodePoolResponseSchema;
+  },
+  /**
+   * Update a node pool
+   *
+   * @generated from rpc organization.v1.ClusterService.UpdateNodePool
+   */
+  updateNodePool: {
+    methodKind: "unary";
+    input: typeof UpdateNodePoolRequestSchema;
+    output: typeof EmptySchema;
+  },
+  /**
+   * Delete a node pool
+   *
+   * @generated from rpc organization.v1.ClusterService.DeleteNodePool
+   */
+  deleteNodePool: {
+    methodKind: "unary";
+    input: typeof DeleteNodePoolRequestSchema;
+    output: typeof EmptySchema;
+  },
+  /**
+   * List installs for a cluster
+   *
+   * @generated from rpc organization.v1.ClusterService.ListInstalls
+   */
+  listInstalls: {
+    methodKind: "unary";
+    input: typeof ListInstallsRequestSchema;
+    output: typeof ListInstallsResponseSchema;
+  },
+  /**
+   * Add an install to a cluster
+   *
+   * @generated from rpc organization.v1.ClusterService.AddInstall
+   */
+  addInstall: {
+    methodKind: "unary";
+    input: typeof AddInstallRequestSchema;
+    output: typeof AddInstallResponseSchema;
+  },
+  /**
+   * Remove an install from a cluster
+   *
+   * @generated from rpc organization.v1.ClusterService.RemoveInstall
+   */
+  removeInstall: {
+    methodKind: "unary";
+    input: typeof RemoveInstallRequestSchema;
+    output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_cluster, 0);

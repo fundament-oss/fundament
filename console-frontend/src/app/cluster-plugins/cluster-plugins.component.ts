@@ -4,6 +4,14 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { ErrorIconComponent } from '../icons';
+import { CLUSTER } from '../../connect/tokens';
+import { create } from '@bufbuild/protobuf';
+import {
+  ListInstallsRequestSchema,
+  AddInstallRequestSchema,
+  RemoveInstallRequestSchema,
+} from '../../generated/v1/cluster_pb';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-cluster-plugins',
@@ -15,6 +23,7 @@ export class ClusterPluginsComponent {
   private titleService = inject(TitleService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private client = inject(CLUSTER);
 
   private clusterId = '';
   errorMessage = signal<string | null>(null);
@@ -26,28 +35,46 @@ export class ClusterPluginsComponent {
   }
 
   async onFormSubmit(data: { preset: string; plugins: string[] }) {
+    // Note: data.plugins now contains UUIDs from the shared-plugins-form component
     if (this.isSubmitting()) return;
 
     this.errorMessage.set(null);
     this.isSubmitting.set(true);
 
     try {
-      // Note: The UpdateCluster API doesn't currently support updating plugins
-      // This is typically a create-time only configuration
-      // For now, we'll just log the attempt and show an informational error
-      console.log('Attempting to update cluster plugins:', data);
+      // Get current installs for the cluster
+      const listRequest = create(ListInstallsRequestSchema, {
+        clusterId: this.clusterId,
+      });
+      const listResponse = await firstValueFrom(this.client.listInstalls(listRequest));
+      const currentPluginIds = listResponse.installs.map((install) => install.pluginId);
 
-      // Simulate an API call that would fail since plugins aren't updateable
-      this.errorMessage.set(
-        'Plugin configuration cannot be updated after cluster creation. This is a limitation of the current API.',
-      );
+      // Remove plugins that are no longer selected
+      for (const installId of listResponse.installs.map((install) => install.id)) {
+        const pluginId = listResponse.installs.find(
+          (install) => install.id === installId,
+        )?.pluginId;
+        if (pluginId && !data.plugins.includes(pluginId)) {
+          const removeRequest = create(RemoveInstallRequestSchema, {
+            installId: installId,
+          });
+          await firstValueFrom(this.client.removeInstall(removeRequest));
+        }
+      }
 
-      // Uncomment this when the API supports plugin updates:
-      // await this.organizationApi.updateCluster({
-      //   clusterId: this.clusterId,
-      //   pluginIds: data.plugins,
-      // });
-      // this.router.navigate(['/clusters', this.clusterId]);
+      // Add plugins that are newly selected
+      for (const pluginId of data.plugins) {
+        if (!currentPluginIds.includes(pluginId)) {
+          const addRequest = create(AddInstallRequestSchema, {
+            clusterId: this.clusterId,
+            pluginId: pluginId,
+          });
+          await firstValueFrom(this.client.addInstall(addRequest));
+        }
+      }
+
+      // Navigate back to cluster detail
+      this.router.navigate(['/clusters', this.clusterId]);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to update cluster plugins';
       this.errorMessage.set(message);

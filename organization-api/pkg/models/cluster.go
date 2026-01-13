@@ -14,13 +14,5 @@ type ClusterCreate struct {
 
 type ClusterUpdate struct {
 	ClusterID         uuid.UUID `validate:"required"`
-	KubernetesVersion string    `validate:"required"`
-}
-
-type ClusterGetActivity struct {
-	ClusterID uuid.UUID `validate:"required"`
-}
-
-type ClusterGetKubeconfig struct {
-	ClusterID uuid.UUID `validate:"required"`
+	KubernetesVersion *string   `validate:"omitempty"`
 }
