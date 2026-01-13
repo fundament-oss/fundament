@@ -36,12 +36,17 @@ const (
 	// PluginServiceListPluginsProcedure is the fully-qualified name of the PluginService's ListPlugins
 	// RPC.
 	PluginServiceListPluginsProcedure = "/organization.v1.PluginService/ListPlugins"
+	// PluginServiceListPresetsProcedure is the fully-qualified name of the PluginService's ListPresets
+	// RPC.
+	PluginServiceListPresetsProcedure = "/organization.v1.PluginService/ListPresets"
 )
 
 // PluginServiceClient is a client for the organization.v1.PluginService service.
 type PluginServiceClient interface {
 	// List all available plugins
 	ListPlugins(context.Context, *connect.Request[v1.ListPluginsRequest]) (*connect.Response[v1.ListPluginsResponse], error)
+	// List all available presets
+	ListPresets(context.Context, *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error)
 }
 
 // NewPluginServiceClient constructs a client for the organization.v1.PluginService service. By
@@ -61,12 +66,19 @@ func NewPluginServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(pluginServiceMethods.ByName("ListPlugins")),
 			connect.WithClientOptions(opts...),
 		),
+		listPresets: connect.NewClient[v1.ListPresetsRequest, v1.ListPresetsResponse](
+			httpClient,
+			baseURL+PluginServiceListPresetsProcedure,
+			connect.WithSchema(pluginServiceMethods.ByName("ListPresets")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // pluginServiceClient implements PluginServiceClient.
 type pluginServiceClient struct {
 	listPlugins *connect.Client[v1.ListPluginsRequest, v1.ListPluginsResponse]
+	listPresets *connect.Client[v1.ListPresetsRequest, v1.ListPresetsResponse]
 }
 
 // ListPlugins calls organization.v1.PluginService.ListPlugins.
@@ -74,10 +86,17 @@ func (c *pluginServiceClient) ListPlugins(ctx context.Context, req *connect.Requ
 	return c.listPlugins.CallUnary(ctx, req)
 }
 
+// ListPresets calls organization.v1.PluginService.ListPresets.
+func (c *pluginServiceClient) ListPresets(ctx context.Context, req *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error) {
+	return c.listPresets.CallUnary(ctx, req)
+}
+
 // PluginServiceHandler is an implementation of the organization.v1.PluginService service.
 type PluginServiceHandler interface {
 	// List all available plugins
 	ListPlugins(context.Context, *connect.Request[v1.ListPluginsRequest]) (*connect.Response[v1.ListPluginsResponse], error)
+	// List all available presets
+	ListPresets(context.Context, *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error)
 }
 
 // NewPluginServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -93,10 +112,18 @@ func NewPluginServiceHandler(svc PluginServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(pluginServiceMethods.ByName("ListPlugins")),
 		connect.WithHandlerOptions(opts...),
 	)
+	pluginServiceListPresetsHandler := connect.NewUnaryHandler(
+		PluginServiceListPresetsProcedure,
+		svc.ListPresets,
+		connect.WithSchema(pluginServiceMethods.ByName("ListPresets")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/organization.v1.PluginService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PluginServiceListPluginsProcedure:
 			pluginServiceListPluginsHandler.ServeHTTP(w, r)
+		case PluginServiceListPresetsProcedure:
+			pluginServiceListPresetsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -108,4 +135,8 @@ type UnimplementedPluginServiceHandler struct{}
 
 func (UnimplementedPluginServiceHandler) ListPlugins(context.Context, *connect.Request[v1.ListPluginsRequest]) (*connect.Response[v1.ListPluginsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.PluginService.ListPlugins is not implemented"))
+}
+
+func (UnimplementedPluginServiceHandler) ListPresets(context.Context, *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.PluginService.ListPresets is not implemented"))
 }

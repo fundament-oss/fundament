@@ -61,3 +61,14 @@ type ZappstoreInstall struct {
 	Created   pgtype.Timestamptz
 	Deleted   pgtype.Timestamptz
 }
+
+type ZappstorePreset struct {
+	ID          uuid.UUID
+	Name        string
+	Description pgtype.Text
+}
+
+type ZappstorePresetPlugin struct {
+	PresetID uuid.UUID
+	PluginID uuid.UUID
+}

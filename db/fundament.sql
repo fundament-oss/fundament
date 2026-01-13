@@ -78,12 +78,12 @@ ALTER TABLE tenant.namespaces ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_deleted ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
 	IF EXISTS (
@@ -143,7 +143,7 @@ ALTER TABLE tenant.clusters ENABLE ROW LEVEL SECURITY;
 CREATE CONSTRAINT TRIGGER verify_deleted
 	AFTER INSERT OR UPDATE
 	ON tenant.clusters
-	NOT DEFERRABLE
+	NOT DEFERRABLE 
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.clusters_tr_verify_deleted();
 -- ddl-end --
@@ -222,6 +222,30 @@ CREATE TABLE zappstore.plugins (
 ALTER TABLE zappstore.plugins OWNER TO fun_fundament_api;
 -- ddl-end --
 
+-- object: zappstore.presets | type: TABLE --
+-- DROP TABLE IF EXISTS zappstore.presets CASCADE;
+CREATE TABLE zappstore.presets (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	name text NOT NULL,
+	description text,
+	CONSTRAINT presets_pk PRIMARY KEY (id),
+	CONSTRAINT presets_uq_name UNIQUE (name)
+);
+-- ddl-end --
+ALTER TABLE zappstore.presets OWNER TO fun_fundament_api;
+-- ddl-end --
+
+-- object: zappstore.preset_plugins | type: TABLE --
+-- DROP TABLE IF EXISTS zappstore.preset_plugins CASCADE;
+CREATE TABLE zappstore.preset_plugins (
+	preset_id uuid NOT NULL,
+	plugin_id uuid NOT NULL,
+	CONSTRAINT preset_plugins_pk PRIMARY KEY (preset_id,plugin_id)
+);
+-- ddl-end --
+ALTER TABLE zappstore.preset_plugins OWNER TO fun_fundament_api;
+-- ddl-end --
+
 -- object: install_organization_policy | type: POLICY --
 -- DROP POLICY IF EXISTS install_organization_policy ON zappstore.installs CASCADE;
 CREATE POLICY install_organization_policy ON zappstore.installs
@@ -253,8 +277,8 @@ ALTER TABLE zappstore.tags OWNER TO fun_fundament_api;
 -- DROP TABLE IF EXISTS zappstore.plugins_tags CASCADE;
 CREATE TABLE zappstore.plugins_tags (
 	plugin_id uuid NOT NULL,
-	tag_id uuid NOT NULL
-
+	tag_id uuid NOT NULL,
+	CONSTRAINT plugins_tags_pk PRIMARY KEY (plugin_id,tag_id)
 );
 -- ddl-end --
 ALTER TABLE zappstore.plugins_tags OWNER TO fun_fundament_api;
@@ -278,8 +302,8 @@ ALTER TABLE zappstore.categories OWNER TO fun_fundament_api;
 -- DROP TABLE IF EXISTS zappstore.categories_plugins CASCADE;
 CREATE TABLE zappstore.categories_plugins (
 	plugin_id uuid NOT NULL,
-	category_id uuid NOT NULL
-
+	category_id uuid NOT NULL,
+	CONSTRAINT categories_plugins_pk PRIMARY KEY (plugin_id,category_id)
 );
 -- ddl-end --
 ALTER TABLE zappstore.categories_plugins OWNER TO fun_fundament_api;
@@ -363,10 +387,17 @@ REFERENCES zappstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
--- object: plugins_tags_plugin_id | type: CONSTRAINT --
--- ALTER TABLE zappstore.plugins_tags DROP CONSTRAINT IF EXISTS plugins_tags_plugin_id CASCADE;
-ALTER TABLE zappstore.plugins_tags ADD CONSTRAINT plugins_tags_plugin_id FOREIGN KEY (plugin_id)
+-- object: plugins_presets_plugin_id | type: CONSTRAINT --
+-- ALTER TABLE zappstore.preset_plugins DROP CONSTRAINT IF EXISTS plugins_presets_plugin_id CASCADE;
+ALTER TABLE zappstore.preset_plugins ADD CONSTRAINT plugins_presets_plugin_id FOREIGN KEY (plugin_id)
 REFERENCES zappstore.plugins (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: plugins_presets_preset_id | type: CONSTRAINT --
+-- ALTER TABLE zappstore.preset_plugins DROP CONSTRAINT IF EXISTS plugins_presets_preset_id CASCADE;
+ALTER TABLE zappstore.preset_plugins ADD CONSTRAINT plugins_presets_preset_id FOREIGN KEY (preset_id)
+REFERENCES zappstore.presets (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -374,6 +405,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE zappstore.plugins_tags DROP CONSTRAINT IF EXISTS plugins_tags_tag_id CASCADE;
 ALTER TABLE zappstore.plugins_tags ADD CONSTRAINT plugins_tags_tag_id FOREIGN KEY (tag_id)
 REFERENCES zappstore.tags (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: plugins_tags_plugin_id | type: CONSTRAINT --
+-- ALTER TABLE zappstore.plugins_tags DROP CONSTRAINT IF EXISTS plugins_tags_plugin_id CASCADE;
+ALTER TABLE zappstore.plugins_tags ADD CONSTRAINT plugins_tags_plugin_id FOREIGN KEY (plugin_id)
+REFERENCES zappstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 

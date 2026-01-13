@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="2.0.0-alpha" use-changelog="false" max-obj-count="14"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="16"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="252,70" last-zoom="1" scene-rect="0,0,2058.81,1839.52"
+	 last-position="0,610" last-zoom="0.75" scene-rect="0,0,2038.81,2098.92"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -268,7 +268,7 @@ END;]]> </definition>
 <table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_fundament_api"/>
-	<position x="1020" y="1060"/>
+	<position x="1000" y="1080"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -295,7 +295,7 @@ END;]]> </definition>
 <table name="plugins" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_fundament_api"/>
-	<position x="540" y="1440"/>
+	<position x="640" y="1380"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -319,6 +319,42 @@ END;]]> </definition>
 	</constraint>
 </table>
 
+<table name="presets" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
+	<schema name="zappstore"/>
+	<role name="fun_fundament_api"/>
+	<position x="660" y="1920"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="description">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="presets_pk" type="pk-constr" table="zappstore.presets">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="presets_uq_name" type="uq-constr" table="zappstore.presets">
+		<columns names="name" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="preset_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
+	<schema name="zappstore"/>
+	<role name="fun_fundament_api"/>
+	<position x="640" y="1680"/>
+	<column name="preset_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="plugin_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<constraint name="preset_plugins_pk" type="pk-constr" table="zappstore.preset_plugins">
+		<columns names="preset_id,plugin_id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
 <policy name="install_organization_policy" table="zappstore.installs" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[EXISTS (
       SELECT 1 FROM clusters
@@ -330,7 +366,7 @@ END;]]> </definition>
 <table name="tags" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_fundament_api"/>
-	<position x="1620" y="1440"/>
+	<position x="1600" y="1380"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -351,22 +387,25 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="plugins_tags" layers="0" collapse-mode="2" max-obj-count="2" z-value="-4">
+<table name="plugins_tags" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="zappstore"/>
 	<role name="fun_fundament_api"/>
-	<position x="1040" y="1460"/>
+	<position x="1060" y="1400"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="tag_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
+	<constraint name="plugins_tags_pk" type="pk-constr" table="zappstore.plugins_tags">
+		<columns names="plugin_id,tag_id" ref-type="src-columns"/>
+	</constraint>
 </table>
 
 <table name="categories" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_fundament_api"/>
-	<position x="1620" y="1640"/>
+	<position x="1600" y="1580"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -387,16 +426,19 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="categories_plugins" layers="0" collapse-mode="2" max-obj-count="2" z-value="-4">
+<table name="categories_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="zappstore"/>
 	<role name="fun_fundament_api"/>
-	<position x="1040" y="1640"/>
+	<position x="1060" y="1560"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="category_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
+	<constraint name="categories_plugins_pk" type="pk-constr" table="zappstore.categories_plugins">
+		<columns names="plugin_id,category_id" ref-type="src-columns"/>
+	</constraint>
 </table>
 
 <policy name="projects_organization_isolation" table="tenant.projects" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
@@ -459,15 +501,27 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
-<constraint name="plugins_tags_plugin_id" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.plugins" table="zappstore.plugins_tags">
+<constraint name="plugins_presets_plugin_id" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.plugins" table="zappstore.preset_plugins">
 	<columns names="plugin_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="plugins_presets_preset_id" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.presets" table="zappstore.preset_plugins">
+	<columns names="preset_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="plugins_tags_tag_id" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.tags" table="zappstore.plugins_tags">
 	<columns names="tag_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="plugins_tags_plugin_id" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.plugins" table="zappstore.plugins_tags">
+	<columns names="plugin_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
@@ -493,6 +547,11 @@ END;]]> </definition>
 	 dst-table="tenant.clusters" reference-fk="namespaces_fk_cluster"
 	 src-required="false" dst-required="true"/>
 
+<relationship name="rel_namespaces_projects" type="relfk" layers="0"
+	 src-table="tenant.namespaces"
+	 dst-table="tenant.projects" reference-fk="namespaces_fk_project"
+	 src-required="false" dst-required="true"/>
+
 <relationship name="rel_users_organizations" type="relfk" layers="0"
 	 src-table="tenant.users"
 	 dst-table="tenant.organizations" reference-fk="users_fk_organization"
@@ -503,12 +562,12 @@ END;]]> </definition>
 	 dst-table="tenant.organizations" reference-fk="clusters_fk_organization"
 	 src-required="false" dst-required="true"/>
 
-<relationship name="rel_cluster_worker_nodes_clusters" type="relfk" layers="0"
+<relationship name="rel_node_pools_clusters" type="relfk" layers="0"
 	 src-table="tenant.node_pools"
 	 dst-table="tenant.clusters" reference-fk="node_pools_fk_cluster"
 	 src-required="false" dst-required="true"/>
 
-<relationship name="rel_plugins_clusters" type="relfk" layers="0"
+<relationship name="rel_installs_clusters" type="relfk" layers="0"
 	 src-table="zappstore.installs"
 	 dst-table="tenant.clusters" reference-fk="installs_fk_cluster"
 	 src-required="false" dst-required="true"/>
@@ -516,11 +575,6 @@ END;]]> </definition>
 <relationship name="rel_installs_plugins" type="relfk" layers="0"
 	 src-table="zappstore.installs"
 	 dst-table="zappstore.plugins" reference-fk="installs_fk_plugin"
-	 src-required="false" dst-required="true"/>
-
-<relationship name="rel_plugins_tags_plugins" type="relfk" layers="0"
-	 src-table="zappstore.plugins_tags"
-	 dst-table="zappstore.plugins" reference-fk="plugins_tags_plugin_id"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_plugins_tags_tags" type="relfk" layers="0"
@@ -538,9 +592,23 @@ END;]]> </definition>
 	 dst-table="zappstore.categories" reference-fk="plugins_categories_category_id"
 	 src-required="false" dst-required="true"/>
 
-<relationship name="rel_namespaces_projects" type="relfk" layers="0"
-	 src-table="tenant.namespaces"
-	 dst-table="tenant.projects" reference-fk="namespaces_fk_project"
+<relationship name="rel_plugins_tags_plugins" type="relfk" layers="0"
+	 src-table="zappstore.plugins_tags"
+	 dst-table="zappstore.plugins" reference-fk="plugins_tags_plugin_id"
 	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_preset_plugins_plugins" type="relfk" layers="0"
+	 src-table="zappstore.preset_plugins"
+	 dst-table="zappstore.plugins" reference-fk="plugins_presets_plugin_id"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_preset_plugins_presets" type="relfk" layers="0"
+	 src-table="zappstore.preset_plugins"
+	 dst-table="zappstore.presets" reference-fk="plugins_presets_preset_id"
+	 src-required="false" dst-required="true">
+	<label ref-type="name-label">
+		<position x="-1.21832" y="-18.853"/>
+	</label>
+</relationship>
 
 </dbmodel>
