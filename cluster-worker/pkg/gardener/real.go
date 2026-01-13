@@ -21,7 +21,7 @@ import (
 type ProviderConfig struct {
 	Type                   string // e.g., "local", "metal", "aws"
 	CloudProfile           string // e.g., "local", "metal", "aws"
-	CredentialsBindingName string // e.g., "", "metal-credentials" (empty for local provider)
+	CredentialsBindingName string // e.g., "local", "metal-credentials" (required for all providers)
 	MaxShootNameLen        int    // Max shoot name length (21 for local provider, up to 63 for others)
 }
 
@@ -29,9 +29,10 @@ type ProviderConfig struct {
 // Override fields as needed for other providers.
 func NewProviderConfig() ProviderConfig {
 	return ProviderConfig{
-		Type:            "local",
-		CloudProfile:    "local",
-		MaxShootNameLen: 21,
+		Type:                   "local",
+		CloudProfile:           "local",
+		CredentialsBindingName: "local", // Required even for local provider (references dummy credentials)
+		MaxShootNameLen:        21,
 	}
 }
 
@@ -347,7 +348,7 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 		},
 	}
 
-	// Only set CredentialsBindingName if configured (local provider doesn't need it)
+	// Set CredentialsBindingName (required for all providers, including local)
 	if r.provider.CredentialsBindingName != "" {
 		shoot.Spec.CredentialsBindingName = ptr.To(r.provider.CredentialsBindingName)
 	}
