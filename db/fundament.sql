@@ -273,7 +273,7 @@ ALTER TABLE appstore.categories OWNER TO fun_fundament_api;
 -- DROP TABLE IF EXISTS appstore.categories_plugins CASCADE;
 CREATE TABLE appstore.categories_plugins (
 	plugin_id uuid NOT NULL,
-	tag_id uuid NOT NULL
+	category_id uuid NOT NULL
 
 );
 -- ddl-end --
@@ -359,7 +359,7 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- object: plugins_categories_category_id | type: CONSTRAINT --
 -- ALTER TABLE appstore.categories_plugins DROP CONSTRAINT IF EXISTS plugins_categories_category_id CASCADE;
-ALTER TABLE appstore.categories_plugins ADD CONSTRAINT plugins_categories_category_id FOREIGN KEY (tag_id)
+ALTER TABLE appstore.categories_plugins ADD CONSTRAINT plugins_categories_category_id FOREIGN KEY (category_id)
 REFERENCES appstore.categories (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --

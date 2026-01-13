@@ -20,10 +20,10 @@ ALTER TABLE "appstore"."categories" ADD CONSTRAINT "categories_uq_name" UNIQUE U
 
 CREATE TABLE "appstore"."categories_plugins" (
 	"plugin_id" uuid NOT NULL,
-	"tag_id" uuid NOT NULL
+	"category_id" uuid NOT NULL
 );
 
-ALTER TABLE "appstore"."categories_plugins" ADD CONSTRAINT "plugins_categories_category_id" FOREIGN KEY (tag_id) REFERENCES appstore.categories(id) NOT VALID;
+ALTER TABLE "appstore"."categories_plugins" ADD CONSTRAINT "plugins_categories_category_id" FOREIGN KEY (category_id) REFERENCES appstore.categories(id) NOT VALID;
 
 ALTER TABLE "appstore"."categories_plugins" VALIDATE CONSTRAINT "plugins_categories_category_id";
 

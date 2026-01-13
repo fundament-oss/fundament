@@ -38,7 +38,7 @@ INSERT INTO appstore.plugins (id, name, description) VALUES
     ('019b4000-3000-7000-8000-00000000000d', 'tempo', 'High-scale distributed tracing backend');
 
 -- Plugin-Category associations
-INSERT INTO appstore.categories_plugins (plugin_id, tag_id) VALUES
+INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
     -- alloy -> observability
     ('019b4000-3000-7000-8000-000000000001', '019b4000-4000-7000-8000-000000000001'),
     -- cert-manager -> security
