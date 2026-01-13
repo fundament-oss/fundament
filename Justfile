@@ -66,7 +66,7 @@ db-shell:
 
 generate:
     go generate -x ./...
-    cd console-frontend && pnpm run generate
+    cd console-frontend && buf generate
 
 # Lint all Go code
 lint:

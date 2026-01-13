@@ -32,3 +32,4 @@ golangci-lint = "2.7.2"
 # Console Frontend
 node = "24"
 pnpm = "10.27.0"
+"npm:@bufbuild/protoc-gen-es" = "2.10.2"
