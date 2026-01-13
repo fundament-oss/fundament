@@ -573,8 +573,8 @@ func toPgTimestamp(t time.Time) pgtype.Timestamptz {
 func TestClusterConversion(t *testing.T) {
 	now := time.Now()
 
-	// Test conversion from db.ClaimUnsyncedClusterRow to gardener.ClusterToSync
-	dbRow := db.ClaimUnsyncedClusterRow{
+	// Test conversion from db.ClusterClaimUnsyncedRow to gardener.ClusterToSync
+	dbRow := db.ClusterClaimUnsyncedRow{
 		ID:               uuid.New(),
 		Name:             "test-cluster",
 		Deleted:          toPgTimestamp(now),

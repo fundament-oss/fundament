@@ -67,7 +67,7 @@ func (p *StatusWorker) pollBatch(ctx context.Context) {
 }
 
 func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
-	clusters, err := p.queries.ListClustersNeedingStatusCheck(ctx, p.cfg.BatchSize)
+	clusters, err := p.queries.ClusterListNeedingStatusCheck(ctx, p.cfg.BatchSize)
 	if err != nil {
 		p.logger.Error("failed to list clusters for status check", "error", err)
 		return
@@ -90,7 +90,7 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 			continue
 		}
 
-		if err := p.queries.UpdateShootStatus(ctx, db.UpdateShootStatusParams{
+		if err := p.queries.ClusterSyncUpdateShootStatus(ctx, db.ClusterSyncUpdateShootStatusParams{
 			ClusterID:          cluster.ID,
 			ShootStatus:        pgtype.Text{String: status, Valid: true},
 			ShootStatusMessage: pgtype.Text{String: message, Valid: true},
@@ -116,7 +116,7 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 }
 
 func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
-	clusters, err := p.queries.ListDeletedClustersNeedingVerification(ctx, p.cfg.BatchSize)
+	clusters, err := p.queries.ClusterListDeletedNeedingVerification(ctx, p.cfg.BatchSize)
 	if err != nil {
 		p.logger.Error("failed to list deleted clusters for verification", "error", err)
 		return
@@ -148,7 +148,7 @@ func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 
 		// If status is "pending" with "not found", the Shoot is confirmed deleted
 		if status == gardener.StatusPending && message == gardener.MsgShootNotFound {
-			if err := p.queries.UpdateShootStatus(ctx, db.UpdateShootStatusParams{
+			if err := p.queries.ClusterSyncUpdateShootStatus(ctx, db.ClusterSyncUpdateShootStatusParams{
 				ClusterID:          cluster.ID,
 				ShootStatus:        pgtype.Text{String: gardener.StatusDeleted, Valid: true},
 				ShootStatusMessage: pgtype.Text{String: "Shoot confirmed deleted", Valid: true},
@@ -163,7 +163,7 @@ func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 				"name", cluster.Name)
 		} else {
 			// Shoot still exists or is being deleted
-			if err := p.queries.UpdateShootStatus(ctx, db.UpdateShootStatusParams{
+			if err := p.queries.ClusterSyncUpdateShootStatus(ctx, db.ClusterSyncUpdateShootStatusParams{
 				ClusterID:          cluster.ID,
 				ShootStatus:        pgtype.Text{String: gardener.StatusDeleting, Valid: true},
 				ShootStatusMessage: pgtype.Text{String: message, Valid: true},

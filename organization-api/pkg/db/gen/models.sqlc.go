@@ -9,14 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type AppstoreInstall struct {
-	ID        uuid.UUID
-	ClusterID uuid.UUID
-	PluginID  uuid.UUID
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-}
-
 type TenantCluster struct {
 	ID                uuid.UUID
 	OrganizationID    uuid.UUID
@@ -37,6 +29,14 @@ type TenantClusterSync struct {
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
+}
+
+type TenantInstall struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	PluginID  uuid.UUID
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
 }
 
 type TenantNamespace struct {
@@ -63,6 +63,11 @@ type TenantOrganization struct {
 	ID      uuid.UUID
 	Name    string
 	Created pgtype.Timestamptz
+}
+
+type TenantPlugin struct {
+	ID   uuid.UUID
+	Name string
 }
 
 type TenantProject struct {

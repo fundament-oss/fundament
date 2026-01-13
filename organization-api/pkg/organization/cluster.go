@@ -57,7 +57,7 @@ func (s *OrganizationServer) GetCluster(
 	}
 
 	return connect.NewResponse(&organizationv1.GetClusterResponse{
-		Cluster: adapter.FromClusterDetail(cluster),
+		Cluster: adapter.FromClusterDetail(&cluster),
 	}), nil
 }
 
@@ -130,9 +130,9 @@ func (s *OrganizationServer) UpdateCluster(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 	}
 
-	return connect.NewResponse(&organizationv1.UpdateClusterResponse{
-		Cluster: adapter.FromClusterDetailBasic(cluster),
-	}), nil
+	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", input.ClusterID)
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 func (s *OrganizationServer) DeleteCluster(

@@ -31,6 +31,14 @@ type TenantClusterSync struct {
 	ShootStatusUpdated pgtype.Timestamptz
 }
 
+type TenantInstall struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	PluginID  uuid.UUID
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
+}
+
 type TenantNamespace struct {
 	ID        uuid.UUID
 	ProjectID uuid.UUID
@@ -40,10 +48,26 @@ type TenantNamespace struct {
 	Deleted   pgtype.Timestamptz
 }
 
+type TenantNodePool struct {
+	ID           uuid.UUID
+	ClusterID    uuid.UUID
+	Name         string
+	MachineType  string
+	AutoscaleMin int32
+	AutoscaleMax int32
+	Created      pgtype.Timestamptz
+	Deleted      pgtype.Timestamptz
+}
+
 type TenantOrganization struct {
 	ID      uuid.UUID
 	Name    string
 	Created pgtype.Timestamptz
+}
+
+type TenantPlugin struct {
+	ID   uuid.UUID
+	Name string
 }
 
 type TenantProject struct {

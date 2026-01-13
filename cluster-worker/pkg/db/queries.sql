@@ -1,4 +1,4 @@
--- name: ClaimUnsyncedCluster :one
+-- name: ClusterClaimUnsynced :one
 -- Claims the oldest unsynced cluster for processing (atomic with SKIP LOCKED).
 -- Includes deleted clusters so worker can sync deletions to Gardener.
 -- Respects backoff: only claim if enough time has passed since last attempt.
@@ -25,7 +25,7 @@ ORDER BY c.created
 FOR NO KEY UPDATE OF cs SKIP LOCKED
 LIMIT 1;
 
--- name: MarkClusterSynced :exec
+-- name: ClusterSyncMarkSynced :exec
 -- Called on successful sync - resets error tracking.
 UPDATE tenant.cluster_sync
 SET synced = now(),
@@ -34,7 +34,7 @@ SET synced = now(),
     sync_last_attempt = now()
 WHERE cluster_id = $1;
 
--- name: MarkClusterSyncFailed :exec
+-- name: ClusterSyncMarkFailed :exec
 -- Called on failed sync - tracks error and increments attempt count.
 UPDATE tenant.cluster_sync
 SET sync_error = $2,
@@ -42,13 +42,13 @@ SET sync_error = $2,
     sync_last_attempt = now()
 WHERE cluster_id = $1;
 
--- name: ResetClusterSynced :exec
+-- name: ClusterSyncReset :exec
 -- Used by reconciliation to mark a cluster for re-sync.
 UPDATE tenant.cluster_sync
 SET synced = NULL
 WHERE cluster_id = $1;
 
--- name: ListActiveClusters :many
+-- name: ClusterListActive :many
 -- Used by periodic reconciliation to compare with Gardener state.
 SELECT
     c.id,
@@ -61,7 +61,7 @@ JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
 JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE c.deleted IS NULL;
 
--- name: ListFailingClusters :many
+-- name: ClusterListFailing :many
 -- Used for alerting - clusters that have failed multiple times.
 SELECT
     c.id,
@@ -74,7 +74,7 @@ JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
 JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE cs.sync_attempts >= $1;
 
--- name: ListClustersNeedingStatusCheck :many
+-- name: ClusterListNeedingStatusCheck :many
 -- Get clusters where we need to check Gardener status (active clusters).
 -- Polls clusters in non-terminal states: NULL (never checked), pending, progressing, error.
 -- Does NOT poll clusters in terminal state: ready.
@@ -94,7 +94,7 @@ WHERE cs.synced IS NOT NULL                           -- Manifest was applied
 ORDER BY cs.shoot_status_updated NULLS FIRST
 LIMIT $1;
 
--- name: ListDeletedClustersNeedingVerification :many
+-- name: ClusterListDeletedNeedingVerification :many
 -- Get deleted clusters where we need to verify Shoot is actually gone from Gardener.
 -- Polls until shoot_status = 'deleted' (confirmed removed).
 -- Typical flow: NULL → deleting → deleted
@@ -111,7 +111,7 @@ WHERE cs.synced IS NOT NULL                           -- Delete was synced
 ORDER BY cs.shoot_status_updated NULLS FIRST
 LIMIT $1;
 
--- name: UpdateShootStatus :exec
+-- name: ClusterSyncUpdateShootStatus :exec
 -- Update shoot status from Gardener polling.
 UPDATE tenant.cluster_sync
 SET shoot_status = $2,
@@ -119,7 +119,7 @@ SET shoot_status = $2,
     shoot_status_updated = now()
 WHERE cluster_id = $1;
 
--- name: GetClusterByID :one
+-- name: ClusterGetByID :one
 -- Get a single cluster by ID with sync state (for testing).
 SELECT
     c.id,
@@ -138,7 +138,7 @@ JOIN tenant.cluster_sync cs ON cs.cluster_id = c.id
 JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE c.id = $1;
 
--- name: GetClusterSyncState :one
+-- name: ClusterSyncGetState :one
 -- Get just the sync state for a cluster.
 SELECT
     cluster_id,
@@ -152,7 +152,7 @@ SELECT
 FROM tenant.cluster_sync
 WHERE cluster_id = $1;
 
--- name: HasActiveClusterWithSameName :one
+-- name: ClusterHasActiveWithSameName :one
 -- Check if there's an active (non-deleted) cluster with the same name in the same organization.
 -- Used to prevent deleting a shoot that's been recreated.
 SELECT EXISTS (
@@ -164,7 +164,7 @@ SELECT EXISTS (
       AND c.deleted IS NULL
 ) AS exists;
 
--- name: ListExhaustedClusters :many
+-- name: ClusterListExhausted :many
 -- Lists clusters that have exceeded max sync attempts.
 -- Used for alerting and admin dashboards.
 SELECT
@@ -180,7 +180,7 @@ JOIN tenant.organizations o ON o.id = c.organization_id
 WHERE cs.synced IS NULL
   AND cs.sync_attempts >= $1;
 
--- name: ResetClusterSyncAttempts :exec
+-- name: ClusterSyncResetAttempts :exec
 -- Resets sync attempts for a cluster, allowing it to be retried.
 -- Used by admins to manually retry exhausted clusters.
 UPDATE tenant.cluster_sync

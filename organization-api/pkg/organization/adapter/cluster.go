@@ -34,13 +34,13 @@ func ToClusterUpdate(req *organizationv1.UpdateClusterRequest) (models.ClusterUp
 
 func FromClustersSummary(clusters []db.ClusterListByOrganizationIDRow) []*organizationv1.ClusterSummary {
 	summaries := make([]*organizationv1.ClusterSummary, 0, len(clusters))
-	for _, c := range clusters {
-		summaries = append(summaries, FromClusterSummary(c))
+	for i := range clusters {
+		summaries = append(summaries, FromClusterSummary(&clusters[i]))
 	}
 	return summaries
 }
 
-func FromClusterSummary(c db.ClusterListByOrganizationIDRow) *organizationv1.ClusterSummary {
+func FromClusterSummary(c *db.ClusterListByOrganizationIDRow) *organizationv1.ClusterSummary {
 	return &organizationv1.ClusterSummary{
 		Id:            c.ID.String(),
 		Name:          c.Name,
@@ -52,7 +52,7 @@ func FromClusterSummary(c db.ClusterListByOrganizationIDRow) *organizationv1.Clu
 	}
 }
 
-func FromClusterDetail(c db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
+func FromClusterDetail(c *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
 	return &organizationv1.ClusterDetails{
 		Id:                c.ID.String(),
 		Name:              c.Name,
@@ -67,26 +67,6 @@ func FromClusterDetail(c db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
 		Members:       nil, // Stub
 		Projects:      nil, // Stub
 		SyncState:     FromSyncState(c.Synced, c.SyncError, c.SyncAttempts, c.SyncLastAttempt, c.ShootStatus, c.ShootStatusMessage, c.ShootStatusUpdated),
-	}
-}
-
-// FromClusterDetailBasic converts a TenantCluster (without sync state) to ClusterDetails.
-// Used for update responses where we don't have sync state.
-func FromClusterDetailBasic(c db.TenantCluster) *organizationv1.ClusterDetails {
-	return &organizationv1.ClusterDetails{
-		Id:                c.ID.String(),
-		Name:              c.Name,
-		Region:            c.Region,
-		KubernetesVersion: c.KubernetesVersion,
-		Status:            FromClusterStatus(c.Status),
-		CreatedAt: &organizationv1.Timestamp{
-			Value: c.Created.Time.Format(time.RFC3339),
-		},
-		ResourceUsage: nil, // Stub
-		NodePools:     nil, // Stub
-		Members:       nil, // Stub
-		Projects:      nil, // Stub
-		SyncState:     nil, // Not available for basic cluster data
 	}
 }
 
@@ -149,13 +129,13 @@ func FromClusterStatus(status string) organizationv1.ClusterStatus {
 
 func FromNodePools(nodePools []db.TenantNodePool) []*organizationv1.NodePool {
 	result := make([]*organizationv1.NodePool, 0, len(nodePools))
-	for _, np := range nodePools {
-		result = append(result, FromNodePool(np))
+	for i := range nodePools {
+		result = append(result, FromNodePool(&nodePools[i]))
 	}
 	return result
 }
 
-func FromNodePool(np db.TenantNodePool) *organizationv1.NodePool {
+func FromNodePool(np *db.TenantNodePool) *organizationv1.NodePool {
 	return &organizationv1.NodePool{
 		Id:           np.ID.String(),
 		Name:         np.Name,

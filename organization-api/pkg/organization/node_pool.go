@@ -168,6 +168,6 @@ func (s *OrganizationServer) GetNodePool(
 	}
 
 	return connect.NewResponse(&organizationv1.GetNodePoolResponse{
-		NodePool: adapter.FromNodePool(nodePool),
+		NodePool: adapter.FromNodePool(&nodePool),
 	}), nil
 }
