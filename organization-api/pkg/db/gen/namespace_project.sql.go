@@ -82,10 +82,11 @@ func (q *Queries) NamespaceProjectListByNamespaceID(ctx context.Context, arg Nam
 }
 
 const namespaceProjectListByProjectID = `-- name: NamespaceProjectListByProjectID :many
-SELECT namespace_id::uuid, created
-FROM tenant.namespaces_projects
-WHERE project_id = $1::uuid
-ORDER BY created DESC
+SELECT np.namespace_id::uuid, n.name AS namespace_name, np.created
+FROM tenant.namespaces_projects np
+JOIN tenant.namespaces n ON n.id = np.namespace_id
+WHERE np.project_id = $1::uuid
+ORDER BY np.created DESC
 `
 
 type NamespaceProjectListByProjectIDParams struct {
@@ -93,8 +94,9 @@ type NamespaceProjectListByProjectIDParams struct {
 }
 
 type NamespaceProjectListByProjectIDRow struct {
-	NamespaceID uuid.UUID
-	Created     pgtype.Timestamptz
+	NpNamespaceID uuid.UUID
+	NamespaceName string
+	Created       pgtype.Timestamptz
 }
 
 func (q *Queries) NamespaceProjectListByProjectID(ctx context.Context, arg NamespaceProjectListByProjectIDParams) ([]NamespaceProjectListByProjectIDRow, error) {
@@ -106,7 +108,7 @@ func (q *Queries) NamespaceProjectListByProjectID(ctx context.Context, arg Names
 	var items []NamespaceProjectListByProjectIDRow
 	for rows.Next() {
 		var i NamespaceProjectListByProjectIDRow
-		if err := rows.Scan(&i.NamespaceID, &i.Created); err != nil {
+		if err := rows.Scan(&i.NpNamespaceID, &i.NamespaceName, &i.Created); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

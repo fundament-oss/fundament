@@ -67,7 +67,8 @@ func FromProjectNamespaces(rows []db.NamespaceProjectListByProjectIDRow) []*orga
 
 func FromProjectNamespace(row *db.NamespaceProjectListByProjectIDRow) *organizationv1.ProjectNamespace {
 	return &organizationv1.ProjectNamespace{
-		NamespaceId: row.NamespaceID.String(),
+		NamespaceId: row.NpNamespaceID.String(),
+		Name:        row.NamespaceName,
 		AttachedAt: &organizationv1.Timestamp{
 			Value: row.Created.Time.Format(time.RFC3339),
 		},

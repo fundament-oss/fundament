@@ -643,6 +643,7 @@ func (x *ListProjectNamespacesResponse) GetNamespaces() []*ProjectNamespace {
 type ProjectNamespace struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	NamespaceId   string                 `protobuf:"bytes,10,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
+	Name          string                 `protobuf:"bytes,15,opt,name=name,proto3" json:"name,omitempty"`
 	AttachedAt    *Timestamp             `protobuf:"bytes,20,opt,name=attached_at,json=attachedAt,proto3" json:"attached_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -681,6 +682,13 @@ func (*ProjectNamespace) Descriptor() ([]byte, []int) {
 func (x *ProjectNamespace) GetNamespaceId() string {
 	if x != nil {
 		return x.NamespaceId
+	}
+	return ""
+}
+
+func (x *ProjectNamespace) GetName() string {
+	if x != nil {
+		return x.Name
 	}
 	return ""
 }
@@ -749,10 +757,11 @@ const file_v1_project_proto_rawDesc = "" +
 	"\n" +
 	"namespaces\x18\n" +
 	" \x03(\v2!.organization.v1.ProjectNamespaceR\n" +
-	"namespaces\"r\n" +
+	"namespaces\"\x86\x01\n" +
 	"\x10ProjectNamespace\x12!\n" +
 	"\fnamespace_id\x18\n" +
-	" \x01(\tR\vnamespaceId\x12;\n" +
+	" \x01(\tR\vnamespaceId\x12\x12\n" +
+	"\x04name\x18\x0f \x01(\tR\x04name\x12;\n" +
 	"\vattached_at\x18\x14 \x01(\v2\x1a.organization.v1.TimestampR\n" +
 	"attachedAt2\xdd\x05\n" +
 	"\x0eProjectService\x12[\n" +

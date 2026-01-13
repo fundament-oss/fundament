@@ -105,5 +105,6 @@ message ListProjectNamespacesResponse {
 // Project namespace information
 message ProjectNamespace {
   string namespace_id = 10;
+  string name = 15;
   Timestamp attached_at = 20;
 }
