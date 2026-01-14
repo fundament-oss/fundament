@@ -26,6 +26,14 @@ type TenantOrganization struct {
 	Created pgtype.Timestamptz
 }
 
+type TenantProject struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	Created        pgtype.Timestamptz
+	Deleted        pgtype.Timestamptz
+}
+
 type ZappstoreInstall struct {
 	ID        uuid.UUID
 	ClusterID uuid.UUID
