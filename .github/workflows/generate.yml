@@ -47,3 +47,28 @@ jobs:
             echo "ERROR: Generated frontend files are out of date. Run 'cd console-frontend && buf generate' and commit the changes."
             exit 1
           fi
+
+  generate-db:
+    name: Generate Database
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run pgmodeler-cli export
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/data sunaoka/pgmodeler-cli \
+            --export-to-file \
+            --input /data/db/fundament.dbm \
+            --output /data/db/fundament.sql \
+            --pgsql-ver 18.0
+          docker run --rm -v ${{ github.workspace }}:/data sunaoka/pgmodeler-cli \
+            --export-to-png \
+            --input /data/db/fundament.dbm \
+            --output /data/db/fundament.png
+
+      - name: Check for changes
+        run: |
+          if ! git diff --exit-code; then
+            echo "ERROR: Generated database files are out of date. Run 'just generate' and commit the changes."
+            exit 1
+          fi
