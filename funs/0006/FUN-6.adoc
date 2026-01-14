@@ -89,6 +89,210 @@ Because the API is a contract with multiple clients, breaking changes must be:
 * Versioned appropriately (new version or deprecation period)
 * Communicated to API consumers
 
+== Current API Design
+
+This section documents the API specifications in Fundament.
+
+=== API Overview
+
+Fundament exposes two primary APIs:
+
+[cols="1,1,2,2"]
+|===
+|API |Type |Location |Purpose
+
+|authn-api
+|gRPC + OpenAPI
+|`authn-api/pkg/proto/` + `authn-api/openapi.yaml`
+|Authentication, user management
+
+|organization-api
+|gRPC
+|`organization-api/pkg/proto/v1/`
+|Organizations, clusters, node pools, plugins
+|===
+
+All gRPC APIs use https://connectrpc.com/[Connect RPC] for HTTP/1.1 compatibility.
+
+=== Design Conventions
+
+==== Naming Conventions
+
+===== RPC Methods
+
+RPC methods follow the `<Action><Object>` pattern (PascalCase):
+
+[cols="1,3,2"]
+|===
+|Action |Description |Example
+
+|`List`
+|Retrieve a collection of resources
+|`ListClusters`, `ListNodePools`
+
+|`Get`
+|Retrieve a single resource by ID
+|`GetCluster`, `GetNodePool`
+
+|`Create`
+|Create a new resource
+|`CreateCluster`, `CreateNodePool`
+
+|`Update`
+|Modify an existing resource
+|`UpdateCluster`, `UpdateNodePool`
+
+|`Delete`
+|Remove a resource (soft delete)
+|`DeleteCluster`, `DeleteNodePool`
+
+|`Add`
+|Add a relationship or child resource
+|`AddInstall`
+
+|`Remove`
+|Remove a relationship or child resource
+|`RemoveInstall`
+|===
+
+===== Messages
+
+Messages follow consistent naming patterns:
+
+* **Request messages**: `<Action><Object>Request` (e.g., `GetClusterRequest`, `CreateNodePoolRequest`)
+* **Response messages**: `<Action><Object>Response` (e.g., `GetClusterResponse`, `ListClustersResponse`)
+* **Void responses**: Use `google.protobuf.Empty` for operations that return no data (e.g., `Update`, `Delete`, `Remove`)
+* **Resource messages**: Singular noun (e.g., `Cluster`, `NodePool`, `Organization`, `Install`)
+* **Summary vs Detail**: Use `<Object>Summary` for list items and `<Object>Details` for full resource (e.g., `ClusterSummary`, `ClusterDetails`)
+
+===== Enums
+
+* **Prefix**: Enum values are prefixed with the enum name in `SCREAMING_SNAKE_CASE`
+* **Zero value**: Always include an `UNSPECIFIED` zero value
+* Example: `ClusterStatus` → `CLUSTER_STATUS_UNSPECIFIED`, `CLUSTER_STATUS_RUNNING`
+
+===== Fields
+
+* **IDs**: Use `<object>_id` for foreign key references (e.g., `cluster_id`, `node_pool_id`, `plugin_id`)
+* **Timestamps**: Use `created_at` for creation timestamps
+* **snake_case**: All field names use snake_case (e.g., `kubernetes_version`, `machine_type`, `autoscale_min`)
+
+===== Identifiers (UUIDv7)
+
+All resource identifiers use https://www.ietf.org/archive/id/draft-peabody-dispatch-new-uuid-format-04.html#name-uuid-version-7[UUIDv7]. This format embeds a Unix timestamp in the first 48 bits, providing:
+
+* **Time-ordered**: IDs sort chronologically, improving database index locality and query performance
+* **Globally unique**: No coordination required between services
+* **Timestamp extraction**: Creation time can be derived from the ID without additional fields
+* **K-sortable**: Lexicographic sorting matches chronological order
+
+The database generates UUIDv7 values using `DEFAULT uuidv7()` on primary key columns.
+
+==== Protocol Buffers
+
+* **Package naming**: `<domain>.v1` (e.g., `organization.v1`, `authn.v1`)
+* **Field numbering**: Start at 10, increment by 10 for room to insert fields
+* **Optional fields**: Use `optional` keyword for nullable values
+* **Empty requests/responses**: Use `google.protobuf.Empty` for void operations
+
+==== OpenAPI
+
+* **Version**: OpenAPI 3.0.3
+* **Responses**: Standard error responses (`BadRequest`, `Unauthorized`, `InternalServerError`)
+* **Schemas**: Reusable components in `#/components/schemas`
+
+==== Code Generation
+
+Generate code using:
+
+[source,bash]
+----
+just generate
+# or
+go generate ./...
+----
+
+Generated code locations:
+
+* Proto → `pkg/proto/gen/`
+* OpenAPI → `pkg/*/server.gen.go` (via oapi-codegen)
+
+=== Data Patterns
+
+==== Soft Deletes
+
+Resources are never physically deleted from the database. Instead, a `deleted` timestamp column marks when a resource was removed:
+
+* `deleted IS NULL` indicates an active resource
+* `deleted IS NOT NULL` indicates a deleted resource
+
+This pattern provides:
+
+* **Audit trail**: History of all resources is preserved
+* **Recovery**: Deleted resources can be restored
+* **Referential integrity**: Foreign key relationships remain valid
+
+Unique constraints use `NULLS NOT DISTINCT` to allow multiple deleted resources with the same name while ensuring active resources have unique names:
+
+[source,sql]
+----
+CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id, name, deleted)
+----
+
+==== Multi-tenancy
+
+Fundament uses PostgreSQL Row-Level Security (RLS) to enforce organization isolation at the database level. Each request sets the current organization context:
+
+[source,sql]
+----
+SET app.current_organization_id = '<uuid>';
+----
+
+RLS policies automatically filter queries to only return rows belonging to the current organization:
+
+[source,sql]
+----
+CREATE POLICY organization_isolation ON tenant.clusters
+  FOR ALL TO fun_fundament_api
+  USING (organization_id = current_setting('app.current_organization_id')::uuid);
+----
+
+This approach ensures:
+
+* **Defense in depth**: Tenant isolation enforced at database level, not just application code
+* **No accidental leaks**: Impossible to query another organization's data without explicit context change
+* **Simplified queries**: Application code doesn't need to add organization filters
+
+Child resources (e.g., `node_pools`, `installs`) use policies that join to their parent to inherit organization isolation:
+
+[source,sql]
+----
+CREATE POLICY node_pools_organization_policy ON tenant.node_pools
+  USING (EXISTS (
+    SELECT 1 FROM clusters
+    WHERE clusters.id = node_pools.cluster_id
+    AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
+  ));
+----
+
+==== Partial Updates
+
+Update operations use the `optional` keyword in protobuf to support partial updates. Only fields that are explicitly set in the request are modified:
+
+[source,protobuf]
+----
+message UpdateClusterRequest {
+  string cluster_id = 10;
+  optional string kubernetes_version = 20;
+}
+----
+
+This pattern:
+
+* **Avoids field masks**: Simpler than Google's `FieldMask` pattern for most use cases
+* **Explicit intent**: `optional` makes it clear which fields can be omitted
+* **Null safety**: Unset fields are distinguishable from empty values in generated Go code (`*string` vs `string`)
+
 == Related
 
 * FUN-4: Plugins expose resources through the API
