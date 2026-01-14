@@ -10,7 +10,7 @@ just = "1.42.4"
 # Documentation
 "ubi:terrastruct/d2" = "0.7.1"
 
-"go:github.com/printeers/trek" = "0.11.2"
+"go:github.com/printeers/trek" = "0.11.3"
 
 # Kubernetes & Deployment
 kubectl = "1.31.4"
