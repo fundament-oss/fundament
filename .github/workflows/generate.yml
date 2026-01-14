@@ -56,12 +56,14 @@ jobs:
 
       - name: Run pgmodeler-cli export
         run: |
-          docker run --rm -v ${{ github.workspace }}:/data sunaoka/pgmodeler-cli \
+          docker run --rm -v ${{ github.workspace }}:/data ghcr.io/printeers/pgmodeler:latest \
+            pgmodeler-cli \
             --export-to-file \
             --input /data/db/fundament.dbm \
             --output /data/db/fundament.sql \
             --pgsql-ver 18.0
-          docker run --rm -v ${{ github.workspace }}:/data sunaoka/pgmodeler-cli \
+          docker run --rm -v ${{ github.workspace }}:/data ghcr.io/printeers/pgmodeler:latest \
+            pgmodeler-cli \
             --export-to-png \
             --input /data/db/fundament.dbm \
             --output /data/db/fundament.png
