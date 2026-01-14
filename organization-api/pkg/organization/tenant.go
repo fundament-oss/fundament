@@ -11,6 +11,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -20,6 +21,10 @@ func (s *OrganizationServer) GetOrganization(
 	req *connect.Request[organizationv1.GetOrganizationRequest],
 ) (*connect.Response[organizationv1.GetOrganizationResponse], error) {
 	organizationID := uuid.MustParse(req.Msg.Id)
+
+	if err := s.checkPermission(ctx, authz.RelationMember, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
+	}
 
 	organization, err := s.queries.OrganizationGetByID(ctx, db.OrganizationGetByIDParams{ID: organizationID})
 	if err != nil {
@@ -43,6 +48,10 @@ func (s *OrganizationServer) UpdateOrganization(
 	req *connect.Request[organizationv1.UpdateOrganizationRequest],
 ) (*connect.Response[emptypb.Empty], error) {
 	organizationID := uuid.MustParse(req.Msg.Id)
+
+	if err := s.checkPermission(ctx, authz.RelationAdmin, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
+	}
 
 	params := db.OrganizationUpdateParams{
 		ID:   organizationID,

@@ -36,6 +36,20 @@ spec:
             - name: CORS_ALLOWED_ORIGINS
               value: {{ $.Values.externalUrls.corsAllowedOrigins }}
             {{- end }}
+            {{- if $.Values.openfga.enabled }}
+            - name: OPENFGA_API_URL
+              value: http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.playground.apiPort | default 8080 }}
+            - name: OPENFGA_STORE_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $.Release.Name }}-openfga-config
+                  key: store-id
+            - name: OPENFGA_AUTHORIZATION_MODEL_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $.Release.Name }}-openfga-config
+                  key: authorization-model-id
+            {{- end }}
 ---
 apiVersion: v1
 kind: Service

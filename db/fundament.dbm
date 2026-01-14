@@ -35,6 +35,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
  sql-disabled="true">
 </role>
 
+<role name="fun_authz_worker"
+ sql-disabled="true">
+</role>
+
 <database name="fundament" is-template="false" allow-conns="true" sql-disabled="true">
 </database>
 
@@ -51,6 +55,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 </schema>
 
 <schema name="authn" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
+	<role name="fun_owner"/>
+</schema>
+
+<schema name="authz" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
 	<role name="fun_owner"/>
 </schema>
 
@@ -931,6 +939,189 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
+<table name="outbox" layers="0" collapse-mode="2" max-obj-count="7" z-value="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<position x="-420" y="100"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="aggregate_type" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="aggregate_id" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="event_type" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="payload" not-null="true">
+		<type name="jsonb" length="0"/>
+	</column>
+	<column name="created_at" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="processed_at">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="outbox_pk" type="pk-constr" table="authz.outbox">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<index name="outbox_idx_unprocessed" table="authz.outbox"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="created_at"/>
+		</idxelement>
+	<predicate> <![CDATA[processed_at IS NULL]]> </predicate>
+</index>
+
+<function name="users_outbox_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF TG_OP = 'INSERT' AND NEW.deleted IS NULL THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('user', NEW.id::text, 'created', jsonb_build_object(
+            'user_id', NEW.id,
+            'organization_id', NEW.organization_id,
+            'role', NEW.role
+        ));
+    ELSIF TG_OP = 'UPDATE' AND OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('user', OLD.id::text, 'deleted', jsonb_build_object(
+            'user_id', OLD.id,
+            'organization_id', OLD.organization_id,
+            'role', OLD.role
+        ));
+    ELSIF TG_OP = 'UPDATE' AND OLD.role IS DISTINCT FROM NEW.role THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('user', NEW.id::text, 'role_changed', jsonb_build_object(
+            'user_id', NEW.id,
+            'organization_id', NEW.organization_id,
+            'old_role', OLD.role,
+            'new_role', NEW.role
+        ));
+    END IF;
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN NEW;
+END;]]> </definition>
+</function>
+
+<function name="project_members_outbox_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF TG_OP = 'INSERT' AND NEW.deleted IS NULL THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('project_member', NEW.id::text, 'created', jsonb_build_object(
+            'project_id', NEW.project_id,
+            'user_id', NEW.user_id,
+            'role', NEW.role
+        ));
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+            VALUES ('project_member', OLD.id::text, 'deleted', jsonb_build_object(
+                'project_id', OLD.project_id,
+                'user_id', OLD.user_id,
+                'role', OLD.role
+            ));
+        ELSIF OLD.role IS DISTINCT FROM NEW.role THEN
+            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+            VALUES ('project_member', NEW.id::text, 'role_changed', jsonb_build_object(
+                'project_id', NEW.project_id,
+                'user_id', NEW.user_id,
+                'old_role', OLD.role,
+                'new_role', NEW.role
+            ));
+        END IF;
+    END IF;
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN NEW;
+END;]]> </definition>
+</function>
+
+<function name="projects_outbox_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('project', NEW.id::text, 'created', jsonb_build_object(
+            'project_id', NEW.id,
+            'organization_id', NEW.organization_id,
+            'name', NEW.name
+        ));
+    ELSIF TG_OP = 'UPDATE' AND OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('project', OLD.id::text, 'deleted', jsonb_build_object(
+            'project_id', OLD.id,
+            'organization_id', OLD.organization_id,
+            'name', OLD.name
+        ));
+    END IF;
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN NEW;
+END;]]> </definition>
+</function>
+
+<trigger name="users_outbox" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.users">
+		<function signature="authz.users_outbox_trigger()"/>
+</trigger>
+
+<trigger name="project_members_outbox" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.project_members">
+		<function signature="authz.project_members_outbox_trigger()"/>
+</trigger>
+
+<trigger name="projects_outbox" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.projects">
+		<function signature="authz.projects_outbox_trigger()"/>
+</trigger>
+
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.projects">
 	<columns names="organization_id" ref-type="src-columns"/>
@@ -1292,6 +1483,36 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 <permission>
 	<object name="authn" type="schema"/>
 	<roles names="fun_fundament_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authz.outbox" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
+	<object name="authz.outbox" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
+	<object name="authz.outbox" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true" update="true"/>
+</permission>
+<permission>
+	<object name="authz" type="schema"/>
+	<roles names="fun_authz_worker"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authz" type="schema"/>
+	<roles names="fun_fundament_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authz" type="schema"/>
+	<roles names="fun_authn_api"/>
 	<privileges usage="true"/>
 </permission>
 </dbmodel>
