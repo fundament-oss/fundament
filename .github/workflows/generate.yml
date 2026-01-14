@@ -1,0 +1,68 @@
+name: Generate
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  generate-go:
+    name: Generate Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.5"
+
+      - name: Install tools
+        run: |
+          go install github.com/bufbuild/buf/cmd/buf@v1.61.0
+          go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0
+          go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+          go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.19.1
+
+      - name: Run go generate
+        run: go generate -x ./...
+
+      - name: Check for changes
+        run: |
+          if ! git diff --exit-code; then
+            echo "ERROR: Generated Go files are out of date. Run 'go generate ./...' and commit the changes."
+            exit 1
+          fi
+
+  generate-frontend:
+    name: Generate Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10.27.0"
+
+      - name: Install tools
+        run: npm install -g @bufbuild/buf@1.61.0 @bufbuild/protoc-gen-es@2.10.2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: console-frontend
+
+      - name: Run buf generate
+        run: buf generate
+        working-directory: console-frontend
+
+      - name: Check for changes
+        run: |
+          if ! git diff --exit-code; then
+            echo "ERROR: Generated frontend files are out of date. Run 'cd console-frontend && buf generate' and commit the changes."
+            exit 1
+          fi

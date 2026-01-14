@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-authn-api:
+    name: Build authn-api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -f authn-api/Dockerfile .
+
+  build-organization-api:
+    name: Build organization-api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -f organization-api/Dockerfile .
+
+  build-db-migrations:
+    name: Build db-migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -f db/Dockerfile db
+
+  build-console-frontend:
+    name: Build console-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -f console-frontend/Dockerfile .
