@@ -27,6 +27,18 @@ service ProjectService {
 
   // List all namespaces belonging to a project
   rpc ListProjectNamespaces(ListProjectNamespacesRequest) returns (ListProjectNamespacesResponse);
+
+  // List all members of a project
+  rpc ListProjectMembers(ListProjectMembersRequest) returns (ListProjectMembersResponse);
+
+  // Add a member to a project (requires admin role)
+  rpc AddProjectMember(AddProjectMemberRequest) returns (AddProjectMemberResponse);
+
+  // Update a member's role (requires admin role)
+  rpc UpdateProjectMemberRole(UpdateProjectMemberRoleRequest) returns (google.protobuf.Empty);
+
+  // Remove a member from a project (requires admin role)
+  rpc RemoveProjectMember(RemoveProjectMemberRequest) returns (google.protobuf.Empty);
 }
 
 // List projects request
@@ -91,4 +103,54 @@ message ProjectNamespace {
   string name = 20;
   string cluster_id = 30;
   google.protobuf.Timestamp created_at = 40;
+}
+
+// Project member role
+enum ProjectMemberRole {
+  PROJECT_MEMBER_ROLE_UNSPECIFIED = 0;
+  PROJECT_MEMBER_ROLE_ADMIN = 1;
+  PROJECT_MEMBER_ROLE_VIEWER = 2;
+}
+
+// Project member information
+message ProjectMember {
+  string id = 10;
+  string project_id = 20;
+  string user_id = 30;
+  string user_name = 40;
+  ProjectMemberRole role = 50;
+  google.protobuf.Timestamp created_at = 60;
+}
+
+// List project members request
+message ListProjectMembersRequest {
+  string project_id = 10;
+}
+
+// List project members response
+message ListProjectMembersResponse {
+  repeated ProjectMember members = 10;
+}
+
+// Add project member request
+message AddProjectMemberRequest {
+  string project_id = 10;
+  string user_id = 20;
+  ProjectMemberRole role = 30;
+}
+
+// Add project member response
+message AddProjectMemberResponse {
+  string member_id = 10;
+}
+
+// Update project member role request
+message UpdateProjectMemberRoleRequest {
+  string member_id = 10;
+  ProjectMemberRole role = 20;
+}
+
+// Remove project member request
+message RemoveProjectMemberRequest {
+  string member_id = 10;
 }

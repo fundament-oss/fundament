@@ -1,0 +1,32 @@
+meta {
+  name: 44 - LastAdmin - Can Demote After Second Admin
+  type: http
+  seq: 44
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/UpdateProjectMemberRole
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "memberId": "{{aliceMemberId}}",
+    "role": "PROJECT_MEMBER_ROLE_VIEWER"
+  }
+}
+
+tests {
+  test("should be able to demote self when another admin exists", function() {
+    expect(res.status).to.equal(200);
+  });
+}

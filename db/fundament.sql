@@ -85,12 +85,12 @@ ALTER TABLE tenant.namespaces ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_deleted ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE 
+	VOLATILE
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS 
+	AS
 $function$
 BEGIN
 	IF EXISTS (
@@ -107,6 +107,222 @@ END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO postgres;
+-- ddl-end --
+
+-- object: authn.current_user_id | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authn.current_user_id() CASCADE;
+CREATE OR REPLACE FUNCTION authn.current_user_id ()
+	RETURNS uuid
+	LANGUAGE sql
+	STABLE
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL SAFE
+	COST 1
+	AS
+$function$
+SELECT current_setting('app.current_user_id')::uuid
+$function$;
+-- ddl-end --
+ALTER FUNCTION authn.current_user_id() OWNER TO fun_fundament_api;
+-- ddl-end --
+
+-- object: authn.current_organization_id | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authn.current_organization_id() CASCADE;
+CREATE OR REPLACE FUNCTION authn.current_organization_id ()
+	RETURNS uuid
+	LANGUAGE sql
+	STABLE
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL SAFE
+	COST 1
+	AS
+$function$
+SELECT current_setting('app.current_organization_id')::uuid
+$function$;
+-- ddl-end --
+ALTER FUNCTION authn.current_organization_id() OWNER TO fun_fundament_api;
+-- ddl-end --
+
+-- object: authn.is_project_member | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authn.is_project_member(uuid,uuid,text) CASCADE;
+CREATE OR REPLACE FUNCTION authn.is_project_member (IN p_project_id uuid, IN p_user_id uuid, IN p_role text)
+	RETURNS boolean
+	LANGUAGE sql
+	STABLE
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL SAFE
+	COST 1
+	AS
+$function$
+SELECT EXISTS (
+    SELECT 1 FROM tenant.project_members
+    WHERE project_id = p_project_id
+    AND user_id = p_user_id
+    AND (p_role IS NULL OR role = p_role)
+    AND deleted IS NULL
+)
+$function$;
+-- ddl-end --
+ALTER FUNCTION authn.is_project_member(uuid,uuid,text) OWNER TO fun_authz;
+-- ddl-end --
+
+-- object: authn.is_project_in_organization | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authn.is_project_in_organization(uuid) CASCADE;
+CREATE OR REPLACE FUNCTION authn.is_project_in_organization (IN p_project_id uuid)
+	RETURNS boolean
+	LANGUAGE sql
+	STABLE
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL SAFE
+	COST 1
+	AS
+$function$
+SELECT EXISTS (
+    SELECT 1 FROM tenant.projects
+    WHERE id = p_project_id
+    AND organization_id = authn.current_organization_id()
+)
+$function$;
+-- ddl-end --
+ALTER FUNCTION authn.is_project_in_organization(uuid) OWNER TO fun_authz;
+-- ddl-end --
+
+-- object: authn.is_cluster_in_organization | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authn.is_cluster_in_organization(uuid) CASCADE;
+CREATE OR REPLACE FUNCTION authn.is_cluster_in_organization (IN p_cluster_id uuid)
+	RETURNS boolean
+	LANGUAGE sql
+	STABLE
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL SAFE
+	COST 1
+	AS
+$function$
+SELECT EXISTS (
+    SELECT 1 FROM tenant.clusters
+    WHERE id = p_cluster_id
+    AND organization_id = authn.current_organization_id()
+)
+$function$;
+-- ddl-end --
+ALTER FUNCTION authn.is_cluster_in_organization(uuid) OWNER TO fun_authz;
+-- ddl-end --
+
+-- object: authn.is_user_in_organization | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authn.is_user_in_organization(uuid) CASCADE;
+CREATE OR REPLACE FUNCTION authn.is_user_in_organization (IN p_user_id uuid)
+	RETURNS boolean
+	LANGUAGE sql
+	STABLE
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL SAFE
+	COST 1
+	AS
+$function$
+SELECT EXISTS (
+    SELECT 1 FROM tenant.users
+    WHERE id = p_user_id
+    AND organization_id = authn.current_organization_id()
+)
+$function$;
+-- ddl-end --
+ALTER FUNCTION authn.is_user_in_organization(uuid) OWNER TO fun_authz;
+-- ddl-end --
+
+-- object: tenant.project_has_members | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.project_has_members(uuid) CASCADE;
+CREATE OR REPLACE FUNCTION tenant.project_has_members (IN p_project_id uuid)
+	RETURNS boolean
+	LANGUAGE sql
+	STABLE
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL SAFE
+	COST 1
+	AS
+$function$
+SELECT EXISTS (
+    SELECT 1 FROM tenant.project_members
+    WHERE project_id = p_project_id
+    AND deleted IS NULL
+)
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.project_has_members(uuid) OWNER TO fun_authz;
+-- ddl-end --
+
+-- object: tenant.project_members_tr_protect_last_admin | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.project_members_tr_protect_last_admin() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.project_members_tr_protect_last_admin ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS
+$function$
+DECLARE
+    admin_count integer;
+BEGIN
+    -- Only check if we're soft-deleting an admin or demoting an admin (UPDATE role from admin)
+    IF OLD.role = 'admin' AND OLD.deleted IS NULL THEN
+        -- Check if this is a soft delete (setting deleted) or role demotion
+        IF (NEW.deleted IS NOT NULL) OR (NEW.role != 'admin') THEN
+            SELECT COUNT(*) INTO admin_count
+            FROM tenant.project_members
+            WHERE project_id = OLD.project_id
+            AND role = 'admin'
+            AND id != OLD.id
+            AND deleted IS NULL;
+
+            IF admin_count = 0 THEN
+                RAISE EXCEPTION 'Cannot remove or demote the last admin of a project'
+                            USING HINT = 'project_contains_one_admin';
+            END IF;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.project_members_tr_protect_last_admin() OWNER TO postgres;
+-- ddl-end --
+
+-- object: tenant.projects_tr_require_admin | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.projects_tr_require_admin() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.projects_tr_require_admin ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS
+$function$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM tenant.project_members
+        WHERE project_id = NEW.id
+        AND role = 'admin'
+        AND deleted IS NULL
+    ) THEN
+        RAISE EXCEPTION 'Project must have at least one admin';
+    END IF;
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.projects_tr_require_admin() OWNER TO postgres;
 -- ddl-end --
 
 -- object: tenant.users | type: TABLE --
@@ -165,12 +381,12 @@ CREATE POLICY api_keys_organization_policy ON authn.api_keys
 CREATE OR REPLACE FUNCTION authn.api_key_get_by_hash (IN p_token_hash bytea)
 	RETURNS authn.api_keys
 	LANGUAGE plpgsql
-	VOLATILE 
+	VOLATILE
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 10
-	AS 
+	AS
 $function$
 DECLARE
 	result authn.api_keys;
@@ -232,7 +448,7 @@ ALTER TABLE tenant.clusters ENABLE ROW LEVEL SECURITY;
 CREATE CONSTRAINT TRIGGER verify_deleted
 	AFTER INSERT OR UPDATE
 	ON tenant.clusters
-	NOT DEFERRABLE 
+	NOT DEFERRABLE
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.clusters_tr_verify_deleted();
 -- ddl-end --
@@ -243,7 +459,7 @@ CREATE POLICY organization_isolation ON tenant.clusters
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_fundament_api
-	USING (organization_id = current_setting('app.current_organization_id')::uuid);
+	USING (organization_id = authn.current_organization_id());
 -- ddl-end --
 
 -- object: tenant.node_pools | type: TABLE --
@@ -272,11 +488,7 @@ CREATE POLICY node_pools_organization_policy ON tenant.node_pools
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_fundament_api
-	USING (EXISTS (
-      SELECT 1 FROM clusters
-      WHERE clusters.id = node_pools.cluster_id
-      AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
-));
+	USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
 -- object: zappstore.installs | type: TABLE --
@@ -345,11 +557,7 @@ CREATE POLICY install_organization_policy ON zappstore.installs
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_fundament_api
-	USING (EXISTS (
-      SELECT 1 FROM clusters
-      WHERE clusters.id = installs.cluster_id
-      AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
-));
+	USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
 -- object: zappstore.tags | type: TABLE --
@@ -416,13 +624,124 @@ CREATE TABLE zappstore.plugin_documentation_links (
 ALTER TABLE zappstore.plugin_documentation_links OWNER TO fun_owner;
 -- ddl-end --
 
--- object: projects_organization_isolation | type: POLICY --
--- DROP POLICY IF EXISTS projects_organization_isolation ON tenant.projects CASCADE;
-CREATE POLICY projects_organization_isolation ON tenant.projects
+-- object: require_admin | type: TRIGGER --
+-- require_admin ON tenant.projects CASCADE;
+CREATE CONSTRAINT TRIGGER require_admin
+	AFTER INSERT
+	ON tenant.projects
+	DEFERRABLE INITIALLY DEFERRED
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.projects_tr_require_admin();
+-- ddl-end --
+
+-- object: tenant.project_members | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.project_members CASCADE;
+CREATE TABLE tenant.project_members (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	project_id uuid NOT NULL,
+	user_id uuid NOT NULL,
+	role text NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT project_members_pk PRIMARY KEY (id),
+	CONSTRAINT project_members_ck_role CHECK (role IN ('admin', 'viewer')),
+	CONSTRAINT project_members_uq_project_user UNIQUE NULLS NOT DISTINCT (project_id,user_id,deleted)
+);
+-- ddl-end --
+ALTER TABLE tenant.project_members OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.project_members ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: project_members_idx_project_id | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.project_members_idx_project_id CASCADE;
+CREATE INDEX project_members_idx_project_id ON tenant.project_members
+USING btree
+(
+	project_id
+);
+-- ddl-end --
+
+-- object: protect_last_admin | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS protect_last_admin ON tenant.project_members CASCADE;
+CREATE OR REPLACE TRIGGER protect_last_admin
+	BEFORE UPDATE
+	ON tenant.project_members
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.project_members_tr_protect_last_admin();
+-- ddl-end --
+
+-- object: project_members_select_policy | type: POLICY --
+-- DROP POLICY IF EXISTS project_members_select_policy ON tenant.project_members CASCADE;
+CREATE POLICY project_members_select_policy ON tenant.project_members
 	AS PERMISSIVE
-	FOR ALL
+	FOR SELECT
 	TO fun_fundament_api
-	USING (organization_id = current_setting('app.current_organization_id')::uuid);
+	USING (authn.is_project_in_organization(project_id)
+AND (authn.is_project_member(project_id, authn.current_user_id(), NULL)
+	OR user_id = authn.current_user_id()));
+-- ddl-end --
+
+-- object: project_members_insert_policy | type: POLICY --
+-- DROP POLICY IF EXISTS project_members_insert_policy ON tenant.project_members CASCADE;
+CREATE POLICY project_members_insert_policy ON tenant.project_members
+	AS PERMISSIVE
+	FOR INSERT
+	TO fun_fundament_api
+	WITH CHECK (authn.is_project_in_organization(project_id)
+AND (deleted IS NOT NULL OR authn.is_user_in_organization(user_id))
+AND (
+    authn.is_project_member(project_id, authn.current_user_id(), 'admin')
+    OR NOT tenant.project_has_members(project_id)
+));
+-- ddl-end --
+
+-- object: project_members_update_policy | type: POLICY --
+-- DROP POLICY IF EXISTS project_members_update_policy ON tenant.project_members CASCADE;
+CREATE POLICY project_members_update_policy ON tenant.project_members
+	AS PERMISSIVE
+	FOR UPDATE
+	TO fun_fundament_api
+	USING (authn.is_project_in_organization(project_id)
+AND authn.is_project_member(project_id, authn.current_user_id(), 'admin'));
+-- ddl-end --
+
+-- object: projects_select_policy | type: POLICY --
+-- DROP POLICY IF EXISTS projects_select_policy ON tenant.projects CASCADE;
+CREATE POLICY projects_select_policy ON tenant.projects
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (organization_id = authn.current_organization_id());
+-- ddl-end --
+
+-- object: projects_insert_policy | type: POLICY --
+-- DROP POLICY IF EXISTS projects_insert_policy ON tenant.projects CASCADE;
+CREATE POLICY projects_insert_policy ON tenant.projects
+	AS PERMISSIVE
+	FOR INSERT
+	TO fun_fundament_api
+	WITH CHECK (organization_id = authn.current_organization_id());
+-- ddl-end --
+
+-- object: projects_update_policy | type: POLICY --
+-- DROP POLICY IF EXISTS projects_update_policy ON tenant.projects CASCADE;
+CREATE POLICY projects_update_policy ON tenant.projects
+	AS PERMISSIVE
+	FOR UPDATE
+	TO fun_fundament_api
+	USING (organization_id = authn.current_organization_id()
+AND authn.is_project_member(id, authn.current_user_id(), 'admin'));
+-- ddl-end --
+
+-- object: projects_delete_policy | type: POLICY --
+-- DROP POLICY IF EXISTS projects_delete_policy ON tenant.projects CASCADE;
+CREATE POLICY projects_delete_policy ON tenant.projects
+	AS PERMISSIVE
+	FOR DELETE
+	TO fun_fundament_api
+	USING (organization_id = authn.current_organization_id()
+AND authn.is_project_member(id, authn.current_user_id(), 'admin'));
 -- ddl-end --
 
 -- object: namespaces_organization_policy | type: POLICY --
@@ -431,11 +750,7 @@ CREATE POLICY namespaces_organization_policy ON tenant.namespaces
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_fundament_api
-	USING (EXISTS (
-    SELECT 1 FROM clusters
-    WHERE clusters.id = namespaces.cluster_id
-    AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
-));
+	USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
 -- object: projects_fk_organization | type: CONSTRAINT --
@@ -554,6 +869,20 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE zappstore.plugin_documentation_links DROP CONSTRAINT IF EXISTS plugin_documentation_links_fk_plugin CASCADE;
 ALTER TABLE zappstore.plugin_documentation_links ADD CONSTRAINT plugin_documentation_links_fk_plugin FOREIGN KEY (plugin_id)
 REFERENCES zappstore.plugins (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: project_members_fk_project | type: CONSTRAINT --
+-- ALTER TABLE tenant.project_members DROP CONSTRAINT IF EXISTS project_members_fk_project CASCADE;
+ALTER TABLE tenant.project_members ADD CONSTRAINT project_members_fk_project FOREIGN KEY (project_id)
+REFERENCES tenant.projects (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: project_members_fk_user | type: CONSTRAINT --
+-- ALTER TABLE tenant.project_members DROP CONSTRAINT IF EXISTS project_members_fk_user CASCADE;
+ALTER TABLE tenant.project_members ADD CONSTRAINT project_members_fk_user FOREIGN KEY (user_id)
+REFERENCES tenant.users (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -737,6 +1066,54 @@ GRANT SELECT,UPDATE
 GRANT SELECT,INSERT,UPDATE
    ON TABLE authn.api_keys
    TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_b3ab3767d0 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.projects
+   TO fun_authz;
+
+-- ddl-end --
+
+
+-- object: grant_r_c9a2fb7fe9 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.clusters
+   TO fun_authz;
+
+-- ddl-end --
+
+
+-- object: grant_r_e2a5068826 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.users
+   TO fun_authz;
+
+-- ddl-end --
+
+
+-- object: grant_raw_f8d413afd5 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.project_members
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_84509e30ec | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.project_members
+   TO fun_authz;
+
+-- ddl-end --
+
+
+-- object: "grant_U_30b8192bf7" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA tenant
+   TO fun_authz;
 
 -- ddl-end --
 

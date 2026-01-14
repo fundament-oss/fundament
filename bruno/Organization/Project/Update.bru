@@ -1,0 +1,27 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/UpdateProject
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{projectId}}",
+    "name": "updated-project-name"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

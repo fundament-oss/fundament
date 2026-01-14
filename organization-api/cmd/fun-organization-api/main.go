@@ -66,14 +66,35 @@ func run() error {
 				queries := db.New(conn)
 
 				// Extract organization_id from context and set it in PostgreSQL session for RLS
-				organizationID, ok := organization.OrganizationIDFromContext(ctx)
-				if ok {
-					err := queries.SetOrganizationContext(ctx, db.SetOrganizationContextParams{
+
+				if organizationID, ok := organization.OrganizationIDFromContext(ctx); ok {
+					logger.Debug("setting organization context for RLS", "organization_id", organizationID.String())
+
+					params := db.SetOrganizationContextParams{
 						SetConfig: organizationID.String(),
-					})
-					if err != nil {
+					}
+
+					if err := queries.SetOrganizationContext(ctx, params); err != nil {
 						return false, fmt.Errorf("failed to set organization context: %w", err)
 					}
+				} else {
+					logger.Debug("no organization_id in context for PrepareConn")
+				}
+
+				// Extract user_id from context and set it in PostgreSQL session for RLS
+
+				if userID, ok := organization.UserIDFromContext(ctx); ok {
+					logger.Debug("setting user context for RLS", "user_id", userID.String())
+
+					params := db.SetUserContextParams{
+						SetConfig: userID.String(),
+					}
+
+					if err := queries.SetUserContext(ctx, params); err != nil {
+						return false, fmt.Errorf("failed to set user context: %w", err)
+					}
+				} else {
+					logger.Debug("no user_id in context for PrepareConn")
 				}
 
 				// Extract user_id from claims and set it in PostgreSQL session for RLS
@@ -100,6 +121,11 @@ func run() error {
 				if err := queries.ResetUserContext(ctx); err != nil {
 					logger.Warn("failed to reset user context on connection release, destroying connection", "error", err)
 					return false // Destroy connection to prevent data leakage
+				}
+
+				if err := queries.ResetUserContext(ctx); err != nil {
+					logger.Warn("failed to reset user context on connection release, destroying connection", "error", err)
+					return false // Destroy connection to prevent user data leakage
 				}
 
 				return true // Keep connection in pool

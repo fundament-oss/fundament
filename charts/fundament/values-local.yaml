@@ -17,6 +17,12 @@ db:
   reset: false
   insertTestData: true
   exposePort: 54328
+  postgresql:
+    parameters:
+      log_statement: "all"
+      log_error_verbosity: "verbose"
+      log_min_messages: "info"
+      log_min_error_statement: "error"
 
 authnApi:
   enabled: true

@@ -1,0 +1,36 @@
+meta {
+  name: 20 - Viewer - Can List Members
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/ListProjectMembers
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{bobToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{testProjectId}}"
+  }
+}
+
+tests {
+  test("viewer should be able to list project members", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.members).to.be.an('array');
+  });
+
+  test("should see other members", function() {
+    expect(res.body.members.length).to.be.at.least(1);
+  });
+}

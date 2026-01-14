@@ -65,7 +65,10 @@ logs:
 
 # Open a shell to the PostgreSQL database
 db-shell:
-    kubectl exec -it -n fundament fundament-db-1 -- psql -U postgres -d fundament
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PASSWORD=$(kubectl get secret -n fundament fundament-db-fun-fundament-api -o jsonpath='{.data.password}' |  {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
+    kubectl exec -it -n fundament fundament-db-1 -- env PGPASSWORD="$PASSWORD" psql -h localhost -U fun_fundament_api -d fundament
 
 generate:
     cd db && trek generate --stdout

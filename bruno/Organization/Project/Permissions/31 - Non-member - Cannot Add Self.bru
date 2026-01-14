@@ -1,0 +1,38 @@
+meta {
+  name: 31 - Non-member - Cannot Add Self
+  type: http
+  seq: 31
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/AddProjectMember
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{carolToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{testProjectId}}",
+    "userId": "019b4000-1000-7000-8000-000000000003",
+    "role": "PROJECT_MEMBER_ROLE_VIEWER"
+  }
+}
+
+tests {
+  test("non-member should not be able to add self to project", function() {
+    // project_members_insert_policy requires admin role OR no members exist
+    expect(res.status).to.not.equal(200);
+  });
+
+  test("should return error code", function() {
+    expect(res.body.code).to.exist;
+  });
+}
