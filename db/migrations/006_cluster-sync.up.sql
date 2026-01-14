@@ -53,7 +53,26 @@ END;
 $function$
 ;
 
-ALTER TABLE "tenant"."cluster_sync" DROP CONSTRAINT "cluster_sync_cluster_id_fkey";
+CREATE TABLE "tenant"."cluster_sync" (
+	"cluster_id" uuid NOT NULL,
+	"synced" timestamp with time zone,
+	"sync_error" text COLLATE "pg_catalog"."default",
+	"sync_attempts" integer DEFAULT 0 NOT NULL,
+	"sync_last_attempt" timestamp with time zone,
+	"shoot_status" text COLLATE "pg_catalog"."default",
+	"shoot_status_message" text COLLATE "pg_catalog"."default",
+	"shoot_status_updated" timestamp with time zone
+);
+
+CREATE UNIQUE INDEX cluster_sync_pk ON tenant.cluster_sync USING btree (cluster_id);
+
+ALTER TABLE "tenant"."cluster_sync" ADD CONSTRAINT "cluster_sync_pk" PRIMARY KEY USING INDEX "cluster_sync_pk";
+
+CREATE INDEX cluster_sync_idx_status_check ON tenant.cluster_sync USING btree (shoot_status_updated) WHERE (synced IS NOT NULL);
+
+CREATE INDEX cluster_sync_idx_unsynced ON tenant.cluster_sync USING btree (cluster_id) WHERE (synced IS NULL);
+
+CREATE TRIGGER cluster_sync_notify AFTER INSERT OR UPDATE OF synced ON tenant.cluster_sync FOR EACH ROW EXECUTE FUNCTION tenant.cluster_sync_notify();
 
 /* Hazards:
  - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
@@ -71,20 +90,11 @@ ALTER TABLE "tenant"."clusters" DROP CONSTRAINT "clusters_ck_status";
 */
 ALTER TABLE "tenant"."clusters" DROP COLUMN "status";
 
-/* Hazards:
- - ACQUIRES_ACCESS_EXCLUSIVE_LOCK: Index drops will lock out all accesses to the table. They should be fast.
- - INDEX_DROPPED: Dropping this index means queries that use this index might perform worse because they will no longer will be able to leverage it.
-*/
-ALTER TABLE "tenant"."cluster_sync" DROP CONSTRAINT "cluster_sync_pkey";
+CREATE TRIGGER cluster_sync_create AFTER INSERT ON tenant.clusters FOR EACH ROW EXECUTE FUNCTION tenant.cluster_sync_create_on_insert();
+
+CREATE TRIGGER cluster_sync_reset_on_delete AFTER UPDATE OF deleted ON tenant.clusters FOR EACH ROW EXECUTE FUNCTION tenant.cluster_sync_reset_on_delete();
 
 ALTER TABLE "tenant"."cluster_sync" ADD CONSTRAINT "cluster_sync_fk_cluster" FOREIGN KEY (cluster_id) REFERENCES tenant.clusters(id) ON DELETE CASCADE NOT VALID;
 
 ALTER TABLE "tenant"."cluster_sync" VALIDATE CONSTRAINT "cluster_sync_fk_cluster";
-
-/* Hazards:
- - ACQUIRES_SHARE_LOCK: Non-concurrent index creates will lock out writes to the table during the duration of the index build.
-*/
-CREATE UNIQUE INDEX cluster_sync_pk ON tenant.cluster_sync USING btree (cluster_id);
-
-ALTER TABLE "tenant"."cluster_sync" ADD CONSTRAINT "cluster_sync_pk" PRIMARY KEY USING INDEX "cluster_sync_pk";
 
