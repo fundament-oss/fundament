@@ -1,6 +1,6 @@
 import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
@@ -12,7 +12,7 @@ import { ErrorIconComponent } from '../icons';
 
 @Component({
   selector: 'app-add-project',
-  imports: [CommonModule, ReactiveFormsModule, ErrorIconComponent],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, ErrorIconComponent],
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
