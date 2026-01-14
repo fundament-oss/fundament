@@ -64,13 +64,24 @@ func run() error {
 				queries := db.New(conn)
 
 				// Extract organization_id from context and set it in PostgreSQL session for RLS
-				organizationID, ok := organization.OrganizationIDFromContext(ctx)
-				if ok {
+				organizationID, orgOk := organization.OrganizationIDFromContext(ctx)
+				if orgOk {
 					err := queries.SetOrganizationContext(ctx, db.SetOrganizationContextParams{
 						SetConfig: organizationID.String(),
 					})
 					if err != nil {
 						return false, fmt.Errorf("failed to set organization context: %w", err)
+					}
+				}
+
+				// Extract user_id from context and set it in PostgreSQL session for RLS
+				userID, userOk := organization.UserIDFromContext(ctx)
+				if userOk {
+					err := queries.SetUserContext(ctx, db.SetUserContextParams{
+						SetConfig: userID.String(),
+					})
+					if err != nil {
+						return false, fmt.Errorf("failed to set user context: %w", err)
 					}
 				}
 
@@ -82,6 +93,11 @@ func run() error {
 				if err := queries.ResetOrganizationContext(ctx); err != nil {
 					logger.Warn("failed to reset organization context on connection release, destroying connection", "error", err)
 					return false // Destroy connection to prevent organization data leakage
+				}
+
+				if err := queries.ResetUserContext(ctx); err != nil {
+					logger.Warn("failed to reset user context on connection release, destroying connection", "error", err)
+					return false // Destroy connection to prevent user data leakage
 				}
 
 				return true // Keep connection in pool

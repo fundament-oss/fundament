@@ -71,12 +71,19 @@ func (s *OrganizationServer) CreateProject(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	params := db.ProjectCreateParams{
-		OrganizationID: organizationID,
-		Name:           input.Name,
+	// Get user ID from context - the creator becomes the admin
+	userID, ok := UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
 	}
 
-	projectID, err := s.queries.ProjectCreate(ctx, params)
+	params := db.ProjectCreateWithMemberParams{
+		OrganizationID: organizationID,
+		Name:           input.Name,
+		UserID:         userID,
+	}
+
+	projectID, err := s.queries.ProjectCreateWithMember(ctx, params)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create project: %w", err))
 	}
@@ -84,6 +91,7 @@ func (s *OrganizationServer) CreateProject(
 	s.logger.InfoContext(ctx, "project created",
 		"project_id", projectID,
 		"organization_id", organizationID,
+		"user_id", userID,
 		"name", input.Name,
 	)
 

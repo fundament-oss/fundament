@@ -45,6 +45,14 @@ type TenantProject struct {
 	Deleted        pgtype.Timestamptz
 }
 
+type TenantProjectMember struct {
+	ID        uuid.UUID
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	Role      string
+	Created   pgtype.Timestamptz
+}
+
 type ZappstoreInstall struct {
 	ID        uuid.UUID
 	ClusterID uuid.UUID

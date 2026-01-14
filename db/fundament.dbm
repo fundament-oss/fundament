@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="14"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="16"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="0,435" last-zoom="1" scene-rect="0,0,2058.81,1839.52"
+	 last-position="0,-15" last-zoom="1" scene-rect="0,-67,2058.81,1906.52"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -38,7 +38,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="organizations" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="440" y="360"/>
+	<position x="1000" y="440"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -59,7 +59,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="projects" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="1000" y="380"/>
+	<position x="980" y="20"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -148,7 +148,7 @@ END;]]> </definition>
 <table name="users" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
-	<position x="420" y="660"/>
+	<position x="480" y="440"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -398,8 +398,76 @@ END;]]> </definition>
 		<type name="uuid" length="0"/>
 	</column>
 </table>
-<policy name="projects_organization_isolation" table="tenant.projects" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid]]> </expression>
+
+<table name="project_members" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
+	<schema name="tenant"/>
+	<role name="postgres"/>
+	<position x="420" y="20"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="project_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="user_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="role" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="project_members_pk" type="pk-constr" table="tenant.project_members">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="project_members_ck_role" type="ck-constr" table="tenant.project_members">
+			<expression> <![CDATA[role IN ('admin', 'member')]]> </expression>
+	</constraint>
+	<constraint name="project_members_uq_project_user" type="uq-constr" table="tenant.project_members">
+		<columns names="project_id,user_id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<policy name="project_members_org_policy" table="tenant.project_members" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (
+      SELECT 1 FROM projects
+      WHERE projects.id = project_members.project_id
+      AND projects.organization_id = current_setting('app.current_organization_id')::uuid
+)]]> </expression>
+</policy>
+
+<policy name="projects_select_policy" table="tenant.projects" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid
+AND EXISTS (
+    SELECT 1 FROM project_members pm
+    WHERE pm.project_id = projects.id
+    AND pm.user_id = current_setting('app.current_user_id')::uuid
+)]]> </expression>
+</policy>
+
+<policy name="projects_insert_policy" table="tenant.projects" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="check-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid]]> </expression>
+</policy>
+
+<policy name="projects_update_policy" table="tenant.projects" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid
+AND EXISTS (
+    SELECT 1 FROM project_members pm
+    WHERE pm.project_id = projects.id
+    AND pm.user_id = current_setting('app.current_user_id')::uuid
+    AND pm.role = 'admin'
+)]]> </expression>
+</policy>
+
+<policy name="projects_delete_policy" table="tenant.projects" command="DELETE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid
+AND EXISTS (
+    SELECT 1 FROM project_members pm
+    WHERE pm.project_id = projects.id
+    AND pm.user_id = current_setting('app.current_user_id')::uuid
+    AND pm.role = 'admin'
+)]]> </expression>
 </policy>
 
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
@@ -474,6 +542,18 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="project_members_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.project_members">
+	<columns names="project_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="project_members_fk_user" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.users" table="tenant.project_members">
+	<columns names="user_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <relationship name="rel_projects_organizations" type="relfk" layers="0"
 	 src-table="tenant.projects"
 	 dst-table="tenant.organizations" reference-fk="projects_fk_organization"
@@ -532,6 +612,16 @@ END;]]> </definition>
 <relationship name="rel_namespaces_projects" type="relfk" layers="0"
 	 src-table="tenant.namespaces"
 	 dst-table="tenant.projects" reference-fk="namespaces_fk_project"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_project_members_projects" type="relfk" layers="0"
+	 src-table="tenant.project_members"
+	 dst-table="tenant.projects" reference-fk="project_members_fk_project"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_project_members_users" type="relfk" layers="0"
+	 src-table="tenant.project_members"
+	 dst-table="tenant.users" reference-fk="project_members_fk_user"
 	 src-required="false" dst-required="true"/>
 
 </dbmodel>

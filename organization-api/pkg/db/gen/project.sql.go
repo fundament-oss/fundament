@@ -30,6 +30,31 @@ func (q *Queries) ProjectCreate(ctx context.Context, arg ProjectCreateParams) (u
 	return id, err
 }
 
+const projectCreateWithMember = `-- name: ProjectCreateWithMember :one
+WITH new_project AS (
+    INSERT INTO tenant.projects (organization_id, name)
+    VALUES ($1, $2)
+    RETURNING id
+)
+INSERT INTO tenant.project_members (project_id, user_id, role)
+SELECT id, $3, 'admin' FROM new_project
+RETURNING (SELECT id FROM new_project)
+`
+
+type ProjectCreateWithMemberParams struct {
+	OrganizationID uuid.UUID
+	Name           string
+	UserID         uuid.UUID
+}
+
+// Creates a project and adds the creator as admin in a single atomic operation
+func (q *Queries) ProjectCreateWithMember(ctx context.Context, arg ProjectCreateWithMemberParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, projectCreateWithMember, arg.OrganizationID, arg.Name, arg.UserID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const projectDelete = `-- name: ProjectDelete :execrows
 UPDATE tenant.projects
 SET deleted = NOW()
@@ -82,6 +107,7 @@ type ProjectListByOrganizationIDParams struct {
 	OrganizationID uuid.UUID
 }
 
+// Note: RLS policies filter to only projects the user has access to
 func (q *Queries) ProjectListByOrganizationID(ctx context.Context, arg ProjectListByOrganizationIDParams) ([]TenantProject, error) {
 	rows, err := q.db.Query(ctx, projectListByOrganizationID, arg.OrganizationID)
 	if err != nil {

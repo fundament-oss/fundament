@@ -283,13 +283,88 @@ CREATE TABLE zappstore.categories_plugins (
 ALTER TABLE zappstore.categories_plugins OWNER TO fun_fundament_api;
 -- ddl-end --
 
--- object: projects_organization_isolation | type: POLICY --
--- DROP POLICY IF EXISTS projects_organization_isolation ON tenant.projects CASCADE;
-CREATE POLICY projects_organization_isolation ON tenant.projects
+-- object: tenant.project_members | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.project_members CASCADE;
+CREATE TABLE tenant.project_members (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	project_id uuid NOT NULL,
+	user_id uuid NOT NULL,
+	role text NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT project_members_pk PRIMARY KEY (id),
+	CONSTRAINT project_members_ck_role CHECK (role IN ('admin', 'member')),
+	CONSTRAINT project_members_uq_project_user UNIQUE (project_id,user_id)
+);
+-- ddl-end --
+ALTER TABLE tenant.project_members OWNER TO postgres;
+-- ddl-end --
+ALTER TABLE tenant.project_members ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: project_members_org_policy | type: POLICY --
+-- DROP POLICY IF EXISTS project_members_org_policy ON tenant.project_members CASCADE;
+CREATE POLICY project_members_org_policy ON tenant.project_members
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_fundament_api
-	USING (organization_id = current_setting('app.current_organization_id')::uuid);
+	USING (EXISTS (
+      SELECT 1 FROM projects
+      WHERE projects.id = project_members.project_id
+      AND projects.organization_id = current_setting('app.current_organization_id')::uuid
+));
+-- ddl-end --
+
+-- object: projects_select_policy | type: POLICY --
+-- DROP POLICY IF EXISTS projects_select_policy ON tenant.projects CASCADE;
+CREATE POLICY projects_select_policy ON tenant.projects
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (organization_id = current_setting('app.current_organization_id')::uuid
+AND EXISTS (
+    SELECT 1 FROM project_members pm
+    WHERE pm.project_id = projects.id
+    AND pm.user_id = current_setting('app.current_user_id')::uuid
+));
+-- ddl-end --
+
+-- object: projects_insert_policy | type: POLICY --
+-- DROP POLICY IF EXISTS projects_insert_policy ON tenant.projects CASCADE;
+CREATE POLICY projects_insert_policy ON tenant.projects
+	AS PERMISSIVE
+	FOR INSERT
+	TO fun_fundament_api
+	WITH CHECK (organization_id = current_setting('app.current_organization_id')::uuid);
+-- ddl-end --
+
+-- object: projects_update_policy | type: POLICY --
+-- DROP POLICY IF EXISTS projects_update_policy ON tenant.projects CASCADE;
+CREATE POLICY projects_update_policy ON tenant.projects
+	AS PERMISSIVE
+	FOR UPDATE
+	TO fun_fundament_api
+	USING (organization_id = current_setting('app.current_organization_id')::uuid
+AND EXISTS (
+    SELECT 1 FROM project_members pm
+    WHERE pm.project_id = projects.id
+    AND pm.user_id = current_setting('app.current_user_id')::uuid
+    AND pm.role = 'admin'
+));
+-- ddl-end --
+
+-- object: projects_delete_policy | type: POLICY --
+-- DROP POLICY IF EXISTS projects_delete_policy ON tenant.projects CASCADE;
+CREATE POLICY projects_delete_policy ON tenant.projects
+	AS PERMISSIVE
+	FOR DELETE
+	TO fun_fundament_api
+	USING (organization_id = current_setting('app.current_organization_id')::uuid
+AND EXISTS (
+    SELECT 1 FROM project_members pm
+    WHERE pm.project_id = projects.id
+    AND pm.user_id = current_setting('app.current_user_id')::uuid
+    AND pm.role = 'admin'
+));
 -- ddl-end --
 
 -- object: projects_fk_organization | type: CONSTRAINT --
@@ -373,6 +448,20 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE zappstore.categories_plugins DROP CONSTRAINT IF EXISTS plugins_categories_category_id CASCADE;
 ALTER TABLE zappstore.categories_plugins ADD CONSTRAINT plugins_categories_category_id FOREIGN KEY (category_id)
 REFERENCES zappstore.categories (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: project_members_fk_project | type: CONSTRAINT --
+-- ALTER TABLE tenant.project_members DROP CONSTRAINT IF EXISTS project_members_fk_project CASCADE;
+ALTER TABLE tenant.project_members ADD CONSTRAINT project_members_fk_project FOREIGN KEY (project_id)
+REFERENCES tenant.projects (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: project_members_fk_user | type: CONSTRAINT --
+-- ALTER TABLE tenant.project_members DROP CONSTRAINT IF EXISTS project_members_fk_user CASCADE;
+ALTER TABLE tenant.project_members ADD CONSTRAINT project_members_fk_user FOREIGN KEY (user_id)
+REFERENCES tenant.users (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 

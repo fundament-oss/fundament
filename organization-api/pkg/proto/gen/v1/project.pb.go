@@ -22,6 +22,56 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Project member role
+type ProjectMemberRole int32
+
+const (
+	ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED ProjectMemberRole = 0
+	ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN       ProjectMemberRole = 1
+	ProjectMemberRole_PROJECT_MEMBER_ROLE_MEMBER      ProjectMemberRole = 2
+)
+
+// Enum value maps for ProjectMemberRole.
+var (
+	ProjectMemberRole_name = map[int32]string{
+		0: "PROJECT_MEMBER_ROLE_UNSPECIFIED",
+		1: "PROJECT_MEMBER_ROLE_ADMIN",
+		2: "PROJECT_MEMBER_ROLE_MEMBER",
+	}
+	ProjectMemberRole_value = map[string]int32{
+		"PROJECT_MEMBER_ROLE_UNSPECIFIED": 0,
+		"PROJECT_MEMBER_ROLE_ADMIN":       1,
+		"PROJECT_MEMBER_ROLE_MEMBER":      2,
+	}
+)
+
+func (x ProjectMemberRole) Enum() *ProjectMemberRole {
+	p := new(ProjectMemberRole)
+	*p = x
+	return p
+}
+
+func (x ProjectMemberRole) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ProjectMemberRole) Descriptor() protoreflect.EnumDescriptor {
+	return file_v1_project_proto_enumTypes[0].Descriptor()
+}
+
+func (ProjectMemberRole) Type() protoreflect.EnumType {
+	return &file_v1_project_proto_enumTypes[0]
+}
+
+func (x ProjectMemberRole) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ProjectMemberRole.Descriptor instead.
+func (ProjectMemberRole) EnumDescriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{0}
+}
+
 // List projects request
 type ListProjectsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -443,6 +493,385 @@ func (x *DeleteProjectRequest) GetProjectId() string {
 	return ""
 }
 
+// Project member information
+type ProjectMember struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,20,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,30,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	UserName      string                 `protobuf:"bytes,40,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	Role          ProjectMemberRole      `protobuf:"varint,50,opt,name=role,proto3,enum=organization.v1.ProjectMemberRole" json:"role,omitempty"`
+	CreatedAt     *Timestamp             `protobuf:"bytes,60,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProjectMember) Reset() {
+	*x = ProjectMember{}
+	mi := &file_v1_project_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProjectMember) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProjectMember) ProtoMessage() {}
+
+func (x *ProjectMember) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProjectMember.ProtoReflect.Descriptor instead.
+func (*ProjectMember) Descriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ProjectMember) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ProjectMember) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *ProjectMember) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *ProjectMember) GetUserName() string {
+	if x != nil {
+		return x.UserName
+	}
+	return ""
+}
+
+func (x *ProjectMember) GetRole() ProjectMemberRole {
+	if x != nil {
+		return x.Role
+	}
+	return ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED
+}
+
+func (x *ProjectMember) GetCreatedAt() *Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+// List project members request
+type ListProjectMembersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProjectMembersRequest) Reset() {
+	*x = ListProjectMembersRequest{}
+	mi := &file_v1_project_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProjectMembersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProjectMembersRequest) ProtoMessage() {}
+
+func (x *ListProjectMembersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProjectMembersRequest.ProtoReflect.Descriptor instead.
+func (*ListProjectMembersRequest) Descriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListProjectMembersRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+// List project members response
+type ListProjectMembersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Members       []*ProjectMember       `protobuf:"bytes,10,rep,name=members,proto3" json:"members,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProjectMembersResponse) Reset() {
+	*x = ListProjectMembersResponse{}
+	mi := &file_v1_project_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProjectMembersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProjectMembersResponse) ProtoMessage() {}
+
+func (x *ListProjectMembersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProjectMembersResponse.ProtoReflect.Descriptor instead.
+func (*ListProjectMembersResponse) Descriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListProjectMembersResponse) GetMembers() []*ProjectMember {
+	if x != nil {
+		return x.Members
+	}
+	return nil
+}
+
+// Add project member request
+type AddProjectMemberRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,20,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Role          ProjectMemberRole      `protobuf:"varint,30,opt,name=role,proto3,enum=organization.v1.ProjectMemberRole" json:"role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddProjectMemberRequest) Reset() {
+	*x = AddProjectMemberRequest{}
+	mi := &file_v1_project_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddProjectMemberRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddProjectMemberRequest) ProtoMessage() {}
+
+func (x *AddProjectMemberRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddProjectMemberRequest.ProtoReflect.Descriptor instead.
+func (*AddProjectMemberRequest) Descriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *AddProjectMemberRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *AddProjectMemberRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *AddProjectMemberRequest) GetRole() ProjectMemberRole {
+	if x != nil {
+		return x.Role
+	}
+	return ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED
+}
+
+// Add project member response
+type AddProjectMemberResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MemberId      string                 `protobuf:"bytes,10,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddProjectMemberResponse) Reset() {
+	*x = AddProjectMemberResponse{}
+	mi := &file_v1_project_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddProjectMemberResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddProjectMemberResponse) ProtoMessage() {}
+
+func (x *AddProjectMemberResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddProjectMemberResponse.ProtoReflect.Descriptor instead.
+func (*AddProjectMemberResponse) Descriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *AddProjectMemberResponse) GetMemberId() string {
+	if x != nil {
+		return x.MemberId
+	}
+	return ""
+}
+
+// Update project member role request
+type UpdateProjectMemberRoleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MemberId      string                 `protobuf:"bytes,10,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	Role          ProjectMemberRole      `protobuf:"varint,20,opt,name=role,proto3,enum=organization.v1.ProjectMemberRole" json:"role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateProjectMemberRoleRequest) Reset() {
+	*x = UpdateProjectMemberRoleRequest{}
+	mi := &file_v1_project_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateProjectMemberRoleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateProjectMemberRoleRequest) ProtoMessage() {}
+
+func (x *UpdateProjectMemberRoleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateProjectMemberRoleRequest.ProtoReflect.Descriptor instead.
+func (*UpdateProjectMemberRoleRequest) Descriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *UpdateProjectMemberRoleRequest) GetMemberId() string {
+	if x != nil {
+		return x.MemberId
+	}
+	return ""
+}
+
+func (x *UpdateProjectMemberRoleRequest) GetRole() ProjectMemberRole {
+	if x != nil {
+		return x.Role
+	}
+	return ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED
+}
+
+// Remove project member request
+type RemoveProjectMemberRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MemberId      string                 `protobuf:"bytes,10,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveProjectMemberRequest) Reset() {
+	*x = RemoveProjectMemberRequest{}
+	mi := &file_v1_project_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveProjectMemberRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveProjectMemberRequest) ProtoMessage() {}
+
+func (x *RemoveProjectMemberRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveProjectMemberRequest.ProtoReflect.Descriptor instead.
+func (*RemoveProjectMemberRequest) Descriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RemoveProjectMemberRequest) GetMemberId() string {
+	if x != nil {
+		return x.MemberId
+	}
+	return ""
+}
+
 var File_v1_project_proto protoreflect.FileDescriptor
 
 const file_v1_project_proto_rawDesc = "" +
@@ -481,14 +910,55 @@ const file_v1_project_proto_rawDesc = "" +
 	"\x14DeleteProjectRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId2\xc4\x03\n" +
+	" \x01(\tR\tprojectId\"\xe7\x01\n" +
+	"\rProjectMember\x12\x0e\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x14 \x01(\tR\tprojectId\x12\x17\n" +
+	"\auser_id\x18\x1e \x01(\tR\x06userId\x12\x1b\n" +
+	"\tuser_name\x18( \x01(\tR\buserName\x126\n" +
+	"\x04role\x182 \x01(\x0e2\".organization.v1.ProjectMemberRoleR\x04role\x129\n" +
+	"\n" +
+	"created_at\x18< \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAt\":\n" +
+	"\x19ListProjectMembersRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\n" +
+	" \x01(\tR\tprojectId\"V\n" +
+	"\x1aListProjectMembersResponse\x128\n" +
+	"\amembers\x18\n" +
+	" \x03(\v2\x1e.organization.v1.ProjectMemberR\amembers\"\x89\x01\n" +
+	"\x17AddProjectMemberRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\n" +
+	" \x01(\tR\tprojectId\x12\x17\n" +
+	"\auser_id\x18\x14 \x01(\tR\x06userId\x126\n" +
+	"\x04role\x18\x1e \x01(\x0e2\".organization.v1.ProjectMemberRoleR\x04role\"7\n" +
+	"\x18AddProjectMemberResponse\x12\x1b\n" +
+	"\tmember_id\x18\n" +
+	" \x01(\tR\bmemberId\"u\n" +
+	"\x1eUpdateProjectMemberRoleRequest\x12\x1b\n" +
+	"\tmember_id\x18\n" +
+	" \x01(\tR\bmemberId\x126\n" +
+	"\x04role\x18\x14 \x01(\x0e2\".organization.v1.ProjectMemberRoleR\x04role\"9\n" +
+	"\x1aRemoveProjectMemberRequest\x12\x1b\n" +
+	"\tmember_id\x18\n" +
+	" \x01(\tR\bmemberId*w\n" +
+	"\x11ProjectMemberRole\x12#\n" +
+	"\x1fPROJECT_MEMBER_ROLE_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19PROJECT_MEMBER_ROLE_ADMIN\x10\x01\x12\x1e\n" +
+	"\x1aPROJECT_MEMBER_ROLE_MEMBER\x10\x022\xdc\x06\n" +
 	"\x0eProjectService\x12[\n" +
 	"\fListProjects\x12$.organization.v1.ListProjectsRequest\x1a%.organization.v1.ListProjectsResponse\x12U\n" +
 	"\n" +
 	"GetProject\x12\".organization.v1.GetProjectRequest\x1a#.organization.v1.GetProjectResponse\x12^\n" +
 	"\rCreateProject\x12%.organization.v1.CreateProjectRequest\x1a&.organization.v1.CreateProjectResponse\x12N\n" +
 	"\rUpdateProject\x12%.organization.v1.UpdateProjectRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
-	"\rDeleteProject\x12%.organization.v1.DeleteProjectRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
+	"\rDeleteProject\x12%.organization.v1.DeleteProjectRequest\x1a\x16.google.protobuf.Empty\x12m\n" +
+	"\x12ListProjectMembers\x12*.organization.v1.ListProjectMembersRequest\x1a+.organization.v1.ListProjectMembersResponse\x12g\n" +
+	"\x10AddProjectMember\x12(.organization.v1.AddProjectMemberRequest\x1a).organization.v1.AddProjectMemberResponse\x12b\n" +
+	"\x17UpdateProjectMemberRole\x12/.organization.v1.UpdateProjectMemberRoleRequest\x1a\x16.google.protobuf.Empty\x12Z\n" +
+	"\x13RemoveProjectMember\x12+.organization.v1.RemoveProjectMemberRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
 
 var (
 	file_v1_project_proto_rawDescOnce sync.Once
@@ -502,39 +972,61 @@ func file_v1_project_proto_rawDescGZIP() []byte {
 	return file_v1_project_proto_rawDescData
 }
 
-var file_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_v1_project_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_v1_project_proto_goTypes = []any{
-	(*ListProjectsRequest)(nil),   // 0: organization.v1.ListProjectsRequest
-	(*ListProjectsResponse)(nil),  // 1: organization.v1.ListProjectsResponse
-	(*GetProjectRequest)(nil),     // 2: organization.v1.GetProjectRequest
-	(*GetProjectResponse)(nil),    // 3: organization.v1.GetProjectResponse
-	(*Project)(nil),               // 4: organization.v1.Project
-	(*CreateProjectRequest)(nil),  // 5: organization.v1.CreateProjectRequest
-	(*CreateProjectResponse)(nil), // 6: organization.v1.CreateProjectResponse
-	(*UpdateProjectRequest)(nil),  // 7: organization.v1.UpdateProjectRequest
-	(*DeleteProjectRequest)(nil),  // 8: organization.v1.DeleteProjectRequest
-	(*Timestamp)(nil),             // 9: organization.v1.Timestamp
-	(*emptypb.Empty)(nil),         // 10: google.protobuf.Empty
+	(ProjectMemberRole)(0),                 // 0: organization.v1.ProjectMemberRole
+	(*ListProjectsRequest)(nil),            // 1: organization.v1.ListProjectsRequest
+	(*ListProjectsResponse)(nil),           // 2: organization.v1.ListProjectsResponse
+	(*GetProjectRequest)(nil),              // 3: organization.v1.GetProjectRequest
+	(*GetProjectResponse)(nil),             // 4: organization.v1.GetProjectResponse
+	(*Project)(nil),                        // 5: organization.v1.Project
+	(*CreateProjectRequest)(nil),           // 6: organization.v1.CreateProjectRequest
+	(*CreateProjectResponse)(nil),          // 7: organization.v1.CreateProjectResponse
+	(*UpdateProjectRequest)(nil),           // 8: organization.v1.UpdateProjectRequest
+	(*DeleteProjectRequest)(nil),           // 9: organization.v1.DeleteProjectRequest
+	(*ProjectMember)(nil),                  // 10: organization.v1.ProjectMember
+	(*ListProjectMembersRequest)(nil),      // 11: organization.v1.ListProjectMembersRequest
+	(*ListProjectMembersResponse)(nil),     // 12: organization.v1.ListProjectMembersResponse
+	(*AddProjectMemberRequest)(nil),        // 13: organization.v1.AddProjectMemberRequest
+	(*AddProjectMemberResponse)(nil),       // 14: organization.v1.AddProjectMemberResponse
+	(*UpdateProjectMemberRoleRequest)(nil), // 15: organization.v1.UpdateProjectMemberRoleRequest
+	(*RemoveProjectMemberRequest)(nil),     // 16: organization.v1.RemoveProjectMemberRequest
+	(*Timestamp)(nil),                      // 17: organization.v1.Timestamp
+	(*emptypb.Empty)(nil),                  // 18: google.protobuf.Empty
 }
 var file_v1_project_proto_depIdxs = []int32{
-	4,  // 0: organization.v1.ListProjectsResponse.projects:type_name -> organization.v1.Project
-	4,  // 1: organization.v1.GetProjectResponse.project:type_name -> organization.v1.Project
-	9,  // 2: organization.v1.Project.created_at:type_name -> organization.v1.Timestamp
-	0,  // 3: organization.v1.ProjectService.ListProjects:input_type -> organization.v1.ListProjectsRequest
-	2,  // 4: organization.v1.ProjectService.GetProject:input_type -> organization.v1.GetProjectRequest
-	5,  // 5: organization.v1.ProjectService.CreateProject:input_type -> organization.v1.CreateProjectRequest
-	7,  // 6: organization.v1.ProjectService.UpdateProject:input_type -> organization.v1.UpdateProjectRequest
-	8,  // 7: organization.v1.ProjectService.DeleteProject:input_type -> organization.v1.DeleteProjectRequest
-	1,  // 8: organization.v1.ProjectService.ListProjects:output_type -> organization.v1.ListProjectsResponse
-	3,  // 9: organization.v1.ProjectService.GetProject:output_type -> organization.v1.GetProjectResponse
-	6,  // 10: organization.v1.ProjectService.CreateProject:output_type -> organization.v1.CreateProjectResponse
-	10, // 11: organization.v1.ProjectService.UpdateProject:output_type -> google.protobuf.Empty
-	10, // 12: organization.v1.ProjectService.DeleteProject:output_type -> google.protobuf.Empty
-	8,  // [8:13] is the sub-list for method output_type
-	3,  // [3:8] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	5,  // 0: organization.v1.ListProjectsResponse.projects:type_name -> organization.v1.Project
+	5,  // 1: organization.v1.GetProjectResponse.project:type_name -> organization.v1.Project
+	17, // 2: organization.v1.Project.created_at:type_name -> organization.v1.Timestamp
+	0,  // 3: organization.v1.ProjectMember.role:type_name -> organization.v1.ProjectMemberRole
+	17, // 4: organization.v1.ProjectMember.created_at:type_name -> organization.v1.Timestamp
+	10, // 5: organization.v1.ListProjectMembersResponse.members:type_name -> organization.v1.ProjectMember
+	0,  // 6: organization.v1.AddProjectMemberRequest.role:type_name -> organization.v1.ProjectMemberRole
+	0,  // 7: organization.v1.UpdateProjectMemberRoleRequest.role:type_name -> organization.v1.ProjectMemberRole
+	1,  // 8: organization.v1.ProjectService.ListProjects:input_type -> organization.v1.ListProjectsRequest
+	3,  // 9: organization.v1.ProjectService.GetProject:input_type -> organization.v1.GetProjectRequest
+	6,  // 10: organization.v1.ProjectService.CreateProject:input_type -> organization.v1.CreateProjectRequest
+	8,  // 11: organization.v1.ProjectService.UpdateProject:input_type -> organization.v1.UpdateProjectRequest
+	9,  // 12: organization.v1.ProjectService.DeleteProject:input_type -> organization.v1.DeleteProjectRequest
+	11, // 13: organization.v1.ProjectService.ListProjectMembers:input_type -> organization.v1.ListProjectMembersRequest
+	13, // 14: organization.v1.ProjectService.AddProjectMember:input_type -> organization.v1.AddProjectMemberRequest
+	15, // 15: organization.v1.ProjectService.UpdateProjectMemberRole:input_type -> organization.v1.UpdateProjectMemberRoleRequest
+	16, // 16: organization.v1.ProjectService.RemoveProjectMember:input_type -> organization.v1.RemoveProjectMemberRequest
+	2,  // 17: organization.v1.ProjectService.ListProjects:output_type -> organization.v1.ListProjectsResponse
+	4,  // 18: organization.v1.ProjectService.GetProject:output_type -> organization.v1.GetProjectResponse
+	7,  // 19: organization.v1.ProjectService.CreateProject:output_type -> organization.v1.CreateProjectResponse
+	18, // 20: organization.v1.ProjectService.UpdateProject:output_type -> google.protobuf.Empty
+	18, // 21: organization.v1.ProjectService.DeleteProject:output_type -> google.protobuf.Empty
+	12, // 22: organization.v1.ProjectService.ListProjectMembers:output_type -> organization.v1.ListProjectMembersResponse
+	14, // 23: organization.v1.ProjectService.AddProjectMember:output_type -> organization.v1.AddProjectMemberResponse
+	18, // 24: organization.v1.ProjectService.UpdateProjectMemberRole:output_type -> google.protobuf.Empty
+	18, // 25: organization.v1.ProjectService.RemoveProjectMember:output_type -> google.protobuf.Empty
+	17, // [17:26] is the sub-list for method output_type
+	8,  // [8:17] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_v1_project_proto_init() }
@@ -549,13 +1041,14 @@ func file_v1_project_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_project_proto_rawDesc), len(file_v1_project_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   9,
+			NumEnums:      1,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_v1_project_proto_goTypes,
 		DependencyIndexes: file_v1_project_proto_depIdxs,
+		EnumInfos:         file_v1_project_proto_enumTypes,
 		MessageInfos:      file_v1_project_proto_msgTypes,
 	}.Build()
 	File_v1_project_proto = out.File

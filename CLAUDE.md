@@ -1,3 +1,5 @@
 - Always use 'go generate ./...' in the in project or 'just generate' in the root of the project to generate stuff.
 - You are not allowed to edit the files in: @db/migrations/
 - You are not allowed to edit the file: @db/fundament.sql
+- When working on the database schema you should always edit @db/fundament.dbm.
+- When working on the database, never generate a migration. We generate that with trek
