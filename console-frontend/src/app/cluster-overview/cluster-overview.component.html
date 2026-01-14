@@ -408,38 +408,50 @@
           </dl>
         </div>
 
-        <!-- Projects Block -->
+        <!-- Namespaces Block -->
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">
-            Projects
-            <a
-              routerLink="/projects"
-              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-medium dark:text-white">Namespaces</h3>
+            <button
+              type="button"
+              (click)="openAddNamespaceModal()"
+              class="btn-primary inline-flex items-center"
             >
-              <app-edit-icon class="mr-1 h-4 w-4" /> Edit
-            </a>
-          </h3>
-          <div class="space-y-4">
-            @for (project of clusterData.projects; track $index) {
-              <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800">
-                <h4 class="mb-3 text-sm font-medium dark:text-white">{{ project.name }}</h4>
-                <dl>
-                  <dt class="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
-                    Namespaces
-                  </dt>
-                  <dd class="flex flex-wrap gap-1 text-sm">
-                    @for (namespace of project.namespaces; track namespace) {
-                      <span
-                        class="inline-flex items-center rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-950 dark:text-blue-200"
-                      >
-                        {{ namespace }}
-                      </span>
-                    }
-                  </dd>
-                </dl>
-              </div>
-            }
+              <app-plus-icon class="mr-1.5 h-4 w-4" />
+              Add namespace
+            </button>
           </div>
+          @if (namespaces().length === 0) {
+            <div class="py-8 text-center">
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                No namespaces in this cluster yet.
+              </p>
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (namespace of namespaces(); track namespace.id) {
+                <div
+                  class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
+                >
+                  <div>
+                    <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Project: {{ namespace.projectId }} &bull; Created
+                      {{ formatDate(namespace.createdAt?.value || '') }}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="deleteNamespace(namespace.id, namespace.name)"
+                    class="inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white"
+                  >
+                    <app-trash-icon class="mr-1.5 h-4 w-4" />
+                    Delete
+                  </button>
+                </div>
+              }
+            </div>
+          }
         </div>
       </div>
 
@@ -508,6 +520,115 @@
           Yes, delete this cluster
         </button>
       </div>
+    </div>
+  </div>
+}
+
+<!-- Add Namespace Modal -->
+@if (showAddNamespaceModal()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      class="w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-950"
+      role="dialog"
+      aria-labelledby="add-namespace-modal-title"
+      aria-modal="true"
+    >
+      <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-950">
+          <h3
+            class="text-lg leading-6 font-semibold text-gray-900 dark:text-white"
+            id="add-namespace-modal-title"
+          >
+            Add namespace
+          </h3>
+
+          <!-- Project Selection -->
+          <div class="mt-4">
+            <label
+              for="projectId"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+            >
+              Project
+            </label>
+            @if (isLoadingProjects()) {
+              <div class="flex items-center py-2">
+                <div
+                  class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
+                ></div>
+                <span class="text-sm text-gray-500 dark:text-gray-400">Loading projects...</span>
+              </div>
+            } @else {
+              <select
+                id="projectId"
+                formControlName="projectId"
+                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              >
+                <option value="">Select a project</option>
+                @for (project of projects(); track project.id) {
+                  <option [value]="project.id">{{ project.name }}</option>
+                }
+              </select>
+              @if (projects().length === 0) {
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  No projects available. Create a project first.
+                </p>
+              }
+            }
+            @if (
+              namespaceForm.get('projectId')?.invalid &&
+              (namespaceForm.get('projectId')?.dirty || namespaceForm.get('projectId')?.touched)
+            ) {
+              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a project.</p>
+            }
+          </div>
+
+          <!-- Namespace Name -->
+          <div class="mt-4">
+            <label
+              for="namespaceName"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+            >
+              Namespace name
+            </label>
+            <input
+              id="namespaceName"
+              formControlName="name"
+              type="text"
+              placeholder="e.g. my-namespace"
+              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            />
+            @if (
+              namespaceForm.get('name')?.invalid &&
+              (namespaceForm.get('name')?.dirty || namespaceForm.get('name')?.touched)
+            ) {
+              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+                {{ getNamespaceNameError() }}
+              </p>
+            }
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 dark:bg-gray-900">
+          <button
+            type="button"
+            (click)="showAddNamespaceModal.set(false)"
+            class="btn-secondary mr-3"
+            [disabled]="isCreatingNamespace()"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="isCreatingNamespace() || !namespaceForm.valid"
+          >
+            @if (isCreatingNamespace()) {
+              Creating...
+            } @else {
+              Add namespace
+            }
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 }
