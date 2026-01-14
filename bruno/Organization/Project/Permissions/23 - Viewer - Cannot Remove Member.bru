@@ -1,0 +1,35 @@
+meta {
+  name: 23 - Viewer - Cannot Remove Member
+  type: http
+  seq: 23
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/RemoveProjectMember
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{bobToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "memberId": "{{aliceMemberId}}"
+  }
+}
+
+tests {
+  test("viewer should not be able to remove member", function() {
+    expect(res.status).to.not.equal(200);
+  });
+
+  test("should return not_found error (RLS blocks access)", function() {
+    expect(res.body.code).to.equal("not_found");
+  });
+}

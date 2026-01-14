@@ -1,0 +1,36 @@
+meta {
+  name: 32 - Non-member - Cannot Update Project
+  type: http
+  seq: 32
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/UpdateProject
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{carolToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{testProjectId}}",
+    "name": "non-member-attempted-update"
+  }
+}
+
+tests {
+  test("non-member should not be able to update project", function() {
+    expect(res.status).to.not.equal(200);
+  });
+
+  test("should return error code (RLS blocks access)", function() {
+    expect(res.body.code).to.be.oneOf(["not_found", "internal"]);
+  });
+}

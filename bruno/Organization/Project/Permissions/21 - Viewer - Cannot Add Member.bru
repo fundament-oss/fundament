@@ -1,0 +1,37 @@
+meta {
+  name: 21 - Viewer - Cannot Add Member
+  type: http
+  seq: 21
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/AddProjectMember
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{bobToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{testProjectId}}",
+    "userId": "019b4000-1000-7000-8000-000000000003",
+    "role": "PROJECT_MEMBER_ROLE_VIEWER"
+  }
+}
+
+tests {
+  test("viewer should not be able to add member", function() {
+    expect(res.status).to.not.equal(200);
+  });
+
+  test("should return error code", function() {
+    expect(res.body.code).to.exist;
+  });
+}

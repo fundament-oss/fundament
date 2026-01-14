@@ -1,0 +1,35 @@
+meta {
+  name: 13 - Admin - Can Remove Member
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/RemoveProjectMember
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "memberId": "{{carolMemberId}}"
+  }
+}
+
+tests {
+  test("admin should be able to remove a member", function() {
+    // Debug: print error details if not 200
+    if (res.status !== 200) {
+      console.log("Remove member failed:", res.status, res.body);
+    }
+    expect(res.status, `Failed with: ${JSON.stringify(res.body)}`).to.equal(200);
+  });
+}

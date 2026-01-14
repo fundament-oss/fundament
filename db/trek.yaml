@@ -5,6 +5,7 @@ roles:
   - name: fun_fundament_api
   - name: fun_operator
   - name: fun_owner
+  - name: fun_authz
 outputs:
   - sql
 templates:

@@ -1,0 +1,32 @@
+meta {
+  name: 43 - LastAdmin - Can Add Second Admin
+  type: http
+  seq: 43
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/UpdateProjectMemberRole
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "memberId": "{{bobMemberId}}",
+    "role": "PROJECT_MEMBER_ROLE_ADMIN"
+  }
+}
+
+tests {
+  test("should be able to promote bob to admin", function() {
+    expect(res.status).to.equal(200);
+  });
+}

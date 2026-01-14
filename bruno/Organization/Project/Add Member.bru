@@ -1,0 +1,34 @@
+meta {
+  name: Add Member
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/AddProjectMember
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{projectId}}",
+    "userId": "019b4000-1000-7000-8000-000000000002",
+    "role": "PROJECT_MEMBER_ROLE_VIEWER"
+  }
+}
+
+script:post-response {
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setVar("memberId", res.body.memberId);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
