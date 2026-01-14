@@ -67,6 +67,8 @@ db-shell:
 generate:
     go generate -x ./...
     cd console-frontend && buf generate
+    pgmodeler-cli --export-to-file --input db/fundament.dbm --output db/fundament.sql --pgsql-ver 18.0
+    pgmodeler-cli --export-to-png --input db/fundament.dbm --output db/fundament.png
 
 # Lint all Go code
 lint:

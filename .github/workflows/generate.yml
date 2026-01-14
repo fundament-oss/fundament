@@ -1,0 +1,71 @@
+name: Generate
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  generate-go:
+    name: Generate Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+        with:
+          install_args: go buf sqlc oapi-codegen protoc-gen-go protoc-gen-connect-go
+
+      - name: Run go generate
+        run: mise exec -- go generate -x ./...
+
+      - name: Check for changes
+        run: |
+          if ! git diff --exit-code; then
+            echo "ERROR: Generated Go files are out of date. Run 'go generate ./...' and commit the changes."
+            exit 1
+          fi
+
+  generate-frontend:
+    name: Generate Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+        with:
+          install_args: node pnpm buf npm:@bufbuild/protoc-gen-es
+
+      - name: Run buf generate
+        run: mise exec -- buf generate
+        working-directory: console-frontend
+
+      - name: Check for changes
+        run: |
+          if ! git diff --exit-code; then
+            echo "ERROR: Generated frontend files are out of date. Run 'cd console-frontend && buf generate' and commit the changes."
+            exit 1
+          fi
+
+  generate-db:
+    name: Generate Database
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run pgmodeler-cli export
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/data ghcr.io/printeers/pgmodeler:latest \
+            pgmodeler-cli \
+            --export-to-file \
+            --input /data/db/fundament.dbm \
+            --output /data/db/fundament.sql \
+            --pgsql-ver 18.0
+
+      - name: Check for changes
+        run: |
+          if ! git diff --exit-code; then
+            echo "ERROR: Generated database files are out of date. Run 'just generate' and commit the changes."
+            exit 1
+          fi
