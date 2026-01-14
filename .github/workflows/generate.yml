@@ -62,8 +62,6 @@ jobs:
             --input /data/db/fundament.dbm \
             --output /data/db/fundament.sql \
             --pgsql-ver 18.0
-          docker run --rm -v ${{ github.workspace }}:/data ghcr.io/printeers/pgmodeler:latest \
-            bash -c "pgmodeler-cli --create-configs && pgmodeler-cli --export-to-png --input /data/db/fundament.dbm --output /data/db/fundament.png"
 
       - name: Check for changes
         run: |
