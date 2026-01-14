@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -14,6 +14,7 @@ import { ErrorIconComponent } from '../icons';
   selector: 'app-add-project',
   imports: [CommonModule, ReactiveFormsModule, ErrorIconComponent],
   templateUrl: './add-project.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AddProjectComponent {
   private titleService = inject(TitleService);

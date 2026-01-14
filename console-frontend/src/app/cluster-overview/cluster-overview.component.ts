@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -46,6 +46,7 @@ import {
     TrashIconComponent,
   ],
   templateUrl: './cluster-overview.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ClusterOverviewComponent implements OnInit {
   private titleService = inject(TitleService);
@@ -288,6 +289,7 @@ export class ClusterOverviewComponent implements OnInit {
       this.namespaces.set(response.namespaces);
     } catch (error) {
       console.error('Failed to load namespaces:', error);
+      this.toastService.error('Failed to load namespaces');
     }
   }
 
@@ -299,6 +301,7 @@ export class ClusterOverviewComponent implements OnInit {
       this.projects.set(response.projects);
     } catch (error) {
       console.error('Failed to load projects:', error);
+      this.toastService.error('Failed to load projects');
     } finally {
       this.isLoadingProjects.set(false);
     }

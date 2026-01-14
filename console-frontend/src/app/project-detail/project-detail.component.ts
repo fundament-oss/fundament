@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -39,6 +39,7 @@ import {
     WarningIconComponent,
   ],
   templateUrl: './project-detail.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectDetailComponent implements OnInit {
   private titleService = inject(TitleService);
@@ -114,6 +115,7 @@ export class ProjectDetailComponent implements OnInit {
       this.namespaces.set(response.namespaces);
     } catch (error) {
       console.error('Failed to fetch namespaces:', error);
+      this.toastService.error('Failed to load namespaces');
     }
   }
 

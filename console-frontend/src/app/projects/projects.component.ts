@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -12,6 +12,7 @@ import { PlusIconComponent, ErrorIconComponent } from '../icons';
   selector: 'app-projects',
   imports: [CommonModule, RouterLink, PlusIconComponent, ErrorIconComponent],
   templateUrl: './projects.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectsComponent implements OnInit {
   private titleService = inject(TitleService);

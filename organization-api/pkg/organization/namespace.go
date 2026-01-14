@@ -21,12 +21,16 @@ func (s *OrganizationServer) ListClusterNamespaces(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListClusterNamespacesRequest],
 ) (*connect.Response[organizationv1.ListClusterNamespacesResponse], error) {
+	if _, ok := OrganizationIDFromContext(ctx); !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
 	clusterID, err := uuid.Parse(req.Msg.ClusterId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	// Verify cluster exists
+	// Verify cluster exists and belongs to organization (via RLS)
 	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
@@ -49,6 +53,10 @@ func (s *OrganizationServer) CreateNamespace(
 	ctx context.Context,
 	req *connect.Request[organizationv1.CreateNamespaceRequest],
 ) (*connect.Response[organizationv1.CreateNamespaceResponse], error) {
+	if _, ok := OrganizationIDFromContext(ctx); !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
 	projectID, err := uuid.Parse(req.Msg.ProjectId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid project id: %w", err))
@@ -67,7 +75,7 @@ func (s *OrganizationServer) CreateNamespace(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	// Verify project exists
+	// Verify project exists and belongs to organization (via RLS)
 	if _, err := s.queries.ProjectGetByID(ctx, db.ProjectGetByIDParams{ID: projectID}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
@@ -75,7 +83,7 @@ func (s *OrganizationServer) CreateNamespace(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project: %w", err))
 	}
 
-	// Verify cluster exists
+	// Verify cluster exists and belongs to organization (via RLS)
 	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
@@ -111,6 +119,10 @@ func (s *OrganizationServer) DeleteNamespace(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteNamespaceRequest],
 ) (*connect.Response[emptypb.Empty], error) {
+	if _, ok := OrganizationIDFromContext(ctx); !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
 	namespaceID, err := uuid.Parse(req.Msg.NamespaceId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid namespace id: %w", err))
@@ -135,12 +147,16 @@ func (s *OrganizationServer) ListProjectNamespaces(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListProjectNamespacesRequest],
 ) (*connect.Response[organizationv1.ListProjectNamespacesResponse], error) {
+	if _, ok := OrganizationIDFromContext(ctx); !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
 	projectID, err := uuid.Parse(req.Msg.ProjectId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid project id: %w", err))
 	}
 
-	// Verify project exists
+	// Verify project exists and belongs to organization (via RLS)
 	if _, err := s.queries.ProjectGetByID(ctx, db.ProjectGetByIDParams{ID: projectID}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
