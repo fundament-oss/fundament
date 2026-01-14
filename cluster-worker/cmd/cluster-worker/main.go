@@ -22,7 +22,7 @@ import (
 
 type config struct {
 	DatabaseURL         string        `env:"DATABASE_URL,required,notEmpty"`
-	GardenerMode        string        `env:"GARDENER_MODE" envDefault:"mock"` // mock or real
+	GardenerMode        string        `env:"GARDENER_MODE"` // mock or real
 	GardenerKubeconfig  string        `env:"GARDENER_KUBECONFIG"`             // Required for real mode
 	GardenerNamespace   string        `env:"GARDENER_NAMESPACE" envDefault:"garden-fundament"`
 	LogLevel            slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
