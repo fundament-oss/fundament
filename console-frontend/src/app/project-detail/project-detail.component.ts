@@ -127,6 +127,9 @@ export class ProjectDetailComponent implements OnInit {
       const request = create(ListClustersRequestSchema, {});
       const response = await firstValueFrom(this.clusterClient.listClusters(request));
       this.clusters.set(response.clusters);
+      if (response.clusters.length > 0) {
+        this.namespaceForm.patchValue({ clusterId: response.clusters[0].id });
+      }
     } catch (error) {
       console.error('Failed to fetch clusters:', error);
     } finally {

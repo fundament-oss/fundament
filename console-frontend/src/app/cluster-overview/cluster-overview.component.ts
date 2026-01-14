@@ -301,6 +301,9 @@ export class ClusterOverviewComponent implements OnInit {
       const request = create(ListProjectsRequestSchema, {});
       const response = await firstValueFrom(this.projectClient.listProjects(request));
       this.projects.set(response.projects);
+      if (response.projects.length > 0) {
+        this.namespaceForm.patchValue({ projectId: response.projects[0].id });
+      }
     } catch (error) {
       console.error('Failed to load projects:', error);
       this.toastService.error('Failed to load projects');
