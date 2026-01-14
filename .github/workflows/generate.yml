@@ -16,14 +16,25 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25.5"
+          cache: false
+
+      - name: Cache Go tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/bin
+            ~/go/pkg/mod
+          key: go-tools-${{ runner.os }}-buf1.61.0-sqlc1.30.0-oapi2.4.1-protoc1.36.11-connect1.19.1
+          restore-keys: |
+            go-tools-${{ runner.os }}-
 
       - name: Install tools
         run: |
-          go install github.com/bufbuild/buf/cmd/buf@v1.61.0
-          go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0
-          go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
-          go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.19.1
+          [ -f ~/go/bin/buf ] || go install github.com/bufbuild/buf/cmd/buf@v1.61.0
+          [ -f ~/go/bin/sqlc ] || go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0
+          [ -f ~/go/bin/oapi-codegen ] || go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
+          [ -f ~/go/bin/protoc-gen-go ] || go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+          [ -f ~/go/bin/protoc-gen-connect-go ] || go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.19.1
 
       - name: Run go generate
         run: go generate -x ./...
