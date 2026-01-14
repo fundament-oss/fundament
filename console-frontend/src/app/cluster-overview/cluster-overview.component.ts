@@ -372,7 +372,7 @@ export class ClusterOverviewComponent implements OnInit {
       return 'Namespace name must not exceed 63 characters.';
     }
     if (nameControl?.hasError('pattern')) {
-      return 'Namespace name must contain only lowercase letters, numbers, and hyphens.';
+      return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
     }
     return '';
   }
