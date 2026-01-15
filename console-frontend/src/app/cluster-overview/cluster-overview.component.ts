@@ -194,8 +194,8 @@ export class ClusterOverviewComponent implements OnInit {
       // Map node pools to the expected format
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
-      // Fetch namespaces
-      await this.loadNamespaces(clusterId);
+      // Fetch namespaces and projects
+      await Promise.all([this.loadNamespaces(clusterId), this.loadProjects()]);
     } catch (error) {
       console.error('Failed to fetch cluster data:', error);
       this.errorMessage.set(
@@ -310,6 +310,11 @@ export class ClusterOverviewComponent implements OnInit {
     } finally {
       this.isLoadingProjects.set(false);
     }
+  }
+
+  getProjectName(projectId: string): string {
+    const project = this.projects().find(p => p.id === projectId);
+    return project?.name || projectId;
   }
 
   openAddNamespaceModal(): void {
