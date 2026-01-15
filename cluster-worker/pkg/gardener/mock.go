@@ -12,11 +12,22 @@ import (
 	"github.com/google/uuid"
 )
 
+// MockEvent represents an event in the mock client's history.
+type MockEvent struct {
+	Time      time.Time
+	Type      string // "apply", "delete", "status_change"
+	ClusterID uuid.UUID
+	ShootName string
+	Status    string // For status_change events
+	Message   string
+}
+
 // MockClient implements Client for testing.
 // It stores shoots in-memory and tracks all calls for test assertions.
 // Features:
 //   - Status progression: shoots progress through pending → progressing → ready
 //   - Spec validation: validates cluster specs to catch errors early
+//   - Event history: tracks all operations for debugging
 type MockClient struct {
 	shoots map[string]*mockShoot
 	mu     sync.RWMutex
@@ -29,6 +40,9 @@ type MockClient struct {
 	DeleteByName  []string
 	ListCallCount int
 	StatusCalls   []ClusterToSync
+
+	// Event history for debugging (visible via GetEventHistory)
+	EventHistory []MockEvent
 
 	// Configurable behavior for testing error paths
 	ApplyError      error
@@ -48,10 +62,10 @@ type MockClient struct {
 
 // mockShoot tracks a shoot's state and creation time for status progression.
 type mockShoot struct {
-	Info       ShootInfo
-	CreatedAt  time.Time
-	DeletedAt  *time.Time // Set when deletion starts
-	Cluster    ClusterToSync
+	Info      ShootInfo
+	CreatedAt time.Time
+	DeletedAt *time.Time // Set when deletion starts
+	Cluster   ClusterToSync
 }
 
 // StatusOverride allows tests to configure custom status for specific clusters.
@@ -118,6 +132,16 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 	if existing, exists := m.shoots[shootName]; exists {
 		// Update preserves creation time
 		existing.Cluster = *cluster
+
+		// Record event
+		m.EventHistory = append(m.EventHistory, MockEvent{
+			Time:      now,
+			Type:      "apply",
+			ClusterID: cluster.ID,
+			ShootName: shootName,
+			Message:   "Shoot updated",
+		})
+
 		m.logger.Info("MOCK: updated shoot", "shoot", shootName, "cluster_id", cluster.ID)
 		return nil
 	}
@@ -135,6 +159,16 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		CreatedAt: now,
 		Cluster:   *cluster,
 	}
+
+	// Record event
+	m.EventHistory = append(m.EventHistory, MockEvent{
+		Time:      now,
+		Type:      "apply",
+		ClusterID: cluster.ID,
+		ShootName: shootName,
+		Message:   "Shoot created",
+	})
+
 	m.logger.Info("MOCK: applied shoot", "shoot", shootName, "cluster_id", cluster.ID)
 	return nil
 }
@@ -156,6 +190,16 @@ func (m *MockClient) DeleteShoot(ctx context.Context, cluster *ClusterToSync) er
 
 	if shoot, exists := m.shoots[shootName]; exists {
 		shoot.DeletedAt = &now
+
+		// Record event
+		m.EventHistory = append(m.EventHistory, MockEvent{
+			Time:      now,
+			Type:      "delete",
+			ClusterID: cluster.ID,
+			ShootName: shootName,
+			Message:   "Shoot marked for deletion",
+		})
+
 		m.logger.Info("MOCK: marked shoot for deletion", "shoot", shootName, "cluster_id", cluster.ID)
 	} else {
 		m.logger.Debug("MOCK: shoot already deleted", "shoot", shootName)
@@ -268,7 +312,7 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 	return StatusReady, MsgShootReady, nil
 }
 
-// Reset clears all recorded calls and stored shoots.
+// Reset clears all recorded calls, events, and stored shoots.
 // Useful for resetting state between test cases.
 func (m *MockClient) Reset() {
 	m.mu.Lock()
@@ -280,6 +324,7 @@ func (m *MockClient) Reset() {
 	m.DeleteByName = nil
 	m.ListCallCount = 0
 	m.StatusCalls = nil
+	m.EventHistory = nil
 	m.ApplyError = nil
 	m.DeleteError = nil
 	m.ListError = nil
@@ -329,6 +374,29 @@ func (m *MockClient) ShootCount() int {
 	return count
 }
 
+// GetEventHistory returns a copy of all recorded events.
+// Useful for debugging and test assertions.
+func (m *MockClient) GetEventHistory() []MockEvent {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	events := make([]MockEvent, len(m.EventHistory))
+	copy(events, m.EventHistory)
+	return events
+}
+
+// GetEventHistoryForCluster returns events for a specific cluster.
+func (m *MockClient) GetEventHistoryForCluster(clusterID uuid.UUID) []MockEvent {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	var events []MockEvent
+	for _, e := range m.EventHistory {
+		if e.ClusterID == clusterID {
+			events = append(events, e)
+		}
+	}
+	return events
+}
+
 // MaxShootNameLength returns the max shoot name length (21 for local provider compatibility).
 func (m *MockClient) MaxShootNameLength() int {
 	return 21
@@ -352,7 +420,7 @@ var (
 )
 
 // semverRegex matches semantic versions like "1.31.1", "1.32.0-rc.1".
-var semverRegex = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$`)
+var semverRegex = regexp.MustCompile(`^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$`)
 
 // dnsLabelRegex matches valid DNS labels (lowercase alphanumeric, hyphens, max 63 chars).
 var dnsLabelRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
@@ -362,23 +430,23 @@ var dnsLabelRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 func (m *MockClient) validateClusterSpec(cluster *ClusterToSync) error {
 	// Validate name
 	if cluster.Name == "" {
-		return fmt.Errorf("Shoot.core.gardener.cloud is invalid: metadata.name: %w", ErrEmptyName)
+		return fmt.Errorf("shoot.core.gardener.cloud is invalid: metadata.name: %w", ErrEmptyName)
 	}
 	if len(cluster.Name) > 63 || !dnsLabelRegex.MatchString(cluster.Name) {
-		return fmt.Errorf("Shoot.core.gardener.cloud is invalid: metadata.name: %w: %q", ErrInvalidName, cluster.Name)
+		return fmt.Errorf("shoot.core.gardener.cloud is invalid: metadata.name: %w: %q", ErrInvalidName, cluster.Name)
 	}
 
 	// Validate region
 	if cluster.Region == "" {
-		return fmt.Errorf("Shoot.core.gardener.cloud is invalid: spec.region: %w", ErrEmptyRegion)
+		return fmt.Errorf("shoot.core.gardener.cloud is invalid: spec.region: %w", ErrEmptyRegion)
 	}
 
 	// Validate Kubernetes version (must be semver, not "1.31.x")
 	if cluster.KubernetesVersion == "" {
-		return fmt.Errorf("Shoot.core.gardener.cloud is invalid: spec.kubernetes.version: Required value")
+		return fmt.Errorf("shoot.core.gardener.cloud is invalid: spec.kubernetes.version: required value")
 	}
 	if !semverRegex.MatchString(cluster.KubernetesVersion) {
-		return fmt.Errorf("Shoot.core.gardener.cloud %q is invalid: failed to parse shoot version %q: %w",
+		return fmt.Errorf("shoot.core.gardener.cloud %q is invalid: failed to parse shoot version %q: %w",
 			cluster.Name, cluster.KubernetesVersion, ErrInvalidVersion)
 	}
 

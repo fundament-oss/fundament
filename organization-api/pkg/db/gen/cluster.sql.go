@@ -37,6 +37,22 @@ func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (u
 	return id, err
 }
 
+const clusterCreateSyncRequestedEvent = `-- name: ClusterCreateSyncRequestedEvent :exec
+INSERT INTO tenant.cluster_events (cluster_id, event_type, sync_action)
+VALUES ($1, 'sync_requested', $2)
+`
+
+type ClusterCreateSyncRequestedEventParams struct {
+	ClusterID  uuid.UUID
+	SyncAction pgtype.Text
+}
+
+// Insert sync_requested event when cluster is created/updated.
+func (q *Queries) ClusterCreateSyncRequestedEvent(ctx context.Context, arg ClusterCreateSyncRequestedEventParams) error {
+	_, err := q.db.Exec(ctx, clusterCreateSyncRequestedEvent, arg.ClusterID, arg.SyncAction)
+	return err
+}
+
 const clusterDelete = `-- name: ClusterDelete :execrows
 UPDATE tenant.clusters
 SET deleted = NOW()
@@ -56,11 +72,10 @@ func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) (i
 }
 
 const clusterGetByID = `-- name: ClusterGetByID :one
-SELECT c.id, c.organization_id, c.name, c.region, c.kubernetes_version, c.created, c.deleted,
-       s.synced, s.sync_error, s.sync_attempts, s.sync_last_attempt, s.shoot_status, s.shoot_status_message, s.shoot_status_updated
-FROM tenant.clusters c
-LEFT JOIN tenant.cluster_sync s ON c.id = s.cluster_id
-WHERE c.id = $1 AND c.deleted IS NULL
+SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
+       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
+FROM tenant.clusters
+WHERE id = $1 AND (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 `
 
 type ClusterGetByIDParams struct {
@@ -77,13 +92,13 @@ type ClusterGetByIDRow struct {
 	Deleted            pgtype.Timestamptz
 	Synced             pgtype.Timestamptz
 	SyncError          pgtype.Text
-	SyncAttempts       pgtype.Int4
-	SyncLastAttempt    pgtype.Timestamptz
+	SyncAttempts       int32
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
 }
 
+// Get cluster by ID, including clusters being deleted (but not fully deleted).
 func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) (ClusterGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetByID, arg.ID)
 	var i ClusterGetByIDRow
@@ -98,7 +113,6 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.Synced,
 		&i.SyncError,
 		&i.SyncAttempts,
-		&i.SyncLastAttempt,
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
@@ -106,13 +120,55 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 	return i, err
 }
 
+const clusterGetEvents = `-- name: ClusterGetEvents :many
+SELECT id, cluster_id, event_type, created, sync_action, message, attempt
+FROM tenant.cluster_events
+WHERE cluster_id = $1
+ORDER BY created DESC
+LIMIT $2
+`
+
+type ClusterGetEventsParams struct {
+	ClusterID uuid.UUID
+	Limit     int32
+}
+
+// Get event history for a cluster
+func (q *Queries) ClusterGetEvents(ctx context.Context, arg ClusterGetEventsParams) ([]TenantClusterEvent, error) {
+	rows, err := q.db.Query(ctx, clusterGetEvents, arg.ClusterID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TenantClusterEvent
+	for rows.Next() {
+		var i TenantClusterEvent
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClusterID,
+			&i.EventType,
+			&i.Created,
+			&i.SyncAction,
+			&i.Message,
+			&i.Attempt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const clusterListByOrganizationID = `-- name: ClusterListByOrganizationID :many
-SELECT c.id, c.organization_id, c.name, c.region, c.kubernetes_version, c.created, c.deleted,
-       s.synced, s.sync_error, s.sync_attempts, s.sync_last_attempt, s.shoot_status, s.shoot_status_message, s.shoot_status_updated
-FROM tenant.clusters c
-LEFT JOIN tenant.cluster_sync s ON c.id = s.cluster_id
-WHERE c.organization_id = $1 AND c.deleted IS NULL
-ORDER BY c.created DESC
+SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
+       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
+FROM tenant.clusters
+WHERE organization_id = $1
+  AND (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
+ORDER BY created DESC
 `
 
 type ClusterListByOrganizationIDParams struct {
@@ -129,13 +185,14 @@ type ClusterListByOrganizationIDRow struct {
 	Deleted            pgtype.Timestamptz
 	Synced             pgtype.Timestamptz
 	SyncError          pgtype.Text
-	SyncAttempts       pgtype.Int4
-	SyncLastAttempt    pgtype.Timestamptz
+	SyncAttempts       int32
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
 }
 
+// List active clusters and clusters being deleted (not yet confirmed deleted in Gardener).
+// Excludes clusters where Gardener has confirmed deletion (shoot_status = 'deleted').
 func (q *Queries) ClusterListByOrganizationID(ctx context.Context, arg ClusterListByOrganizationIDParams) ([]ClusterListByOrganizationIDRow, error) {
 	rows, err := q.db.Query(ctx, clusterListByOrganizationID, arg.OrganizationID)
 	if err != nil {
@@ -156,7 +213,6 @@ func (q *Queries) ClusterListByOrganizationID(ctx context.Context, arg ClusterLi
 			&i.Synced,
 			&i.SyncError,
 			&i.SyncAttempts,
-			&i.SyncLastAttempt,
 			&i.ShootStatus,
 			&i.ShootStatusMessage,
 			&i.ShootStatusUpdated,

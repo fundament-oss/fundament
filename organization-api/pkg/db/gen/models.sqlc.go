@@ -9,6 +9,16 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type TenantClusterEvent struct {
+	ID         uuid.UUID
+	ClusterID  uuid.UUID
+	EventType  string
+	Created    pgtype.Timestamptz
+	SyncAction pgtype.Text
+	Message    pgtype.Text
+	Attempt    pgtype.Int4
+}
+
 type TenantNodePool struct {
 	ID           uuid.UUID
 	ClusterID    uuid.UUID

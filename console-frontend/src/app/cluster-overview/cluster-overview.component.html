@@ -101,18 +101,7 @@
 
       <!-- Gardener Sync State Block -->
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-        <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-lg font-medium dark:text-white">Provisioning Status</h3>
-          <button
-            (click)="refreshSyncState()"
-            [disabled]="isRefreshing()"
-            class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-800"
-            [class.animate-spin]="isRefreshing()"
-          >
-            <app-refresh-icon [class.animate-spin]="isRefreshing()" />
-            <span class="sr-only">Refresh</span>
-          </button>
-        </div>
+        <h3 class="mb-4 text-lg font-medium dark:text-white">Provisioning Status</h3>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <dl>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Gardener status</dt>
@@ -206,16 +195,6 @@
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Sync Attempts</td>
                     <td class="px-3 py-2 dark:text-white">
                       {{ clusterData.syncState.syncAttempts }}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Last Attempt</td>
-                    <td class="px-3 py-2 dark:text-white">
-                      {{
-                        clusterData.syncState.lastAttemptAt?.value
-                          ? formatDate(clusterData.syncState.lastAttemptAt!.value)
-                          : 'N/A'
-                      }}
                     </td>
                   </tr>
                   <tr>
@@ -407,27 +386,40 @@
           </div>
         </div>
 
-        <!-- Recent Activity -->
-        <div class="card card-body">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Recent activity</h3>
+        <!-- Event History -->
+        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+          <h3 class="mb-4 text-lg font-medium dark:text-white">Event History</h3>
           <div class="max-h-80 space-y-3 overflow-y-auto" tabindex="0">
-            @for (activity of clusterData.activity; track activity.timestamp) {
-              <div
-                class="relative flex items-start space-x-3 after:absolute after:top-6 after:bottom-0 after:left-1 after:w-px after:bg-gray-300 after:content-[''] last:after:hidden dark:after:bg-gray-600"
-              >
-                <div class="flex-0">
-                  <div
-                    class="mt-2 h-2.25 w-2.25 rounded-full bg-indigo-500 dark:bg-indigo-400"
-                  ></div>
+            @if (clusterEvents().length === 0) {
+              <p class="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                No events recorded yet
+              </p>
+            } @else {
+              @for (event of clusterEvents(); track event.id) {
+                <div
+                  class="relative flex items-start space-x-3 after:absolute after:top-6 after:bottom-0 after:left-1 after:w-px after:bg-gray-300 after:content-[''] last:after:hidden dark:after:bg-gray-600"
+                >
+                  <div class="flex-0">
+                    <div
+                      class="mt-2 h-2.25 w-2.25 rounded-full"
+                      [class]="getEventTypeColor(event.eventType)"
+                    ></div>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium dark:text-white">
+                      {{ getEventTypeLabel(event.eventType) }}
+                    </p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      {{ getEventDetails(event) }}
+                    </p>
+                    @if (event.createdAt?.value) {
+                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {{ formatDate(event.createdAt!.value) }}
+                      </p>
+                    }
+                  </div>
                 </div>
-                <div class="min-w-0 flex-1">
-                  <p class="text-sm font-medium dark:text-white">{{ activity.action }}</p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">{{ activity.details }}</p>
-                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {{ formatDate(activity.timestamp) }}
-                  </p>
-                </div>
-              </div>
+              }
             }
           </div>
         </div>

@@ -997,6 +997,7 @@ func (x *DeleteClusterRequest) GetClusterId() string {
 type GetClusterActivityRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ClusterId     string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	Limit         int32                  `protobuf:"varint,20,opt,name=limit,proto3" json:"limit,omitempty"` // Optional: limit number of events returned (default 50)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1038,10 +1039,17 @@ func (x *GetClusterActivityRequest) GetClusterId() string {
 	return ""
 }
 
+func (x *GetClusterActivityRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
 // Get cluster activity response
 type GetClusterActivityResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Activities    []*ActivityEntry       `protobuf:"bytes,10,rep,name=activities,proto3" json:"activities,omitempty"`
+	Events        []*ClusterEvent        `protobuf:"bytes,10,rep,name=events,proto3" json:"events,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1076,37 +1084,40 @@ func (*GetClusterActivityResponse) Descriptor() ([]byte, []int) {
 	return file_v1_cluster_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *GetClusterActivityResponse) GetActivities() []*ActivityEntry {
+func (x *GetClusterActivityResponse) GetEvents() []*ClusterEvent {
 	if x != nil {
-		return x.Activities
+		return x.Events
 	}
 	return nil
 }
 
-// Activity entry
-type ActivityEntry struct {
+// Cluster event from cluster_events table
+type ClusterEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Timestamp     *Timestamp             `protobuf:"bytes,10,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	Action        string                 `protobuf:"bytes,20,opt,name=action,proto3" json:"action,omitempty"`
-	Details       string                 `protobuf:"bytes,30,opt,name=details,proto3" json:"details,omitempty"`
+	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	EventType     string                 `protobuf:"bytes,20,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"` // sync_requested, sync_completed, sync_failed, status_ready, status_error, status_deleted
+	CreatedAt     *Timestamp             `protobuf:"bytes,30,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	SyncAction    *string                `protobuf:"bytes,40,opt,name=sync_action,json=syncAction,proto3,oneof" json:"sync_action,omitempty"` // create, update, delete (for sync events)
+	Message       *string                `protobuf:"bytes,50,opt,name=message,proto3,oneof" json:"message,omitempty"`
+	Attempt       *int32                 `protobuf:"varint,60,opt,name=attempt,proto3,oneof" json:"attempt,omitempty"` // Sync attempt number (for sync events)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ActivityEntry) Reset() {
-	*x = ActivityEntry{}
+func (x *ClusterEvent) Reset() {
+	*x = ClusterEvent{}
 	mi := &file_v1_cluster_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ActivityEntry) String() string {
+func (x *ClusterEvent) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ActivityEntry) ProtoMessage() {}
+func (*ClusterEvent) ProtoMessage() {}
 
-func (x *ActivityEntry) ProtoReflect() protoreflect.Message {
+func (x *ClusterEvent) ProtoReflect() protoreflect.Message {
 	mi := &file_v1_cluster_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1118,30 +1129,51 @@ func (x *ActivityEntry) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ActivityEntry.ProtoReflect.Descriptor instead.
-func (*ActivityEntry) Descriptor() ([]byte, []int) {
+// Deprecated: Use ClusterEvent.ProtoReflect.Descriptor instead.
+func (*ClusterEvent) Descriptor() ([]byte, []int) {
 	return file_v1_cluster_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *ActivityEntry) GetTimestamp() *Timestamp {
+func (x *ClusterEvent) GetId() string {
 	if x != nil {
-		return x.Timestamp
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ClusterEvent) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *ClusterEvent) GetCreatedAt() *Timestamp {
+	if x != nil {
+		return x.CreatedAt
 	}
 	return nil
 }
 
-func (x *ActivityEntry) GetAction() string {
-	if x != nil {
-		return x.Action
+func (x *ClusterEvent) GetSyncAction() string {
+	if x != nil && x.SyncAction != nil {
+		return *x.SyncAction
 	}
 	return ""
 }
 
-func (x *ActivityEntry) GetDetails() string {
-	if x != nil {
-		return x.Details
+func (x *ClusterEvent) GetMessage() string {
+	if x != nil && x.Message != nil {
+		return *x.Message
 	}
 	return ""
+}
+
+func (x *ClusterEvent) GetAttempt() int32 {
+	if x != nil && x.Attempt != nil {
+		return *x.Attempt
+	}
+	return 0
 }
 
 // Get kubeconfig request
@@ -2036,21 +2068,31 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\x14DeleteClusterRequest\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\":\n" +
+	" \x01(\tR\tclusterId\"P\n" +
 	"\x19GetClusterActivityRequest\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\"\\\n" +
-	"\x1aGetClusterActivityResponse\x12>\n" +
+	" \x01(\tR\tclusterId\x12\x14\n" +
+	"\x05limit\x18\x14 \x01(\x05R\x05limit\"S\n" +
+	"\x1aGetClusterActivityResponse\x125\n" +
+	"\x06events\x18\n" +
+	" \x03(\v2\x1d.organization.v1.ClusterEventR\x06events\"\x84\x02\n" +
+	"\fClusterEvent\x12\x0e\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
-	"activities\x18\n" +
-	" \x03(\v2\x1e.organization.v1.ActivityEntryR\n" +
-	"activities\"{\n" +
-	"\rActivityEntry\x128\n" +
-	"\ttimestamp\x18\n" +
-	" \x01(\v2\x1a.organization.v1.TimestampR\ttimestamp\x12\x16\n" +
-	"\x06action\x18\x14 \x01(\tR\x06action\x12\x18\n" +
-	"\adetails\x18\x1e \x01(\tR\adetails\"5\n" +
+	"event_type\x18\x14 \x01(\tR\teventType\x129\n" +
+	"\n" +
+	"created_at\x18\x1e \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAt\x12$\n" +
+	"\vsync_action\x18( \x01(\tH\x00R\n" +
+	"syncAction\x88\x01\x01\x12\x1d\n" +
+	"\amessage\x182 \x01(\tH\x01R\amessage\x88\x01\x01\x12\x1d\n" +
+	"\aattempt\x18< \x01(\x05H\x02R\aattempt\x88\x01\x01B\x0e\n" +
+	"\f_sync_actionB\n" +
+	"\n" +
+	"\b_messageB\n" +
+	"\n" +
+	"\b_attempt\"5\n" +
 	"\x14GetKubeconfigRequest\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -2172,7 +2214,7 @@ var file_v1_cluster_proto_goTypes = []any{
 	(*DeleteClusterRequest)(nil),       // 14: organization.v1.DeleteClusterRequest
 	(*GetClusterActivityRequest)(nil),  // 15: organization.v1.GetClusterActivityRequest
 	(*GetClusterActivityResponse)(nil), // 16: organization.v1.GetClusterActivityResponse
-	(*ActivityEntry)(nil),              // 17: organization.v1.ActivityEntry
+	(*ClusterEvent)(nil),               // 17: organization.v1.ClusterEvent
 	(*GetKubeconfigRequest)(nil),       // 18: organization.v1.GetKubeconfigRequest
 	(*GetKubeconfigResponse)(nil),      // 19: organization.v1.GetKubeconfigResponse
 	(*CreateNodePoolRequest)(nil),      // 20: organization.v1.CreateNodePoolRequest
@@ -2214,8 +2256,8 @@ var file_v1_cluster_proto_depIdxs = []int32{
 	37, // 14: organization.v1.ResourceUsageInfo.pods:type_name -> organization.v1.ResourceUsage
 	38, // 15: organization.v1.NodePool.status:type_name -> organization.v1.NodePoolStatus
 	36, // 16: organization.v1.ClusterMember.last_active:type_name -> organization.v1.Timestamp
-	17, // 17: organization.v1.GetClusterActivityResponse.activities:type_name -> organization.v1.ActivityEntry
-	36, // 18: organization.v1.ActivityEntry.timestamp:type_name -> organization.v1.Timestamp
+	17, // 17: organization.v1.GetClusterActivityResponse.events:type_name -> organization.v1.ClusterEvent
+	36, // 18: organization.v1.ClusterEvent.created_at:type_name -> organization.v1.Timestamp
 	7,  // 19: organization.v1.ListNodePoolsResponse.node_pools:type_name -> organization.v1.NodePool
 	7,  // 20: organization.v1.GetNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
 	36, // 21: organization.v1.Install.created_at:type_name -> organization.v1.Timestamp
@@ -2264,6 +2306,7 @@ func file_v1_cluster_proto_init() {
 	}
 	file_v1_common_proto_init()
 	file_v1_cluster_proto_msgTypes[13].OneofWrappers = []any{}
+	file_v1_cluster_proto_msgTypes[17].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -557,13 +557,15 @@ func toPgTimestamp(t time.Time) pgtype.Timestamptz {
 func TestClusterConversion(t *testing.T) {
 	now := time.Now()
 
-	// Test conversion from db.ClusterClaimUnsyncedRow to gardener.ClusterToSync
-	dbRow := db.ClusterClaimUnsyncedRow{
-		ID:               uuid.New(),
-		Name:             "test-cluster",
-		Deleted:          toPgTimestamp(now),
-		SyncAttempts:     3,
-		OrganizationName: "test-tenant",
+	// Test conversion from db.ClusterClaimForSyncRow to gardener.ClusterToSync
+	dbRow := db.ClusterClaimForSyncRow{
+		ID:                uuid.New(),
+		Name:              "test-cluster",
+		Region:            "local",
+		KubernetesVersion: "1.31.1",
+		Deleted:           toPgTimestamp(now),
+		SyncAttempts:      3,
+		OrganizationName:  "test-tenant",
 	}
 
 	// Simulate what worker.claimCluster does
@@ -573,11 +575,13 @@ func TestClusterConversion(t *testing.T) {
 	}
 
 	cluster := gardener.ClusterToSync{
-		ID:               dbRow.ID,
-		Name:             dbRow.Name,
-		OrganizationName: dbRow.OrganizationName,
-		Deleted:          deleted,
-		SyncAttempts:     int(dbRow.SyncAttempts),
+		ID:                dbRow.ID,
+		Name:              dbRow.Name,
+		OrganizationName:  dbRow.OrganizationName,
+		Region:            dbRow.Region,
+		KubernetesVersion: dbRow.KubernetesVersion,
+		Deleted:           deleted,
+		SyncAttempts:      int(dbRow.SyncAttempts),
 	}
 
 	// Verify conversion
@@ -589,6 +593,12 @@ func TestClusterConversion(t *testing.T) {
 	}
 	if cluster.OrganizationName != dbRow.OrganizationName {
 		t.Error("OrganizationName mismatch")
+	}
+	if cluster.Region != dbRow.Region {
+		t.Error("Region mismatch")
+	}
+	if cluster.KubernetesVersion != dbRow.KubernetesVersion {
+		t.Error("KubernetesVersion mismatch")
 	}
 	if cluster.Deleted == nil {
 		t.Error("Deleted should not be nil")

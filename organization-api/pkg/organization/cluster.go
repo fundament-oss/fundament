@@ -87,6 +87,14 @@ func (s *OrganizationServer) CreateCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
 	}
 
+	// Create sync_requested event for history
+	if err := s.queries.ClusterCreateSyncRequestedEvent(ctx, db.ClusterCreateSyncRequestedEventParams{
+		ClusterID:  clusterID,
+		SyncAction: pgtype.Text{String: "create", Valid: true},
+	}); err != nil {
+		s.logger.WarnContext(ctx, "failed to create sync_requested event", "error", err)
+	}
+
 	s.logger.InfoContext(ctx, "cluster created",
 		"cluster_id", clusterID,
 		"organization_id", organizationID,
@@ -129,6 +137,14 @@ func (s *OrganizationServer) UpdateCluster(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 	}
 
+	// Create sync_requested event for history
+	if err := s.queries.ClusterCreateSyncRequestedEvent(ctx, db.ClusterCreateSyncRequestedEventParams{
+		ClusterID:  input.ClusterID,
+		SyncAction: pgtype.Text{String: "update", Valid: true},
+	}); err != nil {
+		s.logger.WarnContext(ctx, "failed to create sync_requested event", "error", err)
+	}
+
 	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", input.ClusterID)
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
@@ -150,6 +166,14 @@ func (s *OrganizationServer) DeleteCluster(
 
 	if rowsAffected != 1 {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+	}
+
+	// Create sync_requested event for history
+	if err := s.queries.ClusterCreateSyncRequestedEvent(ctx, db.ClusterCreateSyncRequestedEventParams{
+		ClusterID:  clusterID,
+		SyncAction: pgtype.Text{String: "delete", Valid: true},
+	}); err != nil {
+		s.logger.WarnContext(ctx, "failed to create sync_requested event", "error", err)
 	}
 
 	s.logger.InfoContext(ctx, "cluster deleted", "cluster_id", clusterID)
@@ -177,9 +201,22 @@ func (s *OrganizationServer) GetClusterActivity(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	// Stub: return empty activities
+	// Default limit if not specified
+	limit := req.Msg.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+
+	events, err := s.queries.ClusterGetEvents(ctx, db.ClusterGetEventsParams{
+		ClusterID: clusterID,
+		Limit:     limit,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster events: %w", err))
+	}
+
 	return connect.NewResponse(&organizationv1.GetClusterActivityResponse{
-		Activities: []*organizationv1.ActivityEntry{},
+		Events: adapter.FromClusterEvents(events),
 	}), nil
 }
 

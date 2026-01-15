@@ -10,33 +10,31 @@ import (
 )
 
 type TenantCluster struct {
-	ID                uuid.UUID
-	OrganizationID    uuid.UUID
-	Name              string
-	Region            string
-	KubernetesVersion string
-	Status            string
-	Created           pgtype.Timestamptz
-	Deleted           pgtype.Timestamptz
-}
-
-type TenantClusterSync struct {
-	ClusterID          uuid.UUID
+	ID                 uuid.UUID
+	OrganizationID     uuid.UUID
+	Name               string
+	Region             string
+	KubernetesVersion  string
+	Created            pgtype.Timestamptz
+	Deleted            pgtype.Timestamptz
 	Synced             pgtype.Timestamptz
+	SyncClaimedAt      pgtype.Timestamptz
+	SyncClaimedBy      pgtype.Text
 	SyncError          pgtype.Text
 	SyncAttempts       int32
-	SyncLastAttempt    pgtype.Timestamptz
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
 }
 
-type TenantInstall struct {
-	ID        uuid.UUID
-	ClusterID uuid.UUID
-	PluginID  uuid.UUID
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
+type TenantClusterEvent struct {
+	ID         uuid.UUID
+	ClusterID  uuid.UUID
+	EventType  string
+	Created    pgtype.Timestamptz
+	SyncAction pgtype.Text
+	Message    pgtype.Text
+	Attempt    pgtype.Int4
 }
 
 type TenantNamespace struct {
@@ -65,16 +63,12 @@ type TenantOrganization struct {
 	Created pgtype.Timestamptz
 }
 
-type TenantPlugin struct {
-	ID   uuid.UUID
-	Name string
-}
-
 type TenantProject struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 	Name           string
 	Created        pgtype.Timestamptz
+	Deleted        pgtype.Timestamptz
 }
 
 type TenantUser struct {
@@ -83,4 +77,44 @@ type TenantUser struct {
 	Name           string
 	ExternalID     string
 	Created        pgtype.Timestamptz
+}
+
+type ZappstoreCategoriesPlugin struct {
+	PluginID   uuid.UUID
+	CategoryID uuid.UUID
+}
+
+type ZappstoreCategory struct {
+	ID      uuid.UUID
+	Name    string
+	Created pgtype.Timestamptz
+	Deleted pgtype.Timestamptz
+}
+
+type ZappstoreInstall struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	PluginID  uuid.UUID
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
+}
+
+type ZappstorePlugin struct {
+	ID          uuid.UUID
+	Name        string
+	Description string
+	Created     pgtype.Timestamptz
+	Deleted     pgtype.Timestamptz
+}
+
+type ZappstorePluginsTag struct {
+	PluginID uuid.UUID
+	TagID    uuid.UUID
+}
+
+type ZappstoreTag struct {
+	ID      uuid.UUID
+	Name    string
+	Created pgtype.Timestamptz
+	Deleted pgtype.Timestamptz
 }

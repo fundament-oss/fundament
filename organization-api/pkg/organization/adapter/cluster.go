@@ -44,11 +44,11 @@ func FromClusterSummary(c *db.ClusterListByOrganizationIDRow) *organizationv1.Cl
 	return &organizationv1.ClusterSummary{
 		Id:            c.ID.String(),
 		Name:          c.Name,
-		Status:        StatusFromShootStatus(c.ShootStatus),
+		Status:        StatusFromCluster(c.Deleted, c.ShootStatus),
 		Region:        c.Region,
 		ProjectCount:  0, // Stub
 		NodePoolCount: 0, // Stub
-		SyncState:     FromSyncState(c.Synced, c.SyncError, c.SyncAttempts, c.SyncLastAttempt, c.ShootStatus, c.ShootStatusMessage, c.ShootStatusUpdated),
+		SyncState:     FromSyncState(c.Synced, c.SyncError, c.SyncAttempts, c.ShootStatus, c.ShootStatusMessage, c.ShootStatusUpdated),
 	}
 }
 
@@ -58,7 +58,7 @@ func FromClusterDetail(c *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
 		Name:              c.Name,
 		Region:            c.Region,
 		KubernetesVersion: c.KubernetesVersion,
-		Status:            StatusFromShootStatus(c.ShootStatus),
+		Status:            StatusFromCluster(c.Deleted, c.ShootStatus),
 		CreatedAt: &organizationv1.Timestamp{
 			Value: c.Created.Time.Format(time.RFC3339),
 		},
@@ -66,15 +66,14 @@ func FromClusterDetail(c *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
 		NodePools:     nil, // Stub
 		Members:       nil, // Stub
 		Projects:      nil, // Stub
-		SyncState:     FromSyncState(c.Synced, c.SyncError, c.SyncAttempts, c.SyncLastAttempt, c.ShootStatus, c.ShootStatusMessage, c.ShootStatusUpdated),
+		SyncState:     FromSyncState(c.Synced, c.SyncError, c.SyncAttempts, c.ShootStatus, c.ShootStatusMessage, c.ShootStatusUpdated),
 	}
 }
 
 func FromSyncState(
 	synced pgtype.Timestamptz,
 	syncError pgtype.Text,
-	syncAttempts pgtype.Int4,
-	syncLastAttempt pgtype.Timestamptz,
+	syncAttempts int32,
 	shootStatus pgtype.Text,
 	shootStatusMessage pgtype.Text,
 	shootStatusUpdated pgtype.Timestamptz,
@@ -87,12 +86,7 @@ func FromSyncState(
 	if syncError.Valid {
 		state.SyncError = &syncError.String
 	}
-	if syncAttempts.Valid {
-		state.SyncAttempts = syncAttempts.Int32
-	}
-	if syncLastAttempt.Valid {
-		state.LastAttemptAt = &organizationv1.Timestamp{Value: syncLastAttempt.Time.Format(time.RFC3339)}
-	}
+	state.SyncAttempts = syncAttempts
 	if shootStatus.Valid {
 		state.ShootStatus = &shootStatus.String
 	}
@@ -104,6 +98,17 @@ func FromSyncState(
 	}
 
 	return state
+}
+
+// StatusFromCluster derives ClusterStatus from the cluster's deleted flag and Gardener's shoot_status.
+// If the cluster is soft-deleted (deleted IS NOT NULL), it's in DELETING state.
+// Otherwise, the status is derived from Gardener's shoot_status.
+func StatusFromCluster(deleted pgtype.Timestamptz, shootStatus pgtype.Text) organizationv1.ClusterStatus {
+	// If cluster is soft-deleted, it's being deleted
+	if deleted.Valid {
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING
+	}
+	return StatusFromShootStatus(shootStatus)
 }
 
 // StatusFromShootStatus derives ClusterStatus from Gardener's shoot_status.
@@ -120,7 +125,7 @@ func StatusFromShootStatus(shootStatus pgtype.Text) organizationv1.ClusterStatus
 	case "error":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR
 	case "deleting":
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING
 	case "deleted":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED
 	default:
@@ -166,4 +171,32 @@ func FromClusterNamespace(ns *db.TenantNamespace) *organizationv1.ClusterNamespa
 			Value: ns.Created.Time.Format(time.RFC3339),
 		},
 	}
+}
+
+func FromClusterEvents(events []db.TenantClusterEvent) []*organizationv1.ClusterEvent {
+	result := make([]*organizationv1.ClusterEvent, 0, len(events))
+	for i := range events {
+		result = append(result, FromClusterEvent(&events[i]))
+	}
+	return result
+}
+
+func FromClusterEvent(e *db.TenantClusterEvent) *organizationv1.ClusterEvent {
+	event := &organizationv1.ClusterEvent{
+		Id:        e.ID.String(),
+		EventType: e.EventType,
+		CreatedAt: &organizationv1.Timestamp{Value: e.Created.Time.Format(time.RFC3339)},
+	}
+
+	if e.SyncAction.Valid {
+		event.SyncAction = &e.SyncAction.String
+	}
+	if e.Message.Valid {
+		event.Message = &e.Message.String
+	}
+	if e.Attempt.Valid {
+		event.Attempt = &e.Attempt.Int32
+	}
+
+	return event
 }
