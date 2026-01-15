@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.2
+-- ** pgModeler version: 2.0.0-alpha
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -69,6 +69,8 @@ CREATE TABLE tenant.namespaces (
 );
 -- ddl-end --
 ALTER TABLE tenant.namespaces OWNER TO postgres;
+-- ddl-end --
+ALTER TABLE tenant.namespaces ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
 
 -- object: tenant.clusters_tr_verify_deleted | type: FUNCTION --
@@ -290,6 +292,19 @@ CREATE POLICY projects_organization_isolation ON tenant.projects
 	FOR ALL
 	TO fun_fundament_api
 	USING (organization_id = current_setting('app.current_organization_id')::uuid);
+-- ddl-end --
+
+-- object: namespaces_organization_policy | type: POLICY --
+-- DROP POLICY IF EXISTS namespaces_organization_policy ON tenant.namespaces CASCADE;
+CREATE POLICY namespaces_organization_policy ON tenant.namespaces
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (EXISTS (
+    SELECT 1 FROM clusters
+    WHERE clusters.id = namespaces.cluster_id
+    AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
+));
 -- ddl-end --
 
 -- object: projects_fk_organization | type: CONSTRAINT --
