@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package organization.v1;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
 // Resource usage information
@@ -21,6 +23,7 @@ enum ClusterStatus {
   CLUSTER_STATUS_ERROR = 5;
   CLUSTER_STATUS_STOPPING = 6;
   CLUSTER_STATUS_STOPPED = 7;
+  CLUSTER_STATUS_DELETING = 8;  // Cluster deletion in progress
 }
 
 // Node pool status
@@ -33,11 +36,11 @@ enum NodePoolStatus {
 
 // Cluster sync state from Gardener
 message SyncState {
-  optional Timestamp synced_at = 10;       // When the cluster was last successfully synced
+  optional google.protobuf.Timestamp synced_at = 10;       // When the cluster was last successfully synced
   optional string sync_error = 20;          // Error message if sync failed
   int32 sync_attempts = 30;                 // Number of sync attempts
-  optional Timestamp last_attempt_at = 40;  // When the last sync attempt was made
+  // Field 40 removed: last_attempt_at (no longer tracked in DB)
   optional string shoot_status = 50;        // Gardener shoot status (pending, progressing, ready, error, deleting)
   optional string shoot_message = 60;       // Human-readable status message from Gardener
-  optional Timestamp status_updated_at = 70; // When the shoot status was last updated
+  optional google.protobuf.Timestamp status_updated_at = 70; // When the shoot status was last updated
 }

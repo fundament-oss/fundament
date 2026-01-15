@@ -99,6 +99,7 @@ export default class DashboardComponent implements OnInit {
         'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200',
       [ClusterStatus.STOPPED]: 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200',
       [ClusterStatus.UNSPECIFIED]: 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200',
+      [ClusterStatus.DELETING]: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
     };
     return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200';
   }
@@ -113,6 +114,7 @@ export default class DashboardComponent implements OnInit {
       [ClusterStatus.ERROR]: 'Error',
       [ClusterStatus.STOPPING]: 'Stopping',
       [ClusterStatus.STOPPED]: 'Stopped',
+      [ClusterStatus.DELETING]: 'Deleting',
     };
     return labels[status] || 'Unknown';
   }

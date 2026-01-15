@@ -41,14 +41,16 @@ We use PostgreSQL's built-in pub/sub mechanism instead of a separate message que
 3. **Proven at scale** - This pattern handles hundreds of thousands of syncs per day at production systems like Printeers
 4. **Simplicity** - One less system to operate, monitor, and secure
 
-### Why SKIP LOCKED?
+### Why SKIP LOCKED + Visibility Timeout?
 
-The `SELECT ... FOR UPDATE SKIP LOCKED` pattern enables multiple workers to process clusters concurrently without conflicts:
+The `SELECT ... FOR UPDATE SKIP LOCKED` pattern combined with a visibility timeout enables multiple workers to process clusters concurrently without conflicts:
 
 - Workers grab available work without blocking each other
-- No risk of processing the same cluster twice
 - Natural load distribution across workers
 - No coordinator needed
+- **Crash recovery**: If a worker dies mid-sync, the visibility timeout (10 min) allows another worker to reclaim the work
+- **Exponential backoff**: Failed syncs wait 30s × 2^(attempts-1) before retry, capped at 15 minutes
+- Each claim is tracked with `sync_claimed_at` and `sync_claimed_by` for debugging
 
 ### Why a separate status poller?
 
@@ -77,11 +79,12 @@ sequenceDiagram
     API->>DB: INSERT/UPDATE tenant.clusters
 
     Note over DB: Trigger fires
-    DB->>DB: SET synced = NULL in cluster_sync
+    DB->>DB: SET synced = NULL on clusters row
     DB-->>Worker: NOTIFY cluster_sync
 
-    Worker->>DB: SELECT ... FOR UPDATE SKIP LOCKED
+    Worker->>DB: Claim with visibility timeout
     DB-->>Worker: Claimed cluster row
+    Worker->>DB: INSERT cluster_events (sync_requested)
 
     alt Cluster created/updated
         Worker->>Gardener: ApplyShoot(manifest)
@@ -92,9 +95,11 @@ sequenceDiagram
     end
 
     alt Success
-        Worker->>DB: synced = now(), sync_error = NULL
+        Worker->>DB: synced = now(), clear claim
+        Worker->>DB: INSERT cluster_events (sync_completed)
     else Error
         Worker->>DB: sync_error = msg, sync_attempts++
+        Worker->>DB: INSERT cluster_events (sync_failed)
     end
 
     Note over Worker,Gardener: Status Poller (separate goroutine)
@@ -124,19 +129,19 @@ The cluster-worker has two goroutines managing related but distinct state machin
 stateDiagram-v2
     direction TB
 
-    state "Sync Worker → cluster_sync table" as db {
-        [*] --> Unsynced: User creates cluster
-        Synced --> Unsynced: User modifies/deletes cluster
+    state "Sync Worker → clusters table" as db {
+        [*] --> Pending: User creates cluster
+        Synced --> Pending: User modifies/deletes cluster
 
-        state Unsynced {
-            [*] --> Pending
-            Pending --> BackingOff: sync failed
-            BackingOff --> Pending: backoff elapsed
-        }
+        Pending --> Claimed: Worker claims
+        Claimed --> Synced: sync succeeded
+        Claimed --> Failed: sync failed
+        Failed --> Pending: backoff elapsed
+        Claimed --> Pending: visibility timeout (worker died)
 
-        Unsynced --> Synced: Worker succeeds
-
-        Unsynced: synced = NULL
+        Pending: synced = NULL, unclaimed
+        Claimed: synced = NULL, sync_claimed_at set
+        Failed: synced = NULL, sync_error set
         Synced: synced = timestamp
     }
 
@@ -159,58 +164,6 @@ stateDiagram-v2
     }
 ```
 
-**Sync Worker** pushes local changes to Gardener:
-
-| Database State | Columns | Meaning |
-|----------------|---------|---------|
-| Unsynced (pending) | `synced = NULL`, `sync_attempts = 0` | Ready for first sync attempt |
-| Unsynced (backing off) | `synced = NULL`, `sync_attempts > 0` | Waiting for backoff before retry |
-| Synced | `synced = timestamp`, `sync_error = NULL` | Successfully synced to Gardener |
-
-The worker claims unsynced clusters with `SELECT ... FOR UPDATE SKIP LOCKED` (transient lock, not stored).
-Backoff formula: `30s × 2^attempts`, capped at 15 minutes.
-
-**Status Poller** observes Gardener and updates `shoot_status`:
-
-| Status | Meaning |
-|--------|---------|
-| `pending` | Shoot manifest applied, not yet visible in Gardener |
-| `progressing` | Gardener is creating/updating the cluster |
-| `ready` | Cluster is fully operational |
-| `error` | Reconciliation failed (see `shoot_status_message`) |
-| `deleting` | Shoot deletion in progress |
-| `deleted` | Shoot confirmed removed from Gardener |
-
-**Step-by-step:**
-
-1. **Trigger**: Database triggers set `synced = NULL` when a cluster needs syncing (insert, update, or soft-delete)
-2. **Notify**: The trigger sends `NOTIFY cluster_sync` to wake up workers
-3. **Claim**: Worker runs `SELECT ... FOR UPDATE SKIP LOCKED` to claim one cluster
-4. **Sync**: Worker applies or deletes the Shoot manifest in Gardener
-5. **Mark**: Worker sets `synced = now()` on success, or records error and increments `sync_attempts` on failure
-6. **Repeat**: Worker processes next pending cluster
-
-### Database Schema
-
-Sync state is stored in a separate `cluster_sync` table (1:1 with clusters):
-
-```sql
--- tenant.cluster_sync (separate from clusters table)
-cluster_id uuid PRIMARY KEY  -- FK to clusters.id, CASCADE delete
-synced timestamptz           -- NULL = needs sync, timestamp = last successful sync
-sync_error text              -- Last error message (NULL if no error)
-sync_attempts int            -- Consecutive failed attempts (reset on success)
-sync_last_attempt timestamptz-- Timestamp of last attempt (for backoff)
-shoot_status text            -- Gardener status: pending, progressing, ready, error, deleting, deleted
-shoot_status_message text    -- Last status message from Gardener
-shoot_status_updated timestamptz -- Timestamp of last status check
-```
-
-This separation provides:
-- Clean separation of concerns (cluster definition vs. sync state)
-- Tenant isolation via joins (users access sync state by joining through RLS-protected clusters table)
-- Minimal worker privileges (cluster-worker has read-only access to clusters, write access only to sync state)
-
 ### Client Modes
 
 The worker supports two Gardener client implementations:
@@ -220,41 +173,20 @@ The worker supports two Gardener client implementations:
 | `mock` | Unit/integration tests | In-memory map |
 | `real` | Production + local Gardener | Gardener API |
 
-## Configuration
+### Event History
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DATABASE_URL` | Yes | - | PostgreSQL connection string |
-| `GARDENER_MODE` | No | `mock` | Client mode: `mock` or `real` |
-| `GARDENER_KUBECONFIG` | When `real` | - | Path to Garden cluster kubeconfig |
-| `GARDENER_NAMESPACE` | No | `garden-fundament` | Gardener project namespace |
-| `GARDENER_PROVIDER_TYPE` | No | `local` | Provider type: `local`, `metal`, `aws`, etc. |
-| `GARDENER_CLOUD_PROFILE` | No | `local` | Cloud profile name |
-| `GARDENER_CREDENTIALS_BINDING_NAME` | No | `local` | Credentials binding name (defaults to `local` for local provider) |
-| `GARDENER_MAX_SHOOT_NAME_LEN` | No | `21` | Max shoot name length (21 for local, up to 63 for others) |
-| `LOG_LEVEL` | No | `info` | Log level (debug, info, warn, error) |
-| `POLL_INTERVAL` | No | `30s` | LISTEN timeout / fallback poll interval |
-| `RECONCILE_INTERVAL` | No | `5m` | Full reconciliation interval |
-| `STATUS_POLL_INTERVAL` | No | `30s` | How often to poll Gardener for status |
-| `STATUS_POLL_BATCH_SIZE` | No | `50` | Max clusters to check per poll cycle |
-| `HEALTH_PORT` | No | `8097` | Port for health check endpoints |
-| `SHUTDOWN_TIMEOUT` | No | `30s` | Max time to wait for graceful shutdown |
-| `MAX_SYNC_ATTEMPTS` | No | `5` | Max sync retries before giving up (requires manual reset) |
+All sync and status changes are recorded in the `cluster_events` table for debugging and auditing:
 
-## Running
+| Event Type | Description |
+|------------|-------------|
+| `sync_requested` | Cluster created/updated/deleted via API, needs sync |
+| `sync_claimed` | Worker claimed the cluster for processing |
+| `sync_submitted` | Gardener accepted the Shoot manifest |
+| `sync_failed` | Sync failed (with error message and attempt count) |
+| `status_ready` | Shoot reconciliation completed successfully |
+| `status_error` | Shoot reconciliation failed |
+| `status_deleted` | Shoot confirmed deleted from Gardener |
 
-```bash
-# Development with mock client
-GARDENER_MODE=mock \
-DATABASE_URL=postgres://user:pass@localhost:5432/fundament \
-go run ./cluster-worker/cmd/cluster-worker
-
-# Run tests
-go test ./cluster-worker/...
-
-# Run tests with database integration
-DATABASE_URL=postgres://... go test ./cluster-worker/... -v
-```
 
 ## Quick Start: Full Local Development
 
@@ -278,7 +210,7 @@ open http://console.127.0.0.1.nip.io:8080
 cd cluster-worker && just create-test-cluster t1
 
 # Watch progress:
-just logs-cluster-worker                  # cluster-worker logs
+cd cluster-worker && just logs.           # cluster-worker logs
 cd cluster-worker && just watch-shoots    # shoots in Gardener
 cd cluster-worker && just gardener-status # overall status
 ```
@@ -293,39 +225,4 @@ cd cluster-worker && just gardener-status # overall status
 - `just dev -p local-gardener` → real local Gardener (requires step 2 first)
 
 First Gardener run takes ~15 minutes to build. Subsequent runs are instant.
-
-## Health Endpoints
-
-- `GET /healthz` - Liveness probe (always 200 if process is running)
-- `GET /readyz` - Readiness probe (200 when LISTEN connection is established)
-
-## Project Structure
-
-```
-cluster-worker/
-├── cmd/cluster-worker/
-│   └── main.go                # Entry point, config, health server
-├── pkg/
-│   ├── worker/
-│   │   ├── worker_sync.go     # Main sync loop with LISTEN/NOTIFY
-│   │   ├── worker_sync_test.go
-│   │   ├── worker_status.go   # Gardener status polling
-│   │   └── worker_status_test.go
-│   ├── gardener/
-│   │   ├── client.go          # Interface and types
-│   │   ├── mock.go            # MockClient for testing
-│   │   └── real.go            # RealClient for Gardener API
-│   └── db/
-│       ├── queries.sql        # sqlc queries (EntityAction naming convention)
-│       ├── sqlc.yaml          # sqlc config
-│       └── gen/               # Generated code
-└── README.md
-```
-
-## References
-
-- [PostgreSQL SKIP LOCKED](https://www.2ndquadrant.com/en/blog/what-is-select-skip-locked-for-in-postgresql-9-5/)
-- [LISTEN/NOTIFY](https://www.postgresql.org/docs/current/sql-notify.html)
-- [Gardener Shoots](https://gardener.cloud/docs/getting-started/shoots/)
-- [testing/synctest](https://pkg.go.dev/testing/synctest) - Go 1.25 fake clock for tests
 

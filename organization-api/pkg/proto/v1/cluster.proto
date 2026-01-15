@@ -187,18 +187,22 @@ message DeleteClusterRequest {
 // Get cluster activity request
 message GetClusterActivityRequest {
   string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  int32 limit = 20;  // Optional: limit number of events returned (default 50)
 }
 
 // Get cluster activity response
 message GetClusterActivityResponse {
-  repeated ActivityEntry activities = 10;
+  repeated ClusterEvent events = 10;
 }
 
-// Activity entry
-message ActivityEntry {
-  google.protobuf.Timestamp timestamp = 10;
-  string action = 20;
-  string details = 30;
+// Cluster event from cluster_events table
+message ClusterEvent {
+  string id = 10;
+  string event_type = 20;      // sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted
+  google.protobuf.Timestamp created_at = 30;
+  optional string sync_action = 40;  // sync, delete (for sync events)
+  optional string message = 50;
+  optional int32 attempt = 60;       // Sync attempt number (for sync events)
 }
 
 // Get kubeconfig request

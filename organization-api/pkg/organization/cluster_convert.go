@@ -7,8 +7,11 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-// clusterStatusFromDB derives cluster status from Gardener shoot status.
-func clusterStatusFromDB(shootStatus pgtype.Text) organizationv1.ClusterStatus {
+// clusterStatusFromDB derives cluster status from deleted flag + Gardener shoot status.
+func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text) organizationv1.ClusterStatus {
+	if deleted.Valid {
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING
+	}
 	if !shootStatus.Valid {
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
 	}
@@ -20,7 +23,7 @@ func clusterStatusFromDB(shootStatus pgtype.Text) organizationv1.ClusterStatus {
 	case "error":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR
 	case "deleting":
-		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING
 	case "deleted":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED
 	default:
@@ -31,8 +34,7 @@ func clusterStatusFromDB(shootStatus pgtype.Text) organizationv1.ClusterStatus {
 func syncStateFromRow(
 	synced pgtype.Timestamptz,
 	syncError pgtype.Text,
-	syncAttempts pgtype.Int4,
-	syncLastAttempt pgtype.Timestamptz,
+	syncAttempts int32,
 	shootStatus pgtype.Text,
 	shootStatusMessage pgtype.Text,
 	shootStatusUpdated pgtype.Timestamptz,
@@ -45,12 +47,7 @@ func syncStateFromRow(
 	if syncError.Valid {
 		state.SyncError = &syncError.String
 	}
-	if syncAttempts.Valid {
-		state.SyncAttempts = syncAttempts.Int32
-	}
-	if syncLastAttempt.Valid {
-		state.LastAttemptAt = timestamppb.New(syncLastAttempt.Time)
-	}
+	state.SyncAttempts = syncAttempts
 	if shootStatus.Valid {
 		state.ShootStatus = &shootStatus.String
 	}
