@@ -1,0 +1,17 @@
+# Go generated files
+*.connect.go -diff linguist-generated=true
+*.pb.go -diff linguist-generated=true
+*.sqlc.go -diff linguist-generated=true
+*.sql.go -diff linguist-generated=true
+*.gen.go -diff linguist-generated=true
+
+# Typescript generated files
+*_pb.ts -diff linguist-generated=true
+*_connect.ts -diff linguist-generated=true
+*.graphql.ts -diff linguist-generated=true
+
+# CSS / TailwindCSS generated files
+*.generated.css -diff linguist-generated=true
+
+# Package manager generated files (npm)
+*.lock -diff linguist-generated=true
