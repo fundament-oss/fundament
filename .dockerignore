@@ -1,0 +1,4 @@
+console-frontend/node_modules/
+console-frontend/dist/
+
+console-frontend/.gitignore
