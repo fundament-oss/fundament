@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 2.0.0-alpha
+-- ** pgModeler version: 1.2.2
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -78,12 +78,12 @@ ALTER TABLE tenant.namespaces ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_deleted ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE 
+	VOLATILE
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS 
+	AS
 $function$
 BEGIN
 	IF EXISTS (
@@ -143,7 +143,7 @@ ALTER TABLE tenant.clusters ENABLE ROW LEVEL SECURITY;
 CREATE CONSTRAINT TRIGGER verify_deleted
 	AFTER INSERT OR UPDATE
 	ON tenant.clusters
-	NOT DEFERRABLE 
+	NOT DEFERRABLE
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.clusters_tr_verify_deleted();
 -- ddl-end --
