@@ -49,6 +49,9 @@ const (
 	// ProjectServiceDeleteProjectProcedure is the fully-qualified name of the ProjectService's
 	// DeleteProject RPC.
 	ProjectServiceDeleteProjectProcedure = "/organization.v1.ProjectService/DeleteProject"
+	// ProjectServiceListProjectNamespacesProcedure is the fully-qualified name of the ProjectService's
+	// ListProjectNamespaces RPC.
+	ProjectServiceListProjectNamespacesProcedure = "/organization.v1.ProjectService/ListProjectNamespaces"
 )
 
 // ProjectServiceClient is a client for the organization.v1.ProjectService service.
@@ -63,6 +66,8 @@ type ProjectServiceClient interface {
 	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[emptypb.Empty], error)
 	// Delete a project
 	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error)
+	// List all namespaces belonging to a project
+	ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error)
 }
 
 // NewProjectServiceClient constructs a client for the organization.v1.ProjectService service. By
@@ -106,16 +111,23 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(projectServiceMethods.ByName("DeleteProject")),
 			connect.WithClientOptions(opts...),
 		),
+		listProjectNamespaces: connect.NewClient[v1.ListProjectNamespacesRequest, v1.ListProjectNamespacesResponse](
+			httpClient,
+			baseURL+ProjectServiceListProjectNamespacesProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("ListProjectNamespaces")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // projectServiceClient implements ProjectServiceClient.
 type projectServiceClient struct {
-	listProjects  *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
-	getProject    *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
-	createProject *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
-	updateProject *connect.Client[v1.UpdateProjectRequest, emptypb.Empty]
-	deleteProject *connect.Client[v1.DeleteProjectRequest, emptypb.Empty]
+	listProjects          *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
+	getProject            *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
+	createProject         *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
+	updateProject         *connect.Client[v1.UpdateProjectRequest, emptypb.Empty]
+	deleteProject         *connect.Client[v1.DeleteProjectRequest, emptypb.Empty]
+	listProjectNamespaces *connect.Client[v1.ListProjectNamespacesRequest, v1.ListProjectNamespacesResponse]
 }
 
 // ListProjects calls organization.v1.ProjectService.ListProjects.
@@ -143,6 +155,11 @@ func (c *projectServiceClient) DeleteProject(ctx context.Context, req *connect.R
 	return c.deleteProject.CallUnary(ctx, req)
 }
 
+// ListProjectNamespaces calls organization.v1.ProjectService.ListProjectNamespaces.
+func (c *projectServiceClient) ListProjectNamespaces(ctx context.Context, req *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error) {
+	return c.listProjectNamespaces.CallUnary(ctx, req)
+}
+
 // ProjectServiceHandler is an implementation of the organization.v1.ProjectService service.
 type ProjectServiceHandler interface {
 	// List all projects for the current organization
@@ -155,6 +172,8 @@ type ProjectServiceHandler interface {
 	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[emptypb.Empty], error)
 	// Delete a project
 	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error)
+	// List all namespaces belonging to a project
+	ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error)
 }
 
 // NewProjectServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -194,6 +213,12 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 		connect.WithSchema(projectServiceMethods.ByName("DeleteProject")),
 		connect.WithHandlerOptions(opts...),
 	)
+	projectServiceListProjectNamespacesHandler := connect.NewUnaryHandler(
+		ProjectServiceListProjectNamespacesProcedure,
+		svc.ListProjectNamespaces,
+		connect.WithSchema(projectServiceMethods.ByName("ListProjectNamespaces")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/organization.v1.ProjectService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProjectServiceListProjectsProcedure:
@@ -206,6 +231,8 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 			projectServiceUpdateProjectHandler.ServeHTTP(w, r)
 		case ProjectServiceDeleteProjectProcedure:
 			projectServiceDeleteProjectHandler.ServeHTTP(w, r)
+		case ProjectServiceListProjectNamespacesProcedure:
+			projectServiceListProjectNamespacesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -233,4 +260,8 @@ func (UnimplementedProjectServiceHandler) UpdateProject(context.Context, *connec
 
 func (UnimplementedProjectServiceHandler) DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.DeleteProject is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.ListProjectNamespaces is not implemented"))
 }

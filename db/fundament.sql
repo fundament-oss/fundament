@@ -70,18 +70,20 @@ CREATE TABLE tenant.namespaces (
 -- ddl-end --
 ALTER TABLE tenant.namespaces OWNER TO postgres;
 -- ddl-end --
+ALTER TABLE tenant.namespaces ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
 
 -- object: tenant.clusters_tr_verify_deleted | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.clusters_tr_verify_deleted() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_deleted ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE 
+	VOLATILE
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS 
+	AS
 $function$
 BEGIN
 	IF EXISTS (
@@ -141,7 +143,7 @@ ALTER TABLE tenant.clusters ENABLE ROW LEVEL SECURITY;
 CREATE CONSTRAINT TRIGGER verify_deleted
 	AFTER INSERT OR UPDATE
 	ON tenant.clusters
-	NOT DEFERRABLE 
+	NOT DEFERRABLE
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.clusters_tr_verify_deleted();
 -- ddl-end --
@@ -290,6 +292,19 @@ CREATE POLICY projects_organization_isolation ON tenant.projects
 	FOR ALL
 	TO fun_fundament_api
 	USING (organization_id = current_setting('app.current_organization_id')::uuid);
+-- ddl-end --
+
+-- object: namespaces_organization_policy | type: POLICY --
+-- DROP POLICY IF EXISTS namespaces_organization_policy ON tenant.namespaces CASCADE;
+CREATE POLICY namespaces_organization_policy ON tenant.namespaces
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (EXISTS (
+    SELECT 1 FROM clusters
+    WHERE clusters.id = namespaces.cluster_id
+    AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
+));
 -- ddl-end --
 
 -- object: projects_fk_organization | type: CONSTRAINT --

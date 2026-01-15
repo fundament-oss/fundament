@@ -443,6 +443,165 @@ func (x *DeleteProjectRequest) GetProjectId() string {
 	return ""
 }
 
+// List project namespaces request
+type ListProjectNamespacesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProjectNamespacesRequest) Reset() {
+	*x = ListProjectNamespacesRequest{}
+	mi := &file_v1_project_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProjectNamespacesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProjectNamespacesRequest) ProtoMessage() {}
+
+func (x *ListProjectNamespacesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProjectNamespacesRequest.ProtoReflect.Descriptor instead.
+func (*ListProjectNamespacesRequest) Descriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListProjectNamespacesRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+// List project namespaces response
+type ListProjectNamespacesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Namespaces    []*ProjectNamespace    `protobuf:"bytes,10,rep,name=namespaces,proto3" json:"namespaces,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProjectNamespacesResponse) Reset() {
+	*x = ListProjectNamespacesResponse{}
+	mi := &file_v1_project_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProjectNamespacesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProjectNamespacesResponse) ProtoMessage() {}
+
+func (x *ListProjectNamespacesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProjectNamespacesResponse.ProtoReflect.Descriptor instead.
+func (*ListProjectNamespacesResponse) Descriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListProjectNamespacesResponse) GetNamespaces() []*ProjectNamespace {
+	if x != nil {
+		return x.Namespaces
+	}
+	return nil
+}
+
+// Project namespace information
+type ProjectNamespace struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
+	ClusterId     string                 `protobuf:"bytes,30,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	CreatedAt     *Timestamp             `protobuf:"bytes,40,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProjectNamespace) Reset() {
+	*x = ProjectNamespace{}
+	mi := &file_v1_project_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProjectNamespace) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProjectNamespace) ProtoMessage() {}
+
+func (x *ProjectNamespace) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProjectNamespace.ProtoReflect.Descriptor instead.
+func (*ProjectNamespace) Descriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ProjectNamespace) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ProjectNamespace) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ProjectNamespace) GetClusterId() string {
+	if x != nil {
+		return x.ClusterId
+	}
+	return ""
+}
+
+func (x *ProjectNamespace) GetCreatedAt() *Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
 var File_v1_project_proto protoreflect.FileDescriptor
 
 const file_v1_project_proto_rawDesc = "" +
@@ -481,14 +640,32 @@ const file_v1_project_proto_rawDesc = "" +
 	"\x14DeleteProjectRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId2\xc4\x03\n" +
+	" \x01(\tR\tprojectId\"=\n" +
+	"\x1cListProjectNamespacesRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\n" +
+	" \x01(\tR\tprojectId\"b\n" +
+	"\x1dListProjectNamespacesResponse\x12A\n" +
+	"\n" +
+	"namespaces\x18\n" +
+	" \x03(\v2!.organization.v1.ProjectNamespaceR\n" +
+	"namespaces\"\x90\x01\n" +
+	"\x10ProjectNamespace\x12\x0e\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18\x1e \x01(\tR\tclusterId\x129\n" +
+	"\n" +
+	"created_at\x18( \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAt2\xbc\x04\n" +
 	"\x0eProjectService\x12[\n" +
 	"\fListProjects\x12$.organization.v1.ListProjectsRequest\x1a%.organization.v1.ListProjectsResponse\x12U\n" +
 	"\n" +
 	"GetProject\x12\".organization.v1.GetProjectRequest\x1a#.organization.v1.GetProjectResponse\x12^\n" +
 	"\rCreateProject\x12%.organization.v1.CreateProjectRequest\x1a&.organization.v1.CreateProjectResponse\x12N\n" +
 	"\rUpdateProject\x12%.organization.v1.UpdateProjectRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
-	"\rDeleteProject\x12%.organization.v1.DeleteProjectRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
+	"\rDeleteProject\x12%.organization.v1.DeleteProjectRequest\x1a\x16.google.protobuf.Empty\x12v\n" +
+	"\x15ListProjectNamespaces\x12-.organization.v1.ListProjectNamespacesRequest\x1a..organization.v1.ListProjectNamespacesResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
 
 var (
 	file_v1_project_proto_rawDescOnce sync.Once
@@ -502,39 +679,46 @@ func file_v1_project_proto_rawDescGZIP() []byte {
 	return file_v1_project_proto_rawDescData
 }
 
-var file_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_v1_project_proto_goTypes = []any{
-	(*ListProjectsRequest)(nil),   // 0: organization.v1.ListProjectsRequest
-	(*ListProjectsResponse)(nil),  // 1: organization.v1.ListProjectsResponse
-	(*GetProjectRequest)(nil),     // 2: organization.v1.GetProjectRequest
-	(*GetProjectResponse)(nil),    // 3: organization.v1.GetProjectResponse
-	(*Project)(nil),               // 4: organization.v1.Project
-	(*CreateProjectRequest)(nil),  // 5: organization.v1.CreateProjectRequest
-	(*CreateProjectResponse)(nil), // 6: organization.v1.CreateProjectResponse
-	(*UpdateProjectRequest)(nil),  // 7: organization.v1.UpdateProjectRequest
-	(*DeleteProjectRequest)(nil),  // 8: organization.v1.DeleteProjectRequest
-	(*Timestamp)(nil),             // 9: organization.v1.Timestamp
-	(*emptypb.Empty)(nil),         // 10: google.protobuf.Empty
+	(*ListProjectsRequest)(nil),           // 0: organization.v1.ListProjectsRequest
+	(*ListProjectsResponse)(nil),          // 1: organization.v1.ListProjectsResponse
+	(*GetProjectRequest)(nil),             // 2: organization.v1.GetProjectRequest
+	(*GetProjectResponse)(nil),            // 3: organization.v1.GetProjectResponse
+	(*Project)(nil),                       // 4: organization.v1.Project
+	(*CreateProjectRequest)(nil),          // 5: organization.v1.CreateProjectRequest
+	(*CreateProjectResponse)(nil),         // 6: organization.v1.CreateProjectResponse
+	(*UpdateProjectRequest)(nil),          // 7: organization.v1.UpdateProjectRequest
+	(*DeleteProjectRequest)(nil),          // 8: organization.v1.DeleteProjectRequest
+	(*ListProjectNamespacesRequest)(nil),  // 9: organization.v1.ListProjectNamespacesRequest
+	(*ListProjectNamespacesResponse)(nil), // 10: organization.v1.ListProjectNamespacesResponse
+	(*ProjectNamespace)(nil),              // 11: organization.v1.ProjectNamespace
+	(*Timestamp)(nil),                     // 12: organization.v1.Timestamp
+	(*emptypb.Empty)(nil),                 // 13: google.protobuf.Empty
 }
 var file_v1_project_proto_depIdxs = []int32{
 	4,  // 0: organization.v1.ListProjectsResponse.projects:type_name -> organization.v1.Project
 	4,  // 1: organization.v1.GetProjectResponse.project:type_name -> organization.v1.Project
-	9,  // 2: organization.v1.Project.created_at:type_name -> organization.v1.Timestamp
-	0,  // 3: organization.v1.ProjectService.ListProjects:input_type -> organization.v1.ListProjectsRequest
-	2,  // 4: organization.v1.ProjectService.GetProject:input_type -> organization.v1.GetProjectRequest
-	5,  // 5: organization.v1.ProjectService.CreateProject:input_type -> organization.v1.CreateProjectRequest
-	7,  // 6: organization.v1.ProjectService.UpdateProject:input_type -> organization.v1.UpdateProjectRequest
-	8,  // 7: organization.v1.ProjectService.DeleteProject:input_type -> organization.v1.DeleteProjectRequest
-	1,  // 8: organization.v1.ProjectService.ListProjects:output_type -> organization.v1.ListProjectsResponse
-	3,  // 9: organization.v1.ProjectService.GetProject:output_type -> organization.v1.GetProjectResponse
-	6,  // 10: organization.v1.ProjectService.CreateProject:output_type -> organization.v1.CreateProjectResponse
-	10, // 11: organization.v1.ProjectService.UpdateProject:output_type -> google.protobuf.Empty
-	10, // 12: organization.v1.ProjectService.DeleteProject:output_type -> google.protobuf.Empty
-	8,  // [8:13] is the sub-list for method output_type
-	3,  // [3:8] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	12, // 2: organization.v1.Project.created_at:type_name -> organization.v1.Timestamp
+	11, // 3: organization.v1.ListProjectNamespacesResponse.namespaces:type_name -> organization.v1.ProjectNamespace
+	12, // 4: organization.v1.ProjectNamespace.created_at:type_name -> organization.v1.Timestamp
+	0,  // 5: organization.v1.ProjectService.ListProjects:input_type -> organization.v1.ListProjectsRequest
+	2,  // 6: organization.v1.ProjectService.GetProject:input_type -> organization.v1.GetProjectRequest
+	5,  // 7: organization.v1.ProjectService.CreateProject:input_type -> organization.v1.CreateProjectRequest
+	7,  // 8: organization.v1.ProjectService.UpdateProject:input_type -> organization.v1.UpdateProjectRequest
+	8,  // 9: organization.v1.ProjectService.DeleteProject:input_type -> organization.v1.DeleteProjectRequest
+	9,  // 10: organization.v1.ProjectService.ListProjectNamespaces:input_type -> organization.v1.ListProjectNamespacesRequest
+	1,  // 11: organization.v1.ProjectService.ListProjects:output_type -> organization.v1.ListProjectsResponse
+	3,  // 12: organization.v1.ProjectService.GetProject:output_type -> organization.v1.GetProjectResponse
+	6,  // 13: organization.v1.ProjectService.CreateProject:output_type -> organization.v1.CreateProjectResponse
+	13, // 14: organization.v1.ProjectService.UpdateProject:output_type -> google.protobuf.Empty
+	13, // 15: organization.v1.ProjectService.DeleteProject:output_type -> google.protobuf.Empty
+	10, // 16: organization.v1.ProjectService.ListProjectNamespaces:output_type -> organization.v1.ListProjectNamespacesResponse
+	11, // [11:17] is the sub-list for method output_type
+	5,  // [5:11] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_v1_project_proto_init() }
@@ -550,7 +734,7 @@ func file_v1_project_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_project_proto_rawDesc), len(file_v1_project_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

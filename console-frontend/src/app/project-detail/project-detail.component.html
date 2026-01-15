@@ -1,0 +1,285 @@
+<!-- Error Message -->
+@if (errorMessage()) {
+  <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
+    <app-error-icon class="mr-3 h-5 w-5 shrink-0 text-rose-400 dark:text-rose-500" />
+    <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
+  </div>
+}
+
+<!-- Loading State -->
+@if (isLoading()) {
+  <div class="flex items-center justify-center py-12">
+    <div
+      class="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
+    ></div>
+  </div>
+}
+
+<!-- Content (only show when not loading) -->
+@if (!isLoading() && project()) {
+  <div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+    <!-- Header -->
+    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+      <div class="grid items-center gap-3 lg:grid-cols-2">
+        <div>
+          <h1 class="text-2xl font-bold dark:text-white">
+            {{ project()?.name || 'Unknown project' }}
+          </h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Created {{ formatDate(project()?.createdAt?.value) }}
+          </p>
+        </div>
+
+        <div class="flex gap-2 lg:justify-end">
+          <a routerLink="/projects" class="btn-secondary">Back to projects</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="space-y-6 p-6">
+      <!-- Basics Block -->
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">Project details</h3>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <dl>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Project name</dt>
+            <dd class="mt-1 text-sm dark:text-white">{{ project()?.name }}</dd>
+          </dl>
+          <dl>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Project ID</dt>
+            <dd class="mt-1 font-mono text-sm dark:text-white">{{ project()?.id }}</dd>
+          </dl>
+          <dl>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Created</dt>
+            <dd class="mt-1 text-sm dark:text-white">
+              {{ formatDate(project()?.createdAt?.value) }}
+            </dd>
+          </dl>
+          <dl>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Namespaces</dt>
+            <dd class="mt-1 text-sm dark:text-white">{{ namespaces().length }}</dd>
+          </dl>
+        </div>
+      </div>
+
+      <!-- Namespaces Block -->
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-lg font-medium dark:text-white">Namespaces</h3>
+          <button
+            type="button"
+            (click)="openCreateNamespaceModal()"
+            class="btn-primary inline-flex items-center"
+          >
+            <app-plus-icon class="mr-1.5 h-4 w-4" />
+            Create namespace
+          </button>
+        </div>
+        @if (namespaces().length === 0) {
+          <div class="py-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              No namespaces belong to this project yet.
+            </p>
+          </div>
+        } @else {
+          <div class="space-y-3">
+            @for (namespace of namespaces(); track namespace.id) {
+              <div
+                class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
+              >
+                <div>
+                  <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Cluster: {{ getClusterName(namespace.clusterId) }} &bull; Created {{ formatDate(namespace.createdAt?.value) }}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  (click)="deleteNamespace(namespace.id, namespace.name)"
+                  class="inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white"
+                >
+                  <app-trash-icon class="mr-1.5 h-4 w-4" />
+                  Delete
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Danger Zone -->
+      <div
+        class="rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-900/20"
+      >
+        <h3 class="mb-2 text-lg font-medium text-rose-800 dark:text-rose-200">Danger zone</h3>
+        <p class="mb-4 text-sm text-rose-700 dark:text-rose-300">
+          Deleting a project is permanent and cannot be undone.
+        </p>
+        <button type="button" (click)="showDeleteModal.set(true)" class="btn-remove">
+          Delete this project
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Create Namespace Modal -->
+@if (showCreateNamespaceModal()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      class="w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-950"
+      role="dialog"
+      aria-labelledby="create-namespace-modal-title"
+      aria-modal="true"
+    >
+      <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-950">
+          <h3
+            class="text-lg leading-6 font-semibold text-gray-900 dark:text-white"
+            id="create-namespace-modal-title"
+          >
+            Create namespace
+          </h3>
+
+          <!-- Cluster Selection -->
+          <div class="mt-4">
+            <label
+              for="clusterId"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+            >
+              Cluster
+            </label>
+            @if (isLoadingClusters()) {
+              <div class="flex items-center py-2">
+                <div
+                  class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
+                ></div>
+                <span class="text-sm text-gray-500 dark:text-gray-400">Loading clusters...</span>
+              </div>
+            } @else {
+              <select
+                id="clusterId"
+                formControlName="clusterId"
+                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              >
+                @for (cluster of clusters(); track cluster.id) {
+                  <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
+                }
+              </select>
+              @if (clusters().length === 0) {
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  No clusters available. Create a cluster first.
+                </p>
+              }
+            }
+            @if (
+              namespaceForm.get('clusterId')?.invalid &&
+              (namespaceForm.get('clusterId')?.dirty || namespaceForm.get('clusterId')?.touched)
+            ) {
+              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a cluster.</p>
+            }
+          </div>
+
+          <!-- Namespace Name -->
+          <div class="mt-4">
+            <label
+              for="namespaceName"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+            >
+              Namespace name
+            </label>
+            <input
+              #namespaceNameInput
+              id="namespaceName"
+              formControlName="name"
+              type="text"
+              placeholder="e.g. my-namespace"
+              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            />
+            @if (
+              namespaceForm.get('name')?.invalid &&
+              (namespaceForm.get('name')?.dirty || namespaceForm.get('name')?.touched)
+            ) {
+              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
+            }
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 dark:bg-gray-900">
+          <button
+            type="button"
+            (click)="showCreateNamespaceModal.set(false)"
+            class="btn-secondary mr-3"
+            [disabled]="isCreatingNamespace()"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="isCreatingNamespace() || !namespaceForm.valid"
+          >
+            @if (isCreatingNamespace()) {
+              Creating...
+            } @else {
+              Create namespace
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Delete Project Modal -->
+@if (showDeleteModal()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      class="w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-950"
+      role="dialog"
+      aria-labelledby="delete-modal-title"
+      aria-modal="true"
+    >
+      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-950">
+        <div class="sm:flex sm:items-start">
+          <div
+            class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+          >
+            <app-warning-icon class="h-6 w-6 text-rose-600 dark:text-rose-400" />
+          </div>
+          <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+            <h3
+              class="text-lg leading-6 font-semibold text-gray-900 dark:text-white"
+              id="delete-modal-title"
+            >
+              Delete project
+            </h3>
+            <div class="mt-2">
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Are you sure you want to delete project
+                <span class="font-semibold text-gray-900 dark:text-white">{{
+                  project()?.name
+                }}</span
+                >?
+              </p>
+              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">This cannot be undone.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 dark:bg-gray-900">
+        <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary mr-3">
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          (click)="deleteProject()"
+          class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+        >
+          Yes, delete this project
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -47,6 +47,7 @@
     "@angular/cli": "^21.0.5",
     "@angular/compiler-cli": "^21.0.7",
     "@bufbuild/buf": "^1.63.0",
+    "@bufbuild/protoc-gen-es": "^2.10.2",
     "@connectrpc/connect": "^2.1.1",
     "@connectrpc/connect-web": "^2.1.1",
     "@connectrpc/protoc-gen-connect-es": "^1.7.0",

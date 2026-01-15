@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="14"
+<dbmodel pgmodeler-ver="2.0.0-alpha" use-changelog="false" max-obj-count="14"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="271,255" last-zoom="1" scene-rect="0,0,2058.81,1839.52"
+	 last-position="252,70" last-zoom="1" scene-rect="0,0,2058.81,1839.52"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -83,7 +83,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
-<table name="namespaces" layers="0" collapse-mode="1" max-obj-count="7" z-value="0">
+<table name="namespaces" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="postgres"/>
 	<position x="1680" y="380"/>
@@ -401,6 +401,14 @@ END;]]> </definition>
 
 <policy name="projects_organization_isolation" table="tenant.projects" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid]]> </expression>
+</policy>
+
+<policy name="namespaces_organization_policy" table="tenant.namespaces" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (
+    SELECT 1 FROM clusters
+    WHERE clusters.id = namespaces.cluster_id
+    AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
+)]]> </expression>
 </policy>
 
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"

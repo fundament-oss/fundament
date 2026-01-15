@@ -1,144 +1,75 @@
-<div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
-  <!-- Header -->
-  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-    <h1 class="text-2xl font-bold dark:text-white">Projects</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-      Projects are used to group clusters and to keep deployments within clusters apart. Each
-      project can correspond to one or more namespaces.
-    </p>
+<!-- Error Message -->
+@if (errorMessage()) {
+  <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
+    <app-error-icon class="mr-3 h-5 w-5 shrink-0 text-rose-400 dark:text-rose-500" />
+    <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
   </div>
+}
 
-  <!-- Form -->
-  <form [formGroup]="projectsForm" (ngSubmit)="onSubmit()" class="space-y-6 px-6 py-6">
-    <!-- Projects Section -->
-    <div formArrayName="projects">
-      <h3 class="mb-4 text-lg font-medium dark:text-white">Projects</h3>
+<!-- Loading State -->
+@if (isLoading()) {
+  <div class="flex items-center justify-center py-12">
+    <div
+      class="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
+    ></div>
+  </div>
+}
 
-      @for (projectControl of projects.controls; track projectControl; let projectIndex = $index) {
-        @let projectNameControl = projectControl.get('name');
-        <div
-          [formGroupName]="projectIndex"
-          class="mb-6 rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
-        >
-          <!-- Project Name -->
-          <div class="mb-4">
-            <label
-              [for]="'projectName-' + projectIndex"
-              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-            >
-              Project name
-            </label>
-            <div class="flex space-x-2">
-              <input
-                #projectNameInput
-                [id]="'projectName-' + projectIndex"
-                formControlName="name"
-                type="text"
-                placeholder="E.g. my-project"
-              />
+<!-- Content (only show when not loading) -->
+@if (!isLoading()) {
+  <div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+    <!-- Header -->
+    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+      <h1 class="text-2xl font-bold dark:text-white">Projects</h1>
+    </div>
 
-              @if (projects.length > 1) {
-                <button
-                  type="button"
-                  (click)="removeProject(projectIndex)"
-                  class="btn-remove shrink-0"
-                >
-                  <app-trash-icon class="mr-1.5 h-4 w-4" />
-                  Remove project
-                </button>
-              }
-            </div>
-
-            @if (
-              projectNameControl?.invalid &&
-              (projectNameControl?.dirty || projectNameControl?.touched)
-            ) {
-              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
-                {{ getProjectNameError(projectIndex) }}
-              </p>
-            }
-          </div>
-
-          <!-- Namespaces -->
-          <div formArrayName="namespaces">
-            <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-white">Namespaces</h4>
-
-            @for (
-              namespaceControl of getNamespaces(projectIndex).controls;
-              track namespaceControl;
-              let namespaceIndex = $index
-            ) {
-              @let namespaceNameControl = namespaceControl.get('name');
-              <div [formGroupName]="namespaceIndex" class="mb-4">
-                <div class="flex flex-wrap items-center gap-2">
-                  <div class="flex grow items-center">
-                    <select
-                      [id]="'cluster-' + projectIndex + '-' + namespaceIndex"
-                      formControlName="cluster"
-                      class="rounded-r-none!"
-                    >
-                      @for (name of clusterNames; track name) {
-                        <option [value]="name">{{ name }}</option>
-                      }
-                    </select>
-                    <div
-                      class="flex items-center self-stretch justify-self-center border-t border-b border-gray-300 bg-gray-100 px-2 whitespace-nowrap text-gray-500 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400"
-                    >
-                      --
-                    </div>
-                    <input
-                      [id]="'namespace-' + projectIndex + '-' + namespaceIndex"
-                      class="rounded-l-none!"
-                      formControlName="name"
-                      type="text"
-                      placeholder="E.g. my-namespace"
-                    />
-                  </div>
-
-                  @if (getNamespaces(projectIndex).length > 1) {
-                    <button
-                      type="button"
-                      (click)="removeNamespace(projectIndex, namespaceIndex)"
-                      class="inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-4 py-2 text-sm font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white"
-                    >
-                      <app-trash-icon class="mr-1.5 h-4 w-4" /> Remove
-                    </button>
-                  }
-                </div>
-
-                @if (
-                  namespaceNameControl?.invalid &&
-                  (namespaceNameControl?.dirty || namespaceNameControl?.touched)
-                ) {
-                  <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
-                    {{ getNamespaceNameError(projectIndex, namespaceIndex) }}
-                  </p>
-                }
-              </div>
-            }
-
-            <button
-              type="button"
-              (click)="addNamespace(projectIndex)"
-              class="btn-light inline-flex items-center"
-            >
-              <app-plus-icon class="mr-1.5 h-4 w-4" />
-              Add another namespace
-            </button>
-          </div>
-        </div>
-      }
-
+    <!-- Content -->
+    <div class="p-6">
       <!-- Add Project Button -->
-      <button type="button" (click)="addProject()" class="btn-light inline-flex items-center">
-        <app-plus-icon class="mr-1.5 h-4 w-4" />
-        Add another project
-      </button>
-    </div>
+      <div class="mb-6">
+        <a routerLink="/projects/add" class="btn-primary inline-flex items-center">
+          <app-plus-icon class="mr-1.5 h-4 w-4" />
+          Add project
+        </a>
+      </div>
 
-    <!-- Form Actions -->
-    <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-      <button type="submit" class="btn-primary">Save changes</button>
+      <!-- Projects List -->
+      <div class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+        @if (projects().length === 0) {
+          <div class="px-6 py-12 text-center">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              No projects found. Create your first project to get started.
+            </p>
+          </div>
+        } @else {
+          @for (project of projects(); track project.id) {
+            <a
+              [routerLink]="['/projects', project.id]"
+              class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-900"
+            >
+              <div>
+                <h3 class="font-medium dark:text-white">{{ project.name }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Created {{ formatDate(project.createdAt?.value) }}
+                </p>
+              </div>
+              <svg
+                class="h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </a>
+          }
+        }
+      </div>
     </div>
-  </form>
-</div>
+  </div>
+}

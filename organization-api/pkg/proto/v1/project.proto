@@ -23,6 +23,9 @@ service ProjectService {
 
   // Delete a project
   rpc DeleteProject(DeleteProjectRequest) returns (google.protobuf.Empty);
+
+  // List all namespaces belonging to a project
+  rpc ListProjectNamespaces(ListProjectNamespacesRequest) returns (ListProjectNamespacesResponse);
 }
 
 // List projects request
@@ -69,4 +72,22 @@ message UpdateProjectRequest {
 // Delete project request
 message DeleteProjectRequest {
   string project_id = 10;
+}
+
+// List project namespaces request
+message ListProjectNamespacesRequest {
+  string project_id = 10;
+}
+
+// List project namespaces response
+message ListProjectNamespacesResponse {
+  repeated ProjectNamespace namespaces = 10;
+}
+
+// Project namespace information
+message ProjectNamespace {
+  string id = 10;
+  string name = 20;
+  string cluster_id = 30;
+  Timestamp created_at = 40;
 }

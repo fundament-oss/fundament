@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/project.proto.
  */
 export const file_v1_project: GenFile = /*@__PURE__*/
-  fileDesc("ChB2MS9wcm9qZWN0LnByb3RvEg9vcmdhbml6YXRpb24udjEiFQoTTGlzdFByb2plY3RzUmVxdWVzdCJCChRMaXN0UHJvamVjdHNSZXNwb25zZRIqCghwcm9qZWN0cxgKIAMoCzIYLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0IicKEUdldFByb2plY3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYCiABKAkiPwoSR2V0UHJvamVjdFJlc3BvbnNlEikKB3Byb2plY3QYCiABKAsyGC5vcmdhbml6YXRpb24udjEuUHJvamVjdCJTCgdQcm9qZWN0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSLgoKY3JlYXRlZF9hdBgeIAEoCzIaLm9yZ2FuaXphdGlvbi52MS5UaW1lc3RhbXAiJAoUQ3JlYXRlUHJvamVjdFJlcXVlc3QSDAoEbmFtZRgKIAEoCSIrChVDcmVhdGVQcm9qZWN0UmVzcG9uc2USEgoKcHJvamVjdF9pZBgKIAEoCSJGChRVcGRhdGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJEhEKBG5hbWUYFCABKAlIAIgBAUIHCgVfbmFtZSIqChREZWxldGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJMsQDCg5Qcm9qZWN0U2VydmljZRJbCgxMaXN0UHJvamVjdHMSJC5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3RzUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdHNSZXNwb25zZRJVCgpHZXRQcm9qZWN0EiIub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RSZXF1ZXN0GiMub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RSZXNwb25zZRJeCg1DcmVhdGVQcm9qZWN0EiUub3JnYW5pemF0aW9uLnYxLkNyZWF0ZVByb2plY3RSZXF1ZXN0GiYub3JnYW5pemF0aW9uLnYxLkNyZWF0ZVByb2plY3RSZXNwb25zZRJOCg1VcGRhdGVQcm9qZWN0EiUub3JnYW5pemF0aW9uLnYxLlVwZGF0ZVByb2plY3RSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Ek4KDURlbGV0ZVByb2plY3QSJS5vcmdhbml6YXRpb24udjEuRGVsZXRlUHJvamVjdFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCVVpTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjFiBnByb3RvMw", [file_v1_common, file_google_protobuf_empty]);
+  fileDesc("ChB2MS9wcm9qZWN0LnByb3RvEg9vcmdhbml6YXRpb24udjEiFQoTTGlzdFByb2plY3RzUmVxdWVzdCJCChRMaXN0UHJvamVjdHNSZXNwb25zZRIqCghwcm9qZWN0cxgKIAMoCzIYLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0IicKEUdldFByb2plY3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYCiABKAkiPwoSR2V0UHJvamVjdFJlc3BvbnNlEikKB3Byb2plY3QYCiABKAsyGC5vcmdhbml6YXRpb24udjEuUHJvamVjdCJTCgdQcm9qZWN0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSLgoKY3JlYXRlZF9hdBgeIAEoCzIaLm9yZ2FuaXphdGlvbi52MS5UaW1lc3RhbXAiJAoUQ3JlYXRlUHJvamVjdFJlcXVlc3QSDAoEbmFtZRgKIAEoCSIrChVDcmVhdGVQcm9qZWN0UmVzcG9uc2USEgoKcHJvamVjdF9pZBgKIAEoCSJGChRVcGRhdGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJEhEKBG5hbWUYFCABKAlIAIgBAUIHCgVfbmFtZSIqChREZWxldGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJIjIKHExpc3RQcm9qZWN0TmFtZXNwYWNlc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgKIAEoCSJWCh1MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXNwb25zZRI1CgpuYW1lc3BhY2VzGAogAygLMiEub3JnYW5pemF0aW9uLnYxLlByb2plY3ROYW1lc3BhY2UicAoQUHJvamVjdE5hbWVzcGFjZRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhIKCmNsdXN0ZXJfaWQYHiABKAkSLgoKY3JlYXRlZF9hdBgoIAEoCzIaLm9yZ2FuaXphdGlvbi52MS5UaW1lc3RhbXAyvAQKDlByb2plY3RTZXJ2aWNlElsKDExpc3RQcm9qZWN0cxIkLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdHNSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0c1Jlc3BvbnNlElUKCkdldFByb2plY3QSIi5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdFJlcXVlc3QaIy5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdFJlc3BvbnNlEl4KDUNyZWF0ZVByb2plY3QSJS5vcmdhbml6YXRpb24udjEuQ3JlYXRlUHJvamVjdFJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuQ3JlYXRlUHJvamVjdFJlc3BvbnNlEk4KDVVwZGF0ZVByb2plY3QSJS5vcmdhbml6YXRpb24udjEuVXBkYXRlUHJvamVjdFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSTgoNRGVsZXRlUHJvamVjdBIlLm9yZ2FuaXphdGlvbi52MS5EZWxldGVQcm9qZWN0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJ2ChVMaXN0UHJvamVjdE5hbWVzcGFjZXMSLS5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3ROYW1lc3BhY2VzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXNwb25zZUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_v1_common, file_google_protobuf_empty]);
 
 /**
  * List projects request
@@ -199,6 +199,78 @@ export const DeleteProjectRequestSchema: GenMessage<DeleteProjectRequest> = /*@_
   messageDesc(file_v1_project, 8);
 
 /**
+ * List project namespaces request
+ *
+ * @generated from message organization.v1.ListProjectNamespacesRequest
+ */
+export type ListProjectNamespacesRequest = Message<"organization.v1.ListProjectNamespacesRequest"> & {
+  /**
+   * @generated from field: string project_id = 10;
+   */
+  projectId: string;
+};
+
+/**
+ * Describes the message organization.v1.ListProjectNamespacesRequest.
+ * Use `create(ListProjectNamespacesRequestSchema)` to create a new message.
+ */
+export const ListProjectNamespacesRequestSchema: GenMessage<ListProjectNamespacesRequest> = /*@__PURE__*/
+  messageDesc(file_v1_project, 9);
+
+/**
+ * List project namespaces response
+ *
+ * @generated from message organization.v1.ListProjectNamespacesResponse
+ */
+export type ListProjectNamespacesResponse = Message<"organization.v1.ListProjectNamespacesResponse"> & {
+  /**
+   * @generated from field: repeated organization.v1.ProjectNamespace namespaces = 10;
+   */
+  namespaces: ProjectNamespace[];
+};
+
+/**
+ * Describes the message organization.v1.ListProjectNamespacesResponse.
+ * Use `create(ListProjectNamespacesResponseSchema)` to create a new message.
+ */
+export const ListProjectNamespacesResponseSchema: GenMessage<ListProjectNamespacesResponse> = /*@__PURE__*/
+  messageDesc(file_v1_project, 10);
+
+/**
+ * Project namespace information
+ *
+ * @generated from message organization.v1.ProjectNamespace
+ */
+export type ProjectNamespace = Message<"organization.v1.ProjectNamespace"> & {
+  /**
+   * @generated from field: string id = 10;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 20;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string cluster_id = 30;
+   */
+  clusterId: string;
+
+  /**
+   * @generated from field: organization.v1.Timestamp created_at = 40;
+   */
+  createdAt?: Timestamp;
+};
+
+/**
+ * Describes the message organization.v1.ProjectNamespace.
+ * Use `create(ProjectNamespaceSchema)` to create a new message.
+ */
+export const ProjectNamespaceSchema: GenMessage<ProjectNamespace> = /*@__PURE__*/
+  messageDesc(file_v1_project, 11);
+
+/**
  * ProjectService manages projects within an organization
  *
  * @generated from service organization.v1.ProjectService
@@ -253,6 +325,16 @@ export const ProjectService: GenService<{
     methodKind: "unary";
     input: typeof DeleteProjectRequestSchema;
     output: typeof EmptySchema;
+  },
+  /**
+   * List all namespaces belonging to a project
+   *
+   * @generated from rpc organization.v1.ProjectService.ListProjectNamespaces
+   */
+  listProjectNamespaces: {
+    methodKind: "unary";
+    input: typeof ListProjectNamespacesRequestSchema;
+    output: typeof ListProjectNamespacesResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_project, 0);

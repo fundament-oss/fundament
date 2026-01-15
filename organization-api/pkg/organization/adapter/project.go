@@ -46,3 +46,22 @@ func FromProject(p *db.TenantProject) *organizationv1.Project {
 		},
 	}
 }
+
+func FromProjectNamespaces(namespaces []db.TenantNamespace) []*organizationv1.ProjectNamespace {
+	result := make([]*organizationv1.ProjectNamespace, 0, len(namespaces))
+	for i := range namespaces {
+		result = append(result, FromProjectNamespace(&namespaces[i]))
+	}
+	return result
+}
+
+func FromProjectNamespace(ns *db.TenantNamespace) *organizationv1.ProjectNamespace {
+	return &organizationv1.ProjectNamespace{
+		Id:        ns.ID.String(),
+		Name:      ns.Name,
+		ClusterId: ns.ClusterID.String(),
+		CreatedAt: &organizationv1.Timestamp{
+			Value: ns.Created.Time.Format(time.RFC3339),
+		},
+	}
+}

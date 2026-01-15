@@ -2,6 +2,7 @@ import { AuthnService } from '../generated/authn/v1/authn_pb';
 import { OrganizationService } from '../generated/v1/organization_pb';
 import { ClusterService } from '../generated/v1/cluster_pb';
 import { PluginService } from '../generated/v1/plugin_pb';
+import { ProjectService } from '../generated/v1/project_pb';
 import { createClientToken, AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from './connect.module';
 
 // Create an injection token for the Authn service client
@@ -15,3 +16,6 @@ export const CLUSTER = createClientToken(ClusterService, ORGANIZATION_TRANSPORT)
 
 // Create an injection token for the Plugin service client
 export const PLUGIN = createClientToken(PluginService, ORGANIZATION_TRANSPORT);
+
+// Create an injection token for the Project service client
+export const PROJECT = createClientToken(ProjectService, ORGANIZATION_TRANSPORT);
