@@ -1,0 +1,50 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: prediscussion
+
+= FUN-7 User Permissions and Roles
+
+Users gain access by being assigned:
+
+* Permissions, for access in the Fundament systems
+* Roles, for access in a cluster
+
+== Organization Role
+
+Organization member with `role='viewer'`::
+* Read projects
+
+Organization member with `role='admin'`::
+* Write projects
+* Read/Write users
+
+NOTE: Do organization admins automatically have `project admin` permissions? Or should they add themselves as a project member with `role='admin'` first to obtain that permission?
+
+Project member with `role='viewer'`::
+* Read project members
+* Read project namespaces
+* Read project rolebindings
+
+Project member with `role='admin'`::
+* Write project members (also create more admins in the same project)
+* Write project namespaces
+* Write project rolebindings
+
+== Cluster Roles
+
+We need a set of Roles, which can be very simple for now:
+
+* Read deployments/services/pods/etc
+* Write deployments/services/pods/etc
+
+For now we hardcode the list of permissions. We probably want to make this editable, but there is complexity because of the n-m relationship between projects and clusters (where the Role needs to be available). It becomes even more complex when Roles can be added by plugins/bloks.
+
+RoleBindings are added on `{user_id, project_id}`. For now, sync each rolebinding to every namespace within the project.
+
+NOTE: Later we can add a glob/matcher so that rolebindings can be added on specific namespaces, e.g. `{user_id=1, project_id=2, namespace_match="test-*"}`
+
+== Service Accounts
+
+Create a single ServiceAccount for each User. Users can download a KubeConfig with their credentials via API call or Console interface.
