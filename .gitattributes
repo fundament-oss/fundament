@@ -15,3 +15,4 @@
 
 # Package manager generated files (npm)
 *.lock -diff linguist-generated=true
+pnpm-lock.yaml -diff linguist-generated=true
