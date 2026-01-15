@@ -1,0 +1,32 @@
+meta {
+  name: List
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ClusterService/ListClusters
+  body: json
+  auth: inherit
+}
+
+headers {
+  ~Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+script:post-response {
+  // If the response is JSON, you can also parse and extract specific fields
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setVar("clusterId", res.body.clusters[0].id);
+  }
+    
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,11 @@
+meta {
+  name: Logout user
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{authnUrl}}/logout
+  body: none
+  auth: inherit
+}

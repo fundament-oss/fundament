@@ -1,0 +1,24 @@
+meta {
+  name: Create
+  type: grpc
+  seq: 3
+}
+
+grpc {
+  url: {{organizationUrl}}
+  method: /organization.v1.ClusterService/CreateCluster
+  body: grpc
+  auth: inherit
+  methodType: unary
+}
+
+body:grpc {
+  name: message 1
+  content: '''
+    {
+      "name": "velit",
+      "region": "crustulum",
+      "kubernetes_version": "tempore"
+    }
+  '''
+}

@@ -1,0 +1,19 @@
+meta {
+  name: Refresh JWT token
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{authnUrl}}/refresh
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  // If the response is JSON, you can also parse and extract specific fields
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setEnvVar("apiKey", res.body.access_token);
+  }
+    
+}

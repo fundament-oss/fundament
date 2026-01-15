@@ -1,0 +1,27 @@
+meta {
+  name: List
+  type: grpc
+  seq: 1
+}
+
+grpc {
+  url: {{organizationUrl}}
+  method: /organization.v1.ClusterService/ListClusters
+  body: grpc
+  auth: inherit
+  methodType: unary
+}
+
+body:grpc {
+  name: message 1
+  content: '''
+    {}
+  '''
+}
+
+script:pre-request {
+  // If the response is JSON, you can also parse and extract specific fields
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setEnvVar("clusterId", res.body.clusters[0].id);
+  } 
+}

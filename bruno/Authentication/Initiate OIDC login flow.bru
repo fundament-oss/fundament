@@ -1,0 +1,15 @@
+meta {
+  name: Initiate OIDC login flow
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{authnUrl}}/login
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~return_to: 
+}

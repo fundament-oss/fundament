@@ -61,6 +61,8 @@ metadata:
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
     app.kubernetes.io/component: organization-api
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
 spec:
   ingressClassName: {{ $.Values.ingress.className }}
   rules:

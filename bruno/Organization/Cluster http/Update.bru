@@ -1,0 +1,27 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ClusterService/UpdateCluster
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "clusterId": "{{clusterId}}",
+    "kubernetesVersion": "1.29"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
