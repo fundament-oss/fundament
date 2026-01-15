@@ -98,8 +98,8 @@ export class ProjectDetailComponent implements OnInit {
       this.project.set(response.project);
       this.titleService.setTitle(response.project.name);
 
-      // Load namespaces
-      await this.loadNamespaces(projectId);
+      // Load namespaces and clusters
+      await Promise.all([this.loadNamespaces(projectId), this.loadClusters()]);
     } catch (error) {
       console.error('Failed to fetch project:', error);
       this.errorMessage.set(
@@ -135,6 +135,11 @@ export class ProjectDetailComponent implements OnInit {
     } finally {
       this.isLoadingClusters.set(false);
     }
+  }
+
+  getClusterName(clusterId: string): string {
+    const cluster = this.clusters().find(c => c.id === clusterId);
+    return cluster?.name || clusterId;
   }
 
   openCreateNamespaceModal() {

@@ -91,7 +91,7 @@
                 <div>
                   <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
                   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Cluster: {{ namespace.clusterId }} &bull; Created {{ formatDate(namespace.createdAt?.value) }}
+                    Cluster: {{ getClusterName(namespace.clusterId) }} &bull; Created {{ formatDate(namespace.createdAt?.value) }}
                   </p>
                 </div>
                 <button
