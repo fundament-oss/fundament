@@ -15,31 +15,36 @@
       </div>
 
       <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
-        Select cluster(s) to install {{ pluginName }} on:
+        Select cluster(s) to install plugin
+        <strong class="font-semibold">{{ pluginName }}</strong> on:
       </p>
 
       <div class="space-y-2">
-        @for (cluster of clusters; track cluster.id) {
-          <div
-            class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
-          >
-            <span class="text-sm font-medium">{{ cluster.name }}</span>
-            @if (cluster.installed) {
-              <span
-                class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
-              >
-                <app-checkmark-icon class="mr-1 h-3 w-3" /> Installed
-              </span>
-            } @else {
-              <button
-                type="button"
-                (click)="onInstall(cluster.id)"
-                class="cursor-pointer rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-              >
-                Install
-              </button>
-            }
-          </div>
+        @if (clusters.length === 0) {
+          <p class="text-sm text-gray-600 dark:text-gray-400">No clusters found</p>
+        } @else {
+          @for (cluster of clusters; track cluster.id) {
+            <div
+              class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
+            >
+              <span class="text-sm font-medium">{{ cluster.name }}</span>
+              @if (cluster.installed) {
+                <span
+                  class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
+                >
+                  <app-checkmark-icon class="mr-1 h-3 w-3" /> Installed
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  (click)="onInstall(cluster.id)"
+                  class="cursor-pointer rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                >
+                  Install
+                </button>
+              }
+            </div>
+          }
         }
       </div>
 
