@@ -70,7 +70,7 @@
                 formControlName="fullName"
                 placeholder="Enter your full name"
               />
-              @if (fullName?.invalid && (fullName?.dirty || fullName?.touched)) {
+              @if (fullName?.invalid && fullName?.dirty) {
                 <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
                   {{ getFullNameError() }}
                 </p>
@@ -101,8 +101,7 @@
                 placeholder="Enter your current password"
               />
               @if (
-                currentPassword?.invalid && (currentPassword?.dirty || currentPassword?.touched)
-              ) {
+                currentPassword?.invalid && currentPassword?.dirty) {
                 <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
                   {{ getCurrentPasswordError() }}
                 </p>
@@ -125,7 +124,7 @@
               <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Leave empty to keep your current password
               </p>
-              @if (password?.invalid && (password?.dirty || password?.touched)) {
+              @if (password?.invalid && password?.dirty) {
                 <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
                   {{ getPasswordError() }}
                 </p>
