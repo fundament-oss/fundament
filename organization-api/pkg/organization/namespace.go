@@ -2,12 +2,10 @@ package organization
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -28,14 +26,6 @@ func (s *OrganizationServer) ListClusterNamespaces(
 	clusterID, err := uuid.Parse(req.Msg.ClusterId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
-	}
-
-	// Verify cluster exists and belongs to organization (via RLS)
-	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
-		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
 	namespaces, err := s.queries.NamespaceListByClusterID(ctx, db.NamespaceListByClusterIDParams{ClusterID: clusterID})
@@ -73,22 +63,6 @@ func (s *OrganizationServer) CreateNamespace(
 
 	if err := s.validator.Validate(input); err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	// Verify project exists and belongs to organization (via RLS)
-	if _, err := s.queries.ProjectGetByID(ctx, db.ProjectGetByIDParams{ID: projectID}); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
-		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project: %w", err))
-	}
-
-	// Verify cluster exists and belongs to organization (via RLS)
-	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
-		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
 	params := db.NamespaceCreateParams{
@@ -154,14 +128,6 @@ func (s *OrganizationServer) ListProjectNamespaces(
 	projectID, err := uuid.Parse(req.Msg.ProjectId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid project id: %w", err))
-	}
-
-	// Verify project exists and belongs to organization (via RLS)
-	if _, err := s.queries.ProjectGetByID(ctx, db.ProjectGetByIDParams{ID: projectID}); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
-		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project: %w", err))
 	}
 
 	namespaces, err := s.queries.NamespaceListByProjectID(ctx, db.NamespaceListByProjectIDParams{ProjectID: projectID})
