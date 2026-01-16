@@ -1,4 +1,12 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy, viewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  viewChild,
+  ElementRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -313,7 +321,7 @@ export class ClusterOverviewComponent implements OnInit {
   }
 
   getProjectName(projectId: string): string {
-    const project = this.projects().find(p => p.id === projectId);
+    const project = this.projects().find((p) => p.id === projectId);
     return project?.name || projectId;
   }
 

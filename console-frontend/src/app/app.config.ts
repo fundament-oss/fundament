@@ -1,4 +1,9 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideAppInitializer, inject } from '@angular/core';
+import {
+  ApplicationConfig,
+  provideBrowserGlobalErrorListeners,
+  provideAppInitializer,
+  inject,
+} from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';

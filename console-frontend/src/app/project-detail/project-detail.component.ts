@@ -1,4 +1,12 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy, viewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  viewChild,
+  ElementRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -103,7 +111,9 @@ export class ProjectDetailComponent implements OnInit {
     } catch (error) {
       console.error('Failed to fetch project:', error);
       this.errorMessage.set(
-        error instanceof Error ? `Failed to load project: ${error.message}` : 'Failed to load project',
+        error instanceof Error
+          ? `Failed to load project: ${error.message}`
+          : 'Failed to load project',
       );
     } finally {
       this.isLoading.set(false);
@@ -138,7 +148,7 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   getClusterName(clusterId: string): string {
-    const cluster = this.clusters().find(c => c.id === clusterId);
+    const cluster = this.clusters().find((c) => c.id === clusterId);
     return cluster?.name || clusterId;
   }
 
@@ -172,7 +182,9 @@ export class ProjectDetailComponent implements OnInit {
     } catch (error) {
       console.error('Failed to create namespace:', error);
       this.errorMessage.set(
-        error instanceof Error ? `Failed to create namespace: ${error.message}` : 'Failed to create namespace',
+        error instanceof Error
+          ? `Failed to create namespace: ${error.message}`
+          : 'Failed to create namespace',
       );
     } finally {
       this.isCreatingNamespace.set(false);
@@ -193,7 +205,9 @@ export class ProjectDetailComponent implements OnInit {
     } catch (error) {
       console.error('Failed to delete namespace:', error);
       this.errorMessage.set(
-        error instanceof Error ? `Failed to delete namespace: ${error.message}` : 'Failed to delete namespace',
+        error instanceof Error
+          ? `Failed to delete namespace: ${error.message}`
+          : 'Failed to delete namespace',
       );
     }
   }
@@ -215,7 +229,9 @@ export class ProjectDetailComponent implements OnInit {
       console.error('Failed to delete project:', error);
       this.showDeleteModal.set(false);
       this.errorMessage.set(
-        error instanceof Error ? `Failed to delete project: ${error.message}` : 'Failed to delete project',
+        error instanceof Error
+          ? `Failed to delete project: ${error.message}`
+          : 'Failed to delete project',
       );
     }
   }

@@ -63,7 +63,9 @@ export class AddProjectComponent {
     } catch (error) {
       console.error('Failed to create project:', error);
       this.errorMessage.set(
-        error instanceof Error ? `Failed to create project: ${error.message}` : 'Failed to create project',
+        error instanceof Error
+          ? `Failed to create project: ${error.message}`
+          : 'Failed to create project',
       );
     } finally {
       this.isSubmitting.set(false);
