@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -19,7 +19,7 @@ import { firstValueFrom } from 'rxjs';
   imports: [CommonModule, SharedPluginsFormComponent, ErrorIconComponent],
   templateUrl: './cluster-plugins.component.html',
 })
-export class ClusterPluginsComponent {
+export class ClusterPluginsComponent implements OnInit {
   private titleService = inject(TitleService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -28,10 +28,27 @@ export class ClusterPluginsComponent {
   private clusterId = '';
   errorMessage = signal<string | null>(null);
   isSubmitting = signal(false);
+  currentPluginIds = signal<string[]>([]);
 
   constructor() {
     this.titleService.setTitle('Cluster plugins');
     this.clusterId = this.route.snapshot.paramMap.get('id') || '';
+  }
+
+  async ngOnInit() {
+    try {
+      // Fetch current installs for the cluster
+      const listRequest = create(ListInstallsRequestSchema, {
+        clusterId: this.clusterId,
+      });
+      const listResponse = await firstValueFrom(this.client.listInstalls(listRequest));
+      this.currentPluginIds.set(listResponse.installs.map((install) => install.pluginId));
+    } catch (error) {
+      console.error('Failed to load current plugins:', error);
+      this.errorMessage.set(
+        error instanceof Error ? error.message : 'Failed to load current plugins',
+      );
+    }
   }
 
   async onFormSubmit(data: { preset: string; plugins: string[] }) {

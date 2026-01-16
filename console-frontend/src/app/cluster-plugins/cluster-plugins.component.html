@@ -15,7 +15,10 @@
         <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
       </div>
     }
-    <app-shared-plugins-form (formSubmit)="onFormSubmit($event)">
+    <app-shared-plugins-form
+      (formSubmit)="onFormSubmit($event)"
+      [initialPluginIds]="currentPluginIds()"
+    >
       <div class="flex space-x-3">
         <button
           type="button"

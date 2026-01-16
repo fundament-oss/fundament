@@ -68,23 +68,25 @@
   <!-- Plugins Block -->
   <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
     <h3 class="mb-4 text-lg font-medium dark:text-white">Plugins</h3>
-    @if (state().preset || (state().plugins && state().plugins!.length > 0)) {
+    @if (isLoadingPlugins()) {
+      <p class="text-sm text-gray-500 dark:text-gray-400">Loading plugin information...</p>
+    } @else if (state().preset || (state().plugins && state().plugins!.length > 0)) {
       <div class="space-y-2">
         @if (state().preset) {
           <dl>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Preset</dt>
-            <dd class="mt-1 text-sm dark:text-white">{{ state().preset }}</dd>
+            <dd class="mt-1 text-sm dark:text-white">{{ getPresetName(state().preset!) }}</dd>
           </dl>
         }
         @if (state().plugins && state().plugins!.length > 0) {
           <dl>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Selected plugins</dt>
             <dd class="mt-2 flex flex-wrap gap-1">
-              @for (plugin of state().plugins; track plugin) {
+              @for (pluginName of getPluginNames(state().plugins!); track pluginName) {
                 <span
                   class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
                 >
-                  {{ plugin }}
+                  {{ pluginName }}
                 </span>
               }
             </dd>

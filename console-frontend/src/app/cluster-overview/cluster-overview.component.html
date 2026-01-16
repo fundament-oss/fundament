@@ -400,12 +400,26 @@
               <app-edit-icon class="mr-1 h-4 w-4" /> Edit
             </a>
           </h3>
-          <dl>
-            <dt class="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">Preset</dt>
-            <dd class="mb-2 text-sm dark:text-white">{{ clusterData.plugins.preset }}</dd>
-            <dt class="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">Description</dt>
-            <dd class="text-sm dark:text-white">{{ clusterData.plugins.description }}</dd>
-          </dl>
+          @if (isLoadingPlugins()) {
+            <p class="text-sm text-gray-500 dark:text-gray-400">Loading plugins...</p>
+          } @else if (installedPlugins().length > 0) {
+            <dl>
+              <dt class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                Installed plugins ({{ installedPlugins().length }})
+              </dt>
+              <dd class="flex flex-wrap gap-1">
+                @for (plugin of installedPlugins(); track plugin.id) {
+                  <span
+                    class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                  >
+                    {{ plugin.name }}
+                  </span>
+                }
+              </dd>
+            </dl>
+          } @else {
+            <p class="text-sm text-gray-500 dark:text-gray-400">No plugins installed</p>
+          }
         </div>
 
         <!-- Namespaces Block -->
