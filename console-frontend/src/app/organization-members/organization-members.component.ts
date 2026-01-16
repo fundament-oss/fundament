@@ -51,7 +51,7 @@ export class OrganizationMembersComponent {
   ]);
 
   constructor() {
-    this.titleService.setTitle('Organization Members');
+    this.titleService.setTitle('Organization members');
   }
 
   openModal() {

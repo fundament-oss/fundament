@@ -2,21 +2,21 @@
   <!-- Header -->
   <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">
     <div>
-      <h1 class="text-2xl font-bold dark:text-white">Organization Members</h1>
+      <h1 class="text-2xl font-bold dark:text-white">Organization members</h1>
       <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
         Manage who has access to your organization
       </p>
     </div>
     <button (click)="openModal()" class="btn-primary inline-flex items-center">
       <app-plus-icon class="mr-2 h-4 w-4" />
-      Invite User
+      Invite user
     </button>
   </div>
 
   <div class="p-6">
     <!-- Pending Invitations Section -->
     <div class="mb-8">
-      <h2 class="mb-4 text-lg font-semibold dark:text-white">Pending Invitations</h2>
+      <h2 class="mb-4 text-lg font-semibold dark:text-white">Pending invitations</h2>
       <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
         Users who have been invited but haven't signed in yet
       </p>
@@ -64,7 +64,7 @@
           <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No pending invitations</p>
           <button (click)="openModal()" class="btn-primary mt-4 inline-flex items-center">
             <app-plus-icon class="mr-2 h-4 w-4" />
-            Invite your first user
+            Invite your first member
           </button>
         </div>
       }
@@ -72,7 +72,7 @@
 
     <!-- Active Members Section -->
     <div>
-      <h2 class="mb-4 text-lg font-semibold dark:text-white">Active Members</h2>
+      <h2 class="mb-4 text-lg font-semibold dark:text-white">Active members</h2>
       <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
         Users who have signed in to the organization
       </p>
@@ -146,7 +146,7 @@
       (click)="$event.stopPropagation()"
     >
       <div class="mb-4 flex items-center justify-between">
-        <h2 id="modal-title" class="text-xl font-bold dark:text-white">Invite User</h2>
+        <h2 id="modal-title" class="text-xl font-bold dark:text-white">Invite user</h2>
         <button
           (click)="closeModal()"
           class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
@@ -163,7 +163,7 @@
       <form (ngSubmit)="submitInvitation()">
         <div class="mb-4">
           <label for="email" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Email Address
+            Email address
           </label>
           <input
             type="email"
@@ -198,7 +198,7 @@
             Cancel
           </button>
           <button type="submit" class="btn-primary">
-            Send Invitation
+            Send invitation
           </button>
         </div>
       </form>
