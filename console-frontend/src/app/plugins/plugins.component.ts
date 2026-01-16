@@ -1,35 +1,41 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
-import { CheckmarkIconComponent, CloseIconComponent } from '../icons';
+import { CheckmarkIconComponent, QuestionCircleIconComponent } from '../icons';
+import { PLUGIN, CLUSTER } from '../../connect/tokens';
+import { create } from '@bufbuild/protobuf';
+import {
+  ListPluginsRequestSchema,
+  ListPresetsRequestSchema,
+  type Category,
+  type Preset,
+  type Plugin,
+} from '../../generated/v1/plugin_pb';
+import { ListClustersRequestSchema, type ClusterSummary } from '../../generated/v1/cluster_pb';
+import { firstValueFrom } from 'rxjs';
 
-export interface Plugin {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  isOfficial?: boolean;
+// Extended plugin type with presets array (computed from backend data)
+interface PluginWithPresets extends Pick<
+  Plugin,
+  'id' | 'name' | 'description' | 'categories' | 'tags'
+> {
   presets?: string[]; // Array of preset IDs this plugin belongs to
 }
 
-interface Cluster {
-  id: string;
-  name: string;
+// Extended cluster type for UI state
+interface ClusterWithState extends ClusterSummary {
   installed: boolean;
 }
 
-interface Category {
-  id: string;
-  name: string;
+// Extended category type with count for filtering
+interface CategoryWithCount extends Pick<Category, 'id' | 'name'> {
   count: number;
 }
 
-interface Preset {
-  id: string;
-  name: string;
-  description: string;
+// Extended preset type with count for filtering
+interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
   count: number;
 }
 
@@ -41,36 +47,37 @@ interface Preset {
     RouterLink,
     InstallPluginModalComponent,
     CheckmarkIconComponent,
-    CloseIconComponent,
+    QuestionCircleIconComponent,
   ],
   templateUrl: './plugins.component.html',
 })
-export class PluginsComponent {
+export class PluginsComponent implements OnInit {
   private titleService = inject(TitleService);
+  private pluginClient = inject(PLUGIN);
+  private clusterClient = inject(CLUSTER);
 
   selectedCategory = 'all';
   selectedPreset = 'all';
 
   showInstallModal = false;
-  selectedPlugin: Plugin | null = null;
+  selectedPlugin: PluginWithPresets | null = null;
 
-  clusters: Cluster[] = [
-    { id: 'cluster-1', name: 'cluster-1', installed: false },
-    { id: 'cluster-2', name: 'cluster-2', installed: false },
-    { id: 'cluster-3', name: 'cluster-3', installed: false },
-    { id: 'cluster-4', name: 'cluster-4', installed: false },
-  ];
+  isLoading = signal(true);
+  errorMessage = signal<string | null>(null);
 
-  get presets(): Preset[] {
+  clusters: ClusterWithState[] = [];
+
+  get presets(): PresetWithCount[] {
     const presetCounts = new Map<string, number>();
 
     // Count plugins per preset based on current category filter
     this.plugins.forEach((plugin) => {
       const matchesCategory =
-        this.selectedCategory === 'all' || plugin.category === this.selectedCategory;
+        this.selectedCategory === 'all' ||
+        plugin.categories.some((cat) => cat.id === this.selectedCategory);
 
       if (matchesCategory && plugin.presets) {
-        plugin.presets.forEach((presetId) => {
+        plugin.presets.forEach((presetId: string) => {
           presetCounts.set(presetId, (presetCounts.get(presetId) || 0) + 1);
         });
       }
@@ -78,140 +85,80 @@ export class PluginsComponent {
 
     // Count all plugins for 'all' preset
     const allCount = this.plugins.filter(
-      (plugin) => this.selectedCategory === 'all' || plugin.category === this.selectedCategory,
+      (plugin) =>
+        this.selectedCategory === 'all' ||
+        plugin.categories.some((cat) => cat.id === this.selectedCategory),
     ).length;
 
-    return [
+    // Build presets list from backend presets
+    const presets: PresetWithCount[] = [
       { id: 'all', name: 'All presets', description: 'Show all plugins', count: allCount },
-      {
-        id: 'havenplus',
-        name: 'Haven+ preset',
-        description: 'Includes monitoring, logging, security scanning, and backup solutions.',
-        count: presetCounts.get('havenplus') || 0,
-      },
-      {
-        id: 'preset2',
-        name: 'Preset #2',
-        description: 'Some other preset.',
-        count: presetCounts.get('preset2') || 0,
-      },
     ];
+
+    this.backendPresets.forEach((backendPreset) => {
+      presets.push({
+        id: backendPreset.id,
+        name: backendPreset.name,
+        description: backendPreset.description,
+        count: presetCounts.get(backendPreset.id) || 0,
+      });
+    });
+
+    return presets;
   }
 
-  plugins: Plugin[] = [
-    {
-      id: 'alloy',
-      title: 'Alloy',
-      description:
-        'Collects, processes, and sends logs, metrics, and traces (telemetry) to observability tools.',
-      category: 'observability',
-      isOfficial: true,
-      presets: ['havenplus'],
-    },
-    {
-      id: 'cert-manager',
-      title: 'cert-manager',
-      description: 'Automates the requesting and renewal of TLS certificates.',
-      category: 'security',
-      isOfficial: true,
-      presets: ['havenplus'],
-    },
-    {
-      id: 'cloudnative-pg',
-      title: 'Cloudnative-pg',
-      description: 'Manages PostgreSQL clusters on Kubernetes.',
-      category: 'databases',
-      isOfficial: true,
-      presets: ['havenplus'],
-    },
-    {
-      id: 'eck-operator',
-      title: 'ECK operator',
-      description: 'Manages Elasticsearch clusters and associated components within Kubernetes.',
-      category: 'databases',
-      isOfficial: true,
-      presets: ['havenplus'],
-    },
-    {
-      id: 'grafana',
-      title: 'Grafana',
-      description: 'Visualizes metrics, logs, and traces in clear dashboards.',
-      category: 'observability',
-      isOfficial: true,
-      presets: ['havenplus', 'preset2'],
-    },
-    {
-      id: 'istio-gateway',
-      title: 'Istio gateway',
-      description: 'Manages incoming traffic to services via configurable ingress policies.',
-      category: 'networking',
-      isOfficial: true,
-      presets: ['havenplus'],
-    },
-    {
-      id: 'istio',
-      title: 'Istio',
-      description:
-        'Controls service-to-service communication, security, and observability within a service mesh.',
-      category: 'networking',
-      isOfficial: true,
-      presets: ['havenplus'],
-    },
-    {
-      id: 'keycloak',
-      title: 'Keycloak',
-      description:
-        'Provides identity and access management with support for SSO, OpenID Connect, and more.',
-      category: 'security',
-      isOfficial: true,
-      presets: ['havenplus'],
-    },
-    {
-      id: 'loki',
-      title: 'Loki',
-      description: 'Stores log files and makes them searchable.',
-      category: 'observability',
-      isOfficial: true,
-      presets: ['havenplus'],
-    },
-    {
-      id: 'mimir',
-      title: 'Mimir',
-      description: 'Stores time series (metrics) in a scalable way.',
-      category: 'observability',
-      isOfficial: true,
-      presets: ['havenplus'],
-    },
-    {
-      id: 'pinniped',
-      title: 'Pinniped',
-      description:
-        'Provides secure authentication in Kubernetes environments via existing identity providers.',
-      category: 'security',
-      isOfficial: true,
-      presets: ['havenplus', 'preset2'],
-    },
-    {
-      id: 'sealed-secrets',
-      title: 'Sealed secrets',
-      description: 'Enables encrypted secrets to be safely stored in Git.',
-      category: 'security',
-      isOfficial: true,
-      presets: ['havenplus'],
-    },
-    {
-      id: 'tempo',
-      title: 'Tempo',
-      description:
-        'Processes and visualizes tracing data to make dependencies and performance insights clear.',
-      category: 'observability',
-      isOfficial: true,
-      presets: ['havenplus'],
-    },
-  ];
+  plugins: PluginWithPresets[] = [];
+  backendPresets: Preset[] = [];
 
-  get categories(): Category[] {
-    const categoryMap = new Map<string, number>();
+  async ngOnInit() {
+    try {
+      // Fetch plugins, presets, and clusters in parallel
+      const [pluginsResponse, presetsResponse, clustersResponse] = await Promise.all([
+        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
+        firstValueFrom(this.pluginClient.listPresets(create(ListPresetsRequestSchema, {}))),
+        firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
+      ]);
+
+      // Store backend presets
+      this.backendPresets = presetsResponse.presets;
+
+      // Map backend plugins to frontend format and assign presets
+      this.plugins = pluginsResponse.plugins.map((backendPlugin) => {
+        const assignedPresets: string[] = [];
+
+        // Check which presets include this plugin
+        this.backendPresets.forEach((preset) => {
+          if (preset.pluginIds.includes(backendPlugin.id)) {
+            assignedPresets.push(preset.id);
+          }
+        });
+
+        return {
+          id: backendPlugin.id,
+          name: backendPlugin.name,
+          description: backendPlugin.description,
+          categories: backendPlugin.categories,
+          tags: backendPlugin.tags,
+          presets: assignedPresets,
+        };
+      });
+
+      // Map clusters to include UI state
+      this.clusters = clustersResponse.clusters.map((cluster) => ({
+        ...cluster,
+        installed: false,
+      }));
+
+      this.isLoading.set(false);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      this.errorMessage.set(error instanceof Error ? error.message : 'Failed to load data');
+      this.isLoading.set(false);
+    }
+  }
+
+  get categories(): CategoryWithCount[] {
+    const categoryMap = new Map<string, { name: string; count: number }>();
 
     // Count plugins per category based on current preset filter
     this.plugins.forEach((plugin) => {
@@ -220,7 +167,15 @@ export class PluginsComponent {
         (plugin.presets && plugin.presets.includes(this.selectedPreset));
 
       if (matchesPreset) {
-        categoryMap.set(plugin.category, (categoryMap.get(plugin.category) || 0) + 1);
+        // A plugin can have multiple categories
+        plugin.categories.forEach((category) => {
+          const existing = categoryMap.get(category.id);
+          if (existing) {
+            existing.count++;
+          } else {
+            categoryMap.set(category.id, { name: category.name, count: 1 });
+          }
+        });
       }
     });
 
@@ -232,21 +187,16 @@ export class PluginsComponent {
     ).length;
 
     // Create categories array with dynamic counts
-    const categories: Category[] = [{ id: 'all', name: 'All categories', count: allCount }];
+    const categories: CategoryWithCount[] = [
+      { id: 'all', name: 'All categories', count: allCount },
+    ];
 
-    // Add categories based on actual plugin categories
-    const categoryNames: Record<string, string> = {
-      observability: 'Observability',
-      security: 'Security',
-      databases: 'Databases',
-      networking: 'Networking',
-    };
-
-    categoryMap.forEach((count, categoryId) => {
+    // Add categories from the map
+    categoryMap.forEach((value, categoryId) => {
       categories.push({
         id: categoryId,
-        name: categoryNames[categoryId] || categoryId,
-        count: count,
+        name: value.name,
+        count: value.count,
       });
     });
 
@@ -257,16 +207,17 @@ export class PluginsComponent {
     this.titleService.setTitle('Plugins');
   }
 
-  get filteredPlugins(): Plugin[] {
+  get filteredPlugins(): PluginWithPresets[] {
     return this.plugins.filter((plugin) => {
       // Filter by preset
       const matchesPreset =
         this.selectedPreset === 'all' ||
         (plugin.presets && plugin.presets.includes(this.selectedPreset));
 
-      // Filter by category
+      // Filter by category (plugin can be in multiple categories)
       const matchesCategory =
-        this.selectedCategory === 'all' || plugin.category === this.selectedCategory;
+        this.selectedCategory === 'all' ||
+        plugin.categories.some((cat) => cat.id === this.selectedCategory);
 
       return matchesPreset && matchesCategory;
     });
@@ -285,7 +236,7 @@ export class PluginsComponent {
     return category?.name || '';
   }
 
-  onInstallPlugin(plugin: Plugin) {
+  onInstallPlugin(plugin: PluginWithPresets) {
     this.selectedPlugin = plugin;
     this.showInstallModal = true;
   }

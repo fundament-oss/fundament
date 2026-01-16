@@ -11,6 +11,7 @@ export { ErrorIconComponent } from './error-icon.component';
 export { CheckmarkIconComponent } from './checkmark-icon.component';
 export { ArrowRightIconComponent } from './arrow-right-icon.component';
 export { InfoCircleIconComponent } from './info-circle-icon.component';
+export { QuestionCircleIconComponent } from './question-circle-icon.component';
 export { ChevronDownIconComponent } from './chevron-down-icon.component';
 export { ChevronRightIconComponent } from './chevron-right-icon.component';
 export { ExternalLinkIconComponent } from './external-link-icon.component';
