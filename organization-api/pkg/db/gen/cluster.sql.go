@@ -44,7 +44,7 @@ VALUES ($1, 'sync_requested', $2)
 
 type ClusterCreateSyncRequestedEventParams struct {
 	ClusterID  uuid.UUID
-	SyncAction pgtype.Text
+	SyncAction NullTenantClusterSyncAction
 }
 
 // Insert sync_requested event when cluster is created/updated.
@@ -124,7 +124,7 @@ const clusterGetEvents = `-- name: ClusterGetEvents :many
 SELECT id, cluster_id, event_type, created, sync_action, message, attempt
 FROM tenant.cluster_events
 WHERE cluster_id = $1
-ORDER BY created DESC
+ORDER BY created DESC, id DESC
 LIMIT $2
 `
 

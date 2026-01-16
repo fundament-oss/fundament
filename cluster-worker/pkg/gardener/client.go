@@ -77,6 +77,7 @@ const hashSuffixLength = 8
 
 // ShootName returns the Gardener Shoot name for a cluster.
 // Format: {organization}-{cluster}
+// Note: Cannot use double-dash because Gardener names may not contain two consecutive hyphens.
 // If the combined name exceeds maxLen, it returns a shortened version in the
 // format: {prefix}-{hash} where the prefix is as much of the original name
 // as fits within the limit.
@@ -99,6 +100,11 @@ func ShootName(organizationName, clusterName string, maxLen int) string {
 	prefix := fullName
 	if len(prefix) > prefixLen {
 		prefix = prefix[:prefixLen]
+	}
+
+	// Trim trailing hyphens to avoid consecutive hyphens (Gardener validation)
+	for len(prefix) > 0 && prefix[len(prefix)-1] == '-' {
+		prefix = prefix[:len(prefix)-1]
 	}
 
 	return prefix + "-" + hashStr

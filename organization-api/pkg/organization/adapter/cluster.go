@@ -62,10 +62,7 @@ func FromClusterDetail(c *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
 		CreatedAt: &organizationv1.Timestamp{
 			Value: c.Created.Time.Format(time.RFC3339),
 		},
-		ResourceUsage: nil, // Stub
-		NodePools:     nil, // Stub
-		Members:       nil, // Stub
-		Projects:      nil, // Stub
+		ResourceUsage: nil, // Stub: would come from actual cluster metrics
 		SyncState:     FromSyncState(c.Synced, c.SyncError, c.SyncAttempts, c.ShootStatus, c.ShootStatusMessage, c.ShootStatusUpdated),
 	}
 }
@@ -184,12 +181,13 @@ func FromClusterEvents(events []db.TenantClusterEvent) []*organizationv1.Cluster
 func FromClusterEvent(e *db.TenantClusterEvent) *organizationv1.ClusterEvent {
 	event := &organizationv1.ClusterEvent{
 		Id:        e.ID.String(),
-		EventType: e.EventType,
+		EventType: string(e.EventType),
 		CreatedAt: &organizationv1.Timestamp{Value: e.Created.Time.Format(time.RFC3339)},
 	}
 
 	if e.SyncAction.Valid {
-		event.SyncAction = &e.SyncAction.String
+		s := string(e.SyncAction.TenantClusterSyncAction)
+		event.SyncAction = &s
 	}
 	if e.Message.Valid {
 		event.Message = &e.Message.String

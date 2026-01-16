@@ -8,6 +8,10 @@ sql:
         package: "db"
         out: "gen"
         sql_package: "pgx/v5"
+        query_parameter_limit: 0
+        omit_unused_structs: true
+        output_db_file_name: "db.sqlc.go"
+        output_models_file_name: "models.sqlc.go"
         overrides:
           - db_type: "uuid"
             go_type:

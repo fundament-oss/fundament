@@ -25,8 +25,8 @@ type StatusWorker struct {
 
 // StatusConfig holds configuration for the status poller.
 type StatusConfig struct {
-	PollInterval time.Duration // How often to poll (e.g., 30s)
-	BatchSize    int32         // Max clusters to check per poll cycle (e.g., 50)
+	PollInterval time.Duration `env:"POLL_INTERVAL" envDefault:"30s"` // How often to poll
+	BatchSize    int32         `env:"BATCH_SIZE" envDefault:"50"`     // Max clusters to check per poll cycle
 }
 
 // NewStatusWorker creates a new StatusWorker.
@@ -67,7 +67,9 @@ func (p *StatusWorker) pollBatch(ctx context.Context) {
 }
 
 func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
-	clusters, err := p.queries.ClusterListNeedingStatusCheck(ctx, p.cfg.BatchSize)
+	clusters, err := p.queries.ClusterListNeedingStatusCheck(ctx, db.ClusterListNeedingStatusCheckParams{
+		LimitCount: p.cfg.BatchSize,
+	})
 	if err != nil {
 		p.logger.Error("failed to list clusters for status check", "error", err)
 		return
@@ -111,12 +113,12 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 
 		// Create events only for milestone state changes
 		if newStatus != oldStatus {
-			var eventType string
+			var eventType db.TenantClusterEventType
 			switch newStatus {
 			case gardener.StatusReady:
-				eventType = "status_ready"
+				eventType = db.TenantClusterEventTypeStatusReady
 			case gardener.StatusError:
-				eventType = "status_error"
+				eventType = db.TenantClusterEventTypeStatusError
 				// Note: status_deleted is handled in pollDeletedClusters
 			}
 
@@ -149,7 +151,9 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 }
 
 func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
-	clusters, err := p.queries.ClusterListDeletedNeedingVerification(ctx, p.cfg.BatchSize)
+	clusters, err := p.queries.ClusterListDeletedNeedingVerification(ctx, db.ClusterListDeletedNeedingVerificationParams{
+		LimitCount: p.cfg.BatchSize,
+	})
 	if err != nil {
 		p.logger.Error("failed to list deleted clusters for verification", "error", err)
 		return
@@ -196,7 +200,7 @@ func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 			// Create status_deleted event
 			if _, err := p.queries.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
 				ClusterID: cluster.ID,
-				EventType: "status_deleted",
+				EventType: db.TenantClusterEventTypeStatusDeleted,
 				Message:   pgtype.Text{String: "Shoot confirmed deleted", Valid: true},
 			}); err != nil {
 				p.logger.Warn("failed to create status_deleted event",

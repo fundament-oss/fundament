@@ -36,7 +36,7 @@ WHERE id = $1 AND deleted IS NULL;
 SELECT id, cluster_id, event_type, created, sync_action, message, attempt
 FROM tenant.cluster_events
 WHERE cluster_id = $1
-ORDER BY created DESC
+ORDER BY created DESC, id DESC
 LIMIT $2;
 
 -- name: ClusterCreateSyncRequestedEvent :exec

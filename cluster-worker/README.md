@@ -77,6 +77,7 @@ sequenceDiagram
     User->>Frontend: Create/Update/Delete cluster
     Frontend->>API: POST/PUT/DELETE /clusters
     API->>DB: INSERT/UPDATE tenant.clusters
+    API->>DB: INSERT cluster_events (sync_requested)
 
     Note over DB: Trigger fires
     DB->>DB: SET synced = NULL on clusters row
@@ -84,7 +85,7 @@ sequenceDiagram
 
     Worker->>DB: Claim with visibility timeout
     DB-->>Worker: Claimed cluster row
-    Worker->>DB: INSERT cluster_events (sync_requested)
+    Worker->>DB: INSERT cluster_events (sync_claimed)
 
     alt Cluster created/updated
         Worker->>Gardener: ApplyShoot(manifest)
@@ -96,7 +97,7 @@ sequenceDiagram
 
     alt Success
         Worker->>DB: synced = now(), clear claim
-        Worker->>DB: INSERT cluster_events (sync_completed)
+        Worker->>DB: INSERT cluster_events (sync_submitted)
     else Error
         Worker->>DB: sync_error = msg, sync_attempts++
         Worker->>DB: INSERT cluster_events (sync_failed)
@@ -106,8 +107,11 @@ sequenceDiagram
 
     loop Every 30s
         Worker->>Gardener: GetShootStatus(clusters...)
-        Gardener-->>Worker: Status (progressing/ready/error)
+        Gardener-->>Worker: Status (progressing/ready/error/deleted)
         Worker->>DB: UPDATE shoot_status, shoot_status_message
+        opt Status changed to ready/error/deleted
+            Worker->>DB: INSERT cluster_events (status_ready/status_error/status_deleted)
+        end
     end
 
     User->>Frontend: View cluster status
@@ -197,7 +201,6 @@ Run the complete stack with local Gardener:
 just cluster-start
 
 # 2. Start local Gardener + configure secrets (first time ~15 min)
-# (requires just dev to have been run before to setup namespace)
 just local-gardener
 
 # 3. Deploy all services with local Gardener mode
@@ -210,7 +213,7 @@ open http://console.127.0.0.1.nip.io:8080
 cd cluster-worker && just create-test-cluster t1
 
 # Watch progress:
-cd cluster-worker && just logs.           # cluster-worker logs
+cd cluster-worker && just logs            # cluster-worker logs
 cd cluster-worker && just watch-shoots    # shoots in Gardener
 cd cluster-worker && just gardener-status # overall status
 ```

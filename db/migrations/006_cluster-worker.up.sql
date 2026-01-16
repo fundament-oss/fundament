@@ -1,6 +1,10 @@
 SET SESSION statement_timeout = 3000;
 SET SESSION lock_timeout = 3000;
 
+CREATE TYPE "tenant"."cluster_event_type" AS ENUM ('sync_requested', 'sync_claimed', 'sync_submitted', 'sync_failed', 'status_ready', 'status_error', 'status_deleted');
+
+CREATE TYPE "tenant"."cluster_sync_action" AS ENUM ('create', 'update', 'delete');
+
 /* Hazards:
  - HAS_UNTRACKABLE_DEPENDENCIES: Dependencies, i.e. other functions used in the function body, of non-sql functions cannot be tracked. As a result, we cannot guarantee that function dependencies are ordered properly relative to this statement. For adds, this means you need to ensure that all functions this function depends on are created/altered before this statement.
 */
@@ -38,14 +42,12 @@ $function$
 CREATE TABLE "tenant"."cluster_events" (
 	"id" uuid DEFAULT uuidv7() NOT NULL,
 	"cluster_id" uuid NOT NULL,
-	"event_type" text COLLATE "pg_catalog"."default" NOT NULL,
+	"event_type" tenant.cluster_event_type NOT NULL,
 	"created" timestamp with time zone DEFAULT now() NOT NULL,
-	"sync_action" text COLLATE "pg_catalog"."default",
+	"sync_action" tenant.cluster_sync_action,
 	"message" text COLLATE "pg_catalog"."default",
 	"attempt" integer
 );
-
-ALTER TABLE "tenant"."cluster_events" ADD CONSTRAINT "cluster_events_ck_event_type" CHECK((event_type = ANY (ARRAY['sync_requested'::text, 'sync_claimed'::text, 'sync_submitted'::text, 'sync_failed'::text, 'status_ready'::text, 'status_error'::text, 'status_deleted'::text])));
 
 CREATE POLICY "cluster_events_organization_isolation" ON "tenant"."cluster_events"
 	AS PERMISSIVE

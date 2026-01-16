@@ -5,16 +5,109 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type TenantClusterEventType string
+
+const (
+	TenantClusterEventTypeSyncRequested TenantClusterEventType = "sync_requested"
+	TenantClusterEventTypeSyncClaimed   TenantClusterEventType = "sync_claimed"
+	TenantClusterEventTypeSyncSubmitted TenantClusterEventType = "sync_submitted"
+	TenantClusterEventTypeSyncFailed    TenantClusterEventType = "sync_failed"
+	TenantClusterEventTypeStatusReady   TenantClusterEventType = "status_ready"
+	TenantClusterEventTypeStatusError   TenantClusterEventType = "status_error"
+	TenantClusterEventTypeStatusDeleted TenantClusterEventType = "status_deleted"
+)
+
+func (e *TenantClusterEventType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TenantClusterEventType(s)
+	case string:
+		*e = TenantClusterEventType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TenantClusterEventType: %T", src)
+	}
+	return nil
+}
+
+type NullTenantClusterEventType struct {
+	TenantClusterEventType TenantClusterEventType
+	Valid                  bool // Valid is true if TenantClusterEventType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTenantClusterEventType) Scan(value interface{}) error {
+	if value == nil {
+		ns.TenantClusterEventType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TenantClusterEventType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTenantClusterEventType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TenantClusterEventType), nil
+}
+
+type TenantClusterSyncAction string
+
+const (
+	TenantClusterSyncActionCreate TenantClusterSyncAction = "create"
+	TenantClusterSyncActionUpdate TenantClusterSyncAction = "update"
+	TenantClusterSyncActionDelete TenantClusterSyncAction = "delete"
+)
+
+func (e *TenantClusterSyncAction) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TenantClusterSyncAction(s)
+	case string:
+		*e = TenantClusterSyncAction(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TenantClusterSyncAction: %T", src)
+	}
+	return nil
+}
+
+type NullTenantClusterSyncAction struct {
+	TenantClusterSyncAction TenantClusterSyncAction
+	Valid                   bool // Valid is true if TenantClusterSyncAction is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTenantClusterSyncAction) Scan(value interface{}) error {
+	if value == nil {
+		ns.TenantClusterSyncAction, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TenantClusterSyncAction.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTenantClusterSyncAction) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TenantClusterSyncAction), nil
+}
+
 type TenantClusterEvent struct {
 	ID         uuid.UUID
 	ClusterID  uuid.UUID
-	EventType  string
+	EventType  TenantClusterEventType
 	Created    pgtype.Timestamptz
-	SyncAction pgtype.Text
+	SyncAction NullTenantClusterSyncAction
 	Message    pgtype.Text
 	Attempt    pgtype.Int4
 }
