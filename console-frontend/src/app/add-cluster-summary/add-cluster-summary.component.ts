@@ -139,7 +139,7 @@ export class AddClusterSummaryComponent implements OnInit {
       this.stateService.reset();
 
       // Set toast message
-      this.toastService.info('Your cluster is being provisioned. This may take a few minutes.');
+      this.toastService.success('Your cluster is being provisioned. This may take a few minutes.');
 
       // Navigate to the cluster detail page
       this.router.navigate(['/clusters', response.clusterId]);

@@ -155,7 +155,7 @@
 <!-- Install Modal -->
 <app-install-plugin-modal
   [pluginName]="selectedPlugin?.name || ''"
-  [clusters]="clusters"
+  [clusters]="clustersForModal"
   [show]="showInstallModal"
   (closeModal)="closeInstallModal()"
   (install)="onInstallOnCluster($event)"

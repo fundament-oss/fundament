@@ -175,7 +175,9 @@ export class PluginDetailsComponent implements OnInit {
         clusters.map((c) => (c.id === clusterId ? { ...c, installed: true } : c)),
       );
 
-      this.toastService.success(`${this.plugin()?.name} installed on ${cluster.name}`);
+      this.toastService.success(
+        `Plugin ${this.plugin()?.name} installed on cluster ${cluster.name}`,
+      );
     } catch (error) {
       console.error('Failed to install plugin:', error);
       this.toastService.error(error instanceof Error ? error.message : 'Failed to install plugin');

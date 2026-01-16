@@ -17,8 +17,16 @@ import {
   type Preset,
   type Plugin,
 } from '../../generated/v1/plugin_pb';
-import { ListClustersRequestSchema, type ClusterSummary } from '../../generated/v1/cluster_pb';
+import {
+  ListClustersRequestSchema,
+  ListInstallsRequestSchema,
+  AddInstallRequestSchema,
+  InstallSchema,
+  type ClusterSummary,
+  type Install,
+} from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
+import { ToastService } from '../toast.service';
 
 // Extended plugin type with presets array (computed from backend data)
 interface PluginWithPresets extends Pick<
@@ -31,6 +39,11 @@ interface PluginWithPresets extends Pick<
 // Extended cluster type for UI state
 interface ClusterWithState extends ClusterSummary {
   installed: boolean;
+}
+
+// Extended install type with cluster ID
+interface InstallWithCluster extends Install {
+  clusterId: string;
 }
 
 // Extended category type with count for filtering
@@ -60,6 +73,7 @@ export class PluginsComponent implements OnInit {
   private titleService = inject(TitleService);
   private pluginClient = inject(PLUGIN);
   private clusterClient = inject(CLUSTER);
+  private toastService = inject(ToastService);
 
   selectedCategory = 'all';
   selectedPreset = 'all';
@@ -70,7 +84,8 @@ export class PluginsComponent implements OnInit {
   isLoading = signal(true);
   errorMessage = signal<string | null>(null);
 
-  clusters: ClusterWithState[] = [];
+  clusters: ClusterSummary[] = [];
+  installs: InstallWithCluster[] = [];
 
   get presets(): PresetWithCount[] {
     const presetCounts = new Map<string, number>();
@@ -148,11 +163,27 @@ export class PluginsComponent implements OnInit {
         };
       });
 
-      // Map clusters to include UI state
-      this.clusters = clustersResponse.clusters.map((cluster) => ({
-        ...cluster,
-        installed: false,
-      }));
+      // Store clusters
+      this.clusters = clustersResponse.clusters;
+
+      // Fetch installs for all clusters
+      const installsPromises = clustersResponse.clusters.map((cluster) =>
+        firstValueFrom(
+          this.clusterClient.listInstalls(
+            create(ListInstallsRequestSchema, { clusterId: cluster.id }),
+          ),
+        ).then((response) => ({
+          clusterId: cluster.id,
+          installs: response.installs,
+        })),
+      );
+
+      const installsResponses = await Promise.all(installsPromises);
+
+      // Flatten all installs and augment with cluster ID
+      this.installs = installsResponses.flatMap(({ clusterId, installs }) =>
+        installs.map((install) => ({ ...install, clusterId })),
+      );
 
       this.isLoading.set(false);
     } catch (error) {
@@ -241,6 +272,21 @@ export class PluginsComponent implements OnInit {
     return category?.name || '';
   }
 
+  // Get clusters with install state for the selected plugin
+  get clustersForModal(): ClusterWithState[] {
+    if (!this.selectedPlugin) {
+      return [];
+    }
+
+    return this.clusters.map((cluster) => ({
+      ...cluster,
+      installed: this.installs.some(
+        (install) =>
+          install.clusterId === cluster.id && install.pluginId === this.selectedPlugin!.id,
+      ),
+    }));
+  }
+
   onInstallPlugin(plugin: PluginWithPresets) {
     this.selectedPlugin = plugin;
     this.showInstallModal = true;
@@ -251,10 +297,45 @@ export class PluginsComponent implements OnInit {
     this.selectedPlugin = null;
   }
 
-  onInstallOnCluster(clusterId: string): void {
+  async onInstallOnCluster(clusterId: string): Promise<void> {
     const cluster = this.clusters.find((c) => c.id === clusterId);
-    if (cluster && !cluster.installed) {
-      cluster.installed = true;
+    if (!cluster || !this.selectedPlugin) {
+      return;
+    }
+
+    // Check if already installed
+    const alreadyInstalled = this.installs.some(
+      (install) => install.clusterId === clusterId && install.pluginId === this.selectedPlugin!.id,
+    );
+    if (alreadyInstalled) {
+      return;
+    }
+
+    try {
+      // Call the API to install the plugin
+      const request = create(AddInstallRequestSchema, {
+        clusterId: clusterId,
+        pluginId: this.selectedPlugin.id,
+      });
+
+      const response = await firstValueFrom(this.clusterClient.addInstall(request));
+
+      // Add the new install to the local state (augmented with clusterId)
+      const newInstall: InstallWithCluster = {
+        ...create(InstallSchema, {
+          id: response.installId,
+          pluginId: this.selectedPlugin.id,
+        }),
+        clusterId: clusterId,
+      };
+      this.installs.push(newInstall);
+
+      this.toastService.success(
+        `Plugin ${this.selectedPlugin.name} installed on cluster ${cluster.name}`,
+      );
+    } catch (error) {
+      console.error('Failed to install plugin:', error);
+      this.toastService.error(error instanceof Error ? error.message : 'Failed to install plugin');
     }
   }
 
