@@ -63,7 +63,7 @@
             <!-- Plugin Card Actions -->
             <div class="px-6 pb-6">
               <div class="flex space-x-3">
-                <a class="btn-secondary flex-1 text-center" routerLink="/plugins/details">
+                <a class="btn-secondary flex-1 text-center" [routerLink]="['/plugins', plugin.id]">
                   Details
                 </a>
                 <button (click)="onInstallPlugin(plugin)" type="button" class="btn-primary flex-1">

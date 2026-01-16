@@ -1,14 +1,39 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
 import {
   ChevronRightIconComponent,
   CheckmarkIconComponent,
-  ExternalLinkIconComponent,
+  ErrorIconComponent,
 } from '../icons';
+import { PLUGIN, CLUSTER } from '../../connect/tokens';
+import { create } from '@bufbuild/protobuf';
+import {
+  ListPluginsRequestSchema,
+  type Plugin,
+} from '../../generated/v1/plugin_pb';
+import {
+  ListClustersRequestSchema,
+  ListInstallsRequestSchema,
+  AddInstallRequestSchema,
+  type ClusterSummary,
+  type Install,
+} from '../../generated/v1/cluster_pb';
+import { firstValueFrom } from 'rxjs';
+import { ToastService } from '../toast.service';
+
+// Extended cluster type for UI state
+interface ClusterWithState extends ClusterSummary {
+  installed: boolean;
+}
+
+// Extended install type with cluster ID
+interface InstallWithCluster extends Install {
+  clusterId: string;
+}
 
 @Component({
   selector: 'app-plugin-details',
@@ -19,65 +44,101 @@ import {
     InstallPluginModalComponent,
     ChevronRightIconComponent,
     CheckmarkIconComponent,
-    ExternalLinkIconComponent,
+    ErrorIconComponent,
   ],
   templateUrl: './plugin-details.component.html',
 })
-export class PluginDetailsComponent {
+export class PluginDetailsComponent implements OnInit {
   private titleService = inject(TitleService);
   private sanitizer = inject(DomSanitizer);
+  private route = inject(ActivatedRoute);
+  private pluginClient = inject(PLUGIN);
+  private clusterClient = inject(CLUSTER);
+  private toastService = inject(ToastService);
 
-  pluginId = 'grafana';
-  pluginName = 'Grafana';
+  pluginId = signal<string>('');
+  plugin = signal<Plugin | null>(null);
+  clusters = signal<ClusterWithState[]>([]);
+  installs = signal<InstallWithCluster[]>([]);
 
-  installedClusters = ['cluster-1', 'cluster-4'];
-
-  clusters = [
-    { id: 'cluster-1', name: 'cluster-1', installed: true },
-    { id: 'cluster-2', name: 'cluster-2', installed: false },
-    { id: 'cluster-3', name: 'cluster-3', installed: false },
-    { id: 'cluster-4', name: 'cluster-4', installed: true },
-  ];
-
+  isLoading = signal<boolean>(true);
+  errorMessage = signal<string | null>(null);
   showInstallModal = false;
 
-  pluginDescription = `
-# Overview
+  async ngOnInit() {
+    // Get plugin ID from route
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      this.errorMessage.set('Plugin ID is missing');
+      this.isLoading.set(false);
+      return;
+    }
 
-Grafana is the open source analytics and monitoring solution for every database. It allows you to query, visualize, alert on and understand your metrics no matter where they are stored.
+    this.pluginId.set(id);
 
-## Key Features
+    try {
+      // Fetch plugin, clusters, and installs in parallel
+      const [pluginsResponse, clustersResponse] = await Promise.all([
+        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
+        firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
+      ]);
 
-- **Visualization**: Create stunning dashboards with a variety of visualization options
-- **Alerting**: Define alert rules and get notified when metrics exceed thresholds
-- **Data Sources**: Connect to multiple data sources including Prometheus, InfluxDB, and more
-- **Plugins**: Extend functionality with a rich ecosystem of plugins
+      // Find the plugin by ID
+      const foundPlugin = pluginsResponse.plugins.find((p) => p.id === id);
+      if (!foundPlugin) {
+        this.errorMessage.set('Plugin not found');
+        this.isLoading.set(false);
+        return;
+      }
 
-## Use Cases
+      this.plugin.set(foundPlugin);
+      this.titleService.setTitle(`${foundPlugin.name} — Plugins`);
 
-- Infrastructure monitoring
-- Application performance monitoring
-- Business analytics
-- IoT data visualization
-  `;
+      // Fetch installs for all clusters
+      const installsPromises = clustersResponse.clusters.map((cluster) =>
+        firstValueFrom(
+          this.clusterClient.listInstalls(
+            create(ListInstallsRequestSchema, { clusterId: cluster.id }),
+          ),
+        ).then((response) => ({
+          clusterId: cluster.id,
+          installs: response.installs,
+        })),
+      );
 
-  author = {
-    name: 'Grafana Labs',
-    website: 'https://grafana.com',
-  };
+      const installsResponses = await Promise.all(installsPromises);
 
-  documentation = {
-    url: 'https://grafana.com/docs/',
-    label: 'Official documentation',
-  };
+      // Flatten all installs and augment with cluster ID
+      const allInstalls: InstallWithCluster[] = installsResponses.flatMap(({ clusterId, installs }) =>
+        installs.map((install) => ({ ...install, clusterId })),
+      );
+      this.installs.set(allInstalls);
 
-  constructor() {
-    this.titleService.setTitle(`${this.pluginName} — Plugins`);
+      // Map clusters with install state
+      this.clusters.set(
+        clustersResponse.clusters.map((cluster) => ({
+          ...cluster,
+          installed: allInstalls.some(
+            (install) => install.clusterId === cluster.id && install.pluginId === id,
+          ),
+        })),
+      );
+
+      this.isLoading.set(false);
+    } catch (error) {
+      console.error('Failed to load plugin details:', error);
+      this.errorMessage.set(
+        error instanceof Error ? error.message : 'Failed to load plugin details',
+      );
+      this.isLoading.set(false);
+    }
   }
 
   getRenderedMarkdown(): SafeHtml {
+    const description = this.plugin()?.description || '';
+
     // Simple markdown to HTML conversion
-    let html = this.pluginDescription
+    let html = description
       .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mb-3 dark:text-white">$1</h1>')
       .replace(
         /^## (.*$)/gim,
@@ -101,15 +162,44 @@ Grafana is the open source analytics and monitoring solution for every database.
     this.showInstallModal = false;
   }
 
-  onInstallOnCluster(clusterId: string): void {
-    const cluster = this.clusters.find((c) => c.id === clusterId);
-    if (cluster && !cluster.installed) {
-      cluster.installed = true;
-      this.installedClusters.push(clusterId);
+  async onInstallOnCluster(clusterId: string): Promise<void> {
+    const cluster = this.clusters().find((c) => c.id === clusterId);
+    if (!cluster || cluster.installed) {
+      return;
+    }
+
+    try {
+      // Call the API to install the plugin
+      const request = create(AddInstallRequestSchema, {
+        clusterId: clusterId,
+        pluginId: this.pluginId(),
+      });
+
+      await firstValueFrom(this.clusterClient.addInstall(request));
+
+      // Update local state
+      this.clusters.update((clusters) =>
+        clusters.map((c) => (c.id === clusterId ? { ...c, installed: true } : c)),
+      );
+
+      this.toastService.success(`${this.plugin()?.name} installed on ${cluster.name}`);
+    } catch (error) {
+      console.error('Failed to install plugin:', error);
+      this.toastService.error(
+        error instanceof Error ? error.message : 'Failed to install plugin',
+      );
     }
   }
 
   isInstalled(clusterId: string): boolean {
-    return this.installedClusters.includes(clusterId);
+    return this.clusters().some((c) => c.id === clusterId && c.installed);
+  }
+
+  hasInstalledClusters(): boolean {
+    return this.clusters().some((c) => c.installed);
+  }
+
+  getInstalledClusterCount(): number {
+    return this.clusters().filter((c) => c.installed).length;
   }
 }
