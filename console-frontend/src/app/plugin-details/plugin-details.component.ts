@@ -4,17 +4,10 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
-import {
-  ChevronRightIconComponent,
-  CheckmarkIconComponent,
-  ErrorIconComponent,
-} from '../icons';
+import { ChevronRightIconComponent, CheckmarkIconComponent, ErrorIconComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import {
-  ListPluginsRequestSchema,
-  type Plugin,
-} from '../../generated/v1/plugin_pb';
+import { ListPluginsRequestSchema, type Plugin } from '../../generated/v1/plugin_pb';
 import {
   ListClustersRequestSchema,
   ListInstallsRequestSchema,
@@ -109,8 +102,8 @@ export class PluginDetailsComponent implements OnInit {
       const installsResponses = await Promise.all(installsPromises);
 
       // Flatten all installs and augment with cluster ID
-      const allInstalls: InstallWithCluster[] = installsResponses.flatMap(({ clusterId, installs }) =>
-        installs.map((install) => ({ ...install, clusterId })),
+      const allInstalls: InstallWithCluster[] = installsResponses.flatMap(
+        ({ clusterId, installs }) => installs.map((install) => ({ ...install, clusterId })),
       );
       this.installs.set(allInstalls);
 
@@ -185,9 +178,7 @@ export class PluginDetailsComponent implements OnInit {
       this.toastService.success(`${this.plugin()?.name} installed on ${cluster.name}`);
     } catch (error) {
       console.error('Failed to install plugin:', error);
-      this.toastService.error(
-        error instanceof Error ? error.message : 'Failed to install plugin',
-      );
+      this.toastService.error(error instanceof Error ? error.message : 'Failed to install plugin');
     }
   }
 

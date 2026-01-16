@@ -174,9 +174,7 @@
                 </p>
               }
             }
-            @if (
-              namespaceForm.get('clusterId')?.invalid &&
-              namespaceForm.get('clusterId')?.dirty) {
+            @if (namespaceForm.get('clusterId')?.invalid && namespaceForm.get('clusterId')?.dirty) {
               <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a cluster.</p>
             }
           </div>
@@ -197,9 +195,7 @@
               placeholder="E.g. my-namespace"
               class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
             />
-            @if (
-              namespaceForm.get('name')?.invalid &&
-              namespaceForm.get('name')?.dirty) {
+            @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
               <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
             }
           </div>

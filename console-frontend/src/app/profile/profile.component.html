@@ -100,8 +100,7 @@
                 formControlName="currentPassword"
                 placeholder="Enter your current password"
               />
-              @if (
-                currentPassword?.invalid && currentPassword?.dirty) {
+              @if (currentPassword?.invalid && currentPassword?.dirty) {
                 <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
                   {{ getCurrentPasswordError() }}
                 </p>
