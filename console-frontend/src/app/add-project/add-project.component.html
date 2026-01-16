@@ -9,7 +9,7 @@
 <div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
   <!-- Header -->
   <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-    <h1 class="text-2xl font-bold dark:text-white">Add Project</h1>
+    <h1 class="text-2xl font-bold dark:text-white">Add project</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
       Create a new project to organize your namespaces and resources.
     </p>
@@ -22,10 +22,11 @@
         Project name
       </label>
       <input
+        #projectNameInput
         id="name"
         formControlName="name"
         type="text"
-        placeholder="e.g. my-project"
+        placeholder="E.g. my-project"
         class="w-full"
         [class.border-rose-500]="
           projectForm.get('name')?.invalid && projectForm.get('name')?.touched
