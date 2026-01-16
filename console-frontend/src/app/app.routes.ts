@@ -113,6 +113,13 @@ export const routes: Routes = [
       import('./organization/organization.component').then((m) => m.OrganizationComponent),
   },
   {
+    path: 'organization/members',
+    loadComponent: () =>
+      import('./organization-members/organization-members.component').then(
+        (m) => m.OrganizationMembersComponent,
+      ),
+  },
+  {
     path: '',
     loadComponent: () =>
       import('./dashboard/dashboard.component').then((m) => m.DashboardComponent),
