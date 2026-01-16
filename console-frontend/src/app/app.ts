@@ -20,7 +20,7 @@ import {
   PuzzleIconComponent,
   UsersIconComponent,
   ChartIconComponent,
-  CheckmarkIconComponent,
+  CheckCircleIconComponent,
   ErrorIconComponent,
   InfoCircleIconComponent,
 } from './icons';
@@ -46,7 +46,7 @@ import {
     PuzzleIconComponent,
     UsersIconComponent,
     ChartIconComponent,
-    CheckmarkIconComponent,
+    CheckCircleIconComponent,
     ErrorIconComponent,
     InfoCircleIconComponent,
   ],

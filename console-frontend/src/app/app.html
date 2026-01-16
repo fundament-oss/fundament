@@ -16,7 +16,7 @@
     >
       <div class="flex items-center">
         @if (toastService.toast()?.type === 'success') {
-          <app-checkmark-icon class="mr-3 h-6 w-6 shrink-0" />
+          <app-check-circle-icon class="mr-3 h-6 w-6 shrink-0" />
         } @else if (toastService.toast()?.type === 'error') {
           <app-error-icon class="mr-3 h-6 w-6 shrink-0" />
         } @else if (toastService.toast()?.type === 'warning') {
