@@ -286,6 +286,157 @@ func (x *ListPluginsResponse) GetPlugins() []*Plugin {
 	return nil
 }
 
+// Preset information
+type Preset struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,30,opt,name=description,proto3" json:"description,omitempty"`
+	PluginIds     []string               `protobuf:"bytes,40,rep,name=plugin_ids,json=pluginIds,proto3" json:"plugin_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Preset) Reset() {
+	*x = Preset{}
+	mi := &file_v1_plugin_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Preset) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Preset) ProtoMessage() {}
+
+func (x *Preset) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Preset.ProtoReflect.Descriptor instead.
+func (*Preset) Descriptor() ([]byte, []int) {
+	return file_v1_plugin_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Preset) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Preset) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Preset) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Preset) GetPluginIds() []string {
+	if x != nil {
+		return x.PluginIds
+	}
+	return nil
+}
+
+// List presets request
+type ListPresetsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPresetsRequest) Reset() {
+	*x = ListPresetsRequest{}
+	mi := &file_v1_plugin_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPresetsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPresetsRequest) ProtoMessage() {}
+
+func (x *ListPresetsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPresetsRequest.ProtoReflect.Descriptor instead.
+func (*ListPresetsRequest) Descriptor() ([]byte, []int) {
+	return file_v1_plugin_proto_rawDescGZIP(), []int{6}
+}
+
+// List presets response
+type ListPresetsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Presets       []*Preset              `protobuf:"bytes,10,rep,name=presets,proto3" json:"presets,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPresetsResponse) Reset() {
+	*x = ListPresetsResponse{}
+	mi := &file_v1_plugin_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPresetsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPresetsResponse) ProtoMessage() {}
+
+func (x *ListPresetsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPresetsResponse.ProtoReflect.Descriptor instead.
+func (*ListPresetsResponse) Descriptor() ([]byte, []int) {
+	return file_v1_plugin_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListPresetsResponse) GetPresets() []*Preset {
+	if x != nil {
+		return x.Presets
+	}
+	return nil
+}
+
 var File_v1_plugin_proto protoreflect.FileDescriptor
 
 const file_v1_plugin_proto_rawDesc = "" +
@@ -311,9 +462,21 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x12ListPluginsRequest\"H\n" +
 	"\x13ListPluginsResponse\x121\n" +
 	"\aplugins\x18\n" +
-	" \x03(\v2\x17.organization.v1.PluginR\aplugins2i\n" +
+	" \x03(\v2\x17.organization.v1.PluginR\aplugins\"m\n" +
+	"\x06Preset\x12\x0e\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x1e \x01(\tR\vdescription\x12\x1d\n" +
+	"\n" +
+	"plugin_ids\x18( \x03(\tR\tpluginIds\"\x14\n" +
+	"\x12ListPresetsRequest\"H\n" +
+	"\x13ListPresetsResponse\x121\n" +
+	"\apresets\x18\n" +
+	" \x03(\v2\x17.organization.v1.PresetR\apresets2\xc3\x01\n" +
 	"\rPluginService\x12X\n" +
-	"\vListPlugins\x12#.organization.v1.ListPluginsRequest\x1a$.organization.v1.ListPluginsResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
+	"\vListPlugins\x12#.organization.v1.ListPluginsRequest\x1a$.organization.v1.ListPluginsResponse\x12X\n" +
+	"\vListPresets\x12#.organization.v1.ListPresetsRequest\x1a$.organization.v1.ListPresetsResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
 
 var (
 	file_v1_plugin_proto_rawDescOnce sync.Once
@@ -327,25 +490,31 @@ func file_v1_plugin_proto_rawDescGZIP() []byte {
 	return file_v1_plugin_proto_rawDescData
 }
 
-var file_v1_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_v1_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_v1_plugin_proto_goTypes = []any{
 	(*Tag)(nil),                 // 0: organization.v1.Tag
 	(*Category)(nil),            // 1: organization.v1.Category
 	(*Plugin)(nil),              // 2: organization.v1.Plugin
 	(*ListPluginsRequest)(nil),  // 3: organization.v1.ListPluginsRequest
 	(*ListPluginsResponse)(nil), // 4: organization.v1.ListPluginsResponse
+	(*Preset)(nil),              // 5: organization.v1.Preset
+	(*ListPresetsRequest)(nil),  // 6: organization.v1.ListPresetsRequest
+	(*ListPresetsResponse)(nil), // 7: organization.v1.ListPresetsResponse
 }
 var file_v1_plugin_proto_depIdxs = []int32{
 	0, // 0: organization.v1.Plugin.tags:type_name -> organization.v1.Tag
 	1, // 1: organization.v1.Plugin.categories:type_name -> organization.v1.Category
 	2, // 2: organization.v1.ListPluginsResponse.plugins:type_name -> organization.v1.Plugin
-	3, // 3: organization.v1.PluginService.ListPlugins:input_type -> organization.v1.ListPluginsRequest
-	4, // 4: organization.v1.PluginService.ListPlugins:output_type -> organization.v1.ListPluginsResponse
-	4, // [4:5] is the sub-list for method output_type
-	3, // [3:4] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	5, // 3: organization.v1.ListPresetsResponse.presets:type_name -> organization.v1.Preset
+	3, // 4: organization.v1.PluginService.ListPlugins:input_type -> organization.v1.ListPluginsRequest
+	6, // 5: organization.v1.PluginService.ListPresets:input_type -> organization.v1.ListPresetsRequest
+	4, // 6: organization.v1.PluginService.ListPlugins:output_type -> organization.v1.ListPluginsResponse
+	7, // 7: organization.v1.PluginService.ListPresets:output_type -> organization.v1.ListPresetsResponse
+	6, // [6:8] is the sub-list for method output_type
+	4, // [4:6] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_v1_plugin_proto_init() }
@@ -359,7 +528,7 @@ func file_v1_plugin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_plugin_proto_rawDesc), len(file_v1_plugin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

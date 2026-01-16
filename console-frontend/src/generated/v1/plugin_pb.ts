@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/plugin.proto.
  */
 export const file_v1_plugin: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9wbHVnaW4ucHJvdG8SD29yZ2FuaXphdGlvbi52MSIfCgNUYWcSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCSIkCghDYXRlZ29yeRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJIooBCgZQbHVnaW4SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRITCgtkZXNjcmlwdGlvbhgeIAEoCRIiCgR0YWdzGCggAygLMhQub3JnYW5pemF0aW9uLnYxLlRhZxItCgpjYXRlZ29yaWVzGDIgAygLMhkub3JnYW5pemF0aW9uLnYxLkNhdGVnb3J5IhQKEkxpc3RQbHVnaW5zUmVxdWVzdCI/ChNMaXN0UGx1Z2luc1Jlc3BvbnNlEigKB3BsdWdpbnMYCiADKAsyFy5vcmdhbml6YXRpb24udjEuUGx1Z2luMmkKDVBsdWdpblNlcnZpY2USWAoLTGlzdFBsdWdpbnMSIy5vcmdhbml6YXRpb24udjEuTGlzdFBsdWdpbnNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RQbHVnaW5zUmVzcG9uc2VCVVpTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjFiBnByb3RvMw");
+  fileDesc("Cg92MS9wbHVnaW4ucHJvdG8SD29yZ2FuaXphdGlvbi52MSIfCgNUYWcSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCSIkCghDYXRlZ29yeRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJIooBCgZQbHVnaW4SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRITCgtkZXNjcmlwdGlvbhgeIAEoCRIiCgR0YWdzGCggAygLMhQub3JnYW5pemF0aW9uLnYxLlRhZxItCgpjYXRlZ29yaWVzGDIgAygLMhkub3JnYW5pemF0aW9uLnYxLkNhdGVnb3J5IhQKEkxpc3RQbHVnaW5zUmVxdWVzdCI/ChNMaXN0UGx1Z2luc1Jlc3BvbnNlEigKB3BsdWdpbnMYCiADKAsyFy5vcmdhbml6YXRpb24udjEuUGx1Z2luIksKBlByZXNldBIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhMKC2Rlc2NyaXB0aW9uGB4gASgJEhIKCnBsdWdpbl9pZHMYKCADKAkiFAoSTGlzdFByZXNldHNSZXF1ZXN0Ij8KE0xpc3RQcmVzZXRzUmVzcG9uc2USKAoHcHJlc2V0cxgKIAMoCzIXLm9yZ2FuaXphdGlvbi52MS5QcmVzZXQywwEKDVBsdWdpblNlcnZpY2USWAoLTGlzdFBsdWdpbnMSIy5vcmdhbml6YXRpb24udjEuTGlzdFBsdWdpbnNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RQbHVnaW5zUmVzcG9uc2USWAoLTGlzdFByZXNldHMSIy5vcmdhbml6YXRpb24udjEuTGlzdFByZXNldHNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RQcmVzZXRzUmVzcG9uc2VCVVpTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjFiBnByb3RvMw");
 
 /**
  * Tag information
@@ -134,7 +134,75 @@ export const ListPluginsResponseSchema: GenMessage<ListPluginsResponse> = /*@__P
   messageDesc(file_v1_plugin, 4);
 
 /**
- * PluginService provides information about available plugins
+ * Preset information
+ *
+ * @generated from message organization.v1.Preset
+ */
+export type Preset = Message<"organization.v1.Preset"> & {
+  /**
+   * @generated from field: string id = 10;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 20;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string description = 30;
+   */
+  description: string;
+
+  /**
+   * @generated from field: repeated string plugin_ids = 40;
+   */
+  pluginIds: string[];
+};
+
+/**
+ * Describes the message organization.v1.Preset.
+ * Use `create(PresetSchema)` to create a new message.
+ */
+export const PresetSchema: GenMessage<Preset> = /*@__PURE__*/
+  messageDesc(file_v1_plugin, 5);
+
+/**
+ * List presets request
+ *
+ * @generated from message organization.v1.ListPresetsRequest
+ */
+export type ListPresetsRequest = Message<"organization.v1.ListPresetsRequest"> & {
+};
+
+/**
+ * Describes the message organization.v1.ListPresetsRequest.
+ * Use `create(ListPresetsRequestSchema)` to create a new message.
+ */
+export const ListPresetsRequestSchema: GenMessage<ListPresetsRequest> = /*@__PURE__*/
+  messageDesc(file_v1_plugin, 6);
+
+/**
+ * List presets response
+ *
+ * @generated from message organization.v1.ListPresetsResponse
+ */
+export type ListPresetsResponse = Message<"organization.v1.ListPresetsResponse"> & {
+  /**
+   * @generated from field: repeated organization.v1.Preset presets = 10;
+   */
+  presets: Preset[];
+};
+
+/**
+ * Describes the message organization.v1.ListPresetsResponse.
+ * Use `create(ListPresetsResponseSchema)` to create a new message.
+ */
+export const ListPresetsResponseSchema: GenMessage<ListPresetsResponse> = /*@__PURE__*/
+  messageDesc(file_v1_plugin, 7);
+
+/**
+ * PluginService provides information about available plugins and presets
  *
  * @generated from service organization.v1.PluginService
  */
@@ -148,6 +216,16 @@ export const PluginService: GenService<{
     methodKind: "unary";
     input: typeof ListPluginsRequestSchema;
     output: typeof ListPluginsResponseSchema;
+  },
+  /**
+   * List all available presets
+   *
+   * @generated from rpc organization.v1.PluginService.ListPresets
+   */
+  listPresets: {
+    methodKind: "unary";
+    input: typeof ListPresetsRequestSchema;
+    output: typeof ListPresetsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_plugin, 0);
