@@ -257,4 +257,8 @@ export class PluginsComponent implements OnInit {
       cluster.installed = true;
     }
   }
+
+  getPluginIconName(pluginName: string): string {
+    return pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
+  }
 }
