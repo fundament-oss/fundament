@@ -1,0 +1,9 @@
+console-frontend/node_modules/
+console-frontend/dist/
+
+.git
+**/.gitignore
+**/.gitattributes
+.claude
+.github
+**/.vscode
