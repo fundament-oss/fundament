@@ -248,92 +248,6 @@ func (x *ResourceUsage) GetUnit() string {
 	return ""
 }
 
-// Cluster sync state from Gardener
-type SyncState struct {
-	state        protoimpl.MessageState `protogen:"open.v1"`
-	SyncedAt     *Timestamp             `protobuf:"bytes,10,opt,name=synced_at,json=syncedAt,proto3,oneof" json:"synced_at,omitempty"`        // When the cluster was last successfully synced
-	SyncError    *string                `protobuf:"bytes,20,opt,name=sync_error,json=syncError,proto3,oneof" json:"sync_error,omitempty"`     // Error message if sync failed
-	SyncAttempts int32                  `protobuf:"varint,30,opt,name=sync_attempts,json=syncAttempts,proto3" json:"sync_attempts,omitempty"` // Number of sync attempts
-	// Field 40 removed: last_attempt_at (no longer tracked in DB)
-	ShootStatus     *string    `protobuf:"bytes,50,opt,name=shoot_status,json=shootStatus,proto3,oneof" json:"shoot_status,omitempty"`               // Gardener shoot status (pending, progressing, ready, error, deleting)
-	ShootMessage    *string    `protobuf:"bytes,60,opt,name=shoot_message,json=shootMessage,proto3,oneof" json:"shoot_message,omitempty"`            // Human-readable status message from Gardener
-	StatusUpdatedAt *Timestamp `protobuf:"bytes,70,opt,name=status_updated_at,json=statusUpdatedAt,proto3,oneof" json:"status_updated_at,omitempty"` // When the shoot status was last updated
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *SyncState) Reset() {
-	*x = SyncState{}
-	mi := &file_v1_common_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SyncState) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SyncState) ProtoMessage() {}
-
-func (x *SyncState) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_common_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SyncState.ProtoReflect.Descriptor instead.
-func (*SyncState) Descriptor() ([]byte, []int) {
-	return file_v1_common_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *SyncState) GetSyncedAt() *Timestamp {
-	if x != nil {
-		return x.SyncedAt
-	}
-	return nil
-}
-
-func (x *SyncState) GetSyncError() string {
-	if x != nil && x.SyncError != nil {
-		return *x.SyncError
-	}
-	return ""
-}
-
-func (x *SyncState) GetSyncAttempts() int32 {
-	if x != nil {
-		return x.SyncAttempts
-	}
-	return 0
-}
-
-func (x *SyncState) GetShootStatus() string {
-	if x != nil && x.ShootStatus != nil {
-		return *x.ShootStatus
-	}
-	return ""
-}
-
-func (x *SyncState) GetShootMessage() string {
-	if x != nil && x.ShootMessage != nil {
-		return *x.ShootMessage
-	}
-	return ""
-}
-
-func (x *SyncState) GetStatusUpdatedAt() *Timestamp {
-	if x != nil {
-		return x.StatusUpdatedAt
-	}
-	return nil
-}
-
 var File_v1_common_proto protoreflect.FileDescriptor
 
 const file_v1_common_proto_rawDesc = "" +
@@ -346,22 +260,7 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x04used\x18\n" +
 	" \x01(\x01R\x04used\x12\x14\n" +
 	"\x05total\x18\x14 \x01(\x01R\x05total\x12\x12\n" +
-	"\x04unit\x18\x1e \x01(\tR\x04unit\"\x87\x03\n" +
-	"\tSyncState\x12<\n" +
-	"\tsynced_at\x18\n" +
-	" \x01(\v2\x1a.organization.v1.TimestampH\x00R\bsyncedAt\x88\x01\x01\x12\"\n" +
-	"\n" +
-	"sync_error\x18\x14 \x01(\tH\x01R\tsyncError\x88\x01\x01\x12#\n" +
-	"\rsync_attempts\x18\x1e \x01(\x05R\fsyncAttempts\x12&\n" +
-	"\fshoot_status\x182 \x01(\tH\x02R\vshootStatus\x88\x01\x01\x12(\n" +
-	"\rshoot_message\x18< \x01(\tH\x03R\fshootMessage\x88\x01\x01\x12K\n" +
-	"\x11status_updated_at\x18F \x01(\v2\x1a.organization.v1.TimestampH\x04R\x0fstatusUpdatedAt\x88\x01\x01B\f\n" +
-	"\n" +
-	"_synced_atB\r\n" +
-	"\v_sync_errorB\x0f\n" +
-	"\r_shoot_statusB\x10\n" +
-	"\x0e_shoot_messageB\x14\n" +
-	"\x12_status_updated_at*\x97\x02\n" +
+	"\x04unit\x18\x1e \x01(\tR\x04unit*\x97\x02\n" +
 	"\rClusterStatus\x12\x1e\n" +
 	"\x1aCLUSTER_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bCLUSTER_STATUS_PROVISIONING\x10\x01\x12\x1b\n" +
@@ -391,22 +290,19 @@ func file_v1_common_proto_rawDescGZIP() []byte {
 }
 
 var file_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_v1_common_proto_goTypes = []any{
 	(ClusterStatus)(0),    // 0: organization.v1.ClusterStatus
 	(NodePoolStatus)(0),   // 1: organization.v1.NodePoolStatus
 	(*Timestamp)(nil),     // 2: organization.v1.Timestamp
 	(*ResourceUsage)(nil), // 3: organization.v1.ResourceUsage
-	(*SyncState)(nil),     // 4: organization.v1.SyncState
 }
 var file_v1_common_proto_depIdxs = []int32{
-	2, // 0: organization.v1.SyncState.synced_at:type_name -> organization.v1.Timestamp
-	2, // 1: organization.v1.SyncState.status_updated_at:type_name -> organization.v1.Timestamp
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	0, // [0:0] is the sub-list for method output_type
+	0, // [0:0] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for extension type_name
+	0, // [0:0] is the sub-list for extension extendee
+	0, // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_v1_common_proto_init() }
@@ -414,14 +310,13 @@ func file_v1_common_proto_init() {
 	if File_v1_common_proto != nil {
 		return
 	}
-	file_v1_common_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_common_proto_rawDesc), len(file_v1_common_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   3,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

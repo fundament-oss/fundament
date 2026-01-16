@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/common.proto.
  */
 export const file_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9jb21tb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSIaCglUaW1lc3RhbXASDQoFdmFsdWUYCiABKAkiOgoNUmVzb3VyY2VVc2FnZRIMCgR1c2VkGAogASgBEg0KBXRvdGFsGBQgASgBEgwKBHVuaXQYHiABKAkiuAIKCVN5bmNTdGF0ZRIyCglzeW5jZWRfYXQYCiABKAsyGi5vcmdhbml6YXRpb24udjEuVGltZXN0YW1wSACIAQESFwoKc3luY19lcnJvchgUIAEoCUgBiAEBEhUKDXN5bmNfYXR0ZW1wdHMYHiABKAUSGQoMc2hvb3Rfc3RhdHVzGDIgASgJSAKIAQESGgoNc2hvb3RfbWVzc2FnZRg8IAEoCUgDiAEBEjoKEXN0YXR1c191cGRhdGVkX2F0GEYgASgLMhoub3JnYW5pemF0aW9uLnYxLlRpbWVzdGFtcEgEiAEBQgwKCl9zeW5jZWRfYXRCDQoLX3N5bmNfZXJyb3JCDwoNX3Nob290X3N0YXR1c0IQCg5fc2hvb3RfbWVzc2FnZUIUChJfc3RhdHVzX3VwZGF0ZWRfYXQqlwIKDUNsdXN0ZXJTdGF0dXMSHgoaQ0xVU1RFUl9TVEFUVVNfVU5TUEVDSUZJRUQQABIfChtDTFVTVEVSX1NUQVRVU19QUk9WSVNJT05JTkcQARIbChdDTFVTVEVSX1NUQVRVU19TVEFSVElORxACEhoKFkNMVVNURVJfU1RBVFVTX1JVTk5JTkcQAxIcChhDTFVTVEVSX1NUQVRVU19VUEdSQURJTkcQBBIYChRDTFVTVEVSX1NUQVRVU19FUlJPUhAFEhsKF0NMVVNURVJfU1RBVFVTX1NUT1BQSU5HEAYSGgoWQ0xVU1RFUl9TVEFUVVNfU1RPUFBFRBAHEhsKF0NMVVNURVJfU1RBVFVTX0RFTEVUSU5HEAgqjwEKDk5vZGVQb29sU3RhdHVzEiAKHE5PREVfUE9PTF9TVEFUVVNfVU5TUEVDSUZJRUQQABIcChhOT0RFX1BPT0xfU1RBVFVTX0hFQUxUSFkQARIdChlOT0RFX1BPT0xfU1RBVFVTX0RFR1JBREVEEAISHgoaTk9ERV9QT09MX1NUQVRVU19VTkhFQUxUSFkQA0JVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z");
+  fileDesc("Cg92MS9jb21tb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSIaCglUaW1lc3RhbXASDQoFdmFsdWUYCiABKAkiOgoNUmVzb3VyY2VVc2FnZRIMCgR1c2VkGAogASgBEg0KBXRvdGFsGBQgASgBEgwKBHVuaXQYHiABKAkqlwIKDUNsdXN0ZXJTdGF0dXMSHgoaQ0xVU1RFUl9TVEFUVVNfVU5TUEVDSUZJRUQQABIfChtDTFVTVEVSX1NUQVRVU19QUk9WSVNJT05JTkcQARIbChdDTFVTVEVSX1NUQVRVU19TVEFSVElORxACEhoKFkNMVVNURVJfU1RBVFVTX1JVTk5JTkcQAxIcChhDTFVTVEVSX1NUQVRVU19VUEdSQURJTkcQBBIYChRDTFVTVEVSX1NUQVRVU19FUlJPUhAFEhsKF0NMVVNURVJfU1RBVFVTX1NUT1BQSU5HEAYSGgoWQ0xVU1RFUl9TVEFUVVNfU1RPUFBFRBAHEhsKF0NMVVNURVJfU1RBVFVTX0RFTEVUSU5HEAgqjwEKDk5vZGVQb29sU3RhdHVzEiAKHE5PREVfUE9PTF9TVEFUVVNfVU5TUEVDSUZJRUQQABIcChhOT0RFX1BPT0xfU1RBVFVTX0hFQUxUSFkQARIdChlOT0RFX1BPT0xfU1RBVFVTX0RFR1JBREVEEAISHgoaTk9ERV9QT09MX1NUQVRVU19VTkhFQUxUSFkQA0JVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z");
 
 /**
  * Common timestamp message
@@ -61,64 +61,6 @@ export type ResourceUsage = Message<"organization.v1.ResourceUsage"> & {
  */
 export const ResourceUsageSchema: GenMessage<ResourceUsage> = /*@__PURE__*/
   messageDesc(file_v1_common, 1);
-
-/**
- * Cluster sync state from Gardener
- *
- * @generated from message organization.v1.SyncState
- */
-export type SyncState = Message<"organization.v1.SyncState"> & {
-  /**
-   * When the cluster was last successfully synced
-   *
-   * @generated from field: optional organization.v1.Timestamp synced_at = 10;
-   */
-  syncedAt?: Timestamp;
-
-  /**
-   * Error message if sync failed
-   *
-   * @generated from field: optional string sync_error = 20;
-   */
-  syncError?: string;
-
-  /**
-   * Number of sync attempts
-   *
-   * @generated from field: int32 sync_attempts = 30;
-   */
-  syncAttempts: number;
-
-  /**
-   * Field 40 removed: last_attempt_at (no longer tracked in DB)
-   *
-   * Gardener shoot status (pending, progressing, ready, error, deleting)
-   *
-   * @generated from field: optional string shoot_status = 50;
-   */
-  shootStatus?: string;
-
-  /**
-   * Human-readable status message from Gardener
-   *
-   * @generated from field: optional string shoot_message = 60;
-   */
-  shootMessage?: string;
-
-  /**
-   * When the shoot status was last updated
-   *
-   * @generated from field: optional organization.v1.Timestamp status_updated_at = 70;
-   */
-  statusUpdatedAt?: Timestamp;
-};
-
-/**
- * Describes the message organization.v1.SyncState.
- * Use `create(SyncStateSchema)` to create a new message.
- */
-export const SyncStateSchema: GenMessage<SyncState> = /*@__PURE__*/
-  messageDesc(file_v1_common, 2);
 
 /**
  * Status enumeration for clusters

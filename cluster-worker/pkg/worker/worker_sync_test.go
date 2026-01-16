@@ -283,8 +283,8 @@ func TestShootName(t *testing.T) {
 		{
 			name:      "exactly 21 chars unchanged",
 			org:       "org",
-			cluster:   "exactly-21-chars-ok",
-			wantExact: "org-exactly-21-chars-ok", // 23 chars, will be hashed
+			cluster:   "exactly-21-chars",
+			wantExact: "org-exactly-21-chars", // 20 chars, within limit
 		},
 		{
 			name:       "long name is hashed",

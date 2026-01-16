@@ -4,6 +4,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -59,4 +60,33 @@ func syncStateFromRow(
 	}
 
 	return state
+}
+
+func clusterEventsFromRows(events []db.TenantClusterEvent) []*organizationv1.ClusterEvent {
+	result := make([]*organizationv1.ClusterEvent, 0, len(events))
+	for i := range events {
+		result = append(result, clusterEventFromRow(&events[i]))
+	}
+	return result
+}
+
+func clusterEventFromRow(e *db.TenantClusterEvent) *organizationv1.ClusterEvent {
+	event := &organizationv1.ClusterEvent{
+		Id:        e.ID.String(),
+		EventType: string(e.EventType),
+		CreatedAt: timestamppb.New(e.Created.Time),
+	}
+
+	if e.SyncAction.Valid {
+		s := string(e.SyncAction.TenantClusterSyncAction)
+		event.SyncAction = &s
+	}
+	if e.Message.Valid {
+		event.Message = &e.Message.String
+	}
+	if e.Attempt.Valid {
+		event.Attempt = &e.Attempt.Int32
+	}
+
+	return event
 }

@@ -21,18 +21,17 @@ import (
 )
 
 type config struct {
-	DatabaseURL         string        `env:"DATABASE_URL,required,notEmpty"`
-	GardenerMode        string        `env:"GARDENER_MODE"`       // mock or real
-	GardenerKubeconfig  string        `env:"GARDENER_KUBECONFIG"` // Required for real mode
-	GardenerNamespace   string        `env:"GARDENER_NAMESPACE" envDefault:"garden-fundament"`
-	LogLevel            slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
-	PollInterval        time.Duration `env:"POLL_INTERVAL" envDefault:"30s"`
-	ReconcileInterval   time.Duration `env:"RECONCILE_INTERVAL" envDefault:"5m"`
-	StatusPollInterval  time.Duration `env:"STATUS_POLL_INTERVAL" envDefault:"30s"`
-	StatusPollBatchSize int32         `env:"STATUS_POLL_BATCH_SIZE" envDefault:"50"`
-	HealthPort          int           `env:"HEALTH_PORT" envDefault:"8097"`
-	ShutdownTimeout     time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
-	MaxSyncAttempts     int32         `env:"MAX_SYNC_ATTEMPTS" envDefault:"5"`
+	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
+	GardenerMode       string        `env:"GARDENER_MODE"`       // mock or real
+	GardenerKubeconfig string        `env:"GARDENER_KUBECONFIG"` // Required for real mode
+	GardenerNamespace  string        `env:"GARDENER_NAMESPACE" envDefault:"garden-fundament"`
+	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
+	HealthPort         int           `env:"HEALTH_PORT" envDefault:"8097"`
+	ShutdownTimeout    time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
+
+	// Worker configs (env tags defined in worker package)
+	Sync   worker.Config       `envPrefix:"SYNC_"`
+	Status worker.StatusConfig `envPrefix:"STATUS_"`
 
 	// Provider configuration for real Gardener mode.
 	// These configure how Shoots are created in Gardener and depend on the target infrastructure.
@@ -91,26 +90,19 @@ func run() error {
 	}
 
 	// SyncWorker (syncs manifests to Gardener)
-	w := worker.NewSyncWorker(db.Pool, gardenerClient, logger, worker.Config{
-		PollInterval:      cfg.PollInterval,
-		ReconcileInterval: cfg.ReconcileInterval,
-		MaxSyncAttempts:   cfg.MaxSyncAttempts,
-	})
+	w := worker.NewSyncWorker(db.Pool, gardenerClient, logger, cfg.Sync)
 
 	// StatusWorker (monitors Gardener reconciliation)
-	sp := worker.NewStatusWorker(db.Pool, gardenerClient, logger, worker.StatusConfig{
-		PollInterval: cfg.StatusPollInterval,
-		BatchSize:    cfg.StatusPollBatchSize,
-	})
+	sp := worker.NewStatusWorker(db.Pool, gardenerClient, logger, cfg.Status)
 
 	// Health check server
 	healthServer := startHealthServer(&cfg, w, logger)
 
 	logger.Info("cluster-worker starting",
-		"poll_interval", cfg.PollInterval,
-		"reconcile_interval", cfg.ReconcileInterval,
-		"status_poll_interval", cfg.StatusPollInterval,
-		"max_sync_attempts", cfg.MaxSyncAttempts,
+		"poll_interval", cfg.Sync.PollInterval,
+		"reconcile_interval", cfg.Sync.ReconcileInterval,
+		"status_poll_interval", cfg.Status.PollInterval,
+		"max_attempts", cfg.Sync.MaxAttempts,
 		"gardener_mode", cfg.GardenerMode,
 		"gardener_namespace", cfg.GardenerNamespace)
 

@@ -9,6 +9,16 @@ import "v1/common.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
+// Cluster sync state from Gardener
+message SyncState {
+  optional google.protobuf.Timestamp synced_at = 10;
+  optional string sync_error = 20;
+  int32 sync_attempts = 30;
+  optional string shoot_status = 40;
+  optional string shoot_message = 50;
+  optional google.protobuf.Timestamp status_updated_at = 60;
+}
+
 // ClusterService manages Kubernetes clusters
 service ClusterService {
   // List all clusters for the current organization
@@ -109,10 +119,7 @@ message ClusterDetails {
   ClusterStatus status = 50;
   google.protobuf.Timestamp created = 60;
   ResourceUsageInfo resource_usage = 70;
-  repeated NodePool node_pools = 80;
-  repeated ClusterMember members = 90;
-  repeated ClusterProject projects = 100;
-  SyncState sync_state = 110;
+  SyncState sync_state = 80;
 }
 
 // Resource usage information for a cluster
@@ -134,22 +141,6 @@ message NodePool {
   NodePoolStatus status = 70;
   string version = 80;
 }
-
-// Cluster member information
-message ClusterMember {
-  string user_id = 10;
-  string name = 20;
-  string role = 30;
-  google.protobuf.Timestamp last_active = 40;
-}
-
-// Project associated with cluster
-message ClusterProject {
-  string project_id = 10;
-  string name = 20;
-  repeated string namespaces = 30;
-}
-
 // Create cluster request
 message CreateClusterRequest {
   string name = 10 [(buf.validate.field).string = {
@@ -198,9 +189,9 @@ message GetClusterActivityResponse {
 // Cluster event from cluster_events table
 message ClusterEvent {
   string id = 10;
-  string event_type = 20;      // sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted
+  string event_type = 20;      // sync_requested, sync_claimed, sync_submitted, sync_failed, status_ready, status_error, status_deleted
   google.protobuf.Timestamp created_at = 30;
-  optional string sync_action = 40;  // sync, delete (for sync events)
+  optional string sync_action = 40;  // create, update, delete (for sync events)
   optional string message = 50;
   optional int32 attempt = 60;       // Sync attempt number (for sync events)
 }

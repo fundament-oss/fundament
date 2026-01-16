@@ -51,9 +51,21 @@ func (s *Server) GetClusterActivity(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	// Stub: return empty activities
+	limit := req.Msg.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+
+	events, err := s.queries.ClusterGetEvents(ctx, db.ClusterGetEventsParams{
+		ClusterID: clusterID,
+		Limit:     limit,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster events: %w", err))
+	}
+
 	return connect.NewResponse(&organizationv1.GetClusterActivityResponse{
-		Activities: []*organizationv1.ActivityEntry{},
+		Events: clusterEventsFromRows(events),
 	}), nil
 }
 

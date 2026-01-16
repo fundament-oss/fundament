@@ -3,7 +3,7 @@
 
 set shell := ["bash", "-uc"]
 
-GARDENER_DIR := env_var_or_default("GARDENER_DIR", "~/gardener")
+GARDENER_DIR := env_var_or_default("GARDENER_DIR", justfile_directory() + "/../.dev/gardener")
 KUBECONFIG_PATH := GARDENER_DIR / "example/provider-local/seed-kind/base/kubeconfig"
 
 # List available recipes

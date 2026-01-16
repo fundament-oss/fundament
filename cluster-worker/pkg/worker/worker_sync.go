@@ -36,9 +36,9 @@ type SyncWorker struct {
 
 // Config holds worker configuration.
 type Config struct {
-	PollInterval      time.Duration // Timeout for WaitForNotification (e.g., 30s)
-	ReconcileInterval time.Duration // How often to run full reconciliation (e.g., 5m)
-	MaxSyncAttempts   int32         // Max retries before giving up (e.g., 10)
+	PollInterval      time.Duration `env:"POLL_INTERVAL" envDefault:"30s"`      // Timeout for WaitForNotification
+	ReconcileInterval time.Duration `env:"RECONCILE_INTERVAL" envDefault:"5m"`  // How often to run full reconciliation
+	MaxAttempts       int32         `env:"MAX_ATTEMPTS" envDefault:"5"`         // Max retries before giving up
 }
 
 // NewSyncWorker creates a new SyncWorker.
@@ -242,7 +242,7 @@ func (w *SyncWorker) reconcileAll(ctx context.Context) {
 		if !exists {
 			w.logger.Warn("drift detected: shoot missing in Gardener",
 				"cluster_id", cluster.ID, "name", cluster.Name)
-			if err := w.queries.ClusterSyncReset(ctx, cluster.ID); err != nil {
+			if err := w.queries.ClusterSyncReset(ctx, db.ClusterSyncResetParams{ClusterID: cluster.ID}); err != nil {
 				w.logger.Error("failed to reset cluster synced", "error", err)
 			}
 			driftCount++
@@ -256,7 +256,7 @@ func (w *SyncWorker) reconcileAll(ctx context.Context) {
 				"cluster_id", cluster.ID,
 				"expected", expectedName,
 				"got", shoot.Name)
-			if err := w.queries.ClusterSyncReset(ctx, cluster.ID); err != nil {
+			if err := w.queries.ClusterSyncReset(ctx, db.ClusterSyncResetParams{ClusterID: cluster.ID}); err != nil {
 				w.logger.Error("failed to reset cluster synced", "error", err)
 			}
 			driftCount++
@@ -300,11 +300,11 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 	}
 
 	// Determine sync action for events
-	syncAction := "create"
+	syncAction := db.TenantClusterSyncActionCreate
 	if cluster.Deleted != nil {
-		syncAction = "delete"
+		syncAction = db.TenantClusterSyncActionDelete
 	} else if cluster.SyncAttempts > 0 {
-		syncAction = "update" // Retry implies update
+		syncAction = db.TenantClusterSyncActionUpdate // Retry implies update
 	}
 	attempt := cluster.SyncAttempts + 1
 
@@ -319,7 +319,7 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 	// Create sync_claimed event for history (worker picked up the cluster)
 	if _, err := w.queries.ClusterCreateSyncClaimedEvent(ctx, db.ClusterCreateSyncClaimedEventParams{
 		ClusterID:  cluster.ID,
-		SyncAction: pgtype.Text{String: syncAction, Valid: true},
+		SyncAction: db.NullTenantClusterSyncAction{TenantClusterSyncAction: syncAction, Valid: true},
 		Attempt:    pgtype.Int4{Int32: attempt, Valid: true},
 	}); err != nil {
 		w.logger.Warn("failed to create sync_claimed event", "error", err)
@@ -372,7 +372,7 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 		// Create sync_failed event
 		if _, err := w.queries.ClusterCreateSyncFailedEvent(ctx, db.ClusterCreateSyncFailedEventParams{
 			ClusterID:  cluster.ID,
-			SyncAction: pgtype.Text{String: syncAction, Valid: true},
+			SyncAction: db.NullTenantClusterSyncAction{TenantClusterSyncAction: syncAction, Valid: true},
 			Message:    pgtype.Text{String: truncateError(syncErr.Error(), 1000), Valid: true},
 			Attempt:    pgtype.Int4{Int32: attempt, Valid: true},
 		}); err != nil {
@@ -385,25 +385,25 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 			"attempt", attempt,
 			"error", syncErr)
 
-		if attempt >= w.cfg.MaxSyncAttempts {
+		if attempt >= w.cfg.MaxAttempts {
 			w.logger.Error("ALERT: cluster sync exhausted, will not retry",
 				"cluster_id", cluster.ID,
 				"name", cluster.Name,
 				"attempts", attempt,
-				"max_attempts", w.cfg.MaxSyncAttempts)
+				"max_attempts", w.cfg.MaxAttempts)
 		}
 
 		return true, nil // Continue processing other clusters
 	}
 
-	if err := w.queries.ClusterMarkSynced(ctx, cluster.ID); err != nil {
+	if err := w.queries.ClusterMarkSynced(ctx, db.ClusterMarkSyncedParams{ClusterID: cluster.ID}); err != nil {
 		return false, fmt.Errorf("mark synced: %w", err)
 	}
 
 	// Create sync_submitted event (Gardener accepted the manifest)
 	if _, err := w.queries.ClusterCreateSyncSubmittedEvent(ctx, db.ClusterCreateSyncSubmittedEventParams{
 		ClusterID:  cluster.ID,
-		SyncAction: pgtype.Text{String: syncAction, Valid: true},
+		SyncAction: db.NullTenantClusterSyncAction{TenantClusterSyncAction: syncAction, Valid: true},
 		Message:    pgtype.Text{}, // NULL for success
 	}); err != nil {
 		w.logger.Warn("failed to create sync_submitted event", "error", err)
@@ -436,7 +436,7 @@ func (w *SyncWorker) claimCluster(ctx context.Context) (*claimedCluster, error) 
 	// Try to claim an active cluster first
 	row, err := w.queries.ClusterClaimForSync(ctx, db.ClusterClaimForSyncParams{
 		WorkerID:    workerID,
-		MaxAttempts: w.cfg.MaxSyncAttempts,
+		MaxAttempts: w.cfg.MaxAttempts,
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("claim cluster: %w", err)
@@ -446,7 +446,7 @@ func (w *SyncWorker) claimCluster(ctx context.Context) (*claimedCluster, error) 
 	if errors.Is(err, pgx.ErrNoRows) {
 		deletedRow, err := w.queries.ClusterClaimDeletedForSync(ctx, db.ClusterClaimDeletedForSyncParams{
 			WorkerID:    workerID,
-			MaxAttempts: w.cfg.MaxSyncAttempts,
+			MaxAttempts: w.cfg.MaxAttempts,
 		})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
