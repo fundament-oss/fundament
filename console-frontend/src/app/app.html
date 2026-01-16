@@ -2,15 +2,15 @@
   <!-- Toast Message -->
   @if (toastService.toast()) {
     <div
-      class="fixed top-2 right-4 left-4 z-100 flex items-center justify-between rounded-md px-4 py-3 text-white shadow-md"
+      class="fixed top-2 right-4 left-4 z-100 flex items-center justify-between rounded-md px-4 py-3 shadow-md dark:text-white"
       [class]="
         toastService.toast()?.type === 'success'
-          ? 'bg-emerald-500/90 dark:bg-emerald-600/90'
+          ? 'bg-emerald-200/90 text-emerald-900 dark:bg-emerald-700/90'
           : toastService.toast()?.type === 'error'
-            ? 'bg-rose-500/90 dark:bg-rose-600/90'
+            ? 'bg-rose-200/90 text-rose-900 dark:bg-rose-700/90'
             : toastService.toast()?.type === 'warning'
-              ? 'bg-amber-500/90 dark:bg-amber-600/90'
-              : 'bg-blue-500/90 dark:bg-blue-600/90'
+              ? 'bg-amber-200/90 text-amber-900 dark:bg-amber-700/90'
+              : 'bg-blue-200/90 text-blue-900 dark:bg-blue-700/90'
       "
       role="alert"
     >
@@ -30,7 +30,7 @@
         (click)="toastService.dismiss()"
         type="button"
         aria-label="Dismiss notification"
-        class="ml-4 shrink-0 cursor-pointer rounded-md p-1 text-white transition-colors hover:bg-white/20 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:outline-none"
+        class="ml-4 shrink-0 cursor-pointer rounded-md p-1 transition-colors hover:bg-white/20 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:outline-none"
       >
         <app-close-icon class="h-5 w-5" />
       </button>
