@@ -3,7 +3,11 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
-import { CheckmarkIconComponent, QuestionCircleIconComponent } from '../icons';
+import {
+  CheckmarkIconComponent,
+  QuestionCircleIconComponent,
+  LoadingIndicatorComponent,
+} from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
@@ -48,6 +52,7 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
     InstallPluginModalComponent,
     CheckmarkIconComponent,
     QuestionCircleIconComponent,
+    LoadingIndicatorComponent,
   ],
   templateUrl: './plugins.component.html',
 })

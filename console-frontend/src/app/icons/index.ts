@@ -1,6 +1,7 @@
 // Icon Components Export
 // Note: not using https://github.com/pierreavn/angular-tabler-icons, since 1) it seems no longer maintained, 2) width/height can only be set using !important, and 3) not all icons are from the Tabler set
 
+export { LoadingIndicatorComponent } from './loading-indicator.component';
 export { WarningIconComponent } from './warning-icon.component';
 export { MenuIconComponent } from './menu-icon.component';
 export { CloseIconComponent } from './close-icon.component';
