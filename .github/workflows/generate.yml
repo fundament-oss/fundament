@@ -7,43 +7,44 @@ on:
     branches: [master]
 
 jobs:
-  generate-go:
-    name: Generate Go
+  generate-pristine:
+    name: Generate must be pristine
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: jdx/mise-action@v2
-        with:
-          install_args: go buf sqlc oapi-codegen protoc-gen-go protoc-gen-connect-go
+      - uses: jdx/mise-action@v3
 
-      - name: Run go generate
-        run: mise exec -- go generate -x ./...
+      - name: Setup trek wrapper (runs via Docker with pgmodeler-cli)
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          cat > "$HOME/.local/bin/trek" << 'EOF'
+          #!/bin/bash
+          # Wrapper script that runs trek from Docker image (includes pgmodeler-cli)
+          # Pass through TREK_* environment variables
+          env_args=()
+          while IFS='=' read -r name value; do
+            if [[ "$name" == TREK_* ]]; then
+              env_args+=(-e "$name=$value")
+            fi
+          done < <(env)
+          exec docker run --rm \
+            "${env_args[@]}" \
+            -v "$(pwd):/data" \
+            -w "/data" \
+            ghcr.io/printeers/trek:0.12.1-pgmodeler trek "$@"
+          EOF
+          chmod +x "$HOME/.local/bin/trek"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run just generate
+        run: mise exec -- just generate
+        env:
+          TREK_ERROR_ON_DIFF: "true"
 
       - name: Check for changes
         run: |
           if ! git diff --exit-code; then
-            echo "ERROR: Generated Go files are out of date. Run 'go generate ./...' and commit the changes."
-            exit 1
-          fi
-
-  generate-frontend:
-    name: Generate Frontend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: jdx/mise-action@v2
-        with:
-          install_args: node pnpm buf npm:@bufbuild/protoc-gen-es
-
-      - name: Run buf generate
-        run: mise exec -- buf generate
-        working-directory: console-frontend
-
-      - name: Check for changes
-        run: |
-          if ! git diff --exit-code; then
-            echo "ERROR: Generated frontend files are out of date. Run 'cd console-frontend && buf generate' and commit the changes."
+            echo "ERROR: Generated files are out of date. Run 'just generate' and commit the changes."
             exit 1
           fi
