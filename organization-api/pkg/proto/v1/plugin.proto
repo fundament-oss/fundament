@@ -8,6 +8,8 @@ option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/pro
 service PluginService {
   // List all available plugins
   rpc ListPlugins(ListPluginsRequest) returns (ListPluginsResponse);
+  // Get detailed information about a specific plugin
+  rpc GetPluginDetail(GetPluginDetailRequest) returns (GetPluginDetailResponse);
   // List all available presets
   rpc ListPresets(ListPresetsRequest) returns (ListPresetsResponse);
 }
@@ -24,8 +26,8 @@ message Category {
   string name = 20;
 }
 
-// Plugin information
-message Plugin {
+// PluginSummary information
+message PluginSummary {
   string id = 10;
   string name = 20;
   string description = 30;
@@ -38,7 +40,7 @@ message ListPluginsRequest {}
 
 // List plugins response
 message ListPluginsResponse {
-  repeated Plugin plugins = 10;
+  repeated PluginSummary plugins = 10;
 }
 
 // Preset information
@@ -55,4 +57,40 @@ message ListPresetsRequest {}
 // List presets response
 message ListPresetsResponse {
   repeated Preset presets = 10;
+}
+
+// Documentation link for a plugin
+message DocumentationLink {
+  string id = 10;
+  string title = 20;
+  string url_name = 30;
+  string url = 40;
+}
+
+// Author information
+message Author {
+  string name = 10;
+  string url = 20;
+}
+
+// Detailed plugin information
+message PluginDetail {
+  string id = 10;
+  string name = 20;
+  string description = 30;
+  repeated Tag tags = 40;
+  repeated Category categories = 50;
+  Author author = 60;
+  string repository_url = 70;
+  repeated DocumentationLink documentation_links = 80;
+}
+
+// Get plugin detail request
+message GetPluginDetailRequest {
+  string plugin_id = 10;
+}
+
+// Get plugin detail response
+message GetPluginDetailResponse {
+  PluginDetail plugin = 10;
 }

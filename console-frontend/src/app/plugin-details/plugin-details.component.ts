@@ -7,7 +7,7 @@ import { InstallPluginModalComponent } from '../install-plugin-modal/install-plu
 import { ChevronRightIconComponent, CheckmarkIconComponent, ErrorIconComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { ListPluginsRequestSchema, type Plugin } from '../../generated/v1/plugin_pb';
+import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import {
   ListClustersRequestSchema,
   ListInstallsRequestSchema,
@@ -50,7 +50,7 @@ export class PluginDetailsComponent implements OnInit {
   private toastService = inject(ToastService);
 
   pluginId = signal<string>('');
-  plugin = signal<Plugin | null>(null);
+  plugin = signal<PluginSummary | null>(null);
   clusters = signal<ClusterWithState[]>([]);
   installs = signal<InstallWithCluster[]>([]);
 

@@ -3,7 +3,7 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="16"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="18"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
 	 last-position="0,610" last-zoom="0.75" scene-rect="0,0,2038.81,2098.92"
 	 default-owner="postgres"
@@ -292,7 +292,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="plugins" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
+<table name="plugins" layers="0" collapse-mode="2" max-obj-count="9" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_fundament_api"/>
 	<position x="640" y="1380"/>
@@ -303,6 +303,15 @@ END;]]> </definition>
 		<type name="text" length="0"/>
 	</column>
 	<column name="description" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="author_name">
+		<type name="text" length="0"/>
+	</column>
+	<column name="author_url">
+		<type name="text" length="0"/>
+	</column>
+	<column name="repository_url">
 		<type name="text" length="0"/>
 	</column>
 	<column name="created" not-null="true" default-value="now()">
@@ -441,6 +450,30 @@ END;]]> </definition>
 	</constraint>
 </table>
 
+<table name="plugin_documentation_links" layers="0" collapse-mode="2" max-obj-count="5" z-value="0">
+	<schema name="zappstore"/>
+	<role name="fun_fundament_api"/>
+	<position x="500" y="1100"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="plugin_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="title" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="url_name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="url" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="plugin_documentation_links_pk" type="pk-constr" table="zappstore.plugin_documentation_links">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
 <policy name="projects_organization_isolation" table="tenant.projects" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid]]> </expression>
 </policy>
@@ -537,6 +570,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="plugin_documentation_links_fk_plugin" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.plugins" table="zappstore.plugin_documentation_links">
+	<columns names="plugin_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <relationship name="rel_projects_organizations" type="relfk" layers="0"
 	 src-table="tenant.projects"
 	 dst-table="tenant.organizations" reference-fk="projects_fk_organization"
@@ -610,5 +649,10 @@ END;]]> </definition>
 		<position x="-1.21832" y="-18.853"/>
 	</label>
 </relationship>
+
+<relationship name="rel_plugin_documentation_links_plugins" type="relfk" layers="0"
+	 src-table="zappstore.plugin_documentation_links"
+	 dst-table="zappstore.plugins" reference-fk="plugin_documentation_links_fk_plugin"
+	 src-required="false" dst-required="true"/>
 
 </dbmodel>

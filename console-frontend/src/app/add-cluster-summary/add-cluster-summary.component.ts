@@ -15,7 +15,7 @@ import {
 import {
   ListPluginsRequestSchema,
   ListPresetsRequestSchema,
-  type Plugin,
+  type PluginSummary,
   type Preset,
 } from '../../generated/v1/plugin_pb';
 import { firstValueFrom } from 'rxjs';
@@ -42,7 +42,7 @@ export class AddClusterSummaryComponent implements OnInit {
   protected isCreating = signal<boolean>(false);
 
   // Plugin and preset data
-  protected plugins = signal<Plugin[]>([]);
+  protected plugins = signal<PluginSummary[]>([]);
   protected presets = signal<Preset[]>([]);
   protected isLoadingPlugins = signal<boolean>(true);
 

@@ -36,6 +36,9 @@ const (
 	// PluginServiceListPluginsProcedure is the fully-qualified name of the PluginService's ListPlugins
 	// RPC.
 	PluginServiceListPluginsProcedure = "/organization.v1.PluginService/ListPlugins"
+	// PluginServiceGetPluginDetailProcedure is the fully-qualified name of the PluginService's
+	// GetPluginDetail RPC.
+	PluginServiceGetPluginDetailProcedure = "/organization.v1.PluginService/GetPluginDetail"
 	// PluginServiceListPresetsProcedure is the fully-qualified name of the PluginService's ListPresets
 	// RPC.
 	PluginServiceListPresetsProcedure = "/organization.v1.PluginService/ListPresets"
@@ -45,6 +48,8 @@ const (
 type PluginServiceClient interface {
 	// List all available plugins
 	ListPlugins(context.Context, *connect.Request[v1.ListPluginsRequest]) (*connect.Response[v1.ListPluginsResponse], error)
+	// Get detailed information about a specific plugin
+	GetPluginDetail(context.Context, *connect.Request[v1.GetPluginDetailRequest]) (*connect.Response[v1.GetPluginDetailResponse], error)
 	// List all available presets
 	ListPresets(context.Context, *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error)
 }
@@ -66,6 +71,12 @@ func NewPluginServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(pluginServiceMethods.ByName("ListPlugins")),
 			connect.WithClientOptions(opts...),
 		),
+		getPluginDetail: connect.NewClient[v1.GetPluginDetailRequest, v1.GetPluginDetailResponse](
+			httpClient,
+			baseURL+PluginServiceGetPluginDetailProcedure,
+			connect.WithSchema(pluginServiceMethods.ByName("GetPluginDetail")),
+			connect.WithClientOptions(opts...),
+		),
 		listPresets: connect.NewClient[v1.ListPresetsRequest, v1.ListPresetsResponse](
 			httpClient,
 			baseURL+PluginServiceListPresetsProcedure,
@@ -77,13 +88,19 @@ func NewPluginServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // pluginServiceClient implements PluginServiceClient.
 type pluginServiceClient struct {
-	listPlugins *connect.Client[v1.ListPluginsRequest, v1.ListPluginsResponse]
-	listPresets *connect.Client[v1.ListPresetsRequest, v1.ListPresetsResponse]
+	listPlugins     *connect.Client[v1.ListPluginsRequest, v1.ListPluginsResponse]
+	getPluginDetail *connect.Client[v1.GetPluginDetailRequest, v1.GetPluginDetailResponse]
+	listPresets     *connect.Client[v1.ListPresetsRequest, v1.ListPresetsResponse]
 }
 
 // ListPlugins calls organization.v1.PluginService.ListPlugins.
 func (c *pluginServiceClient) ListPlugins(ctx context.Context, req *connect.Request[v1.ListPluginsRequest]) (*connect.Response[v1.ListPluginsResponse], error) {
 	return c.listPlugins.CallUnary(ctx, req)
+}
+
+// GetPluginDetail calls organization.v1.PluginService.GetPluginDetail.
+func (c *pluginServiceClient) GetPluginDetail(ctx context.Context, req *connect.Request[v1.GetPluginDetailRequest]) (*connect.Response[v1.GetPluginDetailResponse], error) {
+	return c.getPluginDetail.CallUnary(ctx, req)
 }
 
 // ListPresets calls organization.v1.PluginService.ListPresets.
@@ -95,6 +112,8 @@ func (c *pluginServiceClient) ListPresets(ctx context.Context, req *connect.Requ
 type PluginServiceHandler interface {
 	// List all available plugins
 	ListPlugins(context.Context, *connect.Request[v1.ListPluginsRequest]) (*connect.Response[v1.ListPluginsResponse], error)
+	// Get detailed information about a specific plugin
+	GetPluginDetail(context.Context, *connect.Request[v1.GetPluginDetailRequest]) (*connect.Response[v1.GetPluginDetailResponse], error)
 	// List all available presets
 	ListPresets(context.Context, *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error)
 }
@@ -112,6 +131,12 @@ func NewPluginServiceHandler(svc PluginServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(pluginServiceMethods.ByName("ListPlugins")),
 		connect.WithHandlerOptions(opts...),
 	)
+	pluginServiceGetPluginDetailHandler := connect.NewUnaryHandler(
+		PluginServiceGetPluginDetailProcedure,
+		svc.GetPluginDetail,
+		connect.WithSchema(pluginServiceMethods.ByName("GetPluginDetail")),
+		connect.WithHandlerOptions(opts...),
+	)
 	pluginServiceListPresetsHandler := connect.NewUnaryHandler(
 		PluginServiceListPresetsProcedure,
 		svc.ListPresets,
@@ -122,6 +147,8 @@ func NewPluginServiceHandler(svc PluginServiceHandler, opts ...connect.HandlerOp
 		switch r.URL.Path {
 		case PluginServiceListPluginsProcedure:
 			pluginServiceListPluginsHandler.ServeHTTP(w, r)
+		case PluginServiceGetPluginDetailProcedure:
+			pluginServiceGetPluginDetailHandler.ServeHTTP(w, r)
 		case PluginServiceListPresetsProcedure:
 			pluginServiceListPresetsHandler.ServeHTTP(w, r)
 		default:
@@ -135,6 +162,10 @@ type UnimplementedPluginServiceHandler struct{}
 
 func (UnimplementedPluginServiceHandler) ListPlugins(context.Context, *connect.Request[v1.ListPluginsRequest]) (*connect.Response[v1.ListPluginsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.PluginService.ListPlugins is not implemented"))
+}
+
+func (UnimplementedPluginServiceHandler) GetPluginDetail(context.Context, *connect.Request[v1.GetPluginDetailRequest]) (*connect.Response[v1.GetPluginDetailResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.PluginService.GetPluginDetail is not implemented"))
 }
 
 func (UnimplementedPluginServiceHandler) ListPresets(context.Context, *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error) {

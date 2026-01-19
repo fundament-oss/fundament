@@ -62,6 +62,14 @@ type ZappstoreInstall struct {
 	Deleted   pgtype.Timestamptz
 }
 
+type ZappstorePluginDocumentationLink struct {
+	ID       uuid.UUID
+	PluginID uuid.UUID
+	Title    string
+	UrlName  string
+	Url      string
+}
+
 type ZappstorePreset struct {
 	ID          uuid.UUID
 	Name        string

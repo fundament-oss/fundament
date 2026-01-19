@@ -1,0 +1,26 @@
+meta {
+  name: Get Plugin Detail
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.PluginService/GetPluginDetail
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "pluginId": "{{pluginId}}"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

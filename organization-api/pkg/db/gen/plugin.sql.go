@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const pluginCategoriesList = `-- name: PluginCategoriesList :many
@@ -43,6 +44,114 @@ func (q *Queries) PluginCategoriesList(ctx context.Context) ([]PluginCategoriesL
 		return nil, err
 	}
 	return items, nil
+}
+
+const pluginCategoriesListByPluginID = `-- name: PluginCategoriesListByPluginID :many
+SELECT cp.plugin_id, c.id, c.name
+FROM zappstore.categories_plugins cp
+JOIN zappstore.categories c ON c.id = cp.category_id
+WHERE cp.plugin_id = $1 AND c.deleted IS NULL
+ORDER BY c.name
+`
+
+type PluginCategoriesListByPluginIDParams struct {
+	PluginID uuid.UUID
+}
+
+type PluginCategoriesListByPluginIDRow struct {
+	PluginID uuid.UUID
+	ID       uuid.UUID
+	Name     string
+}
+
+func (q *Queries) PluginCategoriesListByPluginID(ctx context.Context, arg PluginCategoriesListByPluginIDParams) ([]PluginCategoriesListByPluginIDRow, error) {
+	rows, err := q.db.Query(ctx, pluginCategoriesListByPluginID, arg.PluginID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PluginCategoriesListByPluginIDRow
+	for rows.Next() {
+		var i PluginCategoriesListByPluginIDRow
+		if err := rows.Scan(&i.PluginID, &i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pluginDocumentationLinksList = `-- name: PluginDocumentationLinksList :many
+SELECT id, plugin_id, title, url_name, url
+FROM zappstore.plugin_documentation_links
+WHERE plugin_id = $1
+ORDER BY title
+`
+
+type PluginDocumentationLinksListParams struct {
+	PluginID uuid.UUID
+}
+
+func (q *Queries) PluginDocumentationLinksList(ctx context.Context, arg PluginDocumentationLinksListParams) ([]ZappstorePluginDocumentationLink, error) {
+	rows, err := q.db.Query(ctx, pluginDocumentationLinksList, arg.PluginID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ZappstorePluginDocumentationLink
+	for rows.Next() {
+		var i ZappstorePluginDocumentationLink
+		if err := rows.Scan(
+			&i.ID,
+			&i.PluginID,
+			&i.Title,
+			&i.UrlName,
+			&i.Url,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pluginGetByID = `-- name: PluginGetByID :one
+SELECT id, name, description, author_name, author_url, repository_url
+FROM zappstore.plugins
+WHERE id = $1 AND deleted IS NULL
+`
+
+type PluginGetByIDParams struct {
+	ID uuid.UUID
+}
+
+type PluginGetByIDRow struct {
+	ID            uuid.UUID
+	Name          string
+	Description   string
+	AuthorName    pgtype.Text
+	AuthorUrl     pgtype.Text
+	RepositoryUrl pgtype.Text
+}
+
+func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (PluginGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, pluginGetByID, arg.ID)
+	var i PluginGetByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.AuthorName,
+		&i.AuthorUrl,
+		&i.RepositoryUrl,
+	)
+	return i, err
 }
 
 const pluginList = `-- name: PluginList :many
@@ -101,6 +210,44 @@ func (q *Queries) PluginTagsList(ctx context.Context) ([]PluginTagsListRow, erro
 	var items []PluginTagsListRow
 	for rows.Next() {
 		var i PluginTagsListRow
+		if err := rows.Scan(&i.PluginID, &i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pluginTagsListByPluginID = `-- name: PluginTagsListByPluginID :many
+SELECT pt.plugin_id, t.id, t.name
+FROM zappstore.plugins_tags pt
+JOIN zappstore.tags t ON t.id = pt.tag_id
+WHERE pt.plugin_id = $1 AND t.deleted IS NULL
+ORDER BY t.name
+`
+
+type PluginTagsListByPluginIDParams struct {
+	PluginID uuid.UUID
+}
+
+type PluginTagsListByPluginIDRow struct {
+	PluginID uuid.UUID
+	ID       uuid.UUID
+	Name     string
+}
+
+func (q *Queries) PluginTagsListByPluginID(ctx context.Context, arg PluginTagsListByPluginIDParams) ([]PluginTagsListByPluginIDRow, error) {
+	rows, err := q.db.Query(ctx, pluginTagsListByPluginID, arg.PluginID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PluginTagsListByPluginIDRow
+	for rows.Next() {
+		var i PluginTagsListByPluginIDRow
 		if err := rows.Scan(&i.PluginID, &i.ID, &i.Name); err != nil {
 			return nil, err
 		}
