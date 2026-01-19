@@ -1,77 +1,68 @@
 <!-- Error Message -->
 @if (errorMessage()) {
-  <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
-    <app-error-icon class="mr-3 h-5 w-5 shrink-0 text-rose-400 dark:text-rose-500" />
-    <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
-  </div>
+  <app-alert variant="danger" [hasIcon]="true" class="mb-6">
+    <app-error-icon slot="icon" class="h-5 w-5" />
+    {{ errorMessage() }}
+  </app-alert>
 }
 
 <!-- Loading State -->
 @if (isLoading()) {
   <div class="flex items-center justify-center py-12">
-    <div
-      class="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
-    ></div>
+    <app-spinner size="lg"></app-spinner>
   </div>
 }
 
 <!-- Content (only show when not loading) -->
 @if (!isLoading()) {
-  <div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
-    <!-- Header -->
-    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-      <h1 class="text-2xl font-bold dark:text-white">Projects</h1>
+  <app-card [hasHeader]="true">
+    <h1 slot="header" class="text-2xl font-bold dark:text-white">Projects</h1>
+
+    <!-- Add Project Button -->
+    <div class="mb-6">
+      <app-button variant="primary" routerLink="/projects/add" [iconLeading]="true">
+        <app-plus-icon slot="icon-leading" class="h-4 w-4" />
+        Add project
+      </app-button>
     </div>
 
-    <!-- Content -->
-    <div class="p-6">
-      <!-- Add Project Button -->
-      <div class="mb-6">
-        <a routerLink="/projects/add" class="btn-primary inline-flex items-center">
-          <app-plus-icon class="mr-1.5 h-4 w-4" />
-          Add project
-        </a>
-      </div>
-
-      <!-- Projects List -->
-      <div
-        class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
-      >
-        @if (projects().length === 0) {
-          <div class="px-6 py-12 text-center">
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              No projects found. Create your first project to get started.
-            </p>
-          </div>
-        } @else {
-          @for (project of projects(); track project.id) {
-            <a
-              [routerLink]="['/projects', project.id]"
-              class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-900"
+    <!-- Projects List -->
+    <div
+      class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
+    >
+      @if (projects().length === 0) {
+        <app-empty-state
+          title="No projects found"
+          description="Create your first project to get started"
+        ></app-empty-state>
+      } @else {
+        @for (project of projects(); track project.id) {
+          <a
+            [routerLink]="['/projects', project.id]"
+            class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-900"
+          >
+            <div>
+              <h3 class="font-medium dark:text-white">{{ project.name }}</h3>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Created {{ formatDate(project.createdAt?.value) }}
+              </p>
+            </div>
+            <svg
+              class="h-5 w-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <div>
-                <h3 class="font-medium dark:text-white">{{ project.name }}</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Created {{ formatDate(project.createdAt?.value) }}
-                </p>
-              </div>
-              <svg
-                class="h-5 w-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </a>
-          }
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </a>
         }
-      </div>
+      }
     </div>
-  </div>
+  </app-card>
 }

@@ -3,6 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { PlusIconComponent, EyeIconComponent, ErrorIconComponent } from '../icons';
+import {
+  CardComponent,
+  ButtonComponent,
+  BadgeComponent,
+  AlertComponent,
+} from '../shared/components';
 import { CLUSTER } from '../../connect/tokens';
 import { ClusterSummary } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
@@ -11,7 +17,17 @@ import { ClusterStatus } from '../../generated/v1/common_pb';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, PlusIconComponent, EyeIconComponent, ErrorIconComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    PlusIconComponent,
+    EyeIconComponent,
+    ErrorIconComponent,
+    CardComponent,
+    ButtonComponent,
+    BadgeComponent,
+    AlertComponent,
+  ],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {

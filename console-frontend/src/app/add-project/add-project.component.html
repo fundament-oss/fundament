@@ -1,51 +1,52 @@
 <!-- Error Message -->
 @if (errorMessage()) {
-  <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
-    <app-error-icon class="mr-3 h-5 w-5 shrink-0 text-rose-400 dark:text-rose-500" />
-    <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
-  </div>
+  <app-alert variant="danger" class="mb-6">
+    <app-error-icon slot="icon" class="h-5 w-5" />
+    {{ errorMessage() }}
+  </app-alert>
 }
 
-<div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
-  <!-- Header -->
-  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+<app-card>
+  <div header>
     <h1 class="text-2xl font-bold dark:text-white">Add project</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
       Create a new project to organize your namespaces and resources.
     </p>
   </div>
 
-  <!-- Form -->
-  <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" class="space-y-6 px-6 py-6">
-    <div>
-      <label for="name" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-        Project name
-      </label>
-      <input
-        #projectNameInput
-        id="name"
-        formControlName="name"
-        type="text"
-        placeholder="E.g. my-project"
-        class="w-full"
-      />
-      @if (projectForm.get('name')?.invalid && projectForm.get('name')?.dirty) {
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
-      }
-      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        Must be lowercase, start with a letter, and contain only letters, numbers, and hyphens.
-      </p>
-    </div>
-
-    <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
-        @if (isSubmitting()) {
-          Creating...
-        } @else {
-          Create project
+  <div content>
+    <!-- Form -->
+    <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" class="space-y-6">
+      <div>
+        <label for="name" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+          Project name
+        </label>
+        <input
+          #projectNameInput
+          id="name"
+          formControlName="name"
+          type="text"
+          placeholder="E.g. my-project"
+          class="w-full"
+        />
+        @if (projectForm.get('name')?.invalid && projectForm.get('name')?.dirty) {
+          <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
         }
-      </button>
-      <a routerLink="/projects" class="btn-secondary">Cancel</a>
-    </div>
-  </form>
-</div>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          Must be lowercase, start with a letter, and contain only letters, numbers, and hyphens.
+        </p>
+      </div>
+
+      <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+        <app-button type="submit" variant="primary" [disabled]="isSubmitting()">
+          @if (isSubmitting()) {
+            Creating...
+          } @else {
+            Create project
+          }
+        </app-button>
+        <app-button variant="secondary" routerLink="/projects">Cancel</app-button>
+      </div>
+    </form>
+  </div>
+</app-card>

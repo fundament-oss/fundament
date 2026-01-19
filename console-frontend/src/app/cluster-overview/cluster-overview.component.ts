@@ -39,6 +39,16 @@ import {
   PlusIconComponent,
   TrashIconComponent,
 } from '../icons';
+import {
+  CardComponent,
+  ButtonComponent,
+  BadgeComponent,
+  AlertComponent,
+  SpinnerComponent,
+  ModalComponent,
+  ProgressBarComponent,
+  EmptyStateComponent,
+} from '../shared/components';
 
 @Component({
   selector: 'app-cluster-overview',
@@ -54,6 +64,14 @@ import {
     WarningIconComponent,
     PlusIconComponent,
     TrashIconComponent,
+    CardComponent,
+    ButtonComponent,
+    BadgeComponent,
+    AlertComponent,
+    SpinnerComponent,
+    ModalComponent,
+    ProgressBarComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './cluster-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -240,10 +258,10 @@ export class ClusterOverviewComponent implements OnInit {
     return Math.round((used / limit) * 100);
   }
 
-  getUsageColor(percentage: number): string {
-    if (percentage >= 90) return 'bg-red-500';
-    if (percentage >= 75) return 'bg-yellow-500';
-    return 'bg-green-500';
+  getUsageVariant(percentage: number): 'default' | 'success' | 'warning' | 'danger' {
+    if (percentage >= 90) return 'danger';
+    if (percentage >= 75) return 'warning';
+    return 'success';
   }
 
   openTerminal(): void {

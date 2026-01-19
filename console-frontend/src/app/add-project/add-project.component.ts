@@ -17,10 +17,19 @@ import { create } from '@bufbuild/protobuf';
 import { CreateProjectRequestSchema } from '../../generated/v1/project_pb';
 import { firstValueFrom } from 'rxjs';
 import { ErrorIconComponent } from '../icons';
+import { CardComponent, ButtonComponent, AlertComponent } from '../shared/components';
 
 @Component({
   selector: 'app-add-project',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, ErrorIconComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    ErrorIconComponent,
+    CardComponent,
+    ButtonComponent,
+    AlertComponent,
+  ],
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

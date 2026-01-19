@@ -3,11 +3,14 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
+import { CheckmarkIconComponent } from '../icons';
 import {
-  CheckmarkIconComponent,
-  QuestionCircleIconComponent,
-  LoadingIndicatorComponent,
-} from '../icons';
+  CardComponent,
+  ButtonComponent,
+  BadgeComponent,
+  SpinnerComponent,
+  EmptyStateComponent,
+} from '../shared/components';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
@@ -64,8 +67,11 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
     RouterLink,
     InstallPluginModalComponent,
     CheckmarkIconComponent,
-    QuestionCircleIconComponent,
-    LoadingIndicatorComponent,
+    CardComponent,
+    ButtonComponent,
+    BadgeComponent,
+    SpinnerComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './plugins.component.html',
 })

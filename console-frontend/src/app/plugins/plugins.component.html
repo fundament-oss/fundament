@@ -1,156 +1,157 @@
-<div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
-  <!-- Header -->
-  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+<app-card>
+  <div header>
     <h1 class="text-2xl font-bold dark:text-white">Plugins</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
       Discover and install plugins to expand your Kubernetes clusters.
     </p>
   </div>
 
-  <div class="flex flex-col gap-6 p-6 lg:flex-row">
-    <!-- Main Content Area -->
-    <div class="flex-1">
-      <!-- Plugin Cards Grid -->
-      <div
-        class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
-      >
-        @for (plugin of filteredPlugins; track plugin.id) {
-          <div
-            class="rounded-lg border border-gray-200 bg-white transition-shadow duration-200 hover:shadow-sm dark:border-gray-800 dark:bg-gray-950"
-          >
-            <!-- Plugin Card Header -->
-            <div class="p-6">
-              <div class="mb-2 flex items-center space-x-4">
-                <!-- Plugin Logo -->
-                <img
-                  class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 p-1 dark:bg-gray-800"
-                  src="/img/plugins/{{ getPluginIconName(plugin.name) }}.svg"
-                  alt="{{ plugin.name }}"
-                />
+  <div content>
+    <div class="flex flex-col gap-6 lg:flex-row">
+      <!-- Main Content Area -->
+      <div class="flex-1">
+        <!-- Plugin Cards Grid -->
+        <div
+          class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
+        >
+          @for (plugin of filteredPlugins; track plugin.id) {
+            <div
+              class="rounded-lg border border-gray-200 bg-white transition-shadow duration-200 hover:shadow-sm dark:border-gray-800 dark:bg-gray-950"
+            >
+              <!-- Plugin Card Header -->
+              <div class="p-6">
+                <div class="mb-2 flex items-center space-x-4">
+                  <!-- Plugin Logo -->
+                  <img
+                    class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 p-1 dark:bg-gray-800"
+                    src="/img/plugins/{{ getPluginIconName(plugin.name) }}.svg"
+                    alt="{{ plugin.name }}"
+                  />
 
-                <!-- Plugin Title -->
-                <h3 class="flex-1 text-lg font-semibold dark:text-white">
-                  {{ plugin.name }}
-                </h3>
-              </div>
+                  <!-- Plugin Title -->
+                  <h3 class="flex-1 text-lg font-semibold dark:text-white">
+                    {{ plugin.name }}
+                  </h3>
+                </div>
 
-              <!-- Tags -->
-              @if (plugin.tags && plugin.tags.length > 0) {
-                <p class="mb-2 flex flex-wrap gap-1">
-                  @for (tag of plugin.tags; track tag.id) {
-                    <span
-                      [class]="
-                        tag.name.toLowerCase() === 'official'
-                          ? 'inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
-                          : 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                      "
-                    >
-                      @if (tag.name.toLowerCase() === 'official') {
-                        <app-checkmark-icon class="mr-1 h-3 w-3" />
-                      }
-                      {{ tag.name }}
-                    </span>
-                  }
+                <!-- Tags -->
+                @if (plugin.tags && plugin.tags.length > 0) {
+                  <p class="mb-2 flex flex-wrap gap-1">
+                    @for (tag of plugin.tags; track tag.id) {
+                      <app-badge
+                        [class]="
+                          tag.name.toLowerCase() === 'official'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                        "
+                      >
+                        @if (tag.name.toLowerCase() === 'official') {
+                          <app-checkmark-icon class="mr-1 h-3 w-3" />
+                        }
+                        {{ tag.name }}
+                      </app-badge>
+                    }
+                  </p>
+                }
+
+                <!-- Plugin Description -->
+                <p class="line-clamp-3 text-sm text-gray-600 dark:text-gray-300">
+                  {{ plugin.description }}
                 </p>
-              }
+              </div>
 
-              <!-- Plugin Description -->
-              <p class="line-clamp-3 text-sm text-gray-600 dark:text-gray-300">
-                {{ plugin.description }}
-              </p>
-            </div>
-
-            <!-- Plugin Card Actions -->
-            <div class="px-6 pb-6">
-              <div class="flex space-x-3">
-                <a class="btn-secondary flex-1 text-center" [routerLink]="['/plugins', plugin.id]">
-                  Details
-                </a>
-                <button (click)="onInstallPlugin(plugin)" type="button" class="btn-primary flex-1">
-                  Install
-                </button>
+              <!-- Plugin Card Actions -->
+              <div class="px-6 pb-6">
+                <div class="flex space-x-3">
+                  <app-button
+                    variant="secondary"
+                    [routerLink]="['/plugins', plugin.id]"
+                    class="flex-1 text-center"
+                  >
+                    Details
+                  </app-button>
+                  <app-button variant="primary" (click)="onInstallPlugin(plugin)" class="flex-1">
+                    Install
+                  </app-button>
+                </div>
               </div>
             </div>
+          }
+        </div>
+
+        <!-- Loading State -->
+        @if (isLoading()) {
+          <div class="py-12 text-center">
+            <div role="status" class="flex justify-center">
+              <app-spinner size="lg" />
+              <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading plugins...</p>
           </div>
+        }
+
+        <!-- Empty State -->
+        @if (!isLoading() && filteredPlugins.length === 0) {
+          <app-empty-state
+            title="No plugins found"
+            description="Please try selecting a different category."
+            icon="question-circle"
+          />
         }
       </div>
 
-      <!-- Loading State -->
-      @if (isLoading()) {
-        <div class="py-12 text-center">
-          <div role="status" class="flex justify-center">
-            <app-loading-indicator
-              class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
-            />
-            <span class="sr-only">Loading...</span>
-          </div>
-          <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading plugins...</p>
+      <!-- Right Sidebar with filters -->
+      <div class="shrink-0 space-y-4 lg:w-64">
+        <!-- Preset Filter -->
+        <div
+          class="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
+        >
+          <h2 class="mb-3 text-sm font-semibold dark:text-white">Presets</h2>
+          <nav class="space-y-1">
+            @for (preset of presets; track preset.id) {
+              <button
+                (click)="selectPreset(preset.id)"
+                [class]="
+                  selectedPreset === preset.id
+                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100'
+                    : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
+                "
+                class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors duration-200"
+                [title]="preset.description"
+              >
+                <span>{{ preset.name }}</span>
+                <span class="text-xs text-gray-600 dark:text-gray-300">{{ preset.count }}</span>
+              </button>
+            }
+          </nav>
         </div>
-      }
 
-      <!-- Empty State -->
-      @if (!isLoading() && filteredPlugins.length === 0) {
-        <div class="py-12 text-center">
-          <app-question-circle-icon class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
-          <h3 class="mt-2 text-sm font-medium dark:text-white">No plugins found</h3>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Please try selecting a different category.
-          </p>
+        <!-- Category Filter -->
+        <div
+          class="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
+        >
+          <h2 class="mb-3 text-sm font-semibold dark:text-white">Categories</h2>
+          <nav class="space-y-1">
+            @for (category of categories; track category.id) {
+              <button
+                (click)="selectCategory(category.id)"
+                [class]="
+                  selectedCategory === category.id
+                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100'
+                    : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
+                "
+                class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors duration-200"
+              >
+                <span>{{ category.name }}</span>
+                <span class="text-xs text-gray-600 dark:text-gray-300">{{ category.count }}</span>
+              </button>
+            }
+          </nav>
         </div>
-      }
-    </div>
-
-    <!-- Right Sidebar with filters -->
-    <div class="shrink-0 space-y-4 lg:w-64">
-      <!-- Preset Filter -->
-      <div
-        class="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
-      >
-        <h2 class="mb-3 text-sm font-semibold dark:text-white">Presets</h2>
-        <nav class="space-y-1">
-          @for (preset of presets; track preset.id) {
-            <button
-              (click)="selectPreset(preset.id)"
-              [class]="
-                selectedPreset === preset.id
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100'
-                  : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
-              "
-              class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors duration-200"
-              [title]="preset.description"
-            >
-              <span>{{ preset.name }}</span>
-              <span class="text-xs text-gray-600 dark:text-gray-300">{{ preset.count }}</span>
-            </button>
-          }
-        </nav>
-      </div>
-
-      <!-- Category Filter -->
-      <div
-        class="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
-      >
-        <h2 class="mb-3 text-sm font-semibold dark:text-white">Categories</h2>
-        <nav class="space-y-1">
-          @for (category of categories; track category.id) {
-            <button
-              (click)="selectCategory(category.id)"
-              [class]="
-                selectedCategory === category.id
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100'
-                  : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
-              "
-              class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors duration-200"
-            >
-              <span>{{ category.name }}</span>
-              <span class="text-xs text-gray-600 dark:text-gray-300">{{ category.count }}</span>
-            </button>
-          }
-        </nav>
       </div>
     </div>
   </div>
-</div>
+</app-card>
 
 <!-- Install Modal -->
 <app-install-plugin-modal

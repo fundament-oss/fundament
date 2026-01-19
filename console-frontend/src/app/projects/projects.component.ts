@@ -7,10 +7,27 @@ import { create } from '@bufbuild/protobuf';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { firstValueFrom } from 'rxjs';
 import { PlusIconComponent, ErrorIconComponent } from '../icons';
+import {
+  CardComponent,
+  ButtonComponent,
+  SpinnerComponent,
+  AlertComponent,
+  EmptyStateComponent,
+} from '../shared/components';
 
 @Component({
   selector: 'app-projects',
-  imports: [CommonModule, RouterLink, PlusIconComponent, ErrorIconComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    PlusIconComponent,
+    ErrorIconComponent,
+    CardComponent,
+    ButtonComponent,
+    SpinnerComponent,
+    AlertComponent,
+    EmptyStateComponent,
+  ],
   templateUrl: './projects.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
