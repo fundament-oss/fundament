@@ -213,6 +213,9 @@ CREATE TABLE zappstore.plugins (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	name text NOT NULL,
 	description text NOT NULL,
+	author_name text,
+	author_url text,
+	repository_url text,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT plugins_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
@@ -307,6 +310,20 @@ CREATE TABLE zappstore.categories_plugins (
 );
 -- ddl-end --
 ALTER TABLE zappstore.categories_plugins OWNER TO fun_fundament_api;
+-- ddl-end --
+
+-- object: zappstore.plugin_documentation_links | type: TABLE --
+-- DROP TABLE IF EXISTS zappstore.plugin_documentation_links CASCADE;
+CREATE TABLE zappstore.plugin_documentation_links (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	plugin_id uuid NOT NULL,
+	title text NOT NULL,
+	url_name text NOT NULL,
+	url text NOT NULL,
+	CONSTRAINT plugin_documentation_links_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE zappstore.plugin_documentation_links OWNER TO fun_fundament_api;
 -- ddl-end --
 
 -- object: projects_organization_isolation | type: POLICY --
@@ -426,6 +443,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE zappstore.categories_plugins DROP CONSTRAINT IF EXISTS plugins_categories_category_id CASCADE;
 ALTER TABLE zappstore.categories_plugins ADD CONSTRAINT plugins_categories_category_id FOREIGN KEY (category_id)
 REFERENCES zappstore.categories (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: plugin_documentation_links_fk_plugin | type: CONSTRAINT --
+-- ALTER TABLE zappstore.plugin_documentation_links DROP CONSTRAINT IF EXISTS plugin_documentation_links_fk_plugin CASCADE;
+ALTER TABLE zappstore.plugin_documentation_links ADD CONSTRAINT plugin_documentation_links_fk_plugin FOREIGN KEY (plugin_id)
+REFERENCES zappstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 

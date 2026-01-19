@@ -127,8 +127,8 @@ func (x *Category) GetName() string {
 	return ""
 }
 
-// Plugin information
-type Plugin struct {
+// PluginSummary information
+type PluginSummary struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
@@ -139,20 +139,20 @@ type Plugin struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Plugin) Reset() {
-	*x = Plugin{}
+func (x *PluginSummary) Reset() {
+	*x = PluginSummary{}
 	mi := &file_v1_plugin_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Plugin) String() string {
+func (x *PluginSummary) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Plugin) ProtoMessage() {}
+func (*PluginSummary) ProtoMessage() {}
 
-func (x *Plugin) ProtoReflect() protoreflect.Message {
+func (x *PluginSummary) ProtoReflect() protoreflect.Message {
 	mi := &file_v1_plugin_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -164,40 +164,40 @@ func (x *Plugin) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Plugin.ProtoReflect.Descriptor instead.
-func (*Plugin) Descriptor() ([]byte, []int) {
+// Deprecated: Use PluginSummary.ProtoReflect.Descriptor instead.
+func (*PluginSummary) Descriptor() ([]byte, []int) {
 	return file_v1_plugin_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *Plugin) GetId() string {
+func (x *PluginSummary) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *Plugin) GetName() string {
+func (x *PluginSummary) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *Plugin) GetDescription() string {
+func (x *PluginSummary) GetDescription() string {
 	if x != nil {
 		return x.Description
 	}
 	return ""
 }
 
-func (x *Plugin) GetTags() []*Tag {
+func (x *PluginSummary) GetTags() []*Tag {
 	if x != nil {
 		return x.Tags
 	}
 	return nil
 }
 
-func (x *Plugin) GetCategories() []*Category {
+func (x *PluginSummary) GetCategories() []*Category {
 	if x != nil {
 		return x.Categories
 	}
@@ -244,7 +244,7 @@ func (*ListPluginsRequest) Descriptor() ([]byte, []int) {
 // List plugins response
 type ListPluginsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Plugins       []*Plugin              `protobuf:"bytes,10,rep,name=plugins,proto3" json:"plugins,omitempty"`
+	Plugins       []*PluginSummary       `protobuf:"bytes,10,rep,name=plugins,proto3" json:"plugins,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -279,7 +279,7 @@ func (*ListPluginsResponse) Descriptor() ([]byte, []int) {
 	return file_v1_plugin_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *ListPluginsResponse) GetPlugins() []*Plugin {
+func (x *ListPluginsResponse) GetPlugins() []*PluginSummary {
 	if x != nil {
 		return x.Plugins
 	}
@@ -437,6 +437,319 @@ func (x *ListPresetsResponse) GetPresets() []*Preset {
 	return nil
 }
 
+// Documentation link for a plugin
+type DocumentationLink struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	Title         string                 `protobuf:"bytes,20,opt,name=title,proto3" json:"title,omitempty"`
+	UrlName       string                 `protobuf:"bytes,30,opt,name=url_name,json=urlName,proto3" json:"url_name,omitempty"`
+	Url           string                 `protobuf:"bytes,40,opt,name=url,proto3" json:"url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DocumentationLink) Reset() {
+	*x = DocumentationLink{}
+	mi := &file_v1_plugin_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DocumentationLink) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DocumentationLink) ProtoMessage() {}
+
+func (x *DocumentationLink) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DocumentationLink.ProtoReflect.Descriptor instead.
+func (*DocumentationLink) Descriptor() ([]byte, []int) {
+	return file_v1_plugin_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *DocumentationLink) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DocumentationLink) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *DocumentationLink) GetUrlName() string {
+	if x != nil {
+		return x.UrlName
+	}
+	return ""
+}
+
+func (x *DocumentationLink) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+// Author information
+type Author struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,10,opt,name=name,proto3" json:"name,omitempty"`
+	Url           string                 `protobuf:"bytes,20,opt,name=url,proto3" json:"url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Author) Reset() {
+	*x = Author{}
+	mi := &file_v1_plugin_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Author) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Author) ProtoMessage() {}
+
+func (x *Author) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Author.ProtoReflect.Descriptor instead.
+func (*Author) Descriptor() ([]byte, []int) {
+	return file_v1_plugin_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *Author) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Author) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+// Detailed plugin information
+type PluginDetail struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	Name               string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
+	Description        string                 `protobuf:"bytes,30,opt,name=description,proto3" json:"description,omitempty"`
+	Tags               []*Tag                 `protobuf:"bytes,40,rep,name=tags,proto3" json:"tags,omitempty"`
+	Categories         []*Category            `protobuf:"bytes,50,rep,name=categories,proto3" json:"categories,omitempty"`
+	Author             *Author                `protobuf:"bytes,60,opt,name=author,proto3" json:"author,omitempty"`
+	RepositoryUrl      string                 `protobuf:"bytes,70,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	DocumentationLinks []*DocumentationLink   `protobuf:"bytes,80,rep,name=documentation_links,json=documentationLinks,proto3" json:"documentation_links,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *PluginDetail) Reset() {
+	*x = PluginDetail{}
+	mi := &file_v1_plugin_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginDetail) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginDetail) ProtoMessage() {}
+
+func (x *PluginDetail) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PluginDetail.ProtoReflect.Descriptor instead.
+func (*PluginDetail) Descriptor() ([]byte, []int) {
+	return file_v1_plugin_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *PluginDetail) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *PluginDetail) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PluginDetail) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *PluginDetail) GetTags() []*Tag {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+func (x *PluginDetail) GetCategories() []*Category {
+	if x != nil {
+		return x.Categories
+	}
+	return nil
+}
+
+func (x *PluginDetail) GetAuthor() *Author {
+	if x != nil {
+		return x.Author
+	}
+	return nil
+}
+
+func (x *PluginDetail) GetRepositoryUrl() string {
+	if x != nil {
+		return x.RepositoryUrl
+	}
+	return ""
+}
+
+func (x *PluginDetail) GetDocumentationLinks() []*DocumentationLink {
+	if x != nil {
+		return x.DocumentationLinks
+	}
+	return nil
+}
+
+// Get plugin detail request
+type GetPluginDetailRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PluginId      string                 `protobuf:"bytes,10,opt,name=plugin_id,json=pluginId,proto3" json:"plugin_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPluginDetailRequest) Reset() {
+	*x = GetPluginDetailRequest{}
+	mi := &file_v1_plugin_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPluginDetailRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPluginDetailRequest) ProtoMessage() {}
+
+func (x *GetPluginDetailRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPluginDetailRequest.ProtoReflect.Descriptor instead.
+func (*GetPluginDetailRequest) Descriptor() ([]byte, []int) {
+	return file_v1_plugin_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetPluginDetailRequest) GetPluginId() string {
+	if x != nil {
+		return x.PluginId
+	}
+	return ""
+}
+
+// Get plugin detail response
+type GetPluginDetailResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Plugin        *PluginDetail          `protobuf:"bytes,10,opt,name=plugin,proto3" json:"plugin,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPluginDetailResponse) Reset() {
+	*x = GetPluginDetailResponse{}
+	mi := &file_v1_plugin_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPluginDetailResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPluginDetailResponse) ProtoMessage() {}
+
+func (x *GetPluginDetailResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPluginDetailResponse.ProtoReflect.Descriptor instead.
+func (*GetPluginDetailResponse) Descriptor() ([]byte, []int) {
+	return file_v1_plugin_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GetPluginDetailResponse) GetPlugin() *PluginDetail {
+	if x != nil {
+		return x.Plugin
+	}
+	return nil
+}
+
 var File_v1_plugin_proto protoreflect.FileDescriptor
 
 const file_v1_plugin_proto_rawDesc = "" +
@@ -449,8 +762,8 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\bCategory\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\"\xb3\x01\n" +
-	"\x06Plugin\x12\x0e\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\"\xba\x01\n" +
+	"\rPluginSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12 \n" +
@@ -459,10 +772,10 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\n" +
 	"categories\x182 \x03(\v2\x19.organization.v1.CategoryR\n" +
 	"categories\"\x14\n" +
-	"\x12ListPluginsRequest\"H\n" +
-	"\x13ListPluginsResponse\x121\n" +
+	"\x12ListPluginsRequest\"O\n" +
+	"\x13ListPluginsResponse\x128\n" +
 	"\aplugins\x18\n" +
-	" \x03(\v2\x17.organization.v1.PluginR\aplugins\"m\n" +
+	" \x03(\v2\x1e.organization.v1.PluginSummaryR\aplugins\"m\n" +
 	"\x06Preset\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -473,9 +786,38 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x12ListPresetsRequest\"H\n" +
 	"\x13ListPresetsResponse\x121\n" +
 	"\apresets\x18\n" +
-	" \x03(\v2\x17.organization.v1.PresetR\apresets2\xc3\x01\n" +
+	" \x03(\v2\x17.organization.v1.PresetR\apresets\"f\n" +
+	"\x11DocumentationLink\x12\x0e\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x14 \x01(\tR\x05title\x12\x19\n" +
+	"\burl_name\x18\x1e \x01(\tR\aurlName\x12\x10\n" +
+	"\x03url\x18( \x01(\tR\x03url\".\n" +
+	"\x06Author\x12\x12\n" +
+	"\x04name\x18\n" +
+	" \x01(\tR\x04name\x12\x10\n" +
+	"\x03url\x18\x14 \x01(\tR\x03url\"\xe6\x02\n" +
+	"\fPluginDetail\x12\x0e\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x1e \x01(\tR\vdescription\x12(\n" +
+	"\x04tags\x18( \x03(\v2\x14.organization.v1.TagR\x04tags\x129\n" +
+	"\n" +
+	"categories\x182 \x03(\v2\x19.organization.v1.CategoryR\n" +
+	"categories\x12/\n" +
+	"\x06author\x18< \x01(\v2\x17.organization.v1.AuthorR\x06author\x12%\n" +
+	"\x0erepository_url\x18F \x01(\tR\rrepositoryUrl\x12S\n" +
+	"\x13documentation_links\x18P \x03(\v2\".organization.v1.DocumentationLinkR\x12documentationLinks\"5\n" +
+	"\x16GetPluginDetailRequest\x12\x1b\n" +
+	"\tplugin_id\x18\n" +
+	" \x01(\tR\bpluginId\"P\n" +
+	"\x17GetPluginDetailResponse\x125\n" +
+	"\x06plugin\x18\n" +
+	" \x01(\v2\x1d.organization.v1.PluginDetailR\x06plugin2\xa9\x02\n" +
 	"\rPluginService\x12X\n" +
-	"\vListPlugins\x12#.organization.v1.ListPluginsRequest\x1a$.organization.v1.ListPluginsResponse\x12X\n" +
+	"\vListPlugins\x12#.organization.v1.ListPluginsRequest\x1a$.organization.v1.ListPluginsResponse\x12d\n" +
+	"\x0fGetPluginDetail\x12'.organization.v1.GetPluginDetailRequest\x1a(.organization.v1.GetPluginDetailResponse\x12X\n" +
 	"\vListPresets\x12#.organization.v1.ListPresetsRequest\x1a$.organization.v1.ListPresetsResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
 
 var (
@@ -490,31 +832,43 @@ func file_v1_plugin_proto_rawDescGZIP() []byte {
 	return file_v1_plugin_proto_rawDescData
 }
 
-var file_v1_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_v1_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_v1_plugin_proto_goTypes = []any{
-	(*Tag)(nil),                 // 0: organization.v1.Tag
-	(*Category)(nil),            // 1: organization.v1.Category
-	(*Plugin)(nil),              // 2: organization.v1.Plugin
-	(*ListPluginsRequest)(nil),  // 3: organization.v1.ListPluginsRequest
-	(*ListPluginsResponse)(nil), // 4: organization.v1.ListPluginsResponse
-	(*Preset)(nil),              // 5: organization.v1.Preset
-	(*ListPresetsRequest)(nil),  // 6: organization.v1.ListPresetsRequest
-	(*ListPresetsResponse)(nil), // 7: organization.v1.ListPresetsResponse
+	(*Tag)(nil),                     // 0: organization.v1.Tag
+	(*Category)(nil),                // 1: organization.v1.Category
+	(*PluginSummary)(nil),           // 2: organization.v1.PluginSummary
+	(*ListPluginsRequest)(nil),      // 3: organization.v1.ListPluginsRequest
+	(*ListPluginsResponse)(nil),     // 4: organization.v1.ListPluginsResponse
+	(*Preset)(nil),                  // 5: organization.v1.Preset
+	(*ListPresetsRequest)(nil),      // 6: organization.v1.ListPresetsRequest
+	(*ListPresetsResponse)(nil),     // 7: organization.v1.ListPresetsResponse
+	(*DocumentationLink)(nil),       // 8: organization.v1.DocumentationLink
+	(*Author)(nil),                  // 9: organization.v1.Author
+	(*PluginDetail)(nil),            // 10: organization.v1.PluginDetail
+	(*GetPluginDetailRequest)(nil),  // 11: organization.v1.GetPluginDetailRequest
+	(*GetPluginDetailResponse)(nil), // 12: organization.v1.GetPluginDetailResponse
 }
 var file_v1_plugin_proto_depIdxs = []int32{
-	0, // 0: organization.v1.Plugin.tags:type_name -> organization.v1.Tag
-	1, // 1: organization.v1.Plugin.categories:type_name -> organization.v1.Category
-	2, // 2: organization.v1.ListPluginsResponse.plugins:type_name -> organization.v1.Plugin
-	5, // 3: organization.v1.ListPresetsResponse.presets:type_name -> organization.v1.Preset
-	3, // 4: organization.v1.PluginService.ListPlugins:input_type -> organization.v1.ListPluginsRequest
-	6, // 5: organization.v1.PluginService.ListPresets:input_type -> organization.v1.ListPresetsRequest
-	4, // 6: organization.v1.PluginService.ListPlugins:output_type -> organization.v1.ListPluginsResponse
-	7, // 7: organization.v1.PluginService.ListPresets:output_type -> organization.v1.ListPresetsResponse
-	6, // [6:8] is the sub-list for method output_type
-	4, // [4:6] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	0,  // 0: organization.v1.PluginSummary.tags:type_name -> organization.v1.Tag
+	1,  // 1: organization.v1.PluginSummary.categories:type_name -> organization.v1.Category
+	2,  // 2: organization.v1.ListPluginsResponse.plugins:type_name -> organization.v1.PluginSummary
+	5,  // 3: organization.v1.ListPresetsResponse.presets:type_name -> organization.v1.Preset
+	0,  // 4: organization.v1.PluginDetail.tags:type_name -> organization.v1.Tag
+	1,  // 5: organization.v1.PluginDetail.categories:type_name -> organization.v1.Category
+	9,  // 6: organization.v1.PluginDetail.author:type_name -> organization.v1.Author
+	8,  // 7: organization.v1.PluginDetail.documentation_links:type_name -> organization.v1.DocumentationLink
+	10, // 8: organization.v1.GetPluginDetailResponse.plugin:type_name -> organization.v1.PluginDetail
+	3,  // 9: organization.v1.PluginService.ListPlugins:input_type -> organization.v1.ListPluginsRequest
+	11, // 10: organization.v1.PluginService.GetPluginDetail:input_type -> organization.v1.GetPluginDetailRequest
+	6,  // 11: organization.v1.PluginService.ListPresets:input_type -> organization.v1.ListPresetsRequest
+	4,  // 12: organization.v1.PluginService.ListPlugins:output_type -> organization.v1.ListPluginsResponse
+	12, // 13: organization.v1.PluginService.GetPluginDetail:output_type -> organization.v1.GetPluginDetailResponse
+	7,  // 14: organization.v1.PluginService.ListPresets:output_type -> organization.v1.ListPresetsResponse
+	12, // [12:15] is the sub-list for method output_type
+	9,  // [9:12] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_v1_plugin_proto_init() }
@@ -528,7 +882,7 @@ func file_v1_plugin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_plugin_proto_rawDesc), len(file_v1_plugin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

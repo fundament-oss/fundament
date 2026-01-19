@@ -26,7 +26,7 @@ import {
   ClusterNamespace,
 } from '../../generated/v1/cluster_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
-import { ListPluginsRequestSchema, type Plugin } from '../../generated/v1/plugin_pb';
+import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import { NodePoolStatus } from '../../generated/v1/common_pb';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -83,7 +83,7 @@ export class ClusterOverviewComponent implements OnInit {
   isCreatingNamespace = signal<boolean>(false);
 
   // Plugin data
-  installedPlugins = signal<Plugin[]>([]);
+  installedPlugins = signal<PluginSummary[]>([]);
   isLoadingPlugins = signal<boolean>(true);
 
   namespaceNameInput = viewChild<ElementRef<HTMLInputElement>>('namespaceNameInput');

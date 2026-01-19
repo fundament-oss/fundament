@@ -1,0 +1,30 @@
+meta {
+  name: List Presets
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.PluginService/ListPresets
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+script:post-response {
+  if (res.headers['content-type']?.includes('application/json') && res.body.presets?.length > 0) {
+    bru.setVar("presetId", res.body.presets[0].id);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

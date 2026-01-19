@@ -15,7 +15,7 @@ import {
   ListPresetsRequestSchema,
   type Category,
   type Preset,
-  type Plugin,
+  type PluginSummary,
 } from '../../generated/v1/plugin_pb';
 import {
   ListClustersRequestSchema,
@@ -30,7 +30,7 @@ import { ToastService } from '../toast.service';
 
 // Extended plugin type with presets array (computed from backend data)
 interface PluginWithPresets extends Pick<
-  Plugin,
+  PluginSummary,
   'id' | 'name' | 'description' | 'categories' | 'tags'
 > {
   presets?: string[]; // Array of preset IDs this plugin belongs to

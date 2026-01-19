@@ -14,7 +14,7 @@ db:
   instances: 1
   storageSize: 1Gi
   reset: false
-  insertTestData: false
+  insertTestData: true
 
 authnApi:
   enabled: true
