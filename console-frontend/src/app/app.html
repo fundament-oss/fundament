@@ -289,6 +289,40 @@
                 Usage
               </a>
             </li>
+
+            <!-- Organization Section -->
+            <li class="pt-4">
+              <div class="border-t border-gray-200 dark:border-gray-800"></div>
+              <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Organization</p>
+            </li>
+            <li>
+              <a
+                routerLink="/organization"
+                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                [routerLinkActiveOptions]="{ exact: true }"
+                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
+                (click)="closeSidebar()"
+              >
+                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                    <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065"/>
+                    <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0"/>
+                  </g>
+                </svg>
+                Settings
+              </a>
+            </li>
+            <li>
+              <a
+                routerLink="/organization/members"
+                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
+                (click)="closeSidebar()"
+              >
+                <app-users-icon class="mr-3 h-5 w-5" />
+                Members
+              </a>
+            </li>
           </ul>
         </nav>
       </aside>
