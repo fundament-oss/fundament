@@ -32,11 +32,12 @@ func FromPlugins(
 	result := make([]*organizationv1.PluginSummary, 0, len(plugins))
 	for i := range plugins {
 		result = append(result, &organizationv1.PluginSummary{
-			Id:          plugins[i].ID.String(),
-			Name:        plugins[i].Name,
-			Description: plugins[i].Description,
-			Tags:        tagsByPlugin[plugins[i].ID],
-			Categories:  categoriesByPlugin[plugins[i].ID],
+			Id:               plugins[i].ID.String(),
+			Name:             plugins[i].Name,
+			Description:      plugins[i].Description,
+			DescriptionShort: plugins[i].DescriptionShort,
+			Tags:             tagsByPlugin[plugins[i].ID],
+			Categories:       categoriesByPlugin[plugins[i].ID],
 		})
 	}
 	return result
@@ -99,6 +100,7 @@ func FromPluginDetail(
 		Id:                 plugin.ID.String(),
 		Name:               plugin.Name,
 		Description:        plugin.Description,
+		DescriptionShort:   plugin.DescriptionShort,
 		Tags:               protoTags,
 		Categories:         protoCategories,
 		Author:             author,

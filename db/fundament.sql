@@ -212,6 +212,7 @@ ALTER TABLE zappstore.installs ENABLE ROW LEVEL SECURITY;
 CREATE TABLE zappstore.plugins (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	name text NOT NULL,
+	description_short text NOT NULL DEFAULT '',
 	description text NOT NULL,
 	author_name text,
 	author_url text,

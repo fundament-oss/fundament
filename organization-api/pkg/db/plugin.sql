@@ -1,5 +1,5 @@
 -- name: PluginList :many
-SELECT id, name, description
+SELECT id, name, description_short, description
 FROM zappstore.plugins
 WHERE deleted IS NULL
 ORDER BY name;
@@ -19,7 +19,7 @@ WHERE c.deleted IS NULL
 ORDER BY c.name;
 
 -- name: PluginGetByID :one
-SELECT id, name, description, author_name, author_url, repository_url
+SELECT id, name, description_short, description, author_name, author_url, repository_url
 FROM zappstore.plugins
 WHERE id = $1 AND deleted IS NULL;
 
