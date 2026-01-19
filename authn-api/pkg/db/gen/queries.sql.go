@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const organizationCreate = `-- name: OrganizationCreate :one
@@ -29,123 +30,234 @@ func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreate
 }
 
 const userCreate = `-- name: UserCreate :one
-INSERT INTO tenant.users (organization_id, name, external_id)
-VALUES ($1, $2, $3)
-RETURNING id, organization_id, name, external_id, created
+INSERT INTO tenant.users (organization_id, name, external_id, email)
+VALUES ($1, $2, $3, $4)
+RETURNING id, organization_id, name, external_id, email, created
 `
 
 type UserCreateParams struct {
 	OrganizationID uuid.UUID
 	Name           string
-	ExternalID     string
+	ExternalID     pgtype.Text
+	Email          pgtype.Text
 }
 
-func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (TenantUser, error) {
-	row := q.db.QueryRow(ctx, userCreate, arg.OrganizationID, arg.Name, arg.ExternalID)
-	var i TenantUser
+type UserCreateRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     pgtype.Text
+	Email          pgtype.Text
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (UserCreateRow, error) {
+	row := q.db.QueryRow(ctx, userCreate,
+		arg.OrganizationID,
+		arg.Name,
+		arg.ExternalID,
+		arg.Email,
+	)
+	var i UserCreateRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
 		&i.Name,
 		&i.ExternalID,
+		&i.Email,
+		&i.Created,
+	)
+	return i, err
+}
+
+const userGetByEmail = `-- name: UserGetByEmail :one
+SELECT id, organization_id, name, external_id, email, created
+FROM tenant.users
+WHERE email = $1 AND external_id IS NULL AND deleted IS NULL
+LIMIT 1
+`
+
+type UserGetByEmailParams struct {
+	Email pgtype.Text
+}
+
+type UserGetByEmailRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     pgtype.Text
+	Email          pgtype.Text
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) UserGetByEmail(ctx context.Context, arg UserGetByEmailParams) (UserGetByEmailRow, error) {
+	row := q.db.QueryRow(ctx, userGetByEmail, arg.Email)
+	var i UserGetByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.ExternalID,
+		&i.Email,
 		&i.Created,
 	)
 	return i, err
 }
 
 const userGetByExternalID = `-- name: UserGetByExternalID :one
-SELECT id, organization_id, name, external_id, created
+SELECT id, organization_id, name, external_id, email, created
 FROM tenant.users
-WHERE external_id = $1
+WHERE external_id = $1 AND deleted IS NULL
 `
 
 type UserGetByExternalIDParams struct {
-	ExternalID string
+	ExternalID pgtype.Text
 }
 
-func (q *Queries) UserGetByExternalID(ctx context.Context, arg UserGetByExternalIDParams) (TenantUser, error) {
+type UserGetByExternalIDRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     pgtype.Text
+	Email          pgtype.Text
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) UserGetByExternalID(ctx context.Context, arg UserGetByExternalIDParams) (UserGetByExternalIDRow, error) {
 	row := q.db.QueryRow(ctx, userGetByExternalID, arg.ExternalID)
-	var i TenantUser
+	var i UserGetByExternalIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
 		&i.Name,
 		&i.ExternalID,
+		&i.Email,
 		&i.Created,
 	)
 	return i, err
 }
 
 const userGetByID = `-- name: UserGetByID :one
-SELECT id, organization_id, name, external_id, created
+SELECT id, organization_id, name, external_id, email, created
 FROM tenant.users
-WHERE id = $1
+WHERE id = $1 AND deleted IS NULL
 `
 
 type UserGetByIDParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) UserGetByID(ctx context.Context, arg UserGetByIDParams) (TenantUser, error) {
+type UserGetByIDRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     pgtype.Text
+	Email          pgtype.Text
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) UserGetByID(ctx context.Context, arg UserGetByIDParams) (UserGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, userGetByID, arg.ID)
-	var i TenantUser
+	var i UserGetByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
 		&i.Name,
 		&i.ExternalID,
+		&i.Email,
 		&i.Created,
 	)
 	return i, err
+}
+
+const userSetExternalID = `-- name: UserSetExternalID :exec
+UPDATE tenant.users SET external_id = $2, name = $3 WHERE id = $1
+`
+
+type UserSetExternalIDParams struct {
+	ID         uuid.UUID
+	ExternalID pgtype.Text
+	Name       string
+}
+
+func (q *Queries) UserSetExternalID(ctx context.Context, arg UserSetExternalIDParams) error {
+	_, err := q.db.Exec(ctx, userSetExternalID, arg.ID, arg.ExternalID, arg.Name)
+	return err
 }
 
 const userUpdate = `-- name: UserUpdate :one
 UPDATE tenant.users
 SET name = $2
 WHERE external_id = $1
-RETURNING id, organization_id, name, external_id, created
+RETURNING id, organization_id, name, external_id, email, created
 `
 
 type UserUpdateParams struct {
-	ExternalID string
+	ExternalID pgtype.Text
 	Name       string
 }
 
-func (q *Queries) UserUpdate(ctx context.Context, arg UserUpdateParams) (TenantUser, error) {
+type UserUpdateRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     pgtype.Text
+	Email          pgtype.Text
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) UserUpdate(ctx context.Context, arg UserUpdateParams) (UserUpdateRow, error) {
 	row := q.db.QueryRow(ctx, userUpdate, arg.ExternalID, arg.Name)
-	var i TenantUser
+	var i UserUpdateRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
 		&i.Name,
 		&i.ExternalID,
+		&i.Email,
 		&i.Created,
 	)
 	return i, err
 }
 
 const userUpsert = `-- name: UserUpsert :one
-INSERT INTO tenant.users (organization_id, name, external_id)
-VALUES ($1, $2, $3)
-ON CONFLICT (external_id)
-DO UPDATE SET name = EXCLUDED.name
-RETURNING id, organization_id, name, external_id, created
+INSERT INTO tenant.users (organization_id, name, external_id, email)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (external_id, deleted)
+DO UPDATE SET name = EXCLUDED.name, email = EXCLUDED.email
+RETURNING id, organization_id, name, external_id, email, created
 `
 
 type UserUpsertParams struct {
 	OrganizationID uuid.UUID
 	Name           string
-	ExternalID     string
+	ExternalID     pgtype.Text
+	Email          pgtype.Text
 }
 
-func (q *Queries) UserUpsert(ctx context.Context, arg UserUpsertParams) (TenantUser, error) {
-	row := q.db.QueryRow(ctx, userUpsert, arg.OrganizationID, arg.Name, arg.ExternalID)
-	var i TenantUser
+type UserUpsertRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     pgtype.Text
+	Email          pgtype.Text
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) UserUpsert(ctx context.Context, arg UserUpsertParams) (UserUpsertRow, error) {
+	row := q.db.QueryRow(ctx, userUpsert,
+		arg.OrganizationID,
+		arg.Name,
+		arg.ExternalID,
+		arg.Email,
+	)
+	var i UserUpsertRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
 		&i.Name,
 		&i.ExternalID,
+		&i.Email,
 		&i.Created,
 	)
 	return i, err

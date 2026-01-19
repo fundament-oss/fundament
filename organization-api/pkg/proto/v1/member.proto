@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package organization.v1;
+
+import "v1/common.proto";
+
+option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
+
+// MemberService manages organization members
+service MemberService {
+  // List all members of the current organization
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  // Invite a new member by email
+  rpc InviteMember(InviteMemberRequest) returns (InviteMemberResponse);
+  // Delete a member from the organization
+  rpc DeleteMember(DeleteMemberRequest) returns (DeleteMemberResponse);
+}
+
+// List members request
+message ListMembersRequest {}
+
+// List members response
+message ListMembersResponse {
+  repeated Member members = 10;
+}
+
+// Invite member request
+message InviteMemberRequest {
+  string email = 10;
+  // Role for the invited user: "viewer" or "admin"
+  string role = 20;
+}
+
+// Invite member response
+message InviteMemberResponse {
+  Member member = 10;
+}
+
+// Delete member request
+message DeleteMemberRequest {
+  string id = 10;
+}
+
+// Delete member response
+message DeleteMemberResponse {}
+
+// Member information
+message Member {
+  string id = 10;
+  string name = 20;
+  // external_id is empty for pending invitations
+  optional string external_id = 30;
+  // email is set for invited members
+  optional string email = 50;
+  // role is "viewer" or "admin"
+  string role = 60;
+  Timestamp created_at = 40;
+}

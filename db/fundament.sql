@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.2
+-- ** pgModeler version: 2.0.0-alpha
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -108,10 +108,13 @@ CREATE TABLE tenant.users (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	organization_id uuid NOT NULL,
 	name text NOT NULL,
-	external_id text NOT NULL,
+	external_id text,
 	created timestamptz NOT NULL DEFAULT now(),
+	email text,
+	role text NOT NULL DEFAULT 'viewer',
+	deleted timestamptz,
 	CONSTRAINT users_pk PRIMARY KEY (id),
-	CONSTRAINT users_uq_external_id UNIQUE (external_id)
+	CONSTRAINT users_uq_external_id UNIQUE NULLS NOT DISTINCT (external_id,deleted)
 );
 -- ddl-end --
 ALTER TABLE tenant.users OWNER TO fun_owner;
