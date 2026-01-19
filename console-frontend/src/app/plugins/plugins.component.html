@@ -24,24 +24,33 @@
                 <!-- Plugin Logo -->
                 <img
                   class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 p-1 dark:bg-gray-800"
-                  src="/img/plugins/{{ plugin.id }}.svg"
-                  alt="{{ plugin.title }}"
+                  src="/img/plugins/{{ getPluginIconName(plugin.name) }}.svg"
+                  alt="{{ plugin.name }}"
                 />
 
                 <!-- Plugin Title -->
                 <h3 class="flex-1 text-lg font-semibold dark:text-white">
-                  {{ plugin.title }}
+                  {{ plugin.name }}
                 </h3>
               </div>
 
-              <!-- Official Badge -->
-              @if (plugin.isOfficial) {
-                <p class="mb-2">
-                  <span
-                    class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
-                  >
-                    <app-checkmark-icon class="mr-1 h-3 w-3" /> Official
-                  </span>
+              <!-- Tags -->
+              @if (plugin.tags && plugin.tags.length > 0) {
+                <p class="mb-2 flex flex-wrap gap-1">
+                  @for (tag of plugin.tags; track tag.id) {
+                    <span
+                      [class]="
+                        tag.name.toLowerCase() === 'official'
+                          ? 'inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
+                          : 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                      "
+                    >
+                      @if (tag.name.toLowerCase() === 'official') {
+                        <app-checkmark-icon class="mr-1 h-3 w-3" />
+                      }
+                      {{ tag.name }}
+                    </span>
+                  }
                 </p>
               }
 
@@ -54,7 +63,7 @@
             <!-- Plugin Card Actions -->
             <div class="px-6 pb-6">
               <div class="flex space-x-3">
-                <a class="btn-secondary flex-1 text-center" routerLink="/plugins/details">
+                <a class="btn-secondary flex-1 text-center" [routerLink]="['/plugins', plugin.id]">
                   Details
                 </a>
                 <button (click)="onInstallPlugin(plugin)" type="button" class="btn-primary flex-1">
@@ -66,10 +75,23 @@
         }
       </div>
 
-      <!-- Empty State -->
-      @if (filteredPlugins.length === 0) {
+      <!-- Loading State -->
+      @if (isLoading()) {
         <div class="py-12 text-center">
-          <app-close-icon class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
+          <div role="status" class="flex justify-center">
+            <app-loading-indicator
+              class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+            />
+            <span class="sr-only">Loading...</span>
+          </div>
+          <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading plugins...</p>
+        </div>
+      }
+
+      <!-- Empty State -->
+      @if (!isLoading() && filteredPlugins.length === 0) {
+        <div class="py-12 text-center">
+          <app-question-circle-icon class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
           <h3 class="mt-2 text-sm font-medium dark:text-white">No plugins found</h3>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Please try selecting a different category.
@@ -98,7 +120,7 @@
               [title]="preset.description"
             >
               <span>{{ preset.name }}</span>
-              <span class="text-xs text-gray-500 dark:text-gray-400">{{ preset.count }}</span>
+              <span class="text-xs text-gray-600 dark:text-gray-300">{{ preset.count }}</span>
             </button>
           }
         </nav>
@@ -121,7 +143,7 @@
               class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors duration-200"
             >
               <span>{{ category.name }}</span>
-              <span class="text-xs text-gray-500 dark:text-gray-400">{{ category.count }}</span>
+              <span class="text-xs text-gray-600 dark:text-gray-300">{{ category.count }}</span>
             </button>
           }
         </nav>
@@ -132,8 +154,8 @@
 
 <!-- Install Modal -->
 <app-install-plugin-modal
-  [pluginName]="selectedPlugin?.title || ''"
-  [clusters]="clusters"
+  [pluginName]="selectedPlugin?.name || ''"
+  [clusters]="clustersForModal"
   [show]="showInstallModal"
   (closeModal)="closeInstallModal()"
   (install)="onInstallOnCluster($event)"

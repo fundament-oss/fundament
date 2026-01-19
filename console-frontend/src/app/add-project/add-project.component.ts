@@ -1,4 +1,12 @@
-import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -16,7 +24,8 @@ import { ErrorIconComponent } from '../icons';
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AddProjectComponent {
+export class AddProjectComponent implements AfterViewInit {
+  @ViewChild('projectNameInput') projectNameInput!: ElementRef<HTMLInputElement>;
   private titleService = inject(TitleService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
@@ -39,7 +48,12 @@ export class AddProjectComponent {
   });
 
   constructor() {
-    this.titleService.setTitle('Add Project');
+    this.titleService.setTitle('Add project');
+  }
+
+  ngAfterViewInit() {
+    // Focus the project name input after the view is initialized
+    this.projectNameInput.nativeElement.focus();
   }
 
   async onSubmit() {
@@ -63,7 +77,9 @@ export class AddProjectComponent {
     } catch (error) {
       console.error('Failed to create project:', error);
       this.errorMessage.set(
-        error instanceof Error ? `Failed to create project: ${error.message}` : 'Failed to create project',
+        error instanceof Error
+          ? `Failed to create project: ${error.message}`
+          : 'Failed to create project',
       );
     } finally {
       this.isSubmitting.set(false);

@@ -1,10 +1,18 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy, viewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  viewChild,
+  ElementRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { CLUSTER, PROJECT } from '../../connect/tokens';
+import { CLUSTER, PROJECT, PLUGIN } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
   GetClusterRequestSchema,
@@ -13,10 +21,12 @@ import {
   ListClusterNamespacesRequestSchema,
   CreateNamespaceRequestSchema,
   DeleteNamespaceRequestSchema,
+  ListInstallsRequestSchema,
   NodePool,
   ClusterNamespace,
 } from '../../generated/v1/cluster_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
+import { ListPluginsRequestSchema, type Plugin } from '../../generated/v1/plugin_pb';
 import { NodePoolStatus } from '../../generated/v1/common_pb';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -54,6 +64,7 @@ export class ClusterOverviewComponent implements OnInit {
   private router = inject(Router);
   private client = inject(CLUSTER);
   private projectClient = inject(PROJECT);
+  private pluginClient = inject(PLUGIN);
   private toastService = inject(ToastService);
   private fb = inject(FormBuilder);
 
@@ -70,6 +81,10 @@ export class ClusterOverviewComponent implements OnInit {
   showAddNamespaceModal = signal<boolean>(false);
   isLoadingProjects = signal<boolean>(false);
   isCreatingNamespace = signal<boolean>(false);
+
+  // Plugin data
+  installedPlugins = signal<Plugin[]>([]);
+  isLoadingPlugins = signal<boolean>(true);
 
   namespaceNameInput = viewChild<ElementRef<HTMLInputElement>>('namespaceNameInput');
 
@@ -146,20 +161,6 @@ export class ClusterOverviewComponent implements OnInit {
       minAutoscaling: 1,
       maxAutoscaling: 5,
     },
-    plugins: {
-      preset: 'Haven+ preset',
-      description: 'Includes monitoring, logging, security scanning, and backup solutions',
-    },
-    projects: [
-      {
-        name: 'my-project-1',
-        namespaces: ['default'],
-      },
-      {
-        name: 'my-project-2',
-        namespaces: ['abc', 'xyz'],
-      },
-    ],
   };
 
   async ngOnInit() {
@@ -194,8 +195,12 @@ export class ClusterOverviewComponent implements OnInit {
       // Map node pools to the expected format
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
-      // Fetch namespaces and projects
-      await Promise.all([this.loadNamespaces(clusterId), this.loadProjects()]);
+      // Fetch namespaces, projects, and plugins in parallel
+      await Promise.all([
+        this.loadNamespaces(clusterId),
+        this.loadProjects(),
+        this.loadInstalledPlugins(clusterId),
+      ]);
     } catch (error) {
       console.error('Failed to fetch cluster data:', error);
       this.errorMessage.set(
@@ -313,7 +318,7 @@ export class ClusterOverviewComponent implements OnInit {
   }
 
   getProjectName(projectId: string): string {
-    const project = this.projects().find(p => p.id === projectId);
+    const project = this.projects().find((p) => p.id === projectId);
     return project?.name || projectId;
   }
 
@@ -389,5 +394,33 @@ export class ClusterOverviewComponent implements OnInit {
       return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
     }
     return '';
+  }
+
+  // Load installed plugins for the cluster
+  async loadInstalledPlugins(clusterId: string): Promise<void> {
+    try {
+      this.isLoadingPlugins.set(true);
+
+      // Fetch installs and all available plugins in parallel
+      const [installsResponse, pluginsResponse] = await Promise.all([
+        firstValueFrom(this.client.listInstalls(create(ListInstallsRequestSchema, { clusterId }))),
+        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
+      ]);
+
+      // Get the IDs of installed plugins
+      const installedPluginIds = installsResponse.installs.map((install) => install.pluginId);
+
+      // Filter the plugins to only include installed ones
+      const installed = pluginsResponse.plugins.filter((plugin) =>
+        installedPluginIds.includes(plugin.id),
+      );
+
+      this.installedPlugins.set(installed);
+    } catch (error) {
+      console.error('Failed to load installed plugins:', error);
+      this.toastService.error('Failed to load installed plugins');
+    } finally {
+      this.isLoadingPlugins.set(false);
+    }
   }
 }

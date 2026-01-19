@@ -99,7 +99,7 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'plugins/details',
+    path: 'plugins/:id',
     loadComponent: () =>
       import('./plugin-details/plugin-details.component').then((m) => m.PluginDetailsComponent),
   },

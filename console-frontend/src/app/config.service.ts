@@ -6,7 +6,7 @@ export interface AppConfiguration {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ConfigService {
   private config?: AppConfiguration;

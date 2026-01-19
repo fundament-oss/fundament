@@ -42,7 +42,9 @@ export class ProjectsComponent implements OnInit {
     } catch (error) {
       console.error('Failed to fetch projects:', error);
       this.errorMessage.set(
-        error instanceof Error ? `Failed to load projects: ${error.message}` : 'Failed to load projects',
+        error instanceof Error
+          ? `Failed to load projects: ${error.message}`
+          : 'Failed to load projects',
       );
     } finally {
       this.isLoading.set(false);

@@ -1,6 +1,7 @@
 // Icon Components Export
 // Note: not using https://github.com/pierreavn/angular-tabler-icons, since 1) it seems no longer maintained, 2) width/height can only be set using !important, and 3) not all icons are from the Tabler set
 
+export { LoadingIndicatorComponent } from './loading-indicator.component';
 export { WarningIconComponent } from './warning-icon.component';
 export { MenuIconComponent } from './menu-icon.component';
 export { CloseIconComponent } from './close-icon.component';
@@ -10,7 +11,9 @@ export { EditIconComponent } from './edit-icon.component';
 export { ErrorIconComponent } from './error-icon.component';
 export { CheckmarkIconComponent } from './checkmark-icon.component';
 export { ArrowRightIconComponent } from './arrow-right-icon.component';
+export { CheckCircleIconComponent } from './check-circle-icon.component';
 export { InfoCircleIconComponent } from './info-circle-icon.component';
+export { QuestionCircleIconComponent } from './question-circle-icon.component';
 export { ChevronDownIconComponent } from './chevron-down-icon.component';
 export { ChevronRightIconComponent } from './chevron-right-icon.component';
 export { ExternalLinkIconComponent } from './external-link-icon.component';
