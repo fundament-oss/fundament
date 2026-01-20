@@ -3,7 +3,7 @@
 
 set shell := ["bash", "-uc"]
 
-GARDENER_DIR := env_var_or_default("GARDENER_DIR", justfile_directory() + "/../.dev/gardener")
+GARDENER_DIR := env_var_or_default("GARDENER_DIR", justfile_directory() + "/.dev/gardener")
 KUBECONFIG_PATH := GARDENER_DIR / "example/provider-local/seed-kind/base/kubeconfig"
 
 # List available recipes
@@ -278,19 +278,14 @@ create-test-cluster name:
         echo "Cluster '{{name}}' already exists. Watch progress:"
     fi
     echo "  just watch-shoots"
-    echo "  just logs"
 
 # Delete a test cluster
 delete-test-cluster name:
     kubectl exec -n fundament fundament-db-1 -- psql -U postgres -d fundament -c \
         "UPDATE tenant.clusters SET deleted = NOW() WHERE name = '{{name}}' AND deleted IS NULL;"
 
-# Watch cluster-worker logs
-logs:
-    kubectl logs -n fundament -l app.kubernetes.io/component=cluster-worker -f
-
 # Watch shoots in Gardener
-watch-shoots:
+shoots:
     #!/usr/bin/env bash
     GARDENER_DIR="{{GARDENER_DIR}}"
     GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"

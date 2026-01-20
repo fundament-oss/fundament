@@ -201,7 +201,7 @@ Run the complete stack with local Gardener:
 just cluster-start
 
 # 2. Start local Gardener + configure secrets (first time ~15 min)
-just local-gardener
+just cluster-worker local-gardener
 
 # 3. Deploy all services with local Gardener mode
 just dev -p local-gardener
@@ -210,12 +210,11 @@ just dev -p local-gardener
 open http://console.127.0.0.1.nip.io:8080
 
 # 5. Create a test cluster via console or CLI:
-cd cluster-worker && just create-test-cluster t1
+just cluster-worker create-test-cluster t1
 
 # Watch progress:
-cd cluster-worker && just logs            # cluster-worker logs
-cd cluster-worker && just watch-shoots    # shoots in Gardener
-cd cluster-worker && just gardener-status # overall status
+just cluster-worker shoots    # shoots in Gardener
+just cluster-worker gardener-status # overall status
 ```
 
 **Prerequisites:**
