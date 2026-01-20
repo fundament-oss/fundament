@@ -86,9 +86,3 @@ functl *args:
     set -euo pipefail
     PASSWORD=$(kubectl --context k3d-fundament get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' | {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
     DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./functl/cmd/functl {{ args }}
-
-# --- Cluster Worker ---
-
-# Set up local Gardener for testing real Gardener client
-local-gardener:
-    just -f cluster-worker/justfile local-gardener
