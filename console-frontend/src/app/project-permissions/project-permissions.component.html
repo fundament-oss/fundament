@@ -33,58 +33,33 @@
       Add a permission
     </button>
 
-    <div
-      class="ring-opacity-5 overflow-hidden rounded-md shadow ring-1 ring-gray-300 dark:ring-gray-700"
-    >
-      <table class="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-800">
+    <div class="table-container">
+      <table class="table">
+        <thead>
           <tr>
-            <th
-              width="40%"
-              scope="col"
-              class="px-6 py-3.5 text-left text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
-            >
-              Name
-            </th>
-            <th
-              width="20%"
-              scope="col"
-              class="px-6 py-3.5 text-left text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
-            >
-              Object
-            </th>
-            <th
-              width="25%"
-              scope="col"
-              class="px-6 py-3.5 text-left text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
-            >
-              Role
-            </th>
-            <th
-              scope="col"
-              class="px-6 py-3.5 text-left text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
-            >
-              Actions
-            </th>
+            <th width="40%" scope="col">Name</th>
+            <th width="20%" scope="col">Object</th>
+            <th width="25%" scope="col">Role</th>
+            <th scope="col">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
+        <tbody>
           @for (permission of permissions; track permission.name + permission.object) {
             <tr>
-              <td class="px-6 py-3 text-sm font-medium whitespace-nowrap dark:text-white">
+              <td class="font-medium dark:text-white">
                 {{ permission.name }}
               </td>
-              <td class="px-6 py-3 text-sm whitespace-nowrap dark:text-gray-300">
+              <td>
                 {{ permission.object }}
               </td>
-              <td class="px-6 py-3 whitespace-nowrap">
+              <td>
                 <span
                   class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-sm font-medium text-blue-800 dark:bg-blue-950 dark:text-blue-200"
                 >
                   {{ permission.role }}
                 </span>
               </td>
-              <td class="px-6 py-3 whitespace-nowrap">
+              <td>
                 <button
                   type="button"
                   (click)="onEditPermission(permission, $index)"

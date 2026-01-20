@@ -104,6 +104,36 @@ select {
   @apply rounded-md border border-gray-300 text-sm ring-indigo-500 focus:border-indigo-500 focus:ring-1 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950;
 }
 
+/* Table styles */
+
+.table-container {
+  @apply overflow-hidden rounded-md shadow ring-1 ring-gray-300 dark:ring-gray-700;
+}
+
+.table {
+  @apply min-w-full divide-y divide-gray-300 dark:divide-gray-700;
+}
+
+.table thead {
+  @apply bg-gray-50 dark:bg-gray-800;
+}
+
+.table thead th {
+  @apply px-6 py-3.5 text-left text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400;
+}
+
+.table tbody {
+  @apply divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950;
+}
+
+.table tbody tr {
+  @apply hover:bg-gray-50 dark:hover:bg-gray-900;
+}
+
+.table tbody td {
+  @apply px-6 py-3 text-sm whitespace-nowrap dark:text-gray-300;
+}
+
 /* Vanilla Calendar styles. Based on:
 https://github.com/uvarov-frontend/vanilla-calendar-pro/blob/main/package/src/styles/themes/light.css
 https://github.com/uvarov-frontend/vanilla-calendar-pro/blob/main/package/src/styles/themes/dark.css
