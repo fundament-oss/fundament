@@ -122,7 +122,7 @@ func (q *Queries) PluginDocumentationLinksList(ctx context.Context, arg PluginDo
 }
 
 const pluginGetByID = `-- name: PluginGetByID :one
-SELECT id, name, description, author_name, author_url, repository_url
+SELECT id, name, description_short, description, author_name, author_url, repository_url
 FROM zappstore.plugins
 WHERE id = $1 AND deleted IS NULL
 `
@@ -132,12 +132,13 @@ type PluginGetByIDParams struct {
 }
 
 type PluginGetByIDRow struct {
-	ID            uuid.UUID
-	Name          string
-	Description   string
-	AuthorName    pgtype.Text
-	AuthorUrl     pgtype.Text
-	RepositoryUrl pgtype.Text
+	ID               uuid.UUID
+	Name             string
+	DescriptionShort string
+	Description      string
+	AuthorName       pgtype.Text
+	AuthorUrl        pgtype.Text
+	RepositoryUrl    pgtype.Text
 }
 
 func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (PluginGetByIDRow, error) {
@@ -146,6 +147,7 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.DescriptionShort,
 		&i.Description,
 		&i.AuthorName,
 		&i.AuthorUrl,
@@ -155,16 +157,17 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 }
 
 const pluginList = `-- name: PluginList :many
-SELECT id, name, description
+SELECT id, name, description_short, description
 FROM zappstore.plugins
 WHERE deleted IS NULL
 ORDER BY name
 `
 
 type PluginListRow struct {
-	ID          uuid.UUID
-	Name        string
-	Description string
+	ID               uuid.UUID
+	Name             string
+	DescriptionShort string
+	Description      string
 }
 
 func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
@@ -176,7 +179,12 @@ func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
 	var items []PluginListRow
 	for rows.Next() {
 		var i PluginListRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.Description); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.DescriptionShort,
+			&i.Description,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

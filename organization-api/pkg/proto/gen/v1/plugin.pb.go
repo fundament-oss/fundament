@@ -129,14 +129,15 @@ func (x *Category) GetName() string {
 
 // PluginSummary information
 type PluginSummary struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,30,opt,name=description,proto3" json:"description,omitempty"`
-	Tags          []*Tag                 `protobuf:"bytes,40,rep,name=tags,proto3" json:"tags,omitempty"`
-	Categories    []*Category            `protobuf:"bytes,50,rep,name=categories,proto3" json:"categories,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	Name             string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
+	Description      string                 `protobuf:"bytes,30,opt,name=description,proto3" json:"description,omitempty"`
+	DescriptionShort string                 `protobuf:"bytes,35,opt,name=description_short,json=descriptionShort,proto3" json:"description_short,omitempty"`
+	Tags             []*Tag                 `protobuf:"bytes,40,rep,name=tags,proto3" json:"tags,omitempty"`
+	Categories       []*Category            `protobuf:"bytes,50,rep,name=categories,proto3" json:"categories,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *PluginSummary) Reset() {
@@ -186,6 +187,13 @@ func (x *PluginSummary) GetName() string {
 func (x *PluginSummary) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *PluginSummary) GetDescriptionShort() string {
+	if x != nil {
+		return x.DescriptionShort
 	}
 	return ""
 }
@@ -565,6 +573,7 @@ type PluginDetail struct {
 	Id                 string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	Name               string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	Description        string                 `protobuf:"bytes,30,opt,name=description,proto3" json:"description,omitempty"`
+	DescriptionShort   string                 `protobuf:"bytes,35,opt,name=description_short,json=descriptionShort,proto3" json:"description_short,omitempty"`
 	Tags               []*Tag                 `protobuf:"bytes,40,rep,name=tags,proto3" json:"tags,omitempty"`
 	Categories         []*Category            `protobuf:"bytes,50,rep,name=categories,proto3" json:"categories,omitempty"`
 	Author             *Author                `protobuf:"bytes,60,opt,name=author,proto3" json:"author,omitempty"`
@@ -621,6 +630,13 @@ func (x *PluginDetail) GetName() string {
 func (x *PluginDetail) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *PluginDetail) GetDescriptionShort() string {
+	if x != nil {
+		return x.DescriptionShort
 	}
 	return ""
 }
@@ -762,12 +778,13 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\bCategory\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\"\xba\x01\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\"\xe7\x01\n" +
 	"\rPluginSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x1e \x01(\tR\vdescription\x12(\n" +
+	"\vdescription\x18\x1e \x01(\tR\vdescription\x12+\n" +
+	"\x11description_short\x18# \x01(\tR\x10descriptionShort\x12(\n" +
 	"\x04tags\x18( \x03(\v2\x14.organization.v1.TagR\x04tags\x129\n" +
 	"\n" +
 	"categories\x182 \x03(\v2\x19.organization.v1.CategoryR\n" +
@@ -796,12 +813,13 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x06Author\x12\x12\n" +
 	"\x04name\x18\n" +
 	" \x01(\tR\x04name\x12\x10\n" +
-	"\x03url\x18\x14 \x01(\tR\x03url\"\xe6\x02\n" +
+	"\x03url\x18\x14 \x01(\tR\x03url\"\x93\x03\n" +
 	"\fPluginDetail\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x1e \x01(\tR\vdescription\x12(\n" +
+	"\vdescription\x18\x1e \x01(\tR\vdescription\x12+\n" +
+	"\x11description_short\x18# \x01(\tR\x10descriptionShort\x12(\n" +
 	"\x04tags\x18( \x03(\v2\x14.organization.v1.TagR\x04tags\x129\n" +
 	"\n" +
 	"categories\x182 \x03(\v2\x19.organization.v1.CategoryR\n" +

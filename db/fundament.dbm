@@ -292,7 +292,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="plugins" layers="0" collapse-mode="2" max-obj-count="9" z-value="0">
+<table name="plugins" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_fundament_api"/>
 	<position x="640" y="1380"/>
@@ -300,6 +300,9 @@ END;]]> </definition>
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="description_short" not-null="true" default-value="''">
 		<type name="text" length="0"/>
 	</column>
 	<column name="description" not-null="true">
@@ -450,7 +453,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="plugin_documentation_links" layers="0" collapse-mode="2" max-obj-count="5" z-value="0">
+<table name="plugin_documentation_links" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_fundament_api"/>
 	<position x="500" y="1100"/>

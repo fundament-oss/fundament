@@ -31,7 +31,7 @@ import { ToastService } from '../toast.service';
 // Extended plugin type with presets array (computed from backend data)
 interface PluginWithPresets extends Pick<
   PluginSummary,
-  'id' | 'name' | 'description' | 'categories' | 'tags'
+  'id' | 'name' | 'descriptionShort' | 'description' | 'categories' | 'tags'
 > {
   presets?: string[]; // Array of preset IDs this plugin belongs to
 }
@@ -157,6 +157,7 @@ export class PluginsComponent implements OnInit {
           id: backendPlugin.id,
           name: backendPlugin.name,
           description: backendPlugin.description,
+          descriptionShort: backendPlugin.descriptionShort,
           categories: backendPlugin.categories,
           tags: backendPlugin.tags,
           presets: assignedPresets,

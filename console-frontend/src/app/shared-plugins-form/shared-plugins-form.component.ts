@@ -14,6 +14,7 @@ export interface Plugin {
   id: string;
   name: string;
   description: string;
+  descriptionShort: string;
   selected: boolean;
 }
 
@@ -54,6 +55,7 @@ export class SharedPluginsFormComponent implements OnInit {
         id: backendPlugin.id,
         name: backendPlugin.name,
         description: backendPlugin.description,
+        descriptionShort: backendPlugin.descriptionShort,
         selected: this.initialPluginIds?.includes(backendPlugin.id) ?? false,
       }));
 
