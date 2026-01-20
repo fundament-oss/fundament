@@ -15,6 +15,7 @@ db:
   storageSize: 1Gi
   reset: false
   insertTestData: true
+  exposePort: 54328
 
 authnApi:
   enabled: true

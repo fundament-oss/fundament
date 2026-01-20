@@ -26,6 +26,7 @@ db:
   storageSize: 1Gi
   reset: false
   insertTestData: false
+  exposePort: 0  # Expose postgres on this port via LoadBalancer (0 = disabled)
 
 # Authentication API
 authnApi:
