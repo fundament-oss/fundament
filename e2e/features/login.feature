@@ -8,7 +8,7 @@ Feature: User Authentication
 
   @smoke @login
   Scenario: Successful login with valid credentials
-    When I enter email "admin@example.com"
+    When I enter email "alice@acme-corp.com"
     And I enter password "password"
     And I click the sign in button
     Then I should be redirected to the dashboard
@@ -16,7 +16,7 @@ Feature: User Authentication
 
   @login @negative
   Scenario: Failed login with invalid password
-    When I enter email "admin@example.com"
+    When I enter email "alice@acme-corp.com"
     And I enter password "wrongpassword"
     And I click the sign in button
     Then I should see an error message
