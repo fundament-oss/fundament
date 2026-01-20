@@ -1,6 +1,6 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { PlusIconComponent, EyeIconComponent, ErrorIconComponent } from '../icons';
 import { CLUSTER } from '../../connect/tokens';
@@ -12,11 +12,13 @@ import { ClusterStatus } from '../../generated/v1/common_pb';
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, RouterLink, PlusIconComponent, EyeIconComponent, ErrorIconComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {
   private titleService = inject(TitleService);
   private client = inject(CLUSTER);
+  private router = inject(Router);
 
   clusters = signal<ClusterSummary[]>([]);
   errorMessage = signal<string>('');
@@ -71,5 +73,10 @@ export class DashboardComponent implements OnInit {
       [ClusterStatus.UNSPECIFIED]: 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200',
     };
     return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200';
+  }
+
+  handleNavigate(event: Event) {
+    const customEvent = event as CustomEvent<{ path: string }>;
+    this.router.navigate([customEvent.detail.path]);
   }
 }

@@ -1,4 +1,4 @@
-import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
+import { Component, signal, HostListener, inject, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthnApiService } from './authn-api.service';
@@ -50,6 +50,7 @@ import {
     ErrorIconComponent,
     InfoCircleIconComponent,
   ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './app.html',
 })
 export class App implements OnInit {
