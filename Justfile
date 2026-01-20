@@ -1,3 +1,5 @@
+mod terraform-provider 'terraform-provider'
+
 _default:
     @just --list
 

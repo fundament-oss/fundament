@@ -3,3 +3,12 @@
 Thumbs.db
 
 .claude
+
+# Terraform provider binary
+terraform-provider/terraform-provider
+*.lock.hcl
+*.tfstate
+*.tfstate.backup
+.terraform
+
+terraform-provider/terraform-provider-fundament
