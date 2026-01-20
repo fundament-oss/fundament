@@ -7,7 +7,7 @@ import { InstallPluginModalComponent } from '../install-plugin-modal/install-plu
 import { ChevronRightIconComponent, CheckmarkIconComponent, ErrorIconComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
+import { GetPluginDetailRequestSchema, type PluginDetail } from '../../generated/v1/plugin_pb';
 import {
   ListClustersRequestSchema,
   ListInstallsRequestSchema,
@@ -50,7 +50,7 @@ export class PluginDetailsComponent implements OnInit {
   private toastService = inject(ToastService);
 
   pluginId = signal<string>('');
-  plugin = signal<PluginSummary | null>(null);
+  plugin = signal<PluginDetail | null>(null);
   clusters = signal<ClusterWithState[]>([]);
   installs = signal<InstallWithCluster[]>([]);
 
@@ -71,21 +71,22 @@ export class PluginDetailsComponent implements OnInit {
 
     try {
       // Fetch plugin, clusters, and installs in parallel
-      const [pluginsResponse, clustersResponse] = await Promise.all([
-        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
+      const [pluginResponse, clustersResponse] = await Promise.all([
+        firstValueFrom(
+          this.pluginClient.getPluginDetail(create(GetPluginDetailRequestSchema, { pluginId: id })),
+        ),
         firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
       ]);
 
-      // Find the plugin by ID
-      const foundPlugin = pluginsResponse.plugins.find((p) => p.id === id);
-      if (!foundPlugin) {
+      // Check if plugin was found
+      if (!pluginResponse.plugin) {
         this.errorMessage.set('Plugin not found');
         this.isLoading.set(false);
         return;
       }
 
-      this.plugin.set(foundPlugin);
-      this.titleService.setTitle(`${foundPlugin.name} — Plugins`);
+      this.plugin.set(pluginResponse.plugin);
+      this.titleService.setTitle(`${pluginResponse.plugin.name} — Plugins`);
 
       // Fetch installs for all clusters
       const installsPromises = clustersResponse.clusters.map((cluster) =>
