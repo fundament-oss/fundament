@@ -11,14 +11,14 @@ SET check_function_bodies = false;
 -- DROP SCHEMA IF EXISTS tenant CASCADE;
 CREATE SCHEMA tenant;
 -- ddl-end --
-ALTER SCHEMA tenant OWNER TO fun_owner;
+ALTER SCHEMA tenant OWNER TO postgres;
 -- ddl-end --
 
 -- object: zappstore | type: SCHEMA --
 -- DROP SCHEMA IF EXISTS zappstore CASCADE;
 CREATE SCHEMA zappstore;
 -- ddl-end --
-ALTER SCHEMA zappstore OWNER TO fun_owner;
+ALTER SCHEMA zappstore OWNER TO fun_fundament_api;
 -- ddl-end --
 
 SET search_path TO pg_catalog,public,tenant,zappstore;
@@ -34,7 +34,7 @@ CREATE TABLE tenant.organizations (
 	CONSTRAINT organizations_uq_name UNIQUE (name)
 );
 -- ddl-end --
-ALTER TABLE tenant.organizations OWNER TO fun_owner;
+ALTER TABLE tenant.organizations OWNER TO postgres;
 -- ddl-end --
 
 -- object: tenant.projects | type: TABLE --
@@ -49,7 +49,7 @@ CREATE TABLE tenant.projects (
 	CONSTRAINT projects_uq_organization_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
 -- ddl-end --
-ALTER TABLE tenant.projects OWNER TO fun_owner;
+ALTER TABLE tenant.projects OWNER TO postgres;
 -- ddl-end --
 ALTER TABLE tenant.projects ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
@@ -68,7 +68,7 @@ CREATE TABLE tenant.namespaces (
 	CONSTRAINT namespaces_uq_name UNIQUE NULLS NOT DISTINCT (project_id,name,deleted)
 );
 -- ddl-end --
-ALTER TABLE tenant.namespaces OWNER TO fun_owner;
+ALTER TABLE tenant.namespaces OWNER TO postgres;
 -- ddl-end --
 ALTER TABLE tenant.namespaces ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
@@ -102,6 +102,52 @@ $function$;
 ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO postgres;
 -- ddl-end --
 
+-- object: tenant.cluster_reset_synced | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_reset_synced() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_reset_synced ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    NEW.synced := NULL;
+    NEW.sync_claimed_at := NULL;
+    NEW.sync_claimed_by := NULL;
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_reset_synced() OWNER TO postgres;
+-- ddl-end --
+
+-- object: tenant.cluster_sync_notify | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_sync_notify() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_sync_notify ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    IF NEW.synced IS NULL AND (TG_OP = 'INSERT' OR OLD.synced IS NOT NULL) THEN
+        PERFORM pg_notify('cluster_sync', NEW.id::text);
+    END IF;
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_sync_notify() OWNER TO postgres;
+-- ddl-end --
+
 -- object: tenant.users | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.users CASCADE;
 CREATE TABLE tenant.users (
@@ -117,7 +163,7 @@ CREATE TABLE tenant.users (
 	CONSTRAINT users_uq_external_id UNIQUE NULLS NOT DISTINCT (external_id,deleted)
 );
 -- ddl-end --
-ALTER TABLE tenant.users OWNER TO fun_owner;
+ALTER TABLE tenant.users OWNER TO postgres;
 -- ddl-end --
 
 -- object: tenant.clusters | type: TABLE --
@@ -130,11 +176,19 @@ CREATE TABLE tenant.clusters (
 	kubernetes_version text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
+	synced timestamptz,
+	sync_claimed_at timestamptz,
+	sync_claimed_by text,
+	sync_error text,
+	sync_attempts integer NOT NULL DEFAULT 0,
+	shoot_status text,
+	shoot_status_message text,
+	shoot_status_updated timestamptz,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
 	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
 -- ddl-end --
-ALTER TABLE tenant.clusters OWNER TO fun_owner;
+ALTER TABLE tenant.clusters OWNER TO postgres;
 -- ddl-end --
 ALTER TABLE tenant.clusters ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
@@ -167,6 +221,46 @@ CREATE POLICY cluster_worker_all_access ON tenant.clusters
 	USING (true);
 -- ddl-end --
 
+-- object: tenant.cluster_event_type | type: TYPE --
+-- DROP TYPE IF EXISTS tenant.cluster_event_type CASCADE;
+CREATE TYPE tenant.cluster_event_type AS
+ENUM ('sync_requested','sync_claimed','sync_submitted','sync_failed','status_ready','status_error','status_deleted');
+-- ddl-end --
+ALTER TYPE tenant.cluster_event_type OWNER TO postgres;
+-- ddl-end --
+
+-- object: cluster_reset_synced | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS cluster_reset_synced ON tenant.clusters CASCADE;
+CREATE OR REPLACE TRIGGER cluster_reset_synced
+	BEFORE UPDATE OF name,region,kubernetes_version,deleted
+	ON tenant.clusters
+	FOR EACH ROW
+	WHEN (OLD.name IS DISTINCT FROM NEW.name
+    OR OLD.region IS DISTINCT FROM NEW.region
+    OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
+    OR (OLD.deleted IS NULL AND NEW.deleted IS NOT NULL))
+	EXECUTE PROCEDURE tenant.cluster_reset_synced();
+-- ddl-end --
+
+-- object: cluster_sync_notify | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS cluster_sync_notify ON tenant.clusters CASCADE;
+CREATE OR REPLACE TRIGGER cluster_sync_notify
+	AFTER INSERT OR UPDATE OF synced
+	ON tenant.clusters
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.cluster_sync_notify();
+-- ddl-end --
+
+-- object: clusters_idx_needs_sync | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.clusters_idx_needs_sync CASCADE;
+CREATE INDEX clusters_idx_needs_sync ON tenant.clusters
+USING btree
+(
+	created
+)
+WHERE (synced IS NULL);
+-- ddl-end --
+
 -- object: tenant.node_pools | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.node_pools CASCADE;
 CREATE TABLE tenant.node_pools (
@@ -182,7 +276,7 @@ CREATE TABLE tenant.node_pools (
 	CONSTRAINT node_pools_uq_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted)
 );
 -- ddl-end --
-ALTER TABLE tenant.node_pools OWNER TO fun_owner;
+ALTER TABLE tenant.node_pools OWNER TO postgres;
 -- ddl-end --
 ALTER TABLE tenant.node_pools ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
@@ -212,7 +306,7 @@ CREATE TABLE zappstore.installs (
 	CONSTRAINT installs_uq UNIQUE NULLS NOT DISTINCT (cluster_id,plugin_id,deleted)
 );
 -- ddl-end --
-ALTER TABLE zappstore.installs OWNER TO fun_owner;
+ALTER TABLE zappstore.installs OWNER TO fun_fundament_api;
 -- ddl-end --
 ALTER TABLE zappstore.installs ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
@@ -233,7 +327,7 @@ CREATE TABLE zappstore.plugins (
 	CONSTRAINT plugins_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.plugins OWNER TO fun_owner;
+ALTER TABLE zappstore.plugins OWNER TO fun_fundament_api;
 -- ddl-end --
 
 -- object: zappstore.presets | type: TABLE --
@@ -246,7 +340,7 @@ CREATE TABLE zappstore.presets (
 	CONSTRAINT presets_uq_name UNIQUE (name)
 );
 -- ddl-end --
-ALTER TABLE zappstore.presets OWNER TO fun_owner;
+ALTER TABLE zappstore.presets OWNER TO fun_fundament_api;
 -- ddl-end --
 
 -- object: zappstore.preset_plugins | type: TABLE --
@@ -257,7 +351,7 @@ CREATE TABLE zappstore.preset_plugins (
 	CONSTRAINT preset_plugins_pk PRIMARY KEY (preset_id,plugin_id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.preset_plugins OWNER TO fun_owner;
+ALTER TABLE zappstore.preset_plugins OWNER TO fun_fundament_api;
 -- ddl-end --
 
 -- object: install_organization_policy | type: POLICY --
@@ -284,7 +378,7 @@ CREATE TABLE zappstore.tags (
 	CONSTRAINT tags_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.tags OWNER TO fun_owner;
+ALTER TABLE zappstore.tags OWNER TO fun_fundament_api;
 -- ddl-end --
 
 -- object: zappstore.plugins_tags | type: TABLE --
@@ -295,7 +389,7 @@ CREATE TABLE zappstore.plugins_tags (
 	CONSTRAINT plugins_tags_pk PRIMARY KEY (plugin_id,tag_id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.plugins_tags OWNER TO fun_owner;
+ALTER TABLE zappstore.plugins_tags OWNER TO fun_fundament_api;
 -- ddl-end --
 
 -- object: zappstore.categories | type: TABLE --
@@ -309,7 +403,7 @@ CREATE TABLE zappstore.categories (
 	CONSTRAINT categories_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.categories OWNER TO fun_owner;
+ALTER TABLE zappstore.categories OWNER TO fun_fundament_api;
 -- ddl-end --
 
 -- object: zappstore.categories_plugins | type: TABLE --
@@ -320,7 +414,7 @@ CREATE TABLE zappstore.categories_plugins (
 	CONSTRAINT categories_plugins_pk PRIMARY KEY (plugin_id,category_id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.categories_plugins OWNER TO fun_owner;
+ALTER TABLE zappstore.categories_plugins OWNER TO fun_fundament_api;
 -- ddl-end --
 
 -- object: zappstore.plugin_documentation_links | type: TABLE --
@@ -334,7 +428,7 @@ CREATE TABLE zappstore.plugin_documentation_links (
 	CONSTRAINT plugin_documentation_links_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.plugin_documentation_links OWNER TO fun_owner;
+ALTER TABLE zappstore.plugin_documentation_links OWNER TO fun_fundament_api;
 -- ddl-end --
 
 -- object: projects_organization_isolation | type: POLICY --
@@ -357,6 +451,64 @@ CREATE POLICY namespaces_organization_policy ON tenant.namespaces
     WHERE clusters.id = namespaces.cluster_id
     AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
 ));
+-- ddl-end --
+
+-- object: tenant.cluster_sync_action | type: TYPE --
+-- DROP TYPE IF EXISTS tenant.cluster_sync_action CASCADE;
+CREATE TYPE tenant.cluster_sync_action AS
+ENUM ('create','update','delete');
+-- ddl-end --
+ALTER TYPE tenant.cluster_sync_action OWNER TO postgres;
+-- ddl-end --
+
+-- object: tenant.cluster_events | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.cluster_events CASCADE;
+CREATE TABLE tenant.cluster_events (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	cluster_id uuid NOT NULL,
+	event_type tenant.cluster_event_type NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	sync_action tenant.cluster_sync_action,
+	message text,
+	attempt integer,
+	CONSTRAINT cluster_events_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE tenant.cluster_events OWNER TO postgres;
+-- ddl-end --
+ALTER TABLE tenant.cluster_events ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: cluster_events_worker_all_access | type: POLICY --
+-- DROP POLICY IF EXISTS cluster_events_worker_all_access ON tenant.cluster_events CASCADE;
+CREATE POLICY cluster_events_worker_all_access ON tenant.cluster_events
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: cluster_events_organization_isolation | type: POLICY --
+-- DROP POLICY IF EXISTS cluster_events_organization_isolation ON tenant.cluster_events CASCADE;
+CREATE POLICY cluster_events_organization_isolation ON tenant.cluster_events
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (EXISTS (
+    SELECT 1 FROM tenant.clusters c
+    WHERE c.id = cluster_events.cluster_id
+    AND c.organization_id = current_setting('app.current_organization_id')::uuid
+));
+-- ddl-end --
+
+-- object: cluster_events_idx_cluster_created | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.cluster_events_idx_cluster_created CASCADE;
+CREATE INDEX cluster_events_idx_cluster_created ON tenant.cluster_events
+USING btree
+(
+	cluster_id DESC NULLS LAST,
+	created DESC NULLS LAST
+);
 -- ddl-end --
 
 -- object: projects_fk_organization | type: CONSTRAINT --
@@ -464,164 +616,11 @@ REFERENCES zappstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
--- object: "grant_U_ad521dc726" | type: PERMISSION --
-GRANT USAGE
-   ON SCHEMA zappstore
-   TO fun_fundament_api;
-
+-- object: cluster_events_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_events DROP CONSTRAINT IF EXISTS cluster_events_fk_cluster CASCADE;
+ALTER TABLE tenant.cluster_events ADD CONSTRAINT cluster_events_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE CASCADE ON UPDATE NO ACTION;
 -- ddl-end --
-
-
--- object: "grant_U_fc33f17a39" | type: PERMISSION --
-GRANT USAGE
-   ON SCHEMA tenant
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: "grant_U_a09934b29e" | type: PERMISSION --
-GRANT USAGE
-   ON SCHEMA tenant
-   TO fun_authn_api;
-
--- ddl-end --
-
-
--- object: grant_raw_6dafe3fd95 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE tenant.organizations
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_c16308945d | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE tenant.organizations
-   TO fun_authn_api;
-
--- ddl-end --
-
-
--- object: grant_raw_b5e3aab1d0 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE tenant.projects
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_125a3754db | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE tenant.namespaces
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_d972e5c22a | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE tenant.users
-   TO fun_authn_api;
-
--- ddl-end --
-
-
--- object: grant_raw_5940e5f705 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE tenant.users
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_940738ac34 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE tenant.clusters
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_31f2fce1d0 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE tenant.node_pools
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_2ca2d3950e | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.installs
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_b0f3fc5bb2 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.plugin_documentation_links
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_c7ef1230f0 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.plugins
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_bf1c10ddf6 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.categories_plugins
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_66c5b174fe | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.categories
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_638a3173d7 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.preset_plugins
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_00ef9ca13c | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.presets
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_71b6d05387 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.plugins_tags
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_1585801963 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.tags
-   TO fun_fundament_api;
-
--- ddl-end --
-
 
 

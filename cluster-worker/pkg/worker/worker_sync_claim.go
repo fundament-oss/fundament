@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+
+	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 )
 
 // claimedCluster holds a claimed cluster's info.

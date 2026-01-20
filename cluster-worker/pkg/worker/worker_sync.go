@@ -360,7 +360,7 @@ func (w *SyncWorker) reconcileAll(ctx context.Context) {
 		}
 
 		// Outdated - check if key fields have drifted
-		hasDrifted, drifted := w.shootKeyFieldsDrifted(cluster, shoot)
+		hasDrifted, drifted := w.shootKeyFieldsDrifted(&cluster, shoot)
 		if hasDrifted {
 			w.logger.Warn("drift detected: ",
 				"cluster_id", cluster.ID,
@@ -401,7 +401,7 @@ func (w *SyncWorker) reconcileAll(ctx context.Context) {
 // shootKeyFieldsDrifted checks if a Shoot's key fields differ from the expected cluster state.
 // Returns a description of the drift, or empty string if no drift detected.
 // Expand this function as the schema grows to include more fields.
-func (w *SyncWorker) shootKeyFieldsDrifted(cluster db.ClusterListActiveRow, shoot gardener.ShootInfo) (bool, []string) {
+func (w *SyncWorker) shootKeyFieldsDrifted(cluster *db.ClusterListActiveRow, shoot gardener.ShootInfo) (bool, []string) {
 	hasDrifted := false
 	drifted := []string{}
 
