@@ -103,7 +103,7 @@ func ShootName(organizationName, clusterName string, maxLen int) string {
 	}
 
 	// Trim trailing hyphens to avoid consecutive hyphens (Gardener validation)
-	for len(prefix) > 0 && prefix[len(prefix)-1] == '-' {
+	for prefix != "" && prefix[len(prefix)-1] == '-' {
 		prefix = prefix[:len(prefix)-1]
 	}
 
