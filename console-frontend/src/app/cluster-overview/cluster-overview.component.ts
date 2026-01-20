@@ -221,9 +221,9 @@ export class ClusterOverviewComponent implements OnInit {
       upgrading: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200',
       error: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
       stopping: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200',
-      stopped: 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200',
+      stopped: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
     };
-    return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200';
+    return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   }
 
   formatDate(dateString: string): string {

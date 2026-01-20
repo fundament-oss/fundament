@@ -68,8 +68,8 @@ export class DashboardComponent implements OnInit {
       [ClusterStatus.STOPPING]:
         'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200',
       [ClusterStatus.STOPPED]: 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200',
-      [ClusterStatus.UNSPECIFIED]: 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200',
+      [ClusterStatus.UNSPECIFIED]: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
     };
-    return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200';
+    return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   }
 }

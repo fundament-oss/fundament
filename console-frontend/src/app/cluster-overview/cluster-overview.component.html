@@ -17,9 +17,9 @@
 
 <!-- Content (only show when not loading) -->
 @if (!isLoading()) {
-  <div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+  <div class="card">
     <!-- Header -->
-    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+    <div class="card-header">
       <div class="grid items-center gap-3 lg:grid-cols-2">
         <div>
           <h1 class="text-2xl font-bold dark:text-white">
@@ -50,9 +50,9 @@
     </div>
 
     <!-- Summary Content -->
-    <div class="space-y-6 p-6">
+    <div class="card-body-lg space-y-6">
       <!-- Basics Block -->
-      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+      <div class="card card-body">
         <h3 class="mb-4 text-lg font-medium dark:text-white">Basics</h3>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <dl>
@@ -94,7 +94,7 @@
       <!-- Resource Usage Stats -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <!-- Resource Usage Charts -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Resource usage</h3>
           <div class="space-y-4">
             <!-- CPU Usage -->
@@ -256,7 +256,7 @@
         </div>
 
         <!-- Recent Activity -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Recent activity</h3>
           <div class="max-h-80 space-y-3 overflow-y-auto" tabindex="0">
             @for (activity of clusterData.activity; track activity.timestamp) {
@@ -284,7 +284,7 @@
       <!-- Members and Node Pools -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <!-- Members -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Members
             <a
@@ -333,7 +333,7 @@
         </div>
 
         <!-- Node Pools -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Node pools
             <a
@@ -352,7 +352,7 @@
           } @else {
             <div class="space-y-4">
               @for (pool of clusterData.nodePools; track pool.name) {
-                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800">
+                <div class="card card-body-sm">
                   <div class="mb-2 flex items-center justify-between">
                     <h4 class="text-sm font-medium dark:text-white">{{ pool.name }}</h4>
                     <span
@@ -390,7 +390,7 @@
         </div>
 
         <!-- Plugins Block -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Plugins
             <a
@@ -423,7 +423,7 @@
         </div>
 
         <!-- Namespaces Block -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <div class="mb-4 flex items-center justify-between">
             <h3 class="text-lg font-medium dark:text-white">Namespaces</h3>
             <button
@@ -444,9 +444,7 @@
           } @else {
             <div class="space-y-3">
               @for (namespace of namespaces(); track namespace.id) {
-                <div
-                  class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
-                >
+                <div class="card card-body-sm flex items-center justify-between">
                   <div>
                     <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">

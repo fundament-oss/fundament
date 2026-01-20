@@ -1,6 +1,6 @@
-<div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+<div class="card">
   <!-- Header -->
-  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+  <div class="card-header">
     <div class="grid items-center gap-3 sm:grid-cols-2">
       <div>
         <h1 class="text-2xl font-bold dark:text-white">Organization members</h1>
@@ -12,7 +12,7 @@
         <button
           type="button"
           (click)="openModal()"
-          class="inline-flex cursor-pointer items-center rounded-md border border-transparent bg-indigo-600 px-3 py-2 text-sm leading-4 font-medium text-white ring-indigo-500 transition-all duration-200 ease-in-out hover:-translate-y-px hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950"
+          class="btn-primary inline-flex items-center px-3!"
         >
           <app-plus-icon class="mr-2 h-4 w-4" />
           Invite user
@@ -30,32 +30,50 @@
       </p>
 
       @if (pendingInvitations().length > 0) {
-        <div class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+        <div
+          class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
+        >
           @for (invitation of pendingInvitations(); track invitation.id) {
             <div class="flex items-center justify-between px-4 py-3">
               <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
-                  <svg class="h-5 w-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                <div
+                  class="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900"
+                >
+                  <svg
+                    class="h-5 w-5 text-yellow-600 dark:text-yellow-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                 </div>
                 <div>
                   <p class="font-medium dark:text-white">{{ invitation.email }}</p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">Invited {{ formatTimeAgo(invitation.invitedAt) }}</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Invited {{ formatTimeAgo(invitation.invitedAt) }}
+                  </p>
                 </div>
               </div>
               <div class="flex items-center gap-3">
                 <span
                   class="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  [class]="invitation.role === 'admin'
-                    ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
-                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'"
+                  [class]="
+                    invitation.role === 'admin'
+                      ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                  "
                 >
                   {{ invitation.role === 'admin' ? 'Admin' : 'Viewer' }}
                 </span>
                 <button
                   (click)="cancelInvitation(invitation.id)"
-                  class="text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
+                  class="cursor-pointer text-gray-400 hover:text-rose-600 dark:hover:text-rose-400"
                   title="Cancel invitation"
                 >
                   <app-close-icon class="h-5 w-5" />
@@ -65,9 +83,21 @@
           }
         </div>
       } @else {
-        <div class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700">
-          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        <div
+          class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700"
+        >
+          <svg
+            class="mx-auto h-12 w-12 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            />
           </svg>
           <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No pending invitations</p>
           <button (click)="openModal()" class="btn-primary mt-4 inline-flex items-center">
@@ -85,7 +115,9 @@
         Users who have signed in to the organization
       </p>
 
-      <div class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+      <div
+        class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
+      >
         @for (member of members(); track member.id) {
           <div
             class="flex items-center justify-between px-4 py-3"
@@ -94,7 +126,7 @@
           >
             <div class="flex items-center gap-3">
               <div
-                class="flex h-10 w-10 items-center justify-center rounded-full text-white font-medium"
+                class="flex h-10 w-10 items-center justify-center rounded-full font-medium text-white"
                 [class]="getAvatarColor(member.name)"
               >
                 {{ getInitials(member.name) }}
@@ -103,7 +135,10 @@
                 <div class="flex items-center gap-2">
                   <p class="font-medium dark:text-white">{{ member.name }}</p>
                   @if (member.isCurrentUser) {
-                    <span class="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">You</span>
+                    <span
+                      class="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                      >You</span
+                    >
                   }
                 </div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ member.email }}</p>
@@ -111,21 +146,23 @@
             </div>
             <div class="flex items-center gap-3">
               @if (member.isCurrentUser) {
-                <span class="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                <span
+                  class="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200"
+                >
                   {{ member.role === 'admin' ? 'Admin' : 'Viewer' }}
                 </span>
               } @else {
                 <select
                   [value]="member.role"
                   (change)="updateMemberRole(member.id, $any($event.target).value)"
-                  class="rounded-md border border-gray-300 bg-white py-1 pl-2 pr-8 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  class="rounded-md border border-gray-300 bg-white py-1 pr-8 pl-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                 >
                   <option value="admin">Admin</option>
                   <option value="viewer">Viewer</option>
                 </select>
                 <button
                   (click)="removeMember(member.id)"
-                  class="text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
+                  class="cursor-pointer text-gray-400 hover:text-rose-600 dark:hover:text-rose-400"
                   title="Remove member"
                 >
                   <app-trash-icon class="h-5 w-5" />
@@ -165,12 +202,16 @@
       </div>
 
       <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
-        Enter the email address of the user you want to invite. They will be able to sign in via SSO once added.
+        Enter the email address of the user you want to invite. They will be able to sign in via SSO
+        once added.
       </p>
 
       <form (ngSubmit)="submitInvitation()">
         <div class="mb-4">
-          <label for="email" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            for="email"
+            class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Email address
           </label>
           <input
@@ -182,7 +223,7 @@
             placeholder="user@example.com"
             required
             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-          >
+          />
         </div>
 
         <div class="mb-6">
@@ -202,12 +243,8 @@
         </div>
 
         <div class="flex justify-end gap-3">
-          <button type="button" (click)="closeModal()" class="btn-secondary">
-            Cancel
-          </button>
-          <button type="submit" class="btn-primary">
-            Send invitation
-          </button>
+          <button type="button" (click)="closeModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Send invitation</button>
         </div>
       </form>
     </div>

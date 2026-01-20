@@ -51,6 +51,28 @@ input[type='email'].ng-invalid.ng-touched {
   @apply border-rose-500 ring-rose-500 focus:border-rose-500;
 }
 
+/* Card styles */
+
+.card {
+  @apply rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950;
+}
+
+.card-header {
+  @apply border-b border-gray-200 px-6 py-4 dark:border-gray-800;
+}
+
+.card-body-lg {
+  @apply p-6;
+}
+
+.card-body {
+  @apply p-4;
+}
+
+.card-body-sm {
+  @apply p-3;
+}
+
 /* Form styles */
 
 .btn-primary {
