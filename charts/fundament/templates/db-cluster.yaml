@@ -34,6 +34,8 @@ spec:
         bypassrls: true
         passwordSecret:
           name: {{ $.Release.Name }}-db-fun-operator
+      - name: fun_owner
+        login: false
 
 {{- if gt (int $.Values.db.exposePort) 0 }}
 ---

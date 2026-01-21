@@ -31,6 +31,7 @@ spec:
                 sleep 2
               done
               echo "Database is ready!"
+      containers:
         - name: migrations
           image: {{ $.Values.images.dbMigrations }}
           command:
@@ -59,60 +60,6 @@ spec:
               value: {{ $.Values.db.reset | quote }}
             - name: TREK_INSERT_TEST_DATA
               value: {{ $.Values.db.insertTestData | quote }}
-      containers:
-        - name: grant-access
-          image: ghcr.io/cloudnative-pg/postgresql:18
-          command:
-            - sh
-            - -c
-            - |
-              set -e
-              export PGPASSWORD="$POSTGRES_PASSWORD"
-              PGHOST="{{ include "fundament.db.host" . }}"
-              PGUSER="$POSTGRES_USER"
-              PGDATABASE="fundament"
-
-              # Function to grant database and schema access
-              grant_access() {
-                ROLE_NAME=$1
-                echo "Granting access to $ROLE_NAME..."
-                psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c "
-                  -- Grant connect to database
-                  GRANT CONNECT ON DATABASE fundament TO $ROLE_NAME;
-
-                  -- Grant usage on tenant schema
-                  GRANT USAGE ON SCHEMA tenant TO $ROLE_NAME;
-
-                  -- Grant access to all tables in tenant schema
-                  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA tenant TO $ROLE_NAME;
-
-                  -- Grant access to sequences
-                  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA tenant TO $ROLE_NAME;
-
-                  -- Set default privileges for future tables
-                  ALTER DEFAULT PRIVILEGES IN SCHEMA tenant
-                    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO $ROLE_NAME;
-                  ALTER DEFAULT PRIVILEGES IN SCHEMA tenant
-                    GRANT USAGE, SELECT ON SEQUENCES TO $ROLE_NAME;
-                "
-              }
-
-              # Grant access to each role (roles are managed by CNPG declarative role management)
-              grant_access "fun_authn_api"
-              grant_access "fun_fundament_api"
-
-              echo "Access granted to all roles!"
-          env:
-            - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "fundament.db.superuserSecretName" . }}
-                  key: username
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "fundament.db.superuserSecretName" . }}
-                  key: password
 ---
 {{- $authnSecretName := printf "%s-db-fun-authn-api" $.Release.Name }}
 {{- $authnExisting := lookup "v1" "Secret" $.Release.Namespace $authnSecretName }}

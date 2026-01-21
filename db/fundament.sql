@@ -11,14 +11,14 @@ SET check_function_bodies = false;
 -- DROP SCHEMA IF EXISTS tenant CASCADE;
 CREATE SCHEMA tenant;
 -- ddl-end --
-ALTER SCHEMA tenant OWNER TO postgres;
+ALTER SCHEMA tenant OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: zappstore | type: SCHEMA --
 -- DROP SCHEMA IF EXISTS zappstore CASCADE;
 CREATE SCHEMA zappstore;
 -- ddl-end --
-ALTER SCHEMA zappstore OWNER TO fun_fundament_api;
+ALTER SCHEMA zappstore OWNER TO fun_owner;
 -- ddl-end --
 
 SET search_path TO pg_catalog,public,tenant,zappstore;
@@ -34,7 +34,7 @@ CREATE TABLE tenant.organizations (
 	CONSTRAINT organizations_uq_name UNIQUE (name)
 );
 -- ddl-end --
-ALTER TABLE tenant.organizations OWNER TO postgres;
+ALTER TABLE tenant.organizations OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.projects | type: TABLE --
@@ -49,7 +49,7 @@ CREATE TABLE tenant.projects (
 	CONSTRAINT projects_uq_organization_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
 -- ddl-end --
-ALTER TABLE tenant.projects OWNER TO postgres;
+ALTER TABLE tenant.projects OWNER TO fun_owner;
 -- ddl-end --
 ALTER TABLE tenant.projects ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
@@ -68,7 +68,7 @@ CREATE TABLE tenant.namespaces (
 	CONSTRAINT namespaces_uq_name UNIQUE NULLS NOT DISTINCT (project_id,name,deleted)
 );
 -- ddl-end --
-ALTER TABLE tenant.namespaces OWNER TO postgres;
+ALTER TABLE tenant.namespaces OWNER TO fun_owner;
 -- ddl-end --
 ALTER TABLE tenant.namespaces ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
@@ -114,7 +114,7 @@ CREATE TABLE tenant.users (
 	CONSTRAINT users_uq_external_id UNIQUE (external_id)
 );
 -- ddl-end --
-ALTER TABLE tenant.users OWNER TO postgres;
+ALTER TABLE tenant.users OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.clusters | type: TABLE --
@@ -133,7 +133,7 @@ CREATE TABLE tenant.clusters (
 	CONSTRAINT clusters_ck_status CHECK (status IN ('unspecified','provisioning','starting','running','upgrading','error','stopping','stopped'))
 );
 -- ddl-end --
-ALTER TABLE tenant.clusters OWNER TO postgres;
+ALTER TABLE tenant.clusters OWNER TO fun_owner;
 -- ddl-end --
 ALTER TABLE tenant.clusters ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
@@ -172,7 +172,7 @@ CREATE TABLE tenant.node_pools (
 	CONSTRAINT node_pools_uq_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted)
 );
 -- ddl-end --
-ALTER TABLE tenant.node_pools OWNER TO postgres;
+ALTER TABLE tenant.node_pools OWNER TO fun_owner;
 -- ddl-end --
 ALTER TABLE tenant.node_pools ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
@@ -202,7 +202,7 @@ CREATE TABLE zappstore.installs (
 	CONSTRAINT installs_uq UNIQUE NULLS NOT DISTINCT (cluster_id,plugin_id,deleted)
 );
 -- ddl-end --
-ALTER TABLE zappstore.installs OWNER TO fun_fundament_api;
+ALTER TABLE zappstore.installs OWNER TO fun_owner;
 -- ddl-end --
 ALTER TABLE zappstore.installs ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
@@ -223,7 +223,7 @@ CREATE TABLE zappstore.plugins (
 	CONSTRAINT plugins_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.plugins OWNER TO fun_fundament_api;
+ALTER TABLE zappstore.plugins OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: zappstore.presets | type: TABLE --
@@ -236,7 +236,7 @@ CREATE TABLE zappstore.presets (
 	CONSTRAINT presets_uq_name UNIQUE (name)
 );
 -- ddl-end --
-ALTER TABLE zappstore.presets OWNER TO fun_fundament_api;
+ALTER TABLE zappstore.presets OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: zappstore.preset_plugins | type: TABLE --
@@ -247,7 +247,7 @@ CREATE TABLE zappstore.preset_plugins (
 	CONSTRAINT preset_plugins_pk PRIMARY KEY (preset_id,plugin_id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.preset_plugins OWNER TO fun_fundament_api;
+ALTER TABLE zappstore.preset_plugins OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: install_organization_policy | type: POLICY --
@@ -274,7 +274,7 @@ CREATE TABLE zappstore.tags (
 	CONSTRAINT tags_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.tags OWNER TO fun_fundament_api;
+ALTER TABLE zappstore.tags OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: zappstore.plugins_tags | type: TABLE --
@@ -285,7 +285,7 @@ CREATE TABLE zappstore.plugins_tags (
 	CONSTRAINT plugins_tags_pk PRIMARY KEY (plugin_id,tag_id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.plugins_tags OWNER TO fun_fundament_api;
+ALTER TABLE zappstore.plugins_tags OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: zappstore.categories | type: TABLE --
@@ -299,7 +299,7 @@ CREATE TABLE zappstore.categories (
 	CONSTRAINT categories_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.categories OWNER TO fun_fundament_api;
+ALTER TABLE zappstore.categories OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: zappstore.categories_plugins | type: TABLE --
@@ -310,7 +310,7 @@ CREATE TABLE zappstore.categories_plugins (
 	CONSTRAINT categories_plugins_pk PRIMARY KEY (plugin_id,category_id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.categories_plugins OWNER TO fun_fundament_api;
+ALTER TABLE zappstore.categories_plugins OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: zappstore.plugin_documentation_links | type: TABLE --
@@ -324,7 +324,7 @@ CREATE TABLE zappstore.plugin_documentation_links (
 	CONSTRAINT plugin_documentation_links_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.plugin_documentation_links OWNER TO fun_fundament_api;
+ALTER TABLE zappstore.plugin_documentation_links OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: projects_organization_isolation | type: POLICY --
@@ -453,5 +453,165 @@ ALTER TABLE zappstore.plugin_documentation_links ADD CONSTRAINT plugin_documenta
 REFERENCES zappstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
+
+-- object: "grant_U_ad521dc726" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA zappstore
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_fc33f17a39" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA tenant
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_a09934b29e" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA tenant
+   TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_6dafe3fd95 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.organizations
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_c16308945d | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.organizations
+   TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_b5e3aab1d0 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.projects
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_125a3754db | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.namespaces
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_d972e5c22a | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.users
+   TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_5940e5f705 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.users
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_940738ac34 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.clusters
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_31f2fce1d0 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.node_pools
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_2ca2d3950e | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE zappstore.installs
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_b0f3fc5bb2 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE zappstore.plugin_documentation_links
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_c7ef1230f0 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE zappstore.plugins
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_bf1c10ddf6 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE zappstore.categories_plugins
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_66c5b174fe | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE zappstore.categories
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_638a3173d7 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE zappstore.preset_plugins
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_00ef9ca13c | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE zappstore.presets
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_71b6d05387 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE zappstore.plugins_tags
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_1585801963 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE zappstore.tags
+   TO fun_fundament_api;
+
+-- ddl-end --
+
 
 
