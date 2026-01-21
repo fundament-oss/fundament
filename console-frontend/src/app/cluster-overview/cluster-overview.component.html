@@ -68,11 +68,8 @@
           <dl>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
             <dd class="mt-1">
-              <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-                [class]="getStatusColor(clusterData.status)"
-              >
-                {{ clusterData.status }}
+              <span class="badge" [class]="getStatusColor(clusterData.status)">
+                {{ getStatusLabel(clusterData.status) }}
               </span>
             </dd>
           </dl>
@@ -311,14 +308,11 @@
                 </div>
                 <div class="text-right">
                   <span
-                    class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
+                    class="badge-sm"
                     [ngClass]="{
-                      'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200':
-                        member.role === 'admin',
-                      'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200':
-                        member.role === 'edit',
-                      'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200':
-                        member.role === 'view',
+                      'badge-purple': member.role === 'admin',
+                      'badge-blue': member.role === 'edit',
+                      'badge-green': member.role === 'view',
                     }"
                   >
                     {{ member.role }}
@@ -356,11 +350,9 @@
                   <div class="mb-2 flex items-center justify-between">
                     <h4 class="text-sm font-medium dark:text-white">{{ pool.name }}</h4>
                     <span
-                      class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
+                      class="badge-sm"
                       [class]="
-                        pool.status === NodePoolStatus.HEALTHY
-                          ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'
-                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200'
+                        pool.status === NodePoolStatus.HEALTHY ? 'badge-green' : 'badge-rose'
                       "
                     >
                       {{ getNodePoolStatusLabel(pool.status) }}
@@ -409,9 +401,7 @@
               </dt>
               <dd class="flex flex-wrap gap-1">
                 @for (plugin of installedPlugins(); track plugin.id) {
-                  <span
-                    class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                  >
+                  <span class="badge-md badge-emerald">
                     {{ plugin.name }}
                   </span>
                 }

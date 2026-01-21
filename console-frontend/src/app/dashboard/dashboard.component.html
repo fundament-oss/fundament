@@ -30,11 +30,8 @@
           <div class="card-header">
             <div class="flex items-center justify-between">
               <h2 class="text-xl font-bold dark:text-white">{{ cluster.name }}</h2>
-              <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                [class]="getStatusColor(cluster.status)"
-              >
-                {{ cluster.status || 'Unknown status' }}
+              <span class="badge" [class]="getStatusColor(cluster.status)">
+                {{ getStatusLabel(cluster.status) }}
               </span>
             </div>
           </div>

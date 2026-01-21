@@ -62,12 +62,8 @@
               </div>
               <div class="flex items-center gap-3">
                 <span
-                  class="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  [class]="
-                    invitation.role === 'admin'
-                      ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
-                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                  "
+                  class="badge"
+                  [class]="invitation.role === 'admin' ? 'badge-purple' : 'badge-yellow'"
                 >
                   {{ invitation.role === 'admin' ? 'Admin' : 'Viewer' }}
                 </span>
@@ -146,9 +142,7 @@
             </div>
             <div class="flex items-center gap-3">
               @if (member.isCurrentUser) {
-                <span
-                  class="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200"
-                >
+                <span class="badge badge-purple">
                   {{ member.role === 'admin' ? 'Admin' : 'Viewer' }}
                 </span>
               } @else {
@@ -189,6 +183,8 @@
     <div
       class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900"
       (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+      tabindex="-1"
     >
       <div class="mb-4 flex items-center justify-between">
         <h2 id="modal-title" class="text-xl font-bold dark:text-white">Invite user</h2>

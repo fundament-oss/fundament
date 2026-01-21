@@ -27,7 +27,7 @@ import {
 } from '../../generated/v1/cluster_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
-import { NodePoolStatus } from '../../generated/v1/common_pb';
+import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { firstValueFrom } from 'rxjs';
 import {
   EditIconComponent,
@@ -39,6 +39,7 @@ import {
   PlusIconComponent,
   TrashIconComponent,
 } from '../icons';
+import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 
 @Component({
   selector: 'app-cluster-overview',
@@ -70,6 +71,10 @@ export class ClusterOverviewComponent implements OnInit {
 
   // Expose enum for use in template
   NodePoolStatus = NodePoolStatus;
+
+  // Expose utility functions for template
+  getStatusColor = getStatusColor;
+  getStatusLabel = getStatusLabel;
 
   errorMessage = signal<string | null>(null);
   isLoading = signal<boolean>(true);
@@ -109,7 +114,7 @@ export class ClusterOverviewComponent implements OnInit {
       region: '',
       kubernetesVersion: '',
     },
-    status: '',
+    status: ClusterStatus.UNSPECIFIED,
     creationDate: '2024-11-15T10:30:00Z', // Mock data - not available from API
     activity: [
       {
@@ -184,7 +189,7 @@ export class ClusterOverviewComponent implements OnInit {
         region: response.cluster.region,
         kubernetesVersion: response.cluster.kubernetesVersion,
       };
-      this.clusterData.status = response.cluster.status.toString();
+      this.clusterData.status = response.cluster.status;
 
       this.titleService.setTitle(response.cluster.name);
 
@@ -211,19 +216,6 @@ export class ClusterOverviewComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
-  }
-
-  getStatusColor(status: string): string {
-    const colors: Record<string, string> = {
-      provisioning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200',
-      starting: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
-      running: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200',
-      upgrading: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200',
-      error: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
-      stopping: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200',
-      stopped: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   }
 
   formatDate(dateString: string): string {
@@ -258,12 +250,12 @@ export class ClusterOverviewComponent implements OnInit {
 
   getNodePoolStatusLabel(status: NodePoolStatus): string {
     const labels: Record<NodePoolStatus, string> = {
-      [NodePoolStatus.UNSPECIFIED]: 'Unspecified',
+      [NodePoolStatus.UNSPECIFIED]: 'Unknown status',
       [NodePoolStatus.HEALTHY]: 'Healthy',
       [NodePoolStatus.DEGRADED]: 'Degraded',
       [NodePoolStatus.UNHEALTHY]: 'Unhealthy',
     };
-    return labels[status] || 'Unknown';
+    return labels[status];
   }
 
   async deleteCluster(): Promise<void> {
