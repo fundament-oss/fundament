@@ -46,7 +46,7 @@ func New(ctx context.Context, logger *slog.Logger, cfg Config, options ...Option
 		return nil, fmt.Errorf("pinging database: %w", err)
 	}
 
-	logger.Info("database connection established")
+	logger.Debug("database connection established")
 	return &DB{
 		Pool:   pool,
 		logger: logger,

@@ -1,4 +1,6 @@
 {{- if $.Values.db.enabled }}
+
+---
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
@@ -26,4 +28,32 @@ spec:
         login: true
         passwordSecret:
           name: {{ $.Release.Name }}-db-fun-fundament-api
+      - name: fun_operator
+        login: true
+        superuser: true
+        bypassrls: true
+        passwordSecret:
+          name: {{ $.Release.Name }}-db-fun-operator
+
+{{- if gt (int $.Values.db.exposePort) 0 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "fundament.db.name" . }}-external
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  type: LoadBalancer
+  selector:
+    cnpg.io/cluster: {{ include "fundament.db.name" . }}
+    role: primary
+  ports:
+    - name: postgres
+      port: {{ $.Values.db.exposePort }}
+      protocol: TCP
+      targetPort: 5432
+{{- end }}
+
 {{- end }}

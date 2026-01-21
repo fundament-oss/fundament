@@ -155,4 +155,25 @@ stringData:
   username: fun_fundament_api
   password: {{ $fundamentApiPassword | quote }}
   uri: postgresql://fun_fundament_api:{{ $fundamentApiPassword }}@{{ include "fundament.db.host" . }}:5432/fundament
+---
+{{- $operatorSecretName := printf "%s-db-fun-operator" $.Release.Name }}
+{{- $operatorExisting := lookup "v1" "Secret" $.Release.Namespace $operatorSecretName }}
+{{- $operatorPassword := "" }}
+{{- if $operatorExisting }}
+{{- $operatorPassword = index $operatorExisting.data "password" | b64dec }}
+{{- else }}
+{{- $operatorPassword = randAlphaNum 32 }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $operatorSecretName }}
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+type: kubernetes.io/basic-auth
+stringData:
+  username: fun_operator
+  password: {{ $operatorPassword | quote }}
+  uri: postgresql://fun_operator:{{ $operatorPassword }}@{{ include "fundament.db.host" . }}:5432/fundament
 {{- end }}
