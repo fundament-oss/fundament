@@ -67,9 +67,9 @@ db-shell:
     kubectl exec -it -n fundament fundament-db-1 -- psql -U postgres -d fundament
 
 generate:
+    cd db && trek generate --stdout
     go generate -x ./...
     cd console-frontend && buf generate
-    cd db && trek generate --stdout
 
 # Lint all Go code
 lint:
