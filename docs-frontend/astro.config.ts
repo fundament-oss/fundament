@@ -8,6 +8,9 @@ import tailwindcss from '@tailwindcss/vite';
 type ShikiOptions = Parameters<typeof shikiHighlighter>[0];
 
 export default defineConfig({
+  // Use 'never' to prevent trailing slashes on URLs, see https://docs.astro.build/en/reference/configuration-reference/#trailingslash
+  trailingSlash: 'never',
+
   // Disable Astro's built-in image optimization in favor of passthrough, see https://docs.astro.build/en/reference/errors/missing-sharp/
   image: {
     service: passthroughImageService(),
