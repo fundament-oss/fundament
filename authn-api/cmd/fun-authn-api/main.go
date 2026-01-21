@@ -23,8 +23,8 @@ import (
 	"github.com/fundament-oss/fundament/authn-api/pkg/authn"
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
+	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
-	"github.com/fundament-oss/fundament/db/dbversion"
 )
 
 type config struct {

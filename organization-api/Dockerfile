@@ -4,7 +4,6 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY organization-api/ ./organization-api/
 COPY common/ ./common/
-COPY db/dbversion/ ./db/dbversion/
 RUN CGO_ENABLED=0 go build ./organization-api/cmd/fun-organization-api
 
 FROM scratch
