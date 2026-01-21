@@ -20,6 +20,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
+	"github.com/fundament-oss/fundament/db/dbversion"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
@@ -97,6 +98,8 @@ func run() error {
 	}
 
 	defer db.Close()
+
+	dbversion.MustAssertLatestVersion(ctx, logger, db.Pool)
 
 	logger.Debug("database connected")
 
