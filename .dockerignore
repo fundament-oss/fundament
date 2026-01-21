@@ -1,5 +1,7 @@
 console-frontend/node_modules/
 console-frontend/dist/
+docs-frontend/node_modules/
+docs-frontend/dist/
 
 .git
 **/.gitignore

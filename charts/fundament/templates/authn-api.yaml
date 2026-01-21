@@ -43,7 +43,7 @@ spec:
             - name: OIDC_REDIRECT_URL
               value: {{ .Values.externalUrls.authn }}/callback
             - name: FRONTEND_URL
-              value: {{ .Values.externalUrls.frontend }}
+              value: {{ .Values.externalUrls.console }}
             - name: COOKIE_DOMAIN
               value: {{ .Values.externalUrls.cookieDomain }}
             - name: COOKIE_SECURE
@@ -51,7 +51,7 @@ spec:
             - name: LOG_LEVEL
               value: {{ .Values.authnApi.logLevel }}
             - name: CORS_ALLOWED_ORIGINS
-              value: {{ .Values.externalUrls.corsAllowedOrigins | default .Values.externalUrls.frontend }}
+              value: {{ .Values.externalUrls.corsAllowedOrigins | default .Values.externalUrls.console }}
 ---
 apiVersion: v1
 kind: Service

@@ -1,0 +1,42 @@
+@import 'tailwindcss';
+
+/* Dark mode variant using the 'dark' class on the HTML element */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* View transition styles for switching between light and dark mode, see https://theme-toggle.rdsx.dev/ */
+::view-transition-group(root) {
+  @apply animate-[700ms_ease-out];
+}
+
+::view-transition-new(root) {
+  animation-name: reveal-light;
+  animation-fill-mode: both;
+}
+
+::view-transition-old(root),
+.dark::view-transition-old(root) {
+  @apply -z-10 animate-none;
+  animation-fill-mode: both;
+}
+.dark::view-transition-new(root) {
+  animation-name: reveal-dark;
+  animation-fill-mode: both;
+}
+
+@keyframes reveal-light {
+  from {
+    clip-path: polygon(171% 50%, 50% 171%, 50% 171%, 171% 50%);
+  }
+  to {
+    clip-path: polygon(171% 50%, 50% 171%, -50% 71%, 50% -71%);
+  }
+}
+
+@keyframes reveal-dark {
+  from {
+    clip-path: polygon(50% -71%, -50% 71%, -50% 71%, 50% -71%);
+  }
+  to {
+    clip-path: polygon(50% -71%, -50% 71%, 50% 171%, 171% 50%);
+  }
+}

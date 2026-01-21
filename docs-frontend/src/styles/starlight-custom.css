@@ -1,0 +1,9 @@
+@reference "tailwindcss/theme";
+
+.site-title {
+  @apply gap-1.5;
+}
+
+.site-title img {
+  @apply h-8;
+}

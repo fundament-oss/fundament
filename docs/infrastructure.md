@@ -1,4 +1,6 @@
-# Fundament Infrastructure
+---
+title: Infrastructure
+---
 
 Unlike platforms such as OpenStack or CloudStack -which aim to deliver every conceivable service “out of the box” and end up being heavyweight and complex- Fundament takes the opposite approach. It is intentionally minimal at the lower layers of the stack, offering only the essentials by default. This simplicity keeps the foundation clean and reliable. From there, functionality grows on a per-tenant basis: each tenant extends their environment with exactly the Tools they need, nothing more.
 

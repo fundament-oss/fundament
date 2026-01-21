@@ -1,0 +1,137 @@
+---
+import '../styles/global.css';
+
+export interface Props {
+  title?: string;
+}
+
+const { title = 'Fundament' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Fundament - Open-source platform for deploying and managing Kubernetes clusters with bare-metal provisioning"
+    />
+    <title>{title}</title>
+    <link rel="icon" type="image/png" href="/img/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/img/favicon.svg" />
+    <link rel="shortcut icon" href="/img/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  @reference "tailwindcss/theme";
+
+  body {
+    @apply bg-white leading-[1.6] text-gray-800 dark:bg-gray-950 dark:text-gray-100;
+  }
+
+  /* Hero Section */
+  .hero {
+    @apply relative overflow-hidden pt-8 pb-24 sm:pt-12 sm:pb-32;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(182, 63, 152, 0.3), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 20%, rgba(37, 99, 235, 0.35), transparent),
+      linear-gradient(
+        180deg,
+        theme('colors.blue.100') 0%,
+        theme('colors.blue.50') 40%,
+        theme('colors.white') 100%
+      );
+  }
+
+  .hero:where(.dark, .dark *) {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(168, 85, 247, 0.4), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 20%, rgba(59, 130, 246, 0.3), transparent),
+      linear-gradient(
+        180deg,
+        #1a0b2e 0%,
+        theme('colors.gray.950') 50%,
+        theme('colors.gray.900') 100%
+      );
+  }
+
+  .hero::before {
+    @apply pointer-events-none absolute top-[-30%] left-[10%] h-[80%] w-[80%] blur-[100px] content-[''];
+    background: radial-gradient(
+      ellipse,
+      rgba(165, 39, 128, 0.2),
+      rgba(37, 99, 235, 0.15) 40%,
+      transparent 70%
+    );
+  }
+
+  .hero:where(.dark, .dark *)::before {
+    background: radial-gradient(
+      ellipse,
+      rgba(147, 51, 234, 0.25),
+      rgba(59, 130, 246, 0.2) 40%,
+      transparent 70%
+    );
+  }
+
+  .hero-title {
+    @apply mb-6 bg-clip-text text-4xl font-bold sm:text-5xl lg:text-6xl;
+    background: linear-gradient(to right, theme('colors.blue.600'), theme('colors.cyan.600'));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-title:where(.dark, .dark *) {
+    background: linear-gradient(to right, theme('colors.blue.400'), theme('colors.cyan.400'));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Architecture Section */
+  .architecture {
+    @apply relative overflow-hidden py-20 sm:py-24;
+    background:
+      radial-gradient(ellipse 70% 50% at 30% 50%, rgba(182, 63, 152, 0.2), transparent),
+      radial-gradient(ellipse 60% 40% at 70% 50%, rgba(37, 99, 235, 0.25), transparent),
+      linear-gradient(
+        180deg,
+        theme('colors.white') 0%,
+        theme('colors.blue.50') 50%,
+        theme('colors.white') 100%
+      );
+  }
+
+  .architecture:where(.dark, .dark *) {
+    background:
+      radial-gradient(ellipse 70% 50% at 30% 50%, rgba(168, 85, 247, 0.2), transparent),
+      radial-gradient(ellipse 60% 40% at 70% 50%, rgba(59, 130, 246, 0.15), transparent),
+      theme('colors.gray.900');
+  }
+
+  .architecture::before {
+    @apply pointer-events-none absolute top-[20%] right-[10%] h-[60%] w-[60%] content-[''];
+    background: radial-gradient(
+      ellipse,
+      rgba(165, 39, 128, 0.15),
+      rgba(37, 99, 235, 0.12) 40%,
+      transparent 70%
+    );
+    filter: blur(100px);
+  }
+
+  .architecture:where(.dark, .dark *)::before {
+    background: radial-gradient(
+      ellipse,
+      rgba(147, 51, 234, 0.15),
+      rgba(59, 130, 246, 0.1) 40%,
+      transparent 70%
+    );
+  }
+</style>

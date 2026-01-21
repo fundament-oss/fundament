@@ -8,7 +8,8 @@ jwtSecret: ""
 externalUrls:
   authn: "" # e.g., https://authn.example.com
   organization: "" # e.g., https://organization.example.com
-  frontend: "" # e.g., https://app.example.com
+  console: "" # e.g., https://app.example.com
+  docs: "" # e.g., https://docs.example.com
   cookieDomain: "" # e.g., example.com
 
 # Container images
@@ -16,8 +17,8 @@ images:
   dbMigrations: db-migrations:latest
   authnApi: authn-api:latest
   organizationApi: organization-api:latest
-  frontend: frontend:latest
   consoleFrontend: console-frontend:latest
+  docsFrontend: docs-frontend:latest
 
 # Database (CloudNativePG)
 db:
@@ -40,13 +41,13 @@ organizationApi:
   replicas: 1
   logLevel: info
 
-# Frontend
-frontend:
+# Console Frontend
+consoleFrontend:
   enabled: false
   replicas: 1
 
-# Login Frontend
-consoleFrontend:
+# Docs frontend
+docsFrontend:
   enabled: false
   replicas: 1
 

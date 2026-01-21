@@ -1,4 +1,6 @@
-# Fundament Tools
+---
+title: Tools
+---
 
 In Fundament, popular platform capabilities such as storage, networking and database services are provided as Tools. Each Tool is installed on a per-cluster basis, giving tenants control over which features they want to enable in their environment. Rather than reinventing these services, Tools often wrap proven open source projects -preferably CNCF projects- to deliver 𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒-grade functionality in a Kubernetes-native way.
 

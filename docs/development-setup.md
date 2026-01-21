@@ -1,4 +1,6 @@
-# Development setup
+---
+title: Development setup
+---
 
 ## Prerequisites
 

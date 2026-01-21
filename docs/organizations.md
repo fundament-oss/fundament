@@ -1,3 +1,7 @@
+---
+title: Organizations
+---
+
 # Multi-tenancy Model
 
 Fundament implements multi-tenancy through the following identity and resource model.
