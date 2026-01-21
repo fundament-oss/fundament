@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="18"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="24"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="0,0" last-zoom="0.75" scene-rect="0,0,3944.49,2110.92"
+	 last-position="0,0" last-zoom="0.3" scene-rect="0,0,3944.49,2110.92"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -27,6 +27,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
  sql-disabled="true">
 </role>
 
+<role name="fun_owner"
+ sql-disabled="true">
+</role>
+
 <database name="fundament" is-template="false" allow-conns="true" sql-disabled="true">
 </database>
 
@@ -35,16 +39,16 @@ CAUTION: Do not modify this file unless you know what you are doing.
 </schema>
 
 <schema name="tenant" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
-	<role name="postgres"/>
+	<role name="fun_owner"/>
 </schema>
 
 <schema name="zappstore" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
-	<role name="fun_fundament_api"/>
+	<role name="fun_owner"/>
 </schema>
 
 <table name="organizations" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="tenant"/>
-	<role name="postgres"/>
+	<role name="fun_owner"/>
 	<position x="220" y="240"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -65,7 +69,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 
 <table name="projects" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
-	<role name="postgres"/>
+	<role name="fun_owner"/>
 	<position x="780" y="260"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -92,7 +96,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 
 <table name="namespaces" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
-	<role name="postgres"/>
+	<role name="fun_owner"/>
 	<position x="1460" y="260"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -154,7 +158,7 @@ END;]]> </definition>
 
 <table name="users" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
-	<role name="postgres"/>
+	<role name="fun_owner"/>
 	<position x="200" y="540"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -181,7 +185,7 @@ END;]]> </definition>
 
 <table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
-	<role name="postgres"/>
+	<role name="fun_owner"/>
 	<position x="780" y="560"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -230,7 +234,7 @@ END;]]> </definition>
 
 <table name="node_pools" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
-	<role name="postgres"/>
+	<role name="fun_owner"/>
 	<position x="1400" y="520"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -274,7 +278,7 @@ END;]]> </definition>
 
 <table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="zappstore"/>
-	<role name="fun_fundament_api"/>
+	<role name="fun_owner"/>
 	<position x="1440" y="1000"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -301,7 +305,7 @@ END;]]> </definition>
 
 <table name="plugins" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
 	<schema name="zappstore"/>
-	<role name="fun_fundament_api"/>
+	<role name="fun_owner"/>
 	<position x="2160" y="1260"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -340,7 +344,7 @@ END;]]> </definition>
 
 <table name="presets" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="zappstore"/>
-	<role name="fun_fundament_api"/>
+	<role name="fun_owner"/>
 	<position x="1120" y="1720"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -361,7 +365,7 @@ END;]]> </definition>
 
 <table name="preset_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="zappstore"/>
-	<role name="fun_fundament_api"/>
+	<role name="fun_owner"/>
 	<position x="1640" y="1520"/>
 	<column name="preset_id" not-null="true">
 		<type name="uuid" length="0"/>
@@ -384,7 +388,7 @@ END;]]> </definition>
 
 <table name="tags" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="zappstore"/>
-	<role name="fun_fundament_api"/>
+	<role name="fun_owner"/>
 	<position x="3520" y="1700"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -408,7 +412,7 @@ END;]]> </definition>
 
 <table name="plugins_tags" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="zappstore"/>
-	<role name="fun_fundament_api"/>
+	<role name="fun_owner"/>
 	<position x="2880" y="1700"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
@@ -423,7 +427,7 @@ END;]]> </definition>
 
 <table name="categories" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="zappstore"/>
-	<role name="fun_fundament_api"/>
+	<role name="fun_owner"/>
 	<position x="3580" y="1300"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -447,7 +451,7 @@ END;]]> </definition>
 
 <table name="categories_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="zappstore"/>
-	<role name="fun_fundament_api"/>
+	<role name="fun_owner"/>
 	<position x="2860" y="1300"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
@@ -462,7 +466,7 @@ END;]]> </definition>
 
 <table name="plugin_documentation_links" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
 	<schema name="zappstore"/>
-	<role name="fun_fundament_api"/>
+	<role name="fun_owner"/>
 	<position x="2880" y="980"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -665,4 +669,104 @@ END;]]> </definition>
 	 dst-table="zappstore.plugins" reference-fk="plugin_documentation_links_fk_plugin"
 	 src-required="false" dst-required="true"/>
 
+<permission>
+	<object name="zappstore" type="schema"/>
+	<roles names="fun_fundament_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="tenant" type="schema"/>
+	<roles names="fun_fundament_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="tenant" type="schema"/>
+	<roles names="fun_authn_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="tenant.organizations" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.organizations" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.projects" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.namespaces" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.users" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.users" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.clusters" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.node_pools" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="zappstore.installs" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="zappstore.plugin_documentation_links" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="zappstore.plugins" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="zappstore.categories_plugins" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="zappstore.categories" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="zappstore.preset_plugins" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="zappstore.presets" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="zappstore.plugins_tags" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="zappstore.tags" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
 </dbmodel>
