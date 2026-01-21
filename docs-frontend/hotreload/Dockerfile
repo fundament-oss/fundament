@@ -20,21 +20,6 @@ COPY funs/ ./src/content/docs/funs/
 RUN mkdir -p ./src/content/docs/docs
 COPY docs/ ./src/content/docs/docs/
 
-# Add Starlight frontmatter to markdown files in the docs directory
-RUN for file in ./src/content/docs/docs/*.md; do \
-    if [ -f "$file" ]; then \
-      filename=$(basename "$file" .md); \
-      title=$(echo "$filename" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) tolower(substr($i,2))}1'); \
-      temp_file=$(mktemp); \
-      echo "---" > "$temp_file"; \
-      echo "title: $title" >> "$temp_file"; \
-      echo "---" >> "$temp_file"; \
-      echo "" >> "$temp_file"; \
-      tail -n +2 "$file" >> "$temp_file"; \
-      mv "$temp_file" "$file"; \
-    fi \
-  done
-
 # Expose Astro dev server port (using 80 to match production service port)
 EXPOSE 80
 
