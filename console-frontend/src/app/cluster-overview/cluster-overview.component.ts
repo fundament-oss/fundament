@@ -38,6 +38,7 @@ import {
   WarningIconComponent,
   PlusIconComponent,
   TrashIconComponent,
+  LoadingIndicatorComponent,
 } from '../icons';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 
@@ -55,6 +56,7 @@ import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
     WarningIconComponent,
     PlusIconComponent,
     TrashIconComponent,
+    LoadingIndicatorComponent,
   ],
   templateUrl: './cluster-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

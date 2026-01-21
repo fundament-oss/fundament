@@ -38,6 +38,7 @@
     </div>
 
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+      <a routerLink="/projects" class="btn-secondary">Cancel</a>
       <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
         @if (isSubmitting()) {
           Creating...
@@ -45,7 +46,6 @@
           Create project
         }
       </button>
-      <a routerLink="/projects" class="btn-secondary">Cancel</a>
     </div>
   </form>
 </div>

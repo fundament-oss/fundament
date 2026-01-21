@@ -33,6 +33,7 @@ import {
   TrashIconComponent,
   ErrorIconComponent,
   WarningIconComponent,
+  LoadingIndicatorComponent,
 } from '../icons';
 
 @Component({
@@ -45,6 +46,7 @@ import {
     TrashIconComponent,
     ErrorIconComponent,
     WarningIconComponent,
+    LoadingIndicatorComponent,
   ],
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

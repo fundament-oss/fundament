@@ -4,7 +4,12 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
-import { ChevronRightIconComponent, CheckmarkIconComponent, ErrorIconComponent, LoadingIndicatorComponent } from '../icons';
+import {
+  ChevronRightIconComponent,
+  CheckmarkIconComponent,
+  ErrorIconComponent,
+  LoadingIndicatorComponent,
+} from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { GetPluginDetailRequestSchema, type PluginDetail } from '../../generated/v1/plugin_pb';
@@ -38,8 +43,8 @@ interface InstallWithCluster extends Install {
     ChevronRightIconComponent,
     CheckmarkIconComponent,
     ErrorIconComponent,
-    LoadingIndicatorComponent
-],
+    LoadingIndicatorComponent,
+  ],
   templateUrl: './plugin-details.component.html',
 })
 export class PluginDetailsComponent implements OnInit {
