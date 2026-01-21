@@ -1,0 +1,14 @@
+---
+import type { Props } from '@astrojs/starlight/props';
+import Default from '@astrojs/starlight/components/PageTitle.astro';
+import { getEntry } from 'astro:content';
+import StateBadge from '../StateBadge.astro';
+
+// Get the entry from Astro.props via the page data
+const entry =
+  Astro.props.entry || (await getEntry('docs', Astro.url.pathname.replace(/^\/|\/$/g, '')));
+const state = entry?.data?.state;
+---
+
+<Default {...Astro.props} />
+{state && <StateBadge state={state} />}

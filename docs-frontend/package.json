@@ -1,0 +1,44 @@
+{
+  "name": "example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "lint": "eslint . --ext .js,.ts,.astro",
+    "lint:fix": "eslint . --ext .js,.ts,.astro --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@fullhuman/postcss-purgecss": "^7.0.2",
+    "@typescript-eslint/parser": "^8.53.1",
+    "astro-eslint-parser": "^1.2.2",
+    "eslint": "^9.39.2",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-astro": "^1.5.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "^5.5.5",
+    "postcss": "^8.5.6",
+    "prettier": "^3.8.0",
+    "prettier-plugin-astro": "^0.14.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "shiki": "3.21.0",
+    "typescript-eslint": "^8.53.1"
+  },
+  "dependencies": {
+    "@asciidoctor/core": "^3.0.4",
+    "@astrojs/mdx": "^4.3.13",
+    "@astrojs/starlight": "^0.37.3",
+    "@fortawesome/fontawesome-free": "^7.1.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "astro": "5.16.11",
+    "astro-asciidoc": "0.1.0",
+    "tailwindcss": "^4.1.18"
+  }
+}

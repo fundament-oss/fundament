@@ -1,24 +1,24 @@
-{{- if $.Values.frontend.enabled }}
+{{- if $.Values.docsFrontend.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $.Release.Name }}-frontend
+  name: {{ $.Release.Name }}-docs-frontend
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: frontend
+    app.kubernetes.io/component: docs-frontend
 spec:
-  replicas: {{ $.Values.frontend.replicas }}
+  replicas: {{ $.Values.docsFrontend.replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: frontend
+      app.kubernetes.io/component: docs-frontend
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: frontend
+        app.kubernetes.io/component: docs-frontend
     spec:
       containers:
-        - name: frontend
-          image: {{ $.Values.images.frontend }}
+        - name: docs-frontend
+          image: {{ $.Values.images.docsFrontend }}
           ports:
             - name: http
               containerPort: 80
@@ -26,10 +26,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $.Release.Name }}-frontend
+  name: {{ $.Release.Name }}-docs-frontend
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: frontend
+    app.kubernetes.io/component: docs-frontend
 spec:
   type: ClusterIP
   ports:
@@ -37,27 +37,27 @@ spec:
       targetPort: http
       name: http
   selector:
-    app.kubernetes.io/component: frontend
+    app.kubernetes.io/component: docs-frontend
 ---
 {{- if $.Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ $.Release.Name }}-frontend
+  name: {{ $.Release.Name }}-docs-frontend
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: frontend
+    app.kubernetes.io/component: docs-frontend
 spec:
   ingressClassName: {{ $.Values.ingress.className }}
   rules:
-    - host: {{ $.Values.ingress.domain }}
+    - host: docs.{{ $.Values.ingress.domain }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ $.Release.Name }}-frontend
+                name: {{ $.Release.Name }}-docs-frontend
                 port:
                   name: http
 {{- end }}
