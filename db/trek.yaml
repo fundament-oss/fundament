@@ -8,7 +8,7 @@ roles:
 outputs:
   - sql
 templates:
-  - path: dbversion/version.go
+  - path: ../common/dbversion/version.go
     content: |
       package dbversion
 

@@ -1,0 +1,7 @@
+#!/bin/bash
+set -euo pipefail
+
+# Generate dbconst files from fundament.sql
+./_generate-dbconst-constraints
+./_generate-dbconst-enums
+./_generate-dbconst-hints

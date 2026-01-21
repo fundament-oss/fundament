@@ -8,8 +8,8 @@ import (
 
 	"github.com/alecthomas/kong"
 
+	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
-	"github.com/fundament-oss/fundament/db/dbversion"
 	"github.com/fundament-oss/fundament/functl/pkg/cli"
 	db "github.com/fundament-oss/fundament/functl/pkg/db/gen"
 )

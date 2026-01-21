@@ -5,5 +5,4 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY organization-api/ ./organization-api/
 COPY common/ ./common/
-COPY db/dbversion/ ./db/dbversion/
 CMD ["air", "-c", "organization-api/hotreload/.air.toml"]

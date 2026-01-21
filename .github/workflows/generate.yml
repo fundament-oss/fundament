@@ -28,10 +28,21 @@ jobs:
               env_args+=(-e "$name=$value")
             fi
           done < <(env)
-          exec docker run --rm \
+          # Mount project root but cd into db/ inside container so relative paths work
+          PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+          # First chown the mounted directory to nonroot user (1001) as root.
+          # TODO: This messes up permissions on the machine of a developer that
+          # runs `act --job generate-pristine` on their machine. Fix is easy:
+          # `sudo chown -R $(id -u):$(id -g) .`, but not very developer friendly
+          # so we need to fix this if it becomes a substantial problem.
+          docker run --rm --user root \
+            -v "$PROJECT_ROOT:/data" \
+            ghcr.io/printeers/trek:0.12.1-pgmodeler chown -R 1001:1001 /data
+          # Then run trek as the default nonroot user
+          docker run --rm \
             "${env_args[@]}" \
-            -v "$(pwd):/data" \
-            -w "/data" \
+            -v "$PROJECT_ROOT:/data" \
+            -w "/data/db" \
             ghcr.io/printeers/trek:0.12.1-pgmodeler trek "$@"
           EOF
           chmod +x "$HOME/.local/bin/trek"
