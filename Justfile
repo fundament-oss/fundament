@@ -1,3 +1,5 @@
+mod terraform-provider 'terraform-provider'
+
 _default:
     @just --list
 
@@ -65,10 +67,17 @@ db-shell:
     kubectl exec -it -n fundament fundament-db-1 -- psql -U postgres -d fundament
 
 generate:
+    cd db && trek generate --stdout
     go generate -x ./...
     cd console-frontend && buf generate
-    cd db && trek generate --stdout
 
 # Lint all Go code
 lint:
     golangci-lint run ./...
+
+# Run functl against the local development instance/database
+functl *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PASSWORD=$(kubectl --context k3d-fundament get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' | {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
+    DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./functl/cmd/functl {{ args }}

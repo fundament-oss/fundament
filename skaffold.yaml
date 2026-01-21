@@ -31,6 +31,11 @@ build:
       context: .
       docker:
         dockerfile: console-frontend/Dockerfile
+
+    - image: docs-frontend
+      context: .
+      docker:
+        dockerfile: docs-frontend/Dockerfile
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheckDeadlineSeconds: 300
@@ -45,6 +50,7 @@ deploy:
           images.authnApi: "{{.IMAGE_FULLY_QUALIFIED_authn_api}}"
           images.organizationApi: "{{.IMAGE_FULLY_QUALIFIED_organization_api}}"
           images.consoleFrontend: "{{.IMAGE_FULLY_QUALIFIED_console_frontend}}"
+          images.docsFrontend: "{{.IMAGE_FULLY_QUALIFIED_docs_frontend}}"
 
 profiles:
   - name: env-local
@@ -85,4 +91,10 @@ profiles:
         value: console-frontend/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/3/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/4/docker/dockerfile
+        value: docs-frontend/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/4/sync
         value: {}

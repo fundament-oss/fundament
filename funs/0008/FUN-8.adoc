@@ -1,0 +1,123 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: prediscussion
+
+= FUN-8 functl - Operator CLI
+
+== Introduction
+
+This FUN introduces `functl`, a command-line interface tool for Fundament platform operators. The tool provides direct database access for administrative tasks that require root-level system access, such as bootstrapping new organizations or performing system recovery operations.
+
+== Why functl
+
+=== The Need for Operator Tooling
+
+Fundament exposes APIs for end-users (used by Console UI, Terraform provider), but certain administrative operations require elevated privileges beyond what tenant-scoped APIs provide:
+
+* **Bootstrap operations**: Creating the initial organization before any users exist
+* **System recovery**: Fixing data inconsistencies or recovering from failures
+* **Administrative tasks**: Operations that span multiple organizations or require system-level access
+* **Debugging**: Inspecting system state during development or incident response
+
+=== Direct Database Access
+
+For the initial proof-of-concept, `functl` operates directly against the PostgreSQL database rather than through the existing APIs. This approach provides:
+
+* **Simplicity**: No additional API surface to design and maintain
+* **Full access**: No RLS restrictions when using a privileged database user
+* **Speed of development**: Faster iteration for PoC needs
+
+This is not necessarily a permanent decision. Future versions may transition to API-based operations where appropriate, particularly for operations that benefit from audit logging or can be safely exposed to less privileged operators.
+
+== Design
+
+=== CLI Philosophy
+
+`functl` follows conventions established by similar cloud-native CLI tools:
+
+[cols="1,2"]
+|===
+|Tool |Pattern
+
+|kubectl
+|`kubectl <verb> <resource>` (e.g., `kubectl get pods`)
+
+|metalctl
+|`metalctl <resource> <action>` (e.g., `metalctl machine list`)
+
+|gardenctl
+|`gardenctl <action> <resource>` (e.g., `gardenctl target shoot`)
+|===
+
+`functl` adopts the resource-centric pattern:
+
+----
+functl <resource> <action> [arguments] [flags]
+----
+
+Examples:
+----
+functl organization create acme-corp
+functl organization create acme-corp --output json
+----
+
+=== Non-Interactive Design
+
+`functl` is designed to be non-interactive and scriptable:
+
+* All input comes from command-line arguments and flags
+* No interactive prompts or manifest files
+* Suitable for automation, CI/CD pipelines, and scripting
+* Clear exit codes for success/failure
+
+This differs from kubectl's declarative manifest approach. Fundament operators use imperative commands for administrative tasks rather than applying YAML files.
+
+=== Output Formats
+
+`functl` supports multiple output formats via the `--output` / `-o` flag:
+
+[cols="1,3"]
+|===
+|Format |Description
+
+|`table` (default)
+|Human-readable tabular format for terminal use
+
+|`json`
+|Machine-readable JSON for scripting and automation
+|===
+
+=== Configuration
+
+`functl` uses environment variables for configuration, following the 12-factor app methodology:
+
+[cols="1,1,2"]
+|===
+|Variable |Required |Description
+
+|`DATABASE_URL`
+|Yes
+|PostgreSQL connection string (e.g., `postgres://user:pass@host:5432/fundament`)
+|===
+
+No configuration files are used. This keeps the tool simple and explicit about its dependencies.
+
+=== Database Access
+
+`functl` connects directly to the Fundament PostgreSQL database. The database user specified in `DATABASE_URL` should have appropriate permissions:
+
+* For full operator access: Use a PostgreSQL user that has explicit RLS policies granting full access, or a superuser role
+* RLS policies in the Fundament schema can be configured to allow specific users full access, or the bypassrls attribute
+
+Initial development uses the superuser role and bypassrls attributes.
+
+=== Logging
+
+`functl` uses structured logging via Go's `slog` package, with output directed to stderr:
+
+* **Default level: INFO** - Shows user feedback for operations that would otherwise be silent (e.g., successful deletes)
+* **Debug level (`--debug`)** - Includes detailed internal operations like database connections and query parameters
+
+This design keeps stdout clean for programmatic use (piping, scripting) while providing appropriate feedback to operators. Commands that produce data output (list, create) write to stdout; informational messages go to stderr via the logger.

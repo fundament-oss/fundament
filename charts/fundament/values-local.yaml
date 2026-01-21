@@ -5,7 +5,8 @@ jwtSecret: "local-dev-jwt-secret"
 externalUrls:
   authn: http://authn.127.0.0.1.nip.io:8080
   organization: http://organization.127.0.0.1.nip.io:8080
-  frontend: http://console.127.0.0.1.nip.io:8080
+  console: http://console.127.0.0.1.nip.io:8080
+  docs: http://docs.127.0.0.1.nip.io:8080
   cookieDomain: 127.0.0.1.nip.io
   corsAllowedOrigins: "http://console.127.0.0.1.nip.io:8080,http://localhost:4200,http://localhost:5173"
 
@@ -15,6 +16,7 @@ db:
   storageSize: 1Gi
   reset: false
   insertTestData: true
+  exposePort: 54328
 
 authnApi:
   enabled: true
@@ -25,10 +27,11 @@ organizationApi:
   enabled: true
   replicas: 1
 
-frontend:
-  enabled: false
-
 consoleFrontend:
+  enabled: true
+  replicas: 1
+
+docsFrontend:
   enabled: true
   replicas: 1
 

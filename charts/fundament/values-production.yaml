@@ -14,11 +14,11 @@ organizationApi:
   enabled: true
   replicas: 2
 
-frontend:
+consoleFrontend:
   enabled: true
   replicas: 2
 
-consoleFrontend:
+docsFrontend:
   enabled: true
   replicas: 2
 

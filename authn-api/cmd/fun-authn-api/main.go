@@ -23,6 +23,7 @@ import (
 	"github.com/fundament-oss/fundament/authn-api/pkg/authn"
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
+	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )
 
@@ -118,6 +119,8 @@ func run() error {
 	}
 
 	defer db.Close()
+
+	dbversion.MustAssertLatestVersion(ctx, logger, db.Pool)
 
 	logger.Debug("database connected")
 
