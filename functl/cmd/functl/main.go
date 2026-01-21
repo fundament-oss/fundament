@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
+	"github.com/fundament-oss/fundament/db/dbversion"
 	"github.com/fundament-oss/fundament/functl/pkg/cli"
 	db "github.com/fundament-oss/fundament/functl/pkg/db/gen"
 )
@@ -48,6 +49,11 @@ func main() {
 		os.Exit(1)
 	}
 	defer database.Close()
+
+	if err := dbversion.AssertLatestVersion(bgCtx, database.Pool); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: database schema version check failed: %v\n", err)
+		os.Exit(1)
+	}
 
 	queries := db.New(database.Pool)
 
