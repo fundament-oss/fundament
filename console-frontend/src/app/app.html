@@ -214,6 +214,89 @@
             <app-close-icon class="h-6 w-6" />
           </button>
         </div>
+
+        <!-- Nested Selector -->
+        <div class="border-b border-gray-200 px-4 pt-1 pb-4 lg:pt-4 dark:border-gray-800">
+          <!-- Filter Input -->
+          <div class="mb-3">
+            <input
+              type="search"
+              placeholder="Filter organizations, projects, namespaces..."
+              (input)="updateSelectorFilter($event)"
+              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 ring-indigo-500 focus:border-indigo-500 focus:ring-2 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500"
+            />
+          </div>
+
+          <!-- Nested Tree -->
+          <div class="max-h-80 space-y-1 overflow-y-auto">
+            @for (org of filteredOrganizations(); track org.id) {
+              <div>
+                <!-- Organization -->
+                <div class="mb-0.5 px-2">
+                  <span class="text-[0.625rem]/[0.875rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Organization</span>
+                </div>
+                <button
+                  (click)="toggleOrganization(org.id)"
+                  class="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 cursor-pointer"
+                >
+                  <app-chevron-right-icon
+                    class="mr-1.5 h-4 w-4 shrink-0 transition-transform"
+                    [class.rotate-90]="isOrganizationExpanded(org.id)"
+                  />
+                  <svg class="mr-2 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                  </svg>
+                  <span class="truncate">{{ org.name }}</span>
+                </button>
+
+                <!-- Projects (visible when org is expanded) -->
+                @if (isOrganizationExpanded(org.id)) {
+                  <div class="ml-5 space-y-1">
+                    @for (project of org.projects; track project.id) {
+                      <div>
+                        <!-- Project -->
+                        <div class="mb-0.5 px-2">
+                          <span class="text-[0.625rem]/[0.875rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Project</span>
+                        </div>
+                        <button
+                          (click)="toggleProject(project.id)"
+                          class="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 cursor-pointer"
+                        >
+                          <app-chevron-right-icon
+                            class="mr-1.5 h-3.5 w-3.5 shrink-0 transition-transform"
+                            [class.rotate-90]="isProjectExpanded(project.id)"
+                          />
+                          <app-folder-icon class="mr-2 h-3.5 w-3.5 shrink-0" />
+                          <span class="truncate">{{ project.name }}</span>
+                        </button>
+
+                        <!-- Namespaces (visible when project is expanded) -->
+                        @if (isProjectExpanded(project.id)) {
+                          <div class="ml-5 space-y-0.5">
+                            <div class="mb-0.5 px-2">
+                              <span class="text-[0.625rem]/[0.875rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Namespaces</span>
+                            </div>
+                            @for (namespace of project.namespaces; track namespace.id) {
+                              <button
+                                class="flex w-full items-center rounded-md px-2 py-1 text-left text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800 cursor-pointer"
+                              >
+                                <svg class="mr-2 h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                </svg>
+                                <span class="truncate">{{ namespace.name }}</span>
+                              </button>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
         <nav class="h-full overflow-y-auto px-4 pt-1 pb-6 lg:pt-4">
           <ul class="space-y-2">
             <li>

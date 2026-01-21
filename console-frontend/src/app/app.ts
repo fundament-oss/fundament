@@ -12,6 +12,7 @@ import {
   MoonIconComponent,
   SunIconComponent,
   ChevronDownIconComponent,
+  ChevronRightIconComponent,
   UserCircleIconComponent,
   FundamentLogoIconComponent,
   DashboardIconComponent,
@@ -38,6 +39,7 @@ import {
     MoonIconComponent,
     SunIconComponent,
     ChevronDownIconComponent,
+    ChevronRightIconComponent,
     UserCircleIconComponent,
     FundamentLogoIconComponent,
     DashboardIconComponent,
@@ -72,6 +74,74 @@ export class App implements OnInit {
 
   // User state
   currentUser = signal<User | undefined>(undefined);
+
+  // Nested selector state
+  selectorFilterText = signal('');
+  expandedOrganizations = signal<Set<string>>(new Set(['org-1', 'org-2', 'org-3']));
+  expandedProjects = signal<Set<string>>(new Set(['proj-1', 'proj-2', 'proj-3', 'proj-4', 'proj-5']));
+
+  // Mock data for nested selector
+  mockOrganizations = signal([
+    {
+      id: 'org-1',
+      name: 'Acme Corporation',
+      projects: [
+        {
+          id: 'proj-1',
+          name: 'e-commerce-platform',
+          namespaces: [
+            { id: 'ns-1', name: 'production' },
+            { id: 'ns-2', name: 'staging' },
+            { id: 'ns-3', name: 'development' },
+          ],
+        },
+        {
+          id: 'proj-2',
+          name: 'analytics-service',
+          namespaces: [
+            { id: 'ns-4', name: 'production' },
+            { id: 'ns-5', name: 'staging' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'org-2',
+      name: 'TechStart Inc',
+      projects: [
+        {
+          id: 'proj-3',
+          name: 'mobile-app-backend',
+          namespaces: [
+            { id: 'ns-6', name: 'production' },
+            { id: 'ns-7', name: 'qa' },
+            { id: 'ns-8', name: 'development' },
+          ],
+        },
+        {
+          id: 'proj-4',
+          name: 'payment-gateway',
+          namespaces: [
+            { id: 'ns-9', name: 'production' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'org-3',
+      name: 'Global Dynamics',
+      projects: [
+        {
+          id: 'proj-5',
+          name: 'internal-tools',
+          namespaces: [
+            { id: 'ns-10', name: 'production' },
+            { id: 'ns-11', name: 'testing' },
+          ],
+        },
+      ],
+    },
+  ]);
 
   async ngOnInit() {
     this.initializeTheme();
@@ -194,5 +264,78 @@ export class App implements OnInit {
 
   closeSidebar() {
     this.sidebarOpen.set(false);
+  }
+
+  // Nested selector methods
+  toggleOrganization(orgId: string) {
+    const expanded = this.expandedOrganizations();
+    const newExpanded = new Set(expanded);
+    if (newExpanded.has(orgId)) {
+      newExpanded.delete(orgId);
+    } else {
+      newExpanded.add(orgId);
+    }
+    this.expandedOrganizations.set(newExpanded);
+  }
+
+  toggleProject(projectId: string) {
+    const expanded = this.expandedProjects();
+    const newExpanded = new Set(expanded);
+    if (newExpanded.has(projectId)) {
+      newExpanded.delete(projectId);
+    } else {
+      newExpanded.add(projectId);
+    }
+    this.expandedProjects.set(newExpanded);
+  }
+
+  isOrganizationExpanded(orgId: string): boolean {
+    return this.expandedOrganizations().has(orgId);
+  }
+
+  isProjectExpanded(projectId: string): boolean {
+    return this.expandedProjects().has(projectId);
+  }
+
+  updateSelectorFilter(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.selectorFilterText.set(input.value.toLowerCase());
+  }
+
+  filteredOrganizations() {
+    const filterText = this.selectorFilterText();
+    if (!filterText) {
+      return this.mockOrganizations();
+    }
+
+    return this.mockOrganizations()
+      .map((org) => {
+        const orgMatches = org.name.toLowerCase().includes(filterText);
+        const filteredProjects = org.projects
+          .map((project) => {
+            const projectMatches = project.name.toLowerCase().includes(filterText);
+            const filteredNamespaces = project.namespaces.filter((ns) =>
+              ns.name.toLowerCase().includes(filterText)
+            );
+
+            if (projectMatches || filteredNamespaces.length > 0) {
+              return {
+                ...project,
+                namespaces: projectMatches ? project.namespaces : filteredNamespaces,
+              };
+            }
+            return null;
+          })
+          .filter((p) => p !== null);
+
+        if (orgMatches || filteredProjects.length > 0) {
+          return {
+            ...org,
+            projects: orgMatches ? org.projects : filteredProjects,
+          };
+        }
+        return null;
+      })
+      .filter((org) => org !== null);
   }
 }
