@@ -250,19 +250,7 @@
                     class="mr-1.5 h-4 w-4 shrink-0 transition-transform"
                     [class.rotate-90]="isOrganizationExpanded(org.id)"
                   />
-                  <svg
-                    class="mr-2 h-4 w-4 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                    />
-                  </svg>
+                  <app-organization-icon class="mr-2 h-4 w-4 shrink-0" />
                   <span class="truncate">{{ org.name }}</span>
                 </button>
 
@@ -290,20 +278,7 @@
                             class="mr-1.5 h-3.5 w-3.5 shrink-0 transition-transform"
                             [class.rotate-90]="isProjectExpanded(project.id)"
                           />
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="mr-2 h-4 w-4 shrink-0"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2"
-                            />
-                          </svg>
+                          <app-projects-icon class="mr-2 h-4 w-4 shrink-0" />
                           <span class="truncate">{{ project.name }}</span>
                         </button>
 
@@ -325,20 +300,7 @@
                                     isNamespaceSelected(namespace.id),
                                 }"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  class="mr-2 h-4 w-4 shrink-0"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M7 4H3v16h4M17 4h4v16h-4m-9-4h.01M12 16h.01M16 16h.01"
-                                  />
-                                </svg>
+                                <app-namespace-icon class="mr-2 h-4 w-4 shrink-0" />
                                 <span class="truncate">{{ namespace.name }}</span>
                               </button>
                             }
@@ -416,20 +378,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <g
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                    >
-                      <path
-                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065"
-                      />
-                      <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0" />
-                    </g>
-                  </svg>
+                  <app-settings-icon class="mr-3 h-5 w-5" />
                   Settings
                 </button>
               </li>
@@ -439,20 +388,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="mr-3 h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M7 4H3v16h4M17 4h4v16h-4m-9-4h.01M12 16h.01M16 16h.01"
-                    />
-                  </svg>
+                  <app-namespace-icon class="mr-3 h-5 w-5" />
                   Namespaces
                 </button>
               </li>
@@ -479,20 +415,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <g
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                    >
-                      <path
-                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065"
-                      />
-                      <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0" />
-                    </g>
-                  </svg>
+                  <app-settings-icon class="mr-3 h-5 w-5" />
                   Settings
                 </button>
               </li>
@@ -520,20 +443,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <g
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                    >
-                      <path
-                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065"
-                      />
-                      <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0" />
-                    </g>
-                  </svg>
+                  <app-settings-icon class="mr-3 h-5 w-5" />
                   Settings
                 </button>
               </li>

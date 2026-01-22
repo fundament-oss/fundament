@@ -15,7 +15,6 @@ import {
   ChevronRightIconComponent,
   UserCircleIconComponent,
   FundamentLogoIconComponent,
-  DashboardIconComponent,
   KubernetesIconComponent,
   FolderIconComponent,
   PuzzleIconComponent,
@@ -24,6 +23,10 @@ import {
   CheckCircleIconComponent,
   ErrorIconComponent,
   InfoCircleIconComponent,
+  OrganizationIconComponent,
+  ProjectsIconComponent,
+  SettingsIconComponent,
+  NamespaceIconComponent,
 } from './icons';
 
 @Component({
@@ -42,7 +45,6 @@ import {
     ChevronRightIconComponent,
     UserCircleIconComponent,
     FundamentLogoIconComponent,
-    DashboardIconComponent,
     KubernetesIconComponent,
     FolderIconComponent,
     PuzzleIconComponent,
@@ -51,6 +53,10 @@ import {
     CheckCircleIconComponent,
     ErrorIconComponent,
     InfoCircleIconComponent,
+    OrganizationIconComponent,
+    ProjectsIconComponent,
+    SettingsIconComponent,
+    NamespaceIconComponent,
   ],
   templateUrl: './app.html',
 })
@@ -403,9 +409,9 @@ export class App implements OnInit {
 
   getSettingsHeader(): string {
     const type = this.getSelectedType();
-    if (type === 'organization') return 'Organization settings';
-    if (type === 'project') return 'Project settings';
-    if (type === 'namespace') return 'Namespace settings';
+    if (type === 'organization') return 'Organization-specific';
+    if (type === 'project') return 'Project-specific';
+    if (type === 'namespace') return 'Namespace-specific';
     return '';
   }
 

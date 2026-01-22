@@ -32,3 +32,7 @@ export { KubernetesIconComponent } from './kubernetes-icon.component';
 export { PuzzleIconComponent } from './puzzle-icon.component';
 export { TableDownloadIconComponent } from './table-download-icon.component';
 export { UsersIconComponent } from './users-icon.component';
+export { OrganizationIconComponent } from './organization-icon.component';
+export { ProjectsIconComponent } from './projects-icon.component';
+export { SettingsIconComponent } from './settings-icon.component';
+export { NamespaceIconComponent } from './namespace-icon.component';
