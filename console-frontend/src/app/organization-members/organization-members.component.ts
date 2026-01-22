@@ -21,13 +21,7 @@ interface PendingInvitation {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [
-    CommonModule,
-    FormsModule,
-    PlusIconComponent,
-    CloseIconComponent,
-    TrashIconComponent,
-  ],
+  imports: [CommonModule, FormsModule, PlusIconComponent, CloseIconComponent, TrashIconComponent],
   templateUrl: './organization-members.component.html',
 })
 export class OrganizationMembersComponent {
@@ -40,14 +34,30 @@ export class OrganizationMembersComponent {
 
   // Mock data - replace with API calls later
   members = signal<OrganizationMember[]>([
-    { id: '1', name: 'John Doe', email: 'john.doe@example.com', role: 'admin', isCurrentUser: true },
+    {
+      id: '1',
+      name: 'John Doe',
+      email: 'john.doe@example.com',
+      role: 'admin',
+      isCurrentUser: true,
+    },
     { id: '2', name: 'Jane Smith', email: 'jane.smith@example.com', role: 'viewer' },
     { id: '3', name: 'Bob Williams', email: 'bob.williams@example.com', role: 'admin' },
   ]);
 
   pendingInvitations = signal<PendingInvitation[]>([
-    { id: '1', email: 'newuser@example.com', role: 'viewer', invitedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
-    { id: '2', email: 'another.person@company.com', role: 'admin', invitedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
+    {
+      id: '1',
+      email: 'newuser@example.com',
+      role: 'viewer',
+      invitedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    },
+    {
+      id: '2',
+      email: 'another.person@company.com',
+      role: 'admin',
+      invitedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    },
   ]);
 
   constructor() {
@@ -82,15 +92,11 @@ export class OrganizationMembersComponent {
   }
 
   cancelInvitation(id: string) {
-    this.pendingInvitations.update((invitations) =>
-      invitations.filter((inv) => inv.id !== id)
-    );
+    this.pendingInvitations.update((invitations) => invitations.filter((inv) => inv.id !== id));
   }
 
   updateMemberRole(memberId: string, role: 'admin' | 'viewer') {
-    this.members.update((members) =>
-      members.map((m) => (m.id === memberId ? { ...m, role } : m))
-    );
+    this.members.update((members) => members.map((m) => (m.id === memberId ? { ...m, role } : m)));
   }
 
   removeMember(id: string) {

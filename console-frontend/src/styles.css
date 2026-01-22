@@ -51,6 +51,71 @@ input[type='email'].ng-invalid.ng-touched {
   @apply border-rose-500 ring-rose-500 focus:border-rose-500;
 }
 
+/* Card styles */
+
+.card {
+  @apply rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950;
+}
+
+.card-header {
+  @apply border-b border-gray-200 px-6 py-4 dark:border-gray-800;
+}
+
+.card-body-lg {
+  @apply p-6;
+}
+
+.card-body {
+  @apply p-4;
+}
+
+.card-body-sm {
+  @apply p-3;
+}
+
+/* Badge styles */
+
+.badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
+
+.badge-sm {
+  @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium;
+}
+
+.badge-md {
+  @apply inline-flex items-center rounded-md px-2 py-1 text-xs font-medium;
+}
+
+/* Badge color variants */
+.badge-green {
+  @apply bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200;
+}
+
+.badge-blue {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200;
+}
+
+.badge-purple {
+  @apply bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200;
+}
+
+.badge-rose {
+  @apply bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200;
+}
+
+.badge-yellow {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200;
+}
+
+.badge-gray {
+  @apply bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200;
+}
+
+.badge-emerald {
+  @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200;
+}
+
 /* Form styles */
 
 .btn-primary {
@@ -81,6 +146,50 @@ textarea {
 
 select {
   @apply rounded-md border border-gray-300 text-sm ring-indigo-500 focus:border-indigo-500 focus:ring-1 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950;
+}
+
+/* Tab styles */
+
+.tabs {
+  @apply mt-4 -mb-px flex space-x-2;
+}
+
+.tabs a {
+  @apply rounded-t-lg border border-gray-200 border-b-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 dark:border-gray-800 dark:border-b-gray-800 dark:text-gray-400 dark:hover:text-gray-200;
+}
+
+.tabs a.active {
+  @apply border-b-white text-gray-700 dark:border-b-gray-950 dark:text-gray-200;
+}
+
+/* Table styles */
+
+.table-container {
+  @apply overflow-hidden rounded-md shadow ring-1 ring-gray-300 dark:ring-gray-700;
+}
+
+.table {
+  @apply min-w-full divide-y divide-gray-300 dark:divide-gray-700;
+}
+
+.table thead {
+  @apply bg-gray-50 dark:bg-gray-800;
+}
+
+.table thead th {
+  @apply px-6 py-3.5 text-left text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400;
+}
+
+.table tbody {
+  @apply divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950;
+}
+
+.table tbody tr {
+  @apply hover:bg-gray-50 dark:hover:bg-gray-900;
+}
+
+.table tbody td {
+  @apply px-6 py-3 text-sm whitespace-nowrap dark:text-gray-300;
 }
 
 /* Vanilla Calendar styles. Based on:

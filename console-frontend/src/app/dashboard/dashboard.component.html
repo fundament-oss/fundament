@@ -1,11 +1,11 @@
-<div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+<div class="card">
   <!-- Header -->
-  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+  <div class="card-header">
     <h1 class="text-2xl font-bold dark:text-white">Dashboard</h1>
   </div>
 
   <!-- Content -->
-  <div class="p-6">
+  <div class="card-body-lg">
     <!-- Error Message -->
     @if (errorMessage()) {
       <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
@@ -16,10 +16,7 @@
 
     <!-- Create Cluster Button -->
     <div class="mb-6">
-      <a
-        routerLink="/add-cluster"
-        class="inline-flex cursor-pointer items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-indigo-500 transition-colors duration-200 hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950"
-      >
+      <a routerLink="/add-cluster" class="btn-primary inline-flex items-center">
         <app-plus-icon class="mr-1.5 h-4 w-4" />
         Add a Kubernetes cluster
       </a>
@@ -28,22 +25,19 @@
     <!-- Clusters Grid -->
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
       @for (cluster of clusters(); track cluster.id) {
-        <div class="rounded-md border border-gray-200 dark:border-gray-800">
+        <div class="card">
           <!-- Card Header -->
-          <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+          <div class="card-header">
             <div class="flex items-center justify-between">
               <h2 class="text-xl font-bold dark:text-white">{{ cluster.name }}</h2>
-              <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                [class]="getStatusColor(cluster.status)"
-              >
-                {{ cluster.status || 'Unknown status' }}
+              <span class="badge" [class]="getStatusColor(cluster.status)">
+                {{ getStatusLabel(cluster.status) }}
               </span>
             </div>
           </div>
 
           <!-- Card Content -->
-          <div class="p-6">
+          <div class="card-body-lg">
             <dl>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
               <dd class="mt-0.5 mb-4 text-sm dark:text-white">
@@ -61,7 +55,7 @@
             <div class="mt-6">
               <a
                 routerLink="/clusters/{{ cluster.id }}"
-                class="inline-flex cursor-pointer items-center rounded-md border border-transparent bg-indigo-600 px-3 py-2 text-sm leading-4 font-medium text-white ring-indigo-500 transition-all duration-200 ease-in-out hover:-translate-y-px hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950"
+                class="btn-primary inline-flex items-center px-3!"
               >
                 <app-eye-icon class="mr-2 h-4 w-4" /> View details
               </a>

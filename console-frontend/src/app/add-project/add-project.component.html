@@ -6,9 +6,9 @@
   </div>
 }
 
-<div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+<div class="card">
   <!-- Header -->
-  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+  <div class="card-header">
     <h1 class="text-2xl font-bold dark:text-white">Add project</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
       Create a new project to organize your namespaces and resources.
@@ -38,6 +38,7 @@
     </div>
 
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+      <a routerLink="/projects" class="btn-secondary">Cancel</a>
       <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
         @if (isSubmitting()) {
           Creating...
@@ -45,7 +46,6 @@
           Create project
         }
       </button>
-      <a routerLink="/projects" class="btn-secondary">Cancel</a>
     </div>
   </form>
 </div>

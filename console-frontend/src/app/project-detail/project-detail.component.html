@@ -8,18 +8,22 @@
 
 <!-- Loading State -->
 @if (isLoading()) {
-  <div class="flex items-center justify-center py-12">
-    <div
-      class="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
-    ></div>
+  <div class="py-12 text-center">
+    <div role="status" class="flex justify-center">
+      <app-loading-indicator
+        class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+      />
+      <span class="sr-only">Loading...</span>
+    </div>
+    <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading project details...</p>
   </div>
 }
 
 <!-- Content (only show when not loading) -->
 @if (!isLoading() && project()) {
-  <div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+  <div class="card">
     <!-- Header -->
-    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+    <div class="card-header">
       <div class="grid items-center gap-3 lg:grid-cols-2">
         <div>
           <h1 class="text-2xl font-bold dark:text-white">

@@ -1,6 +1,6 @@
-<div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+<div class="card">
   <!-- Header -->
-  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+  <div class="card-header">
     <div class="grid items-center gap-3 sm:grid-cols-2">
       <div>
         <h1 class="text-2xl font-bold dark:text-white">Usage</h1>
@@ -10,10 +10,7 @@
       </div>
 
       <div class="flex gap-2 sm:justify-end">
-        <button
-          type="button"
-          class="inline-flex cursor-pointer items-center rounded-md border border-transparent bg-indigo-600 px-3 py-2 text-sm leading-4 font-medium text-white ring-indigo-500 transition-all duration-200 ease-in-out hover:-translate-y-px hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950"
-        >
+        <button type="button" class="btn-primary inline-flex items-center px-3!">
           <app-table-download-icon class="mr-2 h-4 w-4" />
           Download CSV
         </button>
@@ -22,7 +19,7 @@
   </div>
 
   <!-- Filters -->
-  <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+  <div class="card-header">
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
       <!-- Time Range From -->
       <div class="lg:col-span-2">
@@ -272,48 +269,28 @@
     <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
       <h3 class="mb-4 text-lg font-medium dark:text-white">Per namespace usage</h3>
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-900">
+        <table class="table">
+          <thead>
             <tr>
-              <th
-                scope="col"
-                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
-              >
-                Namespace
-              </th>
-              <th
-                scope="col"
-                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
-              >
-                CPU (cores)
-              </th>
-              <th
-                scope="col"
-                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
-              >
-                Memory (GB)
-              </th>
-              <th
-                scope="col"
-                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
-              >
-                Pods
-              </th>
+              <th scope="col">Namespace</th>
+              <th scope="col">CPU (cores)</th>
+              <th scope="col">Memory (GB)</th>
+              <th scope="col">Pods</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
+          <tbody>
             @for (ns of namespaceUsage; track ns.name) {
-              <tr class="hover:bg-gray-50 dark:hover:bg-gray-900">
-                <td class="px-6 py-4 text-sm font-medium whitespace-nowrap dark:text-white">
+              <tr>
+                <td class="font-medium dark:text-white">
                   {{ ns.name }}
                 </td>
-                <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                <td>
                   {{ ns.cpu }}
                 </td>
-                <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                <td>
                   {{ ns.memory }}
                 </td>
-                <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                <td>
                   {{ ns.pods }}
                 </td>
               </tr>

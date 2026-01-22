@@ -8,18 +8,22 @@
 
 <!-- Loading State -->
 @if (isLoading()) {
-  <div class="flex items-center justify-center py-12">
-    <div
-      class="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
-    ></div>
+  <div class="py-12 text-center">
+    <div role="status" class="flex justify-center">
+      <app-loading-indicator
+        class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+      />
+      <span class="sr-only">Loading...</span>
+    </div>
+    <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading cluster details...</p>
   </div>
 }
 
 <!-- Content (only show when not loading) -->
 @if (!isLoading()) {
-  <div class="rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+  <div class="card">
     <!-- Header -->
-    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+    <div class="card-header">
       <div class="grid items-center gap-3 lg:grid-cols-2">
         <div>
           <h1 class="text-2xl font-bold dark:text-white">
@@ -50,9 +54,9 @@
     </div>
 
     <!-- Summary Content -->
-    <div class="space-y-6 p-6">
+    <div class="card-body-lg space-y-6">
       <!-- Basics Block -->
-      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+      <div class="card card-body">
         <h3 class="mb-4 text-lg font-medium dark:text-white">Basics</h3>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <dl>
@@ -68,11 +72,8 @@
           <dl>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
             <dd class="mt-1">
-              <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-                [class]="getStatusColor(clusterData.status)"
-              >
-                {{ clusterData.status }}
+              <span class="badge" [class]="getStatusColor(clusterData.status)">
+                {{ getStatusLabel(clusterData.status) }}
               </span>
             </dd>
           </dl>
@@ -94,7 +95,7 @@
       <!-- Resource Usage Stats -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <!-- Resource Usage Charts -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Resource usage</h3>
           <div class="space-y-4">
             <!-- CPU Usage -->
@@ -256,7 +257,7 @@
         </div>
 
         <!-- Recent Activity -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Recent activity</h3>
           <div class="max-h-80 space-y-3 overflow-y-auto" tabindex="0">
             @for (activity of clusterData.activity; track activity.timestamp) {
@@ -284,7 +285,7 @@
       <!-- Members and Node Pools -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <!-- Members -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Members
             <a
@@ -311,14 +312,11 @@
                 </div>
                 <div class="text-right">
                   <span
-                    class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
+                    class="badge-sm"
                     [ngClass]="{
-                      'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200':
-                        member.role === 'admin',
-                      'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200':
-                        member.role === 'edit',
-                      'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200':
-                        member.role === 'view',
+                      'badge-purple': member.role === 'admin',
+                      'badge-blue': member.role === 'edit',
+                      'badge-green': member.role === 'view',
                     }"
                   >
                     {{ member.role }}
@@ -333,7 +331,7 @@
         </div>
 
         <!-- Node Pools -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Node pools
             <a
@@ -352,15 +350,13 @@
           } @else {
             <div class="space-y-4">
               @for (pool of clusterData.nodePools; track pool.name) {
-                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800">
+                <div class="card card-body-sm">
                   <div class="mb-2 flex items-center justify-between">
                     <h4 class="text-sm font-medium dark:text-white">{{ pool.name }}</h4>
                     <span
-                      class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
+                      class="badge-sm"
                       [class]="
-                        pool.status === NodePoolStatus.HEALTHY
-                          ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'
-                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200'
+                        pool.status === NodePoolStatus.HEALTHY ? 'badge-green' : 'badge-rose'
                       "
                     >
                       {{ getNodePoolStatusLabel(pool.status) }}
@@ -390,7 +386,7 @@
         </div>
 
         <!-- Plugins Block -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Plugins
             <a
@@ -409,9 +405,7 @@
               </dt>
               <dd class="flex flex-wrap gap-1">
                 @for (plugin of installedPlugins(); track plugin.id) {
-                  <span
-                    class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                  >
+                  <span class="badge-md badge-emerald">
                     {{ plugin.name }}
                   </span>
                 }
@@ -423,7 +417,7 @@
         </div>
 
         <!-- Namespaces Block -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <div class="card card-body">
           <div class="mb-4 flex items-center justify-between">
             <h3 class="text-lg font-medium dark:text-white">Namespaces</h3>
             <button
@@ -444,9 +438,7 @@
           } @else {
             <div class="space-y-3">
               @for (namespace of namespaces(); track namespace.id) {
-                <div
-                  class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
-                >
+                <div class="card card-body-sm flex items-center justify-between">
                   <div>
                     <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
