@@ -78,7 +78,9 @@ export class App implements OnInit {
   // Nested selector state
   selectorFilterText = signal('');
   expandedOrganizations = signal<Set<string>>(new Set(['org-1', 'org-2', 'org-3']));
-  expandedProjects = signal<Set<string>>(new Set(['proj-1', 'proj-2', 'proj-3', 'proj-4', 'proj-5']));
+  expandedProjects = signal<Set<string>>(
+    new Set(['proj-1', 'proj-2', 'proj-3', 'proj-4', 'proj-5']),
+  );
 
   // Mock data for nested selector
   mockOrganizations = signal([
@@ -121,9 +123,7 @@ export class App implements OnInit {
         {
           id: 'proj-4',
           name: 'payment-gateway',
-          namespaces: [
-            { id: 'ns-9', name: 'production' },
-          ],
+          namespaces: [{ id: 'ns-9', name: 'production' }],
         },
       ],
     },
@@ -315,7 +315,7 @@ export class App implements OnInit {
           .map((project) => {
             const projectMatches = project.name.toLowerCase().includes(filterText);
             const filteredNamespaces = project.namespaces.filter((ns) =>
-              ns.name.toLowerCase().includes(filterText)
+              ns.name.toLowerCase().includes(filterText),
             );
 
             if (projectMatches || filteredNamespaces.length > 0) {

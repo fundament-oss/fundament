@@ -233,18 +233,31 @@
               <div>
                 <!-- Organization -->
                 <div class="mb-0.5 px-2">
-                  <span class="text-[0.625rem]/[0.875rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Organization</span>
+                  <span
+                    class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                    >Organization</span
+                  >
                 </div>
                 <button
                   (click)="toggleOrganization(org.id)"
-                  class="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 cursor-pointer"
+                  class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                   <app-chevron-right-icon
                     class="mr-1.5 h-4 w-4 shrink-0 transition-transform"
                     [class.rotate-90]="isOrganizationExpanded(org.id)"
                   />
-                  <svg class="mr-2 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                  <svg
+                    class="mr-2 h-4 w-4 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                    />
                   </svg>
                   <span class="truncate">{{ org.name }}</span>
                 </button>
@@ -256,17 +269,20 @@
                       <div>
                         <!-- Project -->
                         <div class="mb-0.5 px-2">
-                          <span class="text-[0.625rem]/[0.875rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Project</span>
+                          <span
+                            class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                            >Project</span
+                          >
                         </div>
                         <button
                           (click)="toggleProject(project.id)"
-                          class="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 cursor-pointer"
+                          class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                         >
                           <app-chevron-right-icon
                             class="mr-1.5 h-3.5 w-3.5 shrink-0 transition-transform"
                             [class.rotate-90]="isProjectExpanded(project.id)"
                           />
-                          <app-folder-icon class="mr-2 h-3.5 w-3.5 shrink-0" />
+                          <app-folder-icon class="mr-2 h-4 w-4 shrink-0" />
                           <span class="truncate">{{ project.name }}</span>
                         </button>
 
@@ -274,14 +290,27 @@
                         @if (isProjectExpanded(project.id)) {
                           <div class="ml-5 space-y-0.5">
                             <div class="mb-0.5 px-2">
-                              <span class="text-[0.625rem]/[0.875rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Namespaces</span>
+                              <span
+                                class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                                >Namespaces</span
+                              >
                             </div>
                             @for (namespace of project.namespaces; track namespace.id) {
                               <button
-                                class="flex w-full items-center rounded-md px-2 py-1 text-left text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800 cursor-pointer"
+                                class="flex w-full cursor-pointer items-center rounded-md px-2 py-1 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                               >
-                                <svg class="mr-2 h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                <svg
+                                  class="mr-2 h-4 w-4 shrink-0"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                  />
                                 </svg>
                                 <span class="truncate">{{ namespace.name }}</span>
                               </button>
@@ -376,7 +405,11 @@
             <!-- Organization Section -->
             <li class="pt-4">
               <div class="border-t border-gray-200 dark:border-gray-800"></div>
-              <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Organization</p>
+              <p
+                class="px-3 pt-4 pb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Organization
+              </p>
             </li>
             <li>
               <a
@@ -387,9 +420,17 @@
                 (click)="closeSidebar()"
               >
                 <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
-                    <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065"/>
-                    <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0"/>
+                  <g
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065"
+                    />
+                    <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0" />
                   </g>
                 </svg>
                 Settings
