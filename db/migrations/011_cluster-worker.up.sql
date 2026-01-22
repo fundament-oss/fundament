@@ -67,6 +67,12 @@ CREATE POLICY "cluster_events_worker_all_access" ON "tenant"."cluster_events"
 
 ALTER TABLE "tenant"."cluster_events" ENABLE ROW LEVEL SECURITY;
 
+GRANT INSERT ON "tenant"."cluster_events" TO "fun_cluster_worker";
+
+GRANT SELECT ON "tenant"."cluster_events" TO "fun_cluster_worker";
+
+GRANT UPDATE ON "tenant"."cluster_events" TO "fun_cluster_worker";
+
 CREATE UNIQUE INDEX cluster_events_pk ON tenant.cluster_events USING btree (id);
 
 ALTER TABLE "tenant"."cluster_events" ADD CONSTRAINT "cluster_events_pk" PRIMARY KEY USING INDEX "cluster_events_pk";
@@ -97,6 +103,21 @@ CREATE POLICY "cluster_worker_all_access" ON "tenant"."clusters"
 	FOR ALL
 	TO fun_cluster_worker
 	USING (true);
+
+/* Hazards:
+ - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
+*/
+GRANT INSERT ON "tenant"."clusters" TO "fun_cluster_worker";
+
+/* Hazards:
+ - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
+*/
+GRANT SELECT ON "tenant"."clusters" TO "fun_cluster_worker";
+
+/* Hazards:
+ - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
+*/
+GRANT UPDATE ON "tenant"."clusters" TO "fun_cluster_worker";
 
 ALTER TABLE "tenant"."clusters" DROP CONSTRAINT "clusters_ck_status";
 
