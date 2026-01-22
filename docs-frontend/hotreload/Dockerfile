@@ -7,8 +7,8 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Copy package files
 COPY docs-frontend/package.json docs-frontend/pnpm-lock.yaml ./
 
-# Install dependencies with increased heap size
-RUN NODE_OPTIONS='--max-old-space-size=4096' pnpm install --frozen-lockfile
+# Install dependencies
+RUN pnpm install --frozen-lockfile
 
 # Copy source files
 COPY docs-frontend/ .
