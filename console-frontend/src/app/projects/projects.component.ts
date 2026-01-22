@@ -6,11 +6,23 @@ import { PROJECT } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { firstValueFrom } from 'rxjs';
-import { PlusIconComponent, ErrorIconComponent } from '../icons';
+import {
+  PlusIconComponent,
+  ErrorIconComponent,
+  ChevronRightIconComponent,
+  LoadingIndicatorComponent,
+} from '../icons';
 
 @Component({
   selector: 'app-projects',
-  imports: [CommonModule, RouterLink, PlusIconComponent, ErrorIconComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    PlusIconComponent,
+    ErrorIconComponent,
+    ChevronRightIconComponent,
+    LoadingIndicatorComponent,
+  ],
   templateUrl: './projects.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
