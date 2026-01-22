@@ -216,7 +216,7 @@
         </div>
 
         <!-- Nested Selector -->
-        <div class="border-b border-gray-200 px-4 pt-1 pb-4 lg:pt-4 dark:border-gray-800">
+        <div class="p-4">
           <!-- Filter Input -->
           <div class="mb-3">
             <input
@@ -239,8 +239,12 @@
                   >
                 </div>
                 <button
-                  (click)="toggleOrganization(org.id)"
+                  (click)="selectOrganization(org.id)"
                   class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  [ngClass]="{
+                    'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
+                      isOrganizationSelected(org.id),
+                  }"
                 >
                   <app-chevron-right-icon
                     class="mr-1.5 h-4 w-4 shrink-0 transition-transform"
@@ -275,14 +279,31 @@
                           >
                         </div>
                         <button
-                          (click)="toggleProject(project.id)"
+                          (click)="selectProjectItem(project.id)"
                           class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                          [ngClass]="{
+                            'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
+                              isProjectSelected(project.id),
+                          }"
                         >
                           <app-chevron-right-icon
                             class="mr-1.5 h-3.5 w-3.5 shrink-0 transition-transform"
                             [class.rotate-90]="isProjectExpanded(project.id)"
                           />
-                          <app-folder-icon class="mr-2 h-4 w-4 shrink-0" />
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="mr-2 h-4 w-4 shrink-0"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2"
+                            />
+                          </svg>
                           <span class="truncate">{{ project.name }}</span>
                         </button>
 
@@ -297,19 +318,25 @@
                             </div>
                             @for (namespace of project.namespaces; track namespace.id) {
                               <button
-                                class="flex w-full cursor-pointer items-center rounded-md px-2 py-1 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                                (click)="selectNamespaceItem(namespace.id)"
+                                class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                                [ngClass]="{
+                                  'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
+                                    isNamespaceSelected(namespace.id),
+                                }"
                               >
                                 <svg
+                                  xmlns="http://www.w3.org/2000/svg"
                                   class="mr-2 h-4 w-4 shrink-0"
-                                  fill="none"
-                                  stroke="currentColor"
                                   viewBox="0 0 24 24"
                                 >
                                   <path
+                                    fill="none"
+                                    stroke="currentColor"
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                     stroke-width="2"
-                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                    d="M7 4H3v16h4M17 4h4v16h-4m-9-4h.01M12 16h.01M16 16h.01"
                                   />
                                 </svg>
                                 <span class="truncate">{{ namespace.name }}</span>
@@ -326,127 +353,191 @@
           </div>
         </div>
 
-        <nav class="h-full overflow-y-auto px-4 pt-1 pb-6 lg:pt-4">
-          <ul class="space-y-2">
-            <li>
-              <a
-                routerLink="/"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                [routerLinkActiveOptions]="{ exact: true }"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <app-dashboard-icon class="mr-3 h-5 w-5" />
-                Dashboard
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                [ngClass]="{
-                  'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
-                    isClustersActive(),
-                }"
-                (click)="closeSidebar()"
-              >
-                <app-kubernetes-icon class="mr-3 h-5 w-5" />
-                Clusters
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/projects"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <app-folder-icon class="mr-3 h-5 w-5" />
-                Projects
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/plugins"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <app-puzzle-icon class="mr-3 h-5 w-5" />
-                Plugins
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/project-members"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                [ngClass]="{
-                  'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
-                    isProjectMembersOrPermissions(),
-                }"
-                (click)="closeSidebar()"
-              >
-                <app-users-icon class="mr-3 h-5 w-5" />
-                Members
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/usage"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <app-chart-icon class="mr-3 h-5 w-5" />
-                Usage
-              </a>
-            </li>
-
-            <!-- Organization Section -->
-            <li class="pt-4">
-              <div class="border-t border-gray-200 dark:border-gray-800"></div>
+        <nav class="overflow-y-auto px-4 pb-6">
+          @if (getSelectedType()) {
+            <div class="mb-3 border-t border-gray-200 pt-5 dark:border-gray-800">
               <p
-                class="px-3 pt-4 pb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                class="px-3 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
               >
-                Organization
+                {{ getSettingsHeader() }}
               </p>
-            </li>
-            <li>
-              <a
-                routerLink="/organization"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                [routerLinkActiveOptions]="{ exact: true }"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <g
+            </div>
+          }
+
+          <ul class="space-y-2">
+            @if (getSelectedType() === 'organization') {
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <app-kubernetes-icon class="mr-3 h-5 w-5" />
+                  Clusters
+                </button>
+              </li>
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <app-folder-icon class="mr-3 h-5 w-5" />
+                  Projects
+                </button>
+              </li>
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <app-puzzle-icon class="mr-3 h-5 w-5" />
+                  Plugins
+                </button>
+              </li>
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <app-users-icon class="mr-3 h-5 w-5" />
+                  Members
+                </button>
+              </li>
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <app-chart-icon class="mr-3 h-5 w-5" />
+                  Usage
+                </button>
+              </li>
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <g
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065"
+                      />
+                      <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0" />
+                    </g>
+                  </svg>
+                  Settings
+                </button>
+              </li>
+            } @else if (getSelectedType() === 'project') {
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="mr-3 h-5 w-5"
+                    viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
                   >
                     <path
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M7 4H3v16h4M17 4h4v16h-4m-9-4h.01M12 16h.01M16 16h.01"
                     />
-                    <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0" />
-                  </g>
-                </svg>
-                Settings
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/organization/members"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <app-users-icon class="mr-3 h-5 w-5" />
-                Members
-              </a>
-            </li>
+                  </svg>
+                  Namespaces
+                </button>
+              </li>
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <app-users-icon class="mr-3 h-5 w-5" />
+                  Members
+                </button>
+              </li>
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <app-chart-icon class="mr-3 h-5 w-5" />
+                  Usage
+                </button>
+              </li>
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <g
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065"
+                      />
+                      <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0" />
+                    </g>
+                  </svg>
+                  Settings
+                </button>
+              </li>
+            } @else if (getSelectedType() === 'namespace') {
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <app-users-icon class="mr-3 h-5 w-5" />
+                  Members
+                </button>
+              </li>
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <app-chart-icon class="mr-3 h-5 w-5" />
+                  Usage
+                </button>
+              </li>
+              <li>
+                <button
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  (click)="closeSidebar()"
+                >
+                  <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <g
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065"
+                      />
+                      <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0" />
+                    </g>
+                  </svg>
+                  Settings
+                </button>
+              </li>
+            }
           </ul>
         </nav>
       </aside>

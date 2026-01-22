@@ -81,6 +81,9 @@ export class App implements OnInit {
   expandedProjects = signal<Set<string>>(
     new Set(['proj-1', 'proj-2', 'proj-3', 'proj-4', 'proj-5']),
   );
+  selectedOrgId = signal<string | null>(null);
+  selectedProjectId = signal<string | null>(null);
+  selectedNamespaceId = signal<string | null>(null);
 
   // Mock data for nested selector
   mockOrganizations = signal([
@@ -158,6 +161,12 @@ export class App implements OnInit {
     versionMismatch$.subscribe((mismatch) => {
       this.apiVersionMismatch.set(mismatch);
     });
+
+    // Initialize selector with first organization selected
+    const firstOrg = this.mockOrganizations()[0];
+    if (firstOrg) {
+      this.selectedOrgId.set(firstOrg.id);
+    }
   }
 
   reloadApp() {
@@ -267,7 +276,53 @@ export class App implements OnInit {
   }
 
   // Nested selector methods
-  toggleOrganization(orgId: string) {
+  selectOrganization(orgId: string) {
+    // If already selected, toggle collapse/expand
+    if (this.selectedOrgId() === orgId) {
+      this.toggleOrganizationExpansion(orgId);
+    } else {
+      // Select and ensure it's expanded
+      this.selectedOrgId.set(orgId);
+      this.selectedProjectId.set(null);
+      this.selectedNamespaceId.set(null);
+
+      // Expand if not already expanded
+      const expanded = this.expandedOrganizations();
+      if (!expanded.has(orgId)) {
+        const newExpanded = new Set(expanded);
+        newExpanded.add(orgId);
+        this.expandedOrganizations.set(newExpanded);
+      }
+    }
+  }
+
+  selectProjectItem(projectId: string) {
+    // If already selected, toggle collapse/expand
+    if (this.selectedProjectId() === projectId) {
+      this.toggleProjectExpansion(projectId);
+    } else {
+      // Select and ensure it's expanded
+      this.selectedProjectId.set(projectId);
+      this.selectedOrgId.set(null);
+      this.selectedNamespaceId.set(null);
+
+      // Expand if not already expanded
+      const expanded = this.expandedProjects();
+      if (!expanded.has(projectId)) {
+        const newExpanded = new Set(expanded);
+        newExpanded.add(projectId);
+        this.expandedProjects.set(newExpanded);
+      }
+    }
+  }
+
+  selectNamespaceItem(namespaceId: string) {
+    this.selectedNamespaceId.set(namespaceId);
+    this.selectedOrgId.set(null);
+    this.selectedProjectId.set(null);
+  }
+
+  private toggleOrganizationExpansion(orgId: string) {
     const expanded = this.expandedOrganizations();
     const newExpanded = new Set(expanded);
     if (newExpanded.has(orgId)) {
@@ -278,7 +333,7 @@ export class App implements OnInit {
     this.expandedOrganizations.set(newExpanded);
   }
 
-  toggleProject(projectId: string) {
+  private toggleProjectExpansion(projectId: string) {
     const expanded = this.expandedProjects();
     const newExpanded = new Set(expanded);
     if (newExpanded.has(projectId)) {
@@ -337,5 +392,32 @@ export class App implements OnInit {
         return null;
       })
       .filter((org) => org !== null);
+  }
+
+  getSelectedType(): 'organization' | 'project' | 'namespace' | null {
+    if (this.selectedNamespaceId()) return 'namespace';
+    if (this.selectedProjectId()) return 'project';
+    if (this.selectedOrgId()) return 'organization';
+    return null;
+  }
+
+  getSettingsHeader(): string {
+    const type = this.getSelectedType();
+    if (type === 'organization') return 'Organization settings';
+    if (type === 'project') return 'Project settings';
+    if (type === 'namespace') return 'Namespace settings';
+    return '';
+  }
+
+  isOrganizationSelected(orgId: string): boolean {
+    return this.selectedOrgId() === orgId;
+  }
+
+  isProjectSelected(projectId: string): boolean {
+    return this.selectedProjectId() === projectId;
+  }
+
+  isNamespaceSelected(namespaceId: string): boolean {
+    return this.selectedNamespaceId() === namespaceId;
   }
 }
