@@ -1,5 +1,5 @@
 import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthnApiService } from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
@@ -11,7 +11,6 @@ import {
   CloseIconComponent,
   MoonIconComponent,
   SunIconComponent,
-  ChevronDownIconComponent,
   ChevronRightIconComponent,
   UserCircleIconComponent,
   FundamentLogoIconComponent,
@@ -34,14 +33,12 @@ import {
   imports: [
     RouterOutlet,
     RouterLink,
-    RouterLinkActive,
     CommonModule,
     WarningIconComponent,
     MenuIconComponent,
     CloseIconComponent,
     MoonIconComponent,
     SunIconComponent,
-    ChevronDownIconComponent,
     ChevronRightIconComponent,
     UserCircleIconComponent,
     FundamentLogoIconComponent,
@@ -70,9 +67,7 @@ export class App implements OnInit {
   apiVersionMismatch = signal(false);
 
   // Dropdown states
-  projectDropdownOpen = signal(false);
   userDropdownOpen = signal(false);
-  selectedProject = signal('Project 1');
   sidebarOpen = signal(false);
 
   // Theme state
@@ -238,25 +233,15 @@ export class App implements OnInit {
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
     const target = event.target as HTMLElement;
-    const projectDropdown = target.closest('.project-dropdown');
     const userDropdown = target.closest('.user-dropdown');
 
-    if (!projectDropdown) {
-      this.projectDropdownOpen.set(false);
-    }
     if (!userDropdown) {
       this.userDropdownOpen.set(false);
     }
   }
 
-  toggleProjectDropdown() {
-    this.projectDropdownOpen.set(!this.projectDropdownOpen());
-    this.userDropdownOpen.set(false); // Close other dropdown
-  }
-
   toggleUserDropdown() {
     this.userDropdownOpen.set(!this.userDropdownOpen());
-    this.projectDropdownOpen.set(false); // Close other dropdown
   }
 
   async handleLogout() {
@@ -266,11 +251,6 @@ export class App implements OnInit {
     } catch (error) {
       console.error('Logout failed:', error);
     }
-  }
-
-  selectProject(project: string) {
-    this.selectedProject.set(project);
-    this.projectDropdownOpen.set(false);
   }
 
   toggleSidebar() {

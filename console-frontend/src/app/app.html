@@ -106,39 +106,6 @@
           </button>
 
           @if (!isLoginPage()) {
-            <div class="project-dropdown relative">
-              <button
-                (click)="toggleProjectDropdown()"
-                class="flex cursor-pointer items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 ring-indigo-500 hover:bg-gray-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-950 dark:bg-gray-950 dark:text-white dark:ring-offset-gray-950 dark:hover:bg-gray-900"
-              >
-                {{ selectedProject() }}
-                <app-chevron-down-icon class="ml-2 h-4 w-4" />
-              </button>
-
-              @if (projectDropdownOpen()) {
-                <div
-                  class="absolute right-0 z-10 mt-2 w-48 rounded-md bg-white shadow-lg ring-1 ring-gray-300 dark:bg-gray-950 dark:ring-gray-800"
-                >
-                  <div class="py-1">
-                    <button
-                      (click)="selectProject('Project 1')"
-                      class="block w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900 dark:[&.bg-gray-100]:bg-gray-700"
-                      [class.bg-gray-100]="selectedProject() === 'Project 1'"
-                    >
-                      Project 1
-                    </button>
-                    <button
-                      (click)="selectProject('Project 2')"
-                      class="block w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900 dark:[&.bg-gray-100]:bg-gray-700"
-                      [class.bg-gray-100]="selectedProject() === 'Project 2'"
-                    >
-                      Project 2
-                    </button>
-                  </div>
-                </div>
-              }
-            </div>
-
             <!-- User Dropdown -->
             <div class="user-dropdown relative">
               <button
