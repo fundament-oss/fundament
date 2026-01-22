@@ -49,27 +49,27 @@ func TestStatusWorker_MockGardenerInteraction(t *testing.T) {
 	}
 
 	// After shoot exists - instant mock returns "ready"
-	status, _, err := mock.GetShootStatus(ctx, &cluster)
+	shootStatus, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
-	if status != "ready" {
-		t.Errorf("expected 'ready' status for existing shoot, got %q", status)
+	if shootStatus.Status != gardener.StatusReady {
+		t.Errorf("expected 'ready' status for existing shoot, got %q", shootStatus.Status)
 	}
 
 	// Delete shoot
-	if err := mock.DeleteShoot(ctx, &cluster); err != nil {
-		t.Fatalf("DeleteShoot failed: %v", err)
+	if err := mock.DeleteShootByClusterID(ctx, cluster.ID); err != nil {
+		t.Fatalf("DeleteShootByClusterID failed: %v", err)
 	}
 
 	// After shoot deleted - instant mock returns "pending" with "not found"
 	// (Gardener returns not found for deleted shoots, status worker interprets this as deleted)
-	status, msg, err := mock.GetShootStatus(ctx, &cluster)
+	shootStatus, err = mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
-	if status != "pending" || msg != gardener.MsgShootNotFound {
-		t.Errorf("expected 'pending' status with 'Shoot not found' for deleted shoot, got %q / %q", status, msg)
+	if shootStatus.Status != gardener.StatusPending || shootStatus.Message != gardener.MsgShootNotFound {
+		t.Errorf("expected 'pending' status with 'Shoot not found' for deleted shoot, got %q / %q", shootStatus.Status, shootStatus.Message)
 	}
 }
 
@@ -87,17 +87,17 @@ func TestStatusWorker_ProgressingStatus(t *testing.T) {
 	}
 
 	// Override status to simulate progressing state
-	mock.SetStatusOverride(cluster.ID, "progressing", "Creating control plane")
+	mock.SetStatusOverride(cluster.ID, gardener.StatusProgressing, "Creating control plane")
 
-	status, msg, err := mock.GetShootStatus(ctx, &cluster)
+	shootStatus, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
-	if status != "progressing" {
-		t.Errorf("expected 'progressing' status, got %q", status)
+	if shootStatus.Status != gardener.StatusProgressing {
+		t.Errorf("expected 'progressing' status, got %q", shootStatus.Status)
 	}
-	if msg != "Creating control plane" {
-		t.Errorf("expected 'Creating control plane' message, got %q", msg)
+	if shootStatus.Message != "Creating control plane" {
+		t.Errorf("expected 'Creating control plane' message, got %q", shootStatus.Message)
 	}
 }
 
@@ -115,17 +115,17 @@ func TestStatusWorker_ErrorStatus(t *testing.T) {
 	}
 
 	// Override status to simulate error
-	mock.SetStatusOverride(cluster.ID, "error", "Failed to create infrastructure: quota exceeded")
+	mock.SetStatusOverride(cluster.ID, gardener.StatusError, "Failed to create infrastructure: quota exceeded")
 
-	status, msg, err := mock.GetShootStatus(ctx, &cluster)
+	shootStatus, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
-	if status != "error" {
-		t.Errorf("expected 'error' status, got %q", status)
+	if shootStatus.Status != gardener.StatusError {
+		t.Errorf("expected 'error' status, got %q", shootStatus.Status)
 	}
-	if msg != "Failed to create infrastructure: quota exceeded" {
-		t.Errorf("unexpected message: %q", msg)
+	if shootStatus.Message != "Failed to create infrastructure: quota exceeded" {
+		t.Errorf("unexpected message: %q", shootStatus.Message)
 	}
 }
 
@@ -145,17 +145,17 @@ func TestStatusWorker_DeletingStatus(t *testing.T) {
 	}
 
 	// Override status to simulate deleting state
-	mock.SetStatusOverride(cluster.ID, "deleting", "Deleting control plane")
+	mock.SetStatusOverride(cluster.ID, gardener.StatusDeleting, "Deleting control plane")
 
-	status, msg, err := mock.GetShootStatus(ctx, &cluster)
+	shootStatus, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
-	if status != "deleting" {
-		t.Errorf("expected 'deleting' status, got %q", status)
+	if shootStatus.Status != gardener.StatusDeleting {
+		t.Errorf("expected 'deleting' status, got %q", shootStatus.Status)
 	}
-	if msg != "Deleting control plane" {
-		t.Errorf("unexpected message: %q", msg)
+	if shootStatus.Message != "Deleting control plane" {
+		t.Errorf("unexpected message: %q", shootStatus.Message)
 	}
 }
 
@@ -241,22 +241,22 @@ func TestStatusWorker_MultipleStatusOverrides(t *testing.T) {
 	// Create multiple clusters with different status overrides
 	clusters := []struct {
 		cluster gardener.ClusterToSync
-		status  string
+		status  gardener.ShootStatusType
 		message string
 	}{
 		{
 			cluster: testCluster("cluster-1", "tenant"),
-			status:  "ready",
+			status:  gardener.StatusReady,
 			message: "Cluster is ready",
 		},
 		{
 			cluster: testCluster("cluster-2", "tenant"),
-			status:  "progressing",
+			status:  gardener.StatusProgressing,
 			message: "Creating workers",
 		},
 		{
 			cluster: testCluster("cluster-3", "tenant"),
-			status:  "error",
+			status:  gardener.StatusError,
 			message: "Infrastructure provisioning failed",
 		},
 	}
@@ -271,15 +271,15 @@ func TestStatusWorker_MultipleStatusOverrides(t *testing.T) {
 
 	// Verify each cluster returns its correct status
 	for _, tc := range clusters {
-		status, msg, err := mock.GetShootStatus(ctx, &tc.cluster)
+		shootStatus, err := mock.GetShootStatus(ctx, &tc.cluster)
 		if err != nil {
 			t.Fatalf("GetShootStatus failed for %s: %v", tc.cluster.Name, err)
 		}
-		if status != tc.status {
-			t.Errorf("cluster %s: expected status %q, got %q", tc.cluster.Name, tc.status, status)
+		if shootStatus.Status != tc.status {
+			t.Errorf("cluster %s: expected status %q, got %q", tc.cluster.Name, tc.status, shootStatus.Status)
 		}
-		if msg != tc.message {
-			t.Errorf("cluster %s: expected message %q, got %q", tc.cluster.Name, tc.message, msg)
+		if shootStatus.Message != tc.message {
+			t.Errorf("cluster %s: expected message %q, got %q", tc.cluster.Name, tc.message, shootStatus.Message)
 		}
 	}
 }

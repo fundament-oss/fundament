@@ -36,25 +36,22 @@ type MockClient struct {
 	clock    func() time.Time // For testing, defaults to time.Now
 
 	// For test assertions
-	EnsureProjectCalls       []string // Project names
-	GetShootByClusterIDCalls []uuid.UUID
-	ApplyCalls               []ClusterToSync
-	DeleteCalls              []ClusterToSync
-	DeleteByName             []string
-	ListCallCount            int
-	StatusCalls              []ClusterToSync
+	EnsureProjectCalls []string // Project names
+	ApplyCalls         []ClusterToSync
+	DeleteByClusterID  []uuid.UUID
+	ListCallCount      int
+	StatusCalls        []ClusterToSync
 
 	// Event history for debugging (visible via GetEventHistory)
 	EventHistory []MockEvent
 
 	// Configurable behavior for testing error paths
-	EnsureProjectError       error
-	GetShootByClusterIDError error
-	ApplyError               error
-	DeleteError              error
-	ListError                error
-	GetStatusError           error
-	StatusOverrides          map[uuid.UUID]StatusOverride // Per-cluster status override
+	EnsureProjectError error
+	ApplyError         error
+	DeleteError        error
+	ListError          error
+	GetStatusError     error
+	StatusOverrides    map[uuid.UUID]StatusOverride // Per-cluster status override
 
 	// Status progression timing (configurable for tests)
 	ProgressingDelay time.Duration // Time before pending → progressing (default: 1s)
@@ -75,7 +72,7 @@ type mockShoot struct {
 
 // StatusOverride allows tests to configure custom status for specific clusters.
 type StatusOverride struct {
-	Status  string
+	Status  ShootStatusType
 	Message string
 }
 
@@ -106,13 +103,6 @@ func NewMockInstant(logger *slog.Logger) *MockClient {
 	return m
 }
 
-// SetClock sets a custom clock function for testing time-based behavior.
-func (m *MockClient) SetClock(clock func() time.Time) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.clock = clock
-}
-
 // EnsureProject records the call and creates the project if it doesn't exist (idempotent).
 // Returns the namespace (garden-{projectName} for mock).
 func (m *MockClient) EnsureProject(ctx context.Context, projectName string, orgID uuid.UUID) (string, error) {
@@ -132,33 +122,6 @@ func (m *MockClient) EnsureProject(ctx context.Context, projectName string, orgI
 	}
 
 	return namespace, nil
-}
-
-// GetShootByClusterID finds a Shoot by its cluster ID label.
-// Returns nil if not found.
-func (m *MockClient) GetShootByClusterID(ctx context.Context, namespace string, clusterID uuid.UUID) (*ShootInfo, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.GetShootByClusterIDCalls = append(m.GetShootByClusterIDCalls, clusterID)
-
-	if m.GetShootByClusterIDError != nil {
-		return nil, m.GetShootByClusterIDError
-	}
-
-	// Search for a shoot with matching cluster ID label
-	for _, shoot := range m.shoots {
-		if shoot.DeletedAt != nil {
-			continue // Skip deleted shoots
-		}
-		if labelID, ok := shoot.Info.Labels[LabelClusterID]; ok {
-			if labelID == clusterID.String() {
-				return &shoot.Info, nil
-			}
-		}
-	}
-
-	return nil, nil // Not found
 }
 
 // ApplyShoot records the call, validates the spec, and stores the shoot in memory.
@@ -209,6 +172,7 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 	m.shoots[shootName] = &mockShoot{
 		Info: ShootInfo{
 			Name:      shootName,
+			Namespace: cluster.Namespace,
 			ClusterID: cluster.ID,
 			Labels: map[string]string{
 				LabelClusterID:      cluster.ID.String(),
@@ -232,59 +196,28 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 	return nil
 }
 
-// DeleteShoot records the call and marks the shoot for deletion.
-// The shoot progresses through deleting → deleted status based on DeleteDelay.
-func (m *MockClient) DeleteShoot(ctx context.Context, cluster *ClusterToSync) error {
+// DeleteShootByClusterID records the call and marks the shoot for deletion by cluster ID.
+func (m *MockClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.DeleteCalls = append(m.DeleteCalls, *cluster)
+	m.DeleteByClusterID = append(m.DeleteByClusterID, clusterID)
 
 	if m.DeleteError != nil {
 		return m.DeleteError
 	}
 
+	// Find shoot by cluster ID
 	now := m.clock()
-
-	// Look up shoot by cluster ID (not shoot name)
-	shoot, shootName := m.findShootByClusterID(cluster.ID)
-	if shoot != nil {
-		shoot.DeletedAt = &now
-
-		// Record event
-		m.EventHistory = append(m.EventHistory, MockEvent{
-			Time:      now,
-			Type:      "delete",
-			ClusterID: cluster.ID,
-			ShootName: shootName,
-			Message:   "Shoot marked for deletion",
-		})
-
-		m.logger.Info("MOCK: marked shoot for deletion", "shoot", shootName, "cluster_id", cluster.ID)
-	} else {
-		m.logger.Debug("MOCK: shoot not found for deletion", "cluster_id", cluster.ID)
-	}
-	return nil
-}
-
-// DeleteShootByName records the call and marks the shoot for deletion by name.
-func (m *MockClient) DeleteShootByName(ctx context.Context, name string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.DeleteByName = append(m.DeleteByName, name)
-
-	if m.DeleteError != nil {
-		return m.DeleteError
+	for name, shoot := range m.shoots {
+		if shoot.Info.ClusterID == clusterID {
+			shoot.DeletedAt = &now
+			m.logger.Info("MOCK: marked shoot for deletion by cluster ID", "shoot", name, "cluster_id", clusterID)
+			return nil
+		}
 	}
 
-	now := m.clock()
-	if shoot, exists := m.shoots[name]; exists {
-		shoot.DeletedAt = &now
-		m.logger.Info("MOCK: marked shoot for deletion by name", "shoot", name)
-	} else {
-		m.logger.Debug("MOCK: shoot already deleted", "shoot", name)
-	}
+	m.logger.Debug("MOCK: shoot not found for deletion by cluster ID", "cluster_id", clusterID)
 	return nil
 }
 
@@ -318,37 +251,26 @@ func (m *MockClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 //   - progressing → ready (after ReadyDelay)
 //   - deleting → deleted (after DeleteDelay)
 //
-// findShootByClusterID finds a shoot by cluster ID label.
-// Must be called with lock held.
-func (m *MockClient) findShootByClusterID(clusterID uuid.UUID) (*mockShoot, string) {
-	for name, shoot := range m.shoots {
-		if shoot.Cluster.ID == clusterID {
-			return shoot, name
-		}
-	}
-	return nil, ""
-}
-
 // Use StatusOverrides to customize per-cluster behavior for testing.
-func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync) (string, string, error) {
+func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync) (*ShootStatus, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	m.StatusCalls = append(m.StatusCalls, *cluster)
 
 	if m.GetStatusError != nil {
-		return "", "", m.GetStatusError
+		return nil, m.GetStatusError
 	}
 
 	// Check for custom override (takes precedence)
 	if override, ok := m.StatusOverrides[cluster.ID]; ok {
-		return override.Status, override.Message, nil
+		return &ShootStatus{Status: override.Status, Message: override.Message}, nil
 	}
 
 	// Look up shoot by cluster ID (not shoot name)
 	shoot, shootName := m.findShootByClusterID(cluster.ID)
 	if shoot == nil {
-		return StatusPending, MsgShootNotFound, nil
+		return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}, nil
 	}
 
 	now := m.clock()
@@ -359,17 +281,19 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 		if elapsed >= m.DeleteDelay {
 			// Fully deleted - clean up and return deleted status
 			delete(m.shoots, shootName)
-			return StatusPending, MsgShootNotFound, nil
+			return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}, nil
 		}
-		return StatusDeleting, fmt.Sprintf("Shoot is being deleted (%.0fs remaining)",
-			(m.DeleteDelay - elapsed).Seconds()), nil
+		return &ShootStatus{
+			Status:  StatusDeleting,
+			Message: fmt.Sprintf("Shoot is being deleted (%.0fs remaining)", (m.DeleteDelay - elapsed).Seconds()),
+		}, nil
 	}
 
 	// Handle creation status progression
 	elapsed := now.Sub(shoot.CreatedAt)
 
 	if elapsed < m.ProgressingDelay {
-		return StatusPending, "Shoot creation initiated", nil
+		return &ShootStatus{Status: StatusPending, Message: "Shoot creation initiated"}, nil
 	}
 
 	if elapsed < m.ProgressingDelay+m.ReadyDelay {
@@ -377,10 +301,20 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 		if m.ReadyDelay == 0 {
 			progress = 100
 		}
-		return StatusProgressing, fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress), nil
+		return &ShootStatus{
+			Status:  StatusProgressing,
+			Message: fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
+		}, nil
 	}
 
-	return StatusReady, MsgShootReady, nil
+	return &ShootStatus{Status: StatusReady, Message: MsgShootReady}, nil
+}
+
+// SetClock sets a custom clock function for testing time-based behavior.
+func (m *MockClient) SetClock(clock func() time.Time) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.clock = clock
 }
 
 // Reset clears all recorded calls, events, and stored shoots.
@@ -392,15 +326,12 @@ func (m *MockClient) Reset() {
 	m.shoots = make(map[string]*mockShoot)
 	m.projects = make(map[string]bool)
 	m.EnsureProjectCalls = nil
-	m.GetShootByClusterIDCalls = nil
 	m.ApplyCalls = nil
-	m.DeleteCalls = nil
-	m.DeleteByName = nil
+	m.DeleteByClusterID = nil
 	m.ListCallCount = 0
 	m.StatusCalls = nil
 	m.EventHistory = nil
 	m.EnsureProjectError = nil
-	m.GetShootByClusterIDError = nil
 	m.ApplyError = nil
 	m.DeleteError = nil
 	m.ListError = nil
@@ -415,7 +346,7 @@ func (m *MockClient) SetApplyError(err error) {
 	m.ApplyError = err
 }
 
-// SetDeleteError configures the mock to return an error on DeleteShoot/DeleteShootByName.
+// SetDeleteError configures the mock to return an error on DeleteShoot/DeleteShootByClusterID.
 func (m *MockClient) SetDeleteError(err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -423,7 +354,7 @@ func (m *MockClient) SetDeleteError(err error) {
 }
 
 // SetStatusOverride configures a custom status for a specific cluster.
-func (m *MockClient) SetStatusOverride(clusterID uuid.UUID, status, message string) {
+func (m *MockClient) SetStatusOverride(clusterID uuid.UUID, status ShootStatusType, message string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.StatusOverrides[clusterID] = StatusOverride{Status: status, Message: message}
@@ -476,19 +407,16 @@ func (m *MockClient) GetEventHistoryForCluster(clusterID uuid.UUID) []MockEvent 
 // Verify MockClient implements Client interface.
 var _ Client = (*MockClient)(nil)
 
-// ErrMockApplyFailed is a sentinel error for testing apply failures.
-var ErrMockApplyFailed = errors.New("mock: apply failed")
-
-// ErrMockDeleteFailed is a sentinel error for testing delete failures.
-var ErrMockDeleteFailed = errors.New("mock: delete failed")
-
-// Validation errors (match Gardener's error format for realistic testing).
-var (
-	ErrInvalidVersion = errors.New("invalid semantic version")
-	ErrEmptyRegion    = errors.New("region must not be empty")
-	ErrEmptyName      = errors.New("name must not be empty")
-	ErrInvalidName    = errors.New("name must match DNS label format")
-)
+// findShootByClusterID finds a shoot by cluster ID.
+// Must be called with lock held.
+func (m *MockClient) findShootByClusterID(clusterID uuid.UUID) (*mockShoot, string) {
+	for name, shoot := range m.shoots {
+		if shoot.Cluster.ID == clusterID {
+			return shoot, name
+		}
+	}
+	return nil, ""
+}
 
 // semverRegex matches semantic versions like "1.31.1", "1.32.0-rc.1".
 var semverRegex = regexp.MustCompile(`^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$`)
@@ -523,3 +451,17 @@ func (m *MockClient) validateClusterSpec(cluster *ClusterToSync) error {
 
 	return nil
 }
+
+// ErrMockApplyFailed is a sentinel error for testing apply failures.
+var ErrMockApplyFailed = errors.New("mock: apply failed")
+
+// ErrMockDeleteFailed is a sentinel error for testing delete failures.
+var ErrMockDeleteFailed = errors.New("mock: delete failed")
+
+// Validation errors (match Gardener's error format for realistic testing).
+var (
+	ErrInvalidVersion = errors.New("invalid semantic version")
+	ErrEmptyRegion    = errors.New("region must not be empty")
+	ErrEmptyName      = errors.New("name must not be empty")
+	ErrInvalidName    = errors.New("name must match DNS label format")
+)

@@ -11,15 +11,23 @@ import (
 	"github.com/google/uuid"
 )
 
-// Shoot status constants returned by GetShootStatus.
+// ShootStatusType represents the reconciliation state of a Shoot.
+type ShootStatusType string
+
 const (
-	StatusPending     = "pending"
-	StatusProgressing = "progressing"
-	StatusReady       = "ready"
-	StatusError       = "error"
-	StatusDeleting    = "deleting"
-	StatusDeleted     = "deleted"
+	StatusPending     ShootStatusType = "pending"
+	StatusProgressing ShootStatusType = "progressing"
+	StatusReady       ShootStatusType = "ready"
+	StatusError       ShootStatusType = "error"
+	StatusDeleting    ShootStatusType = "deleting"
+	StatusDeleted     ShootStatusType = "deleted"
 )
+
+// ShootStatus contains the current status and a descriptive message.
+type ShootStatus struct {
+	Status  ShootStatusType
+	Message string
+}
 
 // Status message constants for consistent messaging.
 const (
@@ -36,37 +44,27 @@ type Client interface {
 	EnsureProject(ctx context.Context, projectName string, orgID uuid.UUID) (namespace string, err error)
 
 	// ApplyShoot creates or updates a Shoot in Gardener.
-	// Uses cluster ID label to find existing shoots (ignores ShootName for updates).
-	// ShootName is only used when creating a new Shoot.
+	// Uses cluster ID label to find existing shoots.
 	ApplyShoot(ctx context.Context, cluster *ClusterToSync) error
 
-	// DeleteShoot deletes a Shoot by cluster info (uses label-based lookup)
-	DeleteShoot(ctx context.Context, cluster *ClusterToSync) error
-
-	// DeleteShootByName deletes a Shoot by name (for orphan cleanup)
-	DeleteShootByName(ctx context.Context, name string) error
-
-	// GetShootByClusterID finds a Shoot by its cluster ID label.
-	// Returns nil if not found.
-	GetShootByClusterID(ctx context.Context, namespace string, clusterID uuid.UUID) (*ShootInfo, error)
+	// DeleteShootByClusterID deletes a Shoot by cluster ID label.
+	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error
 
 	// ListShoots returns all Shoots managed by this worker
 	ListShoots(ctx context.Context) ([]ShootInfo, error)
 
 	// GetShootStatus returns the current reconciliation status of a Shoot.
-	// Returns status ("pending", "progressing", "ready", "error", "deleting", "deleted")
-	// and a descriptive message.
-	GetShootStatus(ctx context.Context, cluster *ClusterToSync) (status string, message string, err error)
+	GetShootStatus(ctx context.Context, cluster *ClusterToSync) (*ShootStatus, error)
 }
 
 // ClusterToSync contains all the information needed to sync a cluster to Gardener.
 type ClusterToSync struct {
 	ID                uuid.UUID
-	OrganizationID    uuid.UUID  // Organization UUID (for labels)
-	OrganizationName  string     // Organization name (for reference, used in logging)
-	Name              string     // Cluster name
-	ShootName         string     // Generated Gardener Shoot name (used only on create)
-	Namespace         string     // Gardener namespace (garden-{project-name})
+	OrganizationID    uuid.UUID // Organization UUID (for labels)
+	OrganizationName  string    // Organization name (for reference, used in logging)
+	Name              string    // Cluster name
+	ShootName         string    // Generated Gardener Shoot name (used only on create)
+	Namespace         string    // Gardener namespace (garden-{project-name})
 	Region            string
 	KubernetesVersion string
 	Deleted           *time.Time
@@ -76,6 +74,7 @@ type ClusterToSync struct {
 // ShootInfo contains information about a Shoot retrieved from Gardener.
 type ShootInfo struct {
 	Name      string
+	Namespace string
 	ClusterID uuid.UUID
 	Labels    map[string]string
 }
