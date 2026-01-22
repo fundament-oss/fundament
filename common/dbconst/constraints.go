@@ -13,8 +13,8 @@ const (
 	ConstraintApiKeysUqTokenHash = "api_keys_uq_token_hash"
 	// ConstraintCategoriesUqName is defined on zappstore.categories.
 	ConstraintCategoriesUqName = "categories_uq_name"
-	// ConstraintClustersCkStatus is defined on tenant.clusters.
-	ConstraintClustersCkStatus = "clusters_ck_status"
+	// ConstraintClusterEventsFkCluster is defined on tenant.cluster_events.
+	ConstraintClusterEventsFkCluster = "cluster_events_fk_cluster"
 	// ConstraintClustersFkOrganization is defined on tenant.clusters.
 	ConstraintClustersFkOrganization = "clusters_fk_organization"
 	// ConstraintClustersUqName is defined on tenant.clusters.
