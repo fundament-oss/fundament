@@ -47,6 +47,7 @@ RETURNING
     kubernetes_version,
     deleted,
     sync_attempts,
+    organization_id,
     (
         SELECT
             o.name
@@ -102,6 +103,7 @@ RETURNING
     kubernetes_version,
     deleted,
     sync_attempts,
+    organization_id,
     (
         SELECT
             o.name
@@ -272,6 +274,7 @@ SELECT
     c.kubernetes_version,
     c.deleted,
     c.shoot_status,
+    c.organization_id,
     o.name AS organization_name
 FROM
     tenant.clusters c
@@ -304,6 +307,7 @@ SELECT
     c.kubernetes_version,
     c.deleted,
     c.shoot_status,
+    c.organization_id,
     o.name AS organization_name
 FROM
     tenant.clusters c

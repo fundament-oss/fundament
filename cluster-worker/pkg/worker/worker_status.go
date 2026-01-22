@@ -77,10 +77,27 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 
 	for i := range clusters {
 		cluster := &clusters[i]
+
+		// Look up namespace from Gardener project (by organization ID label)
+		projectName := gardener.ProjectName(cluster.OrganizationName)
+		namespace, err := p.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
+		if err != nil {
+			p.logger.Error("failed to get project namespace",
+				"cluster_id", cluster.ID,
+				"error", err)
+			continue
+		}
+		if namespace == "" {
+			// Project exists but namespace not ready yet
+			continue
+		}
+
 		clusterToSync := &gardener.ClusterToSync{
 			ID:                cluster.ID,
 			Name:              cluster.Name,
+			OrganizationID:    cluster.OrganizationID,
 			OrganizationName:  cluster.OrganizationName,
+			Namespace:         namespace,
 			Region:            cluster.Region,
 			KubernetesVersion: cluster.KubernetesVersion,
 		}
@@ -111,10 +128,12 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 			continue
 		}
 
-		// Create events only for milestone state changes
+		// Create events for status changes
 		if newStatus != oldStatus {
 			var eventType db.TenantClusterEventType
 			switch newStatus {
+			case gardener.StatusProgressing:
+				eventType = db.TenantClusterEventTypeStatusProgressing
 			case gardener.StatusReady:
 				eventType = db.TenantClusterEventTypeStatusReady
 			case gardener.StatusError:
@@ -167,10 +186,26 @@ func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 			deleted = &cluster.Deleted.Time
 		}
 
+		// Look up namespace from Gardener project (by organization ID label)
+		projectName := gardener.ProjectName(cluster.OrganizationName)
+		namespace, err := p.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
+		if err != nil {
+			p.logger.Error("failed to get project namespace",
+				"cluster_id", cluster.ID,
+				"error", err)
+			continue
+		}
+		if namespace == "" {
+			// Project exists but namespace not ready yet
+			continue
+		}
+
 		clusterToSync := &gardener.ClusterToSync{
 			ID:                cluster.ID,
 			Name:              cluster.Name,
+			OrganizationID:    cluster.OrganizationID,
 			OrganizationName:  cluster.OrganizationName,
+			Namespace:         namespace,
 			Region:            cluster.Region,
 			KubernetesVersion: cluster.KubernetesVersion,
 			Deleted:           deleted,

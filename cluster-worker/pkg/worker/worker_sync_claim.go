@@ -16,8 +16,9 @@ import (
 // claimedCluster holds a claimed cluster's info.
 type claimedCluster struct {
 	ID                uuid.UUID
-	Name              string
+	OrganizationID    uuid.UUID
 	OrganizationName  string
+	Name              string
 	Region            string
 	KubernetesVersion string
 	Deleted           *time.Time
@@ -58,8 +59,9 @@ func (w *SyncWorker) claimActiveCluster(ctx context.Context) (*claimedCluster, e
 
 	return &claimedCluster{
 		ID:                row.ID,
-		Name:              row.Name,
+		OrganizationID:    row.OrganizationID,
 		OrganizationName:  row.OrganizationName,
+		Name:              row.Name,
 		Region:            row.Region,
 		KubernetesVersion: row.KubernetesVersion,
 		Deleted:           nil, // Active clusters are never deleted
@@ -89,8 +91,9 @@ func (w *SyncWorker) claimDeletedCluster(ctx context.Context) (*claimedCluster, 
 
 	return &claimedCluster{
 		ID:                row.ID,
-		Name:              row.Name,
+		OrganizationID:    row.OrganizationID,
 		OrganizationName:  row.OrganizationName,
+		Name:              row.Name,
 		Region:            row.Region,
 		KubernetesVersion: row.KubernetesVersion,
 		Deleted:           deleted,

@@ -42,25 +42,14 @@ func TestStatusWorker_MockGardenerInteraction(t *testing.T) {
 	ctx := context.Background()
 	cluster := testCluster("test-cluster", "test-tenant")
 
-	// Before shoot exists
-	status, msg, err := mock.GetShootStatus(ctx, &cluster)
+	// Create shoot (ShootName is pre-set from testCluster)
+	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
-		t.Fatalf("GetShootStatus failed: %v", err)
-	}
-	if status != "pending" {
-		t.Errorf("expected 'pending' status for non-existent shoot, got %q", status)
-	}
-	if msg != "Shoot not found in Gardener" {
-		t.Errorf("unexpected message: %q", msg)
-	}
-
-	// Create shoot
-	if err := mock.ApplyShoot(ctx, &cluster); err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
 	// After shoot exists - instant mock returns "ready"
-	status, _, err = mock.GetShootStatus(ctx, &cluster)
+	status, _, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
@@ -73,13 +62,14 @@ func TestStatusWorker_MockGardenerInteraction(t *testing.T) {
 		t.Fatalf("DeleteShoot failed: %v", err)
 	}
 
-	// After shoot deleted - instant mock returns "deleted"
-	status, _, err = mock.GetShootStatus(ctx, &cluster)
+	// After shoot deleted - instant mock returns "pending" with "not found"
+	// (Gardener returns not found for deleted shoots, status worker interprets this as deleted)
+	status, msg, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
-	if status != "deleted" {
-		t.Errorf("expected 'deleted' status for deleted shoot, got %q", status)
+	if status != "pending" || msg != gardener.MsgShootNotFound {
+		t.Errorf("expected 'pending' status with 'Shoot not found' for deleted shoot, got %q / %q", status, msg)
 	}
 }
 
@@ -90,8 +80,9 @@ func TestStatusWorker_ProgressingStatus(t *testing.T) {
 	ctx := context.Background()
 	cluster := testCluster("test-cluster", "test-tenant")
 
-	// Create shoot
-	if err := mock.ApplyShoot(ctx, &cluster); err != nil {
+	// Create shoot (ShootName is pre-set from testCluster)
+	err := mock.ApplyShoot(ctx, &cluster)
+	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
@@ -117,8 +108,9 @@ func TestStatusWorker_ErrorStatus(t *testing.T) {
 	ctx := context.Background()
 	cluster := testCluster("test-cluster", "test-tenant")
 
-	// Create shoot
-	if err := mock.ApplyShoot(ctx, &cluster); err != nil {
+	// Create shoot (ShootName is pre-set from testCluster)
+	err := mock.ApplyShoot(ctx, &cluster)
+	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
@@ -146,8 +138,9 @@ func TestStatusWorker_DeletingStatus(t *testing.T) {
 	cluster := testCluster("test-cluster", "test-tenant")
 	cluster.Deleted = &now // Mark as deleted in DB
 
-	// Create shoot (simulating a shoot that's being deleted)
-	if err := mock.ApplyShoot(ctx, &cluster); err != nil {
+	// Create shoot (simulating a shoot that's being deleted, ShootName is pre-set)
+	err := mock.ApplyShoot(ctx, &cluster)
+	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
@@ -268,11 +261,12 @@ func TestStatusWorker_MultipleStatusOverrides(t *testing.T) {
 		},
 	}
 
-	for _, tc := range clusters {
-		if err := mock.ApplyShoot(ctx, &tc.cluster); err != nil {
+	for i := range clusters {
+		err := mock.ApplyShoot(ctx, &clusters[i].cluster)
+		if err != nil {
 			t.Fatalf("ApplyShoot failed: %v", err)
 		}
-		mock.SetStatusOverride(tc.cluster.ID, tc.status, tc.message)
+		mock.SetStatusOverride(clusters[i].cluster.ID, clusters[i].status, clusters[i].message)
 	}
 
 	// Verify each cluster returns its correct status

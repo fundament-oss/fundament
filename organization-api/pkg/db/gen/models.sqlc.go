@@ -15,13 +15,14 @@ import (
 type TenantClusterEventType string
 
 const (
-	TenantClusterEventTypeSyncRequested TenantClusterEventType = "sync_requested"
-	TenantClusterEventTypeSyncClaimed   TenantClusterEventType = "sync_claimed"
-	TenantClusterEventTypeSyncSubmitted TenantClusterEventType = "sync_submitted"
-	TenantClusterEventTypeSyncFailed    TenantClusterEventType = "sync_failed"
-	TenantClusterEventTypeStatusReady   TenantClusterEventType = "status_ready"
-	TenantClusterEventTypeStatusError   TenantClusterEventType = "status_error"
-	TenantClusterEventTypeStatusDeleted TenantClusterEventType = "status_deleted"
+	TenantClusterEventTypeSyncRequested     TenantClusterEventType = "sync_requested"
+	TenantClusterEventTypeSyncClaimed       TenantClusterEventType = "sync_claimed"
+	TenantClusterEventTypeSyncSubmitted     TenantClusterEventType = "sync_submitted"
+	TenantClusterEventTypeSyncFailed        TenantClusterEventType = "sync_failed"
+	TenantClusterEventTypeStatusProgressing TenantClusterEventType = "status_progressing"
+	TenantClusterEventTypeStatusReady       TenantClusterEventType = "status_ready"
+	TenantClusterEventTypeStatusError       TenantClusterEventType = "status_error"
+	TenantClusterEventTypeStatusDeleted     TenantClusterEventType = "status_deleted"
 )
 
 func (e *TenantClusterEventType) Scan(src interface{}) error {

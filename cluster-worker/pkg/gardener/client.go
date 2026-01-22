@@ -6,8 +6,6 @@ package gardener
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,18 +30,25 @@ const (
 // Client is the interface that all Gardener client implementations must satisfy.
 // This allows swapping between mock (tests) and real (production/local Gardener).
 type Client interface {
-	// ApplyShoot creates or updates a Shoot in Gardener
+	// EnsureProject creates the Gardener Project if it doesn't exist (idempotent).
+	// Project names are deterministic: sanitize(orgName)[:6] + hash(orgName)[:4]
+	// Returns the actual namespace created by Gardener (read from project.Status.Namespace).
+	EnsureProject(ctx context.Context, projectName string, orgID uuid.UUID) (namespace string, err error)
+
+	// ApplyShoot creates or updates a Shoot in Gardener.
+	// Uses cluster ID label to find existing shoots (ignores ShootName for updates).
+	// ShootName is only used when creating a new Shoot.
 	ApplyShoot(ctx context.Context, cluster *ClusterToSync) error
 
-	// DeleteShoot deletes a Shoot by cluster info
+	// DeleteShoot deletes a Shoot by cluster info (uses label-based lookup)
 	DeleteShoot(ctx context.Context, cluster *ClusterToSync) error
-
-	// MaxShootNameLength returns the maximum allowed shoot name length for this client.
-	// The local provider has a restrictive limit (21), while other providers can use up to 63.
-	MaxShootNameLength() int
 
 	// DeleteShootByName deletes a Shoot by name (for orphan cleanup)
 	DeleteShootByName(ctx context.Context, name string) error
+
+	// GetShootByClusterID finds a Shoot by its cluster ID label.
+	// Returns nil if not found.
+	GetShootByClusterID(ctx context.Context, namespace string, clusterID uuid.UUID) (*ShootInfo, error)
 
 	// ListShoots returns all Shoots managed by this worker
 	ListShoots(ctx context.Context) ([]ShootInfo, error)
@@ -57,8 +62,11 @@ type Client interface {
 // ClusterToSync contains all the information needed to sync a cluster to Gardener.
 type ClusterToSync struct {
 	ID                uuid.UUID
-	Name              string
-	OrganizationName  string
+	OrganizationID    uuid.UUID  // Organization UUID (for labels)
+	OrganizationName  string     // Organization name (for reference, used in logging)
+	Name              string     // Cluster name
+	ShootName         string     // Generated Gardener Shoot name (used only on create)
+	Namespace         string     // Gardener namespace (garden-{project-name})
 	Region            string
 	KubernetesVersion string
 	Deleted           *time.Time
@@ -70,42 +78,4 @@ type ShootInfo struct {
 	Name      string
 	ClusterID uuid.UUID
 	Labels    map[string]string
-}
-
-// hashSuffixLength is the length of the hash suffix used for long names.
-const hashSuffixLength = 8
-
-// ShootName returns the Gardener Shoot name for a cluster.
-// Format: {organization}-{cluster}
-// Note: Cannot use double-dash because Gardener names may not contain two consecutive hyphens.
-// If the combined name exceeds maxLen, it returns a shortened version in the
-// format: {prefix}-{hash} where the prefix is as much of the original name
-// as fits within the limit.
-func ShootName(organizationName, clusterName string, maxLen int) string {
-
-	fullName := organizationName + "-" + clusterName
-
-	if len(fullName) <= maxLen {
-		return fullName
-	}
-
-	// Create a hash of the full name for uniqueness
-	hash := sha256.Sum256([]byte(fullName))
-	hashStr := hex.EncodeToString(hash[:])[:hashSuffixLength]
-
-	// Calculate prefix length: maxLen - 1 (hyphen) - hashLen
-	prefixLen := maxLen - 1 - hashSuffixLength
-
-	// Take as much of the original name as fits
-	prefix := fullName
-	if len(prefix) > prefixLen {
-		prefix = prefix[:prefixLen]
-	}
-
-	// Trim trailing hyphens to avoid consecutive hyphens (Gardener validation)
-	for prefix != "" && prefix[len(prefix)-1] == '-' {
-		prefix = prefix[:len(prefix)-1]
-	}
-
-	return prefix + "-" + hashStr
 }
