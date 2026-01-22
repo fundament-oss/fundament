@@ -19,14 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// GardenerMaxShootProjectNameLen is the maximum combined length of shoot name + project name
-// enforced by Gardener's admission controller. This is because Gardener uses the identifier
-// "shoot--<project>-<shoot>" for resources, which must not exceed 30 characters.
-// See: plugin/pkg/shoot/validator/admission.go in gardener/gardener
-// Note: This constant is kept for reference. The naming.go functions ensure names
-// fit within this limit (10 char project + 11 char shoot = 21 chars).
-const GardenerMaxShootProjectNameLen = 21
-
 // ProviderConfig holds cloud provider-specific configuration.
 type ProviderConfig struct {
 	Type                   string // e.g., "local", "metal", "aws"
@@ -59,7 +51,6 @@ type RealClient struct {
 
 // NewReal creates a new RealClient that connects to Gardener.
 // If kubeconfigPath is empty, it uses in-cluster config.
-// Namespaces are now per-organization (computed from org name), not global.
 func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger) (*RealClient, error) {
 	// Build REST config
 	var clientConfig clientcmd.ClientConfig
@@ -79,7 +70,6 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 		return nil, fmt.Errorf("failed to build REST config: %w", err)
 	}
 
-	// Create scheme with Gardener types
 	scheme := runtime.NewScheme()
 	if err := gardencorev1beta1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add Gardener core types to scheme: %w", err)
@@ -88,7 +78,6 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 		return nil, fmt.Errorf("failed to add Gardener security types to scheme: %w", err)
 	}
 
-	// Create controller-runtime client
 	c, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
@@ -110,35 +99,14 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 // First searches for existing project by organization ID label, then creates if not found.
 // Also ensures a CredentialsBinding exists in the project namespace.
 // Returns the actual namespace from project.Spec.Namespace.
-// Note: The namespace is created asynchronously by Gardener. If not ready yet,
-// returns empty string and shoot creation will fail and retry later.
+// Note: The namespace is created asynchronously by Gardener.
+// If not ready yet returns empty string and shoot creation will fail and retry later.
 func (r *RealClient) EnsureProject(ctx context.Context, projectName string, orgID uuid.UUID) (string, error) {
-	// First, search for existing project by organization ID label
-	projectList := &gardencorev1beta1.ProjectList{}
-	if err := r.client.List(ctx, projectList,
-		client.MatchingLabels{LabelOrganizationID: orgID.String()},
-	); err != nil {
-		return "", fmt.Errorf("failed to list projects: %w", err)
+	namespace, found, err := r.getProjectNamespaceByOrgID(ctx, orgID)
+	if err != nil {
+		return "", err
 	}
-
-	if len(projectList.Items) > 0 {
-		// Project exists for this organization
-		project := &projectList.Items[0]
-		namespace := ""
-		if project.Spec.Namespace != nil {
-			namespace = *project.Spec.Namespace
-		}
-		r.logger.Debug("found existing project by organization label",
-			"project", project.Name,
-			"namespace", namespace,
-			"organization_id", orgID)
-
-		// Ensure CredentialsBinding exists in the namespace
-		if namespace != "" {
-			if err := r.ensureCredentialsBinding(ctx, namespace); err != nil {
-				return "", fmt.Errorf("failed to ensure credentials binding: %w", err)
-			}
-		}
+	if found {
 		return namespace, nil
 	}
 
@@ -162,22 +130,11 @@ func (r *RealClient) EnsureProject(ctx context.Context, projectName string, orgI
 	if err := r.client.Create(ctx, project); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			// Race condition: another worker created it, search again by label
-			if err := r.client.List(ctx, projectList,
-				client.MatchingLabels{LabelOrganizationID: orgID.String()},
-			); err != nil {
-				return "", fmt.Errorf("failed to list projects after create conflict: %w", err)
+			namespace, found, err := r.getProjectNamespaceByOrgID(ctx, orgID)
+			if err != nil {
+				return "", fmt.Errorf("after create conflict: %w", err)
 			}
-			if len(projectList.Items) > 0 {
-				namespace := ""
-				if projectList.Items[0].Spec.Namespace != nil {
-					namespace = *projectList.Items[0].Spec.Namespace
-				}
-				// Ensure CredentialsBinding exists
-				if namespace != "" {
-					if err := r.ensureCredentialsBinding(ctx, namespace); err != nil {
-						return "", fmt.Errorf("failed to ensure credentials binding: %w", err)
-					}
-				}
+			if found {
 				return namespace, nil
 			}
 			return "", fmt.Errorf("project exists but not found by label")
@@ -188,6 +145,135 @@ func (r *RealClient) EnsureProject(ctx context.Context, projectName string, orgI
 	// Project just created, namespace won't be set yet (async)
 	// Return empty - caller should handle retry
 	return "", nil
+}
+
+// ApplyShoot creates or updates a Shoot in Gardener.
+// Uses cluster ID label to find existing shoots. ShootName is only used for creation.
+func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) error {
+	if cluster.Namespace == "" {
+		return fmt.Errorf("namespace is required")
+	}
+	if cluster.ShootName == "" {
+		return fmt.Errorf("shoot name is required")
+	}
+
+	existing, err := r.getShootByClusterID(ctx, cluster.ID)
+	if err != nil {
+		return fmt.Errorf("failed to look up existing shoot: %w", err)
+	}
+
+	if existing != nil {
+		r.updateShootSpec(existing, cluster)
+
+		r.logger.Info("updating shoot",
+			"shoot", existing.Name,
+			"cluster_id", cluster.ID,
+			"namespace", existing.Namespace)
+
+		if err := r.client.Update(ctx, existing); err != nil {
+			return fmt.Errorf("failed to update shoot: %w", err)
+		}
+		return nil
+	}
+
+	shoot := r.buildShootSpec(cluster)
+
+	r.logger.Info("creating shoot",
+		"shoot", cluster.ShootName,
+		"cluster_id", cluster.ID,
+		"namespace", cluster.Namespace)
+
+	if err := r.client.Create(ctx, shoot); err != nil {
+		return fmt.Errorf("failed to create shoot: %w", err)
+	}
+	return nil
+}
+
+// DeleteShootByClusterID deletes a Shoot by cluster ID label.
+func (r *RealClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error {
+	shoot, err := r.getShootByClusterID(ctx, clusterID)
+	if err != nil {
+		return fmt.Errorf("failed to look up shoot: %w", err)
+	}
+
+	if shoot == nil {
+		r.logger.Debug("shoot not found for deletion", "cluster_id", clusterID)
+		return nil
+	}
+
+	return r.deleteShoot(ctx, shoot)
+}
+
+// ListShoots returns all Shoots managed by this worker (across all namespaces).
+func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
+	shootList := &gardencorev1beta1.ShootList{}
+
+	// List all shoots with fundament.io labels (across all namespaces)
+	if err := r.client.List(ctx, shootList,
+		client.HasLabels{LabelClusterID},
+	); err != nil {
+		return nil, fmt.Errorf("failed to list shoots: %w", err)
+	}
+
+	shoots := make([]ShootInfo, 0, len(shootList.Items))
+	for i := range shootList.Items {
+		shoot := &shootList.Items[i]
+		clusterIDStr := shoot.Labels[LabelClusterID]
+		clusterID, err := uuid.Parse(clusterIDStr)
+		if err != nil {
+			r.logger.Warn("shoot has invalid cluster-id label",
+				"shoot", shoot.Name,
+				"namespace", shoot.Namespace,
+				"cluster_id", clusterIDStr)
+			continue
+		}
+
+		shoots = append(shoots, ShootInfo{
+			Name:      shoot.Name,
+			Namespace: shoot.Namespace,
+			ClusterID: clusterID,
+			Labels:    shoot.Labels,
+		})
+	}
+
+	return shoots, nil
+}
+
+// GetShootStatus returns the current reconciliation status of a Shoot.
+func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync) (*ShootStatus, error) {
+	shoot, err := r.getShootByClusterID(ctx, cluster.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to look up shoot: %w", err)
+	}
+
+	if shoot == nil {
+		return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}, nil
+	}
+
+	if shoot.DeletionTimestamp != nil {
+		return &ShootStatus{Status: StatusDeleting, Message: "Shoot is being deleted"}, nil
+	}
+
+	if shoot.Status.LastOperation != nil {
+		op := shoot.Status.LastOperation
+
+		switch op.State {
+		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
+			return &ShootStatus{Status: StatusProgressing, Message: fmt.Sprintf("%s: %s", op.Type, op.Description)}, nil
+		case gardencorev1beta1.LastOperationStateError, gardencorev1beta1.LastOperationStateFailed:
+			return &ShootStatus{Status: StatusError, Message: op.Description}, nil
+		case gardencorev1beta1.LastOperationStateSucceeded:
+			if r.isShootHealthy(shoot) {
+				return &ShootStatus{Status: StatusReady, Message: MsgShootReady}, nil
+			}
+			return &ShootStatus{Status: StatusProgressing, Message: "Shoot reconciled but not all conditions healthy"}, nil
+		case gardencorev1beta1.LastOperationStateAborted:
+			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description}, nil
+		}
+	}
+
+	// No last operation, likely still being created
+	return &ShootStatus{Status: StatusProgressing, Message: "Shoot is being created"}, nil
 }
 
 // ensureCredentialsBinding creates a CredentialsBinding in the namespace if it doesn't exist.
@@ -203,7 +289,6 @@ func (r *RealClient) ensureCredentialsBinding(ctx context.Context, namespace str
 		bindingName = "local"
 	}
 
-	// Check if binding already exists
 	existing := &securityv1alpha1.CredentialsBinding{}
 	err := r.client.Get(ctx, client.ObjectKey{
 		Namespace: namespace,
@@ -211,7 +296,6 @@ func (r *RealClient) ensureCredentialsBinding(ctx context.Context, namespace str
 	}, existing)
 
 	if err == nil {
-		// Already exists
 		r.logger.Debug("credentials binding already exists",
 			"namespace", namespace,
 			"name", bindingName)
@@ -222,13 +306,11 @@ func (r *RealClient) ensureCredentialsBinding(ctx context.Context, namespace str
 		return fmt.Errorf("failed to get credentials binding: %w", err)
 	}
 
-	// Parse secret reference (format: "namespace/name")
 	secretNs, secretName, err := parseSecretRef(r.provider.CredentialsSecretRef)
 	if err != nil {
 		return fmt.Errorf("invalid credentials secret ref: %w", err)
 	}
 
-	// Create new binding
 	binding := &securityv1alpha1.CredentialsBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bindingName,
@@ -275,144 +357,67 @@ func parseSecretRef(ref string) (namespace, name string, err error) {
 	return parts[0], parts[1], nil
 }
 
-// GetShootByClusterID finds a Shoot by its cluster ID label.
+// getProjectNamespaceByOrgID finds a Project by organization ID label and returns its namespace.
+// Returns (namespace, true, nil) if found, ("", false, nil) if not found.
+// Also ensures CredentialsBinding exists if namespace is ready.
+func (r *RealClient) getProjectNamespaceByOrgID(ctx context.Context, orgID uuid.UUID) (string, bool, error) {
+	projectList := &gardencorev1beta1.ProjectList{}
+	if err := r.client.List(ctx, projectList,
+		client.MatchingLabels{LabelOrganizationID: orgID.String()},
+	); err != nil {
+		return "", false, fmt.Errorf("failed to list projects: %w", err)
+	}
+
+	if len(projectList.Items) == 0 {
+		return "", false, nil
+	}
+
+	project := &projectList.Items[0]
+	namespace := ""
+	if project.Spec.Namespace != nil {
+		namespace = *project.Spec.Namespace
+	}
+
+	r.logger.Debug("found existing project by organization label",
+		"project", project.Name,
+		"namespace", namespace,
+		"organization_id", orgID)
+
+	// Ensure CredentialsBinding exists in the namespace
+	if namespace != "" {
+		if err := r.ensureCredentialsBinding(ctx, namespace); err != nil {
+			return "", false, fmt.Errorf("failed to ensure credentials binding: %w", err)
+		}
+	}
+
+	return namespace, true, nil
+}
+
+// getShootByClusterID finds a Shoot by its cluster ID label.
 // Returns nil if not found.
-func (r *RealClient) GetShootByClusterID(ctx context.Context, namespace string, clusterID uuid.UUID) (*ShootInfo, error) {
+func (r *RealClient) getShootByClusterID(ctx context.Context, clusterID uuid.UUID) (*gardencorev1beta1.Shoot, error) {
 	shootList := &gardencorev1beta1.ShootList{}
-	err := r.client.List(ctx, shootList,
-		client.InNamespace(namespace),
+	if err := r.client.List(ctx, shootList,
 		client.MatchingLabels{LabelClusterID: clusterID.String()},
-	)
-	if err != nil {
+	); err != nil {
 		return nil, fmt.Errorf("list shoots: %w", err)
 	}
 
 	if len(shootList.Items) == 0 {
-		return nil, nil // Not found
+		return nil, nil
 	}
 
 	if len(shootList.Items) > 1 {
 		r.logger.Warn("multiple shoots found for cluster ID",
 			"cluster_id", clusterID,
-			"namespace", namespace,
 			"count", len(shootList.Items))
 	}
 
-	shoot := &shootList.Items[0]
-	return &ShootInfo{
-		Name:      shoot.Name,
-		ClusterID: clusterID,
-		Labels:    shoot.Labels,
-	}, nil
+	return &shootList.Items[0], nil
 }
 
-// ApplyShoot creates or updates a Shoot in Gardener.
-// Uses cluster ID label to find existing shoots. ShootName is only used for creation.
-func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) error {
-	if cluster.Namespace == "" {
-		return fmt.Errorf("namespace is required")
-	}
-	if cluster.ShootName == "" {
-		return fmt.Errorf("shoot name is required")
-	}
-
-	// Look up existing shoot by cluster ID label
-	existing, err := r.GetShootByClusterID(ctx, cluster.Namespace, cluster.ID)
-	if err != nil {
-		return fmt.Errorf("failed to look up existing shoot: %w", err)
-	}
-
-	if existing != nil {
-		// Update existing shoot (preserve original name)
-		shoot := &gardencorev1beta1.Shoot{}
-		if err := r.client.Get(ctx, client.ObjectKey{
-			Namespace: cluster.Namespace,
-			Name:      existing.Name,
-		}, shoot); err != nil {
-			return fmt.Errorf("failed to get existing shoot: %w", err)
-		}
-
-		// Update spec and labels
-		r.updateShootSpec(shoot, cluster)
-
-		r.logger.Info("updating shoot",
-			"shoot", existing.Name,
-			"cluster_id", cluster.ID,
-			"namespace", cluster.Namespace)
-
-		if err := r.client.Update(ctx, shoot); err != nil {
-			return fmt.Errorf("failed to update shoot: %w", err)
-		}
-		return nil
-	}
-
-	// Create new shoot
-	shoot := r.buildShootSpec(cluster)
-
-	r.logger.Info("creating shoot",
-		"shoot", cluster.ShootName,
-		"cluster_id", cluster.ID,
-		"namespace", cluster.Namespace)
-
-	if err := r.client.Create(ctx, shoot); err != nil {
-		return fmt.Errorf("failed to create shoot: %w", err)
-	}
-	return nil
-}
-
-// DeleteShoot deletes a Shoot by cluster info (uses label-based lookup).
-func (r *RealClient) DeleteShoot(ctx context.Context, cluster *ClusterToSync) error {
-	// Look up shoot by cluster ID label
-	existing, err := r.GetShootByClusterID(ctx, cluster.Namespace, cluster.ID)
-	if err != nil {
-		return fmt.Errorf("failed to look up shoot: %w", err)
-	}
-
-	if existing == nil {
-		r.logger.Debug("shoot already deleted", "cluster_id", cluster.ID)
-		return nil
-	}
-
-	return r.deleteShootInNamespace(ctx, cluster.Namespace, existing.Name)
-}
-
-// DeleteShootByName deletes a Shoot by name (for orphan cleanup).
-// This searches all namespaces with fundament labels for the shoot.
-func (r *RealClient) DeleteShootByName(ctx context.Context, name string) error {
-	// List all shoots with fundament labels to find the namespace
-	shootList := &gardencorev1beta1.ShootList{}
-	if err := r.client.List(ctx, shootList,
-		client.HasLabels{LabelClusterID},
-	); err != nil {
-		return fmt.Errorf("failed to list shoots: %w", err)
-	}
-
-	// Find the shoot with matching name
-	for i := range shootList.Items {
-		shoot := &shootList.Items[i]
-		if shoot.Name == name {
-			return r.deleteShootInNamespace(ctx, shoot.Namespace, name)
-		}
-	}
-
-	r.logger.Debug("shoot not found for deletion", "shoot", name)
-	return nil
-}
-
-// deleteShootInNamespace deletes a shoot from a specific namespace.
-func (r *RealClient) deleteShootInNamespace(ctx context.Context, namespace, name string) error {
-	shoot := &gardencorev1beta1.Shoot{}
-	key := client.ObjectKey{Name: name, Namespace: namespace}
-
-	// Get the shoot first to add the confirmation annotation
-	if err := r.client.Get(ctx, key, shoot); err != nil {
-		if apierrors.IsNotFound(err) {
-			r.logger.Debug("shoot already deleted", "shoot", name)
-			return nil
-		}
-		return fmt.Errorf("failed to get shoot for deletion: %w", err)
-	}
-
+// deleteShoot deletes a shoot, adding the required confirmation annotation.
+func (r *RealClient) deleteShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	// Add the required confirmation annotation
 	if shoot.Annotations == nil {
 		shoot.Annotations = make(map[string]string)
@@ -424,104 +429,18 @@ func (r *RealClient) deleteShootInNamespace(ctx context.Context, namespace, name
 	}
 
 	r.logger.Info("deleting shoot",
-		"shoot", name,
-		"namespace", namespace)
+		"shoot", shoot.Name,
+		"namespace", shoot.Namespace)
 
 	if err := r.client.Delete(ctx, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Debug("shoot already deleted", "shoot", name)
+			r.logger.Debug("shoot already deleted", "shoot", shoot.Name)
 			return nil
 		}
 		return fmt.Errorf("failed to delete shoot: %w", err)
 	}
 
 	return nil
-}
-
-// ListShoots returns all Shoots managed by this worker (across all namespaces).
-func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
-	shootList := &gardencorev1beta1.ShootList{}
-
-	// List all shoots with fundament.io labels (across all namespaces)
-	if err := r.client.List(ctx, shootList,
-		client.HasLabels{LabelClusterID},
-	); err != nil {
-		return nil, fmt.Errorf("failed to list shoots: %w", err)
-	}
-
-	shoots := make([]ShootInfo, 0, len(shootList.Items))
-	for i := range shootList.Items {
-		shoot := &shootList.Items[i]
-		clusterIDStr := shoot.Labels[LabelClusterID]
-		clusterID, err := uuid.Parse(clusterIDStr)
-		if err != nil {
-			r.logger.Warn("shoot has invalid cluster-id label",
-				"shoot", shoot.Name,
-				"namespace", shoot.Namespace,
-				"cluster_id", clusterIDStr)
-			continue
-		}
-
-		shoots = append(shoots, ShootInfo{
-			Name:      shoot.Name,
-			ClusterID: clusterID,
-			Labels:    shoot.Labels,
-		})
-	}
-
-	return shoots, nil
-}
-
-// GetShootStatus returns the current reconciliation status of a Shoot.
-func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync) (string, string, error) {
-	// Look up shoot by cluster ID label
-	existing, err := r.GetShootByClusterID(ctx, cluster.Namespace, cluster.ID)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to look up shoot: %w", err)
-	}
-
-	if existing == nil {
-		return StatusPending, MsgShootNotFound, nil
-	}
-
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.client.Get(ctx, client.ObjectKey{
-		Namespace: cluster.Namespace,
-		Name:      existing.Name,
-	}, shoot); err != nil {
-		if apierrors.IsNotFound(err) {
-			return StatusPending, MsgShootNotFound, nil
-		}
-		return "", "", fmt.Errorf("failed to get shoot: %w", err)
-	}
-
-	// Check if being deleted
-	if shoot.DeletionTimestamp != nil {
-		return StatusDeleting, "Shoot is being deleted", nil
-	}
-
-	// Check last operation status
-	if shoot.Status.LastOperation != nil {
-		op := shoot.Status.LastOperation
-
-		switch op.State {
-		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
-			return StatusProgressing, fmt.Sprintf("%s: %s", op.Type, op.Description), nil
-		case gardencorev1beta1.LastOperationStateError, gardencorev1beta1.LastOperationStateFailed:
-			return StatusError, op.Description, nil
-		case gardencorev1beta1.LastOperationStateSucceeded:
-			// Check if all conditions are healthy
-			if r.isShootHealthy(shoot) {
-				return StatusReady, MsgShootReady, nil
-			}
-			return StatusProgressing, "Shoot reconciled but not all conditions healthy", nil
-		case gardencorev1beta1.LastOperationStateAborted:
-			return StatusError, "Operation was aborted: " + op.Description, nil
-		}
-	}
-
-	// No last operation, likely still being created
-	return StatusProgressing, "Shoot is being created", nil
 }
 
 // isShootHealthy checks if all key conditions are True.
@@ -622,20 +541,17 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 
 // updateShootSpec updates an existing Shoot's spec and labels.
 func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *ClusterToSync) {
-	// Update labels
 	if shoot.Labels == nil {
 		shoot.Labels = make(map[string]string)
 	}
 	shoot.Labels[LabelClusterID] = cluster.ID.String()
 	shoot.Labels[LabelOrganizationID] = cluster.OrganizationID.String()
 
-	// Update annotations
 	if shoot.Annotations == nil {
 		shoot.Annotations = make(map[string]string)
 	}
 	shoot.Annotations[AnnotationClusterName] = cluster.Name
 
-	// Update spec fields that can change
 	shoot.Spec.Region = cluster.Region
 	shoot.Spec.Kubernetes.Version = cluster.KubernetesVersion
 }

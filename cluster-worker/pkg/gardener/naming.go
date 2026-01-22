@@ -48,7 +48,7 @@ func sanitizeName(name string) string {
 	s := result.String()
 
 	// Ensure starts with a letter (K8s naming requirement)
-	if len(s) > 0 && s[0] >= '0' && s[0] <= '9' {
+	if s != "" && s[0] >= '0' && s[0] <= '9' {
 		s = "x" + s
 	}
 

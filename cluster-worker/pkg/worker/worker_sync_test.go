@@ -69,7 +69,7 @@ func TestMockClient_ApplyShoot(t *testing.T) {
 	}
 }
 
-func TestMockClient_DeleteShoot(t *testing.T) {
+func TestMockClient_DeleteShootByClusterID(t *testing.T) {
 	logger := testLogger()
 	mock := gardener.NewMockInstant(logger)
 
@@ -82,10 +82,10 @@ func TestMockClient_DeleteShoot(t *testing.T) {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
-	// Now delete (ShootName is already set from testCluster)
-	err = mock.DeleteShoot(ctx, &cluster)
+	// Now delete by cluster ID
+	err = mock.DeleteShootByClusterID(ctx, cluster.ID)
 	if err != nil {
-		t.Fatalf("DeleteShoot failed: %v", err)
+		t.Fatalf("DeleteShootByClusterID failed: %v", err)
 	}
 
 	// Verify shoot is marked for deletion (HasShootForCluster returns false for deleted)
@@ -94,8 +94,8 @@ func TestMockClient_DeleteShoot(t *testing.T) {
 	}
 
 	// Verify call was recorded
-	if len(mock.DeleteCalls) != 1 {
-		t.Errorf("expected 1 delete call, got %d", len(mock.DeleteCalls))
+	if len(mock.DeleteByClusterID) != 1 {
+		t.Errorf("expected 1 delete call, got %d", len(mock.DeleteByClusterID))
 	}
 }
 
@@ -139,14 +139,14 @@ func TestMockClient_GetShootStatus(t *testing.T) {
 	}
 
 	// After shoot exists - should return ready (instant mock skips progression)
-	status, msg, err := mock.GetShootStatus(ctx, &cluster)
+	shootStatus, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
-	if status != "ready" {
-		t.Errorf("expected status 'ready', got %q", status)
+	if shootStatus.Status != gardener.StatusReady {
+		t.Errorf("expected status 'ready', got %q", shootStatus.Status)
 	}
-	if msg == "" {
+	if shootStatus.Message == "" {
 		t.Error("expected non-empty message")
 	}
 }
@@ -159,7 +159,7 @@ func TestMockClient_StatusOverride(t *testing.T) {
 	cluster := testCluster("test-cluster", "test-tenant")
 
 	// Set override
-	mock.SetStatusOverride(cluster.ID, "progressing", "Creating infrastructure")
+	mock.SetStatusOverride(cluster.ID, gardener.StatusProgressing, "Creating infrastructure")
 
 	// Create shoot (ShootName is pre-set from testCluster)
 	err := mock.ApplyShoot(ctx, &cluster)
@@ -168,15 +168,15 @@ func TestMockClient_StatusOverride(t *testing.T) {
 	}
 
 	// Should return override status, not default "ready"
-	status, msg, err := mock.GetShootStatus(ctx, &cluster)
+	shootStatus, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
 	}
-	if status != "progressing" {
-		t.Errorf("expected status 'progressing', got %q", status)
+	if shootStatus.Status != gardener.StatusProgressing {
+		t.Errorf("expected status 'progressing', got %q", shootStatus.Status)
 	}
-	if msg != "Creating infrastructure" {
-		t.Errorf("expected message 'Creating infrastructure', got %q", msg)
+	if shootStatus.Message != "Creating infrastructure" {
+		t.Errorf("expected message 'Creating infrastructure', got %q", shootStatus.Message)
 	}
 }
 
@@ -418,19 +418,6 @@ func TestNamingLengthConstraints(t *testing.T) {
 
 func hasPrefix(s, prefix string) bool {
 	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || s != "" && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 // Integration tests that require a real PostgreSQL connection

@@ -29,7 +29,6 @@ type StatusConfig struct {
 	BatchSize    int32         `env:"BATCH_SIZE" envDefault:"50"`     // Max clusters to check per poll cycle
 }
 
-// NewStatusWorker creates a new StatusWorker.
 func NewStatusWorker(pool *pgxpool.Pool, gardenerClient gardener.Client, logger *slog.Logger, cfg StatusConfig) *StatusWorker {
 	return &StatusWorker{
 		pool:     pool,
@@ -40,13 +39,11 @@ func NewStatusWorker(pool *pgxpool.Pool, gardenerClient gardener.Client, logger 
 	}
 }
 
-// Run starts the status polling loop.
 func (p *StatusWorker) Run(ctx context.Context) error {
 	ticker := time.NewTicker(p.cfg.PollInterval)
 	defer ticker.Stop()
 
-	// Do an initial poll immediately on startup
-	p.pollBatch(ctx)
+	p.pollBatch(ctx) // Initial poll on startup
 
 	for {
 		select {
@@ -59,10 +56,7 @@ func (p *StatusWorker) Run(ctx context.Context) error {
 }
 
 func (p *StatusWorker) pollBatch(ctx context.Context) {
-	// 1. Check active clusters for readiness
 	p.pollActiveClusters(ctx)
-
-	// 2. Verify deleted clusters are actually gone from Gardener
 	p.pollDeletedClusters(ctx)
 }
 
@@ -102,7 +96,7 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 			KubernetesVersion: cluster.KubernetesVersion,
 		}
 
-		newStatus, message, err := p.gardener.GetShootStatus(ctx, clusterToSync)
+		shootStatus, err := p.gardener.GetShootStatus(ctx, clusterToSync)
 		if err != nil {
 			p.logger.Error("failed to get shoot status",
 				"cluster_id", cluster.ID,
@@ -110,17 +104,15 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 			continue
 		}
 
-		// Get previous status for event creation
-		oldStatus := ""
+		var oldStatus gardener.ShootStatusType
 		if cluster.ShootStatus.Valid {
-			oldStatus = cluster.ShootStatus.String
+			oldStatus = gardener.ShootStatusType(cluster.ShootStatus.String)
 		}
 
-		// Always update shoot status in DB
 		if err := p.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
 			ClusterID: cluster.ID,
-			Status:    pgtype.Text{String: newStatus, Valid: true},
-			Message:   pgtype.Text{String: message, Valid: true},
+			Status:    pgtype.Text{String: string(shootStatus.Status), Valid: true},
+			Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
 		}); err != nil {
 			p.logger.Error("failed to update shoot status",
 				"cluster_id", cluster.ID,
@@ -128,24 +120,26 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 			continue
 		}
 
-		// Create events for status changes
-		if newStatus != oldStatus {
+		if shootStatus.Status != oldStatus {
 			var eventType db.TenantClusterEventType
-			switch newStatus {
+			switch shootStatus.Status {
 			case gardener.StatusProgressing:
 				eventType = db.TenantClusterEventTypeStatusProgressing
 			case gardener.StatusReady:
 				eventType = db.TenantClusterEventTypeStatusReady
 			case gardener.StatusError:
 				eventType = db.TenantClusterEventTypeStatusError
-				// Note: status_deleted is handled in pollDeletedClusters
+			case gardener.StatusPending, gardener.StatusDeleting:
+				// No event for these transient states
+			case gardener.StatusDeleted:
+				// Handled in pollDeletedClusters
 			}
 
 			if eventType != "" {
 				if _, err := p.queries.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
 					ClusterID: cluster.ID,
 					EventType: eventType,
-					Message:   pgtype.Text{String: message, Valid: true},
+					Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
 				}); err != nil {
 					p.logger.Warn("failed to create status event",
 						"cluster_id", cluster.ID,
@@ -158,13 +152,13 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 		p.logger.Info("updated shoot status",
 			"cluster_id", cluster.ID,
 			"name", cluster.Name,
-			"status", newStatus)
+			"status", shootStatus.Status)
 
-		if newStatus == gardener.StatusError {
+		if shootStatus.Status == gardener.StatusError {
 			p.logger.Error("ALERT: shoot reconciliation failed",
 				"cluster_id", cluster.ID,
 				"name", cluster.Name,
-				"message", message)
+				"message", shootStatus.Message)
 		}
 	}
 }
@@ -180,13 +174,11 @@ func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 
 	for i := range clusters {
 		cluster := &clusters[i]
-		// Convert pgtype to time pointer
 		var deleted *time.Time
 		if cluster.Deleted.Valid {
 			deleted = &cluster.Deleted.Time
 		}
 
-		// Look up namespace from Gardener project (by organization ID label)
 		projectName := gardener.ProjectName(cluster.OrganizationName)
 		namespace, err := p.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
 		if err != nil {
@@ -211,7 +203,7 @@ func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 			Deleted:           deleted,
 		}
 
-		status, message, err := p.gardener.GetShootStatus(ctx, clusterToSync)
+		shootStatus, err := p.gardener.GetShootStatus(ctx, clusterToSync)
 		if err != nil {
 			p.logger.Error("failed to check deleted shoot status",
 				"cluster_id", cluster.ID,
@@ -220,10 +212,10 @@ func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 		}
 
 		// If status is "pending" with "not found", the Shoot is confirmed deleted
-		if status == gardener.StatusPending && message == gardener.MsgShootNotFound {
+		if shootStatus.Status == gardener.StatusPending && shootStatus.Message == gardener.MsgShootNotFound {
 			if err := p.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
 				ClusterID: cluster.ID,
-				Status:    pgtype.Text{String: gardener.StatusDeleted, Valid: true},
+				Status:    pgtype.Text{String: string(gardener.StatusDeleted), Valid: true},
 				Message:   pgtype.Text{String: "Shoot confirmed deleted", Valid: true},
 			}); err != nil {
 				p.logger.Error("failed to update deleted status",
@@ -232,7 +224,6 @@ func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 				continue
 			}
 
-			// Create status_deleted event
 			if _, err := p.queries.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
 				ClusterID: cluster.ID,
 				EventType: db.TenantClusterEventTypeStatusDeleted,
@@ -250,8 +241,8 @@ func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 			// Shoot still exists or is being deleted
 			if err := p.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
 				ClusterID: cluster.ID,
-				Status:    pgtype.Text{String: gardener.StatusDeleting, Valid: true},
-				Message:   pgtype.Text{String: message, Valid: true},
+				Status:    pgtype.Text{String: string(gardener.StatusDeleting), Valid: true},
+				Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
 			}); err != nil {
 				p.logger.Error("failed to update deleting status",
 					"cluster_id", cluster.ID,
@@ -259,7 +250,7 @@ func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 			}
 			p.logger.Debug("shoot still being deleted",
 				"cluster_id", cluster.ID,
-				"status", status)
+				"status", shootStatus.Status)
 		}
 	}
 }

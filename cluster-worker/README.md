@@ -91,7 +91,7 @@ sequenceDiagram
         Worker->>Gardener: ApplyShoot(manifest)
         Gardener-->>Worker: OK / Error
     else Cluster deleted
-        Worker->>Gardener: DeleteShoot(name)
+        Worker->>Gardener: DeleteShoot(clusterID)
         Gardener-->>Worker: OK / Error
     end
 
