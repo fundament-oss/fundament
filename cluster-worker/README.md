@@ -200,8 +200,8 @@ Run the complete stack with local Gardener:
 # 1. Start k3d cluster
 just cluster-start
 
-# 2. Start local Gardener + configure secrets (first time ~15 min)
-just cluster-worker local-gardener
+# 2. Start local Gardener (first time ~15 min)
+just cluster-worker gardener-up
 
 # 3. Deploy all services with local Gardener mode
 just dev -p local-gardener
@@ -221,6 +221,10 @@ just cluster-worker gardener-status # overall status
 - Docker with 8+ CPUs and 8+ GB memory
 - `mise trust && mise install` (installs all tools)
 - macOS only: GNU tools (`brew install gnu-sed gnu-tar iproute2mac`)
+
+**Pinned versions** (for team consistency):
+- Gardener: `v1.117.0` (see `GARDENER_VERSION` in Justfile)
+- Other tools: see `mise.toml`
 
 **Skaffold profiles:**
 - `just dev` → mock mode (no Gardener needed)

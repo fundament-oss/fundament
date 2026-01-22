@@ -25,11 +25,19 @@ func testLogger() *slog.Logger {
 }
 
 // testCluster creates a valid ClusterToSync for testing.
+// Uses the new naming scheme with deterministic project names and random shoot names.
 func testCluster(name, org string) gardener.ClusterToSync {
+	orgID := uuid.New()
+	projectName := gardener.ProjectName(org)
+	namespace := gardener.NamespaceFromProjectName(projectName)
+	shootName := gardener.GenerateShootName(name)
 	return gardener.ClusterToSync{
 		ID:                uuid.New(),
-		Name:              name,
+		OrganizationID:    orgID,
 		OrganizationName:  org,
+		Name:              name,
+		ShootName:         shootName,
+		Namespace:         namespace,
 		Region:            "local",
 		KubernetesVersion: "1.31.1",
 	}
@@ -47,10 +55,9 @@ func TestMockClient_ApplyShoot(t *testing.T) {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
-	// Verify shoot was created (use ShootName to get the expected name)
-	expectedName := gardener.ShootName(cluster.OrganizationName, cluster.Name, 21)
-	if !mock.HasShoot(expectedName) {
-		t.Errorf("expected shoot %q to exist", expectedName)
+	// Verify shoot was created for this cluster
+	if !mock.HasShootForCluster(cluster.ID) {
+		t.Errorf("expected shoot for cluster %s to exist", cluster.ID)
 	}
 
 	// Verify call was recorded
@@ -70,16 +77,19 @@ func TestMockClient_DeleteShoot(t *testing.T) {
 	cluster := testCluster("test-cluster", "test-tenant")
 
 	// Create shoot first
-	_ = mock.ApplyShoot(ctx, &cluster)
+	err := mock.ApplyShoot(ctx, &cluster)
+	if err != nil {
+		t.Fatalf("ApplyShoot failed: %v", err)
+	}
 
-	// Now delete
-	err := mock.DeleteShoot(ctx, &cluster)
+	// Now delete (ShootName is already set from testCluster)
+	err = mock.DeleteShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("DeleteShoot failed: %v", err)
 	}
 
-	// Verify shoot is marked for deletion (HasShoot returns false for deleted)
-	if mock.HasShoot(gardener.ShootName(cluster.OrganizationName, cluster.Name, 21)) {
+	// Verify shoot is marked for deletion (HasShootForCluster returns false for deleted)
+	if mock.HasShootForCluster(cluster.ID) {
 		t.Error("expected shoot to be marked deleted")
 	}
 
@@ -98,7 +108,10 @@ func TestMockClient_ListShoots(t *testing.T) {
 	// Create multiple shoots
 	for i := 0; i < 3; i++ {
 		cluster := testCluster("cluster-"+string(rune('a'+i)), "tenant")
-		_ = mock.ApplyShoot(ctx, &cluster)
+		err := mock.ApplyShoot(ctx, &cluster)
+		if err != nil {
+			t.Fatalf("ApplyShoot failed: %v", err)
+		}
 	}
 
 	// List shoots
@@ -119,17 +132,11 @@ func TestMockClient_GetShootStatus(t *testing.T) {
 	ctx := context.Background()
 	cluster := testCluster("test-cluster", "test-tenant")
 
-	// Before shoot exists - should return pending
-	status, _, err := mock.GetShootStatus(ctx, &cluster)
+	// Create shoot (ShootName is pre-set from testCluster)
+	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
-		t.Fatalf("GetShootStatus failed: %v", err)
+		t.Fatalf("ApplyShoot failed: %v", err)
 	}
-	if status != "pending" {
-		t.Errorf("expected status 'pending', got %q", status)
-	}
-
-	// Create shoot
-	_ = mock.ApplyShoot(ctx, &cluster)
 
 	// After shoot exists - should return ready (instant mock skips progression)
 	status, msg, err := mock.GetShootStatus(ctx, &cluster)
@@ -154,8 +161,11 @@ func TestMockClient_StatusOverride(t *testing.T) {
 	// Set override
 	mock.SetStatusOverride(cluster.ID, "progressing", "Creating infrastructure")
 
-	// Create shoot
-	_ = mock.ApplyShoot(ctx, &cluster)
+	// Create shoot (ShootName is pre-set from testCluster)
+	err := mock.ApplyShoot(ctx, &cluster)
+	if err != nil {
+		t.Fatalf("ApplyShoot failed: %v", err)
+	}
 
 	// Should return override status, not default "ready"
 	status, msg, err := mock.GetShootStatus(ctx, &cluster)
@@ -185,9 +195,8 @@ func TestMockClient_ApplyError(t *testing.T) {
 		t.Errorf("expected ErrMockApplyFailed, got %v", err)
 	}
 
-	// Shoot should not exist
-	shootName := gardener.ShootName(cluster.OrganizationName, cluster.Name, 21)
-	if mock.HasShoot(shootName) {
+	// Shoot should not exist - count should be 0
+	if mock.ShootCount() != 0 {
 		t.Error("shoot should not exist after error")
 	}
 }
@@ -200,7 +209,10 @@ func TestMockClient_Reset(t *testing.T) {
 	cluster := testCluster("test-cluster", "test-tenant")
 
 	// Create shoot and set error
-	_ = mock.ApplyShoot(ctx, &cluster)
+	err := mock.ApplyShoot(ctx, &cluster)
+	if err != nil {
+		t.Fatalf("ApplyShoot failed: %v", err)
+	}
 	mock.SetApplyError(gardener.ErrMockApplyFailed)
 
 	// Reset
@@ -215,7 +227,7 @@ func TestMockClient_Reset(t *testing.T) {
 	}
 
 	// Should be able to apply again without error
-	err := mock.ApplyShoot(ctx, &cluster)
+	err = mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Errorf("expected no error after reset, got %v", err)
 	}
@@ -264,92 +276,148 @@ func TestTruncateError(t *testing.T) {
 	}
 }
 
-func TestShootName(t *testing.T) {
+func TestProjectName(t *testing.T) {
 	tests := []struct {
-		name         string
-		org          string
-		cluster      string
-		wantExact    string // if set, expect this exact value
-		wantPrefix   string // if set, expect name to start with this
-		wantMaxLen   int    // if set, expect name to be at most this length
-		wantContains string // if set, expect name to contain this
+		name       string
+		orgName    string
+		wantPrefix string // first 6 chars (sanitized org)
+		wantLen    int    // always 10 chars
 	}{
 		{
-			name:      "short name unchanged",
-			org:       "my-tenant",
-			cluster:   "my-cluster",
-			wantExact: "my-tenant-my-cluster",
+			name:       "normal org name",
+			orgName:    "Acme Corp",
+			wantPrefix: "acmeco", // 6 chars sanitized
+			wantLen:    10,
 		},
 		{
-			name:      "exactly 21 chars unchanged",
-			org:       "org",
-			cluster:   "exactly-21-chars",
-			wantExact: "org-exactly-21-chars", // 20 chars, within limit
+			name:       "short org name gets padded",
+			orgName:    "abc",
+			wantPrefix: "abc", // 3 chars + 3 hash padding
+			wantLen:    10,
 		},
 		{
-			name:       "long name is hashed",
-			org:        "my-organization",
-			cluster:    "very-long-cluster-name",
-			wantPrefix: "my-organizat", // 12 chars prefix
-			wantMaxLen: 21,
+			name:       "long org name gets truncated",
+			orgName:    "very-long-organization-name",
+			wantPrefix: "verylo", // 6 chars
+			wantLen:    10,
 		},
 		{
-			name:       "very long names stay within limit",
-			org:        "extremely-long-organization-name",
-			cluster:    "and-an-extremely-long-cluster-name-too",
-			wantMaxLen: 21,
+			name:       "special chars removed",
+			orgName:    "My-Org!@#$",
+			wantPrefix: "myorg", // special chars removed
+			wantLen:    10,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := gardener.ShootName(tt.org, tt.cluster, 21)
+			got := gardener.ProjectName(tt.orgName)
 
-			if tt.wantExact != "" {
-				// For short names, check if they'd be hashed or not
-				fullName := tt.org + "-" + tt.cluster
-				if len(fullName) <= 21 {
-					if got != fullName {
-						t.Errorf("expected exact %q, got %q", fullName, got)
-					}
-				}
+			if len(got) != tt.wantLen {
+				t.Errorf("expected length %d, got %d (%q)", tt.wantLen, len(got), got)
 			}
 
-			if tt.wantPrefix != "" && len(got) > len(tt.wantPrefix) {
-				if got[:len(tt.wantPrefix)] != tt.wantPrefix {
-					t.Errorf("expected prefix %q, got %q", tt.wantPrefix, got)
-				}
-			}
-
-			if tt.wantMaxLen > 0 && len(got) > tt.wantMaxLen {
-				t.Errorf("expected max length %d, got %d (%q)", tt.wantMaxLen, len(got), got)
-			}
-
-			if tt.wantContains != "" && !contains(got, tt.wantContains) {
-				t.Errorf("expected %q to contain %q", got, tt.wantContains)
+			if !hasPrefix(got, tt.wantPrefix) {
+				t.Errorf("expected prefix %q, got %q", tt.wantPrefix, got)
 			}
 		})
 	}
 }
 
-func TestShootName_Deterministic(t *testing.T) {
-	// Same inputs should always produce same output
-	name1 := gardener.ShootName("long-organization", "long-cluster-name", 21)
-	name2 := gardener.ShootName("long-organization", "long-cluster-name", 21)
+func TestProjectName_Deterministic(t *testing.T) {
+	// Same input should always produce same output
+	name1 := gardener.ProjectName("Test Organization")
+	name2 := gardener.ProjectName("Test Organization")
 
 	if name1 != name2 {
-		t.Errorf("ShootName is not deterministic: %q != %q", name1, name2)
+		t.Errorf("ProjectName is not deterministic: %q != %q", name1, name2)
 	}
 }
 
-func TestShootName_DifferentHashForDifferentInputs(t *testing.T) {
-	// Different inputs should produce different outputs even with same prefix
-	name1 := gardener.ShootName("my-organization", "cluster-aaaaaaaaa", 21)
-	name2 := gardener.ShootName("my-organization", "cluster-bbbbbbbbb", 21)
+func TestProjectName_DifferentOrgsProduceDifferentNames(t *testing.T) {
+	// Different orgs should produce different project names
+	name1 := gardener.ProjectName("Organization A")
+	name2 := gardener.ProjectName("Organization B")
 
 	if name1 == name2 {
-		t.Errorf("different inputs produced same output: %q", name1)
+		t.Errorf("different orgs produced same project name: %q", name1)
 	}
+}
+
+func TestGenerateShootName(t *testing.T) {
+	tests := []struct {
+		name        string
+		clusterName string
+		wantPrefix  string // first 8 chars (sanitized cluster name)
+		wantLen     int    // always 11 chars
+	}{
+		{
+			name:        "normal cluster name",
+			clusterName: "production",
+			wantPrefix:  "producti", // 8 chars
+			wantLen:     11,
+		},
+		{
+			name:        "short cluster name gets padded",
+			clusterName: "dev",
+			wantPrefix:  "dev", // 3 chars + 5 random padding
+			wantLen:     11,
+		},
+		{
+			name:        "long cluster name gets truncated",
+			clusterName: "very-long-cluster-name",
+			wantPrefix:  "verylon", // 8 chars (hyphens removed)
+			wantLen:     11,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := gardener.GenerateShootName(tt.clusterName)
+
+			if len(got) != tt.wantLen {
+				t.Errorf("expected length %d, got %d (%q)", tt.wantLen, len(got), got)
+			}
+
+			if !hasPrefix(got, tt.wantPrefix) {
+				t.Errorf("expected prefix %q, got %q", tt.wantPrefix, got)
+			}
+		})
+	}
+}
+
+func TestGenerateShootName_Randomness(t *testing.T) {
+	// Multiple calls should produce different names (random suffix)
+	name1 := gardener.GenerateShootName("cluster")
+	name2 := gardener.GenerateShootName("cluster")
+
+	if name1 == name2 {
+		// With 36^3 possible combinations, collision is extremely unlikely
+		t.Errorf("GenerateShootName should produce random names, got %q twice", name1)
+	}
+}
+
+func TestNamingLengthConstraints(t *testing.T) {
+	// Test that combined project + shoot names fit within Gardener's 21 char limit
+	orgs := []string{"Acme Corp", "Very Long Organization Name", "a", "123 Corp"}
+	clusters := []string{"production", "very-long-cluster-name", "a", "123-cluster"}
+
+	for _, org := range orgs {
+		for _, cluster := range clusters {
+			projectName := gardener.ProjectName(org)
+			shootName := gardener.GenerateShootName(cluster)
+			combined := len(projectName) + len(shootName)
+
+			if combined != 21 {
+				t.Errorf("combined length should be exactly 21, got %d (project=%q [%d], shoot=%q [%d])",
+					combined, projectName, len(projectName), shootName, len(shootName))
+			}
+		}
+	}
+}
+
+func hasPrefix(s, prefix string) bool {
+	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
 }
 
 func contains(s, substr string) bool {

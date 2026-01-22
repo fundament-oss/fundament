@@ -118,6 +118,8 @@ BEGIN
     NEW.synced := NULL;
     NEW.sync_claimed_at := NULL;
     NEW.sync_claimed_by := NULL;
+    NEW.sync_attempts := 0;
+    NEW.sync_error := NULL;
     RETURN NEW;
 END;
 $function$;
@@ -224,7 +226,7 @@ CREATE POLICY cluster_worker_all_access ON tenant.clusters
 -- object: tenant.cluster_event_type | type: TYPE --
 -- DROP TYPE IF EXISTS tenant.cluster_event_type CASCADE;
 CREATE TYPE tenant.cluster_event_type AS
-ENUM ('sync_requested','sync_claimed','sync_submitted','sync_failed','status_ready','status_error','status_deleted');
+ENUM ('sync_requested','sync_claimed','sync_submitted','sync_failed','status_progressing','status_ready','status_error','status_deleted');
 -- ddl-end --
 ALTER TYPE tenant.cluster_event_type OWNER TO postgres;
 -- ddl-end --

@@ -236,17 +236,65 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 		w.logger.Warn("failed to create sync_claimed event", "error", err)
 	}
 
-	// 2. Sync to Gardener
-	var syncErr error
+	// 2. Compute project name (deterministic from org name)
+	projectName := gardener.ProjectName(cluster.OrganizationName)
+
+	// 3. Ensure Gardener Project exists and get actual namespace
+	namespace, err := w.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
+	if err != nil {
+		w.logger.Error("failed to ensure gardener project",
+			"project", projectName,
+			"organization_id", cluster.OrganizationID,
+			"error", err)
+		// Mark as failed and continue
+		if err := w.queries.ClusterMarkSyncFailed(ctx, db.ClusterMarkSyncFailedParams{
+			ClusterID: cluster.ID,
+			Error:     pgtype.Text{String: truncateError("ensure project: "+err.Error(), 1000), Valid: true},
+		}); err != nil {
+			w.logger.Error("failed to mark sync failed", "error", err)
+		}
+		return true, nil
+	}
+
+	// If namespace is empty, project was just created and Gardener hasn't set the namespace yet
+	if namespace == "" {
+		w.logger.Info("project created but namespace not ready yet, will retry",
+			"project", projectName)
+		if err := w.queries.ClusterMarkSyncFailed(ctx, db.ClusterMarkSyncFailedParams{
+			ClusterID: cluster.ID,
+			Error:     pgtype.Text{String: "project namespace not ready yet", Valid: true},
+		}); err != nil {
+			w.logger.Error("failed to mark sync failed", "error", err)
+		}
+		// Create sync_failed event to track namespace wait
+		if _, err := w.queries.ClusterCreateSyncFailedEvent(ctx, db.ClusterCreateSyncFailedEventParams{
+			ClusterID:  cluster.ID,
+			SyncAction: db.NullTenantClusterSyncAction{TenantClusterSyncAction: syncAction, Valid: true},
+			Message:    pgtype.Text{String: "Waiting for organization namespace to be created", Valid: true},
+			Attempt:    pgtype.Int4{Int32: attempt, Valid: true},
+		}); err != nil {
+			w.logger.Warn("failed to create sync_failed event", "error", err)
+		}
+		return true, nil
+	}
+
+	// 4. Generate shoot name (used only for creation, existing shoots are looked up by label)
+	shootName := gardener.GenerateShootName(cluster.Name)
+
 	clusterToSync := gardener.ClusterToSync{
 		ID:                cluster.ID,
-		Name:              cluster.Name,
+		OrganizationID:    cluster.OrganizationID,
 		OrganizationName:  cluster.OrganizationName,
+		Name:              cluster.Name,
+		ShootName:         shootName,
+		Namespace:         namespace,
 		Region:            cluster.Region,
 		KubernetesVersion: cluster.KubernetesVersion,
 		Deleted:           cluster.Deleted,
 		SyncAttempts:      int(cluster.SyncAttempts),
 	}
+
+	var syncErr error
 
 	if syncAction == db.TenantClusterSyncActionDelete {
 		syncErr = w.gardener.DeleteShoot(ctx, &clusterToSync)
@@ -285,7 +333,9 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 		return true, nil // Continue processing other clusters
 	}
 
-	err = w.queries.ClusterMarkSynced(ctx, db.ClusterMarkSyncedParams{ClusterID: cluster.ID})
+	err = w.queries.ClusterMarkSynced(ctx, db.ClusterMarkSyncedParams{
+		ClusterID: cluster.ID,
+	})
 	if err != nil {
 		return false, fmt.Errorf("mark synced: %w", err)
 	}
@@ -334,7 +384,7 @@ func (w *SyncWorker) reconcileAll(ctx context.Context) {
 
 	shootByClusterID := make(map[uuid.UUID]gardener.ShootInfo)
 	for _, s := range shoots {
-		if id, ok := s.Labels["fundament.io/cluster-id"]; ok {
+		if id, ok := s.Labels[gardener.LabelClusterID]; ok {
 			clusterID, err := uuid.Parse(id)
 			if err == nil {
 				shootByClusterID[clusterID] = s
@@ -400,18 +450,12 @@ func (w *SyncWorker) reconcileAll(ctx context.Context) {
 
 // shootKeyFieldsDrifted checks if a Shoot's key fields differ from the expected cluster state.
 // Returns a description of the drift, or empty string if no drift detected.
-// Expand this function as the schema grows to include more fields.
+// With label-based lookup, drift detection is based on shoot existence (handled elsewhere).
+// Expand this function as the schema grows to include more fields (region, k8s version, etc).
 func (w *SyncWorker) shootKeyFieldsDrifted(cluster *db.ClusterListActiveRow, shoot gardener.ShootInfo) (bool, []string) {
-	hasDrifted := false
-	drifted := []string{}
-
-	expectedName := gardener.ShootName(cluster.OrganizationName, cluster.Name, w.gardener.MaxShootNameLength())
-	if shoot.Name != expectedName {
-		hasDrifted = true
-		drifted = append(drifted, fmt.Sprintf("shoot name mismatch (expected %q, got %q)", expectedName, shoot.Name))
-	}
-
-	return hasDrifted, drifted
+	// Currently no additional drift detection beyond existence check
+	// The reconciliation loop already handles missing shoots via label-based lookup
+	return false, nil
 }
 
 // truncateError limits error message length for DB storage.

@@ -48,11 +48,6 @@ type config struct {
 	// cloud provider credentials (e.g., AWS access keys, GCP service account).
 	// Not needed for local provider. Required for real cloud providers.
 	ProviderCredentialsBindingName string `env:"GARDENER_CREDENTIALS_BINDING_NAME"`
-
-	// ProviderMaxShootNameLen limits Shoot names due to infrastructure constraints.
-	// Local provider requires 21 chars max (node name length limits).
-	// Cloud providers typically allow up to 63 chars.
-	ProviderMaxShootNameLen int `env:"GARDENER_MAX_SHOOT_NAME_LEN"`
 }
 
 func main() {
@@ -155,16 +150,12 @@ func createGardenerClient(cfg *config, logger *slog.Logger) (gardener.Client, er
 		if cfg.ProviderCredentialsBindingName != "" {
 			providerCfg.CredentialsBindingName = cfg.ProviderCredentialsBindingName
 		}
-		if cfg.ProviderMaxShootNameLen > 0 {
-			providerCfg.MaxShootNameLen = cfg.ProviderMaxShootNameLen
-		}
 
 		logger.Info("using real Gardener client",
 			"kubeconfig", cfg.GardenerKubeconfig,
-			"namespace", cfg.GardenerNamespace,
 			"provider", providerCfg.Type,
 			"cloudProfile", providerCfg.CloudProfile)
-		client, err := gardener.NewReal(cfg.GardenerKubeconfig, cfg.GardenerNamespace, providerCfg, logger)
+		client, err := gardener.NewReal(cfg.GardenerKubeconfig, providerCfg, logger)
 		if err != nil {
 			return nil, fmt.Errorf("create gardener client: %w", err)
 		}

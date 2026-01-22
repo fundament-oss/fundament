@@ -10,11 +10,11 @@ WHERE organization_id = $1
 ORDER BY created DESC;
 
 -- name: ClusterGetByID :one
--- Get cluster by ID, including clusters being deleted (but not fully deleted).
+-- Get cluster by ID, including deleted clusters for direct access.
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
        synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
 FROM tenant.clusters
-WHERE id = $1 AND (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted');
+WHERE id = $1;
 
 -- name: ClusterCreate :one
 INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version)

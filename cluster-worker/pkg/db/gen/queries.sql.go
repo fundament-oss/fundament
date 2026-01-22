@@ -56,6 +56,7 @@ RETURNING
     kubernetes_version,
     deleted,
     sync_attempts,
+    organization_id,
     (
         SELECT
             o.name
@@ -78,6 +79,7 @@ type ClusterClaimDeletedForSyncRow struct {
 	KubernetesVersion string
 	Deleted           pgtype.Timestamptz
 	SyncAttempts      int32
+	OrganizationID    uuid.UUID
 	OrganizationName  string
 }
 
@@ -93,6 +95,7 @@ func (q *Queries) ClusterClaimDeletedForSync(ctx context.Context, arg ClusterCla
 		&i.KubernetesVersion,
 		&i.Deleted,
 		&i.SyncAttempts,
+		&i.OrganizationID,
 		&i.OrganizationName,
 	)
 	return i, err
@@ -142,6 +145,7 @@ RETURNING
     kubernetes_version,
     deleted,
     sync_attempts,
+    organization_id,
     (
         SELECT
             o.name
@@ -164,6 +168,7 @@ type ClusterClaimForSyncRow struct {
 	KubernetesVersion string
 	Deleted           pgtype.Timestamptz
 	SyncAttempts      int32
+	OrganizationID    uuid.UUID
 	OrganizationName  string
 }
 
@@ -182,6 +187,7 @@ func (q *Queries) ClusterClaimForSync(ctx context.Context, arg ClusterClaimForSy
 		&i.KubernetesVersion,
 		&i.Deleted,
 		&i.SyncAttempts,
+		&i.OrganizationID,
 		&i.OrganizationName,
 	)
 	return i, err
@@ -530,6 +536,7 @@ SELECT
     c.kubernetes_version,
     c.deleted,
     c.shoot_status,
+    c.organization_id,
     o.name AS organization_name
 FROM
     tenant.clusters c
@@ -562,6 +569,7 @@ type ClusterListDeletedNeedingVerificationRow struct {
 	KubernetesVersion string
 	Deleted           pgtype.Timestamptz
 	ShootStatus       pgtype.Text
+	OrganizationID    uuid.UUID
 	OrganizationName  string
 }
 
@@ -583,6 +591,7 @@ func (q *Queries) ClusterListDeletedNeedingVerification(ctx context.Context, arg
 			&i.KubernetesVersion,
 			&i.Deleted,
 			&i.ShootStatus,
+			&i.OrganizationID,
 			&i.OrganizationName,
 		); err != nil {
 			return nil, err
@@ -714,6 +723,7 @@ SELECT
     c.kubernetes_version,
     c.deleted,
     c.shoot_status,
+    c.organization_id,
     o.name AS organization_name
 FROM
     tenant.clusters c
@@ -748,6 +758,7 @@ type ClusterListNeedingStatusCheckRow struct {
 	KubernetesVersion string
 	Deleted           pgtype.Timestamptz
 	ShootStatus       pgtype.Text
+	OrganizationID    uuid.UUID
 	OrganizationName  string
 }
 
@@ -770,6 +781,7 @@ func (q *Queries) ClusterListNeedingStatusCheck(ctx context.Context, arg Cluster
 			&i.KubernetesVersion,
 			&i.Deleted,
 			&i.ShootStatus,
+			&i.OrganizationID,
 			&i.OrganizationName,
 		); err != nil {
 			return nil, err

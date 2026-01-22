@@ -3,6 +3,11 @@
 
 set shell := ["bash", "-uc"]
 
+# Pin Gardener version for team consistency (kind is managed by mise.toml)
+GARDENER_VERSION := "v1.117.0"
+
+# Gardener directory is in the repo root's .dev folder (shared infrastructure)
+# Note: justfile_directory() returns the root when invoked via 'mod'
 GARDENER_DIR := env_var_or_default("GARDENER_DIR", justfile_directory() + "/.dev/gardener")
 KUBECONFIG_PATH := GARDENER_DIR / "example/provider-local/seed-kind/base/kubeconfig"
 
@@ -13,6 +18,10 @@ default:
 # ============================================================================
 # Local Gardener (Optional)
 # ============================================================================
+
+# Show pinned Gardener version
+versions:
+    @echo "Gardener: {{GARDENER_VERSION}}"
 
 # Check if prerequisites for local Gardener are installed
 check-prerequisites:
@@ -46,13 +55,24 @@ gardener-up: check-prerequisites
     if kind get clusters 2>/dev/null | grep -q gardener-local; then
         echo "Gardener already running"
         echo "Check status: just gardener-status"
+        GARDENER_DIR="$GARDENER_DIR" just gardener-connect-k3d
+        GARDENER_DIR="$GARDENER_DIR" just gardener-secret
         exit 0
     fi
 
-    # Clone repo if needed
+    # Clone repo at pinned version if needed
     if [ ! -d "$GARDENER_DIR" ]; then
-        echo "Cloning Gardener repository..."
-        git clone --depth 1 https://github.com/gardener/gardener.git "$GARDENER_DIR"
+        echo "Cloning Gardener {{GARDENER_VERSION}}..."
+        git clone --depth 1 --branch "{{GARDENER_VERSION}}" https://github.com/gardener/gardener.git "$GARDENER_DIR"
+    else
+        # Verify version matches
+        cd "$GARDENER_DIR"
+        CURRENT_VERSION=$(git describe --tags --exact-match 2>/dev/null || echo "unknown")
+        if [ "$CURRENT_VERSION" != "{{GARDENER_VERSION}}" ]; then
+            echo "Warning: Gardener version mismatch (have: $CURRENT_VERSION, want: {{GARDENER_VERSION}})"
+            echo "Run 'rm -rf $GARDENER_DIR' and re-run to update"
+        fi
+        cd - > /dev/null
     fi
 
     # Ensure hosts entry
@@ -66,7 +86,9 @@ gardener-up: check-prerequisites
     make kind-up
     make gardener-up
     echo ""
-    echo "Gardener started! Next: just gardener-connect-k3d"
+    GARDENER_DIR="$GARDENER_DIR" just gardener-connect-k3d
+    GARDENER_DIR="$GARDENER_DIR" just gardener-secret
+    echo "Gardener started!"
 
 # Stop local Gardener
 gardener-down:
@@ -100,7 +122,7 @@ gardener-fix-ports:
 
     # Check if gardener is running
     if ! docker ps --format '{{{{.Names}}' | grep -q gardener-local-control-plane; then
-        echo "Error: Gardener not running. Start with: just local-gardener"
+        echo "Error: Gardener not running. Start with: just gardener-up"
         exit 1
     fi
 
@@ -123,7 +145,7 @@ gardener-fix-ports:
         echo ""
         echo "Options:"
         echo "  1. Restart Docker Desktop"
-        echo "  2. Recreate: just gardener-delete && just local-gardener"
+        echo "  2. Recreate: just gardener-delete && just gardener-up"
         exit 1
     fi
 
@@ -212,50 +234,33 @@ gardener-connect-k3d:
     echo ""
     echo "Gardener API: https://$KIND_IP:6443"
 
-# ============================================================================
-# Local Gardener Setup
-# ============================================================================
-
-# Manage local Gardener: just local-gardener [up|down] (default: up)
-local-gardener action="up":
+# Create kubeconfig secret for cluster-worker to connect to Gardener
+gardener-secret:
     #!/usr/bin/env bash
     set -e
-
-    if [ "{{action}}" = "down" ]; then
-        just gardener-down
-        exit 0
-    elif [ "{{action}}" != "up" ]; then
-        echo "Unknown action: {{action}}"
-        echo "Usage: just local-gardener [up|down]"
-        exit 1
-    fi
-
-    # Action: up
-    just gardener-up
-    just gardener-connect-k3d
-
     GARDENER_DIR="{{GARDENER_DIR}}"
     GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
     KUBECONFIG_PATH="$GARDENER_DIR/example/provider-local/seed-kind/base/kubeconfig"
 
-    # Get IP from kind network - the certificate SANs include this IP, and k3d can reach it
+    # Generate kubeconfig from kind if missing
+    if [ ! -f "$KUBECONFIG_PATH" ]; then
+        echo "Kubeconfig not found, generating from kind cluster..."
+        mkdir -p "$(dirname "$KUBECONFIG_PATH")"
+        kind get kubeconfig --name gardener-local > "$KUBECONFIG_PATH"
+    fi
+
+    # Get IP from kind network (k3d can reach this, and cert SANs include it)
     KIND_IP=$(docker inspect gardener-local-control-plane --format '{{{{range $net, $conf := .NetworkSettings.Networks}}{{{{if eq $net "kind"}}{{{{$conf.IPAddress}}{{{{end}}{{{{end}}')
 
-    # Create kubeconfig secret with internal IP
-    echo "Creating kubeconfig secret..."
+    # Create kubeconfig with internal IP (not localhost)
+    echo "Creating gardener-kubeconfig secret in fundament namespace..."
     TEMP_KUBECONFIG=$(mktemp)
     sed "s|https://127.0.0.1:[0-9]*|https://$KIND_IP:6443|g" "$KUBECONFIG_PATH" > "$TEMP_KUBECONFIG"
     kubectl create secret generic gardener-kubeconfig \
         --from-file=kubeconfig="$TEMP_KUBECONFIG" \
         -n fundament --dry-run=client -o yaml | kubectl apply -f -
     rm "$TEMP_KUBECONFIG"
-
-    echo ""
-    echo "=== Gardener Ready ==="
-    echo "Gardener API: https://$KIND_IP:6443"
-    echo ""
-    echo "Run skaffold with local-gardener profile (from repo root):"
-    echo "  just dev -p local-gardener"
+    echo "Secret created: gardener-kubeconfig"
 
 # ============================================================================
 # Testing Helpers
@@ -289,6 +294,11 @@ shoots:
     #!/usr/bin/env bash
     GARDENER_DIR="{{GARDENER_DIR}}"
     GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
-    kubectl --kubeconfig "$GARDENER_DIR/example/provider-local/seed-kind/base/kubeconfig" \
-        get shoots -n garden-local -w
+    KUBECONFIG="$GARDENER_DIR/example/provider-local/seed-kind/base/kubeconfig"
+    if [ ! -f "$KUBECONFIG" ]; then
+        echo "Error: Gardener kubeconfig not found at $KUBECONFIG"
+        echo "Run 'just gardener-up' first"
+        exit 1
+    fi
+    kubectl --kubeconfig "$KUBECONFIG" get shoots -A -w
 
