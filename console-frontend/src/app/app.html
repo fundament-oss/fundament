@@ -83,7 +83,7 @@
           </h1>
         </div>
 
-        <!-- Right side dropdowns -->
+        <!-- Right side dropdown -->
         <div class="-my-1 flex items-center space-x-3">
           <!-- Theme (dark/light mode) Switcher -->
           <button
@@ -183,19 +183,18 @@
         </div>
 
         <!-- Nested Selector -->
-        <div class="p-4">
+        <div class="pt-4">
           <!-- Filter Input -->
-          <div class="mb-3">
+          <div class="mb-3 px-4">
             <input
               type="search"
               placeholder="Filter organizations, projects, namespaces..."
               (input)="updateSelectorFilter($event)"
-              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 ring-indigo-500 focus:border-indigo-500 focus:ring-2 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500"
             />
           </div>
 
           <!-- Nested Tree -->
-          <div class="max-h-80 space-y-1 overflow-y-auto">
+          <div class="max-h-80 space-y-1 overflow-y-auto px-4 pb-4">
             @for (org of filteredOrganizations(); track org.id) {
               <div>
                 <!-- Organization -->
@@ -207,7 +206,7 @@
                 </div>
                 <button
                   (click)="selectOrganization(org.id)"
-                  class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   [ngClass]="{
                     'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
                       isOrganizationSelected(org.id),
@@ -235,7 +234,7 @@
                         </div>
                         <button
                           (click)="selectProjectItem(project.id)"
-                          class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                          class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                           [ngClass]="{
                             'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
                               isProjectSelected(project.id),
@@ -261,7 +260,7 @@
                             @for (namespace of project.namespaces; track namespace.id) {
                               <button
                                 (click)="selectNamespaceItem(namespace.id)"
-                                class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                                class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                                 [ngClass]="{
                                   'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
                                     isNamespaceSelected(namespace.id),
@@ -297,7 +296,7 @@
             @if (getSelectedType() === 'organization') {
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-kubernetes-icon class="mr-3 h-5 w-5" />
@@ -306,7 +305,7 @@
               </li>
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-folder-icon class="mr-3 h-5 w-5" />
@@ -315,7 +314,7 @@
               </li>
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-puzzle-icon class="mr-3 h-5 w-5" />
@@ -324,7 +323,7 @@
               </li>
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-users-icon class="mr-3 h-5 w-5" />
@@ -333,7 +332,7 @@
               </li>
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-chart-icon class="mr-3 h-5 w-5" />
@@ -342,7 +341,7 @@
               </li>
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-settings-icon class="mr-3 h-5 w-5" />
@@ -352,7 +351,7 @@
             } @else if (getSelectedType() === 'project') {
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-namespace-icon class="mr-3 h-5 w-5" />
@@ -361,7 +360,7 @@
               </li>
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-users-icon class="mr-3 h-5 w-5" />
@@ -370,7 +369,7 @@
               </li>
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-chart-icon class="mr-3 h-5 w-5" />
@@ -379,7 +378,7 @@
               </li>
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-settings-icon class="mr-3 h-5 w-5" />
@@ -389,7 +388,7 @@
             } @else if (getSelectedType() === 'namespace') {
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-users-icon class="mr-3 h-5 w-5" />
@@ -398,7 +397,7 @@
               </li>
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-chart-icon class="mr-3 h-5 w-5" />
@@ -407,7 +406,7 @@
               </li>
               <li>
                 <button
-                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-settings-icon class="mr-3 h-5 w-5" />
