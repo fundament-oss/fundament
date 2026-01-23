@@ -12,6 +12,7 @@ import {
   MoonIconComponent,
   SunIconComponent,
   ChevronRightIconComponent,
+  ChevronDownIconComponent,
   UserCircleIconComponent,
   FundamentLogoIconComponent,
   KubernetesIconComponent,
@@ -26,6 +27,7 @@ import {
   ProjectsIconComponent,
   SettingsIconComponent,
   NamespaceIconComponent,
+  SearchIconComponent,
 } from './icons';
 
 @Component({
@@ -40,6 +42,7 @@ import {
     MoonIconComponent,
     SunIconComponent,
     ChevronRightIconComponent,
+    ChevronDownIconComponent,
     UserCircleIconComponent,
     FundamentLogoIconComponent,
     KubernetesIconComponent,
@@ -54,6 +57,7 @@ import {
     ProjectsIconComponent,
     SettingsIconComponent,
     NamespaceIconComponent,
+    SearchIconComponent,
   ],
   templateUrl: './app.html',
 })
@@ -69,6 +73,7 @@ export class App implements OnInit {
   // Dropdown states
   userDropdownOpen = signal(false);
   sidebarOpen = signal(false);
+  selectorDropdownOpen = signal(false);
 
   // Theme state
   isDarkMode = signal(false);
@@ -78,6 +83,7 @@ export class App implements OnInit {
 
   // Nested selector state
   selectorFilterText = signal('');
+  selectorFilterInputValue = signal('');
   expandedOrganizations = signal<Set<string>>(new Set(['org-1', 'org-2', 'org-3']));
   expandedProjects = signal<Set<string>>(
     new Set(['proj-1', 'proj-2', 'proj-3', 'proj-4', 'proj-5']),
@@ -234,14 +240,23 @@ export class App implements OnInit {
   onDocumentClick(event: Event) {
     const target = event.target as HTMLElement;
     const userDropdown = target.closest('.user-dropdown');
+    const selectorDropdown = target.closest('.selector-dropdown');
 
     if (!userDropdown) {
       this.userDropdownOpen.set(false);
+    }
+
+    if (!selectorDropdown) {
+      this.selectorDropdownOpen.set(false);
     }
   }
 
   toggleUserDropdown() {
     this.userDropdownOpen.set(!this.userDropdownOpen());
+  }
+
+  toggleSelectorDropdown() {
+    this.selectorDropdownOpen.update((value) => !value);
   }
 
   async handleLogout() {
@@ -279,6 +294,10 @@ export class App implements OnInit {
         newExpanded.add(orgId);
         this.expandedOrganizations.set(newExpanded);
       }
+
+      // Close dropdown and reset filter
+      this.selectorDropdownOpen.set(false);
+      this.resetSelectorFilter();
     }
   }
 
@@ -299,6 +318,10 @@ export class App implements OnInit {
         newExpanded.add(projectId);
         this.expandedProjects.set(newExpanded);
       }
+
+      // Close dropdown and reset filter
+      this.selectorDropdownOpen.set(false);
+      this.resetSelectorFilter();
     }
   }
 
@@ -306,6 +329,10 @@ export class App implements OnInit {
     this.selectedNamespaceId.set(namespaceId);
     this.selectedOrgId.set(null);
     this.selectedProjectId.set(null);
+
+    // Close dropdown and reset filter
+    this.selectorDropdownOpen.set(false);
+    this.resetSelectorFilter();
   }
 
   private toggleOrganizationExpansion(orgId: string) {
@@ -340,7 +367,13 @@ export class App implements OnInit {
 
   updateSelectorFilter(event: Event) {
     const input = event.target as HTMLInputElement;
+    this.selectorFilterInputValue.set(input.value);
     this.selectorFilterText.set(input.value.toLowerCase());
+  }
+
+  resetSelectorFilter() {
+    this.selectorFilterInputValue.set('');
+    this.selectorFilterText.set('');
   }
 
   filteredOrganizations() {
@@ -405,5 +438,42 @@ export class App implements OnInit {
 
   isNamespaceSelected(namespaceId: string): boolean {
     return this.selectedNamespaceId() === namespaceId;
+  }
+
+  getSelectedItemDisplay(): {
+    type: 'organization' | 'project' | 'namespace';
+    name: string;
+  } | null {
+    const selectedType = this.getSelectedType();
+
+    if (!selectedType) return null;
+
+    if (selectedType === 'namespace') {
+      const namespaceId = this.selectedNamespaceId();
+      for (const org of this.mockOrganizations()) {
+        for (const project of org.projects) {
+          const namespace = project.namespaces.find((ns) => ns.id === namespaceId);
+          if (namespace) {
+            return { type: 'namespace', name: namespace.name };
+          }
+        }
+      }
+    } else if (selectedType === 'project') {
+      const projectId = this.selectedProjectId();
+      for (const org of this.mockOrganizations()) {
+        const project = org.projects.find((p) => p.id === projectId);
+        if (project) {
+          return { type: 'project', name: project.name };
+        }
+      }
+    } else if (selectedType === 'organization') {
+      const orgId = this.selectedOrgId();
+      const org = this.mockOrganizations().find((o) => o.id === orgId);
+      if (org) {
+        return { type: 'organization', name: org.name };
+      }
+    }
+
+    return null;
   }
 }

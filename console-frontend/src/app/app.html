@@ -182,103 +182,154 @@
           </button>
         </div>
 
-        <!-- Nested Selector -->
-        <div class="pt-4">
-          <!-- Filter Input -->
-          <div class="mb-3 px-4">
-            <input
-              type="search"
-              placeholder="Filter organizations, projects, namespaces..."
-              (input)="updateSelectorFilter($event)"
-            />
+        <!-- Selector Dropdown -->
+        <div class="selector-dropdown relative px-4 pt-4">
+          <!-- Label -->
+          <div class="mb-2 px-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+            Organization, project, or namespace:
           </div>
 
-          <!-- Nested Tree -->
-          <div class="max-h-80 space-y-1 overflow-y-auto px-4 pb-4">
-            @for (org of filteredOrganizations(); track org.id) {
-              <div>
-                <!-- Organization -->
-                <div class="mb-0.5 px-2">
-                  <span
-                    class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                    >Organization</span
-                  >
-                </div>
-                <button
-                  (click)="selectOrganization(org.id)"
-                  class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
-                  [ngClass]="{
-                    'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
-                      isOrganizationSelected(org.id),
-                  }"
-                >
-                  <app-chevron-right-icon
-                    class="mr-1.5 h-4 w-4 shrink-0 transition-transform"
-                    [class.rotate-90]="isOrganizationExpanded(org.id)"
-                  />
+          <!-- Dropdown Button -->
+          <button
+            (click)="toggleSelectorDropdown()"
+            type="button"
+            class="flex w-full cursor-pointer items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm font-medium text-gray-700 shadow-sm ring-indigo-500 transition-colors hover:bg-gray-50 focus:border-indigo-500 focus:ring-2 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
+          >
+            <div class="flex min-w-0 flex-1 items-center">
+              @if (getSelectedItemDisplay(); as selected) {
+                @if (selected.type === 'organization') {
                   <app-organization-icon class="mr-2 h-4 w-4 shrink-0" />
-                  <span class="truncate">{{ org.name }}</span>
-                </button>
+                } @else if (selected.type === 'project') {
+                  <app-projects-icon class="mr-2 h-4 w-4 shrink-0" />
+                } @else if (selected.type === 'namespace') {
+                  <app-namespace-icon class="mr-2 h-4 w-4 shrink-0" />
+                }
+                <span class="truncate">{{ selected.name }}</span>
+              } @else {
+                <span class="text-gray-500 dark:text-gray-400">Select...</span>
+              }
+            </div>
+            <app-chevron-down-icon
+              class="ml-2 h-4 w-4 shrink-0 transition-transform"
+              [class.rotate-180]="selectorDropdownOpen()"
+            />
+          </button>
 
-                <!-- Projects (visible when org is expanded) -->
-                @if (isOrganizationExpanded(org.id)) {
-                  <div class="ml-5 space-y-1">
-                    @for (project of org.projects; track project.id) {
-                      <div>
-                        <!-- Project -->
-                        <div class="mb-0.5 px-2">
-                          <span
-                            class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                            >Project</span
-                          >
-                        </div>
-                        <button
-                          (click)="selectProjectItem(project.id)"
-                          class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
-                          [ngClass]="{
-                            'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
-                              isProjectSelected(project.id),
-                          }"
+          <!-- Dropdown Panel -->
+          @if (selectorDropdownOpen()) {
+            <div
+              class="absolute right-4 left-4 z-20 mt-2 max-h-96 overflow-hidden rounded-md border border-gray-300 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
+            >
+              <!-- Filter Input -->
+              <div class="border-b border-gray-200 p-3 dark:border-gray-800">
+                <div class="relative">
+                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <app-search-icon class="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <input
+                    type="search"
+                    placeholder="Search..."
+                    [value]="selectorFilterInputValue()"
+                    (input)="updateSelectorFilter($event)"
+                    class="pl-9!"
+                  />
+                </div>
+              </div>
+
+              <!-- Nested Tree -->
+              <div class="max-h-80 space-y-1 overflow-y-auto p-3">
+                @if (filteredOrganizations().length === 0) {
+                  <div class="py-1 text-center text-sm text-gray-500 dark:text-gray-400">
+                    No results found.
+                  </div>
+                } @else {
+                  @for (org of filteredOrganizations(); track org.id) {
+                    <div>
+                      <!-- Organization -->
+                      <div class="mb-0.5 px-2">
+                        <span
+                          class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                          >Organization</span
                         >
-                          <app-chevron-right-icon
-                            class="mr-1.5 h-3.5 w-3.5 shrink-0 transition-transform"
-                            [class.rotate-90]="isProjectExpanded(project.id)"
-                          />
-                          <app-projects-icon class="mr-2 h-4 w-4 shrink-0" />
-                          <span class="truncate">{{ project.name }}</span>
-                        </button>
+                      </div>
+                      <button
+                        (click)="selectOrganization(org.id)"
+                        class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
+                        [ngClass]="{
+                          'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
+                            isOrganizationSelected(org.id),
+                        }"
+                      >
+                        <app-chevron-right-icon
+                          class="mr-1.5 h-4 w-4 shrink-0 transition-transform"
+                          [class.rotate-90]="isOrganizationExpanded(org.id)"
+                        />
+                        <app-organization-icon class="mr-2 h-4 w-4 shrink-0" />
+                        <span class="truncate">{{ org.name }}</span>
+                      </button>
 
-                        <!-- Namespaces (visible when project is expanded) -->
-                        @if (isProjectExpanded(project.id)) {
-                          <div class="ml-5 space-y-0.5">
-                            <div class="mb-0.5 px-2">
-                              <span
-                                class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                                >Namespaces</span
-                              >
-                            </div>
-                            @for (namespace of project.namespaces; track namespace.id) {
+                      <!-- Projects (visible when org is expanded) -->
+                      @if (isOrganizationExpanded(org.id)) {
+                        <div class="ml-5 space-y-1">
+                          @for (project of org.projects; track project.id) {
+                            <div>
+                              <!-- Project -->
+                              <div class="mb-0.5 px-2">
+                                <span
+                                  class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                                  >Project</span
+                                >
+                              </div>
                               <button
-                                (click)="selectNamespaceItem(namespace.id)"
+                                (click)="selectProjectItem(project.id)"
                                 class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                                 [ngClass]="{
                                   'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
-                                    isNamespaceSelected(namespace.id),
+                                    isProjectSelected(project.id),
                                 }"
                               >
-                                <app-namespace-icon class="mr-2 h-4 w-4 shrink-0" />
-                                <span class="truncate">{{ namespace.name }}</span>
+                                <app-chevron-right-icon
+                                  class="mr-1.5 h-3.5 w-3.5 shrink-0 transition-transform"
+                                  [class.rotate-90]="isProjectExpanded(project.id)"
+                                />
+                                <app-projects-icon class="mr-2 h-4 w-4 shrink-0" />
+                                <span class="truncate">{{ project.name }}</span>
                               </button>
-                            }
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
+
+                              <!-- Namespaces (visible when project is expanded) -->
+                              @if (isProjectExpanded(project.id)) {
+                                <div class="ml-5 space-y-0.5">
+                                  <div class="mb-0.5 px-2">
+                                    <span
+                                      class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                                      >Namespaces</span
+                                    >
+                                  </div>
+                                  @for (namespace of project.namespaces; track namespace.id) {
+                                    <button
+                                      (click)="selectNamespaceItem(namespace.id)"
+                                      class="flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
+                                      [ngClass]="{
+                                        'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
+                                          isNamespaceSelected(namespace.id),
+                                      }"
+                                    >
+                                      <app-namespace-icon class="mr-2 h-4 w-4 shrink-0" />
+                                      <span class="truncate">{{ namespace.name }}</span>
+                                    </button>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
                 }
               </div>
-            }
-          </div>
+            </div>
+          }
         </div>
 
         <nav class="overflow-y-auto px-4 pb-6">

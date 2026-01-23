@@ -36,3 +36,4 @@ export { OrganizationIconComponent } from './organization-icon.component';
 export { ProjectsIconComponent } from './projects-icon.component';
 export { SettingsIconComponent } from './settings-icon.component';
 export { NamespaceIconComponent } from './namespace-icon.component';
+export { SearchIconComponent } from './search-icon.component';
