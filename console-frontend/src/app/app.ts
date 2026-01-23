@@ -5,6 +5,7 @@ import { AuthnApiService } from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { ToastService } from './toast.service';
 import { versionMismatch$ } from './app.config';
+import { SelectorModalComponent } from './selector-modal/selector-modal.component';
 import {
   WarningIconComponent,
   MenuIconComponent,
@@ -12,7 +13,6 @@ import {
   MoonIconComponent,
   SunIconComponent,
   ChevronRightIconComponent,
-  ChevronDownIconComponent,
   UserCircleIconComponent,
   FundamentLogoIconComponent,
   KubernetesIconComponent,
@@ -27,7 +27,6 @@ import {
   ProjectsIconComponent,
   SettingsIconComponent,
   NamespaceIconComponent,
-  SearchIconComponent,
 } from './icons';
 
 @Component({
@@ -36,13 +35,13 @@ import {
     RouterOutlet,
     RouterLink,
     CommonModule,
+    SelectorModalComponent,
     WarningIconComponent,
     MenuIconComponent,
     CloseIconComponent,
     MoonIconComponent,
     SunIconComponent,
     ChevronRightIconComponent,
-    ChevronDownIconComponent,
     UserCircleIconComponent,
     FundamentLogoIconComponent,
     KubernetesIconComponent,
@@ -57,7 +56,6 @@ import {
     ProjectsIconComponent,
     SettingsIconComponent,
     NamespaceIconComponent,
-    SearchIconComponent,
   ],
   templateUrl: './app.html',
 })
@@ -73,7 +71,7 @@ export class App implements OnInit {
   // Dropdown states
   userDropdownOpen = signal(false);
   sidebarOpen = signal(false);
-  selectorDropdownOpen = signal(false);
+  selectorModalOpen = signal(false);
 
   // Theme state
   isDarkMode = signal(false);
@@ -82,8 +80,6 @@ export class App implements OnInit {
   currentUser = signal<User | undefined>(undefined);
 
   // Nested selector state
-  selectorFilterText = signal('');
-  selectorFilterInputValue = signal('');
   expandedOrganizations = signal<Set<string>>(new Set(['org-1', 'org-2', 'org-3']));
   expandedProjects = signal<Set<string>>(
     new Set(['proj-1', 'proj-2', 'proj-3', 'proj-4', 'proj-5']),
@@ -240,14 +236,9 @@ export class App implements OnInit {
   onDocumentClick(event: Event) {
     const target = event.target as HTMLElement;
     const userDropdown = target.closest('.user-dropdown');
-    const selectorDropdown = target.closest('.selector-dropdown');
 
     if (!userDropdown) {
       this.userDropdownOpen.set(false);
-    }
-
-    if (!selectorDropdown) {
-      this.selectorDropdownOpen.set(false);
     }
   }
 
@@ -255,8 +246,12 @@ export class App implements OnInit {
     this.userDropdownOpen.set(!this.userDropdownOpen());
   }
 
-  toggleSelectorDropdown() {
-    this.selectorDropdownOpen.update((value) => !value);
+  openSelectorModal() {
+    this.selectorModalOpen.set(true);
+  }
+
+  closeSelectorModal() {
+    this.selectorModalOpen.set(false);
   }
 
   async handleLogout() {
@@ -295,9 +290,8 @@ export class App implements OnInit {
         this.expandedOrganizations.set(newExpanded);
       }
 
-      // Close dropdown and reset filter
-      this.selectorDropdownOpen.set(false);
-      this.resetSelectorFilter();
+      // Close modal
+      this.selectorModalOpen.set(false);
     }
   }
 
@@ -319,9 +313,8 @@ export class App implements OnInit {
         this.expandedProjects.set(newExpanded);
       }
 
-      // Close dropdown and reset filter
-      this.selectorDropdownOpen.set(false);
-      this.resetSelectorFilter();
+      // Close modal
+      this.selectorModalOpen.set(false);
     }
   }
 
@@ -330,9 +323,8 @@ export class App implements OnInit {
     this.selectedOrgId.set(null);
     this.selectedProjectId.set(null);
 
-    // Close dropdown and reset filter
-    this.selectorDropdownOpen.set(false);
-    this.resetSelectorFilter();
+    // Close modal
+    this.selectorModalOpen.set(false);
   }
 
   private toggleOrganizationExpansion(orgId: string) {
@@ -363,54 +355,6 @@ export class App implements OnInit {
 
   isProjectExpanded(projectId: string): boolean {
     return this.expandedProjects().has(projectId);
-  }
-
-  updateSelectorFilter(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.selectorFilterInputValue.set(input.value);
-    this.selectorFilterText.set(input.value.toLowerCase());
-  }
-
-  resetSelectorFilter() {
-    this.selectorFilterInputValue.set('');
-    this.selectorFilterText.set('');
-  }
-
-  filteredOrganizations() {
-    const filterText = this.selectorFilterText();
-    if (!filterText) {
-      return this.mockOrganizations();
-    }
-
-    return this.mockOrganizations()
-      .map((org) => {
-        const orgMatches = org.name.toLowerCase().includes(filterText);
-        const filteredProjects = org.projects
-          .map((project) => {
-            const projectMatches = project.name.toLowerCase().includes(filterText);
-            const filteredNamespaces = project.namespaces.filter((ns) =>
-              ns.name.toLowerCase().includes(filterText),
-            );
-
-            if (projectMatches || filteredNamespaces.length > 0) {
-              return {
-                ...project,
-                namespaces: projectMatches ? project.namespaces : filteredNamespaces,
-              };
-            }
-            return null;
-          })
-          .filter((p) => p !== null);
-
-        if (orgMatches || filteredProjects.length > 0) {
-          return {
-            ...org,
-            projects: orgMatches ? org.projects : filteredProjects,
-          };
-        }
-        return null;
-      })
-      .filter((org) => org !== null);
   }
 
   getSelectedType(): 'organization' | 'project' | 'namespace' | null {
