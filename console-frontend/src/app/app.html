@@ -227,58 +227,64 @@
           <ul class="space-y-2">
             @if (getSelectedType() === 'organization') {
               <li>
-                <button
+                <a
+                  routerLink="/"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-kubernetes-icon class="mr-3 h-5 w-5" />
                   Clusters
-                </button>
+                </a>
               </li>
               <li>
-                <button
+                <a
+                  routerLink="/projects"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-folder-icon class="mr-3 h-5 w-5" />
                   Projects
-                </button>
+                </a>
               </li>
               <li>
-                <button
+                <a
+                  routerLink="/plugins"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-puzzle-icon class="mr-3 h-5 w-5" />
                   Plugins
-                </button>
+                </a>
               </li>
               <li>
-                <button
+                <a
+                  routerLink="/organization/members"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-users-icon class="mr-3 h-5 w-5" />
                   Members
-                </button>
+                </a>
               </li>
               <li>
-                <button
+                <a
+                  routerLink="/usage"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-chart-icon class="mr-3 h-5 w-5" />
                   Usage
-                </button>
+                </a>
               </li>
               <li>
-                <button
+                <a
+                  routerLink="/organization"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-settings-icon class="mr-3 h-5 w-5" />
                   Settings
-                </button>
+                </a>
               </li>
             } @else if (getSelectedType() === 'project') {
               <li>
@@ -291,22 +297,24 @@
                 </button>
               </li>
               <li>
-                <button
+                <a
+                  routerLink="/project-members"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-users-icon class="mr-3 h-5 w-5" />
                   Members
-                </button>
+                </a>
               </li>
               <li>
-                <button
+                <a
+                  routerLink="/usage"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-chart-icon class="mr-3 h-5 w-5" />
                   Usage
-                </button>
+                </a>
               </li>
               <li>
                 <button
@@ -328,13 +336,14 @@
                 </button>
               </li>
               <li>
-                <button
+                <a
+                  routerLink="/usage"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-chart-icon class="mr-3 h-5 w-5" />
                   Usage
-                </button>
+                </a>
               </li>
               <li>
                 <button
