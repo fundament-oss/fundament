@@ -1,10 +1,94 @@
-<div class="space-y-6">
-  <div>
-    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Namespace settings</h2>
-    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Configure your namespace settings</p>
+<div class="card">
+  <!-- Header -->
+  <div class="card-header">
+    <h1 class="text-2xl font-bold dark:text-white">Namespace</h1>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Manage your namespace's information</p>
   </div>
 
-  <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
-    <p class="text-gray-600 dark:text-gray-400">TODO</p>
+  <div class="p-6">
+    <!-- Error Message -->
+    @if (error()) {
+      <div class="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-950">
+        <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+      </div>
+    }
+
+    <!-- Loading State -->
+    @if (loading()) {
+      <div class="py-8 text-center">
+        <p class="text-gray-600 dark:text-gray-300">Loading namespace...</p>
+      </div>
+    }
+
+    <!-- Namespace Information -->
+    @if (namespace()) {
+      <div class="space-y-6">
+        <!-- Namespace ID -->
+        <div>
+          <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Namespace ID
+          </div>
+          <p
+            class="rounded-md bg-gray-50 px-4 py-2 font-mono text-sm text-gray-900 dark:bg-gray-900 dark:text-white"
+          >
+            {{ namespace()!.id }}
+          </p>
+        </div>
+
+        <!-- Namespace Name -->
+        <div>
+          <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Name</div>
+          @if (isEditing()) {
+            <div class="flex gap-2">
+              <input
+                #nameInput
+                type="text"
+                [ngModel]="editingName()"
+                (ngModelChange)="editingName.set($event)"
+                class="block flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                (keyup.enter)="saveEdit()"
+                (keyup.escape)="cancelEdit()"
+              />
+              <button
+                type="button"
+                (click)="saveEdit()"
+                [disabled]="loading()"
+                class="btn-primary inline-flex shrink-0 items-center"
+              >
+                <app-checkmark-icon class="mr-1.5 h-4 w-4" /> Save
+              </button>
+              <button
+                type="button"
+                (click)="cancelEdit()"
+                [disabled]="loading()"
+                class="btn-secondary inline-flex shrink-0 items-center"
+              >
+                <app-close-icon class="mr-1.5 h-4 w-4" /> Cancel
+              </button>
+            </div>
+          } @else {
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-gray-900 dark:text-white">{{ namespace()!.name }}</p>
+              <button
+                type="button"
+                (click)="startEdit()"
+                [disabled]="loading()"
+                class="btn-light inline-flex shrink-0 items-center"
+              >
+                <app-edit-icon class="mr-1.5 h-4 w-4" /> Rename
+              </button>
+            </div>
+          }
+        </div>
+
+        <!-- Created Date -->
+        <div>
+          <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Created</div>
+          <p class="text-sm text-gray-900 dark:text-white">
+            {{ formatDate(namespace()!.created) }}
+          </p>
+        </div>
+      </div>
+    }
   </div>
 </div>
