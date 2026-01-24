@@ -1,5 +1,5 @@
 import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
-import { RouterOutlet, RouterLink, Router } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthnApiService } from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
@@ -34,6 +34,7 @@ import {
   imports: [
     RouterOutlet,
     RouterLink,
+    RouterLinkActive,
     CommonModule,
     SelectorModalComponent,
     WarningIconComponent,

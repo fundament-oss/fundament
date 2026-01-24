@@ -78,6 +78,11 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'namespaces',
+    loadComponent: () =>
+      import('./namespaces/namespaces.component').then((m) => m.NamespacesComponent),
+  },
+  {
     path: 'project-permissions',
     loadComponent: () =>
       import('./project-permissions/project-permissions.component').then(
@@ -88,6 +93,27 @@ export const routes: Routes = [
     path: 'project-members',
     loadComponent: () =>
       import('./project-members/project-members.component').then((m) => m.ProjectMembersComponent),
+  },
+  {
+    path: 'project-settings',
+    loadComponent: () =>
+      import('./project-settings/project-settings.component').then(
+        (m) => m.ProjectSettingsComponent,
+      ),
+  },
+  {
+    path: 'namespace-members',
+    loadComponent: () =>
+      import('./namespace-members/namespace-members.component').then(
+        (m) => m.NamespaceMembersComponent,
+      ),
+  },
+  {
+    path: 'namespace-settings',
+    loadComponent: () =>
+      import('./namespace-settings/namespace-settings.component').then(
+        (m) => m.NamespaceSettingsComponent,
+      ),
   },
   {
     path: 'plugins',

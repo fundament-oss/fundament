@@ -229,6 +229,8 @@
               <li>
                 <a
                   routerLink="/"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                  [routerLinkActiveOptions]="{ exact: true }"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
@@ -239,6 +241,7 @@
               <li>
                 <a
                   routerLink="/projects"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
@@ -249,6 +252,7 @@
               <li>
                 <a
                   routerLink="/plugins"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
@@ -259,6 +263,7 @@
               <li>
                 <a
                   routerLink="/organization/members"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
@@ -269,6 +274,7 @@
               <li>
                 <a
                   routerLink="/usage"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
@@ -279,6 +285,8 @@
               <li>
                 <a
                   routerLink="/organization"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                  [routerLinkActiveOptions]="{ exact: true }"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
@@ -288,17 +296,20 @@
               </li>
             } @else if (getSelectedType() === 'project') {
               <li>
-                <button
+                <a
+                  routerLink="/namespaces"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-namespace-icon class="mr-3 h-5 w-5" />
                   Namespaces
-                </button>
+                </a>
               </li>
               <li>
                 <a
                   routerLink="/project-members"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
@@ -309,6 +320,7 @@
               <li>
                 <a
                   routerLink="/usage"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
@@ -317,27 +329,32 @@
                 </a>
               </li>
               <li>
-                <button
+                <a
+                  routerLink="/project-settings"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-settings-icon class="mr-3 h-5 w-5" />
                   Settings
-                </button>
+                </a>
               </li>
             } @else if (getSelectedType() === 'namespace') {
               <li>
-                <button
+                <a
+                  routerLink="/namespace-members"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-users-icon class="mr-3 h-5 w-5" />
                   Members
-                </button>
+                </a>
               </li>
               <li>
                 <a
                   routerLink="/usage"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
@@ -346,13 +363,15 @@
                 </a>
               </li>
               <li>
-                <button
+                <a
+                  routerLink="/namespace-settings"
+                  routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
                   <app-settings-icon class="mr-3 h-5 w-5" />
                   Settings
-                </button>
+                </a>
               </li>
             }
           </ul>
