@@ -1,4 +1,15 @@
-import { Component, Input, Output, EventEmitter, signal, HostListener } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  signal,
+  HostListener,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnChanges,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   CloseIconComponent,
@@ -40,7 +51,7 @@ interface Organization {
   ],
   templateUrl: './selector-modal.component.html',
 })
-export class SelectorModalComponent {
+export class SelectorModalComponent implements AfterViewInit, OnChanges {
   @Input() show = false;
   @Input() organizations: Organization[] = [];
   @Input() selectedOrgId: string | null = null;
@@ -54,8 +65,27 @@ export class SelectorModalComponent {
   @Output() selectProject = new EventEmitter<string>();
   @Output() selectNamespace = new EventEmitter<string>();
 
+  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
+
   filterText = signal('');
   filterInputValue = signal('');
+
+  ngAfterViewInit(): void {
+    if (this.show) {
+      this.focusSearchInput();
+    }
+  }
+
+  ngOnChanges(): void {
+    if (this.show) {
+      // Use setTimeout to ensure the DOM is ready
+      setTimeout(() => this.focusSearchInput(), 0);
+    }
+  }
+
+  private focusSearchInput(): void {
+    this.searchInput?.nativeElement.focus();
+  }
 
   @HostListener('document:keydown', ['$event'])
   handleEscapeKey(event: KeyboardEvent): void {
