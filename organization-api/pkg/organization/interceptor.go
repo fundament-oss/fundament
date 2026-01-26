@@ -27,6 +27,7 @@ func (s *OrganizationServer) AuthInterceptor() connect.UnaryInterceptorFunc {
 
 			// Inject into context
 			ctx = WithOrganizationID(ctx, claims.OrganizationID)
+			ctx = WithUserID(ctx, claims.UserID)
 			ctx = WithClaims(ctx, claims)
 
 			s.logger.DebugContext(ctx, "request authenticated",

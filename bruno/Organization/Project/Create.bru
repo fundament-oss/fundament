@@ -1,0 +1,32 @@
+meta {
+  name: Create
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/CreateProject
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "my-project"
+  }
+}
+
+script:post-response {
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setVar("projectId", res.body.projectId);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

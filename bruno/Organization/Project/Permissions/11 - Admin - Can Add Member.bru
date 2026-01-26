@@ -1,0 +1,40 @@
+meta {
+  name: 11 - Admin - Can Add Member
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/AddProjectMember
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{testProjectId}}",
+    "userId": "019b4000-1000-7000-8000-000000000003",
+    "role": "PROJECT_MEMBER_ROLE_VIEWER"
+  }
+}
+
+script:post-response {
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setVar("carolMemberId", res.body.memberId);
+  }
+}
+
+tests {
+  test("admin should be able to add a new member", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.memberId).to.be.a('string');
+  });
+}

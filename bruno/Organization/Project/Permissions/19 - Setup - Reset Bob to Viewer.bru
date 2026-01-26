@@ -1,0 +1,33 @@
+meta {
+  name: 19 - Setup - Reset Bob to Viewer
+  type: http
+  seq: 19
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/UpdateProjectMemberRole
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "memberId": "{{bobMemberId}}",
+    "role": "PROJECT_MEMBER_ROLE_VIEWER"
+  }
+}
+
+tests {
+  test("should reset bob to viewer for viewer tests", function() {
+    // Accept both 200 (success) and 400 (already a viewer)
+    expect([200, 400]).to.include(res.status);
+  });
+}

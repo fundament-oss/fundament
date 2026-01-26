@@ -1,0 +1,34 @@
+meta {
+  name: 40 - LastAdmin - Setup Reset Bob to Viewer
+  type: http
+  seq: 40
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/UpdateProjectMemberRole
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "memberId": "{{bobMemberId}}",
+    "role": "PROJECT_MEMBER_ROLE_VIEWER"
+  }
+}
+
+tests {
+  test("should reset bob to viewer for last admin tests", function() {
+    // This may succeed (if bob was promoted) or fail (if bob is already viewer)
+    // We accept both outcomes to set up the test state
+    expect([200, 400]).to.include(res.status);
+  });
+}

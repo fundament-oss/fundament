@@ -1,0 +1,40 @@
+meta {
+  name: 41 - LastAdmin - Cannot Demote Self
+  type: http
+  seq: 41
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/UpdateProjectMemberRole
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "memberId": "{{aliceMemberId}}",
+    "role": "PROJECT_MEMBER_ROLE_VIEWER"
+  }
+}
+
+tests {
+  test("last admin should not be able to demote self", function() {
+    expect(res.status).to.not.equal(200);
+  });
+
+  test("should return failed_precondition error", function() {
+    expect(res.body.code).to.equal("failed_precondition");
+  });
+
+  test("error message should mention last admin", function() {
+    expect(res.body.message.toLowerCase()).to.include("last admin");
+  });
+}

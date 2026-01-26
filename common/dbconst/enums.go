@@ -15,3 +15,11 @@ const (
 	ClusterStatus_Stopping ClusterStatus = "stopping"
 	ClusterStatus_Stopped ClusterStatus = "stopped"
 )
+
+// ProjectMemberRole represents valid values for tenant.project_members.role.
+type ProjectMemberRole string
+
+const (
+	ProjectMemberRole_Admin ProjectMemberRole = "admin"
+	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
+)

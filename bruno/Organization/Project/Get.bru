@@ -1,0 +1,26 @@
+meta {
+  name: Get
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/GetProject
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{projectId}}"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

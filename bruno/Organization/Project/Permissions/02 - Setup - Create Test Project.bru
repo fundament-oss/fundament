@@ -1,0 +1,44 @@
+meta {
+  name: 02 - Setup - Create Test Project
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/CreateProject
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+script:pre-request {
+  // Generate unique project name with timestamp
+  const timestamp = Date.now();
+  bru.setVar("testProjectName", `permissions-test-${timestamp}`);
+}
+
+body:json {
+  {
+    "name": "{{testProjectName}}"
+  }
+}
+
+script:post-response {
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setVar("testProjectId", res.body.projectId);
+  }
+}
+
+tests {
+  test("should create test project", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.projectId).to.be.a('string');
+  });
+}
