@@ -11,6 +11,7 @@ import { PROTO_API_VERSION } from '../proto-version';
 import { BehaviorSubject } from 'rxjs';
 import { routes } from './app.routes';
 import { ConfigService } from './config.service';
+import { provideNgIconsConfig } from '@ng-icons/core';
 
 const EXPECTED_API_VERSION = PROTO_API_VERSION;
 
@@ -33,6 +34,9 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const configService = inject(ConfigService);
       return configService.loadConfig();
+    }),
+    provideNgIconsConfig({
+      size: '1rem', // Default icon size
     }),
     // Provide the Authn transport
     {
