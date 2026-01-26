@@ -129,12 +129,15 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 
 // Resources defines the resources implemented in the provider.
 func (p *FundamentProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		NewClusterResource,
+	}
 }
 
 // DataSources defines the data sources implemented in the provider.
 func (p *FundamentProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		NewClusterDataSource,
 		NewClustersDataSource,
 	}
 }
