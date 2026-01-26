@@ -1,4 +1,4 @@
-import { Component, signal, HostListener, inject, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthnApiService } from './authn-api.service';
@@ -9,6 +9,24 @@ import {
   FundamentLogoIconComponent,
   KubernetesIconComponent,
 } from './icons';
+import { TablerIconComponent, provideTablerIcons } from 'angular-tabler-icons';
+import {
+  IconCircleCheck,
+  IconCircleXFilled,
+  IconAlertTriangle,
+  IconInfoCircle,
+  IconX,
+  IconMenu2,
+  IconMoon,
+  IconSun,
+  IconChevronDown,
+  IconUserCircle,
+  IconLayoutDashboard,
+  IconFolder,
+  IconPuzzle,
+  IconUsers,
+  IconChartLine,
+} from 'angular-tabler-icons/icons';
 
 @Component({
   selector: 'app-root',
@@ -19,8 +37,27 @@ import {
     CommonModule,
     FundamentLogoIconComponent,
     KubernetesIconComponent,
+    TablerIconComponent,
   ],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  providers: [
+    provideTablerIcons({
+      IconCircleCheck,
+      IconCircleXFilled,
+      IconAlertTriangle,
+      IconInfoCircle,
+      IconX,
+      IconMenu2,
+      IconMoon,
+      IconSun,
+      IconChevronDown,
+      IconUserCircle,
+      IconLayoutDashboard,
+      IconFolder,
+      IconPuzzle,
+      IconUsers,
+      IconChartLine,
+    }),
+  ],
   templateUrl: './app.html',
 })
 export class App implements OnInit {
