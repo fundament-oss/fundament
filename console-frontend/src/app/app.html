@@ -16,13 +16,13 @@
     >
       <div class="flex items-center">
         @if (toastService.toast()?.type === 'success') {
-          <app-check-circle-icon class="mr-3 h-6 w-6 shrink-0" />
+          <iconify-icon icon="tabler:circle-check" class="mr-3 h-6 w-6 shrink-0" width="unset" noobserver />
         } @else if (toastService.toast()?.type === 'error') {
-          <app-error-icon class="mr-3 h-6 w-6 shrink-0" />
+          <iconify-icon icon="tabler:circle-x-filled" class="mr-3 h-6 w-6 shrink-0" width="unset" noobserver />
         } @else if (toastService.toast()?.type === 'warning') {
-          <app-warning-icon class="mr-3 h-6 w-6 shrink-0" />
+          <iconify-icon icon="tabler:alert-triangle" class="mr-3 h-6 w-6 shrink-0" width="unset" noobserver />
         } @else {
-          <app-info-circle-icon class="mr-3 h-6 w-6 shrink-0" />
+          <iconify-icon icon="tabler:info-circle" class="mr-3 h-6 w-6 shrink-0" width="unset" noobserver />
         }
         <p class="text-sm">{{ toastService.toast()?.message }}</p>
       </div>
@@ -32,7 +32,7 @@
         aria-label="Dismiss notification"
         class="ml-4 shrink-0 cursor-pointer rounded-md p-1 transition-colors hover:bg-white/20 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:outline-none"
       >
-        <app-close-icon class="h-5 w-5" />
+        <iconify-icon icon="tabler:x" class="h-5 w-5" width="unset" noobserver />
       </button>
     </div>
   }
@@ -44,7 +44,7 @@
       role="alert"
     >
       <div class="flex items-center">
-        <app-warning-icon class="mr-3 h-6 w-6 shrink-0" />
+        <iconify-icon icon="tabler:alert-triangle" class="mr-3 h-6 w-6 shrink-0" width="unset" noobserver />
         <div>
           <p class="font-semibold">New version available</p>
           <p class="text-sm">The API has been updated. Please reload to use the latest version.</p>
@@ -72,7 +72,7 @@
               aria-label="Toggle sidebar"
               class="mr-3 cursor-pointer rounded-md p-2 text-gray-600 ring-indigo-500 hover:bg-gray-100 focus:ring-2 focus:outline-none lg:hidden dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
             >
-              <app-menu-icon class="h-6 w-6" />
+              <iconify-icon icon="tabler:menu-2" class="h-6 w-6" width="unset" noobserver />
             </button>
           }
           <h1 class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
@@ -98,9 +98,9 @@
               class="flex h-5.25 w-5.25 translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow transition-transform group-aria-checked:translate-x-4.75 dark:bg-gray-950 dark:text-gray-300"
             >
               @if (isDarkMode()) {
-                <app-moon-icon class="h-4 w-4" />
+                <iconify-icon icon="tabler:moon" class="h-4 w-4" width="unset" noobserver />
               } @else {
-                <app-sun-icon class="h-4 w-4" />
+                <iconify-icon icon="tabler:sun" class="h-4 w-4" width="unset" noobserver />
               }
             </span>
           </button>
@@ -112,7 +112,7 @@
                 class="flex cursor-pointer items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 ring-indigo-500 hover:bg-gray-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-950 dark:bg-gray-950 dark:text-white dark:ring-offset-gray-950 dark:hover:bg-gray-900"
               >
                 {{ selectedProject() }}
-                <app-chevron-down-icon class="ml-2 h-4 w-4" />
+                <iconify-icon icon="tabler:chevron-down" class="ml-2 h-4 w-4" width="unset" noobserver />
               </button>
 
               @if (projectDropdownOpen()) {
@@ -146,7 +146,7 @@
                 class="flex cursor-pointer items-center rounded-full text-indigo-600 ring-indigo-500 focus:ring-2 focus:outline-none dark:text-indigo-400 dark:ring-offset-gray-950"
                 aria-label="User menu"
               >
-                <app-user-circle-icon class="h-8 w-8" />
+                <iconify-icon icon="tabler:user-circle" class="h-8 w-8" width="unset" noobserver />
               </button>
 
               @if (userDropdownOpen()) {
@@ -211,7 +211,7 @@
             aria-label="Close sidebar"
             class="cursor-pointer rounded-md p-2 text-gray-600 ring-indigo-500 hover:bg-gray-100 focus:ring-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
           >
-            <app-close-icon class="h-6 w-6" />
+            <iconify-icon icon="tabler:x" class="h-6 w-6" width="unset" noobserver />
           </button>
         </div>
         <nav class="h-full overflow-y-auto px-4 pt-1 pb-6 lg:pt-4">
@@ -224,7 +224,7 @@
                 class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                 (click)="closeSidebar()"
               >
-                <app-dashboard-icon class="mr-3 h-5 w-5" />
+                <iconify-icon icon="tabler:layout-dashboard" class="mr-3 h-5 w-5" width="unset" noobserver />
                 Dashboard
               </a>
             </li>
@@ -249,7 +249,7 @@
                 class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
                 (click)="closeSidebar()"
               >
-                <app-folder-icon class="mr-3 h-5 w-5" />
+                <iconify-icon icon="tabler:folder" class="mr-3 h-5 w-5" width="unset" noobserver />
                 Projects
               </a>
             </li>
@@ -260,7 +260,7 @@
                 class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
                 (click)="closeSidebar()"
               >
-                <app-puzzle-icon class="mr-3 h-5 w-5" />
+                <iconify-icon icon="tabler:puzzle" class="mr-3 h-5 w-5" width="unset" noobserver />
                 Plugins
               </a>
             </li>
@@ -274,7 +274,7 @@
                 }"
                 (click)="closeSidebar()"
               >
-                <app-users-icon class="mr-3 h-5 w-5" />
+                <iconify-icon icon="tabler:users" class="mr-3 h-5 w-5" width="unset" noobserver />
                 Members
               </a>
             </li>
@@ -285,7 +285,7 @@
                 class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
                 (click)="closeSidebar()"
               >
-                <app-chart-icon class="mr-3 h-5 w-5" />
+                <iconify-icon icon="mdi:chart-line" class="mr-3 h-5 w-5" width="unset" noobserver />
                 Usage
               </a>
             </li>
@@ -331,7 +331,7 @@
                 class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
                 (click)="closeSidebar()"
               >
-                <app-users-icon class="mr-3 h-5 w-5" />
+                <iconify-icon icon="tabler:users" class="mr-3 h-5 w-5" width="unset" noobserver />
                 Members
               </a>
             </li>

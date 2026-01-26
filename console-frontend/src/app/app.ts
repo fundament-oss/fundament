@@ -1,4 +1,4 @@
-import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
+import { Component, signal, HostListener, inject, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthnApiService } from './authn-api.service';
@@ -6,23 +6,8 @@ import type { User } from '../generated/authn/v1/authn_pb';
 import { ToastService } from './toast.service';
 import { versionMismatch$ } from './app.config';
 import {
-  WarningIconComponent,
-  MenuIconComponent,
-  CloseIconComponent,
-  MoonIconComponent,
-  SunIconComponent,
-  ChevronDownIconComponent,
-  UserCircleIconComponent,
   FundamentLogoIconComponent,
-  DashboardIconComponent,
   KubernetesIconComponent,
-  FolderIconComponent,
-  PuzzleIconComponent,
-  UsersIconComponent,
-  ChartIconComponent,
-  CheckCircleIconComponent,
-  ErrorIconComponent,
-  InfoCircleIconComponent,
 } from './icons';
 
 @Component({
@@ -32,24 +17,10 @@ import {
     RouterLink,
     RouterLinkActive,
     CommonModule,
-    WarningIconComponent,
-    MenuIconComponent,
-    CloseIconComponent,
-    MoonIconComponent,
-    SunIconComponent,
-    ChevronDownIconComponent,
-    UserCircleIconComponent,
     FundamentLogoIconComponent,
-    DashboardIconComponent,
     KubernetesIconComponent,
-    FolderIconComponent,
-    PuzzleIconComponent,
-    UsersIconComponent,
-    ChartIconComponent,
-    CheckCircleIconComponent,
-    ErrorIconComponent,
-    InfoCircleIconComponent,
   ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './app.html',
 })
 export class App implements OnInit {
