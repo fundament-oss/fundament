@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="24"
+<dbmodel pgmodeler-ver="2.0.0-alpha" use-changelog="false" max-obj-count="24"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="0,0" last-zoom="0.3" scene-rect="0,0,3944.49,2110.92"
+	 last-position="0,0" last-zoom="0.7" scene-rect="0,0,3944.49,2110.92"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -156,10 +156,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 END;]]> </definition>
 </function>
 
-<table name="users" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
+<table name="users" layers="0" collapse-mode="1" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="200" y="540"/>
+	<position x="220" y="540"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -169,17 +169,26 @@ END;]]> </definition>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
 	</column>
-	<column name="external_id" not-null="true">
+	<column name="external_id">
 		<type name="text" length="0"/>
 	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
+	<column name="email">
+		<type name="text" length="0"/>
+	</column>
+	<column name="role" not-null="true" default-value="'viewer'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
 	<constraint name="users_pk" type="pk-constr" table="tenant.users">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="users_uq_external_id" type="uq-constr" table="tenant.users">
-		<columns names="external_id" ref-type="src-columns"/>
+	<constraint name="users_uq_external_id" type="uq-constr" nulls-not-distinct="true" table="tenant.users">
+		<columns names="external_id,deleted" ref-type="src-columns"/>
 	</constraint>
 </table>
 

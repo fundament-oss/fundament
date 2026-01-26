@@ -29,11 +29,16 @@
         Users who have been invited but haven't signed in yet
       </p>
 
-      @if (pendingInvitations().length > 0) {
+      @if (isLoading()) {
+        <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
+          <div class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"></div>
+          <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      } @else if (pendingInvitations.length > 0) {
         <div
           class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
         >
-          @for (invitation of pendingInvitations(); track invitation.id) {
+          @for (invitation of pendingInvitations; track invitation.id) {
             <div class="flex items-center justify-between px-4 py-3">
               <div class="flex items-center gap-3">
                 <div
@@ -54,19 +59,14 @@
                   </svg>
                 </div>
                 <div>
-                  <p class="font-medium dark:text-white">{{ invitation.email }}</p>
+                  <p class="font-medium dark:text-white">{{ invitation.email || invitation.name }}</p>
                   <p class="text-sm text-gray-500 dark:text-gray-400">
-                    Invited {{ formatTimeAgo(invitation.invitedAt) }}
+                    Invited {{ formatTimeAgo(invitation.createdAt) }}
                   </p>
                 </div>
               </div>
               <div class="flex items-center gap-3">
-                <span
-                  class="badge"
-                  [class]="invitation.role === 'admin' ? 'badge-purple' : 'badge-yellow'"
-                >
-                  {{ invitation.role === 'admin' ? 'Admin' : 'Viewer' }}
-                </span>
+                <span class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 capitalize dark:bg-gray-800 dark:text-gray-300">{{ invitation.role }}</span>
                 <button
                   (click)="cancelInvitation(invitation.id)"
                   class="cursor-pointer text-gray-400 hover:text-rose-600 dark:hover:text-rose-400"
@@ -96,10 +96,6 @@
             />
           </svg>
           <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No pending invitations</p>
-          <button (click)="openModal()" class="btn-primary mt-4 inline-flex items-center">
-            <app-plus-icon class="mr-2 h-4 w-4" />
-            Invite your first member
-          </button>
         </div>
       }
     </div>
@@ -111,61 +107,62 @@
         Users who have signed in to the organization
       </p>
 
-      <div
-        class="divide-y divide-gray-200 overflow-hidden rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
-      >
-        @for (member of members(); track member.id) {
-          <div
-            class="flex items-center justify-between px-4 py-3"
-            [class.bg-gray-50]="member.isCurrentUser"
-            [class.dark:bg-gray-900]="member.isCurrentUser"
+      @if (isLoading()) {
+        <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
+          <div class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"></div>
+          <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading members...</p>
+        </div>
+      } @else if (error()) {
+        <div class="rounded-md border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-800 dark:bg-rose-950">
+          <svg class="mx-auto h-12 w-12 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
+          <button
+            type="button"
+            (click)="loadMembers()"
+            class="mt-4 inline-flex items-center rounded-md border border-transparent bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 cursor-pointer"
           >
-            <div class="flex items-center gap-3">
-              <div
-                class="flex h-10 w-10 items-center justify-center rounded-full font-medium text-white"
-                [class]="getAvatarColor(member.name)"
-              >
-                {{ getInitials(member.name) }}
-              </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <p class="font-medium dark:text-white">{{ member.name }}</p>
-                  @if (member.isCurrentUser) {
-                    <span
-                      class="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
-                      >You</span
-                    >
-                  }
+            Try again
+          </button>
+        </div>
+      } @else if (activeMembers.length === 0) {
+        <div class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No members found</p>
+        </div>
+      } @else {
+        <div class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+          @for (member of activeMembers; track member.id) {
+            <div
+              class="flex items-center justify-between px-4 py-3"
+              [class.bg-gray-50]="member.isCurrentUser"
+              [class.dark:bg-gray-900]="member.isCurrentUser"
+            >
+              <div class="flex items-center gap-3">
+                <div
+                  class="flex h-10 w-10 items-center justify-center rounded-full text-white font-medium"
+                  [class]="getAvatarColor(member.name)"
+                >
+                  {{ getInitials(member.name) }}
                 </div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ member.email }}</p>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <p class="font-medium dark:text-white">{{ member.name }}</p>
+                    @if (member.isCurrentUser) {
+                      <span class="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">You</span>
+                    }
+                  </div>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">{{ member.email || member.externalId }}</p>
+                </div>
               </div>
+              <span class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 capitalize dark:bg-gray-800 dark:text-gray-300">{{ member.role }}</span>
             </div>
-            <div class="flex items-center gap-3">
-              @if (member.isCurrentUser) {
-                <span class="badge badge-purple">
-                  {{ member.role === 'admin' ? 'Admin' : 'Viewer' }}
-                </span>
-              } @else {
-                <select
-                  [value]="member.role"
-                  (change)="updateMemberRole(member.id, $any($event.target).value)"
-                  class="rounded-md border border-gray-300 bg-white py-1 pr-8 pl-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                >
-                  <option value="admin">Admin</option>
-                  <option value="viewer">Viewer</option>
-                </select>
-                <button
-                  (click)="removeMember(member.id)"
-                  class="cursor-pointer text-gray-400 hover:text-rose-600 dark:hover:text-rose-400"
-                  title="Remove member"
-                >
-                  <app-trash-icon class="h-5 w-5" />
-                </button>
-              }
-            </div>
-          </div>
-        }
-      </div>
+          }
+        </div>
+      }
     </div>
   </div>
 </div>
@@ -190,7 +187,7 @@
         <h2 id="modal-title" class="text-xl font-bold dark:text-white">Invite user</h2>
         <button
           (click)="closeModal()"
-          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
           aria-label="Close modal"
         >
           <app-close-icon class="h-6 w-6" />
@@ -202,7 +199,7 @@
         once added.
       </p>
 
-      <form (ngSubmit)="submitInvitation()">
+      <form (ngSubmit)="submitInvitation()" novalidate>
         <div class="mb-4">
           <label
             for="email"
@@ -211,15 +208,22 @@
             Email address
           </label>
           <input
+            #emailInput
+            #emailModel="ngModel"
             type="email"
             id="email"
+            email
             [ngModel]="inviteEmail()"
-            (ngModelChange)="inviteEmail.set($event)"
+            (ngModelChange)="inviteEmail.set($event); inviteError.set(null)"
             name="email"
             placeholder="user@example.com"
-            required
-            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-          />
+            [disabled]="isSubmitting()"
+            class="disabled:opacity-50"
+            [class]="inviteError() || (emailModel.invalid && emailModel.touched) ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700'"
+          >
+          @if (inviteError()) {
+            <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ inviteError() }}</p>
+          }
         </div>
 
         <div class="mb-6">
@@ -231,16 +235,25 @@
             [ngModel]="inviteRole()"
             (ngModelChange)="inviteRole.set($event)"
             name="role"
-            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+            [disabled]="isSubmitting()"
+            class="w-full disabled:opacity-50"
           >
-            <option value="viewer">Viewer - Can view organization resources</option>
-            <option value="admin">Admin - Full access to manage the organization</option>
+            <option value="viewer">Viewer</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
 
         <div class="flex justify-end gap-3">
-          <button type="button" (click)="closeModal()" class="btn-secondary">Cancel</button>
-          <button type="submit" class="btn-primary">Send invitation</button>
+          <button type="button" (click)="closeModal()" class="btn-secondary" [disabled]="isSubmitting()">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+            @if (isSubmitting()) {
+              Sending...
+            } @else {
+              Send invitation
+            }
+          </button>
         </div>
       </form>
     </div>

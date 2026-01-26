@@ -14,11 +14,3 @@ type TenantOrganization struct {
 	Name    string
 	Created pgtype.Timestamptz
 }
-
-type TenantUser struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	Name           string
-	ExternalID     string
-	Created        pgtype.Timestamptz
-}

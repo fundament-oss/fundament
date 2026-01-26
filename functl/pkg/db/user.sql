@@ -24,13 +24,15 @@ SELECT
   external_id,
   created
 FROM tenant.users
-WHERE organization_id = @organization_id
+WHERE organization_id = @organization_id AND deleted IS NULL
 ORDER BY created DESC;
 
 -- name: UserDelete :execrows
-DELETE FROM tenant.users
-USING tenant.organizations
+UPDATE tenant.users
+SET deleted = NOW()
+FROM tenant.organizations
 WHERE
   users.organization_id = organizations.id
   AND organizations.name = @organization_name::text
-  AND users.name = @user_name::text;
+  AND users.name = @user_name::text
+  AND users.deleted IS NULL;
