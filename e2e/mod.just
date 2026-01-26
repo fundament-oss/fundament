@@ -1,7 +1,3 @@
-# Install e2e test dependencies
-install:
-    bun install && bunx playwright install chromium
-
 # Run all e2e tests (requires local cluster to be running)
 test:
     bun run test
