@@ -13,6 +13,6 @@
 # CSS / TailwindCSS generated files
 *.generated.css -diff linguist-generated=true
 
-# Package manager generated files (npm)
+# Package manager generated files (bun)
 *.lock -diff linguist-generated=true
-pnpm-lock.yaml -diff linguist-generated=true
+bun.lock -diff linguist-generated=true

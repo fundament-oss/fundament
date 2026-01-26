@@ -14,8 +14,8 @@ Credentials:
 To lint or format the code, use:
 
 ```bash
-pnpm lint
-pnpm format
+bun lint
+bun format
 ```
 
 ## Building
