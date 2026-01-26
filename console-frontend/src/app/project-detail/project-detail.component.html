@@ -461,9 +461,9 @@
           <!-- Member name (only show when editing) -->
           @if (editingMember()) {
             <div class="mt-4">
-              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+              <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
                 Member
-              </label>
+              </span>
               <p class="text-sm dark:text-white">{{ editingMember()?.name }}</p>
               <p class="text-xs text-gray-500 dark:text-gray-400">{{ editingMember()?.email }}</p>
             </div>

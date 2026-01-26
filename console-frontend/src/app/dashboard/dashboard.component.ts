@@ -1,8 +1,7 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
-import { PlusIconComponent, EyeIconComponent, ErrorIconComponent } from '../icons';
 import { CLUSTER } from '../../connect/tokens';
 import { ClusterSummary } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
@@ -11,7 +10,8 @@ import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, PlusIconComponent, EyeIconComponent, ErrorIconComponent],
+  imports: [CommonModule, RouterLink],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {

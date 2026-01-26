@@ -9,7 +9,7 @@
     <!-- Error Message -->
     @if (errorMessage()) {
       <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
-        <app-error-icon class="mr-3 h-5 w-5 shrink-0 text-rose-400 dark:text-rose-500" />
+        <iconify-icon icon="tabler:circle-x-filled" class="mr-3 h-5 w-5 shrink-0 text-rose-400 dark:text-rose-500" width="unset" noobserver />
         <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
       </div>
     }
@@ -17,7 +17,7 @@
     <!-- Create Cluster Button -->
     <div class="mb-6">
       <a routerLink="/add-cluster" class="btn-primary inline-flex items-center">
-        <app-plus-icon class="mr-1.5 h-4 w-4" />
+        <iconify-icon icon="tabler:plus" class="mr-1.5 h-4 w-4" width="unset" noobserver />
         Add a Kubernetes cluster
       </a>
     </div>
@@ -57,7 +57,7 @@
                 routerLink="/clusters/{{ cluster.id }}"
                 class="btn-primary inline-flex items-center px-3!"
               >
-                <app-eye-icon class="mr-2 h-4 w-4" /> View details
+                <iconify-icon icon="tabler:eye" class="mr-2 h-4 w-4" width="unset" noobserver /> View details
               </a>
             </div>
           </div>
