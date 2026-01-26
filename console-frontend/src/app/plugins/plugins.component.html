@@ -46,7 +46,7 @@
                       "
                     >
                       @if (tag.name.toLowerCase() === 'official') {
-                        <app-checkmark-icon class="mr-1 h-3 w-3" />
+                        <ng-icon name="tablerCheck" size="0.75rem" class="mr-1" />
                       }
                       {{ tag.name }}
                     </span>
@@ -91,7 +91,11 @@
       <!-- Empty State -->
       @if (!isLoading() && filteredPlugins.length === 0) {
         <div class="py-12 text-center">
-          <app-question-circle-icon class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
+          <ng-icon
+            name="tablerQuestionMark"
+            size="2rem"
+            class="mx-auto text-gray-400! dark:text-gray-500!"
+          />
           <h3 class="mt-2 text-sm font-medium dark:text-white">No plugins found</h3>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Please try selecting a different category.

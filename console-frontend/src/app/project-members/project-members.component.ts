@@ -2,18 +2,19 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TitleService } from '../title.service';
-import { PlusIconComponent, EditIconComponent, TrashIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPlus, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
 
 @Component({
   selector: 'app-project-members',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    RouterLinkActive,
-    PlusIconComponent,
-    EditIconComponent,
-    TrashIconComponent,
+  imports: [CommonModule, RouterLink, RouterLinkActive, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerPlus,
+      tablerPencil,
+      tablerTrash,
+    }),
   ],
   templateUrl: './project-members.component.html',
 })

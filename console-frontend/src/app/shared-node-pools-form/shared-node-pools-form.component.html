@@ -15,7 +15,7 @@
               (click)="removeNodePool($index)"
               class="inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-2 py-1 text-xs font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white"
             >
-              <app-trash-icon class="mr-1 h-3 w-3" /> Remove
+              <ng-icon name="tablerTrash" size="0.75rem" class="mr-1" /> Remove
             </button>
           }
         </div>
@@ -98,7 +98,7 @@
   </div>
 
   <button type="button" (click)="addNodePool()" class="btn-light inline-flex items-center">
-    <app-plus-icon class="mr-1.5 h-4 w-4" />
+    <ng-icon name="tablerPlus" class="mr-1.5" />
     Add another node pool
   </button>
 

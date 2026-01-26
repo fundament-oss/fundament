@@ -5,10 +5,7 @@ import { AuthnApiService } from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { ToastService } from './toast.service';
 import { versionMismatch$ } from './app.config';
-import {
-  FundamentLogoIconComponent,
-  KubernetesIconComponent,
-} from './icons';
+import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerCircleCheck,

@@ -17,7 +17,7 @@
       (click)="onAddPermission()"
       class="btn-light mb-5 inline-flex items-center"
     >
-      <app-plus-icon class="mr-1.5 h-4 w-4" />
+      <ng-icon name="tablerPlus" class="mr-1.5" />
       Add a permission
     </button>
 
@@ -53,11 +53,11 @@
                   (click)="onEditPermission(permission, $index)"
                   class="btn-light mr-2 inline-flex shrink-0 items-center"
                 >
-                  <app-edit-icon class="mr-1.5 h-4 w-4" /> Edit
+                  <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
                 </button>
 
                 <button type="button" class="btn-remove shrink-0">
-                  <app-trash-icon class="mr-1.5 h-4 w-4" /> Remove
+                  <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
                 </button>
               </td>
             </tr>

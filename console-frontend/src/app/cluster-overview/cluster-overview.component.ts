@@ -29,34 +29,34 @@ import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_p
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  EditIconComponent,
-  TerminalIconComponent,
-  DownloadIconComponent,
-  UpgradeIconComponent,
-  ErrorIconComponent,
-  WarningIconComponent,
-  PlusIconComponent,
-  TrashIconComponent,
-  LoadingIndicatorComponent,
-} from '../icons';
+  tablerTerminal,
+  tablerDownload,
+  tablerArrowUp,
+  tablerPencil,
+  tablerPlus,
+  tablerTrash,
+  tablerAlertTriangle,
+} from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 
 @Component({
   selector: 'app-cluster-overview',
-  imports: [
-    CommonModule,
-    RouterLink,
-    ReactiveFormsModule,
-    EditIconComponent,
-    TerminalIconComponent,
-    DownloadIconComponent,
-    UpgradeIconComponent,
-    ErrorIconComponent,
-    WarningIconComponent,
-    PlusIconComponent,
-    TrashIconComponent,
-    LoadingIndicatorComponent,
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent],
+  viewProviders: [
+    provideIcons({
+      tablerCircleXFill,
+      tablerTerminal,
+      tablerDownload,
+      tablerArrowUp,
+      tablerPencil,
+      tablerPlus,
+      tablerTrash,
+      tablerAlertTriangle,
+    }),
   ],
   templateUrl: './cluster-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

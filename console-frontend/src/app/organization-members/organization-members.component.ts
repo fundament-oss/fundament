@@ -2,7 +2,8 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
-import { PlusIconComponent, CloseIconComponent, TrashIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPlus, tablerX, tablerTrash } from '@ng-icons/tabler-icons';
 
 interface OrganizationMember {
   id: string;
@@ -21,7 +22,14 @@ interface PendingInvitation {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [CommonModule, FormsModule, PlusIconComponent, CloseIconComponent, TrashIconComponent],
+  imports: [CommonModule, FormsModule, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerPlus,
+      tablerX,
+      tablerTrash,
+    }),
+  ],
   templateUrl: './organization-members.component.html',
 })
 export class OrganizationMembersComponent {

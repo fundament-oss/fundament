@@ -17,7 +17,7 @@
           class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-3 border-gray-200 text-sm font-semibold text-gray-400 group-data-[active=true]:border-emerald-500 group-data-[active=true]:text-emerald-500 group-data-[completed=true]:border-emerald-500 group-data-[completed=true]:text-emerald-500 dark:border-gray-700 dark:text-gray-500"
         >
           @if (isCompleted(i)) {
-            <app-checkmark-icon class="h-4 w-4" />
+            <ng-icon name="tablerCheck" />
           } @else if (isActive(i)) {
             <span class="h-3 w-3 rounded-full bg-emerald-500"></span>
           } @else {

@@ -16,11 +16,17 @@ import { PROJECT } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { CreateProjectRequestSchema } from '../../generated/v1/project_pb';
 import { firstValueFrom } from 'rxjs';
-import { ErrorIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 
 @Component({
   selector: 'app-add-project',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, ErrorIconComponent],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerCircleXFill,
+    }),
+  ],
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

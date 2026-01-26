@@ -16,12 +16,18 @@ import {
   NodePool,
 } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
-import { ErrorIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 
 @Component({
   selector: 'app-cluster-nodes',
   standalone: true,
-  imports: [CommonModule, SharedNodePoolsFormComponent, ErrorIconComponent],
+  imports: [CommonModule, SharedNodePoolsFormComponent, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerCircleXFill,
+    }),
+  ],
   templateUrl: './cluster-nodes.component.html',
 })
 export class ClusterNodesComponent implements OnInit {

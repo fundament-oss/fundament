@@ -14,7 +14,7 @@
           (click)="openModal()"
           class="btn-primary inline-flex items-center px-3!"
         >
-          <app-plus-icon class="mr-2 h-4 w-4" />
+          <ng-icon name="tablerPlus" class="mr-2" />
           Invite user
         </button>
       </div>
@@ -72,7 +72,7 @@
                   class="cursor-pointer text-gray-400 hover:text-rose-600 dark:hover:text-rose-400"
                   title="Cancel invitation"
                 >
-                  <app-close-icon class="h-5 w-5" />
+                  <ng-icon name="tablerX" size="1.25rem" class="block!" />
                 </button>
               </div>
             </div>
@@ -97,7 +97,7 @@
           </svg>
           <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No pending invitations</p>
           <button (click)="openModal()" class="btn-primary mt-4 inline-flex items-center">
-            <app-plus-icon class="mr-2 h-4 w-4" />
+            <ng-icon name="tablerPlus" class="mr-2" />
             Invite your first member
           </button>
         </div>
@@ -159,7 +159,7 @@
                   class="cursor-pointer text-gray-400 hover:text-rose-600 dark:hover:text-rose-400"
                   title="Remove member"
                 >
-                  <app-trash-icon class="h-5 w-5" />
+                  <ng-icon name="tablerTrash" size="1.25rem" class="block!" />
                 </button>
               }
             </div>
@@ -193,7 +193,7 @@
           class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
           aria-label="Close modal"
         >
-          <app-close-icon class="h-6 w-6" />
+          <ng-icon name="tablerX" size="1.5rem" class="block!" />
         </button>
       </div>
 

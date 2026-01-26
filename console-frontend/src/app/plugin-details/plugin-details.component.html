@@ -1,7 +1,7 @@
 <!-- Breadcrumb -->
 <nav class="-mt-2 mb-4 flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
   <a routerLink="/plugins" class="hover:text-indigo-600 dark:hover:text-indigo-400">Plugins</a>
-  <app-chevron-right-icon class="mr-2 h-3.5 w-3.5" />
+  <ng-icon name="tablerChevronRight" size="0.875rem" class="mr-2" />
   <span>{{ plugin()?.name || 'Loading...' }}</span>
 </nav>
 
@@ -24,7 +24,7 @@
 @if (errorMessage() && !isLoading()) {
   <div class="rounded-md border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950">
     <div class="flex items-center">
-      <app-error-icon class="h-5 w-5 text-red-600 dark:text-red-400" />
+      <ng-icon name="tablerCircleXFill" size="1.25rem" class="text-red-600! dark:text-red-400!" />
       <h3 class="ml-3 text-sm font-medium text-red-800 dark:text-red-200">
         {{ errorMessage() }}
       </h3>
@@ -71,7 +71,7 @@
                       "
                     >
                       @if (tag.name.toLowerCase() === 'official') {
-                        <app-checkmark-icon class="mr-1 h-3 w-3" />
+                        <ng-icon name="tablerCheck" size="0.75rem" class="mr-1" />
                       }
                       {{ tag.name }}
                     </span>
@@ -80,7 +80,7 @@
                     <span
                       class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     >
-                      <app-checkmark-icon class="mr-1 h-3 w-3" />
+                      <ng-icon name="tablerCheck" size="0.75rem" class="mr-1" />
                       Installed on {{ getInstalledClusterCount() }} cluster{{
                         getInstalledClusterCount() > 1 ? 's' : ''
                       }}
@@ -113,20 +113,26 @@
 
           <div class="mt-6 space-y-3 border-t border-gray-200 pt-6 dark:border-gray-800">
             <div class="flex items-start">
-              <app-checkmark-icon
-                class="mr-3 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+              <ng-icon
+                name="tablerCheck"
+                size="1.25rem"
+                class="mr-3 shrink-0 text-emerald-600! dark:text-emerald-400!"
               />
               <span class="text-sm text-gray-600 dark:text-gray-300">Community support</span>
             </div>
             <div class="flex items-start">
-              <app-checkmark-icon
-                class="mr-3 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+              <ng-icon
+                name="tablerCheck"
+                size="1.25rem"
+                class="mr-3 shrink-0 text-emerald-600! dark:text-emerald-400!"
               />
               <span class="text-sm text-gray-600 dark:text-gray-300">Open source</span>
             </div>
             <div class="flex items-start">
-              <app-checkmark-icon
-                class="mr-3 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+              <ng-icon
+                name="tablerCheck"
+                size="1.25rem"
+                class="mr-3 shrink-0 text-emerald-600! dark:text-emerald-400!"
               />
               <span class="text-sm text-gray-600 dark:text-gray-300">Regular updates</span>
             </div>

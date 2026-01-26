@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CloseIconComponent, CheckmarkIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerX, tablerCheck } from '@ng-icons/tabler-icons';
 
 interface Cluster {
   id: string;
@@ -11,7 +12,13 @@ interface Cluster {
 @Component({
   selector: 'app-install-plugin-modal',
   standalone: true,
-  imports: [CommonModule, CloseIconComponent, CheckmarkIconComponent],
+  imports: [CommonModule, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerX,
+      tablerCheck,
+    }),
+  ],
   templateUrl: './install-plugin-modal.html',
 })
 export class InstallPluginModalComponent {

@@ -1,7 +1,8 @@
 import { Component, inject, computed, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
-import { CheckmarkIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerCheck } from '@ng-icons/tabler-icons';
 import { ClusterWizardStateService } from './cluster-wizard-state.service';
 
 interface ProgressStep {
@@ -12,7 +13,12 @@ interface ProgressStep {
 @Component({
   selector: 'app-add-cluster-wizard-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, CheckmarkIconComponent],
+  imports: [CommonModule, RouterOutlet, RouterLink, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerCheck,
+    }),
+  ],
   templateUrl: './add-cluster-wizard-layout.component.html',
 })
 export class AddClusterWizardLayoutComponent implements OnDestroy {
