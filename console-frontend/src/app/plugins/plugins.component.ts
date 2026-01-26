@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCheck, tablerQuestionMark } from '@ng-icons/tabler-icons';
+import { tablerCheck, tablerHelpCircle } from '@ng-icons/tabler-icons';
 import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
@@ -67,7 +67,7 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
   viewProviders: [
     provideIcons({
       tablerCheck,
-      tablerQuestionMark,
+      tablerHelpCircle,
     }),
   ],
   templateUrl: './plugins.component.html',

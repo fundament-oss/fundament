@@ -3,7 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerX, tablerTrash } from '@ng-icons/tabler-icons';
+import {
+  tablerPlus,
+  tablerX,
+  tablerTrash,
+  tablerClockHour4,
+  tablerMail,
+} from '@ng-icons/tabler-icons';
 
 interface OrganizationMember {
   id: string;
@@ -28,6 +34,8 @@ interface PendingInvitation {
       tablerPlus,
       tablerX,
       tablerTrash,
+      tablerClockHour4,
+      tablerMail,
     }),
   ],
   templateUrl: './organization-members.component.html',

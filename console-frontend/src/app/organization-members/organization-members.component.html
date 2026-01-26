@@ -39,19 +39,11 @@
                 <div
                   class="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900"
                 >
-                  <svg
-                    class="h-5 w-5 text-yellow-600 dark:text-yellow-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
+                  <ng-icon
+                    name="tablerClockHour4"
+                    size="1.25rem"
+                    class="text-yellow-600! dark:text-yellow-400!"
+                  />
                 </div>
                 <div>
                   <p class="font-medium dark:text-white">{{ invitation.email }}</p>
@@ -82,19 +74,11 @@
         <div
           class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700"
         >
-          <svg
-            class="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="1.5"
-              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-            />
-          </svg>
+          <ng-icon
+            name="tablerMail"
+            size="3rem"
+            class="mx-auto text-gray-400! dark:text-gray-600!"
+          />
           <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No pending invitations</p>
           <button (click)="openModal()" class="btn-primary mt-4 inline-flex items-center">
             <ng-icon name="tablerPlus" class="mr-2" />
