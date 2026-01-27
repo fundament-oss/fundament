@@ -35,3 +35,12 @@ bun = "1.3.6"
 "npm:@bufbuild/protoc-gen-es" = "2.10.2"
 opentofu = "1.11.3"
 act = "latest"
+
+[tasks.install]
+depends = ["e2e:install"]
+description = "Install all project dependencies"
+
+[tasks."e2e:install"]
+run = "bun install && bunx playwright install chromium"
+dir = "e2e"
+description = "Install e2e test dependencies"
