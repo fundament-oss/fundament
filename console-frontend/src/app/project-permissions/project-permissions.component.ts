@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TitleService } from '../title.service';
 import { PermissionModalComponent } from '../permission-modal/permission-modal.component';
-import { PlusIconComponent, EditIconComponent, TrashIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPlus, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
 
 interface Permission {
   name: string;
@@ -14,14 +15,13 @@ interface Permission {
 @Component({
   selector: 'app-project-permissions',
   standalone: true,
-  imports: [
-    CommonModule,
-    PermissionModalComponent,
-    RouterLink,
-    RouterLinkActive,
-    PlusIconComponent,
-    EditIconComponent,
-    TrashIconComponent,
+  imports: [CommonModule, PermissionModalComponent, RouterLink, RouterLinkActive, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerPlus,
+      tablerPencil,
+      tablerTrash,
+    }),
   ],
   templateUrl: './project-permissions.component.html',
 })

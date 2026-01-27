@@ -2,16 +2,25 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
-import { PlusIconComponent, EyeIconComponent, ErrorIconComponent } from '../icons';
 import { CLUSTER } from '../../connect/tokens';
 import { ClusterSummary } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPlus, tablerEye } from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, PlusIconComponent, EyeIconComponent, ErrorIconComponent],
+  imports: [CommonModule, RouterLink, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerCircleXFill,
+      tablerPlus,
+      tablerEye,
+    }),
+  ],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {

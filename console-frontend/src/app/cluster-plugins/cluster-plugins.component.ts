@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
-import { ErrorIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
@@ -16,7 +17,12 @@ import { firstValueFrom } from 'rxjs';
 @Component({
   selector: 'app-cluster-plugins',
   standalone: true,
-  imports: [CommonModule, SharedPluginsFormComponent, ErrorIconComponent],
+  imports: [CommonModule, SharedPluginsFormComponent, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerCircleXFill,
+    }),
+  ],
   templateUrl: './cluster-plugins.component.html',
 })
 export class ClusterPluginsComponent implements OnInit {

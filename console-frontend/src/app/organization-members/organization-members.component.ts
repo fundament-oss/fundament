@@ -1,11 +1,30 @@
-import { Component, inject, OnInit, signal, ChangeDetectionStrategy, viewChild, ElementRef, afterNextRender, Injector } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  signal,
+  ChangeDetectionStrategy,
+  viewChild,
+  ElementRef,
+  afterNextRender,
+  Injector,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
 import { TitleService } from '../title.service';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  tablerPlus,
+  tablerX,
+  tablerTrash,
+  tablerClockHour4,
+  tablerMail,
+  tablerAlertTriangle,
+} from '@ng-icons/tabler-icons';
+import { heroUserGroup } from '@ng-icons/heroicons/outline';
 import { AuthnApiService } from '../authn-api.service';
-import { PlusIconComponent, CloseIconComponent } from '../icons';
 import { MEMBER } from '../../connect/tokens';
 
 interface OrganizationMember {
@@ -21,8 +40,18 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [
-    CommonModule, FormsModule, PlusIconComponent, CloseIconComponent],
+  imports: [CommonModule, FormsModule, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerPlus,
+      tablerX,
+      tablerTrash,
+      tablerClockHour4,
+      tablerMail,
+      tablerAlertTriangle,
+      heroUserGroup,
+    }),
+  ],
   templateUrl: './organization-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -98,9 +127,12 @@ export class OrganizationMembersComponent implements OnInit {
     this.inviteRole.set('viewer');
     this.inviteError.set(null);
     this.isModalOpen.set(true);
-    afterNextRender(() => {
-      this.emailInput()?.nativeElement.focus();
-    }, { injector: this.injector });
+    afterNextRender(
+      () => {
+        this.emailInput()?.nativeElement.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   closeModal() {

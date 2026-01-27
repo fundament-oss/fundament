@@ -4,12 +4,10 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
-import {
-  ChevronRightIconComponent,
-  CheckmarkIconComponent,
-  ErrorIconComponent,
-  LoadingIndicatorComponent,
-} from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerChevronRight, tablerCheck } from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { GetPluginDetailRequestSchema, type PluginDetail } from '../../generated/v1/plugin_pb';
@@ -40,10 +38,15 @@ interface InstallWithCluster extends Install {
     CommonModule,
     RouterLink,
     InstallPluginModalComponent,
-    ChevronRightIconComponent,
-    CheckmarkIconComponent,
-    ErrorIconComponent,
+    NgIcon,
     LoadingIndicatorComponent,
+  ],
+  viewProviders: [
+    provideIcons({
+      tablerChevronRight,
+      tablerCheck,
+      tablerCircleXFill,
+    }),
   ],
   templateUrl: './plugin-details.component.html',
 })

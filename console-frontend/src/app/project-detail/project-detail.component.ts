@@ -28,14 +28,10 @@ import {
   ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
-import {
-  PlusIconComponent,
-  TrashIconComponent,
-  ErrorIconComponent,
-  WarningIconComponent,
-  LoadingIndicatorComponent,
-  EditIconComponent,
-} from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPlus, tablerTrash, tablerAlertTriangle, tablerPencil } from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { LoadingIndicatorComponent } from '../icons';
 
 type ProjectMemberRole = 'viewer' | 'admin';
 
@@ -50,16 +46,15 @@ interface ProjectMember {
 
 @Component({
   selector: 'app-project-detail',
-  imports: [
-    CommonModule,
-    RouterLink,
-    ReactiveFormsModule,
-    PlusIconComponent,
-    TrashIconComponent,
-    ErrorIconComponent,
-    WarningIconComponent,
-    LoadingIndicatorComponent,
-    EditIconComponent,
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent],
+  viewProviders: [
+    provideIcons({
+      tablerCircleXFill,
+      tablerPlus,
+      tablerTrash,
+      tablerAlertTriangle,
+      tablerPencil,
+    }),
   ],
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -351,14 +346,16 @@ export class ProjectDetailComponent implements OnInit {
     if (this.editingMember()) {
       // Edit existing member
       const member = this.editingMember()!;
-      this.members.update(members =>
-        members.map(m => (m.id === member.id ? { ...m, role } : m)),
+      this.members.update((members) =>
+        members.map((m) => (m.id === member.id ? { ...m, role } : m)),
       );
-      this.toastService.success(`${member.name}'s role updated to ${role === 'admin' ? 'Project admin' : 'Project member'}`);
+      this.toastService.success(
+        `${member.name}'s role updated to ${role === 'admin' ? 'Project admin' : 'Project member'}`,
+      );
     } else {
       // Add new member
       const userId = this.memberForm.value.userId!;
-      const user = this.availableUsers().find(u => u.id === userId);
+      const user = this.availableUsers().find((u) => u.id === userId);
 
       if (user) {
         const newMember: ProjectMember = {
@@ -370,8 +367,8 @@ export class ProjectDetailComponent implements OnInit {
           addedAt: new Date().toISOString(),
         };
 
-        this.members.update(members => [...members, newMember]);
-        this.availableUsers.update(users => users.filter(u => u.id !== userId));
+        this.members.update((members) => [...members, newMember]);
+        this.availableUsers.update((users) => users.filter((u) => u.id !== userId));
         this.toastService.success(`${user.name} added to project`);
       }
     }
@@ -382,7 +379,7 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   removeMember(memberId: string) {
-    const member = this.members().find(m => m.id === memberId);
+    const member = this.members().find((m) => m.id === memberId);
     if (!member) return;
 
     if (!confirm(`Are you sure you want to remove ${member.name} from this project?`)) {
@@ -390,8 +387,11 @@ export class ProjectDetailComponent implements OnInit {
     }
 
     // Move user back to available users
-    this.availableUsers.update(users => [...users, { id: member.userId, name: member.name, email: member.email }]);
-    this.members.update(members => members.filter(m => m.id !== memberId));
+    this.availableUsers.update((users) => [
+      ...users,
+      { id: member.userId, name: member.name, email: member.email },
+    ]);
+    this.members.update((members) => members.filter((m) => m.id !== memberId));
     this.toastService.info(`${member.name} removed from project`);
   }
 }
