@@ -21,7 +21,9 @@ import {
   tablerTrash,
   tablerClockHour4,
   tablerMail,
+  tablerAlertTriangle,
 } from '@ng-icons/tabler-icons';
+import { heroUserGroup } from '@ng-icons/heroicons/outline';
 import { AuthnApiService } from '../authn-api.service';
 import { MEMBER } from '../../connect/tokens';
 
@@ -46,6 +48,8 @@ interface OrganizationMember {
       tablerTrash,
       tablerClockHour4,
       tablerMail,
+      tablerAlertTriangle,
+      heroUserGroup,
     }),
   ],
   templateUrl: './organization-members.component.html',
