@@ -31,7 +31,9 @@
 
       @if (isLoading()) {
         <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
-          <div class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"></div>
+          <div
+            class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"
+          ></div>
           <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       } @else if (pendingInvitations.length > 0) {
@@ -51,14 +53,19 @@
                   />
                 </div>
                 <div>
-                  <p class="font-medium dark:text-white">{{ invitation.email || invitation.name }}</p>
+                  <p class="font-medium dark:text-white">
+                    {{ invitation.email || invitation.name }}
+                  </p>
                   <p class="text-sm text-gray-500 dark:text-gray-400">
                     Invited {{ formatTimeAgo(invitation.createdAt) }}
                   </p>
                 </div>
               </div>
               <div class="flex items-center gap-3">
-                <span class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 capitalize dark:bg-gray-800 dark:text-gray-300">{{ invitation.role }}</span>
+                <span
+                  class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 capitalize dark:bg-gray-800 dark:text-gray-300"
+                  >{{ invitation.role }}</span
+                >
                 <button
                   (click)="cancelInvitation(invitation.id)"
                   class="cursor-pointer text-gray-400 hover:text-rose-600 dark:hover:text-rose-400"
@@ -93,28 +100,40 @@
 
       @if (isLoading()) {
         <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
-          <div class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"></div>
+          <div
+            class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"
+          ></div>
           <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading members...</p>
         </div>
       } @else if (error()) {
-        <div class="rounded-md border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-800 dark:bg-rose-950">
+        <div
+          class="rounded-md border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-800 dark:bg-rose-950"
+        >
           <ng-icon name="tablerAlertTriangle" size="3rem" class="mx-auto text-rose-400!" />
           <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
           <button
             type="button"
             (click)="loadMembers()"
-            class="mt-4 inline-flex items-center rounded-md border border-transparent bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 cursor-pointer"
+            class="mt-4 inline-flex cursor-pointer items-center rounded-md border border-transparent bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700"
           >
             Try again
           </button>
         </div>
       } @else if (activeMembers.length === 0) {
-        <div class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700">
-          <ng-icon name="heroUserGroup" size="3rem" class="mx-auto text-gray-400! dark:text-gray-600!" />
+        <div
+          class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700"
+        >
+          <ng-icon
+            name="heroUserGroup"
+            size="3rem"
+            class="mx-auto text-gray-400! dark:text-gray-600!"
+          />
           <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No members found</p>
         </div>
       } @else {
-        <div class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+        <div
+          class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
+        >
           @for (member of activeMembers; track member.id) {
             <div
               class="flex items-center justify-between px-4 py-3"
@@ -123,7 +142,7 @@
             >
               <div class="flex items-center gap-3">
                 <div
-                  class="flex h-10 w-10 items-center justify-center rounded-full text-white font-medium"
+                  class="flex h-10 w-10 items-center justify-center rounded-full font-medium text-white"
                   [class]="getAvatarColor(member.name)"
                 >
                   {{ getInitials(member.name) }}
@@ -132,13 +151,21 @@
                   <div class="flex items-center gap-2">
                     <p class="font-medium dark:text-white">{{ member.name }}</p>
                     @if (member.isCurrentUser) {
-                      <span class="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">You</span>
+                      <span
+                        class="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                        >You</span
+                      >
                     }
                   </div>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">{{ member.email || member.externalId }}</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ member.email || member.externalId }}
+                  </p>
                 </div>
               </div>
-              <span class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 capitalize dark:bg-gray-800 dark:text-gray-300">{{ member.role }}</span>
+              <span
+                class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 capitalize dark:bg-gray-800 dark:text-gray-300"
+                >{{ member.role }}</span
+              >
             </div>
           }
         </div>
@@ -167,7 +194,7 @@
         <h2 id="modal-title" class="text-xl font-bold dark:text-white">Invite user</h2>
         <button
           (click)="closeModal()"
-          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+          class="cursor-pointer text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
           aria-label="Close modal"
         >
           <ng-icon name="tablerX" size="1.5rem" class="block!" />
@@ -199,8 +226,12 @@
             placeholder="user@example.com"
             [disabled]="isSubmitting()"
             class="disabled:opacity-50"
-            [class]="inviteError() || (emailModel.invalid && emailModel.touched) ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700'"
-          >
+            [class]="
+              inviteError() || (emailModel.invalid && emailModel.touched)
+                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+                : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700'
+            "
+          />
           @if (inviteError()) {
             <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ inviteError() }}</p>
           }
@@ -224,7 +255,12 @@
         </div>
 
         <div class="flex justify-end gap-3">
-          <button type="button" (click)="closeModal()" class="btn-secondary" [disabled]="isSubmitting()">
+          <button
+            type="button"
+            (click)="closeModal()"
+            class="btn-secondary"
+            [disabled]="isSubmitting()"
+          >
             Cancel
           </button>
           <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
