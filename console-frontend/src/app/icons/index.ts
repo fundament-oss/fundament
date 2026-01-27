@@ -5,3 +5,4 @@
 export { LoadingIndicatorComponent } from './loading-indicator.component';
 export { FundamentLogoIconComponent } from './fundament-logo-icon.component';
 export { KubernetesIconComponent } from './kubernetes-icon.component';
+export { CheckmarkIconComponent } from './checkmark-icon.component';
