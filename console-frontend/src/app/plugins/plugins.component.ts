@@ -3,11 +3,9 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
-import {
-  CheckmarkIconComponent,
-  QuestionCircleIconComponent,
-  LoadingIndicatorComponent,
-} from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerCheck, tablerHelpCircle } from '@ng-icons/tabler-icons';
+import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
@@ -63,9 +61,14 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
     CommonModule,
     RouterLink,
     InstallPluginModalComponent,
-    CheckmarkIconComponent,
-    QuestionCircleIconComponent,
+    NgIcon,
     LoadingIndicatorComponent,
+  ],
+  viewProviders: [
+    provideIcons({
+      tablerCheck,
+      tablerHelpCircle,
+    }),
   ],
   templateUrl: './plugins.component.html',
 })

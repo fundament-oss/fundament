@@ -6,12 +6,12 @@ import (
 
 func TestParseUserIdentifier(t *testing.T) {
 	tests := []struct {
-		name         string
-		identifier   string
-		wantOrg      string
-		wantUser     string
-		wantErr      bool
-		wantErrMsg   string
+		name       string
+		identifier string
+		wantOrg    string
+		wantUser   string
+		wantErr    bool
+		wantErrMsg string
 	}{
 		{
 			name:       "valid identifier",

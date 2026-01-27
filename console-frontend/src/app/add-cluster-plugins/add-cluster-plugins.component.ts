@@ -3,13 +3,19 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
-import { ArrowRightIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerArrowRight } from '@ng-icons/tabler-icons';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 
 @Component({
   selector: 'app-add-cluster-plugins',
   standalone: true,
-  imports: [CommonModule, SharedPluginsFormComponent, RouterLink, ArrowRightIconComponent],
+  imports: [CommonModule, SharedPluginsFormComponent, RouterLink, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerArrowRight,
+    }),
+  ],
   templateUrl: './add-cluster-plugins.component.html',
 })
 export class AddClusterPluginsComponent {

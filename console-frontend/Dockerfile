@@ -1,15 +1,12 @@
 # Build stage
-FROM node:24-alpine AS build
+FROM oven/bun:1-alpine AS build
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 # Copy package files
-COPY console-frontend/package.json console-frontend/pnpm-lock.yaml ./
+COPY console-frontend/package.json console-frontend/bun.lock ./
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN bun install --frozen-lockfile
 
 # Copy proto files first (needed for generate-proto-version.js)
 COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/
@@ -18,7 +15,7 @@ COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/
 COPY console-frontend/ .
 
 # Build the application
-RUN pnpm build
+RUN bun run build
 
 # Production stage
 FROM nginx:alpine

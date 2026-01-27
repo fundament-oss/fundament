@@ -6,13 +6,19 @@ import {
   SharedNodePoolsFormComponent,
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
-import { ArrowRightIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerArrowRight } from '@ng-icons/tabler-icons';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 
 @Component({
   selector: 'app-add-cluster-nodes',
   standalone: true,
-  imports: [CommonModule, SharedNodePoolsFormComponent, RouterLink, ArrowRightIconComponent],
+  imports: [CommonModule, SharedNodePoolsFormComponent, RouterLink, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerArrowRight,
+    }),
+  ],
   templateUrl: './add-cluster-nodes.component.html',
 })
 export class AddClusterNodesComponent {

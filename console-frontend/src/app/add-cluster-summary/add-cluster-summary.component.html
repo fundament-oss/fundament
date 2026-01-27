@@ -101,7 +101,11 @@
   <!-- Error Message -->
   @if (errorMessage()) {
     <div class="flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
-      <app-error-icon class="mr-3 h-5 w-5 shrink-0 text-rose-400 dark:text-rose-500" />
+      <ng-icon
+        name="tablerCircleXFill"
+        class="mr-3 shrink-0 text-rose-400! dark:text-rose-500!"
+        size="1.25rem"
+      />
       <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
     </div>
   }

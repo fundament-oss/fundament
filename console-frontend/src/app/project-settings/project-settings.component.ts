@@ -2,7 +2,8 @@ import { Component, inject, ViewChild, ElementRef, signal } from '@angular/core'
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
-import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '../icons';
+import { NgIconComponent, provideIcons } from '@ng-icons/core';
+import { tablerX, tablerPencil, tablerCheck } from '@ng-icons/tabler-icons';
 
 interface Project {
   id: string;
@@ -13,12 +14,13 @@ interface Project {
 @Component({
   selector: 'app-project-settings',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    CheckmarkIconComponent,
-    CloseIconComponent,
-    EditIconComponent,
+  imports: [CommonModule, FormsModule, NgIconComponent],
+  viewProviders: [
+    provideIcons({
+      tablerX,
+      tablerPencil,
+      tablerCheck,
+    }),
   ],
   templateUrl: './project-settings.component.html',
 })

@@ -28,25 +28,33 @@ import {
   ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
-import {
-  PlusIconComponent,
-  TrashIconComponent,
-  ErrorIconComponent,
-  WarningIconComponent,
-  LoadingIndicatorComponent,
-} from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPlus, tablerTrash, tablerAlertTriangle, tablerPencil } from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { LoadingIndicatorComponent } from '../icons';
+
+type ProjectMemberRole = 'viewer' | 'admin';
+
+interface ProjectMember {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: ProjectMemberRole;
+  addedAt: string;
+}
 
 @Component({
   selector: 'app-project-detail',
-  imports: [
-    CommonModule,
-    RouterLink,
-    ReactiveFormsModule,
-    PlusIconComponent,
-    TrashIconComponent,
-    ErrorIconComponent,
-    WarningIconComponent,
-    LoadingIndicatorComponent,
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent],
+  viewProviders: [
+    provideIcons({
+      tablerCircleXFill,
+      tablerPlus,
+      tablerTrash,
+      tablerAlertTriangle,
+      tablerPencil,
+    }),
   ],
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,6 +72,8 @@ export class ProjectDetailComponent implements OnInit {
   namespaces = signal<ProjectNamespace[]>([]);
   clusters = signal<ClusterSummary[]>([]);
 
+  activeTab = signal<'details' | 'members'>('details');
+
   isLoading = signal<boolean>(true);
   errorMessage = signal<string | null>(null);
 
@@ -72,6 +82,13 @@ export class ProjectDetailComponent implements OnInit {
 
   isLoadingClusters = signal<boolean>(false);
   isCreatingNamespace = signal<boolean>(false);
+
+  // Project Members
+  members = signal<ProjectMember[]>([]);
+  availableUsers = signal<{ id: string; name: string; email: string }[]>([]);
+  showAddMemberModal = signal<boolean>(false);
+  isAddingMember = signal<boolean>(false);
+  editingMember = signal<ProjectMember | null>(null);
 
   namespaceNameInput = viewChild<ElementRef<HTMLInputElement>>('namespaceNameInput');
 
@@ -88,9 +105,15 @@ export class ProjectDetailComponent implements OnInit {
     ],
   });
 
+  memberForm = this.fb.group({
+    userId: ['', Validators.required],
+    role: ['viewer' as ProjectMemberRole, Validators.required],
+  });
+
   async ngOnInit() {
     const projectId = this.route.snapshot.params['id'];
     await this.loadProject(projectId);
+    this.loadMembers();
   }
 
   async loadProject(projectId: string) {
@@ -259,5 +282,116 @@ export class ProjectDetailComponent implements OnInit {
       return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
     }
     return '';
+  }
+
+  // Project Members methods
+  loadMembers() {
+    // Mock data for project members
+    this.members.set([
+      {
+        id: 'pm-1',
+        userId: 'user-1',
+        name: 'Alice Johnson',
+        email: 'alice.johnson@example.com',
+        role: 'admin',
+        addedAt: '2024-01-15T10:30:00Z',
+      },
+      {
+        id: 'pm-2',
+        userId: 'user-2',
+        name: 'Bob Smith',
+        email: 'bob.smith@example.com',
+        role: 'viewer',
+        addedAt: '2024-02-20T14:45:00Z',
+      },
+      {
+        id: 'pm-3',
+        userId: 'user-3',
+        name: 'Carol Williams',
+        email: 'carol.williams@example.com',
+        role: 'viewer',
+        addedAt: '2024-03-10T09:15:00Z',
+      },
+    ]);
+
+    // Mock available users (users not yet in the project)
+    this.availableUsers.set([
+      { id: 'user-4', name: 'David Brown', email: 'david.brown@example.com' },
+      { id: 'user-5', name: 'Eve Davis', email: 'eve.davis@example.com' },
+      { id: 'user-6', name: 'Frank Miller', email: 'frank.miller@example.com' },
+    ]);
+  }
+
+  openAddMemberModal() {
+    this.editingMember.set(null);
+    this.memberForm.reset({ userId: '', role: 'viewer' });
+    this.showAddMemberModal.set(true);
+  }
+
+  openEditMemberModal(member: ProjectMember) {
+    this.editingMember.set(member);
+    this.memberForm.patchValue({ userId: member.userId, role: member.role });
+    this.showAddMemberModal.set(true);
+  }
+
+  saveMember() {
+    if (this.memberForm.invalid) {
+      this.memberForm.markAllAsTouched();
+      return;
+    }
+
+    this.isAddingMember.set(true);
+    const role = this.memberForm.value.role as ProjectMemberRole;
+
+    if (this.editingMember()) {
+      // Edit existing member
+      const member = this.editingMember()!;
+      this.members.update((members) =>
+        members.map((m) => (m.id === member.id ? { ...m, role } : m)),
+      );
+      this.toastService.success(
+        `${member.name}'s role updated to ${role === 'admin' ? 'Project admin' : 'Project member'}`,
+      );
+    } else {
+      // Add new member
+      const userId = this.memberForm.value.userId!;
+      const user = this.availableUsers().find((u) => u.id === userId);
+
+      if (user) {
+        const newMember: ProjectMember = {
+          id: `pm-${Date.now()}`,
+          userId: user.id,
+          name: user.name,
+          email: user.email,
+          role,
+          addedAt: new Date().toISOString(),
+        };
+
+        this.members.update((members) => [...members, newMember]);
+        this.availableUsers.update((users) => users.filter((u) => u.id !== userId));
+        this.toastService.success(`${user.name} added to project`);
+      }
+    }
+
+    this.showAddMemberModal.set(false);
+    this.isAddingMember.set(false);
+    this.editingMember.set(null);
+  }
+
+  removeMember(memberId: string) {
+    const member = this.members().find((m) => m.id === memberId);
+    if (!member) return;
+
+    if (!confirm(`Are you sure you want to remove ${member.name} from this project?`)) {
+      return;
+    }
+
+    // Move user back to available users
+    this.availableUsers.update((users) => [
+      ...users,
+      { id: member.userId, name: member.name, email: member.email },
+    ]);
+    this.members.update((members) => members.filter((m) => m.id !== memberId));
+    this.toastService.info(`${member.name} removed from project`);
   }
 }

@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { TitleService } from '../title.service';
 import { DateRangePickerComponent } from '../date-range-picker/date-range-picker.component';
-import { TableDownloadIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerTableDown } from '@ng-icons/tabler-icons';
 
 Chart.register(...registerables);
 
@@ -43,7 +44,12 @@ interface Project {
 @Component({
   selector: 'app-usage',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateRangePickerComponent, TableDownloadIconComponent],
+  imports: [CommonModule, FormsModule, DateRangePickerComponent, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerTableDown,
+    }),
+  ],
   templateUrl: './usage.component.html',
 })
 export class UsageComponent implements AfterViewInit {

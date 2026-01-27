@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { ErrorIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { CLUSTER, PLUGIN } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
@@ -23,7 +24,12 @@ import { firstValueFrom } from 'rxjs';
 @Component({
   selector: 'app-add-cluster-summary',
   standalone: true,
-  imports: [CommonModule, RouterLink, ErrorIconComponent],
+  imports: [CommonModule, RouterLink, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerCircleXFill,
+    }),
+  ],
   templateUrl: './add-cluster-summary.component.html',
 })
 export class AddClusterSummaryComponent implements OnInit {

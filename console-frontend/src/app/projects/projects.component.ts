@@ -6,22 +6,20 @@ import { PROJECT } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { firstValueFrom } from 'rxjs';
-import {
-  PlusIconComponent,
-  ErrorIconComponent,
-  ChevronRightIconComponent,
-  LoadingIndicatorComponent,
-} from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPlus, tablerChevronRight } from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { LoadingIndicatorComponent } from '../icons';
 
 @Component({
   selector: 'app-projects',
-  imports: [
-    CommonModule,
-    RouterLink,
-    PlusIconComponent,
-    ErrorIconComponent,
-    ChevronRightIconComponent,
-    LoadingIndicatorComponent,
+  imports: [CommonModule, RouterLink, NgIcon, LoadingIndicatorComponent],
+  viewProviders: [
+    provideIcons({
+      tablerCircleXFill,
+      tablerPlus,
+      tablerChevronRight,
+    }),
   ],
   templateUrl: './projects.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

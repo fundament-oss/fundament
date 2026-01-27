@@ -11,14 +11,15 @@ import {
   OnChanges,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
-  CloseIconComponent,
-  SearchIconComponent,
-  ChevronRightIconComponent,
-  OrganizationIconComponent,
-  ProjectsIconComponent,
-  NamespaceIconComponent,
-} from '../icons';
+  tablerX,
+  tablerSearch,
+  tablerChevronRight,
+  tablerFolder,
+  tablerBracketsContain,
+  tablerBuilding,
+} from '@ng-icons/tabler-icons';
 
 interface Namespace {
   id: string;
@@ -40,14 +41,16 @@ interface Organization {
 @Component({
   selector: 'app-selector-modal',
   standalone: true,
-  imports: [
-    CommonModule,
-    CloseIconComponent,
-    SearchIconComponent,
-    ChevronRightIconComponent,
-    OrganizationIconComponent,
-    ProjectsIconComponent,
-    NamespaceIconComponent,
+  imports: [CommonModule, NgIconComponent],
+  viewProviders: [
+    provideIcons({
+      tablerX,
+      tablerSearch,
+      tablerChevronRight,
+      tablerFolder,
+      tablerBracketsContain,
+      tablerBuilding,
+    }),
   ],
   templateUrl: './selector-modal.component.html',
 })
@@ -57,8 +60,8 @@ export class SelectorModalComponent implements AfterViewInit, OnChanges {
   @Input() selectedOrgId: string | null = null;
   @Input() selectedProjectId: string | null = null;
   @Input() selectedNamespaceId: string | null = null;
-  @Input() expandedOrganizations: Set<string> = new Set();
-  @Input() expandedProjects: Set<string> = new Set();
+  @Input() expandedOrganizations: Set<string> = new Set<string>();
+  @Input() expandedProjects: Set<string> = new Set<string>();
 
   @Output() closeModal = new EventEmitter<void>();
   @Output() selectOrganization = new EventEmitter<string>();
@@ -173,7 +176,7 @@ export class SelectorModalComponent implements AfterViewInit, OnChanges {
             }
             return null;
           })
-          .filter((p) => p !== null);
+          .filter((p): p is Project => p !== null);
 
         if (orgMatches || filteredProjects.length > 0) {
           return {
@@ -183,6 +186,6 @@ export class SelectorModalComponent implements AfterViewInit, OnChanges {
         }
         return null;
       })
-      .filter((org) => org !== null);
+      .filter((org): org is Organization => org !== null);
   }
 }

@@ -71,7 +71,7 @@ func (c *UserCreateCmd) Run(ctx *Context) error {
 
 	ctx.Logger.Debug("user created", "id", u.ID.String())
 
-	return outputUserCreate(ctx.Output, u)
+	return outputUserCreate(ctx.Output, &u)
 }
 
 // Run executes the user list command.
@@ -135,7 +135,7 @@ type userOutput struct {
 	Created     string `json:"created"`
 }
 
-func outputUserCreate(format OutputFormat, u db.TenantUser) error {
+func outputUserCreate(format OutputFormat, u *db.UserCreateRow) error {
 	switch format {
 	case OutputJSON:
 		return PrintJSON(userCreateOutput{
@@ -157,7 +157,7 @@ func outputUserList(format OutputFormat, organization string, users []db.UserLis
 			output[i] = userOutput{
 				ID:          u.ID.String(),
 				Identifier:  organization + "/" + u.Name,
-				ExternalRef: u.ExternalID,
+				ExternalRef: u.ExternalID.String,
 				Created:     u.Created.Time.Format(TimeFormat),
 			}
 		}
@@ -170,7 +170,7 @@ func outputUserList(format OutputFormat, organization string, users []db.UserLis
 				u.ID.String(),
 				organization,
 				u.Name,
-				u.ExternalID,
+				u.ExternalID.String,
 				u.Created.Time.Format(TimeFormat),
 			)
 		}

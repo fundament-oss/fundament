@@ -16,13 +16,13 @@
     >
       <div class="flex items-center">
         @if (toastService.toast()?.type === 'success') {
-          <app-check-circle-icon class="mr-3 h-6 w-6 shrink-0" />
+          <ng-icon name="tablerCircleCheck" class="mr-3 shrink-0" size="1.5rem" />
         } @else if (toastService.toast()?.type === 'error') {
-          <app-error-icon class="mr-3 h-6 w-6 shrink-0" />
+          <ng-icon name="tablerCircleXFill" class="mr-3 shrink-0" size="1.5rem" />
         } @else if (toastService.toast()?.type === 'warning') {
-          <app-warning-icon class="mr-3 h-6 w-6 shrink-0" />
+          <ng-icon name="tablerAlertTriangle" class="mr-3 shrink-0" size="1.5rem" />
         } @else {
-          <app-info-circle-icon class="mr-3 h-6 w-6 shrink-0" />
+          <ng-icon name="tablerInfoCircle" class="mr-3 shrink-0" size="1.5rem" />
         }
         <p class="text-sm">{{ toastService.toast()?.message }}</p>
       </div>
@@ -32,7 +32,7 @@
         aria-label="Dismiss notification"
         class="ml-4 shrink-0 cursor-pointer rounded-md p-1 transition-colors hover:bg-white/20 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:outline-none"
       >
-        <app-close-icon class="h-5 w-5" />
+        <ng-icon name="tablerX" size="1.25rem" class="block!" />
       </button>
     </div>
   }
@@ -44,7 +44,7 @@
       role="alert"
     >
       <div class="flex items-center">
-        <app-warning-icon class="mr-3 h-6 w-6 shrink-0" />
+        <ng-icon name="tablerAlertTriangle" class="mr-3 shrink-0" size="1.5rem" />
         <div>
           <p class="font-semibold">New version available</p>
           <p class="text-sm">The API has been updated. Please reload to use the latest version.</p>
@@ -72,7 +72,7 @@
               aria-label="Toggle sidebar"
               class="mr-3 cursor-pointer rounded-md p-2 text-gray-600 ring-indigo-500 hover:bg-gray-100 focus:ring-2 focus:outline-none lg:hidden dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
             >
-              <app-menu-icon class="h-6 w-6" />
+              <ng-icon name="tablerMenu2" class="block!" size="1.5rem" />
             </button>
           }
           <h1 class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
@@ -98,9 +98,9 @@
               class="flex h-5.25 w-5.25 translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow transition-transform group-aria-checked:translate-x-4.75 dark:bg-gray-950 dark:text-gray-300"
             >
               @if (isDarkMode()) {
-                <app-moon-icon class="h-4 w-4" />
+                <ng-icon name="tablerMoon" />
               } @else {
-                <app-sun-icon class="h-4 w-4" />
+                <ng-icon name="tablerSun" />
               }
             </span>
           </button>
@@ -113,7 +113,7 @@
                 class="flex cursor-pointer items-center rounded-full text-indigo-600 ring-indigo-500 focus:ring-2 focus:outline-none dark:text-indigo-400 dark:ring-offset-gray-950"
                 aria-label="User menu"
               >
-                <app-user-circle-icon class="h-8 w-8" />
+                <ng-icon name="tablerUserCircle" size="2rem" />
               </button>
 
               @if (userDropdownOpen()) {
@@ -178,7 +178,7 @@
             aria-label="Close sidebar"
             class="cursor-pointer rounded-md p-2 text-gray-600 ring-indigo-500 hover:bg-gray-100 focus:ring-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
           >
-            <app-close-icon class="h-6 w-6" />
+            <ng-icon name="tablerX" class="block!" size="1.5rem" />
           </button>
         </div>
 
@@ -198,18 +198,18 @@
             <div class="flex min-w-0 flex-1 items-center">
               @if (getSelectedItemDisplay(); as selected) {
                 @if (selected.type === 'organization') {
-                  <app-organization-icon class="mr-2 h-4 w-4 shrink-0" />
+                  <ng-icon name="tablerBuilding" class="mr-2 shrink-0" />
                 } @else if (selected.type === 'project') {
-                  <app-projects-icon class="mr-2 h-4 w-4 shrink-0" />
+                  <ng-icon name="tablerFolder" class="mr-2 shrink-0" />
                 } @else if (selected.type === 'namespace') {
-                  <app-namespace-icon class="mr-2 h-4 w-4 shrink-0" />
+                  <ng-icon name="tablerBracketsContain" class="mr-2 shrink-0" />
                 }
                 <span class="truncate">{{ selected.name }}</span>
               } @else {
                 <span class="text-gray-500 dark:text-gray-400">Select...</span>
               }
             </div>
-            <app-chevron-right-icon class="ml-2 h-4 w-4 shrink-0" />
+            <ng-icon name="tablerChevronRight" class="ml-2 shrink-0" />
           </button>
         </div>
 
@@ -245,7 +245,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-folder-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerFolders" class="mr-3" size="1.25rem" />
                   Projects
                 </a>
               </li>
@@ -256,7 +256,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-puzzle-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerPuzzle" class="mr-3" size="1.25rem" />
                   Plugins
                 </a>
               </li>
@@ -267,7 +267,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-users-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
                   Members
                 </a>
               </li>
@@ -278,7 +278,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-chart-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
                   Usage
                 </a>
               </li>
@@ -290,7 +290,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-settings-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
                   Settings
                 </a>
               </li>
@@ -302,7 +302,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-namespace-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerBracketsContain" size="1.25rem" class="mr-3" />
                   Namespaces
                 </a>
               </li>
@@ -313,7 +313,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-users-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
                   Members
                 </a>
               </li>
@@ -324,7 +324,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-chart-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
                   Usage
                 </a>
               </li>
@@ -335,7 +335,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-settings-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
                   Settings
                 </a>
               </li>
@@ -347,7 +347,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-users-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
                   Members
                 </a>
               </li>
@@ -358,7 +358,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-chart-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
                   Usage
                 </a>
               </li>
@@ -369,7 +369,7 @@
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
                 >
-                  <app-settings-icon class="mr-3 h-5 w-5" />
+                  <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
                   Settings
                 </a>
               </li>

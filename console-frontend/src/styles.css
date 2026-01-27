@@ -154,11 +154,13 @@ select {
   @apply mt-4 -mb-px flex space-x-2;
 }
 
-.tabs a {
+.tabs a,
+.tabs button {
   @apply rounded-t-lg border border-gray-200 border-b-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 dark:border-gray-800 dark:border-b-gray-800 dark:text-gray-400 dark:hover:text-gray-200;
 }
 
-.tabs a.active {
+.tabs a.active,
+.tabs button.active {
   @apply border-b-white text-gray-700 dark:border-b-gray-950 dark:text-gray-200;
 }
 

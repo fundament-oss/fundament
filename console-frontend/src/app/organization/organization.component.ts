@@ -10,17 +10,19 @@ import {
   Organization,
 } from '../../generated/v1/organization_pb';
 import { firstValueFrom } from 'rxjs';
-import { CheckmarkIconComponent, CloseIconComponent, EditIconComponent } from '../icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
 
 @Component({
   selector: 'app-organization',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    CheckmarkIconComponent,
-    CloseIconComponent,
-    EditIconComponent,
+  imports: [CommonModule, FormsModule, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerPencil,
+      tablerX,
+      tablerCheck,
+    }),
   ],
   templateUrl: './organization.component.html',
 })

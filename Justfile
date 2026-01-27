@@ -1,4 +1,5 @@
 mod terraform-provider 'terraform-provider'
+mod e2e 'e2e'
 
 _default:
     @just --list

@@ -55,7 +55,7 @@
                 [disabled]="loading()"
                 class="btn-primary inline-flex shrink-0 items-center"
               >
-                <app-checkmark-icon class="mr-1.5 h-4 w-4" /> Save
+                <ng-icon name="tablerCheck" class="mr-1.5" size="1rem" /> Save
               </button>
               <button
                 type="button"
@@ -63,7 +63,7 @@
                 [disabled]="loading()"
                 class="btn-secondary inline-flex shrink-0 items-center"
               >
-                <app-close-icon class="mr-1.5 h-4 w-4" /> Cancel
+                <ng-icon name="tablerX" class="mr-1.5" size="1rem" /> Cancel
               </button>
             </div>
           } @else {
@@ -75,7 +75,7 @@
                 [disabled]="loading()"
                 class="btn-light inline-flex shrink-0 items-center"
               >
-                <app-edit-icon class="mr-1.5 h-4 w-4" /> Rename
+                <ng-icon name="tablerPencil" class="mr-1.5" size="1rem" /> Rename
               </button>
             </div>
           }

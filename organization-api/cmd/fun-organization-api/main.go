@@ -135,6 +135,7 @@ func run() error {
 		"organization.v1.OrganizationService",
 		"organization.v1.ClusterService",
 		"organization.v1.PluginService",
+		"organization.v1.MemberService",
 	)
 	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
 	mux.Handle(reflectPath, reflectHandler)
@@ -143,6 +144,9 @@ func run() error {
 
 	projectPath, projectHandler := organizationv1connect.NewProjectServiceHandler(server, interceptors)
 	mux.Handle(projectPath, projectHandler)
+
+	memberPath, memberHandler := organizationv1connect.NewMemberServiceHandler(server, interceptors)
+	mux.Handle(memberPath, memberHandler)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,

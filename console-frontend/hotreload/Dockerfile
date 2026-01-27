@@ -1,14 +1,11 @@
-FROM node:24-alpine
+FROM oven/bun:1-alpine
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 # Copy package files
-COPY console-frontend/package.json console-frontend/pnpm-lock.yaml ./
+COPY console-frontend/package.json console-frontend/bun.lock ./
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN bun install --frozen-lockfile
 
 # Copy proto files (needed for generate-proto-version.js)
 COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/
@@ -21,4 +18,4 @@ EXPOSE 80
 
 # Start development server with hot reload
 # Configure dev server to listen on 0.0.0.0:80 for pod accessibility
-CMD ["sh", "-c", "pnpm start --host 0.0.0.0 --port 80"]
+CMD ["sh", "-c", "bun start --host 0.0.0.0 --port 80"]
