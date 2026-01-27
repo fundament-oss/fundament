@@ -53,6 +53,14 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 
 const AuthCookieName = "fundament_auth"
 
+// User represents user data for JWT generation.
+type User struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     string
+}
+
 type Claims struct {
 	jwt.RegisteredClaims
 	UserID         uuid.UUID `json:"user_id"`
@@ -61,7 +69,7 @@ type Claims struct {
 	Name           string    `json:"name"`
 }
 
-func (s *AuthnServer) generateJWT(user *db.TenantUser, groups []string) (string, error) {
+func (s *AuthnServer) generateJWT(user *User, groups []string) (string, error) {
 	now := time.Now()
 
 	claims := Claims{

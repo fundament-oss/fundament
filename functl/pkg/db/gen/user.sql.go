@@ -38,9 +38,17 @@ type UserCreateParams struct {
 	OrganizationName string
 }
 
-func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (TenantUser, error) {
+type UserCreateRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     pgtype.Text
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (UserCreateRow, error) {
 	row := q.db.QueryRow(ctx, userCreate, arg.Name, arg.ExternalRef, arg.OrganizationName)
-	var i TenantUser
+	var i UserCreateRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
@@ -52,12 +60,14 @@ func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (TenantU
 }
 
 const userDelete = `-- name: UserDelete :execrows
-DELETE FROM tenant.users
-USING tenant.organizations
+UPDATE tenant.users
+SET deleted = NOW()
+FROM tenant.organizations
 WHERE
   users.organization_id = organizations.id
   AND organizations.name = $1::text
   AND users.name = $2::text
+  AND users.deleted IS NULL
 `
 
 type UserDeleteParams struct {
@@ -80,7 +90,7 @@ SELECT
   external_id,
   created
 FROM tenant.users
-WHERE organization_id = $1
+WHERE organization_id = $1 AND deleted IS NULL
 ORDER BY created DESC
 `
 
@@ -91,7 +101,7 @@ type UserListParams struct {
 type UserListRow struct {
 	ID         uuid.UUID
 	Name       string
-	ExternalID string
+	ExternalID pgtype.Text
 	Created    pgtype.Timestamptz
 }
 

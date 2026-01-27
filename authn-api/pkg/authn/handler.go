@@ -8,8 +8,8 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/oauth2"
 
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
@@ -189,7 +189,7 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := &db.TenantUser{
+	user := &User{
 		ID:             claims.UserID,
 		OrganizationID: claims.OrganizationID,
 		Name:           claims.Name,
@@ -325,74 +325,185 @@ type oidcClaims struct {
 // processOIDCLogin handles the common logic for processing an OIDC login,
 // including user lookup/creation and JWT generation.
 // Returns the user, groups, and access token on success.
-func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, loginMethod string) (*db.TenantUser, []string, string, error) {
-	// Dex staticPasswords doesn't support groups, so fall back to email-based mapping for dev
+func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, loginMethod string) (*User, []string, string, error) {
+	groups := s.resolveGroups(claims)
+
+	// Try by external ID
+	existingUser, err := s.queries.UserGetByExternalID(ctx, db.UserGetByExternalIDParams{
+		ExternalID: pgtype.Text{String: claims.Sub, Valid: true},
+	})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		s.logger.Error("failed to get user by external_id", "error", err)
+		return nil, nil, "", fmt.Errorf("looking up user: %w", err)
+	}
+	if err == nil {
+		return s.handleExistingUser(ctx, claims, &existingUser, groups, loginMethod)
+	}
+
+	// Try invited user by email
+	if claims.Email != "" {
+		invitedUser, err := s.queries.UserGetByEmail(ctx, db.UserGetByEmailParams{
+			Email: pgtype.Text{String: claims.Email, Valid: true},
+		})
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			s.logger.Error("failed to check for invited user", "error", err)
+			return nil, nil, "", fmt.Errorf("looking up invited user: %w", err)
+		}
+		if err == nil {
+			return s.handleInvitedUser(ctx, claims, &invitedUser, groups, loginMethod)
+		}
+	}
+
+	// Create new user with new organization
+	return s.handleNewUser(ctx, claims, groups, loginMethod)
+}
+
+// userFromUpsertRow converts a db.UserUpsertRow to *User.
+func userFromUpsertRow(row *db.UserUpsertRow) *User {
+	return &User{
+		ID:             row.ID,
+		OrganizationID: row.OrganizationID,
+		Name:           row.Name,
+		ExternalID:     row.ExternalID.String,
+	}
+}
+
+// userFromGetByIDRow converts a db.UserGetByIDRow to *User.
+func userFromGetByIDRow(row *db.UserGetByIDRow) *User {
+	return &User{
+		ID:             row.ID,
+		OrganizationID: row.OrganizationID,
+		Name:           row.Name,
+		ExternalID:     row.ExternalID.String,
+	}
+}
+
+// resolveGroups returns the groups from claims, falling back to dev groups if empty.
+func (s *AuthnServer) resolveGroups(claims *oidcClaims) []string {
 	groups := claims.Groups
 	if len(groups) == 0 {
 		groups = getDevGroups(claims.Email)
 	}
+	return groups
+}
 
-	// Check if user exists to determine if we need to create an organization
-	var organizationID uuid.UUID
-	existingUser, err := s.queries.UserGetByExternalID(ctx, db.UserGetByExternalIDParams{
-		ExternalID: claims.Sub,
-	})
-	isNewUser := errors.Is(err, pgx.ErrNoRows)
+// generateAccessToken creates a User from a db row and generates a JWT.
+func (s *AuthnServer) generateAccessToken(row *db.UserUpsertRow, groups []string) (*User, string, error) {
+	user := userFromUpsertRow(row)
+	accessToken, err := s.generateJWT(user, groups)
+	if err != nil {
+		return nil, "", fmt.Errorf("generating JWT: %w", err)
+	}
+	return user, accessToken, nil
+}
 
-	if err != nil && !isNewUser {
-		s.logger.Error("failed to get user", "error", err)
-		return nil, nil, "", fmt.Errorf("database error")
+// handleExistingUser handles login for users with a matching external_id.
+func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims, existingUser *db.UserGetByExternalIDRow, groups []string, loginMethod string) (*User, []string, string, error) {
+	params := db.UserUpsertParams{
+		OrganizationID: existingUser.OrganizationID,
+		Name:           claims.Name,
+		ExternalID:     pgtype.Text{String: claims.Sub, Valid: true},
+		Email:          pgtype.Text{String: claims.Email, Valid: claims.Email != ""},
+	}
+	row, err := s.queries.UserUpsert(ctx, params)
+	if err != nil {
+		s.logger.Error("failed to upsert user", "error", err)
+		return nil, nil, "", fmt.Errorf("upserting user: %w", err)
 	}
 
-	if isNewUser {
-		// New user - create organization first
-		organizationName := claims.Name
-		if organizationName == "" {
-			organizationName = claims.Email
-		}
+	user, accessToken, err := s.generateAccessToken(&row, groups)
+	if err != nil {
+		s.logger.Error("failed to generate token", "error", err)
+		return nil, nil, "", err
+	}
 
-		organization, err := s.queries.OrganizationCreate(ctx, db.OrganizationCreateParams{
-			Name: organizationName,
-		})
-		if err != nil {
-			s.logger.Error("failed to create organization", "error", err)
-			return nil, nil, "", fmt.Errorf("failed to create organization")
-		}
-		organizationID = organization.ID
-	} else {
-		organizationID = existingUser.OrganizationID
+	s.logger.Info("existing user logged in",
+		"login_method", loginMethod,
+		"user_id", user.ID,
+		"organization_id", user.OrganizationID,
+	)
+
+	return user, groups, accessToken, nil
+}
+
+// handleInvitedUser handles login for users who were invited by email.
+func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims, invitedUser *db.UserGetByEmailRow, groups []string, loginMethod string) (*User, []string, string, error) {
+	err := s.queries.UserSetExternalID(ctx, db.UserSetExternalIDParams{
+		ID:         invitedUser.ID,
+		ExternalID: pgtype.Text{String: claims.Sub, Valid: true},
+		Name:       claims.Name,
+	})
+	if err != nil {
+		s.logger.Error("failed to set external_id for invited user", "error", err)
+		return nil, nil, "", fmt.Errorf("claiming invited user: %w", err)
+	}
+
+	row, err := s.queries.UserGetByID(ctx, db.UserGetByIDParams{ID: invitedUser.ID})
+	if err != nil {
+		s.logger.Error("failed to fetch updated user", "error", err)
+		return nil, nil, "", fmt.Errorf("fetching updated user: %w", err)
+	}
+
+	user := userFromGetByIDRow(&row)
+	accessToken, err := s.generateJWT(user, groups)
+	if err != nil {
+		s.logger.Error("failed to generate token", "error", err)
+		return nil, nil, "", fmt.Errorf("generating JWT: %w", err)
+	}
+
+	s.logger.Info("invited user claimed account",
+		"login_method", loginMethod,
+		"user_id", user.ID,
+		"organization_id", user.OrganizationID,
+		"name", user.Name,
+		"email", claims.Email,
+	)
+
+	return user, groups, accessToken, nil
+}
+
+// handleNewUser creates a new organization and user for first-time registration.
+func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, groups []string, loginMethod string) (*User, []string, string, error) {
+	organizationName := claims.Name
+	if organizationName == "" {
+		organizationName = claims.Email
+	}
+
+	organization, err := s.queries.OrganizationCreate(ctx, db.OrganizationCreateParams{
+		Name: organizationName,
+	})
+	if err != nil {
+		s.logger.Error("failed to create organization", "error", err)
+		return nil, nil, "", fmt.Errorf("creating organization: %w", err)
 	}
 
 	params := db.UserUpsertParams{
-		OrganizationID: organizationID,
+		OrganizationID: organization.ID,
 		Name:           claims.Name,
-		ExternalID:     claims.Sub,
+		ExternalID:     pgtype.Text{String: claims.Sub, Valid: true},
+		Email:          pgtype.Text{String: claims.Email, Valid: claims.Email != ""},
 	}
 
-	// Upsert user (creates if new, updates name if existing)
-	user, err := s.queries.UserUpsert(ctx, params)
+	row, err := s.queries.UserUpsert(ctx, params)
 	if err != nil {
 		s.logger.Error("failed to upsert user", "error", err)
-		return nil, nil, "", fmt.Errorf("failed to upsert user")
+		return nil, nil, "", fmt.Errorf("creating user: %w", err)
 	}
 
-	if isNewUser {
-		s.logger.Info("new user registered",
-			"login_method", loginMethod,
-			"user_id", user.ID,
-			"organization_id", organizationID,
-			"name", user.Name,
-		)
-	}
-
-	// Generate JWT
-	accessToken, err := s.generateJWT(&user, groups)
+	user, accessToken, err := s.generateAccessToken(&row, groups)
 	if err != nil {
 		s.logger.Error("failed to generate token", "error", err)
-		return nil, nil, "", fmt.Errorf("failed to generate token")
+		return nil, nil, "", err
 	}
 
-	return &user, groups, accessToken, nil
+	s.logger.Info("new user registered",
+		"login_method", loginMethod,
+		"user_id", user.ID,
+		"organization_id", organization.ID,
+		"name", user.Name,
+	)
+
+	return user, groups, accessToken, nil
 }
 
 // writeJSON writes a JSON response with the given status code.

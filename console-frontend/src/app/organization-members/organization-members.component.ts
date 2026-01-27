@@ -1,6 +1,18 @@
-import { Component, inject, signal } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  signal,
+  ChangeDetectionStrategy,
+  viewChild,
+  ElementRef,
+  afterNextRender,
+  Injector,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { ConnectError, Code } from '@connectrpc/connect';
 import { TitleService } from '../title.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -10,20 +22,18 @@ import {
   tablerClockHour4,
   tablerMail,
 } from '@ng-icons/tabler-icons';
+import { AuthnApiService } from '../authn-api.service';
+import { MEMBER } from '../../connect/tokens';
 
 interface OrganizationMember {
   id: string;
   name: string;
-  email: string;
-  role: 'admin' | 'viewer';
+  email?: string;
+  externalId?: string;
+  role: string;
   isCurrentUser?: boolean;
-}
-
-interface PendingInvitation {
-  id: string;
-  email: string;
-  role: 'admin' | 'viewer';
-  invitedAt: Date;
+  isPending: boolean;
+  createdAt?: Date;
 }
 
 @Component({
@@ -39,87 +49,139 @@ interface PendingInvitation {
     }),
   ],
   templateUrl: './organization-members.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class OrganizationMembersComponent {
+export class OrganizationMembersComponent implements OnInit {
   private titleService = inject(TitleService);
+  private memberClient = inject(MEMBER);
+  private authnService = inject(AuthnApiService);
+  private injector = inject(Injector);
+
+  // Loading and error state
+  isLoading = signal(true);
+  error = signal<string | null>(null);
+  isSubmitting = signal(false);
 
   // Modal state
   isModalOpen = signal(false);
   inviteEmail = signal('');
-  inviteRole = signal<'admin' | 'viewer'>('viewer');
+  inviteRole = signal('viewer');
+  inviteError = signal<string | null>(null);
+  private emailInput = viewChild<ElementRef<HTMLInputElement>>('emailInput');
 
-  // Mock data - replace with API calls later
-  members = signal<OrganizationMember[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      role: 'admin',
-      isCurrentUser: true,
-    },
-    { id: '2', name: 'Jane Smith', email: 'jane.smith@example.com', role: 'viewer' },
-    { id: '3', name: 'Bob Williams', email: 'bob.williams@example.com', role: 'admin' },
-  ]);
+  // All members loaded from API (includes both active and pending)
+  allMembers = signal<OrganizationMember[]>([]);
 
-  pendingInvitations = signal<PendingInvitation[]>([
-    {
-      id: '1',
-      email: 'newuser@example.com',
-      role: 'viewer',
-      invitedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: '2',
-      email: 'another.person@company.com',
-      role: 'admin',
-      invitedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    },
-  ]);
+  // Computed: active members (have external_id)
+  get activeMembers(): OrganizationMember[] {
+    return this.allMembers().filter((m) => !m.isPending);
+  }
+
+  // Computed: pending invitations (no external_id)
+  get pendingInvitations(): OrganizationMember[] {
+    return this.allMembers().filter((m) => m.isPending);
+  }
 
   constructor() {
     this.titleService.setTitle('Organization members');
   }
 
+  ngOnInit() {
+    this.loadMembers();
+  }
+
+  async loadMembers() {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    try {
+      const currentUser = await firstValueFrom(this.authnService.currentUser$);
+      const response = await firstValueFrom(this.memberClient.listMembers({}));
+
+      const members: OrganizationMember[] = response.members.map((member) => ({
+        id: member.id,
+        name: member.name,
+        email: member.email,
+        externalId: member.externalId,
+        role: member.role,
+        isCurrentUser: currentUser?.id === member.id,
+        isPending: !member.externalId,
+        createdAt: member.createdAt?.value ? new Date(member.createdAt.value) : undefined,
+      }));
+
+      this.allMembers.set(members);
+    } catch (err) {
+      this.error.set('Failed to load members. Please try again.');
+      console.error('Failed to load members:', err);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
   openModal() {
     this.inviteEmail.set('');
     this.inviteRole.set('viewer');
+    this.inviteError.set(null);
     this.isModalOpen.set(true);
+    afterNextRender(
+      () => {
+        this.emailInput()?.nativeElement.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   closeModal() {
     this.isModalOpen.set(false);
   }
 
-  submitInvitation() {
-    const email = this.inviteEmail();
-    const role = this.inviteRole();
+  async submitInvitation() {
+    const email = this.inviteEmail().trim();
 
-    if (!email.trim()) {
+    if (!email) {
       return;
     }
 
-    // Add to pending invitations (mock - replace with API call)
-    this.pendingInvitations.update((invitations) => [
-      ...invitations,
-      { id: crypto.randomUUID(), email: email.trim(), role, invitedAt: new Date() },
-    ]);
+    this.isSubmitting.set(true);
+    this.inviteError.set(null);
 
-    this.closeModal();
+    try {
+      await firstValueFrom(this.memberClient.inviteMember({ email, role: this.inviteRole() }));
+      this.closeModal();
+      await this.loadMembers();
+    } catch (err: unknown) {
+      console.error('Failed to invite member:', err);
+      if (err instanceof ConnectError) {
+        if (err.code === Code.AlreadyExists) {
+          this.inviteError.set('This email address is already in use.');
+        } else if (err.code === Code.InvalidArgument) {
+          this.inviteError.set('Please enter a valid email address.');
+        } else {
+          this.inviteError.set('Failed to invite member. Please try again.');
+        }
+      } else {
+        this.inviteError.set('Failed to invite member. Please try again.');
+      }
+    } finally {
+      this.isSubmitting.set(false);
+    }
   }
 
-  cancelInvitation(id: string) {
-    this.pendingInvitations.update((invitations) => invitations.filter((inv) => inv.id !== id));
+  async cancelInvitation(id: string) {
+    try {
+      await firstValueFrom(this.memberClient.deleteMember({ id }));
+      await this.loadMembers();
+    } catch (err) {
+      console.error('Failed to cancel invitation:', err);
+      this.error.set('Failed to cancel invitation. Please try again.');
+    }
   }
 
-  updateMemberRole(memberId: string, role: 'admin' | 'viewer') {
-    this.members.update((members) => members.map((m) => (m.id === memberId ? { ...m, role } : m)));
-  }
+  formatTimeAgo(date: Date | undefined): string {
+    if (!date) {
+      return '';
+    }
 
-  removeMember(id: string) {
-    this.members.update((members) => members.filter((m) => m.id !== id));
-  }
-
-  formatTimeAgo(date: Date): string {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));

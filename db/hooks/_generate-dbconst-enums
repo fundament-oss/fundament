@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 SQL_FILE="../fundament.sql"
@@ -40,7 +40,7 @@ while IFS= read -r line; do
         # Convert table_column to PascalCase for the type name (e.g., clusters + status -> ClusterStatus)
         # Remove trailing 's' from table name for singular form
         singular_table="${current_table%s}"
-        type_name=$(echo "${singular_table}_${column}" | sed -E 's/(^|_)([a-z])/\U\2/g')
+        type_name=$(echo "${singular_table}_${column}" | awk -F'_' '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1' OFS='')
 
         # Extract values from the IN clause (handles 'value1','value2',...)
         # Parse comma-separated quoted values
@@ -60,9 +60,9 @@ while IFS= read -r line; do
   fi
 done < "$SQL_FILE"
 
-# Convert snake_case to PascalCase
+# Convert snake_case to PascalCase (portable across GNU/BSD)
 to_pascal_case() {
-  echo "$1" | sed -E 's/(^|_)([a-z0-9])/\U\2/g'
+  echo "$1" | awk -F'_' '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1' OFS=''
 }
 
 # Get sorted type names
