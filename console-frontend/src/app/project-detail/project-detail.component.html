@@ -27,7 +27,7 @@
 @if (!isLoading() && project()) {
   <div class="card">
     <!-- Header -->
-    <div class="card-header">
+    <div class="card-header pb-0!">
       <div class="grid items-center gap-3 lg:grid-cols-2">
         <div>
           <h1 class="text-2xl font-bold dark:text-white">
@@ -44,38 +44,20 @@
       </div>
 
       <!-- Tabs -->
-      <nav class="mt-4 -mb-px flex space-x-2">
+      <nav class="tabs">
         <button
           type="button"
           (click)="activeTab.set('details')"
-          class="rounded-t-lg border border-gray-200 px-4 py-2 text-sm font-medium dark:border-gray-800"
-          [class.border-b-white]="activeTab() === 'details'"
-          [class.dark:border-b-gray-950]="activeTab() === 'details'"
-          [class.text-gray-700]="activeTab() === 'details'"
-          [class.dark:text-gray-200]="activeTab() === 'details'"
-          [class.border-b-gray-200]="activeTab() !== 'details'"
-          [class.dark:border-b-gray-800]="activeTab() !== 'details'"
-          [class.text-gray-500]="activeTab() !== 'details'"
-          [class.dark:text-gray-400]="activeTab() !== 'details'"
-          [class.hover:text-gray-700]="activeTab() !== 'details'"
-          [class.dark:hover:text-gray-200]="activeTab() !== 'details'"
+          class="cursor-pointer"
+          [class.active]="activeTab() === 'details'"
         >
           Details
         </button>
         <button
           type="button"
           (click)="activeTab.set('members')"
-          class="rounded-t-lg border border-gray-200 px-4 py-2 text-sm font-medium dark:border-gray-800"
-          [class.border-b-white]="activeTab() === 'members'"
-          [class.dark:border-b-gray-950]="activeTab() === 'members'"
-          [class.text-gray-700]="activeTab() === 'members'"
-          [class.dark:text-gray-200]="activeTab() === 'members'"
-          [class.border-b-gray-200]="activeTab() !== 'members'"
-          [class.dark:border-b-gray-800]="activeTab() !== 'members'"
-          [class.text-gray-500]="activeTab() !== 'members'"
-          [class.dark:text-gray-400]="activeTab() !== 'members'"
-          [class.hover:text-gray-700]="activeTab() !== 'members'"
-          [class.dark:hover:text-gray-200]="activeTab() !== 'members'"
+          class="cursor-pointer"
+          [class.active]="activeTab() === 'members'"
         >
           Members
         </button>
