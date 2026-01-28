@@ -21,12 +21,6 @@ type ProjectDataSource struct {
 	client *FundamentClient
 }
 
-// ProjectDataSourceModel describes the data source data model.
-type ProjectDataSourceModel struct {
-	ID        types.String `tfsdk:"id"`
-	Name      types.String `tfsdk:"name"`
-	CreatedAt types.String `tfsdk:"created_at"`
-}
 
 // NewProjectDataSource creates a new ProjectDataSource.
 func NewProjectDataSource() datasource.DataSource {
@@ -79,7 +73,7 @@ func (d *ProjectDataSource) Configure(ctx context.Context, req datasource.Config
 
 // Read refreshes the Terraform state with the latest data.
 func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config ProjectDataSourceModel
+	var config ProjectModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
