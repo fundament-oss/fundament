@@ -793,4 +793,12 @@ GRANT SELECT,INSERT,UPDATE
 -- ddl-end --
 
 
+-- object: grant_raw_eefd069f6a | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.cluster_events
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
 

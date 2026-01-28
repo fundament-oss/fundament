@@ -128,11 +128,11 @@
               </dd>
             </dl>
           }
-          @if (clusterData.syncState?.syncedAt) {
+          @if (clusterData.syncState?.syncedAt?.value) {
             <dl>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last synced</dt>
               <dd class="mt-1 text-sm dark:text-white">
-                {{ formatDate(clusterData.syncState!.syncedAt!) }}
+                {{ formatDate(clusterData.syncState!.syncedAt!.value) }}
               </dd>
             </dl>
           }
@@ -185,8 +185,8 @@
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Status Updated</td>
                     <td class="px-3 py-2 dark:text-white">
                       {{
-                        clusterData.syncState.statusUpdatedAt
-                          ? formatDate(clusterData.syncState.statusUpdatedAt)
+                        clusterData.syncState.statusUpdatedAt?.value
+                          ? formatDate(clusterData.syncState.statusUpdatedAt!.value)
                           : 'N/A'
                       }}
                     </td>
@@ -201,8 +201,8 @@
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Last Synced</td>
                     <td class="px-3 py-2 dark:text-white">
                       {{
-                        clusterData.syncState.syncedAt
-                          ? formatDate(clusterData.syncState.syncedAt)
+                        clusterData.syncState.syncedAt?.value
+                          ? formatDate(clusterData.syncState.syncedAt!.value)
                           : 'N/A'
                       }}
                     </td>

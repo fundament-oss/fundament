@@ -72,6 +72,12 @@ GRANT SELECT ON "tenant"."cluster_events" TO "fun_cluster_worker";
 
 GRANT UPDATE ON "tenant"."cluster_events" TO "fun_cluster_worker";
 
+GRANT INSERT ON "tenant"."cluster_events" TO "fun_fundament_api";
+
+GRANT SELECT ON "tenant"."cluster_events" TO "fun_fundament_api";
+
+GRANT UPDATE ON "tenant"."cluster_events" TO "fun_fundament_api";
+
 CREATE UNIQUE INDEX cluster_events_pk ON tenant.cluster_events USING btree (id);
 
 ALTER TABLE "tenant"."cluster_events" ADD CONSTRAINT "cluster_events_pk" PRIMARY KEY USING INDEX "cluster_events_pk";

@@ -58,17 +58,6 @@ const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
   return labels[status];
 };
 
-// Temporary local type until protos are regenerated
-interface SyncState {
-  syncedAt?: string;
-  syncError?: string;
-  syncAttempts?: number;
-  lastAttemptAt?: string;
-  shootStatus?: string;
-  shootMessage?: string;
-  statusUpdatedAt?: string;
-}
-
 @Component({
   selector: 'app-cluster-details',
   imports: [RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent, ModalComponent],
@@ -238,7 +227,7 @@ export default class ClusterDetailsComponent implements OnInit {
         kubernetesVersion: response.cluster.kubernetesVersion,
       };
       this.clusterData.status = response.cluster.status;
-      // TODO: Map syncState from response.cluster.syncState when protos are regenerated
+      this.clusterData.syncState = response.cluster.syncState ?? null;
 
       this.titleService.setTitle(response.cluster.name);
 
