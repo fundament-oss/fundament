@@ -12,55 +12,55 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-// Ensure NamespacesDataSource satisfies various datasource interfaces.
-var _ datasource.DataSource = &NamespacesDataSource{}
-var _ datasource.DataSourceWithConfigure = &NamespacesDataSource{}
+// Ensure ProjectNamespacesDataSource satisfies various datasource interfaces.
+var _ datasource.DataSource = &ProjectNamespacesDataSource{}
+var _ datasource.DataSourceWithConfigure = &ProjectNamespacesDataSource{}
 
-// NamespacesDataSource defines the data source implementation.
-type NamespacesDataSource struct {
+// ProjectNamespacesDataSource defines the data source implementation.
+type ProjectNamespacesDataSource struct {
 	client *FundamentClient
 }
 
-// NamespacesDataSourceModel describes the data source data model.
-type NamespacesDataSourceModel struct {
-	ID         types.String      `tfsdk:"id"`
-	ClusterID  types.String      `tfsdk:"cluster_id"`
-	Namespaces []NamespaceModel  `tfsdk:"namespaces"`
+// ProjectNamespacesDataSourceModel describes the data source data model.
+type ProjectNamespacesDataSourceModel struct {
+	ID         types.String                `tfsdk:"id"`
+	ProjectID  types.String                `tfsdk:"project_id"`
+	Namespaces []ProjectNamespaceModel     `tfsdk:"namespaces"`
 }
 
-// NamespaceModel describes a single namespace in the data source.
-type NamespaceModel struct {
+// ProjectNamespaceModel describes a single namespace in the project data source.
+type ProjectNamespaceModel struct {
 	ID        types.String `tfsdk:"id"`
 	Name      types.String `tfsdk:"name"`
-	ProjectID types.String `tfsdk:"project_id"`
+	ClusterID types.String `tfsdk:"cluster_id"`
 	CreatedAt types.String `tfsdk:"created_at"`
 }
 
-// NewNamespacesDataSource creates a new NamespacesDataSource.
-func NewNamespacesDataSource() datasource.DataSource {
-	return &NamespacesDataSource{}
+// NewProjectNamespacesDataSource creates a new ProjectNamespacesDataSource.
+func NewProjectNamespacesDataSource() datasource.DataSource {
+	return &ProjectNamespacesDataSource{}
 }
 
 // Metadata returns the data source type name.
-func (d *NamespacesDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_namespaces"
+func (d *ProjectNamespacesDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project_namespaces"
 }
 
 // Schema defines the schema for the data source.
-func (d *NamespacesDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *ProjectNamespacesDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Fetches the list of namespaces in a cluster.",
+		Description: "Fetches the list of namespaces belonging to a project.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Identifier for this data source.",
 				Computed:    true,
 			},
-			"cluster_id": schema.StringAttribute{
-				Description: "The ID of the cluster to list namespaces from.",
+			"project_id": schema.StringAttribute{
+				Description: "The ID of the project to list namespaces from.",
 				Required:    true,
 			},
 			"namespaces": schema.ListNestedAttribute{
-				Description: "List of namespaces in the cluster.",
+				Description: "List of namespaces in the project.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -72,8 +72,8 @@ func (d *NamespacesDataSource) Schema(ctx context.Context, req datasource.Schema
 							Description: "The name of the namespace.",
 							Computed:    true,
 						},
-						"project_id": schema.StringAttribute{
-							Description: "The ID of the project that owns this namespace.",
+						"cluster_id": schema.StringAttribute{
+							Description: "The ID of the cluster where this namespace is deployed.",
 							Computed:    true,
 						},
 						"created_at": schema.StringAttribute{
@@ -88,7 +88,7 @@ func (d *NamespacesDataSource) Schema(ctx context.Context, req datasource.Schema
 }
 
 // Configure adds the provider configured client to the data source.
-func (d *NamespacesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *ProjectNamespacesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -106,8 +106,8 @@ func (d *NamespacesDataSource) Configure(ctx context.Context, req datasource.Con
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *NamespacesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state NamespacesDataSourceModel
+func (d *ProjectNamespacesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var state ProjectNamespacesDataSourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -122,17 +122,17 @@ func (d *NamespacesDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	clusterID := state.ClusterID.ValueString()
-	tflog.Debug(ctx, "Fetching namespaces", map[string]any{
-		"cluster_id": clusterID,
+	projectID := state.ProjectID.ValueString()
+	tflog.Debug(ctx, "Fetching project namespaces", map[string]any{
+		"project_id": projectID,
 	})
 
-	rpcReq := connect.NewRequest(&organizationv1.ListClusterNamespacesRequest{
-		ClusterId: clusterID,
+	rpcReq := connect.NewRequest(&organizationv1.ListProjectNamespacesRequest{
+		ProjectId: projectID,
 	})
 
 	// Call the API
-	rpcResp, err := d.client.ClusterService.ListClusterNamespaces(ctx, rpcReq)
+	rpcResp, err := d.client.ProjectService.ListProjectNamespaces(ctx, rpcReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeInvalidArgument:
@@ -143,37 +143,37 @@ func (d *NamespacesDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to list namespaces in this cluster.",
+				"You do not have permission to list namespaces in this project.",
 			)
 		case connect.CodeNotFound:
 			resp.Diagnostics.AddError(
-				"Cluster Not Found",
-				fmt.Sprintf("Cluster with ID %q does not exist.", clusterID),
+				"Project Not Found",
+				fmt.Sprintf("Project with ID %q does not exist.", projectID),
 			)
 		default:
 			resp.Diagnostics.AddError(
-				"Unable to List Namespaces",
-				fmt.Sprintf("Unable to list namespaces: %s", err.Error()),
+				"Unable to List Project Namespaces",
+				fmt.Sprintf("Unable to list project namespaces: %s", err.Error()),
 			)
 		}
 		return
 	}
 
 	// Map response to state
-	state.Namespaces = make([]NamespaceModel, len(rpcResp.Msg.Namespaces))
+	state.Namespaces = make([]ProjectNamespaceModel, len(rpcResp.Msg.Namespaces))
 	for i, ns := range rpcResp.Msg.Namespaces {
-		state.Namespaces[i] = NamespaceModel{
+		state.Namespaces[i] = ProjectNamespaceModel{
 			ID:        types.StringValue(ns.Id),
 			Name:      types.StringValue(ns.Name),
-			ProjectID: types.StringValue(ns.ProjectId),
+			ClusterID: types.StringValue(ns.ClusterId),
 			CreatedAt: types.StringValue(ns.CreatedAt.Value),
 		}
 	}
 
 	// Set the data source ID
-	state.ID = types.StringValue("namespaces-" + clusterID)
+	state.ID = types.StringValue("project-namespaces-" + projectID)
 
-	tflog.Debug(ctx, "Fetched namespaces successfully", map[string]any{
+	tflog.Debug(ctx, "Fetched project namespaces successfully", map[string]any{
 		"namespace_count": len(state.Namespaces),
 	})
 

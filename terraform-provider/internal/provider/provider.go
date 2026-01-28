@@ -144,6 +144,7 @@ func (p *FundamentProvider) DataSources(ctx context.Context) []func() datasource
 		NewProjectDataSource,
 		NewProjectsDataSource,
 		NewNamespaceDataSource,
-		NewNamespacesDataSource,
+		NewClusterNamespacesDataSource,
+		NewProjectNamespacesDataSource,
 	}
 }
