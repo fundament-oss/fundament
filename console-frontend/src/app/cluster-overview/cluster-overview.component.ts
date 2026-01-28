@@ -22,8 +22,10 @@ import {
   CreateNamespaceRequestSchema,
   DeleteNamespaceRequestSchema,
   ListInstallsRequestSchema,
+  GetClusterActivityRequestSchema,
   NodePool,
   ClusterNamespace,
+  type GetClusterActivityResponse_ClusterEvent as ClusterEvent,
 } from '../../generated/v1/cluster_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
@@ -103,6 +105,10 @@ export class ClusterOverviewComponent implements OnInit {
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
   isLoadingPlugins = signal<boolean>(true);
+
+  // Activity/Events data
+  clusterEvents = signal<ClusterEvent[]>([]);
+  isLoadingEvents = signal<boolean>(true);
 
   namespaceNameInput = viewChild<ElementRef<HTMLInputElement>>('namespaceNameInput');
 
@@ -215,11 +221,12 @@ export class ClusterOverviewComponent implements OnInit {
       // Map node pools to the expected format
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
-      // Fetch namespaces, projects, and plugins in parallel
+      // Fetch namespaces, projects, plugins, and events in parallel
       await Promise.all([
         this.loadNamespaces(clusterId),
         this.loadProjects(),
         this.loadInstalledPlugins(clusterId),
+        this.loadClusterEvents(clusterId),
       ]);
     } catch (error) {
       console.error('Failed to fetch cluster data:', error);
@@ -449,5 +456,61 @@ export class ClusterOverviewComponent implements OnInit {
     if (syncState.syncedAt) return 'Synced';
     if (syncState.syncError) return 'Error';
     return 'Pending';
+  }
+
+  // Load cluster activity/events
+  async loadClusterEvents(clusterId: string): Promise<void> {
+    try {
+      this.isLoadingEvents.set(true);
+      const request = create(GetClusterActivityRequestSchema, { clusterId, limit: 20 });
+      const response = await firstValueFrom(this.client.getClusterActivity(request));
+      this.clusterEvents.set(response.events);
+    } catch (error) {
+      console.error('Failed to load cluster events:', error);
+      // Don't show toast for events - it's not critical
+    } finally {
+      this.isLoadingEvents.set(false);
+    }
+  }
+
+  getEventTypeLabel(eventType: string): string {
+    const labels: Record<string, string> = {
+      sync_requested: 'Sync requested',
+      sync_claimed: 'Sync started',
+      sync_succeeded: 'Sync completed',
+      sync_failed: 'Sync failed',
+      status_progressing: 'Cluster progressing',
+      status_ready: 'Cluster ready',
+      status_error: 'Cluster error',
+      status_deleted: 'Cluster deleted',
+    };
+    return labels[eventType] || eventType;
+  }
+
+  getEventTypeColor(eventType: string): string {
+    const colors: Record<string, string> = {
+      sync_requested: 'bg-blue-500',
+      sync_claimed: 'bg-blue-500',
+      sync_succeeded: 'bg-green-500',
+      sync_failed: 'bg-red-500',
+      status_progressing: 'bg-blue-500',
+      status_ready: 'bg-green-500',
+      status_error: 'bg-red-500',
+      status_deleted: 'bg-gray-500',
+    };
+    return colors[eventType] || 'bg-gray-500';
+  }
+
+  getEventDetails(event: ClusterEvent): string {
+    if (event.message) {
+      return event.message;
+    }
+    if (event.syncAction) {
+      return `Action: ${event.syncAction}`;
+    }
+    if (event.attempt !== undefined) {
+      return `Attempt ${event.attempt}`;
+    }
+    return '';
   }
 }

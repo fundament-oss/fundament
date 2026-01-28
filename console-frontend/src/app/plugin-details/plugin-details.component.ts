@@ -15,7 +15,7 @@ import {
   ListClustersRequestSchema,
   ListInstallsRequestSchema,
   AddInstallRequestSchema,
-  type ClusterSummary,
+  type ListClustersResponse_ClusterSummary as ClusterSummary,
   type Install,
 } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';

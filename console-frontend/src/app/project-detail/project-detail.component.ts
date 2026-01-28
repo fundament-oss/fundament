@@ -25,7 +25,7 @@ import {
   ListClustersRequestSchema,
   CreateNamespaceRequestSchema,
   DeleteNamespaceRequestSchema,
-  ClusterSummary,
+  ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';

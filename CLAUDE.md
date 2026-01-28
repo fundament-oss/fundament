@@ -1,5 +1,7 @@
 - Always use 'go generate ./...' in the in project or 'just generate' in the root of the project to generate stuff.
 - You are not allowed to edit the files in: @db/migrations/
 - You are not allowed to edit the file: @db/fundament.sql
+- You are not allowed to use aliases in SQL queries
+- You are not allowed to use postgres enums, use check constraints instead
 - For frontend development, use `bun` as package manager instead of `npm`
 - For frontend development in console-frontend, check for existing predefined classes in `console-frontend/src/styles.css` and use those if applicable
