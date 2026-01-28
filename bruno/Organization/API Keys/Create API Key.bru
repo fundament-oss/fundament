@@ -1,0 +1,35 @@
+meta {
+  name: Create API Key
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.APIKeyService/CreateAPIKey
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "terraform-key",
+    "expiresInDays": 90
+  }
+}
+
+script:post-response {
+  // Store the token for use in Exchange Token request
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setVar("apiToken", res.body.token);
+    bru.setVar("apiKeyId", res.body.id);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

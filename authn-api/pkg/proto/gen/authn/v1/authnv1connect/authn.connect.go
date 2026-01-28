@@ -23,6 +23,8 @@ const _ = connect.IsAtLeastVersion1_13_0
 const (
 	// AuthnServiceName is the fully-qualified name of the AuthnService service.
 	AuthnServiceName = "authn.v1.AuthnService"
+	// TokenServiceName is the fully-qualified name of the TokenService service.
+	TokenServiceName = "authn.v1.TokenService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -36,6 +38,9 @@ const (
 	// AuthnServiceGetUserInfoProcedure is the fully-qualified name of the AuthnService's GetUserInfo
 	// RPC.
 	AuthnServiceGetUserInfoProcedure = "/authn.v1.AuthnService/GetUserInfo"
+	// TokenServiceExchangeTokenProcedure is the fully-qualified name of the TokenService's
+	// ExchangeToken RPC.
+	TokenServiceExchangeTokenProcedure = "/authn.v1.TokenService/ExchangeToken"
 )
 
 // AuthnServiceClient is a client for the authn.v1.AuthnService service.
@@ -110,4 +115,78 @@ type UnimplementedAuthnServiceHandler struct{}
 
 func (UnimplementedAuthnServiceHandler) GetUserInfo(context.Context, *connect.Request[v1.GetUserInfoRequest]) (*connect.Response[v1.GetUserInfoResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("authn.v1.AuthnService.GetUserInfo is not implemented"))
+}
+
+// TokenServiceClient is a client for the authn.v1.TokenService service.
+type TokenServiceClient interface {
+	// ExchangeToken exchanges an API key for a short-lived JWT
+	// The API key should be provided in the Authorization header as Bearer token
+	ExchangeToken(context.Context, *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error)
+}
+
+// NewTokenServiceClient constructs a client for the authn.v1.TokenService service. By default, it
+// uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
+// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
+// connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewTokenServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) TokenServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	tokenServiceMethods := v1.File_authn_v1_authn_proto.Services().ByName("TokenService").Methods()
+	return &tokenServiceClient{
+		exchangeToken: connect.NewClient[v1.ExchangeTokenRequest, v1.ExchangeTokenResponse](
+			httpClient,
+			baseURL+TokenServiceExchangeTokenProcedure,
+			connect.WithSchema(tokenServiceMethods.ByName("ExchangeToken")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// tokenServiceClient implements TokenServiceClient.
+type tokenServiceClient struct {
+	exchangeToken *connect.Client[v1.ExchangeTokenRequest, v1.ExchangeTokenResponse]
+}
+
+// ExchangeToken calls authn.v1.TokenService.ExchangeToken.
+func (c *tokenServiceClient) ExchangeToken(ctx context.Context, req *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error) {
+	return c.exchangeToken.CallUnary(ctx, req)
+}
+
+// TokenServiceHandler is an implementation of the authn.v1.TokenService service.
+type TokenServiceHandler interface {
+	// ExchangeToken exchanges an API key for a short-lived JWT
+	// The API key should be provided in the Authorization header as Bearer token
+	ExchangeToken(context.Context, *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error)
+}
+
+// NewTokenServiceHandler builds an HTTP handler from the service implementation. It returns the
+// path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewTokenServiceHandler(svc TokenServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	tokenServiceMethods := v1.File_authn_v1_authn_proto.Services().ByName("TokenService").Methods()
+	tokenServiceExchangeTokenHandler := connect.NewUnaryHandler(
+		TokenServiceExchangeTokenProcedure,
+		svc.ExchangeToken,
+		connect.WithSchema(tokenServiceMethods.ByName("ExchangeToken")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/authn.v1.TokenService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case TokenServiceExchangeTokenProcedure:
+			tokenServiceExchangeTokenHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedTokenServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedTokenServiceHandler struct{}
+
+func (UnimplementedTokenServiceHandler) ExchangeToken(context.Context, *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("authn.v1.TokenService.ExchangeToken is not implemented"))
 }

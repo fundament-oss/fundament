@@ -1,0 +1,59 @@
+meta {
+  name: Exchange API Token
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{authnUrl}}/authn.v1.TokenService/ExchangeToken
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{apiToken}}
+}
+
+body:json {
+  {}
+}
+
+script:post-response {
+  // Store the JWT for use in subsequent requests
+  if (res.headers['content-type']?.includes('application/json') && res.body.accessToken) {
+    bru.setVar("jwtToken", res.body.accessToken);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  # Exchange API Token for JWT
+  
+  This endpoint exchanges a Fundament API token (format: `fun_xxx...`) for a short-lived JWT (15 minutes).
+  
+  ## Usage
+  
+  1. First, create an API key using `Organization > API Keys > Create API Key`
+  2. The token is automatically stored in the `createdApiToken` variable
+  3. Run this request to get a JWT
+  
+  ## Response
+  
+  ```json
+  {
+    "accessToken": "<JWT>",
+    "tokenType": "Bearer",
+    "expiresIn": 900
+  }
+  ```
+  
+  The returned `accessToken` is automatically stored as `apiKey` for subsequent API calls.
+}

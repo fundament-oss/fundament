@@ -71,10 +71,11 @@ generate:
     cd db && trek generate --stdout
     go generate -x ./...
     cd console-frontend && buf generate
+    cd e2e && buf generate
 
 # Lint all Go code
 lint:
-    golangci-lint run ./...
+    golangci-lint run --new-from-rev $(git rev-parse origin/master) ./...
 
 # Run functl against the local development instance/database
 functl *args:

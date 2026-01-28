@@ -60,7 +60,7 @@ func (*GetUserInfoRequest) Descriptor() ([]byte, []int) {
 type GetUserInfoResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// User information
-	User          *User `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	User          *User `protobuf:"bytes,10,opt,name=user,proto3" json:"user,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -105,15 +105,15 @@ func (x *GetUserInfoResponse) GetUser() *User {
 type User struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// User ID
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	// Organization ID
-	OrganizationId string `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	OrganizationId string `protobuf:"bytes,20,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	// User name
-	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Name string `protobuf:"bytes,30,opt,name=name,proto3" json:"name,omitempty"`
 	// External ID from OIDC provider
-	ExternalId string `protobuf:"bytes,4,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	ExternalId string `protobuf:"bytes,40,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
 	// Groups the user belongs to
-	Groups        []string `protobuf:"bytes,5,rep,name=groups,proto3" json:"groups,omitempty"`
+	Groups        []string `protobuf:"bytes,50,rep,name=groups,proto3" json:"groups,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -183,6 +183,107 @@ func (x *User) GetGroups() []string {
 	return nil
 }
 
+// ExchangeToken request - empty, API key is in Authorization header
+type ExchangeTokenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExchangeTokenRequest) Reset() {
+	*x = ExchangeTokenRequest{}
+	mi := &file_authn_v1_authn_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExchangeTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExchangeTokenRequest) ProtoMessage() {}
+
+func (x *ExchangeTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_authn_v1_authn_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExchangeTokenRequest.ProtoReflect.Descriptor instead.
+func (*ExchangeTokenRequest) Descriptor() ([]byte, []int) {
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{3}
+}
+
+// ExchangeToken response
+type ExchangeTokenResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// JWT access token for API calls
+	AccessToken string `protobuf:"bytes,10,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	// Token type (always "Bearer")
+	TokenType string `protobuf:"bytes,20,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"`
+	// Seconds until token expires
+	ExpiresIn     int64 `protobuf:"varint,30,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExchangeTokenResponse) Reset() {
+	*x = ExchangeTokenResponse{}
+	mi := &file_authn_v1_authn_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExchangeTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExchangeTokenResponse) ProtoMessage() {}
+
+func (x *ExchangeTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_authn_v1_authn_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExchangeTokenResponse.ProtoReflect.Descriptor instead.
+func (*ExchangeTokenResponse) Descriptor() ([]byte, []int) {
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ExchangeTokenResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *ExchangeTokenResponse) GetTokenType() string {
+	if x != nil {
+		return x.TokenType
+	}
+	return ""
+}
+
+func (x *ExchangeTokenResponse) GetExpiresIn() int64 {
+	if x != nil {
+		return x.ExpiresIn
+	}
+	return 0
+}
+
 var File_authn_v1_authn_proto protoreflect.FileDescriptor
 
 const file_authn_v1_authn_proto_rawDesc = "" +
@@ -190,16 +291,28 @@ const file_authn_v1_authn_proto_rawDesc = "" +
 	"\x14authn/v1/authn.proto\x12\bauthn.v1\"\x14\n" +
 	"\x12GetUserInfoRequest\"9\n" +
 	"\x13GetUserInfoResponse\x12\"\n" +
-	"\x04user\x18\x01 \x01(\v2\x0e.authn.v1.UserR\x04user\"\x8c\x01\n" +
+	"\x04user\x18\n" +
+	" \x01(\v2\x0e.authn.v1.UserR\x04user\"\x8c\x01\n" +
 	"\x04User\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1f\n" +
-	"\vexternal_id\x18\x04 \x01(\tR\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12'\n" +
+	"\x0forganization_id\x18\x14 \x01(\tR\x0eorganizationId\x12\x12\n" +
+	"\x04name\x18\x1e \x01(\tR\x04name\x12\x1f\n" +
+	"\vexternal_id\x18( \x01(\tR\n" +
 	"externalId\x12\x16\n" +
-	"\x06groups\x18\x05 \x03(\tR\x06groups2Z\n" +
+	"\x06groups\x182 \x03(\tR\x06groups\"\x16\n" +
+	"\x14ExchangeTokenRequest\"x\n" +
+	"\x15ExchangeTokenResponse\x12!\n" +
+	"\faccess_token\x18\n" +
+	" \x01(\tR\vaccessToken\x12\x1d\n" +
+	"\n" +
+	"token_type\x18\x14 \x01(\tR\ttokenType\x12\x1d\n" +
+	"\n" +
+	"expires_in\x18\x1e \x01(\x03R\texpiresIn2Z\n" +
 	"\fAuthnService\x12J\n" +
-	"\vGetUserInfo\x12\x1c.authn.v1.GetUserInfoRequest\x1a\x1d.authn.v1.GetUserInfoResponseBMZKgithub.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1;authnv1b\x06proto3"
+	"\vGetUserInfo\x12\x1c.authn.v1.GetUserInfoRequest\x1a\x1d.authn.v1.GetUserInfoResponse2`\n" +
+	"\fTokenService\x12P\n" +
+	"\rExchangeToken\x12\x1e.authn.v1.ExchangeTokenRequest\x1a\x1f.authn.v1.ExchangeTokenResponseBMZKgithub.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1;authnv1b\x06proto3"
 
 var (
 	file_authn_v1_authn_proto_rawDescOnce sync.Once
@@ -213,18 +326,22 @@ func file_authn_v1_authn_proto_rawDescGZIP() []byte {
 	return file_authn_v1_authn_proto_rawDescData
 }
 
-var file_authn_v1_authn_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_authn_v1_authn_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_authn_v1_authn_proto_goTypes = []any{
-	(*GetUserInfoRequest)(nil),  // 0: authn.v1.GetUserInfoRequest
-	(*GetUserInfoResponse)(nil), // 1: authn.v1.GetUserInfoResponse
-	(*User)(nil),                // 2: authn.v1.User
+	(*GetUserInfoRequest)(nil),    // 0: authn.v1.GetUserInfoRequest
+	(*GetUserInfoResponse)(nil),   // 1: authn.v1.GetUserInfoResponse
+	(*User)(nil),                  // 2: authn.v1.User
+	(*ExchangeTokenRequest)(nil),  // 3: authn.v1.ExchangeTokenRequest
+	(*ExchangeTokenResponse)(nil), // 4: authn.v1.ExchangeTokenResponse
 }
 var file_authn_v1_authn_proto_depIdxs = []int32{
 	2, // 0: authn.v1.GetUserInfoResponse.user:type_name -> authn.v1.User
 	0, // 1: authn.v1.AuthnService.GetUserInfo:input_type -> authn.v1.GetUserInfoRequest
-	1, // 2: authn.v1.AuthnService.GetUserInfo:output_type -> authn.v1.GetUserInfoResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
+	3, // 2: authn.v1.TokenService.ExchangeToken:input_type -> authn.v1.ExchangeTokenRequest
+	1, // 3: authn.v1.AuthnService.GetUserInfo:output_type -> authn.v1.GetUserInfoResponse
+	4, // 4: authn.v1.TokenService.ExchangeToken:output_type -> authn.v1.ExchangeTokenResponse
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -241,9 +358,9 @@ func file_authn_v1_authn_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_authn_v1_authn_proto_rawDesc), len(file_authn_v1_authn_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   2,
 		},
 		GoTypes:           file_authn_v1_authn_proto_goTypes,
 		DependencyIndexes: file_authn_v1_authn_proto_depIdxs,
