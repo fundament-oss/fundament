@@ -217,8 +217,11 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 			"project", projectName,
 			"organization_id", cluster.OrganizationID,
 			"error", err)
-		// Mark as failed and continue (no event - transient infrastructure error)
-		w.markSyncFailed(ctx, cluster.ID, "ensure project: "+err.Error(), nil)
+		w.markSyncFailed(ctx, cluster.ID, "ensure project: "+err.Error(), &syncFailedEvent{
+			syncAction: syncAction,
+			message:    "Failed to ensure Gardener project: " + err.Error(),
+			attempt:    attempt,
+		})
 		return true, nil
 	}
 

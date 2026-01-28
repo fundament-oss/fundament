@@ -26,6 +26,7 @@ import {
   NodePool,
   ClusterNamespace,
   type GetClusterActivityResponse_ClusterEvent as ClusterEvent,
+  type SyncState,
 } from '../../generated/v1/cluster_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
@@ -44,17 +45,6 @@ import {
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
-
-// Temporary local type until protos are regenerated
-interface SyncState {
-  syncedAt?: string;
-  syncError?: string;
-  syncAttempts?: number;
-  lastAttemptAt?: string;
-  shootStatus?: string;
-  shootMessage?: string;
-  statusUpdatedAt?: string;
-}
 
 @Component({
   selector: 'app-cluster-overview',
@@ -210,7 +200,7 @@ export class ClusterOverviewComponent implements OnInit {
         kubernetesVersion: response.cluster.kubernetesVersion,
       };
       this.clusterData.status = response.cluster.status;
-      // TODO: Map syncState from response.cluster.syncState when protos are regenerated
+      this.clusterData.syncState = response.cluster.syncState ?? null;
 
       this.titleService.setTitle(response.cluster.name);
 

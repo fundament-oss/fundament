@@ -960,4 +960,19 @@ END;]]> </definition>
 	<roles names="fun_cluster_worker"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
+<permission>
+	<object name="tenant.organizations" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.namespaces" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.cluster_events" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
 </dbmodel>

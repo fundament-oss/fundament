@@ -249,8 +249,8 @@ gardener-secret:
         kind get kubeconfig --name gardener-local > "$KUBECONFIG_PATH"
     fi
 
-    # Get IP from kind network (k3d can reach this, and cert SANs include it)
-    KIND_IP=$(docker inspect gardener-local-control-plane --format '{{{{range $net, $conf := .NetworkSettings.Networks}}{{{{if eq $net "kind"}}{{{{$conf.IPAddress}}{{{{end}}{{{{end}}')
+    # Get IP from k3d-fundament network (cert SANs include this IP)
+    KIND_IP=$(docker inspect gardener-local-control-plane --format '{{{{range $net, $conf := .NetworkSettings.Networks}}{{{{if eq $net "k3d-fundament"}}{{{{$conf.IPAddress}}{{{{end}}{{{{end}}')
 
     # Ensure fundament namespace exists
     kubectl create namespace fundament --dry-run=client -o yaml | kubectl apply -f -
