@@ -135,10 +135,35 @@ func (d *ClustersDataSource) Read(ctx context.Context, req datasource.ReadReques
 	// Call the API
 	rpcResp, err := d.client.ClusterService.ListClusters(ctx, rpcReq)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to List Clusters",
-			fmt.Sprintf("Unable to list clusters: %s", err.Error()),
-		)
+		switch connect.CodeOf(err) {
+		case connect.CodeInvalidArgument:
+			resp.Diagnostics.AddError(
+				"Invalid Request",
+				fmt.Sprintf("Invalid request parameters: %s", err.Error()),
+			)
+		case connect.CodePermissionDenied:
+			resp.Diagnostics.AddError(
+				"Permission Denied",
+				"You do not have permission to list clusters in this organization.",
+			)
+		case connect.CodeNotFound:
+			if projectID != "" {
+				resp.Diagnostics.AddError(
+					"Project Not Found",
+					fmt.Sprintf("Project with ID %q does not exist.", projectID),
+				)
+			} else {
+				resp.Diagnostics.AddError(
+					"Not Found",
+					fmt.Sprintf("Unable to list clusters: %s", err.Error()),
+				)
+			}
+		default:
+			resp.Diagnostics.AddError(
+				"Unable to List Clusters",
+				fmt.Sprintf("Unable to list clusters: %s", err.Error()),
+			)
+		}
 		return
 	}
 
