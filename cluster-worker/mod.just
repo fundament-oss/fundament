@@ -54,9 +54,9 @@ gardener-up: check-prerequisites
 
     if kind get clusters 2>/dev/null | grep -q gardener-local; then
         echo "Gardener already running"
-        echo "Check status: just gardener-status"
-        GARDENER_DIR="$GARDENER_DIR" just gardener-connect-k3d
-        GARDENER_DIR="$GARDENER_DIR" just gardener-secret
+        echo "Check status: just cluster-worker gardener-status"
+        GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-connect-k3d
+        GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-secret
         exit 0
     fi
 
@@ -86,8 +86,8 @@ gardener-up: check-prerequisites
     make kind-up
     make gardener-up
     echo ""
-    GARDENER_DIR="$GARDENER_DIR" just gardener-connect-k3d
-    GARDENER_DIR="$GARDENER_DIR" just gardener-secret
+    GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-connect-k3d
+    GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-secret
     echo "Gardener started!"
 
 # Stop local Gardener
@@ -122,7 +122,7 @@ gardener-fix-ports:
 
     # Check if gardener is running
     if ! docker ps --format '{{{{.Names}}' | grep -q gardener-local-control-plane; then
-        echo "Error: Gardener not running. Start with: just gardener-up"
+        echo "Error: Gardener not running. Start with: just cluster-worker gardener-up"
         exit 1
     fi
 
@@ -145,7 +145,7 @@ gardener-fix-ports:
         echo ""
         echo "Options:"
         echo "  1. Restart Docker Desktop"
-        echo "  2. Recreate: just gardener-delete && just gardener-up"
+        echo "  2. Recreate: just cluster-worker gardener-delete && just cluster-worker gardener-up"
         exit 1
     fi
 
@@ -157,7 +157,7 @@ gardener-fix-ports:
         -p $PORT:6443 \
         alpine/socat TCP-LISTEN:6443,fork,reuseaddr TCP:gardener-local-control-plane:6443
 
-    echo "Port forward active. Test with: just gardener-status"
+    echo "Port forward active. Test with: just cluster-worker gardener-status"
     echo "Stop with: docker rm -f gardener-port-forward"
 
 # Check Gardener status
@@ -172,7 +172,7 @@ gardener-status:
 
     if ! kind get clusters 2>/dev/null | grep -q gardener-local; then
         echo "Status: NOT RUNNING"
-        echo "Start with: just gardener-up"
+        echo "Start with: just cluster-worker gardener-up"
         exit 1
     fi
 
@@ -182,14 +182,14 @@ gardener-status:
     echo ""
 
     echo "=== Shoots ==="
-    kubectl --kubeconfig "$KUBECONFIG" get shoots -n garden-local 2>/dev/null || echo "No shoots (run 'just gardener-fix-ports' if connection refused)"
+    kubectl --kubeconfig "$KUBECONFIG" get shoots -n garden-local 2>/dev/null || echo "No shoots (run 'just cluster-worker gardener-fix-ports' if connection refused)"
     echo ""
 
     echo "=== Network ==="
     if docker network inspect k3d-fundament --format '{{{{range .Containers}}{{{{.Name}} {{{{end}}' 2>/dev/null | grep -q gardener-local-control-plane; then
         echo "k3d network: Connected"
     else
-        echo "k3d network: NOT connected (run: just gardener-connect-k3d)"
+        echo "k3d network: NOT connected (run: just cluster-worker gardener-connect-k3d)"
     fi
 
 # Connect Docker networks so k3d can reach Gardener
@@ -202,7 +202,7 @@ gardener-connect-k3d:
     KIND_NETWORK="kind"
 
     if ! docker ps --format '{{{{.Names}}' | grep -q "$KIND_CONTAINER"; then
-        echo "Error: Gardener is not running. Start with: just gardener-up"
+        echo "Error: Gardener is not running. Start with: just cluster-worker gardener-up"
         exit 1
     fi
 
@@ -252,6 +252,9 @@ gardener-secret:
     # Get IP from kind network (k3d can reach this, and cert SANs include it)
     KIND_IP=$(docker inspect gardener-local-control-plane --format '{{{{range $net, $conf := .NetworkSettings.Networks}}{{{{if eq $net "kind"}}{{{{$conf.IPAddress}}{{{{end}}{{{{end}}')
 
+    # Ensure fundament namespace exists
+    kubectl create namespace fundament --dry-run=client -o yaml | kubectl apply -f -
+
     # Create kubeconfig with internal IP (not localhost)
     echo "Creating gardener-kubeconfig secret in fundament namespace..."
     TEMP_KUBECONFIG=$(mktemp)
@@ -282,7 +285,7 @@ create-test-cluster name:
     else
         echo "Cluster '{{name}}' already exists. Watch progress:"
     fi
-    echo "  just watch-shoots"
+    echo "  just cluster-worker shoots"
 
 # Delete a test cluster
 delete-test-cluster name:
@@ -297,7 +300,7 @@ shoots:
     KUBECONFIG="$GARDENER_DIR/example/provider-local/seed-kind/base/kubeconfig"
     if [ ! -f "$KUBECONFIG" ]; then
         echo "Error: Gardener kubeconfig not found at $KUBECONFIG"
-        echo "Run 'just gardener-up' first"
+        echo "Run 'just cluster-worker gardener-up' first"
         exit 1
     fi
     kubectl --kubeconfig "$KUBECONFIG" get shoots -A -w
