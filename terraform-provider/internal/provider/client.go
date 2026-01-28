@@ -10,6 +10,7 @@ import (
 // FundamentClient wraps the Connect RPC clients for the Fundament API.
 type FundamentClient struct {
 	ClusterService organizationv1connect.ClusterServiceClient
+	ProjectService organizationv1connect.ProjectServiceClient
 }
 
 // AuthTransport is an http.RoundTripper that adds a Bearer token to requests.
@@ -44,5 +45,6 @@ func NewFundamentClient(endpoint, token string) *FundamentClient {
 
 	return &FundamentClient{
 		ClusterService: organizationv1connect.NewClusterServiceClient(httpClient, endpoint),
+		ProjectService: organizationv1connect.NewProjectServiceClient(httpClient, endpoint),
 	}
 }
