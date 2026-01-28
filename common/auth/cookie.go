@@ -1,32 +1,51 @@
 package auth
 
-import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
-	"fmt"
-	"strings"
-)
+import "net/http"
 
-// VerifyCookieValue verifies a signed cookie value and returns the original value.
-// Format is: <value>.<signature> where value may contain dots (e.g., JWT).
-func VerifyCookieValue(signedValue string, secret []byte) (string, error) {
-	// Find the last dot to separate value from signature
-	lastDot := strings.LastIndexByte(signedValue, '.')
-	if lastDot == -1 {
-		return "", fmt.Errorf("invalid signed value format: no signature separator")
+// CookieBuilder creates auth cookies with consistent settings.
+type CookieBuilder struct {
+	domain string
+	secure bool
+}
+
+// NewCookieBuilder creates a new CookieBuilder.
+// For localhost, pass "localhost" as domain - it will be converted to empty string
+// since browsers handle localhost cookies better without an explicit domain.
+func NewCookieBuilder(domain string, secure bool) *CookieBuilder {
+	// Don't set domain for localhost - browsers handle it better without explicit domain
+	if domain == "localhost" {
+		domain = ""
 	}
-
-	value := signedValue[:lastDot]
-	signature := signedValue[lastDot+1:]
-
-	mac := hmac.New(sha256.New, secret)
-	mac.Write([]byte(value))
-	expectedSig := base64.URLEncoding.EncodeToString(mac.Sum(nil))
-
-	if !hmac.Equal([]byte(signature), []byte(expectedSig)) {
-		return "", fmt.Errorf("invalid signature")
+	return &CookieBuilder{
+		domain: domain,
+		secure: secure,
 	}
+}
 
-	return value, nil
+// Build creates an auth cookie with the given token and max age.
+func (b *CookieBuilder) Build(token string, maxAge int) *http.Cookie {
+	return &http.Cookie{
+		Name:     AuthCookieName,
+		Value:    token,
+		Path:     "/",
+		Domain:   b.domain,
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		Secure:   b.secure,
+		SameSite: http.SameSiteStrictMode,
+	}
+}
+
+// BuildClear creates a cookie that clears the auth cookie.
+func (b *CookieBuilder) BuildClear() *http.Cookie {
+	return &http.Cookie{
+		Name:     AuthCookieName,
+		Value:    "",
+		Path:     "/",
+		Domain:   b.domain,
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   b.secure,
+		SameSite: http.SameSiteStrictMode,
+	}
 }

@@ -26,7 +26,7 @@ func (s *AuthnServer) GetUserInfo(
 	ctx context.Context,
 	req *connect.Request[authnv1.GetUserInfoRequest],
 ) (*connect.Response[authnv1.GetUserInfoResponse], error) {
-	claims, err := s.validateRequestOrCookie(req.Header())
+	claims, err := s.validator.Validate(req.Header())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
@@ -182,7 +182,7 @@ func (s *AuthnServer) HandleCallback(w http.ResponseWriter, r *http.Request, par
 
 // HandleRefresh refreshes the JWT token.
 func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
-	claims, err := s.validateRequestOrCookie(r.Header)
+	claims, err := s.validator.Validate(r.Header)
 	if err != nil {
 		if err := s.writeJSON(w, http.StatusUnauthorized, authnhttp.ErrorResponse{Error: "Unauthorized"}); err != nil {
 			s.logger.Error("failed to write JSON response", "error", err)
