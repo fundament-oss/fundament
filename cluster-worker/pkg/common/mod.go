@@ -4,8 +4,9 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
 	"github.com/google/uuid"
+
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
 )
 
 // TestCluster creates a logger for tests.

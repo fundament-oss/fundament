@@ -15,9 +15,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
+	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
 // SyncWorker syncs cluster state from PostgreSQL to Gardener.
@@ -172,8 +172,8 @@ func (w *SyncWorker) processAllPending(ctx context.Context) {
 func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 	// Context is cancelled on shutdown signal (SIGTERM/SIGINT).
 	// This check prevents starting new work during graceful shutdown.
-	if ctx.Err() != nil {
-		return false, nil
+	if err := ctx.Err(); err != nil {
+		return false, fmt.Errorf("context cancelled: %w", err)
 	}
 
 	// 1. Claim cluster
