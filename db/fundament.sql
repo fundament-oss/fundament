@@ -793,6 +793,22 @@ GRANT SELECT,INSERT,UPDATE
 -- ddl-end --
 
 
+-- object: grant_r_5db3d57700 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organizations
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_a11f270e5c | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.namespaces
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
 -- object: grant_raw_eefd069f6a | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.cluster_events

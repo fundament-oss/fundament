@@ -142,3 +142,13 @@ ALTER TABLE "tenant"."cluster_events" ADD CONSTRAINT "cluster_events_fk_cluster"
 
 ALTER TABLE "tenant"."cluster_events" VALIDATE CONSTRAINT "cluster_events_fk_cluster";
 
+/* Hazards:
+ - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
+*/
+GRANT SELECT ON "tenant"."namespaces" TO "fun_cluster_worker";
+
+/* Hazards:
+ - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
+*/
+GRANT SELECT ON "tenant"."organizations" TO "fun_cluster_worker";
+
