@@ -27,13 +27,6 @@ type ProjectsDataSourceModel struct {
 	Projects []ProjectModel `tfsdk:"projects"`
 }
 
-// ProjectModel describes a single project in the data source.
-type ProjectModel struct {
-	ID        types.String `tfsdk:"id"`
-	Name      types.String `tfsdk:"name"`
-	CreatedAt types.String `tfsdk:"created_at"`
-}
-
 // NewProjectsDataSource creates a new ProjectsDataSource.
 func NewProjectsDataSource() datasource.DataSource {
 	return &ProjectsDataSource{}

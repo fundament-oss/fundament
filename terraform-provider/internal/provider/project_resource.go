@@ -26,12 +26,6 @@ type ProjectResource struct {
 	client *FundamentClient
 }
 
-// ProjectResourceModel describes the resource data model.
-type ProjectResourceModel struct {
-	ID        types.String `tfsdk:"id"`
-	Name      types.String `tfsdk:"name"`
-	CreatedAt types.String `tfsdk:"created_at"`
-}
 
 // NewProjectResource creates a new ProjectResource.
 func NewProjectResource() resource.Resource {
@@ -62,6 +56,9 @@ func (r *ProjectResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"created_at": schema.StringAttribute{
 				Description: "The timestamp when the project was created.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -87,7 +84,7 @@ func (r *ProjectResource) Configure(ctx context.Context, req resource.ConfigureR
 
 // Create creates a new project.
 func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan ProjectResourceModel
+	var plan ProjectModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
@@ -149,7 +146,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 
 // Read refreshes the Terraform state with the latest data.
 func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state ProjectResourceModel
+	var state ProjectModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -206,8 +203,8 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 // Update updates the project configuration.
 func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan ProjectResourceModel
-	var state ProjectResourceModel
+	var plan ProjectModel
+	var state ProjectModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -300,7 +297,7 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 // Delete deletes the project.
 func (r *ProjectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state ProjectResourceModel
+	var state ProjectModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
