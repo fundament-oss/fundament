@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { CLUSTER } from '../../connect/tokens';
-import { ClusterSummary } from '../../generated/v1/cluster_pb';
+import { ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 import { NgIcon, provideIcons } from '@ng-icons/core';

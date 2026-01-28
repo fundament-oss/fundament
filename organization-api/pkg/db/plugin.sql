@@ -14,7 +14,7 @@ ORDER BY t.name;
 -- name: PluginCategoriesList :many
 SELECT cp.plugin_id, c.id, c.name
 FROM zappstore.categories_plugins cp
-JOIN zappstore.categories c ON c.id = cp.category_id
+JOIN zappstore.categories c ON c.id = cp.tag_id
 WHERE c.deleted IS NULL
 ORDER BY c.name;
 

@@ -57,7 +57,7 @@ func (s *OrganizationServer) GetCluster(
 	}
 
 	return connect.NewResponse(&organizationv1.GetClusterResponse{
-		Cluster: adapter.FromClusterDetail(cluster),
+		Cluster: adapter.FromClusterDetail(&cluster),
 	}), nil
 }
 
@@ -75,17 +75,41 @@ func (s *OrganizationServer) CreateCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
+	// Use transaction to ensure sync_requested event is created before pg_notify fires
+	tx, err := s.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	qtx := s.queries.WithTx(tx)
+
 	params := db.ClusterCreateParams{
 		OrganizationID:    organizationID,
 		Name:              input.Name,
 		Region:            input.Region,
 		KubernetesVersion: input.KubernetesVersion,
-		Status:            "unspecified",
 	}
 
-	clusterID, err := s.queries.ClusterCreate(ctx, params)
+	clusterID, err := qtx.ClusterCreate(ctx, params)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeAlreadyExists,
+				fmt.Errorf("a cluster named %q already exists", input.Name))
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
+	}
+
+	// Create sync_requested event for history (in same transaction)
+	if err := qtx.ClusterCreateSyncRequestedEvent(ctx, db.ClusterCreateSyncRequestedEventParams{
+		ClusterID:  clusterID,
+		SyncAction: pgtype.Text{String: "sync", Valid: true},
+	}); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create sync_requested event: %w", err))
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
 	}
 
 	s.logger.InfoContext(ctx, "cluster created",
@@ -113,6 +137,15 @@ func (s *OrganizationServer) UpdateCluster(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
+	// Use transaction to ensure sync_requested event is created before pg_notify fires
+	tx, err := s.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	qtx := s.queries.WithTx(tx)
+
 	params := db.ClusterUpdateParams{
 		ID: input.ClusterID,
 	}
@@ -121,13 +154,25 @@ func (s *OrganizationServer) UpdateCluster(
 		params.KubernetesVersion = pgtype.Text{String: *input.KubernetesVersion, Valid: true}
 	}
 
-	rowsAffected, err := s.queries.ClusterUpdate(ctx, params)
+	rowsAffected, err := qtx.ClusterUpdate(ctx, params)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update cluster: %w", err))
 	}
 
 	if rowsAffected != 1 {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+	}
+
+	// Create sync_requested event for history (in same transaction)
+	if err := qtx.ClusterCreateSyncRequestedEvent(ctx, db.ClusterCreateSyncRequestedEventParams{
+		ClusterID:  input.ClusterID,
+		SyncAction: pgtype.Text{String: "sync", Valid: true},
+	}); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create sync_requested event: %w", err))
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
 	}
 
 	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", input.ClusterID)
@@ -144,13 +189,34 @@ func (s *OrganizationServer) DeleteCluster(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
 	}
 
-	rowsAffected, err := s.queries.ClusterDelete(ctx, db.ClusterDeleteParams{ID: clusterID})
+	// Use transaction to ensure sync_requested event is created before pg_notify fires
+	tx, err := s.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	qtx := s.queries.WithTx(tx)
+
+	rowsAffected, err := qtx.ClusterDelete(ctx, db.ClusterDeleteParams{ID: clusterID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete cluster: %w", err))
 	}
 
 	if rowsAffected != 1 {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+	}
+
+	// Create sync_requested event for history (in same transaction)
+	if err := qtx.ClusterCreateSyncRequestedEvent(ctx, db.ClusterCreateSyncRequestedEventParams{
+		ClusterID:  clusterID,
+		SyncAction: pgtype.Text{String: "delete", Valid: true},
+	}); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create sync_requested event: %w", err))
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
 	}
 
 	s.logger.InfoContext(ctx, "cluster deleted", "cluster_id", clusterID)
@@ -178,9 +244,22 @@ func (s *OrganizationServer) GetClusterActivity(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	// Stub: return empty activities
+	// Default limit if not specified
+	limit := req.Msg.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+
+	events, err := s.queries.ClusterGetEvents(ctx, db.ClusterGetEventsParams{
+		ClusterID: clusterID,
+		Limit:     limit,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster events: %w", err))
+	}
+
 	return connect.NewResponse(&organizationv1.GetClusterActivityResponse{
-		Activities: []*organizationv1.ActivityEntry{},
+		Events: adapter.FromClusterEvents(events),
 	}), nil
 }
 

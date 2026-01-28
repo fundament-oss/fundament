@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 2.0.0-alpha
+-- ** pgModeler version: 1.2.2
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -99,7 +99,54 @@ BEGIN
 END;
 $function$;
 -- ddl-end --
-ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO postgres;
+ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.cluster_reset_synced | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_reset_synced() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_reset_synced ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    NEW.synced := NULL;
+    NEW.sync_claimed_at := NULL;
+    NEW.sync_attempts := 0;
+    NEW.sync_error := NULL;
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_reset_synced() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.cluster_sync_notify | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_sync_notify() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_sync_notify ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    IF NEW.synced IS NULL AND (TG_OP = 'INSERT' OR OLD.synced IS NOT NULL) THEN
+        PERFORM pg_notify('cluster_sync', '');
+    END IF;
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_sync_notify() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.users | type: TABLE --
@@ -128,12 +175,17 @@ CREATE TABLE tenant.clusters (
 	name text NOT NULL,
 	region text NOT NULL,
 	kubernetes_version text NOT NULL,
-	status text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
+	synced timestamptz,
+	sync_claimed_at timestamptz,
+	sync_error text,
+	sync_attempts integer NOT NULL DEFAULT 0,
+	shoot_status text,
+	shoot_status_message text,
+	shoot_status_updated timestamptz,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
-	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted),
-	CONSTRAINT clusters_ck_status CHECK (status IN ('unspecified','provisioning','starting','running','upgrading','error','stopping','stopped'))
+	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
 -- ddl-end --
 ALTER TABLE tenant.clusters OWNER TO fun_owner;
@@ -158,6 +210,47 @@ CREATE POLICY organization_isolation ON tenant.clusters
 	FOR ALL
 	TO fun_fundament_api
 	USING (organization_id = current_setting('app.current_organization_id')::uuid);
+-- ddl-end --
+
+-- object: cluster_worker_all_access | type: POLICY --
+-- DROP POLICY IF EXISTS cluster_worker_all_access ON tenant.clusters CASCADE;
+CREATE POLICY cluster_worker_all_access ON tenant.clusters
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: cluster_reset_synced | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS cluster_reset_synced ON tenant.clusters CASCADE;
+CREATE OR REPLACE TRIGGER cluster_reset_synced
+	BEFORE UPDATE OF name,region,kubernetes_version,deleted
+	ON tenant.clusters
+	FOR EACH ROW
+	WHEN (OLD.name IS DISTINCT FROM NEW.name
+    OR OLD.region IS DISTINCT FROM NEW.region
+    OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
+    OR (OLD.deleted IS NULL AND NEW.deleted IS NOT NULL))
+	EXECUTE PROCEDURE tenant.cluster_reset_synced();
+-- ddl-end --
+
+-- object: cluster_sync_notify | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS cluster_sync_notify ON tenant.clusters CASCADE;
+CREATE OR REPLACE TRIGGER cluster_sync_notify
+	AFTER INSERT OR UPDATE OF synced
+	ON tenant.clusters
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.cluster_sync_notify();
+-- ddl-end --
+
+-- object: clusters_idx_needs_sync | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.clusters_idx_needs_sync CASCADE;
+CREATE INDEX clusters_idx_needs_sync ON tenant.clusters
+USING btree
+(
+	created
+)
+WHERE (synced IS NULL);
 -- ddl-end --
 
 -- object: tenant.node_pools | type: TABLE --
@@ -352,6 +445,58 @@ CREATE POLICY namespaces_organization_policy ON tenant.namespaces
 ));
 -- ddl-end --
 
+-- object: tenant.cluster_events | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.cluster_events CASCADE;
+CREATE TABLE tenant.cluster_events (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	cluster_id uuid NOT NULL,
+	event_type text NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	sync_action text,
+	message text,
+	attempt integer,
+	CONSTRAINT cluster_events_pk PRIMARY KEY (id),
+	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted')),
+	CONSTRAINT cluster_events_ck_sync_action CHECK (sync_action IN ('sync','delete'))
+);
+-- ddl-end --
+ALTER TABLE tenant.cluster_events OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.cluster_events ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: cluster_events_worker_all_access | type: POLICY --
+-- DROP POLICY IF EXISTS cluster_events_worker_all_access ON tenant.cluster_events CASCADE;
+CREATE POLICY cluster_events_worker_all_access ON tenant.cluster_events
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: cluster_events_organization_isolation | type: POLICY --
+-- DROP POLICY IF EXISTS cluster_events_organization_isolation ON tenant.cluster_events CASCADE;
+CREATE POLICY cluster_events_organization_isolation ON tenant.cluster_events
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (EXISTS (
+    SELECT 1 FROM tenant.clusters c
+    WHERE c.id = cluster_events.cluster_id
+    AND c.organization_id = current_setting('app.current_organization_id')::uuid
+));
+-- ddl-end --
+
+-- object: cluster_events_idx_cluster_created | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.cluster_events_idx_cluster_created CASCADE;
+CREATE INDEX cluster_events_idx_cluster_created ON tenant.cluster_events
+USING btree
+(
+	cluster_id DESC NULLS LAST,
+	created DESC NULLS LAST
+);
+-- ddl-end --
+
 -- object: projects_fk_organization | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_organization CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_organization FOREIGN KEY (organization_id)
@@ -455,6 +600,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE zappstore.plugin_documentation_links ADD CONSTRAINT plugin_documentation_links_fk_plugin FOREIGN KEY (plugin_id)
 REFERENCES zappstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: cluster_events_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_events DROP CONSTRAINT IF EXISTS cluster_events_fk_cluster CASCADE;
+ALTER TABLE tenant.cluster_events ADD CONSTRAINT cluster_events_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE CASCADE ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: "grant_U_ad521dc726" | type: PERMISSION --
@@ -613,6 +765,54 @@ GRANT SELECT,INSERT,UPDATE
 GRANT SELECT,INSERT,UPDATE
    ON TABLE zappstore.tags
    TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_8317ece277 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.clusters
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_raw_fcaa9ce53e | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.cluster_events
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_5db3d57700 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organizations
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_a11f270e5c | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.namespaces
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_raw_eefd069f6a | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.cluster_events
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_94ccb226af" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA tenant
+   TO fun_cluster_worker;
 
 -- ddl-end --
 

@@ -22,8 +22,11 @@ import {
   CreateNamespaceRequestSchema,
   DeleteNamespaceRequestSchema,
   ListInstallsRequestSchema,
+  GetClusterActivityRequestSchema,
   NodePool,
   ClusterNamespace,
+  type GetClusterActivityResponse_ClusterEvent as ClusterEvent,
+  type SyncState,
 } from '../../generated/v1/cluster_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
@@ -93,6 +96,10 @@ export class ClusterOverviewComponent implements OnInit {
   installedPlugins = signal<PluginSummary[]>([]);
   isLoadingPlugins = signal<boolean>(true);
 
+  // Activity/Events data
+  clusterEvents = signal<ClusterEvent[]>([]);
+  isLoadingEvents = signal<boolean>(true);
+
   namespaceNameInput = viewChild<ElementRef<HTMLInputElement>>('namespaceNameInput');
 
   namespaceForm = this.fb.group({
@@ -117,6 +124,7 @@ export class ClusterOverviewComponent implements OnInit {
       kubernetesVersion: '',
     },
     status: ClusterStatus.UNSPECIFIED,
+    syncState: null as SyncState | null,
     creationDate: '2024-11-15T10:30:00Z', // Mock data - not available from API
     activity: [
       {
@@ -192,6 +200,7 @@ export class ClusterOverviewComponent implements OnInit {
         kubernetesVersion: response.cluster.kubernetesVersion,
       };
       this.clusterData.status = response.cluster.status;
+      this.clusterData.syncState = response.cluster.syncState ?? null;
 
       this.titleService.setTitle(response.cluster.name);
 
@@ -202,11 +211,12 @@ export class ClusterOverviewComponent implements OnInit {
       // Map node pools to the expected format
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
-      // Fetch namespaces, projects, and plugins in parallel
+      // Fetch namespaces, projects, plugins, and events in parallel
       await Promise.all([
         this.loadNamespaces(clusterId),
         this.loadProjects(),
         this.loadInstalledPlugins(clusterId),
+        this.loadClusterEvents(clusterId),
       ]);
     } catch (error) {
       console.error('Failed to fetch cluster data:', error);
@@ -227,6 +237,7 @@ export class ClusterOverviewComponent implements OnInit {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      second: '2-digit',
     });
   }
 
@@ -282,7 +293,7 @@ export class ClusterOverviewComponent implements OnInit {
     }
   }
 
-  // Namespace management methods
+// Namespace management methods
   async loadNamespaces(clusterId: string): Promise<void> {
     try {
       const request = create(ListClusterNamespacesRequestSchema, { clusterId });
@@ -416,5 +427,81 @@ export class ClusterOverviewComponent implements OnInit {
     } finally {
       this.isLoadingPlugins.set(false);
     }
+  }
+
+  // Sync status methods
+  getSyncStatusColor(status: string | undefined): string {
+    const colors: Record<string, string> = {
+      ready: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200',
+      progressing: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
+      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200',
+      error: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
+      deleting: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200',
+    };
+    return colors[status ?? ''] || 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200';
+  }
+
+  getSyncStatusLabel(syncState: SyncState | null): string {
+    if (!syncState) return 'Unknown';
+    if (syncState.shootStatus) return syncState.shootStatus;
+    if (syncState.syncedAt) return 'Synced';
+    if (syncState.syncError) return 'Error';
+    return 'Pending';
+  }
+
+  // Load cluster activity/events
+  async loadClusterEvents(clusterId: string): Promise<void> {
+    try {
+      this.isLoadingEvents.set(true);
+      const request = create(GetClusterActivityRequestSchema, { clusterId, limit: 20 });
+      const response = await firstValueFrom(this.client.getClusterActivity(request));
+      this.clusterEvents.set(response.events);
+    } catch (error) {
+      console.error('Failed to load cluster events:', error);
+      // Don't show toast for events - it's not critical
+    } finally {
+      this.isLoadingEvents.set(false);
+    }
+  }
+
+  getEventTypeLabel(eventType: string): string {
+    const labels: Record<string, string> = {
+      sync_requested: 'Sync requested',
+      sync_claimed: 'Sync started',
+      sync_succeeded: 'Sync completed',
+      sync_failed: 'Sync failed',
+      status_progressing: 'Cluster progressing',
+      status_ready: 'Cluster ready',
+      status_error: 'Cluster error',
+      status_deleted: 'Cluster deleted',
+    };
+    return labels[eventType] || eventType;
+  }
+
+  getEventTypeColor(eventType: string): string {
+    const colors: Record<string, string> = {
+      sync_requested: 'bg-blue-500',
+      sync_claimed: 'bg-blue-500',
+      sync_succeeded: 'bg-green-500',
+      sync_failed: 'bg-red-500',
+      status_progressing: 'bg-blue-500',
+      status_ready: 'bg-green-500',
+      status_error: 'bg-red-500',
+      status_deleted: 'bg-gray-500',
+    };
+    return colors[eventType] || 'bg-gray-500';
+  }
+
+  getEventDetails(event: ClusterEvent): string {
+    if (event.message) {
+      return event.message;
+    }
+    if (event.syncAction) {
+      return `Action: ${event.syncAction}`;
+    }
+    if (event.attempt !== undefined) {
+      return `Attempt ${event.attempt}`;
+    }
+    return '';
   }
 }

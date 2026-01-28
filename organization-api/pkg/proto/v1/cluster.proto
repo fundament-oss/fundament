@@ -7,6 +7,16 @@ import "google/protobuf/empty.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
+// Cluster sync state from Gardener
+message SyncState {
+  optional Timestamp synced_at = 10;
+  optional string sync_error = 20;
+  int32 sync_attempts = 30;
+  optional string shoot_status = 40;
+  optional string shoot_message = 50;
+  optional Timestamp status_updated_at = 60;
+}
+
 // ClusterService manages Kubernetes clusters
 service ClusterService {
   // List all clusters for the current organization
@@ -71,15 +81,17 @@ message ListClustersRequest {
 
 // List clusters response
 message ListClustersResponse {
+  // Cluster summary information
+  message ClusterSummary {
+    string id = 10;
+    string name = 20;
+    ClusterStatus status = 30;
+    string region = 40;
+    int32 project_count = 50;
+    int32 node_pool_count = 60;
+    SyncState sync_state = 70;
+  }
   repeated ClusterSummary clusters = 10;
-}
-
-// Cluster summary information
-message ClusterSummary {
-  string id = 10;
-  string name = 20;
-  ClusterStatus status = 30;
-  string region = 40;
 }
 
 // Get cluster request
@@ -101,6 +113,7 @@ message ClusterDetails {
   ClusterStatus status = 50;
   Timestamp created_at = 60;
   ResourceUsageInfo resource_usage = 70;
+  SyncState sync_state = 80;
 }
 
 // Resource usage information for a cluster
@@ -121,21 +134,6 @@ message NodePool {
   int32 max_nodes = 60;
   NodePoolStatus status = 70;
   string version = 80;
-}
-
-// Cluster member information
-message ClusterMember {
-  string user_id = 10;
-  string name = 20;
-  string role = 30;
-  Timestamp last_active = 40;
-}
-
-// Project associated with cluster
-message ClusterProject {
-  string project_id = 10;
-  string name = 20;
-  repeated string namespaces = 30;
 }
 
 // Create cluster request
@@ -172,18 +170,21 @@ message DeleteClusterRequest {
 // Get cluster activity request
 message GetClusterActivityRequest {
   string cluster_id = 10;
+  int32 limit = 20;  // Optional: limit number of events returned (default 50)
 }
 
 // Get cluster activity response
 message GetClusterActivityResponse {
-  repeated ActivityEntry activities = 10;
-}
-
-// Activity entry
-message ActivityEntry {
-  Timestamp timestamp = 10;
-  string action = 20;
-  string details = 30;
+  // Cluster event from cluster_events table
+  message ClusterEvent {
+    string id = 10;
+    string event_type = 20;      // sync_requested, sync_claimed, sync_submitted, sync_failed, status_ready, status_error, status_deleted
+    Timestamp created_at = 30;
+    optional string sync_action = 40;  // create, update, delete (for sync events)
+    optional string message = 50;
+    optional int32 attempt = 60;       // Sync attempt number (for sync events)
+  }
+  repeated ClusterEvent events = 10;
 }
 
 // Get kubeconfig request

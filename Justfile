@@ -1,5 +1,6 @@
 mod terraform-provider 'terraform-provider'
 mod e2e 'e2e'
+mod cluster-worker
 
 _default:
     @just --list
