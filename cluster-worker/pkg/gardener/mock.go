@@ -60,14 +60,20 @@ type MockClient struct {
 
 	// Validation settings
 	ValidateSpecs bool // Enable spec validation (default: true)
+
+	// Async namespace simulation (like real Gardener)
+	SimulateAsyncNamespace bool                    // If true, first EnsureProject call returns empty namespace
+	projectCreatedAt       map[string]time.Time    // Track when projects were created
+	NamespaceReadyDelay    time.Duration           // Time before namespace becomes ready (default: 2s)
 }
 
 // mockShoot tracks a shoot's state and creation time for status progression.
 type mockShoot struct {
-	Info      ShootInfo
-	CreatedAt time.Time
-	DeletedAt *time.Time // Set when deletion starts
-	Cluster   ClusterToSync
+	Info       ShootInfo
+	CreatedAt  time.Time
+	DeletedAt  *time.Time // Set when deletion starts
+	Cluster    ClusterToSync
+	LastStatus ShootStatusType // Track last status for change detection
 }
 
 // StatusOverride allows tests to configure custom status for specific clusters.
@@ -81,15 +87,18 @@ type StatusOverride struct {
 // Spec validation is enabled to catch common errors.
 func NewMock(logger *slog.Logger) *MockClient {
 	return &MockClient{
-		shoots:           make(map[string]*mockShoot),
-		projects:         make(map[string]bool),
-		logger:           logger,
-		clock:            time.Now,
-		StatusOverrides:  make(map[uuid.UUID]StatusOverride),
-		ProgressingDelay: 1 * time.Second,
-		ReadyDelay:       5 * time.Second,
-		DeleteDelay:      3 * time.Second,
-		ValidateSpecs:    true,
+		shoots:                 make(map[string]*mockShoot),
+		projects:               make(map[string]bool),
+		projectCreatedAt:       make(map[string]time.Time),
+		logger:                 logger,
+		clock:                  time.Now,
+		StatusOverrides:        make(map[uuid.UUID]StatusOverride),
+		ProgressingDelay:       1 * time.Second,
+		ReadyDelay:             5 * time.Second,
+		DeleteDelay:            3 * time.Second,
+		ValidateSpecs:          true,
+		SimulateAsyncNamespace: false,             // Default: instant namespace (backwards compatible)
+		NamespaceReadyDelay:    2 * time.Second,
 	}
 }
 
@@ -105,6 +114,7 @@ func NewMockInstant(logger *slog.Logger) *MockClient {
 
 // EnsureProject records the call and creates the project if it doesn't exist (idempotent).
 // Returns the namespace (garden-{projectName} for mock).
+// If SimulateAsyncNamespace is enabled, returns empty namespace on first call (like real Gardener).
 func (m *MockClient) EnsureProject(ctx context.Context, projectName string, orgID uuid.UUID) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -116,9 +126,27 @@ func (m *MockClient) EnsureProject(ctx context.Context, projectName string, orgI
 	}
 
 	namespace := NamespaceFromProjectName(projectName)
+	now := m.clock()
+
 	if !m.projects[projectName] {
 		m.projects[projectName] = true
+		m.projectCreatedAt[projectName] = now
 		m.logger.Info("MOCK: created project", "project", projectName, "namespace", namespace, "organization_id", orgID)
+
+		// Simulate async namespace creation like real Gardener
+		if m.SimulateAsyncNamespace {
+			m.logger.Debug("MOCK: namespace not ready yet (async simulation)", "project", projectName)
+			return "", nil
+		}
+	}
+
+	// Check if namespace is ready (for async simulation)
+	if m.SimulateAsyncNamespace {
+		createdAt, exists := m.projectCreatedAt[projectName]
+		if exists && now.Sub(createdAt) < m.NamespaceReadyDelay {
+			m.logger.Debug("MOCK: namespace not ready yet", "project", projectName, "elapsed", now.Sub(createdAt))
+			return "", nil
+		}
 	}
 
 	return namespace, nil
@@ -251,6 +279,7 @@ func (m *MockClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 //   - progressing → ready (after ReadyDelay)
 //   - deleting → deleted (after DeleteDelay)
 //
+// Records status_change events in EventHistory when status transitions.
 // Use StatusOverrides to customize per-cluster behavior for testing.
 func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync) (*ShootStatus, error) {
 	m.mu.Lock()
@@ -274,6 +303,7 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 	}
 
 	now := m.clock()
+	var status *ShootStatus
 
 	// Handle deletion status progression
 	if shoot.DeletedAt != nil {
@@ -283,31 +313,49 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 			delete(m.shoots, shootName)
 			return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}, nil
 		}
-		return &ShootStatus{
+		status = &ShootStatus{
 			Status:  StatusDeleting,
 			Message: fmt.Sprintf("Shoot is being deleted (%.0fs remaining)", (m.DeleteDelay - elapsed).Seconds()),
-		}, nil
-	}
-
-	// Handle creation status progression
-	elapsed := now.Sub(shoot.CreatedAt)
-
-	if elapsed < m.ProgressingDelay {
-		return &ShootStatus{Status: StatusPending, Message: "Shoot creation initiated"}, nil
-	}
-
-	if elapsed < m.ProgressingDelay+m.ReadyDelay {
-		progress := (elapsed - m.ProgressingDelay).Seconds() / m.ReadyDelay.Seconds() * 100
-		if m.ReadyDelay == 0 {
-			progress = 100
 		}
-		return &ShootStatus{
-			Status:  StatusProgressing,
-			Message: fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
-		}, nil
+	} else {
+		// Handle creation status progression
+		elapsed := now.Sub(shoot.CreatedAt)
+
+		if elapsed < m.ProgressingDelay {
+			status = &ShootStatus{Status: StatusPending, Message: "Shoot creation initiated"}
+		} else if elapsed < m.ProgressingDelay+m.ReadyDelay {
+			progress := (elapsed - m.ProgressingDelay).Seconds() / m.ReadyDelay.Seconds() * 100
+			if m.ReadyDelay == 0 {
+				progress = 100
+			}
+			status = &ShootStatus{
+				Status:  StatusProgressing,
+				Message: fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
+			}
+		} else {
+			status = &ShootStatus{Status: StatusReady, Message: MsgShootReady}
+		}
 	}
 
-	return &ShootStatus{Status: StatusReady, Message: MsgShootReady}, nil
+	// Record status_change event if status changed
+	if shoot.LastStatus != status.Status {
+		m.EventHistory = append(m.EventHistory, MockEvent{
+			Time:      now,
+			Type:      "status_change",
+			ClusterID: cluster.ID,
+			ShootName: shootName,
+			Status:    string(status.Status),
+			Message:   status.Message,
+		})
+		shoot.LastStatus = status.Status
+		m.logger.Debug("MOCK: status changed",
+			"cluster_id", cluster.ID,
+			"shoot", shootName,
+			"old_status", shoot.LastStatus,
+			"new_status", status.Status)
+	}
+
+	return status, nil
 }
 
 // SetClock sets a custom clock function for testing time-based behavior.
@@ -325,6 +373,7 @@ func (m *MockClient) Reset() {
 
 	m.shoots = make(map[string]*mockShoot)
 	m.projects = make(map[string]bool)
+	m.projectCreatedAt = make(map[string]time.Time)
 	m.EnsureProjectCalls = nil
 	m.ApplyCalls = nil
 	m.DeleteByClusterID = nil

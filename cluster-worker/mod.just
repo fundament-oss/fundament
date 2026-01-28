@@ -235,7 +235,8 @@ gardener-connect-k3d:
     echo "Gardener API: https://$KIND_IP:6443"
 
 # Create kubeconfig secret for cluster-worker to connect to Gardener
-gardener-secret:
+# Depends on gardener-connect-k3d to ensure networks are connected
+gardener-secret: gardener-connect-k3d
     #!/usr/bin/env bash
     set -e
     GARDENER_DIR="{{GARDENER_DIR}}"
@@ -249,14 +250,21 @@ gardener-secret:
         kind get kubeconfig --name gardener-local > "$KUBECONFIG_PATH"
     fi
 
-    # Get IP from k3d-fundament network (cert SANs include this IP)
-    KIND_IP=$(docker inspect gardener-local-control-plane --format '{{{{range $net, $conf := .NetworkSettings.Networks}}{{{{if eq $net "k3d-fundament"}}{{{{$conf.IPAddress}}{{{{end}}{{{{end}}')
+    # Always use kind network IP - the TLS cert SANs only include kind network IP,
+    # not the k3d-fundament network IP. This works because gardener-connect-k3d
+    # connects the k3d server to the kind network, allowing pods to reach this IP.
+    KIND_IP=$(docker inspect gardener-local-control-plane --format '{{{{range $net, $conf := .NetworkSettings.Networks}}{{{{if eq $net "kind"}}{{{{$conf.IPAddress}}{{{{end}}{{{{end}}')
+
+    if [ -z "$KIND_IP" ]; then
+        echo "Error: Could not get kind network IP. Is Gardener running?"
+        exit 1
+    fi
 
     # Ensure fundament namespace exists
     kubectl create namespace fundament --dry-run=client -o yaml | kubectl apply -f -
 
-    # Create kubeconfig with internal IP (not localhost)
-    echo "Creating gardener-kubeconfig secret in fundament namespace..."
+    # Create kubeconfig with kind network IP (not localhost)
+    echo "Creating gardener-kubeconfig secret (server: https://$KIND_IP:6443)..."
     TEMP_KUBECONFIG=$(mktemp)
     sed "s|https://127.0.0.1:[0-9]*|https://$KIND_IP:6443|g" "$KUBECONFIG_PATH" > "$TEMP_KUBECONFIG"
     kubectl create secret generic gardener-kubeconfig \
@@ -295,13 +303,9 @@ delete-test-cluster name:
 # Watch shoots in Gardener
 shoots:
     #!/usr/bin/env bash
-    GARDENER_DIR="{{GARDENER_DIR}}"
-    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
-    KUBECONFIG="$GARDENER_DIR/example/provider-local/seed-kind/base/kubeconfig"
-    if [ ! -f "$KUBECONFIG" ]; then
-        echo "Error: Gardener kubeconfig not found at $KUBECONFIG"
-        echo "Run 'just cluster-worker gardener-up' first"
+    if ! docker ps --format '{{{{.Names}}' | grep -q gardener-local-control-plane; then
+        echo "Error: Gardener is not running. Start with: just cluster-worker gardener-up"
         exit 1
     fi
-    kubectl --kubeconfig "$KUBECONFIG" get shoots -A -w
+    docker exec gardener-local-control-plane kubectl get shoots -A -w
 
