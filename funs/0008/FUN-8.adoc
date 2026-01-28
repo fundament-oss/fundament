@@ -111,7 +111,7 @@ No configuration files are used. This keeps the tool simple and explicit about i
 * For full operator access: Use a PostgreSQL user that has explicit RLS policies granting full access, or a superuser role
 * RLS policies in the Fundament schema can be configured to allow specific users full access, or the bypassrls attribute
 
-Initial development uses the superuser role and bypassrls attributes.
+Initial development uses the superuser role and bypasses rls attributes.
 
 === Logging
 
