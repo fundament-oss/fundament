@@ -6,9 +6,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func TestProjectDataSourceModel(t *testing.T) {
+func TestProjectModel_DataSource(t *testing.T) {
 	// Test that the model can be created with expected values
-	model := ProjectDataSourceModel{
+	model := ProjectModel{
 		ID:        types.StringValue("test-id"),
 		Name:      types.StringValue("test-project"),
 		CreatedAt: types.StringValue("2024-01-15T10:30:00Z"),

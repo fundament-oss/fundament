@@ -6,9 +6,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func TestProjectResourceModel(t *testing.T) {
+func TestProjectModel_Resource(t *testing.T) {
 	// Test that the model can be created with expected values
-	model := ProjectResourceModel{
+	model := ProjectModel{
 		ID:        types.StringValue("test-id"),
 		Name:      types.StringValue("test-project"),
 		CreatedAt: types.StringValue("2024-01-15T10:30:00Z"),
@@ -27,9 +27,9 @@ func TestProjectResourceModel(t *testing.T) {
 	}
 }
 
-func TestProjectResourceModelNullValues(t *testing.T) {
+func TestProjectModelNullValues(t *testing.T) {
 	// Test that null values are handled correctly
-	model := ProjectResourceModel{
+	model := ProjectModel{
 		ID:        types.StringNull(),
 		Name:      types.StringValue("test-project"),
 		CreatedAt: types.StringNull(),
