@@ -1,4 +1,4 @@
-package worker
+package worker_status
 
 import (
 	"context"
@@ -9,21 +9,22 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/common"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
 )
 
 func TestStatusWorker_Creation(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMock(logger)
 
 	// StatusPoller can be created without a DB connection for basic tests
 	// Real functionality requires DB
-	cfg := StatusConfig{
+	cfg := Config{
 		PollInterval: 30 * time.Second,
 		BatchSize:    50,
 	}
 
-	sp := NewStatusWorker(nil, mock, logger, cfg)
+	sp := New(nil, mock, logger, cfg)
 	if sp == nil {
 		t.Fatal("status poller should not be nil")
 	}
@@ -36,13 +37,13 @@ func TestStatusWorker_Creation(t *testing.T) {
 }
 
 func TestStatusWorker_MockGardenerInteraction(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := testCluster("test-cluster", "test-tenant")
+	cluster := common.TestCluster("test-cluster", "test-tenant")
 
-	// Create shoot (ShootName is pre-set from testCluster)
+	// Create shoot (ShootName is pre-set from common.TestCluster)
 	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
@@ -74,13 +75,13 @@ func TestStatusWorker_MockGardenerInteraction(t *testing.T) {
 }
 
 func TestStatusWorker_ProgressingStatus(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := testCluster("test-cluster", "test-tenant")
+	cluster := common.TestCluster("test-cluster", "test-tenant")
 
-	// Create shoot (ShootName is pre-set from testCluster)
+	// Create shoot (ShootName is pre-set from common.TestCluster)
 	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
@@ -102,13 +103,13 @@ func TestStatusWorker_ProgressingStatus(t *testing.T) {
 }
 
 func TestStatusWorker_ErrorStatus(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := testCluster("test-cluster", "test-tenant")
+	cluster := common.TestCluster("test-cluster", "test-tenant")
 
-	// Create shoot (ShootName is pre-set from testCluster)
+	// Create shoot (ShootName is pre-set from common.TestCluster)
 	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
@@ -130,12 +131,12 @@ func TestStatusWorker_ErrorStatus(t *testing.T) {
 }
 
 func TestStatusWorker_DeletingStatus(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
 	now := time.Now()
-	cluster := testCluster("test-cluster", "test-tenant")
+	cluster := common.TestCluster("test-cluster", "test-tenant")
 	cluster.Deleted = &now // Mark as deleted in DB
 
 	// Create shoot (simulating a shoot that's being deleted, ShootName is pre-set)
@@ -173,10 +174,10 @@ func TestStatusWorker_Integration(t *testing.T) {
 	}
 	defer pool.Close()
 
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMock(logger)
 
-	sp := NewStatusWorker(pool, mock, logger, StatusConfig{
+	sp := New(pool, mock, logger, Config{
 		PollInterval: 30 * time.Second,
 		BatchSize:    50,
 	})
@@ -188,7 +189,7 @@ func TestStatusWorker_Integration(t *testing.T) {
 
 func TestStatusWorker_RunLoop(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		logger := testLogger()
+		logger := common.TestLogger()
 		mock := gardener.NewMock(logger)
 
 		pollInterval := 100 * time.Millisecond
@@ -233,7 +234,7 @@ func TestStatusWorker_RunLoop(t *testing.T) {
 }
 
 func TestStatusWorker_MultipleStatusOverrides(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
@@ -245,17 +246,17 @@ func TestStatusWorker_MultipleStatusOverrides(t *testing.T) {
 		message string
 	}{
 		{
-			cluster: testCluster("cluster-1", "tenant"),
+			cluster: common.TestCluster("cluster-1", "tenant"),
 			status:  gardener.StatusReady,
 			message: "Cluster is ready",
 		},
 		{
-			cluster: testCluster("cluster-2", "tenant"),
+			cluster: common.TestCluster("cluster-2", "tenant"),
 			status:  gardener.StatusProgressing,
 			message: "Creating workers",
 		},
 		{
-			cluster: testCluster("cluster-3", "tenant"),
+			cluster: common.TestCluster("cluster-3", "tenant"),
 			status:  gardener.StatusError,
 			message: "Infrastructure provisioning failed",
 		},

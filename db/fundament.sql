@@ -117,7 +117,6 @@ $function$
 BEGIN
     NEW.synced := NULL;
     NEW.sync_claimed_at := NULL;
-    NEW.sync_claimed_by := NULL;
     NEW.sync_attempts := 0;
     NEW.sync_error := NULL;
     RETURN NEW;
@@ -141,7 +140,7 @@ CREATE OR REPLACE FUNCTION tenant.cluster_sync_notify ()
 $function$
 BEGIN
     IF NEW.synced IS NULL AND (TG_OP = 'INSERT' OR OLD.synced IS NOT NULL) THEN
-        PERFORM pg_notify('cluster_sync', NEW.id::text);
+        PERFORM pg_notify('cluster_sync', '');
     END IF;
     RETURN NEW;
 END;
@@ -180,7 +179,6 @@ CREATE TABLE tenant.clusters (
 	deleted timestamptz,
 	synced timestamptz,
 	sync_claimed_at timestamptz,
-	sync_claimed_by text,
 	sync_error text,
 	sync_attempts integer NOT NULL DEFAULT 0,
 	shoot_status text,
@@ -221,14 +219,6 @@ CREATE POLICY cluster_worker_all_access ON tenant.clusters
 	FOR ALL
 	TO fun_cluster_worker
 	USING (true);
--- ddl-end --
-
--- object: tenant.cluster_event_type | type: TYPE --
--- DROP TYPE IF EXISTS tenant.cluster_event_type CASCADE;
-CREATE TYPE tenant.cluster_event_type AS
-ENUM ('sync_requested','sync_claimed','sync_submitted','sync_failed','status_progressing','status_ready','status_error','status_deleted');
--- ddl-end --
-ALTER TYPE tenant.cluster_event_type OWNER TO postgres;
 -- ddl-end --
 
 -- object: cluster_reset_synced | type: TRIGGER --
@@ -455,25 +445,19 @@ CREATE POLICY namespaces_organization_policy ON tenant.namespaces
 ));
 -- ddl-end --
 
--- object: tenant.cluster_sync_action | type: TYPE --
--- DROP TYPE IF EXISTS tenant.cluster_sync_action CASCADE;
-CREATE TYPE tenant.cluster_sync_action AS
-ENUM ('create','update','delete');
--- ddl-end --
-ALTER TYPE tenant.cluster_sync_action OWNER TO postgres;
--- ddl-end --
-
 -- object: tenant.cluster_events | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.cluster_events CASCADE;
 CREATE TABLE tenant.cluster_events (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	cluster_id uuid NOT NULL,
-	event_type tenant.cluster_event_type NOT NULL,
+	event_type text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
-	sync_action tenant.cluster_sync_action,
+	sync_action text,
 	message text,
 	attempt integer,
-	CONSTRAINT cluster_events_pk PRIMARY KEY (id)
+	CONSTRAINT cluster_events_pk PRIMARY KEY (id),
+	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted')),
+	CONSTRAINT cluster_events_ck_sync_action CHECK (sync_action IN ('sync','delete'))
 );
 -- ddl-end --
 ALTER TABLE tenant.cluster_events OWNER TO postgres;

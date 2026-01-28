@@ -86,18 +86,17 @@ message ListClustersRequest {
 
 // List clusters response
 message ListClustersResponse {
+  // Cluster summary information
+  message ClusterSummary {
+    string id = 10;
+    string name = 20;
+    ClusterStatus status = 30;
+    string region = 40;
+    int32 project_count = 50;
+    int32 node_pool_count = 60;
+    SyncState sync_state = 70;
+  }
   repeated ClusterSummary clusters = 10;
-}
-
-// Cluster summary information
-message ClusterSummary {
-  string id = 10;
-  string name = 20;
-  ClusterStatus status = 30;
-  string region = 40;
-  int32 project_count = 50;
-  int32 node_pool_count = 60;
-  SyncState sync_state = 70;
 }
 
 // Get cluster request
@@ -195,7 +194,6 @@ message ClusterEvent {
   optional string message = 50;
   optional int32 attempt = 60;       // Sync attempt number (for sync events)
 }
-
 // Get kubeconfig request
 message GetKubeconfigRequest {
   string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];

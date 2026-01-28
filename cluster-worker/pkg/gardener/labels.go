@@ -1,4 +1,3 @@
-// Package gardener provides label constants for Gardener resources.
 package gardener
 
 // LabelPrefix is the domain prefix for all Fundament labels.

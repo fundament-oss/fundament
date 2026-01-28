@@ -1,9 +1,8 @@
-package worker
+package worker_sync
 
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"os"
 	"testing"
 	"testing/synctest"
@@ -13,42 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/common"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
 )
 
-// testLogger creates a logger for tests.
-func testLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-}
-
-// testCluster creates a valid ClusterToSync for testing.
-// Uses the new naming scheme with deterministic project names and random shoot names.
-func testCluster(name, org string) gardener.ClusterToSync {
-	orgID := uuid.New()
-	projectName := gardener.ProjectName(org)
-	namespace := gardener.NamespaceFromProjectName(projectName)
-	shootName := gardener.GenerateShootName(name)
-	return gardener.ClusterToSync{
-		ID:                uuid.New(),
-		OrganizationID:    orgID,
-		OrganizationName:  org,
-		Name:              name,
-		ShootName:         shootName,
-		Namespace:         namespace,
-		Region:            "local",
-		KubernetesVersion: "1.31.1",
-	}
-}
-
 func TestMockClient_ApplyShoot(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := testCluster("test-cluster", "test-tenant")
+	cluster := common.TestCluster("test-cluster", "test-tenant")
 
 	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
@@ -70,11 +44,11 @@ func TestMockClient_ApplyShoot(t *testing.T) {
 }
 
 func TestMockClient_DeleteShootByClusterID(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := testCluster("test-cluster", "test-tenant")
+	cluster := common.TestCluster("test-cluster", "test-tenant")
 
 	// Create shoot first
 	err := mock.ApplyShoot(ctx, &cluster)
@@ -100,14 +74,14 @@ func TestMockClient_DeleteShootByClusterID(t *testing.T) {
 }
 
 func TestMockClient_ListShoots(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
 
 	// Create multiple shoots
 	for i := 0; i < 3; i++ {
-		cluster := testCluster("cluster-"+string(rune('a'+i)), "tenant")
+		cluster := common.TestCluster("cluster-"+string(rune('a'+i)), "tenant")
 		err := mock.ApplyShoot(ctx, &cluster)
 		if err != nil {
 			t.Fatalf("ApplyShoot failed: %v", err)
@@ -126,13 +100,13 @@ func TestMockClient_ListShoots(t *testing.T) {
 }
 
 func TestMockClient_GetShootStatus(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger) // Instant transitions for this test
 
 	ctx := context.Background()
-	cluster := testCluster("test-cluster", "test-tenant")
+	cluster := common.TestCluster("test-cluster", "test-tenant")
 
-	// Create shoot (ShootName is pre-set from testCluster)
+	// Create shoot (ShootName is pre-set from common.TestCluster)
 	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
@@ -152,16 +126,16 @@ func TestMockClient_GetShootStatus(t *testing.T) {
 }
 
 func TestMockClient_StatusOverride(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := testCluster("test-cluster", "test-tenant")
+	cluster := common.TestCluster("test-cluster", "test-tenant")
 
 	// Set override
 	mock.SetStatusOverride(cluster.ID, gardener.StatusProgressing, "Creating infrastructure")
 
-	// Create shoot (ShootName is pre-set from testCluster)
+	// Create shoot (ShootName is pre-set from common.TestCluster)
 	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
@@ -181,11 +155,11 @@ func TestMockClient_StatusOverride(t *testing.T) {
 }
 
 func TestMockClient_ApplyError(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := testCluster("test-cluster", "test-tenant")
+	cluster := common.TestCluster("test-cluster", "test-tenant")
 
 	// Set error
 	mock.SetApplyError(gardener.ErrMockApplyFailed)
@@ -202,11 +176,11 @@ func TestMockClient_ApplyError(t *testing.T) {
 }
 
 func TestMockClient_Reset(t *testing.T) {
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
 
 	ctx := context.Background()
-	cluster := testCluster("test-cluster", "test-tenant")
+	cluster := common.TestCluster("test-cluster", "test-tenant")
 
 	// Create shoot and set error
 	err := mock.ApplyShoot(ctx, &cluster)
@@ -230,49 +204,6 @@ func TestMockClient_Reset(t *testing.T) {
 	err = mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Errorf("expected no error after reset, got %v", err)
-	}
-}
-
-func TestTruncateError(t *testing.T) {
-	tests := []struct {
-		name     string
-		msg      string
-		maxLen   int
-		expected string
-	}{
-		{
-			name:     "short message",
-			msg:      "short error",
-			maxLen:   100,
-			expected: "short error",
-		},
-		{
-			name:     "exact length",
-			msg:      "exact",
-			maxLen:   5,
-			expected: "exact",
-		},
-		{
-			name:     "truncated",
-			msg:      "this is a very long error message that needs to be truncated",
-			maxLen:   20,
-			expected: "this is a very lo...",
-		},
-		{
-			name:     "empty message",
-			msg:      "",
-			maxLen:   10,
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := truncateError(tt.msg, tt.maxLen)
-			if result != tt.expected {
-				t.Errorf("expected %q, got %q", tt.expected, result)
-			}
-		})
 	}
 }
 
@@ -437,10 +368,10 @@ func TestSyncWorker_Integration(t *testing.T) {
 	}
 	defer pool.Close()
 
-	logger := testLogger()
+	logger := common.TestLogger()
 	mock := gardener.NewMock(logger)
 
-	w := NewSyncWorker(pool, mock, logger, Config{
+	w := New(pool, mock, logger, Config{
 		PollInterval:      30 * time.Second,
 		ReconcileInterval: 5 * time.Minute,
 	})
@@ -496,7 +427,7 @@ func pow2(n int) float64 {
 
 func TestStatusPoller_Timing(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		logger := testLogger()
+		logger := common.TestLogger()
 		mock := gardener.NewMock(logger)
 
 		// We can't easily test the full poller without a DB connection,
@@ -530,76 +461,6 @@ func TestStatusPoller_Timing(t *testing.T) {
 		if mock == nil {
 			t.Fatal("mock should not be nil")
 		}
-	})
-}
-
-func TestSyncWorker_ShutdownTimeout(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		logger := testLogger()
-
-		// Create a worker (without real DB connection, just test shutdown logic)
-		w := &SyncWorker{
-			logger: logger,
-		}
-
-		// Simulate in-flight operation
-		w.inFlight.Add(1)
-
-		shutdownComplete := make(chan struct{})
-		go func() {
-			w.Shutdown(100 * time.Millisecond)
-			close(shutdownComplete)
-		}()
-
-		// Complete the in-flight operation after 50ms
-		go func() {
-			time.Sleep(50 * time.Millisecond)
-			w.inFlight.Done()
-		}()
-
-		synctest.Wait()
-
-		// Shutdown should complete before timeout
-		select {
-		case <-shutdownComplete:
-			// Good, shutdown completed
-		case <-time.After(200 * time.Millisecond):
-			t.Error("shutdown did not complete in time")
-		}
-	})
-}
-
-func TestSyncWorker_ShutdownTimeoutExceeded(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		logger := testLogger()
-
-		w := &SyncWorker{
-			logger: logger,
-		}
-
-		// Simulate in-flight operation that takes too long
-		w.inFlight.Add(1)
-
-		shutdownComplete := make(chan struct{})
-		go func() {
-			w.Shutdown(50 * time.Millisecond) // Short timeout
-			close(shutdownComplete)
-		}()
-
-		// Don't complete the in-flight operation
-
-		synctest.Wait()
-
-		// Shutdown should timeout
-		select {
-		case <-shutdownComplete:
-			// Good, shutdown timed out as expected
-		case <-time.After(200 * time.Millisecond):
-			t.Error("shutdown did not timeout as expected")
-		}
-
-		// Clean up
-		w.inFlight.Done()
 	})
 }
 

@@ -1,4 +1,3 @@
-// Package gardener provides the real Gardener client implementation.
 package gardener
 
 import (

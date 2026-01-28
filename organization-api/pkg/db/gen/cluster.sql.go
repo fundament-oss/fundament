@@ -14,7 +14,14 @@ import (
 
 const clusterCreate = `-- name: ClusterCreate :one
 INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version)
-VALUES ($1, $2, $3, $4)
+SELECT $1, $2, $3, $4
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM tenant.clusters
+    WHERE organization_id = $1
+      AND name = $2
+      AND (deleted IS NULL OR synced IS NULL)
+)
 RETURNING id
 `
 
@@ -25,6 +32,9 @@ type ClusterCreateParams struct {
 	KubernetesVersion string
 }
 
+// Create a cluster if no active or pending-delete cluster with the same name exists.
+// Allows creation only after delete is finalized (synced to Gardener).
+// Returns NULL if blocked (caller should check for pgx.ErrNoRows).
 func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, clusterCreate,
 		arg.OrganizationID,
@@ -44,7 +54,7 @@ VALUES ($1, 'sync_requested', $2)
 
 type ClusterCreateSyncRequestedEventParams struct {
 	ClusterID  uuid.UUID
-	SyncAction NullTenantClusterSyncAction
+	SyncAction pgtype.Text
 }
 
 // Insert sync_requested event when cluster is created/updated.
