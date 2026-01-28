@@ -2,9 +2,9 @@ package adapter
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/models"
@@ -55,9 +55,7 @@ func FromClusterDetail(c db.TenantCluster) *organizationv1.ClusterDetails {
 		Region:            c.Region,
 		KubernetesVersion: c.KubernetesVersion,
 		Status:            FromClusterStatus(c.Status),
-		CreatedAt: &organizationv1.Timestamp{
-			Value: c.Created.Time.Format(time.RFC3339),
-		},
+		CreatedAt: timestamppb.New(c.Created.Time),
 		ResourceUsage: nil, // Stub
 	}
 }
@@ -117,8 +115,6 @@ func FromClusterNamespace(ns *db.TenantNamespace) *organizationv1.ClusterNamespa
 		Id:        ns.ID.String(),
 		Name:      ns.Name,
 		ProjectId: ns.ProjectID.String(),
-		CreatedAt: &organizationv1.Timestamp{
-			Value: ns.Created.Time.Format(time.RFC3339),
-		},
+		CreatedAt: timestamppb.New(ns.Created.Time),
 	}
 }

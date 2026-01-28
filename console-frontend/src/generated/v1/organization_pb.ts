@@ -4,15 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { EmptySchema } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_empty } from "@bufbuild/protobuf/wkt";
+import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/organization.proto.
  */
 export const file_v1_organization: GenFile = /*@__PURE__*/
-  fileDesc("ChV2MS9vcmdhbml6YXRpb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSI5CgxPcmdhbml6YXRpb24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIPCgdjcmVhdGVkGB4gASgJIiQKFkdldE9yZ2FuaXphdGlvblJlcXVlc3QSCgoCaWQYCiABKAkiTgoXR2V0T3JnYW5pemF0aW9uUmVzcG9uc2USMwoMb3JnYW5pemF0aW9uGAogASgLMh0ub3JnYW5pemF0aW9uLnYxLk9yZ2FuaXphdGlvbiI1ChlVcGRhdGVPcmdhbml6YXRpb25SZXF1ZXN0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAky1QEKE09yZ2FuaXphdGlvblNlcnZpY2USZAoPR2V0T3JnYW5pemF0aW9uEicub3JnYW5pemF0aW9uLnYxLkdldE9yZ2FuaXphdGlvblJlcXVlc3QaKC5vcmdhbml6YXRpb24udjEuR2V0T3JnYW5pemF0aW9uUmVzcG9uc2USWAoSVXBkYXRlT3JnYW5pemF0aW9uEioub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU9yZ2FuaXphdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCVVpTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjFiBnByb3RvMw", [file_google_protobuf_empty]);
+  fileDesc("ChV2MS9vcmdhbml6YXRpb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSJVCgxPcmdhbml6YXRpb24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIrCgdjcmVhdGVkGB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIkChZHZXRPcmdhbml6YXRpb25SZXF1ZXN0EgoKAmlkGAogASgJIk4KF0dldE9yZ2FuaXphdGlvblJlc3BvbnNlEjMKDG9yZ2FuaXphdGlvbhgKIAEoCzIdLm9yZ2FuaXphdGlvbi52MS5Pcmdhbml6YXRpb24iNQoZVXBkYXRlT3JnYW5pemF0aW9uUmVxdWVzdBIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJMtUBChNPcmdhbml6YXRpb25TZXJ2aWNlEmQKD0dldE9yZ2FuaXphdGlvbhInLm9yZ2FuaXphdGlvbi52MS5HZXRPcmdhbml6YXRpb25SZXF1ZXN0Gigub3JnYW5pemF0aW9uLnYxLkdldE9yZ2FuaXphdGlvblJlc3BvbnNlElgKElVwZGF0ZU9yZ2FuaXphdGlvbhIqLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVPcmdhbml6YXRpb25SZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5QlVaU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_google_protobuf_empty]);
 
 /**
  * Organization information
@@ -37,9 +37,9 @@ export type Organization = Message<"organization.v1.Organization"> & {
   /**
    * Creation timestamp (RFC3339)
    *
-   * @generated from field: string created = 30;
+   * @generated from field: google.protobuf.Timestamp created = 30;
    */
-  created: string;
+  created?: Timestamp;
 };
 
 /**

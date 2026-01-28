@@ -14,6 +14,7 @@ import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { CLUSTER, PROJECT, PLUGIN } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
+import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
@@ -220,8 +221,10 @@ export class ClusterOverviewComponent implements OnInit {
     }
   }
 
-  formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  formatDate(timestamp: Timestamp | string | undefined): string {
+    if (!timestamp) return 'Unknown';
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestampDate(timestamp);
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',

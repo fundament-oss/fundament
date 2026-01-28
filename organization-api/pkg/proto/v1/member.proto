@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package organization.v1;
 
+import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
@@ -54,5 +55,5 @@ message Member {
   optional string email = 50;
   // role is "viewer" or "admin"
   string role = 60;
-  Timestamp created_at = 40;
+  google.protobuf.Timestamp created_at = 40;
 }

@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -279,7 +280,7 @@ type ClusterDetails struct {
 	Region            string                 `protobuf:"bytes,30,opt,name=region,proto3" json:"region,omitempty"`
 	KubernetesVersion string                 `protobuf:"bytes,40,opt,name=kubernetes_version,json=kubernetesVersion,proto3" json:"kubernetes_version,omitempty"`
 	Status            ClusterStatus          `protobuf:"varint,50,opt,name=status,proto3,enum=organization.v1.ClusterStatus" json:"status,omitempty"`
-	CreatedAt         *Timestamp             `protobuf:"bytes,60,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	ResourceUsage     *ResourceUsageInfo     `protobuf:"bytes,70,opt,name=resource_usage,json=resourceUsage,proto3" json:"resource_usage,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
@@ -350,7 +351,7 @@ func (x *ClusterDetails) GetStatus() ClusterStatus {
 	return ClusterStatus_CLUSTER_STATUS_UNSPECIFIED
 }
 
-func (x *ClusterDetails) GetCreatedAt() *Timestamp {
+func (x *ClusterDetails) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
 	}
@@ -540,7 +541,7 @@ type ClusterMember struct {
 	UserId        string                 `protobuf:"bytes,10,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	Role          string                 `protobuf:"bytes,30,opt,name=role,proto3" json:"role,omitempty"`
-	LastActive    *Timestamp             `protobuf:"bytes,40,opt,name=last_active,json=lastActive,proto3" json:"last_active,omitempty"`
+	LastActive    *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=last_active,json=lastActive,proto3" json:"last_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -596,7 +597,7 @@ func (x *ClusterMember) GetRole() string {
 	return ""
 }
 
-func (x *ClusterMember) GetLastActive() *Timestamp {
+func (x *ClusterMember) GetLastActive() *timestamppb.Timestamp {
 	if x != nil {
 		return x.LastActive
 	}
@@ -1030,7 +1031,7 @@ func (x *GetClusterActivityResponse) GetActivities() []*ActivityEntry {
 // Activity entry
 type ActivityEntry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Timestamp     *Timestamp             `protobuf:"bytes,10,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	Action        string                 `protobuf:"bytes,20,opt,name=action,proto3" json:"action,omitempty"`
 	Details       string                 `protobuf:"bytes,30,opt,name=details,proto3" json:"details,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1067,7 +1068,7 @@ func (*ActivityEntry) Descriptor() ([]byte, []int) {
 	return file_v1_cluster_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *ActivityEntry) GetTimestamp() *Timestamp {
+func (x *ActivityEntry) GetTimestamp() *timestamppb.Timestamp {
 	if x != nil {
 		return x.Timestamp
 	}
@@ -1591,7 +1592,7 @@ type Install struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	PluginId      string                 `protobuf:"bytes,20,opt,name=plugin_id,json=pluginId,proto3" json:"plugin_id,omitempty"`
-	CreatedAt     *Timestamp             `protobuf:"bytes,30,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1640,7 +1641,7 @@ func (x *Install) GetPluginId() string {
 	return ""
 }
 
-func (x *Install) GetCreatedAt() *Timestamp {
+func (x *Install) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
 	}
@@ -1976,7 +1977,7 @@ type ClusterNamespace struct {
 	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	ProjectId     string                 `protobuf:"bytes,30,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	CreatedAt     *Timestamp             `protobuf:"bytes,40,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2032,7 +2033,7 @@ func (x *ClusterNamespace) GetProjectId() string {
 	return ""
 }
 
-func (x *ClusterNamespace) GetCreatedAt() *Timestamp {
+func (x *ClusterNamespace) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
 	}
@@ -2194,7 +2195,7 @@ var File_v1_cluster_proto protoreflect.FileDescriptor
 
 const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x0fv1/common.proto\x1a\x1bgoogle/protobuf/empty.proto\"4\n" +
+	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x0fv1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"4\n" +
 	"\x13ListClustersRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\n" +
@@ -2223,7 +2224,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\x12kubernetes_version\x18( \x01(\tR\x11kubernetesVersion\x126\n" +
 	"\x06status\x182 \x01(\x0e2\x1e.organization.v1.ClusterStatusR\x06status\x129\n" +
 	"\n" +
-	"created_at\x18< \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAt\x12I\n" +
+	"created_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12I\n" +
 	"\x0eresource_usage\x18F \x01(\v2\".organization.v1.ResourceUsageInfoR\rresourceUsage\"\xe5\x01\n" +
 	"\x11ResourceUsageInfo\x120\n" +
 	"\x03cpu\x18\n" +
@@ -2246,7 +2247,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	" \x01(\tR\x06userId\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12\x12\n" +
 	"\x04role\x18\x1e \x01(\tR\x04role\x12;\n" +
-	"\vlast_active\x18( \x01(\v2\x1a.organization.v1.TimestampR\n" +
+	"\vlast_active\x18( \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"lastActive\"c\n" +
 	"\x0eClusterProject\x12\x1d\n" +
 	"\n" +
@@ -2292,7 +2293,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"activities\"{\n" +
 	"\rActivityEntry\x128\n" +
 	"\ttimestamp\x18\n" +
-	" \x01(\v2\x1a.organization.v1.TimestampR\ttimestamp\x12\x16\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x16\n" +
 	"\x06action\x18\x14 \x01(\tR\x06action\x12\x18\n" +
 	"\adetails\x18\x1e \x01(\tR\adetails\"5\n" +
 	"\x14GetKubeconfigRequest\x12\x1d\n" +
@@ -2344,7 +2345,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	" \x01(\tR\x02id\x12\x1b\n" +
 	"\tplugin_id\x18\x14 \x01(\tR\bpluginId\x129\n" +
 	"\n" +
-	"created_at\x18\x1e \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAt\"4\n" +
+	"created_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"4\n" +
 	"\x13ListInstallsRequest\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -2381,7 +2382,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
 	"project_id\x18\x1e \x01(\tR\tprojectId\x129\n" +
 	"\n" +
-	"created_at\x18( \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAt\"j\n" +
+	"created_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"j\n" +
 	"\x16CreateNamespaceRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\n" +
@@ -2472,7 +2473,7 @@ var file_v1_cluster_proto_goTypes = []any{
 	(*CreateNamespaceResponse)(nil),       // 38: organization.v1.CreateNamespaceResponse
 	(*DeleteNamespaceRequest)(nil),        // 39: organization.v1.DeleteNamespaceRequest
 	(ClusterStatus)(0),                    // 40: organization.v1.ClusterStatus
-	(*Timestamp)(nil),                     // 41: organization.v1.Timestamp
+	(*timestamppb.Timestamp)(nil),         // 41: google.protobuf.Timestamp
 	(*ResourceUsage)(nil),                 // 42: organization.v1.ResourceUsage
 	(NodePoolStatus)(0),                   // 43: organization.v1.NodePoolStatus
 	(*emptypb.Empty)(nil),                 // 44: google.protobuf.Empty
@@ -2482,22 +2483,22 @@ var file_v1_cluster_proto_depIdxs = []int32{
 	40, // 1: organization.v1.ClusterSummary.status:type_name -> organization.v1.ClusterStatus
 	5,  // 2: organization.v1.GetClusterResponse.cluster:type_name -> organization.v1.ClusterDetails
 	40, // 3: organization.v1.ClusterDetails.status:type_name -> organization.v1.ClusterStatus
-	41, // 4: organization.v1.ClusterDetails.created_at:type_name -> organization.v1.Timestamp
+	41, // 4: organization.v1.ClusterDetails.created_at:type_name -> google.protobuf.Timestamp
 	6,  // 5: organization.v1.ClusterDetails.resource_usage:type_name -> organization.v1.ResourceUsageInfo
 	42, // 6: organization.v1.ResourceUsageInfo.cpu:type_name -> organization.v1.ResourceUsage
 	42, // 7: organization.v1.ResourceUsageInfo.memory:type_name -> organization.v1.ResourceUsage
 	42, // 8: organization.v1.ResourceUsageInfo.disk:type_name -> organization.v1.ResourceUsage
 	42, // 9: organization.v1.ResourceUsageInfo.pods:type_name -> organization.v1.ResourceUsage
 	43, // 10: organization.v1.NodePool.status:type_name -> organization.v1.NodePoolStatus
-	41, // 11: organization.v1.ClusterMember.last_active:type_name -> organization.v1.Timestamp
+	41, // 11: organization.v1.ClusterMember.last_active:type_name -> google.protobuf.Timestamp
 	17, // 12: organization.v1.GetClusterActivityResponse.activities:type_name -> organization.v1.ActivityEntry
-	41, // 13: organization.v1.ActivityEntry.timestamp:type_name -> organization.v1.Timestamp
+	41, // 13: organization.v1.ActivityEntry.timestamp:type_name -> google.protobuf.Timestamp
 	7,  // 14: organization.v1.ListNodePoolsResponse.node_pools:type_name -> organization.v1.NodePool
 	7,  // 15: organization.v1.GetNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
-	41, // 16: organization.v1.Install.created_at:type_name -> organization.v1.Timestamp
+	41, // 16: organization.v1.Install.created_at:type_name -> google.protobuf.Timestamp
 	28, // 17: organization.v1.ListInstallsResponse.installs:type_name -> organization.v1.Install
 	36, // 18: organization.v1.ListClusterNamespacesResponse.namespaces:type_name -> organization.v1.ClusterNamespace
-	41, // 19: organization.v1.ClusterNamespace.created_at:type_name -> organization.v1.Timestamp
+	41, // 19: organization.v1.ClusterNamespace.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 20: organization.v1.ClusterService.ListClusters:input_type -> organization.v1.ListClustersRequest
 	3,  // 21: organization.v1.ClusterService.GetCluster:input_type -> organization.v1.GetClusterRequest
 	10, // 22: organization.v1.ClusterService.CreateCluster:input_type -> organization.v1.CreateClusterRequest

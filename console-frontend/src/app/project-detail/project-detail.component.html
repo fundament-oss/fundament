@@ -34,7 +34,7 @@
             {{ project()?.name || 'Unknown project' }}
           </h1>
           <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-            Created {{ formatDate(project()?.createdAt?.value) }}
+            Created {{ formatDate(project()?.createdAt) }}
           </p>
         </div>
 
@@ -82,7 +82,7 @@
             <dl>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Created</dt>
               <dd class="mt-1 text-sm dark:text-white">
-                {{ formatDate(project()?.createdAt?.value) }}
+                {{ formatDate(project()?.createdAt) }}
               </dd>
             </dl>
             <dl>
@@ -121,7 +121,7 @@
                     <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                       Cluster: {{ getClusterName(namespace.clusterId) }} &bull; Created
-                      {{ formatDate(namespace.createdAt?.value) }}
+                      {{ formatDate(namespace.createdAt) }}
                     </p>
                   </div>
                   <button

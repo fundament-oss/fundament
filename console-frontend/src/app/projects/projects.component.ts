@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { PROJECT } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
+import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -61,9 +62,9 @@ export class ProjectsComponent implements OnInit {
     }
   }
 
-  formatDate(dateString?: string): string {
-    if (!dateString) return 'Unknown';
-    return new Date(dateString).toLocaleDateString('en-US', {
+  formatDate(timestamp: Timestamp | undefined): string {
+    if (!timestamp) return 'Unknown';
+    return timestampDate(timestamp).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',

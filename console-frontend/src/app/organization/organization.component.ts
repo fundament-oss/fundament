@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { AUTHN, ORGANIZATION } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
+import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import {
   GetOrganizationRequestSchema,
   UpdateOrganizationRequestSchema,
@@ -128,15 +129,12 @@ export class OrganizationComponent implements OnInit {
     }
   }
 
-  formatDate(dateString: string): string {
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch {
-      return dateString;
-    }
+  formatDate(timestamp: Timestamp | undefined): string {
+    if (!timestamp) return 'Unknown';
+    return timestampDate(timestamp).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   }
 }

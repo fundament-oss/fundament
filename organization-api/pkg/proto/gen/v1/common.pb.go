@@ -139,51 +139,6 @@ func (NodePoolStatus) EnumDescriptor() ([]byte, []int) {
 	return file_v1_common_proto_rawDescGZIP(), []int{1}
 }
 
-// Common timestamp message
-type Timestamp struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Value         string                 `protobuf:"bytes,10,opt,name=value,proto3" json:"value,omitempty"` // ISO 8601 format
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Timestamp) Reset() {
-	*x = Timestamp{}
-	mi := &file_v1_common_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Timestamp) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Timestamp) ProtoMessage() {}
-
-func (x *Timestamp) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_common_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Timestamp.ProtoReflect.Descriptor instead.
-func (*Timestamp) Descriptor() ([]byte, []int) {
-	return file_v1_common_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *Timestamp) GetValue() string {
-	if x != nil {
-		return x.Value
-	}
-	return ""
-}
-
 // Resource usage information
 type ResourceUsage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -196,7 +151,7 @@ type ResourceUsage struct {
 
 func (x *ResourceUsage) Reset() {
 	*x = ResourceUsage{}
-	mi := &file_v1_common_proto_msgTypes[1]
+	mi := &file_v1_common_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -208,7 +163,7 @@ func (x *ResourceUsage) String() string {
 func (*ResourceUsage) ProtoMessage() {}
 
 func (x *ResourceUsage) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_common_proto_msgTypes[1]
+	mi := &file_v1_common_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -221,7 +176,7 @@ func (x *ResourceUsage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceUsage.ProtoReflect.Descriptor instead.
 func (*ResourceUsage) Descriptor() ([]byte, []int) {
-	return file_v1_common_proto_rawDescGZIP(), []int{1}
+	return file_v1_common_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ResourceUsage) GetUsed() float64 {
@@ -249,10 +204,7 @@ var File_v1_common_proto protoreflect.FileDescriptor
 
 const file_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/common.proto\x12\x0forganization.v1\"!\n" +
-	"\tTimestamp\x12\x14\n" +
-	"\x05value\x18\n" +
-	" \x01(\tR\x05value\"M\n" +
+	"\x0fv1/common.proto\x12\x0forganization.v1\"M\n" +
 	"\rResourceUsage\x12\x12\n" +
 	"\x04used\x18\n" +
 	" \x01(\x01R\x04used\x12\x14\n" +
@@ -286,12 +238,11 @@ func file_v1_common_proto_rawDescGZIP() []byte {
 }
 
 var file_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_v1_common_proto_goTypes = []any{
 	(ClusterStatus)(0),    // 0: organization.v1.ClusterStatus
 	(NodePoolStatus)(0),   // 1: organization.v1.NodePoolStatus
-	(*Timestamp)(nil),     // 2: organization.v1.Timestamp
-	(*ResourceUsage)(nil), // 3: organization.v1.ResourceUsage
+	(*ResourceUsage)(nil), // 2: organization.v1.ResourceUsage
 }
 var file_v1_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -312,7 +263,7 @@ func file_v1_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_common_proto_rawDesc), len(file_v1_common_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   2,
+			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

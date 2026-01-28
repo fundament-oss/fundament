@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -30,7 +31,7 @@ type Organization struct {
 	// Organization name
 	Name string `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	// Creation timestamp (RFC3339)
-	Created       string `protobuf:"bytes,30,opt,name=created,proto3" json:"created,omitempty"`
+	Created       *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created,proto3" json:"created,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -79,11 +80,11 @@ func (x *Organization) GetName() string {
 	return ""
 }
 
-func (x *Organization) GetCreated() string {
+func (x *Organization) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
 		return x.Created
 	}
-	return ""
+	return nil
 }
 
 // GetOrganization request
@@ -237,12 +238,12 @@ var File_v1_organization_proto protoreflect.FileDescriptor
 
 const file_v1_organization_proto_rawDesc = "" +
 	"\n" +
-	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1bgoogle/protobuf/empty.proto\"L\n" +
+	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"h\n" +
 	"\fOrganization\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x12\x18\n" +
-	"\acreated\x18\x1e \x01(\tR\acreated\"(\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x124\n" +
+	"\acreated\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"(\n" +
 	"\x16GetOrganizationRequest\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\"\\\n" +
@@ -275,19 +276,21 @@ var file_v1_organization_proto_goTypes = []any{
 	(*GetOrganizationRequest)(nil),    // 1: organization.v1.GetOrganizationRequest
 	(*GetOrganizationResponse)(nil),   // 2: organization.v1.GetOrganizationResponse
 	(*UpdateOrganizationRequest)(nil), // 3: organization.v1.UpdateOrganizationRequest
-	(*emptypb.Empty)(nil),             // 4: google.protobuf.Empty
+	(*timestamppb.Timestamp)(nil),     // 4: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),             // 5: google.protobuf.Empty
 }
 var file_v1_organization_proto_depIdxs = []int32{
-	0, // 0: organization.v1.GetOrganizationResponse.organization:type_name -> organization.v1.Organization
-	1, // 1: organization.v1.OrganizationService.GetOrganization:input_type -> organization.v1.GetOrganizationRequest
-	3, // 2: organization.v1.OrganizationService.UpdateOrganization:input_type -> organization.v1.UpdateOrganizationRequest
-	2, // 3: organization.v1.OrganizationService.GetOrganization:output_type -> organization.v1.GetOrganizationResponse
-	4, // 4: organization.v1.OrganizationService.UpdateOrganization:output_type -> google.protobuf.Empty
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	4, // 0: organization.v1.Organization.created:type_name -> google.protobuf.Timestamp
+	0, // 1: organization.v1.GetOrganizationResponse.organization:type_name -> organization.v1.Organization
+	1, // 2: organization.v1.OrganizationService.GetOrganization:input_type -> organization.v1.GetOrganizationRequest
+	3, // 3: organization.v1.OrganizationService.UpdateOrganization:input_type -> organization.v1.UpdateOrganizationRequest
+	2, // 4: organization.v1.OrganizationService.GetOrganization:output_type -> organization.v1.GetOrganizationResponse
+	5, // 5: organization.v1.OrganizationService.UpdateOrganization:output_type -> google.protobuf.Empty
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_v1_organization_proto_init() }
