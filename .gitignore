@@ -18,5 +18,3 @@ deploy/k3d/kubeconfig.yaml
 
 # Dev dependencies (cloned repos, generated kubeconfigs)
 .dev/
-
-docs/plans

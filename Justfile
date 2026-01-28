@@ -1,10 +1,6 @@
 mod terraform-provider 'terraform-provider'
 mod e2e 'e2e'
 
-# KUBECONFIG is set via mise.toml to isolate from other clusters
-# This variable is used by cluster-create/cluster-start to write the kubeconfig
-KUBECONFIG := justfile_directory() / "deploy/k3d/kubeconfig.yaml"
-
 _default:
     @just --list
 

@@ -32,16 +32,16 @@ func ToClusterUpdate(req *organizationv1.UpdateClusterRequest) (models.ClusterUp
 	}, nil
 }
 
-func FromClustersSummary(clusters []db.ClusterListByOrganizationIDRow) []*organizationv1.ClusterSummary {
-	summaries := make([]*organizationv1.ClusterSummary, 0, len(clusters))
+func FromClustersSummary(clusters []db.ClusterListByOrganizationIDRow) []*organizationv1.ListClustersResponse_ClusterSummary {
+	summaries := make([]*organizationv1.ListClustersResponse_ClusterSummary, 0, len(clusters))
 	for i := range clusters {
 		summaries = append(summaries, FromClusterSummary(&clusters[i]))
 	}
 	return summaries
 }
 
-func FromClusterSummary(c *db.ClusterListByOrganizationIDRow) *organizationv1.ClusterSummary {
-	return &organizationv1.ClusterSummary{
+func FromClusterSummary(c *db.ClusterListByOrganizationIDRow) *organizationv1.ListClustersResponse_ClusterSummary {
+	return &organizationv1.ListClustersResponse_ClusterSummary{
 		Id:            c.ID.String(),
 		Name:          c.Name,
 		Status:        StatusFromCluster(c.Deleted, c.ShootStatus),
@@ -170,24 +170,23 @@ func FromClusterNamespace(ns *db.TenantNamespace) *organizationv1.ClusterNamespa
 	}
 }
 
-func FromClusterEvents(events []db.TenantClusterEvent) []*organizationv1.ClusterEvent {
-	result := make([]*organizationv1.ClusterEvent, 0, len(events))
+func FromClusterEvents(events []db.TenantClusterEvent) []*organizationv1.GetClusterActivityResponse_ClusterEvent {
+	result := make([]*organizationv1.GetClusterActivityResponse_ClusterEvent, 0, len(events))
 	for i := range events {
 		result = append(result, FromClusterEvent(&events[i]))
 	}
 	return result
 }
 
-func FromClusterEvent(e *db.TenantClusterEvent) *organizationv1.ClusterEvent {
-	event := &organizationv1.ClusterEvent{
+func FromClusterEvent(e *db.TenantClusterEvent) *organizationv1.GetClusterActivityResponse_ClusterEvent {
+	event := &organizationv1.GetClusterActivityResponse_ClusterEvent{
 		Id:        e.ID.String(),
 		EventType: string(e.EventType),
 		CreatedAt: &organizationv1.Timestamp{Value: e.Created.Time.Format(time.RFC3339)},
 	}
 
 	if e.SyncAction.Valid {
-		s := string(e.SyncAction.TenantClusterSyncAction)
-		event.SyncAction = &s
+		event.SyncAction = &e.SyncAction.String
 	}
 	if e.Message.Valid {
 		event.Message = &e.Message.String

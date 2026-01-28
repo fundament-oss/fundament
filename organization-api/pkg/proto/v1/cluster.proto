@@ -81,18 +81,17 @@ message ListClustersRequest {
 
 // List clusters response
 message ListClustersResponse {
+  // Cluster summary information
+  message ClusterSummary {
+    string id = 10;
+    string name = 20;
+    ClusterStatus status = 30;
+    string region = 40;
+    int32 project_count = 50;
+    int32 node_pool_count = 60;
+    SyncState sync_state = 70;
+  }
   repeated ClusterSummary clusters = 10;
-}
-
-// Cluster summary information
-message ClusterSummary {
-  string id = 10;
-  string name = 20;
-  ClusterStatus status = 30;
-  string region = 40;
-  int32 project_count = 50;
-  int32 node_pool_count = 60;
-  SyncState sync_state = 70;
 }
 
 // Get cluster request
@@ -176,17 +175,16 @@ message GetClusterActivityRequest {
 
 // Get cluster activity response
 message GetClusterActivityResponse {
+  // Cluster event from cluster_events table
+  message ClusterEvent {
+    string id = 10;
+    string event_type = 20;      // sync_requested, sync_claimed, sync_submitted, sync_failed, status_ready, status_error, status_deleted
+    Timestamp created_at = 30;
+    optional string sync_action = 40;  // create, update, delete (for sync events)
+    optional string message = 50;
+    optional int32 attempt = 60;       // Sync attempt number (for sync events)
+  }
   repeated ClusterEvent events = 10;
-}
-
-// Cluster event from cluster_events table
-message ClusterEvent {
-  string id = 10;
-  string event_type = 20;      // sync_requested, sync_claimed, sync_submitted, sync_failed, status_ready, status_error, status_deleted
-  Timestamp created_at = 30;
-  optional string sync_action = 40;  // create, update, delete (for sync events)
-  optional string message = 50;
-  optional int32 attempt = 60;       // Sync attempt number (for sync events)
 }
 
 // Get kubeconfig request

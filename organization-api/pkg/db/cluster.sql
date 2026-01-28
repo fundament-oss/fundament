@@ -17,8 +17,18 @@ FROM tenant.clusters
 WHERE id = $1;
 
 -- name: ClusterCreate :one
+-- Create a cluster if no active or pending-delete cluster with the same name exists.
+-- Allows creation only after delete is finalized (synced to Gardener).
+-- Returns NULL if blocked (caller should check for pgx.ErrNoRows).
 INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version)
-VALUES ($1, $2, $3, $4)
+SELECT $1, $2, $3, $4
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM tenant.clusters
+    WHERE organization_id = $1
+      AND name = $2
+      AND (deleted IS NULL OR synced IS NULL)
+)
 RETURNING id;
 
 -- name: ClusterUpdate :execrows
@@ -43,3 +53,4 @@ LIMIT $2;
 -- Insert sync_requested event when cluster is created/updated.
 INSERT INTO tenant.cluster_events (cluster_id, event_type, sync_action)
 VALUES ($1, 'sync_requested', $2);
+

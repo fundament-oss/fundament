@@ -93,13 +93,17 @@ func (s *OrganizationServer) CreateCluster(
 
 	clusterID, err := qtx.ClusterCreate(ctx, params)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeAlreadyExists,
+				fmt.Errorf("a cluster named %q already exists", input.Name))
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
 	}
 
 	// Create sync_requested event for history (in same transaction)
 	if err := qtx.ClusterCreateSyncRequestedEvent(ctx, db.ClusterCreateSyncRequestedEventParams{
 		ClusterID:  clusterID,
-		SyncAction: db.NullTenantClusterSyncAction{TenantClusterSyncAction: db.TenantClusterSyncActionCreate, Valid: true},
+		SyncAction: pgtype.Text{String: "sync", Valid: true},
 	}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create sync_requested event: %w", err))
 	}
@@ -162,7 +166,7 @@ func (s *OrganizationServer) UpdateCluster(
 	// Create sync_requested event for history (in same transaction)
 	if err := qtx.ClusterCreateSyncRequestedEvent(ctx, db.ClusterCreateSyncRequestedEventParams{
 		ClusterID:  input.ClusterID,
-		SyncAction: db.NullTenantClusterSyncAction{TenantClusterSyncAction: db.TenantClusterSyncActionUpdate, Valid: true},
+		SyncAction: pgtype.Text{String: "sync", Valid: true},
 	}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create sync_requested event: %w", err))
 	}
@@ -206,7 +210,7 @@ func (s *OrganizationServer) DeleteCluster(
 	// Create sync_requested event for history (in same transaction)
 	if err := qtx.ClusterCreateSyncRequestedEvent(ctx, db.ClusterCreateSyncRequestedEventParams{
 		ClusterID:  clusterID,
-		SyncAction: db.NullTenantClusterSyncAction{TenantClusterSyncAction: db.TenantClusterSyncActionDelete, Valid: true},
+		SyncAction: pgtype.Text{String: "delete", Valid: true},
 	}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create sync_requested event: %w", err))
 	}

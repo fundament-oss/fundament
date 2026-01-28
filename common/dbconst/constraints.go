@@ -5,6 +5,10 @@ package dbconst
 const (
 	// ConstraintCategoriesUqName is defined on zappstore.categories.
 	ConstraintCategoriesUqName = "categories_uq_name"
+	// ConstraintClusterEventsCkEventType is defined on tenant.cluster_events.
+	ConstraintClusterEventsCkEventType = "cluster_events_ck_event_type"
+	// ConstraintClusterEventsCkSyncAction is defined on tenant.cluster_events.
+	ConstraintClusterEventsCkSyncAction = "cluster_events_ck_sync_action"
 	// ConstraintClusterEventsFkCluster is defined on tenant.cluster_events.
 	ConstraintClusterEventsFkCluster = "cluster_events_fk_cluster"
 	// ConstraintClustersFkOrganization is defined on tenant.clusters.

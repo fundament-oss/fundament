@@ -1,10 +1,6 @@
 SET SESSION statement_timeout = 3000;
 SET SESSION lock_timeout = 3000;
 
-CREATE TYPE "tenant"."cluster_event_type" AS ENUM ('sync_requested', 'sync_claimed', 'sync_submitted', 'sync_failed', 'status_progressing', 'status_ready', 'status_error', 'status_deleted');
-
-CREATE TYPE "tenant"."cluster_sync_action" AS ENUM ('create', 'update', 'delete');
-
 /* Hazards:
  - HAS_UNTRACKABLE_DEPENDENCIES: Dependencies, i.e. other functions used in the function body, of non-sql functions cannot be tracked. As a result, we cannot guarantee that function dependencies are ordered properly relative to this statement. For adds, this means you need to ensure that all functions this function depends on are created/altered before this statement.
 */
@@ -16,7 +12,6 @@ AS $function$
 BEGIN
     NEW.synced := NULL;
     NEW.sync_claimed_at := NULL;
-    NEW.sync_claimed_by := NULL;
     NEW.sync_attempts := 0;
     NEW.sync_error := NULL;
     RETURN NEW;
@@ -34,7 +29,7 @@ CREATE OR REPLACE FUNCTION tenant.cluster_sync_notify()
 AS $function$
 BEGIN
     IF NEW.synced IS NULL AND (TG_OP = 'INSERT' OR OLD.synced IS NOT NULL) THEN
-        PERFORM pg_notify('cluster_sync', NEW.id::text);
+        PERFORM pg_notify('cluster_sync', '');
     END IF;
     RETURN NEW;
 END;
@@ -44,12 +39,16 @@ $function$
 CREATE TABLE "tenant"."cluster_events" (
 	"id" uuid DEFAULT uuidv7() NOT NULL,
 	"cluster_id" uuid NOT NULL,
-	"event_type" tenant.cluster_event_type NOT NULL,
+	"event_type" text COLLATE "pg_catalog"."default" NOT NULL,
 	"created" timestamp with time zone DEFAULT now() NOT NULL,
-	"sync_action" tenant.cluster_sync_action,
+	"sync_action" text COLLATE "pg_catalog"."default",
 	"message" text COLLATE "pg_catalog"."default",
 	"attempt" integer
 );
+
+ALTER TABLE "tenant"."cluster_events" ADD CONSTRAINT "cluster_events_ck_event_type" CHECK((event_type = ANY (ARRAY['sync_requested'::text, 'sync_claimed'::text, 'sync_succeeded'::text, 'sync_failed'::text, 'status_progressing'::text, 'status_ready'::text, 'status_error'::text, 'status_deleted'::text])));
+
+ALTER TABLE "tenant"."cluster_events" ADD CONSTRAINT "cluster_events_ck_sync_action" CHECK((sync_action = ANY (ARRAY['sync'::text, 'delete'::text])));
 
 CREATE POLICY "cluster_events_organization_isolation" ON "tenant"."cluster_events"
 	AS PERMISSIVE
@@ -88,8 +87,6 @@ ALTER TABLE "tenant"."clusters" ADD COLUMN "shoot_status_updated" timestamp with
 ALTER TABLE "tenant"."clusters" ADD COLUMN "sync_attempts" integer DEFAULT 0 NOT NULL;
 
 ALTER TABLE "tenant"."clusters" ADD COLUMN "sync_claimed_at" timestamp with time zone;
-
-ALTER TABLE "tenant"."clusters" ADD COLUMN "sync_claimed_by" text COLLATE "pg_catalog"."default";
 
 ALTER TABLE "tenant"."clusters" ADD COLUMN "sync_error" text COLLATE "pg_catalog"."default";
 

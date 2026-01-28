@@ -1,4 +1,4 @@
-package worker
+package worker_status
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
 )
@@ -20,16 +21,16 @@ type StatusWorker struct {
 	queries  *db.Queries
 	gardener gardener.Client
 	logger   *slog.Logger
-	cfg      StatusConfig
+	cfg      Config
 }
 
-// StatusConfig holds configuration for the status poller.
-type StatusConfig struct {
+// Config holds configuration for the status poller.
+type Config struct {
 	PollInterval time.Duration `env:"POLL_INTERVAL" envDefault:"30s"` // How often to poll
 	BatchSize    int32         `env:"BATCH_SIZE" envDefault:"50"`     // Max clusters to check per poll cycle
 }
 
-func NewStatusWorker(pool *pgxpool.Pool, gardenerClient gardener.Client, logger *slog.Logger, cfg StatusConfig) *StatusWorker {
+func New(pool *pgxpool.Pool, gardenerClient gardener.Client, logger *slog.Logger, cfg Config) *StatusWorker {
 	return &StatusWorker{
 		pool:     pool,
 		queries:  db.New(pool),
@@ -121,14 +122,14 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 		}
 
 		if shootStatus.Status != oldStatus {
-			var eventType db.TenantClusterEventType
+			var eventType dbconst.ClusterEventEventType
 			switch shootStatus.Status {
 			case gardener.StatusProgressing:
-				eventType = db.TenantClusterEventTypeStatusProgressing
+				eventType = dbconst.ClusterEventEventType_StatusProgressing
 			case gardener.StatusReady:
-				eventType = db.TenantClusterEventTypeStatusReady
+				eventType = dbconst.ClusterEventEventType_StatusReady
 			case gardener.StatusError:
-				eventType = db.TenantClusterEventTypeStatusError
+				eventType = dbconst.ClusterEventEventType_StatusError
 			case gardener.StatusPending, gardener.StatusDeleting:
 				// No event for these transient states
 			case gardener.StatusDeleted:
@@ -138,7 +139,7 @@ func (p *StatusWorker) pollActiveClusters(ctx context.Context) {
 			if eventType != "" {
 				if _, err := p.queries.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
 					ClusterID: cluster.ID,
-					EventType: eventType,
+					EventType: string(eventType),
 					Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
 				}); err != nil {
 					p.logger.Warn("failed to create status event",
@@ -226,7 +227,7 @@ func (p *StatusWorker) pollDeletedClusters(ctx context.Context) {
 
 			if _, err := p.queries.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
 				ClusterID: cluster.ID,
-				EventType: db.TenantClusterEventTypeStatusDeleted,
+				EventType: string(dbconst.ClusterEventEventType_StatusDeleted),
 				Message:   pgtype.Text{String: "Shoot confirmed deleted", Valid: true},
 			}); err != nil {
 				p.logger.Warn("failed to create status_deleted event",

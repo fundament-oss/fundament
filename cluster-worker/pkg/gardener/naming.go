@@ -1,4 +1,3 @@
-// Package gardener provides naming functions for Gardener resources.
 package gardener
 
 import (
