@@ -99,7 +99,7 @@ BEGIN
 END;
 $function$;
 -- ddl-end --
-ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO postgres;
+ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.cluster_reset_synced | type: FUNCTION --
@@ -123,7 +123,7 @@ BEGIN
 END;
 $function$;
 -- ddl-end --
-ALTER FUNCTION tenant.cluster_reset_synced() OWNER TO postgres;
+ALTER FUNCTION tenant.cluster_reset_synced() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.cluster_sync_notify | type: FUNCTION --
@@ -146,7 +146,7 @@ BEGIN
 END;
 $function$;
 -- ddl-end --
-ALTER FUNCTION tenant.cluster_sync_notify() OWNER TO postgres;
+ALTER FUNCTION tenant.cluster_sync_notify() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.users | type: TABLE --
@@ -460,7 +460,7 @@ CREATE TABLE tenant.cluster_events (
 	CONSTRAINT cluster_events_ck_sync_action CHECK (sync_action IN ('sync','delete'))
 );
 -- ddl-end --
-ALTER TABLE tenant.cluster_events OWNER TO postgres;
+ALTER TABLE tenant.cluster_events OWNER TO fun_owner;
 -- ddl-end --
 ALTER TABLE tenant.cluster_events ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
@@ -769,14 +769,6 @@ GRANT SELECT,INSERT,UPDATE
 -- ddl-end --
 
 
--- object: "grant_U_94ccb226af" | type: PERMISSION --
-GRANT USAGE
-   ON SCHEMA tenant
-   TO fun_cluster_worker;
-
--- ddl-end --
-
-
 -- object: grant_raw_8317ece277 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.clusters
@@ -813,6 +805,14 @@ GRANT SELECT
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.cluster_events
    TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_94ccb226af" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA tenant
+   TO fun_cluster_worker;
 
 -- ddl-end --
 

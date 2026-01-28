@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="2.0.0-alpha" use-changelog="false" max-obj-count="27"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="31"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="0,0" last-zoom="0.7" scene-rect="0,0,3944.49,2110.92"
+	 last-position="0,64" last-zoom="0.7" scene-rect="0,0,3944.49,2110.92"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -141,7 +141,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 		execution-cost="1"
 		row-amount="0">
 	<schema name="tenant"/>
-	<role name="postgres"/>
+	<role name="fun_owner"/>
 	<language name="plpgsql"/>
 	<return-type>
 	<type name="trigger" length="0"/>
@@ -170,7 +170,7 @@ END;]]> </definition>
 		execution-cost="1"
 		row-amount="0">
 	<schema name="tenant"/>
-	<role name="postgres"/>
+	<role name="fun_owner"/>
 	<language name="plpgsql"/>
 	<return-type>
 	<type name="trigger" length="0"/>
@@ -194,7 +194,7 @@ END;]]> </definition>
 		execution-cost="1"
 		row-amount="0">
 	<schema name="tenant"/>
-	<role name="postgres"/>
+	<role name="fun_owner"/>
 	<language name="plpgsql"/>
 	<return-type>
 	<type name="trigger" length="0"/>
@@ -207,7 +207,7 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
-<table name="users" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
+<table name="users" layers="0" collapse-mode="1" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
 	<position x="220" y="540"/>
@@ -243,7 +243,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="18" z-value="0">
+<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="16" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
 	<position x="780" y="560"/>
@@ -608,7 +608,7 @@ END;]]> </definition>
 
 <table name="cluster_events" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
-	<role name="postgres"/>
+	<role name="fun_owner"/>
 	<position x="200" y="800"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
@@ -946,11 +946,6 @@ END;]]> </definition>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
-	<object name="tenant" type="schema"/>
-	<roles names="fun_cluster_worker"/>
-	<privileges usage="true"/>
-</permission>
-<permission>
 	<object name="tenant.clusters" type="table"/>
 	<roles names="fun_cluster_worker"/>
 	<privileges select="true" insert="true" update="true"/>
@@ -974,5 +969,10 @@ END;]]> </definition>
 	<object name="tenant.cluster_events" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant" type="schema"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges usage="true"/>
 </permission>
 </dbmodel>
