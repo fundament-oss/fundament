@@ -131,6 +131,7 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 func (p *FundamentProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewClusterResource,
+		NewProjectResource,
 	}
 }
 
@@ -139,5 +140,7 @@ func (p *FundamentProvider) DataSources(ctx context.Context) []func() datasource
 	return []func() datasource.DataSource{
 		NewClusterDataSource,
 		NewClustersDataSource,
+		NewProjectDataSource,
+		NewProjectsDataSource,
 	}
 }
