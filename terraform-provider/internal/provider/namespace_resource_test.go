@@ -6,9 +6,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func TestNamespaceResourceModel(t *testing.T) {
+func TestNamespaceModel_Resource(t *testing.T) {
 	// Test that the model can be created with expected values
-	model := NamespaceResourceModel{
+	model := NamespaceModel{
 		ID:        types.StringValue("test-namespace-id"),
 		Name:      types.StringValue("test-namespace"),
 		ProjectID: types.StringValue("test-project-id"),
@@ -37,9 +37,9 @@ func TestNamespaceResourceModel(t *testing.T) {
 	}
 }
 
-func TestNamespaceResourceModelNullValues(t *testing.T) {
+func TestNamespaceModel_NullValues(t *testing.T) {
 	// Test that null values are handled correctly
-	model := NamespaceResourceModel{
+	model := NamespaceModel{
 		ID:        types.StringNull(),
 		Name:      types.StringValue("test-namespace"),
 		ProjectID: types.StringValue("test-project-id"),

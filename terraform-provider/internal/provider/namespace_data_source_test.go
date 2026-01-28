@@ -6,9 +6,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func TestNamespaceDataSourceModel(t *testing.T) {
+func TestNamespaceModel_DataSource(t *testing.T) {
 	// Test that the model can be created with expected values
-	model := NamespaceDataSourceModel{
+	model := NamespaceModel{
 		ID:        types.StringValue("test-namespace-id"),
 		ClusterID: types.StringValue("test-cluster-id"),
 		Name:      types.StringValue("test-namespace"),

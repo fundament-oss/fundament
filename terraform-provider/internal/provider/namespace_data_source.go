@@ -21,14 +21,6 @@ type NamespaceDataSource struct {
 	client *FundamentClient
 }
 
-// NamespaceDataSourceModel describes the data source data model.
-type NamespaceDataSourceModel struct {
-	ID        types.String `tfsdk:"id"`
-	ClusterID types.String `tfsdk:"cluster_id"`
-	Name      types.String `tfsdk:"name"`
-	ProjectID types.String `tfsdk:"project_id"`
-	CreatedAt types.String `tfsdk:"created_at"`
-}
 
 // NewNamespaceDataSource creates a new NamespaceDataSource.
 func NewNamespaceDataSource() datasource.DataSource {
@@ -89,7 +81,7 @@ func (d *NamespaceDataSource) Configure(ctx context.Context, req datasource.Conf
 
 // Read refreshes the Terraform state with the latest data.
 func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config NamespaceDataSourceModel
+	var config NamespaceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {

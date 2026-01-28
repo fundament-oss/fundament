@@ -25,14 +25,6 @@ type NamespaceResource struct {
 	client *FundamentClient
 }
 
-// NamespaceResourceModel describes the resource data model.
-type NamespaceResourceModel struct {
-	ID        types.String `tfsdk:"id"`
-	Name      types.String `tfsdk:"name"`
-	ProjectID types.String `tfsdk:"project_id"`
-	ClusterID types.String `tfsdk:"cluster_id"`
-	CreatedAt types.String `tfsdk:"created_at"`
-}
 
 // NewNamespaceResource creates a new NamespaceResource.
 func NewNamespaceResource() resource.Resource {
@@ -80,6 +72,9 @@ func (r *NamespaceResource) Schema(ctx context.Context, req resource.SchemaReque
 			"created_at": schema.StringAttribute{
 				Description: "The timestamp when the namespace was created.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -105,7 +100,7 @@ func (r *NamespaceResource) Configure(ctx context.Context, req resource.Configur
 
 // Create creates a new namespace.
 func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan NamespaceResourceModel
+	var plan NamespaceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
@@ -211,7 +206,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 
 // Read refreshes the Terraform state with the latest data.
 func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state NamespaceResourceModel
+	var state NamespaceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -293,7 +288,7 @@ func (r *NamespaceResource) Update(ctx context.Context, req resource.UpdateReque
 
 // Delete deletes the namespace.
 func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state NamespaceResourceModel
+	var state NamespaceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
