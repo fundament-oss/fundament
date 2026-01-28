@@ -93,3 +93,22 @@ func (q *Queries) OrganizationList(ctx context.Context) ([]TenantOrganization, e
 	}
 	return items, nil
 }
+
+const organizationUpdate = `-- name: OrganizationUpdate :one
+UPDATE tenant.organizations
+SET name = $2
+WHERE name = $1
+RETURNING id, name, created
+`
+
+type OrganizationUpdateParams struct {
+	Name   string
+	Name_2 string
+}
+
+func (q *Queries) OrganizationUpdate(ctx context.Context, arg OrganizationUpdateParams) (TenantOrganization, error) {
+	row := q.db.QueryRow(ctx, organizationUpdate, arg.Name, arg.Name_2)
+	var i TenantOrganization
+	err := row.Scan(&i.ID, &i.Name, &i.Created)
+	return i, err
+}

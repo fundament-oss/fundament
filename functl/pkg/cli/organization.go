@@ -14,6 +14,7 @@ import (
 type OrganizationCmd struct {
 	Create OrganizationCreateCmd `cmd:"" help:"Create a new organization."`
 	List   OrganizationListCmd   `cmd:"" help:"List all organizations."`
+	Update OrganizationUpdateCmd `cmd:"" help:"Update an organization."`
 	Delete OrganizationDeleteCmd `cmd:"" help:"Delete an organization."`
 }
 
@@ -24,6 +25,12 @@ type OrganizationCreateCmd struct {
 
 // OrganizationListCmd lists all organizations.
 type OrganizationListCmd struct{}
+
+// OrganizationUpdateCmd updates an organization.
+type OrganizationUpdateCmd struct {
+	Name    string `arg:"" help:"Current organization name." required:""`
+	NewName string `arg:"" help:"New organization name." required:""`
+}
 
 // OrganizationDeleteCmd deletes an organization.
 type OrganizationDeleteCmd struct {
@@ -64,6 +71,31 @@ func (c *OrganizationListCmd) Run(ctx *Context) error {
 	return outputOrganizationList(ctx.Output, orgs)
 }
 
+// Run executes the organization update command.
+func (c *OrganizationUpdateCmd) Run(ctx *Context) error {
+	ctx.Logger.Debug("updating organization", "name", c.Name, "newName", c.NewName)
+
+	org, err := ctx.Queries.OrganizationUpdate(context.Background(), db.OrganizationUpdateParams{
+		Name:   c.Name,
+		Name_2: c.NewName,
+	})
+	if err != nil {
+		// Check for unique constraint violation
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			return fmt.Errorf("organization '%s' already exists", c.NewName)
+		}
+		// Check for no rows found (organization doesn't exist)
+		if err.Error() == "no rows in result set" {
+			return fmt.Errorf("organization '%s' not found", c.Name)
+		}
+		return fmt.Errorf("failed to update organization: %w", err)
+	}
+
+	ctx.Logger.Debug("organization updated", "id", org.ID.String())
+
+	return outputOrganizationUpdate(ctx.Output, org)
+}
+
 // Run executes the organization delete command.
 func (c *OrganizationDeleteCmd) Run(ctx *Context) error {
 	ctx.Logger.Debug("deleting organization", "name", c.Name)
@@ -100,6 +132,22 @@ func outputOrganizationCreate(format OutputFormat, org db.TenantOrganization) er
 	case OutputJSON:
 		return PrintJSON(organizationCreateOutput{
 			ID: org.ID.String(),
+		})
+	case OutputTable:
+		fmt.Println(org.ID.String())
+		return nil
+	default:
+		panic(fmt.Sprintf("unknown output format: %s", format))
+	}
+}
+
+func outputOrganizationUpdate(format OutputFormat, org db.TenantOrganization) error {
+	switch format {
+	case OutputJSON:
+		return PrintJSON(organizationOutput{
+			ID:      org.ID.String(),
+			Name:    org.Name,
+			Created: org.Created.Time.Format(TimeFormat),
 		})
 	case OutputTable:
 		fmt.Println(org.ID.String())

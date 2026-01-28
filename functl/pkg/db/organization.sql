@@ -22,3 +22,9 @@ WHERE name = $1;
 SELECT id
 FROM tenant.organizations
 WHERE name = $1;
+
+-- name: OrganizationUpdate :one
+UPDATE tenant.organizations
+SET name = $2
+WHERE name = $1
+RETURNING id, name, created;
