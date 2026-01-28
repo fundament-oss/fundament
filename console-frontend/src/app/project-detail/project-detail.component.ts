@@ -14,6 +14,7 @@ import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { PROJECT, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
+import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import {
   GetProjectRequestSchema,
   DeleteProjectRequestSchema,
@@ -261,9 +262,9 @@ export class ProjectDetailComponent implements OnInit {
     }
   }
 
-  formatDate(dateString?: string): string {
-    if (!dateString) return 'Unknown';
-    return new Date(dateString).toLocaleDateString('en-US', {
+  formatDate(timestamp: Timestamp | undefined): string {
+    if (!timestamp) return 'Unknown';
+    return timestampDate(timestamp).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
