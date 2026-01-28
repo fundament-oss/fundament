@@ -152,3 +152,11 @@ GRANT SELECT ON "tenant"."namespaces" TO "fun_cluster_worker";
 */
 GRANT SELECT ON "tenant"."organizations" TO "fun_cluster_worker";
 
+
+-- Statements generated automatically, please review:
+ALTER FUNCTION tenant.cluster_reset_synced() OWNER TO fun_owner;
+ALTER FUNCTION tenant.cluster_sync_notify() OWNER TO fun_owner;
+ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO fun_owner;
+ALTER TABLE tenant.cluster_events OWNER TO fun_owner;
+
+GRANT USAGE ON SCHEMA tenant TO fun_cluster_worker;
