@@ -78,9 +78,9 @@
             <dd class="mt-1">
               <span
                 class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                [class]="getClusterStatusColor(clusterData.status)"
+                [class]="getStatusColor(clusterData.status)"
               >
-                {{ getClusterStatusLabel(clusterData.status) }}
+                {{ getStatusLabel(clusterData.status) }}
               </span>
             </dd>
           </dl>
@@ -128,15 +128,15 @@
               </dd>
             </dl>
           }
-          @if (clusterData.syncState?.syncedAt?.value) {
+          @if (clusterData.syncState?.syncedAt) {
             <dl>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last synced</dt>
               <dd class="mt-1 text-sm dark:text-white">
-                {{ formatDate(clusterData.syncState!.syncedAt!.value) }}
+                {{ formatDate(clusterData.syncState!.syncedAt!) }}
               </dd>
             </dl>
           }
-          @if (clusterData.syncState && clusterData.syncState.syncAttempts > 0) {
+          @if (clusterData.syncState && (clusterData.syncState.syncAttempts ?? 0) > 0) {
             <dl>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Sync attempts</dt>
               <dd class="mt-1 text-sm dark:text-white">{{ clusterData.syncState.syncAttempts }}</dd>
@@ -185,8 +185,8 @@
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Status Updated</td>
                     <td class="px-3 py-2 dark:text-white">
                       {{
-                        clusterData.syncState.statusUpdatedAt?.value
-                          ? formatDate(clusterData.syncState.statusUpdatedAt!.value)
+                        clusterData.syncState.statusUpdatedAt
+                          ? formatDate(clusterData.syncState.statusUpdatedAt)
                           : 'N/A'
                       }}
                     </td>
@@ -201,8 +201,8 @@
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Last Synced</td>
                     <td class="px-3 py-2 dark:text-white">
                       {{
-                        clusterData.syncState.syncedAt?.value
-                          ? formatDate(clusterData.syncState.syncedAt!.value)
+                        clusterData.syncState.syncedAt
+                          ? formatDate(clusterData.syncState.syncedAt)
                           : 'N/A'
                       }}
                     </td>
