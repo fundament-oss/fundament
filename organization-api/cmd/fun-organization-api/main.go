@@ -76,6 +76,17 @@ func run() error {
 					}
 				}
 
+				// Extract user_id from claims and set it in PostgreSQL session for RLS
+				claims, ok := organization.ClaimsFromContext(ctx)
+				if ok {
+					err := queries.SetUserContext(ctx, db.SetUserContextParams{
+						SetConfig: claims.UserID.String(),
+					})
+					if err != nil {
+						return false, fmt.Errorf("failed to set user context: %w", err)
+					}
+				}
+
 				return true, nil
 			}
 			config.AfterRelease = func(c *pgx.Conn) bool {
@@ -83,7 +94,12 @@ func run() error {
 
 				if err := queries.ResetOrganizationContext(ctx); err != nil {
 					logger.Warn("failed to reset organization context on connection release, destroying connection", "error", err)
-					return false // Destroy connection to prevent organization data leakage
+					return false // Destroy connection to prevent data leakage
+				}
+
+				if err := queries.ResetUserContext(ctx); err != nil {
+					logger.Warn("failed to reset user context on connection release, destroying connection", "error", err)
+					return false // Destroy connection to prevent data leakage
 				}
 
 				return true // Keep connection in pool
@@ -136,6 +152,7 @@ func run() error {
 		"organization.v1.ClusterService",
 		"organization.v1.PluginService",
 		"organization.v1.MemberService",
+		"organization.v1.APIKeyService",
 	)
 	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
 	mux.Handle(reflectPath, reflectHandler)
@@ -147,6 +164,9 @@ func run() error {
 
 	memberPath, memberHandler := organizationv1connect.NewMemberServiceHandler(server, interceptors)
 	mux.Handle(memberPath, memberHandler)
+
+	apiKeyPath, apiKeyHandler := organizationv1connect.NewAPIKeyServiceHandler(server, interceptors)
+	mux.Handle(apiKeyPath, apiKeyHandler)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,

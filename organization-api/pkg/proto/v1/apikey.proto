@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package organization.v1;
+
+import "v1/common.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
+
+// APIKeyService manages API keys for programmatic access
+service APIKeyService {
+  // Create a new API key
+  rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse);
+
+  // List all API keys for the current organization
+  rpc ListAPIKeys(ListAPIKeysRequest) returns (ListAPIKeysResponse);
+
+  // Get a specific API key by ID
+  rpc GetAPIKey(GetAPIKeyRequest) returns (GetAPIKeyResponse);
+
+  // Revoke an API key
+  rpc RevokeAPIKey(RevokeAPIKeyRequest) returns (google.protobuf.Empty);
+
+  // Delete an API key
+  rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (google.protobuf.Empty);
+}
+
+// API key information (without sensitive data)
+message APIKey {
+  string id = 10;
+  string name = 20;
+  string token_prefix = 30;  // First 8 chars for display (fun_XXXX)
+  Timestamp expires_at = 40;  // null if never expires
+  Timestamp last_used_at = 50;
+  Timestamp created_at = 60;
+  Timestamp revoked_at = 70;  // null if not revoked
+}
+
+// Create API key request
+message CreateAPIKeyRequest {
+  string name = 10;
+  optional int64 expires_in_days = 20;  // Days until expiry, null = never
+}
+
+// Create API key response (only time the full token is returned)
+message CreateAPIKeyResponse {
+  string id = 10;
+  string token = 20;  // IMPORTANT: Only returned once, must be copied by user
+  string token_prefix = 30;
+}
+
+// List API keys request
+message ListAPIKeysRequest {}
+
+// List API keys response
+message ListAPIKeysResponse {
+  repeated APIKey api_keys = 10;
+}
+
+// Get API key request
+message GetAPIKeyRequest {
+  string api_key_id = 10;
+}
+
+// Get API key response
+message GetAPIKeyResponse {
+  APIKey api_key = 10;
+}
+
+// Revoke API key request
+message RevokeAPIKeyRequest {
+  string api_key_id = 10;
+}
+
+// Delete API key request
+message DeleteAPIKeyRequest {
+  string api_key_id = 10;
+}

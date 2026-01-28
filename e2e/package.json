@@ -8,7 +8,15 @@
     "test:headed": "HEADED=true NODE_OPTIONS='--import tsx' cucumber-js",
     "test:debug": "PWDEBUG=1 NODE_OPTIONS='--import tsx' cucumber-js",
     "test:tags": "NODE_OPTIONS='--import tsx' cucumber-js --tags",
+    "test:api": "NODE_OPTIONS='--import tsx' cucumber-js --tags @api",
+    "test:apikey": "NODE_OPTIONS='--import tsx' cucumber-js --tags @apikey",
+    "test:token": "NODE_OPTIONS='--import tsx' cucumber-js --tags @token",
     "report": "open reports/cucumber-report.html"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.10.2",
+    "@connectrpc/connect": "^2.0.3",
+    "@connectrpc/connect-node": "^2.0.3"
   },
   "devDependencies": {
     "@cucumber/cucumber": "^11.0.0",

@@ -22,7 +22,7 @@ DO UPDATE SET name = EXCLUDED.name, email = EXCLUDED.email
 RETURNING id, organization_id, name, external_id, email, created;
 
 -- name: UserGetByID :one
-SELECT id, organization_id, name, external_id, email, created
+SELECT id, organization_id, name, external_id, email, role, created
 FROM tenant.users
 WHERE id = $1 AND deleted IS NULL;
 
@@ -39,3 +39,8 @@ UPDATE tenant.users SET external_id = $2, name = $3 WHERE id = $1;
 INSERT INTO tenant.organizations (name)
 VALUES ($1)
 RETURNING id, name, created;
+
+-- name: APIKeyGetByHash :one
+-- Uses SECURITY DEFINER function to bypass RLS (we don't know org_id before lookup)
+SELECT id, organization_id, user_id, name, token_prefix, expires, revoked, last_used, created, deleted
+FROM authn.api_key_get_by_hash($1);

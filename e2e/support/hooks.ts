@@ -1,6 +1,8 @@
 import { Before, After, BeforeAll, AfterAll, Status, setDefaultTimeout } from '@cucumber/cucumber';
 import { Browser, chromium } from 'playwright';
 import { ICustomWorld } from './world.ts';
+import { APIKeyService } from './api/apikey-service.ts';
+import { TokenService } from './api/token-service.ts';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -56,3 +58,66 @@ After(async function (this: ICustomWorld, { result }) {
   await this.page?.close();
   await this.context?.close();
 });
+
+// API testing hooks for @api tagged scenarios
+Before({ tags: '@api' }, async function (this: ICustomWorld) {
+  this.organizationApiUrl = process.env.ORGANIZATION_API_URL || 'http://organization.127.0.0.1.nip.io:8080';
+  this.authnApiUrl = process.env.AUTHN_API_URL || 'http://authn.127.0.0.1.nip.io:8080';
+  this.tokenService = new TokenService(this.authnApiUrl);
+  this.createdApiKeys = new Map();
+  this.createdApiKeysByUser = new Map();
+  this.savedApiKeyId = undefined;
+  this.currentUserEmail = undefined;
+  this.lastApiResponse = undefined;
+  this.lastApiError = undefined;
+});
+
+After({ tags: '@api' }, async function (this: ICustomWorld) {
+  // Cleanup: Delete all created API keys for each user
+  for (const [userEmail, apiKeys] of this.createdApiKeysByUser) {
+    if (apiKeys.size > 0) {
+      try {
+        // Authenticate as the user who created the keys
+        const authToken = await authenticateForCleanup(this.authnApiUrl!, userEmail);
+        const service = new APIKeyService(this.organizationApiUrl!, authToken);
+        for (const [, apiKey] of apiKeys) {
+          try {
+            await service.deleteAPIKey(apiKey.id);
+          } catch {
+            // Ignore cleanup errors - key may already be deleted by test
+          }
+        }
+      } catch {
+        // Ignore auth errors during cleanup
+      }
+    }
+  }
+
+  // Also cleanup keys from the legacy map (for backwards compatibility)
+  if (this.authToken && this.apiKeyService && this.createdApiKeys.size > 0) {
+    for (const [, apiKey] of this.createdApiKeys) {
+      try {
+        await this.apiKeyService.deleteAPIKey(apiKey.id);
+      } catch {
+        // Ignore cleanup errors - key may already be deleted by test
+      }
+    }
+  }
+});
+
+/**
+ * Authenticate for cleanup purposes (separate from test flow).
+ */
+async function authenticateForCleanup(authnApiUrl: string, email: string): Promise<string> {
+  const password = 'password';
+  const response = await fetch(`${authnApiUrl}/login/password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) {
+    throw new Error(`Cleanup auth failed for ${email}`);
+  }
+  const data = (await response.json()) as { access_token: string };
+  return data.access_token;
+}

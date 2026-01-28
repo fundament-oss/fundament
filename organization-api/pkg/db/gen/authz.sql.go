@@ -18,6 +18,15 @@ func (q *Queries) ResetOrganizationContext(ctx context.Context) error {
 	return err
 }
 
+const resetUserContext = `-- name: ResetUserContext :exec
+RESET app.current_user_id
+`
+
+func (q *Queries) ResetUserContext(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, resetUserContext)
+	return err
+}
+
 const setOrganizationContext = `-- name: SetOrganizationContext :exec
 SELECT set_config('app.current_organization_id', $1, false)
 `
@@ -28,5 +37,18 @@ type SetOrganizationContextParams struct {
 
 func (q *Queries) SetOrganizationContext(ctx context.Context, arg SetOrganizationContextParams) error {
 	_, err := q.db.Exec(ctx, setOrganizationContext, arg.SetConfig)
+	return err
+}
+
+const setUserContext = `-- name: SetUserContext :exec
+SELECT set_config('app.current_user_id', $1, false)
+`
+
+type SetUserContextParams struct {
+	SetConfig string
+}
+
+func (q *Queries) SetUserContext(ctx context.Context, arg SetUserContextParams) error {
+	_, err := q.db.Exec(ctx, setUserContext, arg.SetConfig)
 	return err
 }
