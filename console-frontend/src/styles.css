@@ -164,6 +164,16 @@ select {
   @apply border-b-white text-gray-700 dark:border-b-gray-950 dark:text-gray-200;
 }
 
+/* Breadcrumb styles */
+
+.breadcrumb {
+  @apply -mt-2 mb-4 flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400;
+}
+
+.breadcrumb a {
+  @apply hover:text-indigo-600 dark:hover:text-indigo-400;
+}
+
 /* Table styles */
 
 .table-container {
