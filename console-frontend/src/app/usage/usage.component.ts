@@ -1,6 +1,7 @@
-import { Component, inject, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, AfterViewInit, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { TitleService } from '../title.service';
 import { DateRangePickerComponent } from '../date-range-picker/date-range-picker.component';
@@ -53,8 +54,9 @@ interface Project {
   ],
   templateUrl: './usage.component.html',
 })
-export class UsageComponent implements AfterViewInit {
+export class UsageComponent implements OnInit, AfterViewInit {
   private titleService = inject(TitleService);
+  private route = inject(ActivatedRoute);
 
   @ViewChild('cpuChart') cpuChartCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('memoryChart') memoryChartCanvas!: ElementRef<HTMLCanvasElement>;
@@ -151,6 +153,19 @@ export class UsageComponent implements AfterViewInit {
 
     this.dateTo = today.toISOString().split('T')[0];
     this.dateFrom = weekAgo.toISOString().split('T')[0];
+  }
+
+  ngOnInit() {
+    // Get route parameters if they exist
+    const projectId = this.route.snapshot.params['id'];
+    const namespaceId = this.route.snapshot.params['namespaceId'];
+
+    if (projectId) {
+      this.selectedProjectId = projectId;
+    }
+    if (namespaceId) {
+      this.selectedNamespace = namespaceId;
+    }
   }
 
   ngAfterViewInit(): void {

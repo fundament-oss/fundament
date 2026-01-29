@@ -193,7 +193,7 @@ export class App implements OnInit {
 
   // Check if current route is project members or permissions
   isProjectMembersOrPermissions(): boolean {
-    return this.router.url === '/project-members' || this.router.url === '/project-permissions';
+    return this.router.url.includes('/members') || this.router.url === '/project-permissions';
   }
 
   // Check if current route is clusters or add-cluster
@@ -331,7 +331,20 @@ export class App implements OnInit {
   selectNamespaceItem(namespaceId: string) {
     this.selectedNamespaceId.set(namespaceId);
     this.selectedOrgId.set(null);
-    this.selectedProjectId.set(null);
+
+    // Find the project that contains this namespace
+    let projectId: string | null = null;
+    for (const org of this.mockOrganizations()) {
+      for (const project of org.projects) {
+        if (project.namespaces.some((ns) => ns.id === namespaceId)) {
+          projectId = project.id;
+          break;
+        }
+      }
+      if (projectId) break;
+    }
+
+    this.selectedProjectId.set(projectId);
 
     // Close modal
     this.selectorModalOpen.set(false);

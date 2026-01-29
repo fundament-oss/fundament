@@ -297,7 +297,7 @@
             } @else if (getSelectedType() === 'project') {
               <li>
                 <a
-                  routerLink="/namespaces"
+                  [routerLink]="['/projects', selectedProjectId(), 'namespaces']"
                   routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
@@ -308,7 +308,7 @@
               </li>
               <li>
                 <a
-                  routerLink="/project-members"
+                  [routerLink]="['/projects', selectedProjectId(), 'members']"
                   routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
@@ -319,7 +319,7 @@
               </li>
               <li>
                 <a
-                  routerLink="/usage"
+                  [routerLink]="['/projects', selectedProjectId(), 'usage']"
                   routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
@@ -330,7 +330,7 @@
               </li>
               <li>
                 <a
-                  routerLink="/project-settings"
+                  [routerLink]="['/projects', selectedProjectId(), 'settings']"
                   routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
@@ -342,7 +342,13 @@
             } @else if (getSelectedType() === 'namespace') {
               <li>
                 <a
-                  routerLink="/namespace-members"
+                  [routerLink]="[
+                    '/projects',
+                    selectedProjectId(),
+                    'namespaces',
+                    selectedNamespaceId(),
+                    'members',
+                  ]"
                   routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
@@ -353,7 +359,13 @@
               </li>
               <li>
                 <a
-                  routerLink="/usage"
+                  [routerLink]="[
+                    '/projects',
+                    selectedProjectId(),
+                    'namespaces',
+                    selectedNamespaceId(),
+                    'usage',
+                  ]"
                   routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"
@@ -364,7 +376,13 @@
               </li>
               <li>
                 <a
-                  routerLink="/namespace-settings"
+                  [routerLink]="[
+                    '/projects',
+                    selectedProjectId(),
+                    'namespaces',
+                    selectedNamespaceId(),
+                    'settings',
+                  ]"
                   routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                   class="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
                   (click)="closeSidebar()"

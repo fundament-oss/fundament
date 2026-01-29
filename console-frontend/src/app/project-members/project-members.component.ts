@@ -1,6 +1,6 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
@@ -18,8 +18,11 @@ import { tablerPlus, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
   ],
   templateUrl: './project-members.component.html',
 })
-export class ProjectMembersComponent {
+export class ProjectMembersComponent implements OnInit {
   private titleService = inject(TitleService);
+  private route = inject(ActivatedRoute);
+
+  projectId = signal<string>('');
 
   // Members data for the project
   members = {
@@ -51,5 +54,12 @@ export class ProjectMembersComponent {
 
   constructor() {
     this.titleService.setTitle('Project members');
+  }
+
+  ngOnInit() {
+    const id = this.route.snapshot.params['id'];
+    if (id) {
+      this.projectId.set(id);
+    }
   }
 }

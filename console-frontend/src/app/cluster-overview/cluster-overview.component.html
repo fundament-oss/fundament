@@ -292,12 +292,14 @@
         <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Members
+            <!-- TODO: Update this link - clusters belong to organizations, not projects
             <a
               routerLink="/project-members"
               class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
             >
               <ng-icon name="tablerPencil" class="mr-1" /> Edit
             </a>
+            -->
           </h3>
           <div class="space-y-3">
             @for (member of clusterData.members; track member.name) {

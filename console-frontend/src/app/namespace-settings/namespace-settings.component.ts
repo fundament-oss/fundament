@@ -1,6 +1,7 @@
-import { Component, inject, ViewChild, ElementRef, signal } from '@angular/core';
+import { Component, inject, ViewChild, ElementRef, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerX, tablerPencil, tablerCheck } from '@ng-icons/tabler-icons';
@@ -24,10 +25,14 @@ interface Namespace {
   ],
   templateUrl: './namespace-settings.component.html',
 })
-export class NamespaceSettingsComponent {
+export class NamespaceSettingsComponent implements OnInit {
   private titleService = inject(TitleService);
+  private route = inject(ActivatedRoute);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
+
+  projectId = signal<string>('');
+  namespaceId = signal<string>('');
 
   // Mock namespace data
   namespace = signal<Namespace>({
@@ -43,6 +48,17 @@ export class NamespaceSettingsComponent {
 
   constructor() {
     this.titleService.setTitle('Namespace Settings');
+  }
+
+  ngOnInit() {
+    const id = this.route.snapshot.params['id'];
+    const nsId = this.route.snapshot.params['namespaceId'];
+    if (id) {
+      this.projectId.set(id);
+    }
+    if (nsId) {
+      this.namespaceId.set(nsId);
+    }
   }
 
   startEdit() {

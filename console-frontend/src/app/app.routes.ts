@@ -78,7 +78,7 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'namespaces',
+    path: 'projects/:id/namespaces',
     loadComponent: () =>
       import('./namespaces/namespaces.component').then((m) => m.NamespacesComponent),
   },
@@ -90,26 +90,26 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'project-members',
+    path: 'projects/:id/members',
     loadComponent: () =>
       import('./project-members/project-members.component').then((m) => m.ProjectMembersComponent),
   },
   {
-    path: 'project-settings',
+    path: 'projects/:id/settings',
     loadComponent: () =>
       import('./project-settings/project-settings.component').then(
         (m) => m.ProjectSettingsComponent,
       ),
   },
   {
-    path: 'namespace-members',
+    path: 'projects/:id/namespaces/:namespaceId/members',
     loadComponent: () =>
       import('./namespace-members/namespace-members.component').then(
         (m) => m.NamespaceMembersComponent,
       ),
   },
   {
-    path: 'namespace-settings',
+    path: 'projects/:id/namespaces/:namespaceId/settings',
     loadComponent: () =>
       import('./namespace-settings/namespace-settings.component').then(
         (m) => m.NamespaceSettingsComponent,
@@ -131,6 +131,14 @@ export const routes: Routes = [
   },
   {
     path: 'usage',
+    loadComponent: () => import('./usage/usage.component').then((m) => m.UsageComponent),
+  },
+  {
+    path: 'projects/:id/usage',
+    loadComponent: () => import('./usage/usage.component').then((m) => m.UsageComponent),
+  },
+  {
+    path: 'projects/:id/namespaces/:namespaceId/usage',
     loadComponent: () => import('./usage/usage.component').then((m) => m.UsageComponent),
   },
   {
