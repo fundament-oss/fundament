@@ -18,7 +18,7 @@ export class ModalComponent {
   @Input() show = false;
   @Input() title = '';
   @Input() maxWidth = 'max-w-md';
-  @Output() close = new EventEmitter<void>();
+  @Output() modalClose = new EventEmitter<void>();
 
   @HostListener('document:keydown', ['$event'])
   handleEscapeKey(event: KeyboardEvent): void {
@@ -29,7 +29,7 @@ export class ModalComponent {
   }
 
   onClose(): void {
-    this.close.emit();
+    this.modalClose.emit();
   }
 
   onBackdropClick(event: Event): void {

@@ -1,4 +1,8 @@
-<app-modal [show]="show" title="Select organization, project, or namespace" (close)="onClose()">
+<app-modal
+  [show]="show"
+  title="Select organization, project, or namespace"
+  (modalClose)="onClose()"
+>
   <!-- Filter Input -->
   <div class="mb-4">
     <div class="relative">

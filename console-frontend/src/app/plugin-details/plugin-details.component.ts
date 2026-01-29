@@ -152,7 +152,7 @@ export class PluginDetailsComponent implements OnInit {
       .replace(/\n\n/g, '</p><p class="mb-3">')
       .trim();
 
-    html = '<p class="mb-3">' + html + '</p>';
+    html = `<p class="mb-3">${html}</p>`;
 
     return this.sanitizer.sanitize(1, html) || '';
   }
