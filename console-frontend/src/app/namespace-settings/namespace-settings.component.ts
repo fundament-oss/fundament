@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerX, tablerPencil, tablerCheck } from '@ng-icons/tabler-icons';
+import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 
 interface Namespace {
   id: string;
@@ -15,7 +16,7 @@ interface Namespace {
 @Component({
   selector: 'app-namespace-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIconComponent],
+  imports: [CommonModule, FormsModule, NgIconComponent, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
       tablerX,
@@ -33,6 +34,7 @@ export class NamespaceSettingsComponent implements OnInit {
 
   projectId = signal<string>('');
   namespaceId = signal<string>('');
+  projectName = signal<string>(''); // Mock project name
 
   // Mock namespace data
   namespace = signal<Namespace>({
@@ -55,10 +57,35 @@ export class NamespaceSettingsComponent implements OnInit {
     const nsId = this.route.snapshot.params['namespaceId'];
     if (id) {
       this.projectId.set(id);
+      // Mock project name - in real app, this would be fetched from API
+      this.projectName.set('Project Alpha');
     }
     if (nsId) {
       this.namespaceId.set(nsId);
     }
+  }
+
+  get breadcrumbSegments(): BreadcrumbSegment[] {
+    const segments: BreadcrumbSegment[] = [];
+
+    if (this.projectName()) {
+      segments.push({
+        label: this.projectName(),
+        route: `/projects/${this.projectId()}`,
+      });
+    }
+
+    const currentNamespace = this.namespace();
+    if (currentNamespace?.name) {
+      segments.push({
+        label: currentNamespace.name,
+        route: `/projects/${this.projectId()}/namespaces/${this.namespaceId()}`,
+      });
+    }
+
+    segments.push({ label: 'Settings' });
+
+    return segments;
   }
 
   startEdit() {

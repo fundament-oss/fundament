@@ -1,4 +1,12 @@
-import { Component, inject, AfterViewInit, OnInit, ElementRef, ViewChild, signal } from '@angular/core';
+import {
+  Component,
+  inject,
+  AfterViewInit,
+  OnInit,
+  ElementRef,
+  ViewChild,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
