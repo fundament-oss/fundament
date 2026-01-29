@@ -1,0 +1,31 @@
+meta {
+  name: List API Keys
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.APIKeyService/ListAPIKeys
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+script:post-response {
+  // Store the first API key ID for use in other requests
+  if (res.headers['content-type']?.includes('application/json') && res.body.apiKeys?.length > 0) {
+    bru.setVar("apiKeyId", res.body.apiKeys[0].id);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

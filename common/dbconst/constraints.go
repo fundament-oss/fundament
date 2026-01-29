@@ -3,6 +3,14 @@
 package dbconst
 
 const (
+	// ConstraintApiKeysFkOrganization is defined on authn.api_keys.
+	ConstraintApiKeysFkOrganization = "api_keys_fk_organization"
+	// ConstraintApiKeysFkUser is defined on authn.api_keys.
+	ConstraintApiKeysFkUser = "api_keys_fk_user"
+	// ConstraintApiKeysUqName is defined on authn.api_keys.
+	ConstraintApiKeysUqName = "api_keys_uq_name"
+	// ConstraintApiKeysUqTokenHash is defined on authn.api_keys.
+	ConstraintApiKeysUqTokenHash = "api_keys_uq_token_hash"
 	// ConstraintCategoriesUqName is defined on zappstore.categories.
 	ConstraintCategoriesUqName = "categories_uq_name"
 	// ConstraintClustersCkStatus is defined on tenant.clusters.
