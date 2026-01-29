@@ -45,7 +45,7 @@ import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 import { ModalComponent } from '../modal/modal.component';
 
 @Component({
-  selector: 'app-cluster-overview',
+  selector: 'app-cluster-details',
   imports: [
     CommonModule,
     RouterLink,
@@ -66,10 +66,10 @@ import { ModalComponent } from '../modal/modal.component';
       tablerAlertTriangle,
     }),
   ],
-  templateUrl: './cluster-overview.component.html',
+  templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ClusterOverviewComponent implements OnInit {
+export class ClusterDetailsComponent implements OnInit {
   private titleService = inject(TitleService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
