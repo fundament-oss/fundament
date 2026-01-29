@@ -8,6 +8,12 @@
       Unknown organization
     }
   </a>
-  <ng-icon name="tablerChevronRight" size="0.875rem" />
-  <span>{{ currentPage }}</span>
+  @for (segment of allSegments; track $index; let isLast = $last) {
+    <ng-icon name="tablerChevronRight" size="0.875rem" />
+    @if (segment.route && !isLast) {
+      <a [routerLink]="segment.route">{{ segment.label }}</a>
+    } @else {
+      <span>{{ segment.label }}</span>
+    }
+  }
 </nav>

@@ -1,4 +1,4 @@
-import { Component, inject, AfterViewInit, OnInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, AfterViewInit, OnInit, ElementRef, ViewChild, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -7,7 +7,7 @@ import { TitleService } from '../title.service';
 import { DateRangePickerComponent } from '../date-range-picker/date-range-picker.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerTableDown } from '@ng-icons/tabler-icons';
-import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
+import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 
 Chart.register(...registerables);
 
@@ -72,6 +72,10 @@ export class UsageComponent implements OnInit, AfterViewInit {
   selectedNamespace = '';
   dateFrom = '';
   dateTo = '';
+
+  // Route context for breadcrumbs
+  projectName = signal<string>('');
+  namespaceName = signal<string>('');
 
   // Mock data
   projects: Project[] = [
@@ -162,14 +166,43 @@ export class UsageComponent implements OnInit, AfterViewInit {
 
     if (projectId) {
       this.selectedProjectId = projectId;
+      // Mock project name - in real app, this would be fetched from API
+      this.projectName.set('Project Alpha');
     }
     if (namespaceId) {
       this.selectedNamespace = namespaceId;
+      // Mock namespace name - in real app, this would be fetched from API
+      this.namespaceName.set('production');
     }
   }
 
   ngAfterViewInit(): void {
     this.initializeCharts();
+  }
+
+  get breadcrumbSegments(): BreadcrumbSegment[] {
+    const segments: BreadcrumbSegment[] = [];
+
+    // Add project segment if we're in a project context
+    if (this.projectName()) {
+      segments.push({
+        label: this.projectName(),
+        route: `/projects/${this.selectedProjectId}`,
+      });
+    }
+
+    // Add namespace segment if we're in a namespace context
+    if (this.namespaceName()) {
+      segments.push({
+        label: this.namespaceName(),
+        route: `/projects/${this.selectedProjectId}/namespaces/${this.selectedNamespace}`,
+      });
+    }
+
+    // Always add Usage as the final segment
+    segments.push({ label: 'Usage' });
+
+    return segments;
   }
 
   get availableClusters(): Cluster[] {

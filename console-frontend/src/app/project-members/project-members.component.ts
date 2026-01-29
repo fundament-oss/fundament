@@ -4,11 +4,12 @@ import { RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
+import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-project-members',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, NgIcon],
+  imports: [CommonModule, RouterLink, RouterLinkActive, NgIcon, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -23,6 +24,7 @@ export class ProjectMembersComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   projectId = signal<string>('');
+  projectName = signal<string>(''); // Mock project name
 
   // Members data for the project
   members = {
@@ -60,6 +62,23 @@ export class ProjectMembersComponent implements OnInit {
     const id = this.route.snapshot.params['id'];
     if (id) {
       this.projectId.set(id);
+      // Mock project name - in real app, this would be fetched from API
+      this.projectName.set('Project Alpha');
     }
+  }
+
+  get breadcrumbSegments(): BreadcrumbSegment[] {
+    const segments: BreadcrumbSegment[] = [];
+
+    if (this.projectName()) {
+      segments.push({
+        label: this.projectName(),
+        route: `/projects/${this.projectId()}`,
+      });
+    }
+
+    segments.push({ label: 'Members' });
+
+    return segments;
   }
 }

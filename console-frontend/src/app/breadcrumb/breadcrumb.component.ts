@@ -8,6 +8,11 @@ import { firstValueFrom } from 'rxjs';
 import { create } from '@bufbuild/protobuf';
 import { GetOrganizationRequestSchema } from '../../generated/v1/organization_pb';
 
+export interface BreadcrumbSegment {
+  label: string;
+  route?: string;
+}
+
 @Component({
   selector: 'app-breadcrumb',
   standalone: true,
@@ -23,13 +28,26 @@ export class BreadcrumbComponent implements OnInit {
   private authnClient = inject(AUTHN);
   private organizationClient = inject(ORGANIZATION);
 
-  @Input({ required: true }) currentPage!: string;
+  // Support both the old API (currentPage) and new API (segments)
+  @Input() currentPage?: string;
+  @Input() segments: BreadcrumbSegment[] = [];
 
   organizationName = signal<string | null>(null);
   organizationLoading = signal(true);
 
   async ngOnInit() {
     await this.loadOrganization();
+  }
+
+  // Computed segments that combines old and new API
+  get allSegments(): BreadcrumbSegment[] {
+    if (this.segments.length > 0) {
+      return this.segments;
+    }
+    if (this.currentPage) {
+      return [{ label: this.currentPage }];
+    }
+    return [];
   }
 
   async loadOrganization() {
