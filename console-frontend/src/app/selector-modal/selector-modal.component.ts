@@ -4,7 +4,6 @@ import {
   Output,
   EventEmitter,
   signal,
-  HostListener,
   ViewChild,
   ElementRef,
   AfterViewInit,
@@ -13,13 +12,13 @@ import {
 import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
-  tablerX,
   tablerSearch,
   tablerChevronRight,
   tablerFolder,
   tablerBracketsContain,
   tablerBuilding,
 } from '@ng-icons/tabler-icons';
+import { ModalComponent } from '../modal/modal.component';
 
 interface Namespace {
   id: string;
@@ -41,10 +40,9 @@ interface Organization {
 @Component({
   selector: 'app-selector-modal',
   standalone: true,
-  imports: [CommonModule, NgIconComponent],
+  imports: [CommonModule, NgIconComponent, ModalComponent],
   viewProviders: [
     provideIcons({
-      tablerX,
       tablerSearch,
       tablerChevronRight,
       tablerFolder,
@@ -90,28 +88,8 @@ export class SelectorModalComponent implements AfterViewInit, OnChanges {
     this.searchInput?.nativeElement.focus();
   }
 
-  @HostListener('document:keydown', ['$event'])
-  handleEscapeKey(event: KeyboardEvent): void {
-    if (this.show && event.key === 'Escape') {
-      event.preventDefault();
-      this.onClose();
-    }
-  }
-
   onClose(): void {
     this.closeModal.emit();
-  }
-
-  onBackdropClick(event: Event): void {
-    // Close modal when clicking on the backdrop
-    if (event.target === event.currentTarget) {
-      this.onClose();
-    }
-  }
-
-  onModalContentClick(event: Event): void {
-    // Stop propagation to prevent backdrop click from firing
-    event.stopPropagation();
   }
 
   updateFilter(event: Event): void {

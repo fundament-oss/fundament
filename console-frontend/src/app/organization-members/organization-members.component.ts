@@ -17,16 +17,17 @@ import { TitleService } from '../title.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerPlus,
-  tablerX,
   tablerTrash,
   tablerClockHour4,
   tablerMail,
   tablerAlertTriangle,
+  tablerX,
 } from '@ng-icons/tabler-icons';
 import { heroUserGroup } from '@ng-icons/heroicons/outline';
 import { AuthnApiService } from '../authn-api.service';
 import { MEMBER } from '../../connect/tokens';
 import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
+import { ModalComponent } from '../modal/modal.component';
 
 interface OrganizationMember {
   id: string;
@@ -41,7 +42,7 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [CommonModule, FormsModule, NgIcon, BreadcrumbComponent],
+  imports: [CommonModule, FormsModule, NgIcon, BreadcrumbComponent, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,

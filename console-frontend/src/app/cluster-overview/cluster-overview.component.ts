@@ -42,10 +42,11 @@ import {
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
+import { ModalComponent } from '../modal/modal.component';
 
 @Component({
   selector: 'app-cluster-overview',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,

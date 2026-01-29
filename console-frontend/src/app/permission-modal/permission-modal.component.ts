@@ -1,8 +1,7 @@
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerX } from '@ng-icons/tabler-icons';
+import { ModalComponent } from '../modal/modal.component';
 
 interface Permission {
   name?: string;
@@ -23,12 +22,7 @@ interface RoleItem {
 @Component({
   selector: 'app-permission-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIcon],
-  viewProviders: [
-    provideIcons({
-      tablerX,
-    }),
-  ],
+  imports: [CommonModule, FormsModule, ModalComponent],
   templateUrl: './permission-modal.component.html',
 })
 export class PermissionModalComponent implements OnChanges {

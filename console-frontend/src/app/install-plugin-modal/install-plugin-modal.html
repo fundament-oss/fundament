@@ -1,57 +1,39 @@
-@if (show) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <div
-      class="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950"
-    >
-      <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-xl font-semibold">Install plugin</h2>
-        <button
-          type="button"
-          (click)="onClose()"
-          class="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          aria-label="Close"
+<app-modal [show]="show" title="Install plugin" (close)="onClose()">
+  <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+    Select cluster(s) to install plugin
+    <strong class="font-semibold">{{ pluginName }}</strong> on:
+  </p>
+
+  <div class="space-y-2">
+    @if (clusters.length === 0) {
+      <p class="text-sm text-gray-600 dark:text-gray-400">No clusters found</p>
+    } @else {
+      @for (cluster of clusters; track cluster.id) {
+        <div
+          class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
         >
-          <ng-icon name="tablerX" size="1.5rem" class="block!" />
-        </button>
-      </div>
-
-      <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
-        Select cluster(s) to install plugin
-        <strong class="font-semibold">{{ pluginName }}</strong> on:
-      </p>
-
-      <div class="space-y-2">
-        @if (clusters.length === 0) {
-          <p class="text-sm text-gray-600 dark:text-gray-400">No clusters found</p>
-        } @else {
-          @for (cluster of clusters; track cluster.id) {
-            <div
-              class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
+          <span class="text-sm font-medium">{{ cluster.name }}</span>
+          @if (cluster.installed) {
+            <span
+              class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
             >
-              <span class="text-sm font-medium">{{ cluster.name }}</span>
-              @if (cluster.installed) {
-                <span
-                  class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
-                >
-                  <ng-icon name="tablerCheck" size="0.75rem" class="mr-1" /> Installed
-                </span>
-              } @else {
-                <button
-                  type="button"
-                  (click)="onInstall(cluster.id)"
-                  class="cursor-pointer rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-                >
-                  Install
-                </button>
-              }
-            </div>
+              <ng-icon name="tablerCheck" size="0.75rem" class="mr-1" /> Installed
+            </span>
+          } @else {
+            <button
+              type="button"
+              (click)="onInstall(cluster.id)"
+              class="cursor-pointer rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            >
+              Install
+            </button>
           }
-        }
-      </div>
-
-      <div class="mt-6 flex justify-end">
-        <button type="button" (click)="onClose()" class="btn-secondary">Close</button>
-      </div>
-    </div>
+        </div>
+      }
+    }
   </div>
-}
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="onClose()" class="btn-secondary">Close</button>
+  </div>
+</app-modal>
