@@ -12,11 +12,12 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
+import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-organization',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIcon],
+  imports: [CommonModule, FormsModule, NgIcon, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
       tablerPencil,

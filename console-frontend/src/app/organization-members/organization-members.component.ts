@@ -26,6 +26,7 @@ import {
 import { heroUserGroup } from '@ng-icons/heroicons/outline';
 import { AuthnApiService } from '../authn-api.service';
 import { MEMBER } from '../../connect/tokens';
+import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 interface OrganizationMember {
   id: string;
@@ -40,7 +41,7 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [CommonModule, FormsModule, NgIcon],
+  imports: [CommonModule, FormsModule, NgIcon, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,

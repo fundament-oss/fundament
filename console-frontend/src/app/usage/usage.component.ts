@@ -6,6 +6,7 @@ import { TitleService } from '../title.service';
 import { DateRangePickerComponent } from '../date-range-picker/date-range-picker.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerTableDown } from '@ng-icons/tabler-icons';
+import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 Chart.register(...registerables);
 
@@ -44,7 +45,7 @@ interface Project {
 @Component({
   selector: 'app-usage',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateRangePickerComponent, NgIcon],
+  imports: [CommonModule, FormsModule, DateRangePickerComponent, NgIcon, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
       tablerTableDown,

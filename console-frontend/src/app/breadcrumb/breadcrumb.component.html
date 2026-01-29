@@ -1,0 +1,13 @@
+<nav class="breadcrumb">
+  <a routerLink="/">
+    @if (organizationLoading()) {
+      Loading...
+    } @else if (organizationName()) {
+      {{ organizationName() }}
+    } @else {
+      Unknown organization
+    }
+  </a>
+  <ng-icon name="tablerChevronRight" size="0.875rem" />
+  <span>{{ currentPage }}</span>
+</nav>

@@ -10,10 +10,11 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerChevronRight } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
+import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-projects',
-  imports: [CommonModule, RouterLink, NgIcon, LoadingIndicatorComponent],
+  imports: [CommonModule, RouterLink, NgIcon, LoadingIndicatorComponent, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
