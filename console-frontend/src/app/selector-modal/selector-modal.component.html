@@ -19,9 +19,7 @@
   <!-- Nested Tree -->
   <div class="-mx-2 -mb-2 max-h-96 space-y-1 overflow-y-auto px-2 pb-2">
     @if (filteredOrganizations().length === 0) {
-      <div class="py-1 text-center text-sm text-gray-500 dark:text-gray-400">
-        No results found.
-      </div>
+      <div class="py-1 text-center text-sm text-gray-500 dark:text-gray-400">No results found.</div>
     } @else {
       @for (org of filteredOrganizations(); track org.id) {
         <div>
@@ -98,11 +96,7 @@
                               isNamespaceSelected(namespace.id),
                           }"
                         >
-                          <ng-icon
-                            name="tablerBracketsContain"
-                            class="mr-2 shrink-0"
-                            size="1rem"
-                          />
+                          <ng-icon name="tablerBracketsContain" class="mr-2 shrink-0" size="1rem" />
                           <span class="truncate">{{ namespace.name }}</span>
                         </button>
                       }

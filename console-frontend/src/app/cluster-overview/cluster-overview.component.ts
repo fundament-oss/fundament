@@ -46,7 +46,14 @@ import { ModalComponent } from '../modal/modal.component';
 
 @Component({
   selector: 'app-cluster-overview',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent, ModalComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    NgIcon,
+    LoadingIndicatorComponent,
+    ModalComponent,
+  ],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,

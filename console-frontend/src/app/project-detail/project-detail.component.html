@@ -250,264 +250,214 @@
 }
 
 <!-- Create Namespace Modal -->
-@if (showCreateNamespaceModal()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div
-      class="w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-950"
-      role="dialog"
-      aria-labelledby="create-namespace-modal-title"
-      aria-modal="true"
-    >
-      <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-950">
-          <h3
-            class="text-lg leading-6 font-semibold text-gray-900 dark:text-white"
-            id="create-namespace-modal-title"
-          >
-            Create namespace
-          </h3>
-
-          <!-- Cluster Selection -->
-          <div class="mt-4">
-            <label
-              for="clusterId"
-              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-            >
-              Cluster
-            </label>
-            @if (isLoadingClusters()) {
-              <div class="flex items-center py-2">
-                <div
-                  class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
-                ></div>
-                <span class="text-sm text-gray-500 dark:text-gray-400">Loading clusters...</span>
-              </div>
-            } @else {
-              <select
-                id="clusterId"
-                formControlName="clusterId"
-                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-              >
-                @for (cluster of clusters(); track cluster.id) {
-                  <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
-                }
-              </select>
-              @if (clusters().length === 0) {
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  No clusters available. Create a cluster first.
-                </p>
-              }
-            }
-            @if (namespaceForm.get('clusterId')?.invalid && namespaceForm.get('clusterId')?.dirty) {
-              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a cluster.</p>
-            }
-          </div>
-
-          <!-- Namespace Name -->
-          <div class="mt-4">
-            <label
-              for="namespaceName"
-              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-            >
-              Namespace name
-            </label>
-            <input
-              #namespaceNameInput
-              id="namespaceName"
-              formControlName="name"
-              type="text"
-              placeholder="E.g. my-namespace"
-              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-            />
-            @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
-              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
-            }
-          </div>
+<app-modal
+  [show]="showCreateNamespaceModal()"
+  title="Create namespace"
+  [maxWidth]="'max-w-lg'"
+  (close)="showCreateNamespaceModal.set(false)"
+>
+  <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
+    <!-- Cluster Selection -->
+    <div class="mb-4">
+      <label for="clusterId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+        Cluster
+      </label>
+      @if (isLoadingClusters()) {
+        <div class="flex items-center py-2">
+          <div
+            class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
+          ></div>
+          <span class="text-sm text-gray-500 dark:text-gray-400">Loading clusters...</span>
         </div>
-        <div class="bg-gray-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 dark:bg-gray-900">
-          <button
-            type="button"
-            (click)="showCreateNamespaceModal.set(false)"
-            class="btn-secondary mr-3"
-            [disabled]="isCreatingNamespace()"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="btn-primary"
-            [disabled]="isCreatingNamespace() || !namespaceForm.valid"
-          >
-            @if (isCreatingNamespace()) {
-              Creating...
-            } @else {
-              Create namespace
-            }
-          </button>
-        </div>
-      </form>
+      } @else {
+        <select
+          id="clusterId"
+          formControlName="clusterId"
+          class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+        >
+          @for (cluster of clusters(); track cluster.id) {
+            <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
+          }
+        </select>
+        @if (clusters().length === 0) {
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            No clusters available. Create a cluster first.
+          </p>
+        }
+      }
+      @if (namespaceForm.get('clusterId')?.invalid && namespaceForm.get('clusterId')?.dirty) {
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a cluster.</p>
+      }
     </div>
-  </div>
-}
+
+    <!-- Namespace Name -->
+    <div class="mb-4">
+      <label
+        for="namespaceName"
+        class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+      >
+        Namespace name
+      </label>
+      <input
+        #namespaceNameInput
+        id="namespaceName"
+        formControlName="name"
+        type="text"
+        placeholder="E.g. my-namespace"
+        class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+      />
+      @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
+      }
+    </div>
+
+    <div modal-footer class="modal-footer">
+      <button
+        type="button"
+        (click)="showCreateNamespaceModal.set(false)"
+        class="btn-secondary"
+        [disabled]="isCreatingNamespace()"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="isCreatingNamespace() || !namespaceForm.valid"
+      >
+        @if (isCreatingNamespace()) {
+          Creating...
+        } @else {
+          Create namespace
+        }
+      </button>
+    </div>
+  </form>
+</app-modal>
 
 <!-- Delete Project Modal -->
-@if (showDeleteModal()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+<app-modal
+  [show]="showDeleteModal()"
+  title="Delete project"
+  [maxWidth]="'max-w-lg'"
+  (close)="showDeleteModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
     <div
-      class="w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-950"
-      role="dialog"
-      aria-labelledby="delete-modal-title"
-      aria-modal="true"
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
     >
-      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-950">
-        <div class="sm:flex sm:items-start">
-          <div
-            class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
-          >
-            <ng-icon
-              name="tablerAlertTriangle"
-              size="1.5rem"
-              class="text-rose-600! dark:text-rose-400!"
-            />
-          </div>
-          <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-            <h3
-              class="text-lg leading-6 font-semibold text-gray-900 dark:text-white"
-              id="delete-modal-title"
-            >
-              Delete project
-            </h3>
-            <div class="mt-2">
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Are you sure you want to delete project
-                <span class="font-semibold text-gray-900 dark:text-white">{{
-                  project()?.name
-                }}</span
-                >?
-              </p>
-              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">This cannot be undone.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="bg-gray-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 dark:bg-gray-900">
-        <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary mr-3">
-          Cancel
-        </button>
-
-        <button
-          type="button"
-          (click)="deleteProject()"
-          class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
-        >
-          Yes, delete this project
-        </button>
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Are you sure you want to delete project
+          <span class="font-semibold text-gray-900 dark:text-white">{{ project()?.name }}</span
+          >?
+        </p>
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">This cannot be undone.</p>
       </div>
     </div>
   </div>
-}
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="deleteProject()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, delete this project
+    </button>
+  </div>
+</app-modal>
 
 <!-- Add/Edit Member Modal -->
-@if (showAddMemberModal()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div
-      class="w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-950"
-      role="dialog"
-      aria-labelledby="member-modal-title"
-      aria-modal="true"
-    >
-      <form [formGroup]="memberForm" (ngSubmit)="saveMember()">
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-950">
-          <h3
-            class="text-lg leading-6 font-semibold text-gray-900 dark:text-white"
-            id="member-modal-title"
-          >
-            {{ editingMember() ? 'Edit member' : 'Add member to project' }}
-          </h3>
-
-          <!-- User Selection (only show when adding) -->
-          @if (!editingMember()) {
-            <div class="mt-4">
-              <label
-                for="userId"
-                class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-              >
-                User
-              </label>
-              <select
-                id="userId"
-                formControlName="userId"
-                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-              >
-                <option value="">Select a user</option>
-                @for (user of availableUsers(); track user.id) {
-                  <option [value]="user.id">{{ user.name }} ({{ user.email }})</option>
-                }
-              </select>
-              @if (availableUsers().length === 0) {
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  No users available to add.
-                </p>
-              }
-              @if (
-                memberForm.get('userId')?.invalid &&
-                (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
-              ) {
-                <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a user.</p>
-              }
-            </div>
+<app-modal
+  [show]="showAddMemberModal()"
+  [title]="editingMember() ? 'Edit member' : 'Add member to project'"
+  [maxWidth]="'max-w-lg'"
+  (close)="showAddMemberModal.set(false)"
+>
+  <form [formGroup]="memberForm" (ngSubmit)="saveMember()">
+    <!-- User Selection (only show when adding) -->
+    @if (!editingMember()) {
+      <div class="mb-4">
+        <label for="userId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+          User
+        </label>
+        <select
+          id="userId"
+          formControlName="userId"
+          class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+        >
+          <option value="">Select a user</option>
+          @for (user of availableUsers(); track user.id) {
+            <option [value]="user.id">{{ user.name }} ({{ user.email }})</option>
           }
+        </select>
+        @if (availableUsers().length === 0) {
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No users available to add.</p>
+        }
+        @if (
+          memberForm.get('userId')?.invalid &&
+          (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
+        ) {
+          <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a user.</p>
+        }
+      </div>
+    }
 
-          <!-- Member name (only show when editing) -->
-          @if (editingMember()) {
-            <div class="mt-4">
-              <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-                Member
-              </span>
-              <p class="text-sm dark:text-white">{{ editingMember()?.name }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">{{ editingMember()?.email }}</p>
-            </div>
-          }
+    <!-- Member name (only show when editing) -->
+    @if (editingMember()) {
+      <div class="mb-4">
+        <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"> Member </span>
+        <p class="text-sm dark:text-white">{{ editingMember()?.name }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">{{ editingMember()?.email }}</p>
+      </div>
+    }
 
-          <!-- Role Selection -->
-          <div class="mt-4">
-            <label for="role" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-              Role
-            </label>
-            <select
-              id="role"
-              formControlName="role"
-              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-            >
-              <option value="viewer">Project member - Read access to project resources</option>
-              <option value="admin">Project admin - Full access to project resources</option>
-            </select>
-          </div>
-        </div>
-        <div class="bg-gray-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 dark:bg-gray-900">
-          <button
-            type="button"
-            (click)="showAddMemberModal.set(false)"
-            class="btn-secondary mr-3"
-            [disabled]="isAddingMember()"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="btn-primary"
-            [disabled]="isAddingMember() || (!editingMember() && !memberForm.valid)"
-          >
-            @if (isAddingMember()) {
-              Saving...
-            } @else if (editingMember()) {
-              Save changes
-            } @else {
-              Add member
-            }
-          </button>
-        </div>
-      </form>
+    <!-- Role Selection -->
+    <div class="mb-4">
+      <label for="role" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+        Role
+      </label>
+      <select
+        id="role"
+        formControlName="role"
+        class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+      >
+        <option value="viewer">Project member - Read access to project resources</option>
+        <option value="admin">Project admin - Full access to project resources</option>
+      </select>
     </div>
-  </div>
-}
+
+    <div modal-footer class="modal-footer">
+      <button
+        type="button"
+        (click)="showAddMemberModal.set(false)"
+        class="btn-secondary"
+        [disabled]="isAddingMember()"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="isAddingMember() || (!editingMember() && !memberForm.valid)"
+      >
+        @if (isAddingMember()) {
+          Saving...
+        } @else if (editingMember()) {
+          Save changes
+        } @else {
+          Add member
+        }
+      </button>
+    </div>
+  </form>
+</app-modal>

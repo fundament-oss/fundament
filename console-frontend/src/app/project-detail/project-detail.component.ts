@@ -32,6 +32,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerTrash, tablerAlertTriangle, tablerPencil } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
+import { ModalComponent } from '../modal/modal.component';
 
 type ProjectMemberRole = 'viewer' | 'admin';
 
@@ -46,7 +47,14 @@ interface ProjectMember {
 
 @Component({
   selector: 'app-project-detail',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    NgIcon,
+    LoadingIndicatorComponent,
+    ModalComponent,
+  ],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,

@@ -230,7 +230,12 @@
     </div>
 
     <div modal-footer class="modal-footer">
-      <button type="button" (click)="closeModal()" class="btn-secondary" [disabled]="isSubmitting()">
+      <button
+        type="button"
+        (click)="closeModal()"
+        class="btn-secondary"
+        [disabled]="isSubmitting()"
+      >
         Cancel
       </button>
       <button type="submit" class="btn-primary" [disabled]="isSubmitting()">

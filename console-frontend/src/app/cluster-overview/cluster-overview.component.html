@@ -484,7 +484,12 @@
 }
 
 <!-- Delete Cluster Modal -->
-<app-modal [show]="showDeleteModal()" title="Delete cluster" [maxWidth]="'max-w-lg'" (close)="showDeleteModal.set(false)">
+<app-modal
+  [show]="showDeleteModal()"
+  title="Delete cluster"
+  [maxWidth]="'max-w-lg'"
+  (close)="showDeleteModal.set(false)"
+>
   <div class="sm:flex sm:items-start">
     <div
       class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
@@ -510,9 +515,7 @@
   </div>
 
   <div modal-footer class="modal-footer">
-    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">
-      Cancel
-    </button>
+    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
     <button
       type="button"
       (click)="deleteCluster()"
@@ -524,14 +527,16 @@
 </app-modal>
 
 <!-- Add Namespace Modal -->
-<app-modal [show]="showAddNamespaceModal()" title="Add namespace" [maxWidth]="'max-w-lg'" (close)="showAddNamespaceModal.set(false)">
+<app-modal
+  [show]="showAddNamespaceModal()"
+  title="Add namespace"
+  [maxWidth]="'max-w-lg'"
+  (close)="showAddNamespaceModal.set(false)"
+>
   <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
     <!-- Project Selection -->
     <div class="mb-4">
-      <label
-        for="projectId"
-        class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-      >
+      <label for="projectId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
         Project
       </label>
       @if (isLoadingProjects()) {
