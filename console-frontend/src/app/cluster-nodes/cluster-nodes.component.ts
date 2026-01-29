@@ -13,16 +13,18 @@ import {
   CreateNodePoolRequestSchema,
   UpdateNodePoolRequestSchema,
   DeleteNodePoolRequestSchema,
+  GetClusterRequestSchema,
   NodePool,
 } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-cluster-nodes',
   standalone: true,
-  imports: [CommonModule, SharedNodePoolsFormComponent, NgIcon],
+  imports: [CommonModule, SharedNodePoolsFormComponent, NgIcon, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -42,6 +44,7 @@ export class ClusterNodesComponent implements OnInit {
   isSubmitting = signal(false);
   isLoading = signal(true);
   initialNodePools = signal<NodePoolData[]>([]);
+  clusterName = signal<string | null>(null);
 
   constructor() {
     this.titleService.setTitle('Cluster nodes');
@@ -49,7 +52,19 @@ export class ClusterNodesComponent implements OnInit {
   }
 
   async ngOnInit() {
-    await this.loadNodePools();
+    await Promise.all([this.loadClusterName(), this.loadNodePools()]);
+  }
+
+  async loadClusterName() {
+    try {
+      const request = create(GetClusterRequestSchema, { clusterId: this.clusterId });
+      const response = await firstValueFrom(this.client.getCluster(request));
+      if (response.cluster) {
+        this.clusterName.set(response.cluster.name);
+      }
+    } catch (error) {
+      console.error('Failed to load cluster name:', error);
+    }
   }
 
   async loadNodePools() {
@@ -141,5 +156,22 @@ export class ClusterNodesComponent implements OnInit {
 
   onCancel() {
     this.router.navigate(['/clusters', this.clusterId]);
+  }
+
+  get breadcrumbSegments(): BreadcrumbSegment[] {
+    const segments: BreadcrumbSegment[] = [
+      { label: 'Clusters', route: '/' }
+    ];
+
+    if (this.clusterName()) {
+      segments.push({
+        label: this.clusterName()!,
+        route: `/clusters/${this.clusterId}`
+      });
+    }
+
+    segments.push({ label: 'Nodes' });
+
+    return segments;
   }
 }

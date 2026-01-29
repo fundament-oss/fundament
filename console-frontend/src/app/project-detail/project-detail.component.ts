@@ -33,6 +33,7 @@ import { tablerPlus, tablerTrash, tablerAlertTriangle, tablerPencil } from '@ng-
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
 import { ModalComponent } from '../modal/modal.component';
+import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 
 type ProjectMemberRole = 'viewer' | 'admin';
 
@@ -54,6 +55,7 @@ interface ProjectMember {
     NgIcon,
     LoadingIndicatorComponent,
     ModalComponent,
+    BreadcrumbComponent,
   ],
   viewProviders: [
     provideIcons({
@@ -401,5 +403,17 @@ export class ProjectDetailComponent implements OnInit {
     ]);
     this.members.update((members) => members.filter((m) => m.id !== memberId));
     this.toastService.info(`${member.name} removed from project`);
+  }
+
+  get breadcrumbSegments(): BreadcrumbSegment[] {
+    const segments: BreadcrumbSegment[] = [
+      { label: 'Projects', route: '/projects' }
+    ];
+
+    if (this.project()) {
+      segments.push({ label: this.project()!.name });
+    }
+
+    return segments;
   }
 }

@@ -1,9 +1,4 @@
-<!-- Breadcrumb -->
-<nav class="breadcrumb">
-  <a routerLink="/plugins">Plugins</a>
-  <ng-icon name="tablerChevronRight" size="0.875rem" />
-  <span>{{ plugin()?.name || 'Loading...' }}</span>
-</nav>
+<app-breadcrumb [segments]="breadcrumbSegments" />
 
 <!-- Loading State -->
 @if (isLoading()) {

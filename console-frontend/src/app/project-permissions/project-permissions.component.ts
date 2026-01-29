@@ -5,6 +5,7 @@ import { TitleService } from '../title.service';
 import { PermissionModalComponent } from '../permission-modal/permission-modal.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
+import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 interface Permission {
   name: string;
@@ -15,7 +16,7 @@ interface Permission {
 @Component({
   selector: 'app-project-permissions',
   standalone: true,
-  imports: [CommonModule, PermissionModalComponent, RouterLink, RouterLinkActive, NgIcon],
+  imports: [CommonModule, PermissionModalComponent, RouterLink, RouterLinkActive, NgIcon, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,

@@ -6,11 +6,12 @@ import { AUTHN } from '../../connect/tokens';
 import type { User } from '../../generated/authn/v1/authn_pb';
 import { TitleService } from '../title.service';
 import { firstValueFrom } from 'rxjs';
+import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, BreadcrumbComponent],
   templateUrl: './profile.component.html',
 })
 export class ProfileComponent implements OnInit {
