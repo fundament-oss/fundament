@@ -15,6 +15,7 @@ type CLI struct {
 	Organization OrganizationCmd `cmd:"" help:"Manage organizations."`
 	User         UserCmd         `cmd:"" help:"Manage users."`
 	Namespace    NamespaceCmd    `cmd:"" help:"Manage namespaces."`
+	Cluster      ClusterCmd      `cmd:"" help:"Manage clusters."`
 }
 
 // Context holds shared dependencies for command execution.
