@@ -6,6 +6,7 @@ import { TitleService } from '../title.service';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerX, tablerPencil, tablerCheck } from '@ng-icons/tabler-icons';
 import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
+import { OrganizationDataService } from '../organization-data.service';
 
 interface Namespace {
   id: string;
@@ -29,12 +30,13 @@ interface Namespace {
 export class NamespaceSettingsComponent implements OnInit {
   private titleService = inject(TitleService);
   private route = inject(ActivatedRoute);
+  private organizationDataService = inject(OrganizationDataService);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   projectId = signal<string>('');
   namespaceId = signal<string>('');
-  projectName = signal<string>(''); // Mock project name
+  projectName = signal<string>('');
 
   // Mock namespace data
   namespace = signal<Namespace>({
@@ -57,8 +59,15 @@ export class NamespaceSettingsComponent implements OnInit {
     const nsId = this.route.snapshot.params['namespaceId'];
     if (id) {
       this.projectId.set(id);
-      // Mock project name - in real app, this would be fetched from API
-      this.projectName.set('Project Alpha');
+      // Find the actual project name from organization data
+      const orgs = this.organizationDataService.organizations();
+      for (const org of orgs) {
+        const project = org.projects.find((p) => p.id === id);
+        if (project) {
+          this.projectName.set(project.name);
+          break;
+        }
+      }
     }
     if (nsId) {
       this.namespaceId.set(nsId);

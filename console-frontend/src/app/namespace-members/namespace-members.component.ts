@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
+import { OrganizationDataService } from '../organization-data.service';
 
 @Component({
   selector: 'app-namespace-members',
@@ -13,11 +14,12 @@ import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb
 export class NamespaceMembersComponent implements OnInit {
   private titleService = inject(TitleService);
   private route = inject(ActivatedRoute);
+  private organizationDataService = inject(OrganizationDataService);
 
   projectId = signal<string>('');
   namespaceId = signal<string>('');
-  projectName = signal<string>(''); // Mock project name
-  namespaceName = signal<string>(''); // Mock namespace name
+  projectName = signal<string>('');
+  namespaceName = signal<string>('');
 
   constructor() {
     this.titleService.setTitle('Namespace Members');
@@ -28,13 +30,30 @@ export class NamespaceMembersComponent implements OnInit {
     const nsId = this.route.snapshot.params['namespaceId'];
     if (id) {
       this.projectId.set(id);
-      // Mock project name - in real app, this would be fetched from API
-      this.projectName.set('Project Alpha');
+      // Find the actual project name from organization data
+      const orgs = this.organizationDataService.organizations();
+      for (const org of orgs) {
+        const project = org.projects.find((p) => p.id === id);
+        if (project) {
+          this.projectName.set(project.name);
+          break;
+        }
+      }
     }
     if (nsId) {
       this.namespaceId.set(nsId);
-      // Mock namespace name - in real app, this would be fetched from API
-      this.namespaceName.set('production');
+      // Find the actual namespace name from organization data
+      const orgs = this.organizationDataService.organizations();
+      for (const org of orgs) {
+        for (const project of org.projects) {
+          const namespace = project.namespaces.find((ns) => ns.id === nsId);
+          if (namespace) {
+            this.namespaceName.set(namespace.name);
+            break;
+          }
+        }
+        if (this.namespaceName()) break;
+      }
     }
   }
 
