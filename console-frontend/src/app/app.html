@@ -229,8 +229,7 @@
               <li>
                 <a
                   routerLink="/"
-                  routerLinkActive="active"
-                  [routerLinkActiveOptions]="{ exact: true }"
+                  [class.active]="isClustersActive()"
                   class="nav-link"
                   (click)="closeSidebar()"
                 >
