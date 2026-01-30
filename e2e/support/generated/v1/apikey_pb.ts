@@ -4,17 +4,16 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Timestamp } from "./common_pb";
 import { file_v1_common } from "./common_pb";
-import type { EmptySchema } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_empty } from "@bufbuild/protobuf/wkt";
+import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/apikey.proto.
  */
 export const file_v1_apikey: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9hcGlrZXkucHJvdG8SD29yZ2FuaXphdGlvbi52MSL6AQoGQVBJS2V5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJEi4KCmV4cGlyZXNfYXQYKCABKAsyGi5vcmdhbml6YXRpb24udjEuVGltZXN0YW1wEjAKDGxhc3RfdXNlZF9hdBgyIAEoCzIaLm9yZ2FuaXphdGlvbi52MS5UaW1lc3RhbXASLgoKY3JlYXRlZF9hdBg8IAEoCzIaLm9yZ2FuaXphdGlvbi52MS5UaW1lc3RhbXASLgoKcmV2b2tlZF9hdBhGIAEoCzIaLm9yZ2FuaXphdGlvbi52MS5UaW1lc3RhbXAiVQoTQ3JlYXRlQVBJS2V5UmVxdWVzdBIMCgRuYW1lGAogASgJEhwKD2V4cGlyZXNfaW5fZGF5cxgUIAEoA0gAiAEBQhIKEF9leHBpcmVzX2luX2RheXMiRwoUQ3JlYXRlQVBJS2V5UmVzcG9uc2USCgoCaWQYCiABKAkSDQoFdG9rZW4YFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJIhQKEkxpc3RBUElLZXlzUmVxdWVzdCJAChNMaXN0QVBJS2V5c1Jlc3BvbnNlEikKCGFwaV9rZXlzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLkFQSUtleSImChBHZXRBUElLZXlSZXF1ZXN0EhIKCmFwaV9rZXlfaWQYCiABKAkiPQoRR2V0QVBJS2V5UmVzcG9uc2USKAoHYXBpX2tleRgKIAEoCzIXLm9yZ2FuaXphdGlvbi52MS5BUElLZXkiKQoTUmV2b2tlQVBJS2V5UmVxdWVzdBISCgphcGlfa2V5X2lkGAogASgJIikKE0RlbGV0ZUFQSUtleVJlcXVlc3QSEgoKYXBpX2tleV9pZBgKIAEoCTK2AwoNQVBJS2V5U2VydmljZRJbCgxDcmVhdGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuQ3JlYXRlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVBUElLZXlSZXNwb25zZRJYCgtMaXN0QVBJS2V5cxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0QVBJS2V5c1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdEFQSUtleXNSZXNwb25zZRJSCglHZXRBUElLZXkSIS5vcmdhbml6YXRpb24udjEuR2V0QVBJS2V5UmVxdWVzdBoiLm9yZ2FuaXphdGlvbi52MS5HZXRBUElLZXlSZXNwb25zZRJMCgxSZXZva2VBUElLZXkSJC5vcmdhbml6YXRpb24udjEuUmV2b2tlQVBJS2V5UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJMCgxEZWxldGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuRGVsZXRlQVBJS2V5UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_v1_common, file_google_protobuf_empty]);
+  fileDesc("Cg92MS9hcGlrZXkucHJvdG8SD29yZ2FuaXphdGlvbi52MSL6AQoGQVBJS2V5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJEi4KCmV4cGlyZXNfYXQYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGxhc3RfdXNlZF9hdBgyIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKY3JlYXRlZF9hdBg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKcmV2b2tlZF9hdBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiVQoTQ3JlYXRlQVBJS2V5UmVxdWVzdBIMCgRuYW1lGAogASgJEhwKD2V4cGlyZXNfaW5fZGF5cxgUIAEoA0gAiAEBQhIKEF9leHBpcmVzX2luX2RheXMiRwoUQ3JlYXRlQVBJS2V5UmVzcG9uc2USCgoCaWQYCiABKAkSDQoFdG9rZW4YFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJIhQKEkxpc3RBUElLZXlzUmVxdWVzdCJAChNMaXN0QVBJS2V5c1Jlc3BvbnNlEikKCGFwaV9rZXlzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLkFQSUtleSImChBHZXRBUElLZXlSZXF1ZXN0EhIKCmFwaV9rZXlfaWQYCiABKAkiPQoRR2V0QVBJS2V5UmVzcG9uc2USKAoHYXBpX2tleRgKIAEoCzIXLm9yZ2FuaXphdGlvbi52MS5BUElLZXkiKQoTUmV2b2tlQVBJS2V5UmVxdWVzdBISCgphcGlfa2V5X2lkGAogASgJIikKE0RlbGV0ZUFQSUtleVJlcXVlc3QSEgoKYXBpX2tleV9pZBgKIAEoCTK2AwoNQVBJS2V5U2VydmljZRJbCgxDcmVhdGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuQ3JlYXRlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVBUElLZXlSZXNwb25zZRJYCgtMaXN0QVBJS2V5cxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0QVBJS2V5c1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdEFQSUtleXNSZXNwb25zZRJSCglHZXRBUElLZXkSIS5vcmdhbml6YXRpb24udjEuR2V0QVBJS2V5UmVxdWVzdBoiLm9yZ2FuaXphdGlvbi52MS5HZXRBUElLZXlSZXNwb25zZRJMCgxSZXZva2VBUElLZXkSJC5vcmdhbml6YXRpb24udjEuUmV2b2tlQVBJS2V5UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJMCgxEZWxldGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuRGVsZXRlQVBJS2V5UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_v1_common, file_google_protobuf_timestamp, file_google_protobuf_empty]);
 
 /**
  * API key information (without sensitive data)
@@ -42,24 +41,24 @@ export type APIKey = Message<"organization.v1.APIKey"> & {
   /**
    * null if never expires
    *
-   * @generated from field: organization.v1.Timestamp expires_at = 40;
+   * @generated from field: google.protobuf.Timestamp expires_at = 40;
    */
   expiresAt?: Timestamp;
 
   /**
-   * @generated from field: organization.v1.Timestamp last_used_at = 50;
+   * @generated from field: google.protobuf.Timestamp last_used_at = 50;
    */
   lastUsedAt?: Timestamp;
 
   /**
-   * @generated from field: organization.v1.Timestamp created_at = 60;
+   * @generated from field: google.protobuf.Timestamp created_at = 60;
    */
   createdAt?: Timestamp;
 
   /**
    * null if not revoked
    *
-   * @generated from field: organization.v1.Timestamp revoked_at = 70;
+   * @generated from field: google.protobuf.Timestamp revoked_at = 70;
    */
   revokedAt?: Timestamp;
 };

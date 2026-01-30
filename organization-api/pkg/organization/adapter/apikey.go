@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/models"
@@ -27,24 +28,16 @@ func FromAPIKey(record *db.APIKeyGetByIDRow) *organizationv1.APIKey {
 		Id:          record.ID.String(),
 		Name:        record.Name,
 		TokenPrefix: record.TokenPrefix,
-		CreatedAt: &organizationv1.Timestamp{
-			Value: record.Created.Time.Format(time.RFC3339),
-		},
+		CreatedAt:   timestamppb.New(record.Created.Time),
 	}
 	if record.Expires.Valid {
-		apiKey.ExpiresAt = &organizationv1.Timestamp{
-			Value: record.Expires.Time.Format(time.RFC3339),
-		}
+		apiKey.ExpiresAt = timestamppb.New(record.Expires.Time)
 	}
 	if record.LastUsed.Valid {
-		apiKey.LastUsedAt = &organizationv1.Timestamp{
-			Value: record.LastUsed.Time.Format(time.RFC3339),
-		}
+		apiKey.LastUsedAt = timestamppb.New(record.LastUsed.Time)
 	}
 	if record.Revoked.Valid {
-		apiKey.RevokedAt = &organizationv1.Timestamp{
-			Value: record.Revoked.Time.Format(time.RFC3339),
-		}
+		apiKey.RevokedAt = timestamppb.New(record.Revoked.Time)
 	}
 	return apiKey
 }
