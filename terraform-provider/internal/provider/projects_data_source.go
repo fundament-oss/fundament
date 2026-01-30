@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -138,7 +139,7 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		state.Projects[i] = ProjectModel{
 			ID:        types.StringValue(project.Id),
 			Name:      types.StringValue(project.Name),
-			CreatedAt: types.StringValue(project.CreatedAt.Value),
+			CreatedAt: types.StringValue(project.CreatedAt.AsTime().Format(time.RFC3339)),
 		}
 	}
 

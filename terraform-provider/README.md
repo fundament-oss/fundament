@@ -81,7 +81,7 @@ provider "fundament" {
 
 You can obtain a token by:
 
-1. Logging into the Fundament console and extracting the token from the `fundament_auth` cookie (possibly remove the part starting with the last dot, since there should only be 3 segments in the JWT)
+1. Logging into the Fundament console and extracting the token from the `fundament_auth` cookie
 2. Using the authn-api's password grant flow
 
 The token contains your organization ID and is used for all API requests.

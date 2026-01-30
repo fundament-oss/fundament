@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -140,7 +141,7 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		if ns.Id == config.ID.ValueString() {
 			config.Name = types.StringValue(ns.Name)
 			config.ProjectID = types.StringValue(ns.ProjectId)
-			config.CreatedAt = types.StringValue(ns.CreatedAt.Value)
+			config.CreatedAt = types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339))
 			found = true
 			break
 		}

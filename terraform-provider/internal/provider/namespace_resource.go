@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -182,7 +183,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	var found bool
 	for _, ns := range listResp.Msg.Namespaces {
 		if ns.Id == plan.ID.ValueString() {
-			plan.CreatedAt = types.StringValue(ns.CreatedAt.Value)
+			plan.CreatedAt = types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339))
 			found = true
 			break
 		}
@@ -256,7 +257,7 @@ func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 		if ns.Id == state.ID.ValueString() {
 			state.Name = types.StringValue(ns.Name)
 			state.ProjectID = types.StringValue(ns.ProjectId)
-			state.CreatedAt = types.StringValue(ns.CreatedAt.Value)
+			state.CreatedAt = types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339))
 			found = true
 			break
 		}

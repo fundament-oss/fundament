@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -135,7 +136,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Map response to state
-	plan.CreatedAt = types.StringValue(getResp.Msg.Project.CreatedAt.Value)
+	plan.CreatedAt = types.StringValue(getResp.Msg.Project.CreatedAt.AsTime().Format(time.RFC3339))
 
 	tflog.Info(ctx, "Created project", map[string]any{
 		"id": plan.ID.ValueString(),
@@ -192,7 +193,7 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	// Map response to state
 	state.ID = types.StringValue(project.Id)
 	state.Name = types.StringValue(project.Name)
-	state.CreatedAt = types.StringValue(project.CreatedAt.Value)
+	state.CreatedAt = types.StringValue(project.CreatedAt.AsTime().Format(time.RFC3339))
 
 	tflog.Debug(ctx, "Read project successfully", map[string]any{
 		"id": state.ID.ValueString(),
@@ -286,7 +287,7 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 	// Update the plan with the server response
 	plan.ID = types.StringValue(project.Id)
 	plan.Name = types.StringValue(project.Name)
-	plan.CreatedAt = types.StringValue(project.CreatedAt.Value)
+	plan.CreatedAt = types.StringValue(project.CreatedAt.AsTime().Format(time.RFC3339))
 
 	tflog.Info(ctx, "Updated project", map[string]any{
 		"id": plan.ID.ValueString(),

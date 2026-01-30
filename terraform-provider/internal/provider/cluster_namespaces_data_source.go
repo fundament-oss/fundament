@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -166,7 +167,7 @@ func (d *ClusterNamespacesDataSource) Read(ctx context.Context, req datasource.R
 			ID:        types.StringValue(ns.Id),
 			Name:      types.StringValue(ns.Name),
 			ProjectID: types.StringValue(ns.ProjectId),
-			CreatedAt: types.StringValue(ns.CreatedAt.Value),
+			CreatedAt: types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339)),
 		}
 	}
 
