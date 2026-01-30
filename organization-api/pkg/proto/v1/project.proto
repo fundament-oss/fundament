@@ -16,6 +16,9 @@ service ProjectService {
   // Get detailed information about a specific project
   rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
 
+  // Get a project by name
+  rpc GetProjectByName(GetProjectByNameRequest) returns (GetProjectResponse);
+
   // Create a new project
   rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
 
@@ -40,6 +43,11 @@ message ListProjectsResponse {
 // Get project request
 message GetProjectRequest {
   string project_id = 10;
+}
+
+// Get project by name request
+message GetProjectByNameRequest {
+  string name = 10;
 }
 
 // Get project response

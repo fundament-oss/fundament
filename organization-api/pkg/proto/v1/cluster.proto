@@ -16,6 +16,9 @@ service ClusterService {
   // Get detailed information about a specific cluster
   rpc GetCluster(GetClusterRequest) returns (GetClusterResponse);
 
+  // Get a cluster by name
+  rpc GetClusterByName(GetClusterByNameRequest) returns (GetClusterResponse);
+
   // Create a new cluster
   rpc CreateCluster(CreateClusterRequest) returns (CreateClusterResponse);
 
@@ -58,6 +61,12 @@ service ClusterService {
   // List namespaces for a cluster
   rpc ListClusterNamespaces(ListClusterNamespacesRequest) returns (ListClusterNamespacesResponse);
 
+  // Get a namespace by cluster name and namespace name
+  rpc GetNamespaceByClusterAndName(GetNamespaceByClusterAndNameRequest) returns (GetNamespaceByClusterAndNameResponse);
+
+  // Get a namespace by project name and namespace name
+  rpc GetNamespaceByProjectAndName(GetNamespaceByProjectAndNameRequest) returns (GetNamespaceByProjectAndNameResponse);
+
   // Create a namespace in a cluster
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse);
 
@@ -86,6 +95,11 @@ message ClusterSummary {
 // Get cluster request
 message GetClusterRequest {
   string cluster_id = 10;
+}
+
+// Get cluster by name request
+message GetClusterByNameRequest {
+  string name = 10;
 }
 
 // Get cluster response
@@ -309,4 +323,26 @@ message CreateNamespaceResponse {
 // Delete namespace request
 message DeleteNamespaceRequest {
   string namespace_id = 10;
+}
+
+// Get namespace by cluster and name request
+message GetNamespaceByClusterAndNameRequest {
+  string cluster_name = 10;
+  string namespace_name = 20;
+}
+
+// Get namespace by cluster and name response
+message GetNamespaceByClusterAndNameResponse {
+  ClusterNamespace namespace = 10;
+}
+
+// Get namespace by project and name request
+message GetNamespaceByProjectAndNameRequest {
+  string project_name = 10;
+  string namespace_name = 20;
+}
+
+// Get namespace by project and name response
+message GetNamespaceByProjectAndNameResponse {
+  ClusterNamespace namespace = 10;
 }
