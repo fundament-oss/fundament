@@ -1,0 +1,40 @@
+name: Terraform Provider
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - terraform-provider/**
+      - go.mod
+      - go.sum
+      - .github/workflows/terraform-provider.yml
+  pull_request:
+    branches: [master]
+    paths:
+      - terraform-provider/**
+      - go.mod
+      - go.sum
+      - .github/workflows/terraform-provider.yml
+
+jobs:
+  build:
+    name: Build terraform-provider
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v3
+
+      - name: Build
+        run: mise exec -- just terraform-provider::build
+
+  test:
+    name: Test terraform-provider
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v3
+
+      - name: Unit tests
+        run: mise exec -- just terraform-provider::test
