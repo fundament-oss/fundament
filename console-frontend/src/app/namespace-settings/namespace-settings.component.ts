@@ -6,13 +6,15 @@ import { TitleService } from '../title.service';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerX, tablerPencil, tablerCheck } from '@ng-icons/tabler-icons';
 import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
-import { OrganizationDataService } from '../organization-data.service';
-
-interface Namespace {
-  id: string;
-  name: string;
-  created: string;
-}
+import { PROJECT } from '../../connect/tokens';
+import { create } from '@bufbuild/protobuf';
+import {
+  GetProjectRequestSchema,
+  ListProjectNamespacesRequestSchema,
+  type ProjectNamespace,
+} from '../../generated/v1/project_pb';
+import { firstValueFrom } from 'rxjs';
+import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 
 @Component({
   selector: 'app-namespace-settings',
@@ -30,20 +32,14 @@ interface Namespace {
 export class NamespaceSettingsComponent implements OnInit {
   private titleService = inject(TitleService);
   private route = inject(ActivatedRoute);
-  private organizationDataService = inject(OrganizationDataService);
+  private projectClient = inject(PROJECT);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   projectId = signal<string>('');
   namespaceId = signal<string>('');
   projectName = signal<string>('');
-
-  // Mock namespace data
-  namespace = signal<Namespace>({
-    id: '660e8400-e29b-41d4-a716-446655440000',
-    name: 'production',
-    created: new Date().toISOString(),
-  });
+  namespace = signal<ProjectNamespace | undefined>(undefined);
 
   isEditing = signal(false);
   editingName = signal('');
@@ -54,23 +50,45 @@ export class NamespaceSettingsComponent implements OnInit {
     this.titleService.setTitle('Namespace Settings');
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     const id = this.route.snapshot.params['id'];
     const nsId = this.route.snapshot.params['namespaceId'];
-    if (id) {
+    if (id && nsId) {
       this.projectId.set(id);
-      // Find the actual project name from organization data
-      const orgs = this.organizationDataService.organizations();
-      for (const org of orgs) {
-        const project = org.projects.find((p) => p.id === id);
-        if (project) {
-          this.projectName.set(project.name);
-          break;
-        }
-      }
-    }
-    if (nsId) {
       this.namespaceId.set(nsId);
+      await this.loadNamespaceAndProject(id, nsId);
+    }
+  }
+
+  private async loadNamespaceAndProject(projectId: string, namespaceId: string) {
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      // Fetch project info for breadcrumb
+      const projectRequest = create(GetProjectRequestSchema, { projectId });
+      const projectResponse = await firstValueFrom(this.projectClient.getProject(projectRequest));
+      if (projectResponse.project) {
+        this.projectName.set(projectResponse.project.name);
+      }
+
+      // Fetch namespaces for this project
+      const namespacesRequest = create(ListProjectNamespacesRequestSchema, { projectId });
+      const namespacesResponse = await firstValueFrom(
+        this.projectClient.listProjectNamespaces(namespacesRequest),
+      );
+
+      // Find the specific namespace
+      const namespace = namespacesResponse.namespaces.find((ns) => ns.id === namespaceId);
+      if (namespace) {
+        this.namespace.set(namespace);
+      } else {
+        this.error.set('Namespace not found');
+      }
+    } catch (err) {
+      console.error('Error loading namespace:', err);
+      this.error.set('Failed to load namespace');
+    } finally {
+      this.loading.set(false);
     }
   }
 
@@ -115,7 +133,7 @@ export class NamespaceSettingsComponent implements OnInit {
     this.editingName.set('');
   }
 
-  saveEdit() {
+  async saveEdit() {
     const currentNamespace = this.namespace();
     const nameToSave = this.editingName();
 
@@ -126,28 +144,32 @@ export class NamespaceSettingsComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
 
-    // Simulate API call with timeout
-    setTimeout(() => {
-      // Update the local namespace with the new name
-      this.namespace.set({
-        ...currentNamespace,
-        name: nameToSave.trim(),
-      });
+    try {
+      // TODO: Update namespace API endpoint not yet implemented
+      // For now, show an error message
+      this.error.set('Namespace renaming is not yet supported');
       this.isEditing.set(false);
       this.editingName.set('');
+    } catch (err) {
+      console.error('Error updating namespace:', err);
+      this.error.set('Failed to update namespace name');
+    } finally {
       this.loading.set(false);
-    }, 500);
+    }
   }
 
-  formatDate(dateString: string): string {
+  formatDate(timestamp: Timestamp | undefined): string {
     try {
-      return new Date(dateString).toLocaleDateString('en-US', {
+      if (!timestamp) {
+        return '';
+      }
+      return timestampDate(timestamp).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
       });
     } catch {
-      return dateString;
+      return '';
     }
   }
 }
