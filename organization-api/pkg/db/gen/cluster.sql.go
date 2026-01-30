@@ -83,6 +83,33 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 	return i, err
 }
 
+const clusterGetByName = `-- name: ClusterGetByName :one
+SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
+FROM tenant.clusters
+WHERE organization_id = $1 AND name = $2 AND deleted IS NULL
+`
+
+type ClusterGetByNameParams struct {
+	OrganizationID uuid.UUID
+	Name           string
+}
+
+func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (TenantCluster, error) {
+	row := q.db.QueryRow(ctx, clusterGetByName, arg.OrganizationID, arg.Name)
+	var i TenantCluster
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Region,
+		&i.KubernetesVersion,
+		&i.Status,
+		&i.Created,
+		&i.Deleted,
+	)
+	return i, err
+}
+
 const clusterListByOrganizationID = `-- name: ClusterListByOrganizationID :many
 SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
 FROM tenant.clusters

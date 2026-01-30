@@ -71,6 +71,30 @@ func (q *Queries) ProjectGetByID(ctx context.Context, arg ProjectGetByIDParams) 
 	return i, err
 }
 
+const projectGetByName = `-- name: ProjectGetByName :one
+SELECT id, organization_id, name, created, deleted
+FROM tenant.projects
+WHERE organization_id = $1 AND name = $2 AND deleted IS NULL
+`
+
+type ProjectGetByNameParams struct {
+	OrganizationID uuid.UUID
+	Name           string
+}
+
+func (q *Queries) ProjectGetByName(ctx context.Context, arg ProjectGetByNameParams) (TenantProject, error) {
+	row := q.db.QueryRow(ctx, projectGetByName, arg.OrganizationID, arg.Name)
+	var i TenantProject
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Created,
+		&i.Deleted,
+	)
+	return i, err
+}
+
 const projectListByOrganizationID = `-- name: ProjectListByOrganizationID :many
 SELECT id, organization_id, name, created, deleted
 FROM tenant.projects

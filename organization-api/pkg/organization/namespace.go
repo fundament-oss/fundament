@@ -139,3 +139,51 @@ func (s *OrganizationServer) ListProjectNamespaces(
 		Namespaces: adapter.FromProjectNamespaces(namespaces),
 	}), nil
 }
+
+// GetNamespaceByClusterAndName gets a namespace by cluster name and namespace name
+func (s *OrganizationServer) GetNamespaceByClusterAndName(
+	ctx context.Context,
+	req *connect.Request[organizationv1.GetNamespaceByClusterAndNameRequest],
+) (*connect.Response[organizationv1.GetNamespaceByClusterAndNameResponse], error) {
+	organizationID, ok := OrganizationIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	namespace, err := s.queries.NamespaceGetByClusterAndName(ctx, db.NamespaceGetByClusterAndNameParams{
+		OrganizationID: organizationID,
+		ClusterName:    req.Msg.ClusterName,
+		NamespaceName:  req.Msg.NamespaceName,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get namespace: %w", err))
+	}
+
+	return connect.NewResponse(&organizationv1.GetNamespaceByClusterAndNameResponse{
+		Namespace: adapter.FromClusterNamespace(&namespace),
+	}), nil
+}
+
+// GetNamespaceByProjectAndName gets a namespace by project name and namespace name
+func (s *OrganizationServer) GetNamespaceByProjectAndName(
+	ctx context.Context,
+	req *connect.Request[organizationv1.GetNamespaceByProjectAndNameRequest],
+) (*connect.Response[organizationv1.GetNamespaceByProjectAndNameResponse], error) {
+	organizationID, ok := OrganizationIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	namespace, err := s.queries.NamespaceGetByProjectAndName(ctx, db.NamespaceGetByProjectAndNameParams{
+		OrganizationID: organizationID,
+		ProjectName:    req.Msg.ProjectName,
+		NamespaceName:  req.Msg.NamespaceName,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get namespace: %w", err))
+	}
+
+	return connect.NewResponse(&organizationv1.GetNamespaceByProjectAndNameResponse{
+		Namespace: adapter.FromClusterNamespace(&namespace),
+	}), nil
+}
