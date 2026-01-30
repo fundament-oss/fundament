@@ -150,6 +150,51 @@ func (x *GetProjectRequest) GetProjectId() string {
 	return ""
 }
 
+// Get project by name request
+type GetProjectByNameRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,10,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProjectByNameRequest) Reset() {
+	*x = GetProjectByNameRequest{}
+	mi := &file_v1_project_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProjectByNameRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProjectByNameRequest) ProtoMessage() {}
+
+func (x *GetProjectByNameRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProjectByNameRequest.ProtoReflect.Descriptor instead.
+func (*GetProjectByNameRequest) Descriptor() ([]byte, []int) {
+	return file_v1_project_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetProjectByNameRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 // Get project response
 type GetProjectResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -160,7 +205,7 @@ type GetProjectResponse struct {
 
 func (x *GetProjectResponse) Reset() {
 	*x = GetProjectResponse{}
-	mi := &file_v1_project_proto_msgTypes[3]
+	mi := &file_v1_project_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -172,7 +217,7 @@ func (x *GetProjectResponse) String() string {
 func (*GetProjectResponse) ProtoMessage() {}
 
 func (x *GetProjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_project_proto_msgTypes[3]
+	mi := &file_v1_project_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -185,7 +230,7 @@ func (x *GetProjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProjectResponse.ProtoReflect.Descriptor instead.
 func (*GetProjectResponse) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{3}
+	return file_v1_project_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetProjectResponse) GetProject() *Project {
@@ -207,7 +252,7 @@ type Project struct {
 
 func (x *Project) Reset() {
 	*x = Project{}
-	mi := &file_v1_project_proto_msgTypes[4]
+	mi := &file_v1_project_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -219,7 +264,7 @@ func (x *Project) String() string {
 func (*Project) ProtoMessage() {}
 
 func (x *Project) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_project_proto_msgTypes[4]
+	mi := &file_v1_project_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -232,7 +277,7 @@ func (x *Project) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Project.ProtoReflect.Descriptor instead.
 func (*Project) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{4}
+	return file_v1_project_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Project) GetId() string {
@@ -266,7 +311,7 @@ type CreateProjectRequest struct {
 
 func (x *CreateProjectRequest) Reset() {
 	*x = CreateProjectRequest{}
-	mi := &file_v1_project_proto_msgTypes[5]
+	mi := &file_v1_project_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -278,7 +323,7 @@ func (x *CreateProjectRequest) String() string {
 func (*CreateProjectRequest) ProtoMessage() {}
 
 func (x *CreateProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_project_proto_msgTypes[5]
+	mi := &file_v1_project_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -291,7 +336,7 @@ func (x *CreateProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProjectRequest.ProtoReflect.Descriptor instead.
 func (*CreateProjectRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{5}
+	return file_v1_project_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateProjectRequest) GetName() string {
@@ -311,7 +356,7 @@ type CreateProjectResponse struct {
 
 func (x *CreateProjectResponse) Reset() {
 	*x = CreateProjectResponse{}
-	mi := &file_v1_project_proto_msgTypes[6]
+	mi := &file_v1_project_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -323,7 +368,7 @@ func (x *CreateProjectResponse) String() string {
 func (*CreateProjectResponse) ProtoMessage() {}
 
 func (x *CreateProjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_project_proto_msgTypes[6]
+	mi := &file_v1_project_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -336,7 +381,7 @@ func (x *CreateProjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProjectResponse.ProtoReflect.Descriptor instead.
 func (*CreateProjectResponse) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{6}
+	return file_v1_project_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CreateProjectResponse) GetProjectId() string {
@@ -357,7 +402,7 @@ type UpdateProjectRequest struct {
 
 func (x *UpdateProjectRequest) Reset() {
 	*x = UpdateProjectRequest{}
-	mi := &file_v1_project_proto_msgTypes[7]
+	mi := &file_v1_project_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -369,7 +414,7 @@ func (x *UpdateProjectRequest) String() string {
 func (*UpdateProjectRequest) ProtoMessage() {}
 
 func (x *UpdateProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_project_proto_msgTypes[7]
+	mi := &file_v1_project_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -382,7 +427,7 @@ func (x *UpdateProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProjectRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProjectRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{7}
+	return file_v1_project_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *UpdateProjectRequest) GetProjectId() string {
@@ -409,7 +454,7 @@ type DeleteProjectRequest struct {
 
 func (x *DeleteProjectRequest) Reset() {
 	*x = DeleteProjectRequest{}
-	mi := &file_v1_project_proto_msgTypes[8]
+	mi := &file_v1_project_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -421,7 +466,7 @@ func (x *DeleteProjectRequest) String() string {
 func (*DeleteProjectRequest) ProtoMessage() {}
 
 func (x *DeleteProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_project_proto_msgTypes[8]
+	mi := &file_v1_project_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -434,7 +479,7 @@ func (x *DeleteProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProjectRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{8}
+	return file_v1_project_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteProjectRequest) GetProjectId() string {
@@ -454,7 +499,7 @@ type ListProjectNamespacesRequest struct {
 
 func (x *ListProjectNamespacesRequest) Reset() {
 	*x = ListProjectNamespacesRequest{}
-	mi := &file_v1_project_proto_msgTypes[9]
+	mi := &file_v1_project_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -466,7 +511,7 @@ func (x *ListProjectNamespacesRequest) String() string {
 func (*ListProjectNamespacesRequest) ProtoMessage() {}
 
 func (x *ListProjectNamespacesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_project_proto_msgTypes[9]
+	mi := &file_v1_project_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -479,7 +524,7 @@ func (x *ListProjectNamespacesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectNamespacesRequest.ProtoReflect.Descriptor instead.
 func (*ListProjectNamespacesRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{9}
+	return file_v1_project_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListProjectNamespacesRequest) GetProjectId() string {
@@ -499,7 +544,7 @@ type ListProjectNamespacesResponse struct {
 
 func (x *ListProjectNamespacesResponse) Reset() {
 	*x = ListProjectNamespacesResponse{}
-	mi := &file_v1_project_proto_msgTypes[10]
+	mi := &file_v1_project_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -511,7 +556,7 @@ func (x *ListProjectNamespacesResponse) String() string {
 func (*ListProjectNamespacesResponse) ProtoMessage() {}
 
 func (x *ListProjectNamespacesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_project_proto_msgTypes[10]
+	mi := &file_v1_project_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -524,7 +569,7 @@ func (x *ListProjectNamespacesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectNamespacesResponse.ProtoReflect.Descriptor instead.
 func (*ListProjectNamespacesResponse) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{10}
+	return file_v1_project_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListProjectNamespacesResponse) GetNamespaces() []*ProjectNamespace {
@@ -547,7 +592,7 @@ type ProjectNamespace struct {
 
 func (x *ProjectNamespace) Reset() {
 	*x = ProjectNamespace{}
-	mi := &file_v1_project_proto_msgTypes[11]
+	mi := &file_v1_project_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -559,7 +604,7 @@ func (x *ProjectNamespace) String() string {
 func (*ProjectNamespace) ProtoMessage() {}
 
 func (x *ProjectNamespace) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_project_proto_msgTypes[11]
+	mi := &file_v1_project_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -572,7 +617,7 @@ func (x *ProjectNamespace) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectNamespace.ProtoReflect.Descriptor instead.
 func (*ProjectNamespace) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{11}
+	return file_v1_project_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ProjectNamespace) GetId() string {
@@ -615,7 +660,10 @@ const file_v1_project_proto_rawDesc = "" +
 	"\x11GetProjectRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\"H\n" +
+	" \x01(\tR\tprojectId\"-\n" +
+	"\x17GetProjectByNameRequest\x12\x12\n" +
+	"\x04name\x18\n" +
+	" \x01(\tR\x04name\"H\n" +
 	"\x12GetProjectResponse\x122\n" +
 	"\aproject\x18\n" +
 	" \x01(\v2\x18.organization.v1.ProjectR\aproject\"h\n" +
@@ -658,11 +706,12 @@ const file_v1_project_proto_rawDesc = "" +
 	"\n" +
 	"cluster_id\x18\x1e \x01(\tR\tclusterId\x129\n" +
 	"\n" +
-	"created_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\xbc\x04\n" +
+	"created_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\x9f\x05\n" +
 	"\x0eProjectService\x12[\n" +
 	"\fListProjects\x12$.organization.v1.ListProjectsRequest\x1a%.organization.v1.ListProjectsResponse\x12U\n" +
 	"\n" +
-	"GetProject\x12\".organization.v1.GetProjectRequest\x1a#.organization.v1.GetProjectResponse\x12^\n" +
+	"GetProject\x12\".organization.v1.GetProjectRequest\x1a#.organization.v1.GetProjectResponse\x12a\n" +
+	"\x10GetProjectByName\x12(.organization.v1.GetProjectByNameRequest\x1a#.organization.v1.GetProjectResponse\x12^\n" +
 	"\rCreateProject\x12%.organization.v1.CreateProjectRequest\x1a&.organization.v1.CreateProjectResponse\x12N\n" +
 	"\rUpdateProject\x12%.organization.v1.UpdateProjectRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
 	"\rDeleteProject\x12%.organization.v1.DeleteProjectRequest\x1a\x16.google.protobuf.Empty\x12v\n" +
@@ -680,43 +729,46 @@ func file_v1_project_proto_rawDescGZIP() []byte {
 	return file_v1_project_proto_rawDescData
 }
 
-var file_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_v1_project_proto_goTypes = []any{
 	(*ListProjectsRequest)(nil),           // 0: organization.v1.ListProjectsRequest
 	(*ListProjectsResponse)(nil),          // 1: organization.v1.ListProjectsResponse
 	(*GetProjectRequest)(nil),             // 2: organization.v1.GetProjectRequest
-	(*GetProjectResponse)(nil),            // 3: organization.v1.GetProjectResponse
-	(*Project)(nil),                       // 4: organization.v1.Project
-	(*CreateProjectRequest)(nil),          // 5: organization.v1.CreateProjectRequest
-	(*CreateProjectResponse)(nil),         // 6: organization.v1.CreateProjectResponse
-	(*UpdateProjectRequest)(nil),          // 7: organization.v1.UpdateProjectRequest
-	(*DeleteProjectRequest)(nil),          // 8: organization.v1.DeleteProjectRequest
-	(*ListProjectNamespacesRequest)(nil),  // 9: organization.v1.ListProjectNamespacesRequest
-	(*ListProjectNamespacesResponse)(nil), // 10: organization.v1.ListProjectNamespacesResponse
-	(*ProjectNamespace)(nil),              // 11: organization.v1.ProjectNamespace
-	(*timestamppb.Timestamp)(nil),         // 12: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                 // 13: google.protobuf.Empty
+	(*GetProjectByNameRequest)(nil),       // 3: organization.v1.GetProjectByNameRequest
+	(*GetProjectResponse)(nil),            // 4: organization.v1.GetProjectResponse
+	(*Project)(nil),                       // 5: organization.v1.Project
+	(*CreateProjectRequest)(nil),          // 6: organization.v1.CreateProjectRequest
+	(*CreateProjectResponse)(nil),         // 7: organization.v1.CreateProjectResponse
+	(*UpdateProjectRequest)(nil),          // 8: organization.v1.UpdateProjectRequest
+	(*DeleteProjectRequest)(nil),          // 9: organization.v1.DeleteProjectRequest
+	(*ListProjectNamespacesRequest)(nil),  // 10: organization.v1.ListProjectNamespacesRequest
+	(*ListProjectNamespacesResponse)(nil), // 11: organization.v1.ListProjectNamespacesResponse
+	(*ProjectNamespace)(nil),              // 12: organization.v1.ProjectNamespace
+	(*timestamppb.Timestamp)(nil),         // 13: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                 // 14: google.protobuf.Empty
 }
 var file_v1_project_proto_depIdxs = []int32{
-	4,  // 0: organization.v1.ListProjectsResponse.projects:type_name -> organization.v1.Project
-	4,  // 1: organization.v1.GetProjectResponse.project:type_name -> organization.v1.Project
-	12, // 2: organization.v1.Project.created_at:type_name -> google.protobuf.Timestamp
-	11, // 3: organization.v1.ListProjectNamespacesResponse.namespaces:type_name -> organization.v1.ProjectNamespace
-	12, // 4: organization.v1.ProjectNamespace.created_at:type_name -> google.protobuf.Timestamp
+	5,  // 0: organization.v1.ListProjectsResponse.projects:type_name -> organization.v1.Project
+	5,  // 1: organization.v1.GetProjectResponse.project:type_name -> organization.v1.Project
+	13, // 2: organization.v1.Project.created_at:type_name -> google.protobuf.Timestamp
+	12, // 3: organization.v1.ListProjectNamespacesResponse.namespaces:type_name -> organization.v1.ProjectNamespace
+	13, // 4: organization.v1.ProjectNamespace.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 5: organization.v1.ProjectService.ListProjects:input_type -> organization.v1.ListProjectsRequest
 	2,  // 6: organization.v1.ProjectService.GetProject:input_type -> organization.v1.GetProjectRequest
-	5,  // 7: organization.v1.ProjectService.CreateProject:input_type -> organization.v1.CreateProjectRequest
-	7,  // 8: organization.v1.ProjectService.UpdateProject:input_type -> organization.v1.UpdateProjectRequest
-	8,  // 9: organization.v1.ProjectService.DeleteProject:input_type -> organization.v1.DeleteProjectRequest
-	9,  // 10: organization.v1.ProjectService.ListProjectNamespaces:input_type -> organization.v1.ListProjectNamespacesRequest
-	1,  // 11: organization.v1.ProjectService.ListProjects:output_type -> organization.v1.ListProjectsResponse
-	3,  // 12: organization.v1.ProjectService.GetProject:output_type -> organization.v1.GetProjectResponse
-	6,  // 13: organization.v1.ProjectService.CreateProject:output_type -> organization.v1.CreateProjectResponse
-	13, // 14: organization.v1.ProjectService.UpdateProject:output_type -> google.protobuf.Empty
-	13, // 15: organization.v1.ProjectService.DeleteProject:output_type -> google.protobuf.Empty
-	10, // 16: organization.v1.ProjectService.ListProjectNamespaces:output_type -> organization.v1.ListProjectNamespacesResponse
-	11, // [11:17] is the sub-list for method output_type
-	5,  // [5:11] is the sub-list for method input_type
+	3,  // 7: organization.v1.ProjectService.GetProjectByName:input_type -> organization.v1.GetProjectByNameRequest
+	6,  // 8: organization.v1.ProjectService.CreateProject:input_type -> organization.v1.CreateProjectRequest
+	8,  // 9: organization.v1.ProjectService.UpdateProject:input_type -> organization.v1.UpdateProjectRequest
+	9,  // 10: organization.v1.ProjectService.DeleteProject:input_type -> organization.v1.DeleteProjectRequest
+	10, // 11: organization.v1.ProjectService.ListProjectNamespaces:input_type -> organization.v1.ListProjectNamespacesRequest
+	1,  // 12: organization.v1.ProjectService.ListProjects:output_type -> organization.v1.ListProjectsResponse
+	4,  // 13: organization.v1.ProjectService.GetProject:output_type -> organization.v1.GetProjectResponse
+	4,  // 14: organization.v1.ProjectService.GetProjectByName:output_type -> organization.v1.GetProjectResponse
+	7,  // 15: organization.v1.ProjectService.CreateProject:output_type -> organization.v1.CreateProjectResponse
+	14, // 16: organization.v1.ProjectService.UpdateProject:output_type -> google.protobuf.Empty
+	14, // 17: organization.v1.ProjectService.DeleteProject:output_type -> google.protobuf.Empty
+	11, // 18: organization.v1.ProjectService.ListProjectNamespaces:output_type -> organization.v1.ListProjectNamespacesResponse
+	12, // [12:19] is the sub-list for method output_type
+	5,  // [5:12] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -728,14 +780,14 @@ func file_v1_project_proto_init() {
 		return
 	}
 	file_v1_common_proto_init()
-	file_v1_project_proto_msgTypes[7].OneofWrappers = []any{}
+	file_v1_project_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_project_proto_rawDesc), len(file_v1_project_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

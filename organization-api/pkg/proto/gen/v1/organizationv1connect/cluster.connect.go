@@ -40,6 +40,9 @@ const (
 	// ClusterServiceGetClusterProcedure is the fully-qualified name of the ClusterService's GetCluster
 	// RPC.
 	ClusterServiceGetClusterProcedure = "/organization.v1.ClusterService/GetCluster"
+	// ClusterServiceGetClusterByNameProcedure is the fully-qualified name of the ClusterService's
+	// GetClusterByName RPC.
+	ClusterServiceGetClusterByNameProcedure = "/organization.v1.ClusterService/GetClusterByName"
 	// ClusterServiceCreateClusterProcedure is the fully-qualified name of the ClusterService's
 	// CreateCluster RPC.
 	ClusterServiceCreateClusterProcedure = "/organization.v1.ClusterService/CreateCluster"
@@ -82,6 +85,12 @@ const (
 	// ClusterServiceListClusterNamespacesProcedure is the fully-qualified name of the ClusterService's
 	// ListClusterNamespaces RPC.
 	ClusterServiceListClusterNamespacesProcedure = "/organization.v1.ClusterService/ListClusterNamespaces"
+	// ClusterServiceGetNamespaceByClusterAndNameProcedure is the fully-qualified name of the
+	// ClusterService's GetNamespaceByClusterAndName RPC.
+	ClusterServiceGetNamespaceByClusterAndNameProcedure = "/organization.v1.ClusterService/GetNamespaceByClusterAndName"
+	// ClusterServiceGetNamespaceByProjectAndNameProcedure is the fully-qualified name of the
+	// ClusterService's GetNamespaceByProjectAndName RPC.
+	ClusterServiceGetNamespaceByProjectAndNameProcedure = "/organization.v1.ClusterService/GetNamespaceByProjectAndName"
 	// ClusterServiceCreateNamespaceProcedure is the fully-qualified name of the ClusterService's
 	// CreateNamespace RPC.
 	ClusterServiceCreateNamespaceProcedure = "/organization.v1.ClusterService/CreateNamespace"
@@ -96,6 +105,8 @@ type ClusterServiceClient interface {
 	ListClusters(context.Context, *connect.Request[v1.ListClustersRequest]) (*connect.Response[v1.ListClustersResponse], error)
 	// Get detailed information about a specific cluster
 	GetCluster(context.Context, *connect.Request[v1.GetClusterRequest]) (*connect.Response[v1.GetClusterResponse], error)
+	// Get a cluster by name
+	GetClusterByName(context.Context, *connect.Request[v1.GetClusterByNameRequest]) (*connect.Response[v1.GetClusterResponse], error)
 	// Create a new cluster
 	CreateCluster(context.Context, *connect.Request[v1.CreateClusterRequest]) (*connect.Response[v1.CreateClusterResponse], error)
 	// Update cluster configuration
@@ -124,6 +135,10 @@ type ClusterServiceClient interface {
 	RemoveInstall(context.Context, *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[emptypb.Empty], error)
 	// List namespaces for a cluster
 	ListClusterNamespaces(context.Context, *connect.Request[v1.ListClusterNamespacesRequest]) (*connect.Response[v1.ListClusterNamespacesResponse], error)
+	// Get a namespace by cluster name and namespace name
+	GetNamespaceByClusterAndName(context.Context, *connect.Request[v1.GetNamespaceByClusterAndNameRequest]) (*connect.Response[v1.GetNamespaceByClusterAndNameResponse], error)
+	// Get a namespace by project name and namespace name
+	GetNamespaceByProjectAndName(context.Context, *connect.Request[v1.GetNamespaceByProjectAndNameRequest]) (*connect.Response[v1.GetNamespaceByProjectAndNameResponse], error)
 	// Create a namespace in a cluster
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	// Delete a namespace
@@ -151,6 +166,12 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			httpClient,
 			baseURL+ClusterServiceGetClusterProcedure,
 			connect.WithSchema(clusterServiceMethods.ByName("GetCluster")),
+			connect.WithClientOptions(opts...),
+		),
+		getClusterByName: connect.NewClient[v1.GetClusterByNameRequest, v1.GetClusterResponse](
+			httpClient,
+			baseURL+ClusterServiceGetClusterByNameProcedure,
+			connect.WithSchema(clusterServiceMethods.ByName("GetClusterByName")),
 			connect.WithClientOptions(opts...),
 		),
 		createCluster: connect.NewClient[v1.CreateClusterRequest, v1.CreateClusterResponse](
@@ -237,6 +258,18 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(clusterServiceMethods.ByName("ListClusterNamespaces")),
 			connect.WithClientOptions(opts...),
 		),
+		getNamespaceByClusterAndName: connect.NewClient[v1.GetNamespaceByClusterAndNameRequest, v1.GetNamespaceByClusterAndNameResponse](
+			httpClient,
+			baseURL+ClusterServiceGetNamespaceByClusterAndNameProcedure,
+			connect.WithSchema(clusterServiceMethods.ByName("GetNamespaceByClusterAndName")),
+			connect.WithClientOptions(opts...),
+		),
+		getNamespaceByProjectAndName: connect.NewClient[v1.GetNamespaceByProjectAndNameRequest, v1.GetNamespaceByProjectAndNameResponse](
+			httpClient,
+			baseURL+ClusterServiceGetNamespaceByProjectAndNameProcedure,
+			connect.WithSchema(clusterServiceMethods.ByName("GetNamespaceByProjectAndName")),
+			connect.WithClientOptions(opts...),
+		),
 		createNamespace: connect.NewClient[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse](
 			httpClient,
 			baseURL+ClusterServiceCreateNamespaceProcedure,
@@ -254,24 +287,27 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 
 // clusterServiceClient implements ClusterServiceClient.
 type clusterServiceClient struct {
-	listClusters          *connect.Client[v1.ListClustersRequest, v1.ListClustersResponse]
-	getCluster            *connect.Client[v1.GetClusterRequest, v1.GetClusterResponse]
-	createCluster         *connect.Client[v1.CreateClusterRequest, v1.CreateClusterResponse]
-	updateCluster         *connect.Client[v1.UpdateClusterRequest, emptypb.Empty]
-	deleteCluster         *connect.Client[v1.DeleteClusterRequest, emptypb.Empty]
-	getClusterActivity    *connect.Client[v1.GetClusterActivityRequest, v1.GetClusterActivityResponse]
-	getKubeconfig         *connect.Client[v1.GetKubeconfigRequest, v1.GetKubeconfigResponse]
-	listNodePools         *connect.Client[v1.ListNodePoolsRequest, v1.ListNodePoolsResponse]
-	getNodePool           *connect.Client[v1.GetNodePoolRequest, v1.GetNodePoolResponse]
-	createNodePool        *connect.Client[v1.CreateNodePoolRequest, v1.CreateNodePoolResponse]
-	updateNodePool        *connect.Client[v1.UpdateNodePoolRequest, emptypb.Empty]
-	deleteNodePool        *connect.Client[v1.DeleteNodePoolRequest, emptypb.Empty]
-	listInstalls          *connect.Client[v1.ListInstallsRequest, v1.ListInstallsResponse]
-	addInstall            *connect.Client[v1.AddInstallRequest, v1.AddInstallResponse]
-	removeInstall         *connect.Client[v1.RemoveInstallRequest, emptypb.Empty]
-	listClusterNamespaces *connect.Client[v1.ListClusterNamespacesRequest, v1.ListClusterNamespacesResponse]
-	createNamespace       *connect.Client[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse]
-	deleteNamespace       *connect.Client[v1.DeleteNamespaceRequest, emptypb.Empty]
+	listClusters                 *connect.Client[v1.ListClustersRequest, v1.ListClustersResponse]
+	getCluster                   *connect.Client[v1.GetClusterRequest, v1.GetClusterResponse]
+	getClusterByName             *connect.Client[v1.GetClusterByNameRequest, v1.GetClusterResponse]
+	createCluster                *connect.Client[v1.CreateClusterRequest, v1.CreateClusterResponse]
+	updateCluster                *connect.Client[v1.UpdateClusterRequest, emptypb.Empty]
+	deleteCluster                *connect.Client[v1.DeleteClusterRequest, emptypb.Empty]
+	getClusterActivity           *connect.Client[v1.GetClusterActivityRequest, v1.GetClusterActivityResponse]
+	getKubeconfig                *connect.Client[v1.GetKubeconfigRequest, v1.GetKubeconfigResponse]
+	listNodePools                *connect.Client[v1.ListNodePoolsRequest, v1.ListNodePoolsResponse]
+	getNodePool                  *connect.Client[v1.GetNodePoolRequest, v1.GetNodePoolResponse]
+	createNodePool               *connect.Client[v1.CreateNodePoolRequest, v1.CreateNodePoolResponse]
+	updateNodePool               *connect.Client[v1.UpdateNodePoolRequest, emptypb.Empty]
+	deleteNodePool               *connect.Client[v1.DeleteNodePoolRequest, emptypb.Empty]
+	listInstalls                 *connect.Client[v1.ListInstallsRequest, v1.ListInstallsResponse]
+	addInstall                   *connect.Client[v1.AddInstallRequest, v1.AddInstallResponse]
+	removeInstall                *connect.Client[v1.RemoveInstallRequest, emptypb.Empty]
+	listClusterNamespaces        *connect.Client[v1.ListClusterNamespacesRequest, v1.ListClusterNamespacesResponse]
+	getNamespaceByClusterAndName *connect.Client[v1.GetNamespaceByClusterAndNameRequest, v1.GetNamespaceByClusterAndNameResponse]
+	getNamespaceByProjectAndName *connect.Client[v1.GetNamespaceByProjectAndNameRequest, v1.GetNamespaceByProjectAndNameResponse]
+	createNamespace              *connect.Client[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse]
+	deleteNamespace              *connect.Client[v1.DeleteNamespaceRequest, emptypb.Empty]
 }
 
 // ListClusters calls organization.v1.ClusterService.ListClusters.
@@ -282,6 +318,11 @@ func (c *clusterServiceClient) ListClusters(ctx context.Context, req *connect.Re
 // GetCluster calls organization.v1.ClusterService.GetCluster.
 func (c *clusterServiceClient) GetCluster(ctx context.Context, req *connect.Request[v1.GetClusterRequest]) (*connect.Response[v1.GetClusterResponse], error) {
 	return c.getCluster.CallUnary(ctx, req)
+}
+
+// GetClusterByName calls organization.v1.ClusterService.GetClusterByName.
+func (c *clusterServiceClient) GetClusterByName(ctx context.Context, req *connect.Request[v1.GetClusterByNameRequest]) (*connect.Response[v1.GetClusterResponse], error) {
+	return c.getClusterByName.CallUnary(ctx, req)
 }
 
 // CreateCluster calls organization.v1.ClusterService.CreateCluster.
@@ -354,6 +395,16 @@ func (c *clusterServiceClient) ListClusterNamespaces(ctx context.Context, req *c
 	return c.listClusterNamespaces.CallUnary(ctx, req)
 }
 
+// GetNamespaceByClusterAndName calls organization.v1.ClusterService.GetNamespaceByClusterAndName.
+func (c *clusterServiceClient) GetNamespaceByClusterAndName(ctx context.Context, req *connect.Request[v1.GetNamespaceByClusterAndNameRequest]) (*connect.Response[v1.GetNamespaceByClusterAndNameResponse], error) {
+	return c.getNamespaceByClusterAndName.CallUnary(ctx, req)
+}
+
+// GetNamespaceByProjectAndName calls organization.v1.ClusterService.GetNamespaceByProjectAndName.
+func (c *clusterServiceClient) GetNamespaceByProjectAndName(ctx context.Context, req *connect.Request[v1.GetNamespaceByProjectAndNameRequest]) (*connect.Response[v1.GetNamespaceByProjectAndNameResponse], error) {
+	return c.getNamespaceByProjectAndName.CallUnary(ctx, req)
+}
+
 // CreateNamespace calls organization.v1.ClusterService.CreateNamespace.
 func (c *clusterServiceClient) CreateNamespace(ctx context.Context, req *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error) {
 	return c.createNamespace.CallUnary(ctx, req)
@@ -370,6 +421,8 @@ type ClusterServiceHandler interface {
 	ListClusters(context.Context, *connect.Request[v1.ListClustersRequest]) (*connect.Response[v1.ListClustersResponse], error)
 	// Get detailed information about a specific cluster
 	GetCluster(context.Context, *connect.Request[v1.GetClusterRequest]) (*connect.Response[v1.GetClusterResponse], error)
+	// Get a cluster by name
+	GetClusterByName(context.Context, *connect.Request[v1.GetClusterByNameRequest]) (*connect.Response[v1.GetClusterResponse], error)
 	// Create a new cluster
 	CreateCluster(context.Context, *connect.Request[v1.CreateClusterRequest]) (*connect.Response[v1.CreateClusterResponse], error)
 	// Update cluster configuration
@@ -398,6 +451,10 @@ type ClusterServiceHandler interface {
 	RemoveInstall(context.Context, *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[emptypb.Empty], error)
 	// List namespaces for a cluster
 	ListClusterNamespaces(context.Context, *connect.Request[v1.ListClusterNamespacesRequest]) (*connect.Response[v1.ListClusterNamespacesResponse], error)
+	// Get a namespace by cluster name and namespace name
+	GetNamespaceByClusterAndName(context.Context, *connect.Request[v1.GetNamespaceByClusterAndNameRequest]) (*connect.Response[v1.GetNamespaceByClusterAndNameResponse], error)
+	// Get a namespace by project name and namespace name
+	GetNamespaceByProjectAndName(context.Context, *connect.Request[v1.GetNamespaceByProjectAndNameRequest]) (*connect.Response[v1.GetNamespaceByProjectAndNameResponse], error)
 	// Create a namespace in a cluster
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	// Delete a namespace
@@ -421,6 +478,12 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 		ClusterServiceGetClusterProcedure,
 		svc.GetCluster,
 		connect.WithSchema(clusterServiceMethods.ByName("GetCluster")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clusterServiceGetClusterByNameHandler := connect.NewUnaryHandler(
+		ClusterServiceGetClusterByNameProcedure,
+		svc.GetClusterByName,
+		connect.WithSchema(clusterServiceMethods.ByName("GetClusterByName")),
 		connect.WithHandlerOptions(opts...),
 	)
 	clusterServiceCreateClusterHandler := connect.NewUnaryHandler(
@@ -507,6 +570,18 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 		connect.WithSchema(clusterServiceMethods.ByName("ListClusterNamespaces")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clusterServiceGetNamespaceByClusterAndNameHandler := connect.NewUnaryHandler(
+		ClusterServiceGetNamespaceByClusterAndNameProcedure,
+		svc.GetNamespaceByClusterAndName,
+		connect.WithSchema(clusterServiceMethods.ByName("GetNamespaceByClusterAndName")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clusterServiceGetNamespaceByProjectAndNameHandler := connect.NewUnaryHandler(
+		ClusterServiceGetNamespaceByProjectAndNameProcedure,
+		svc.GetNamespaceByProjectAndName,
+		connect.WithSchema(clusterServiceMethods.ByName("GetNamespaceByProjectAndName")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clusterServiceCreateNamespaceHandler := connect.NewUnaryHandler(
 		ClusterServiceCreateNamespaceProcedure,
 		svc.CreateNamespace,
@@ -525,6 +600,8 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 			clusterServiceListClustersHandler.ServeHTTP(w, r)
 		case ClusterServiceGetClusterProcedure:
 			clusterServiceGetClusterHandler.ServeHTTP(w, r)
+		case ClusterServiceGetClusterByNameProcedure:
+			clusterServiceGetClusterByNameHandler.ServeHTTP(w, r)
 		case ClusterServiceCreateClusterProcedure:
 			clusterServiceCreateClusterHandler.ServeHTTP(w, r)
 		case ClusterServiceUpdateClusterProcedure:
@@ -553,6 +630,10 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 			clusterServiceRemoveInstallHandler.ServeHTTP(w, r)
 		case ClusterServiceListClusterNamespacesProcedure:
 			clusterServiceListClusterNamespacesHandler.ServeHTTP(w, r)
+		case ClusterServiceGetNamespaceByClusterAndNameProcedure:
+			clusterServiceGetNamespaceByClusterAndNameHandler.ServeHTTP(w, r)
+		case ClusterServiceGetNamespaceByProjectAndNameProcedure:
+			clusterServiceGetNamespaceByProjectAndNameHandler.ServeHTTP(w, r)
 		case ClusterServiceCreateNamespaceProcedure:
 			clusterServiceCreateNamespaceHandler.ServeHTTP(w, r)
 		case ClusterServiceDeleteNamespaceProcedure:
@@ -572,6 +653,10 @@ func (UnimplementedClusterServiceHandler) ListClusters(context.Context, *connect
 
 func (UnimplementedClusterServiceHandler) GetCluster(context.Context, *connect.Request[v1.GetClusterRequest]) (*connect.Response[v1.GetClusterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetCluster is not implemented"))
+}
+
+func (UnimplementedClusterServiceHandler) GetClusterByName(context.Context, *connect.Request[v1.GetClusterByNameRequest]) (*connect.Response[v1.GetClusterResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetClusterByName is not implemented"))
 }
 
 func (UnimplementedClusterServiceHandler) CreateCluster(context.Context, *connect.Request[v1.CreateClusterRequest]) (*connect.Response[v1.CreateClusterResponse], error) {
@@ -628,6 +713,14 @@ func (UnimplementedClusterServiceHandler) RemoveInstall(context.Context, *connec
 
 func (UnimplementedClusterServiceHandler) ListClusterNamespaces(context.Context, *connect.Request[v1.ListClusterNamespacesRequest]) (*connect.Response[v1.ListClusterNamespacesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.ListClusterNamespaces is not implemented"))
+}
+
+func (UnimplementedClusterServiceHandler) GetNamespaceByClusterAndName(context.Context, *connect.Request[v1.GetNamespaceByClusterAndNameRequest]) (*connect.Response[v1.GetNamespaceByClusterAndNameResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetNamespaceByClusterAndName is not implemented"))
+}
+
+func (UnimplementedClusterServiceHandler) GetNamespaceByProjectAndName(context.Context, *connect.Request[v1.GetNamespaceByProjectAndNameRequest]) (*connect.Response[v1.GetNamespaceByProjectAndNameResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetNamespaceByProjectAndName is not implemented"))
 }
 
 func (UnimplementedClusterServiceHandler) CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error) {

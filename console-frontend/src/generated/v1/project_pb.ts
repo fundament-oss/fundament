@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/project.proto.
  */
 export const file_v1_project: GenFile = /*@__PURE__*/
-  fileDesc("ChB2MS9wcm9qZWN0LnByb3RvEg9vcmdhbml6YXRpb24udjEiFQoTTGlzdFByb2plY3RzUmVxdWVzdCJCChRMaXN0UHJvamVjdHNSZXNwb25zZRIqCghwcm9qZWN0cxgKIAMoCzIYLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0IicKEUdldFByb2plY3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYCiABKAkiPwoSR2V0UHJvamVjdFJlc3BvbnNlEikKB3Byb2plY3QYCiABKAsyGC5vcmdhbml6YXRpb24udjEuUHJvamVjdCJTCgdQcm9qZWN0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSLgoKY3JlYXRlZF9hdBgeIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiJAoUQ3JlYXRlUHJvamVjdFJlcXVlc3QSDAoEbmFtZRgKIAEoCSIrChVDcmVhdGVQcm9qZWN0UmVzcG9uc2USEgoKcHJvamVjdF9pZBgKIAEoCSJGChRVcGRhdGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJEhEKBG5hbWUYFCABKAlIAIgBAUIHCgVfbmFtZSIqChREZWxldGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJIjIKHExpc3RQcm9qZWN0TmFtZXNwYWNlc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgKIAEoCSJWCh1MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXNwb25zZRI1CgpuYW1lc3BhY2VzGAogAygLMiEub3JnYW5pemF0aW9uLnYxLlByb2plY3ROYW1lc3BhY2UicAoQUHJvamVjdE5hbWVzcGFjZRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhIKCmNsdXN0ZXJfaWQYHiABKAkSLgoKY3JlYXRlZF9hdBgoIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAyvAQKDlByb2plY3RTZXJ2aWNlElsKDExpc3RQcm9qZWN0cxIkLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdHNSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0c1Jlc3BvbnNlElUKCkdldFByb2plY3QSIi5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdFJlcXVlc3QaIy5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdFJlc3BvbnNlEl4KDUNyZWF0ZVByb2plY3QSJS5vcmdhbml6YXRpb24udjEuQ3JlYXRlUHJvamVjdFJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuQ3JlYXRlUHJvamVjdFJlc3BvbnNlEk4KDVVwZGF0ZVByb2plY3QSJS5vcmdhbml6YXRpb24udjEuVXBkYXRlUHJvamVjdFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSTgoNRGVsZXRlUHJvamVjdBIlLm9yZ2FuaXphdGlvbi52MS5EZWxldGVQcm9qZWN0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJ2ChVMaXN0UHJvamVjdE5hbWVzcGFjZXMSLS5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3ROYW1lc3BhY2VzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXNwb25zZUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_google_protobuf_timestamp, file_google_protobuf_empty, file_v1_common]);
+  fileDesc("ChB2MS9wcm9qZWN0LnByb3RvEg9vcmdhbml6YXRpb24udjEiFQoTTGlzdFByb2plY3RzUmVxdWVzdCJCChRMaXN0UHJvamVjdHNSZXNwb25zZRIqCghwcm9qZWN0cxgKIAMoCzIYLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0IicKEUdldFByb2plY3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYCiABKAkiJwoXR2V0UHJvamVjdEJ5TmFtZVJlcXVlc3QSDAoEbmFtZRgKIAEoCSI/ChJHZXRQcm9qZWN0UmVzcG9uc2USKQoHcHJvamVjdBgKIAEoCzIYLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0IlMKB1Byb2plY3QSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIuCgpjcmVhdGVkX2F0GB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIkChRDcmVhdGVQcm9qZWN0UmVxdWVzdBIMCgRuYW1lGAogASgJIisKFUNyZWF0ZVByb2plY3RSZXNwb25zZRISCgpwcm9qZWN0X2lkGAogASgJIkYKFFVwZGF0ZVByb2plY3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYCiABKAkSEQoEbmFtZRgUIAEoCUgAiAEBQgcKBV9uYW1lIioKFERlbGV0ZVByb2plY3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYCiABKAkiMgocTGlzdFByb2plY3ROYW1lc3BhY2VzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJIlYKHUxpc3RQcm9qZWN0TmFtZXNwYWNlc1Jlc3BvbnNlEjUKCm5hbWVzcGFjZXMYCiADKAsyIS5vcmdhbml6YXRpb24udjEuUHJvamVjdE5hbWVzcGFjZSJwChBQcm9qZWN0TmFtZXNwYWNlEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSEgoKY2x1c3Rlcl9pZBgeIAEoCRIuCgpjcmVhdGVkX2F0GCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDKfBQoOUHJvamVjdFNlcnZpY2USWwoMTGlzdFByb2plY3RzEiQub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0c1JlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3RzUmVzcG9uc2USVQoKR2V0UHJvamVjdBIiLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0UmVxdWVzdBojLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0UmVzcG9uc2USYQoQR2V0UHJvamVjdEJ5TmFtZRIoLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0QnlOYW1lUmVxdWVzdBojLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0UmVzcG9uc2USXgoNQ3JlYXRlUHJvamVjdBIlLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVQcm9qZWN0UmVxdWVzdBomLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVQcm9qZWN0UmVzcG9uc2USTgoNVXBkYXRlUHJvamVjdBIlLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVQcm9qZWN0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJOCg1EZWxldGVQcm9qZWN0EiUub3JnYW5pemF0aW9uLnYxLkRlbGV0ZVByb2plY3RSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EnYKFUxpc3RQcm9qZWN0TmFtZXNwYWNlcxItLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXF1ZXN0Gi4ub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0TmFtZXNwYWNlc1Jlc3BvbnNlQlVaU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_google_protobuf_empty, file_v1_common]);
 
 /**
  * List projects request
@@ -69,6 +69,25 @@ export const GetProjectRequestSchema: GenMessage<GetProjectRequest> = /*@__PURE_
   messageDesc(file_v1_project, 2);
 
 /**
+ * Get project by name request
+ *
+ * @generated from message organization.v1.GetProjectByNameRequest
+ */
+export type GetProjectByNameRequest = Message<"organization.v1.GetProjectByNameRequest"> & {
+  /**
+   * @generated from field: string name = 10;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message organization.v1.GetProjectByNameRequest.
+ * Use `create(GetProjectByNameRequestSchema)` to create a new message.
+ */
+export const GetProjectByNameRequestSchema: GenMessage<GetProjectByNameRequest> = /*@__PURE__*/
+  messageDesc(file_v1_project, 3);
+
+/**
  * Get project response
  *
  * @generated from message organization.v1.GetProjectResponse
@@ -85,7 +104,7 @@ export type GetProjectResponse = Message<"organization.v1.GetProjectResponse"> &
  * Use `create(GetProjectResponseSchema)` to create a new message.
  */
 export const GetProjectResponseSchema: GenMessage<GetProjectResponse> = /*@__PURE__*/
-  messageDesc(file_v1_project, 3);
+  messageDesc(file_v1_project, 4);
 
 /**
  * Project information
@@ -114,7 +133,7 @@ export type Project = Message<"organization.v1.Project"> & {
  * Use `create(ProjectSchema)` to create a new message.
  */
 export const ProjectSchema: GenMessage<Project> = /*@__PURE__*/
-  messageDesc(file_v1_project, 4);
+  messageDesc(file_v1_project, 5);
 
 /**
  * Create project request
@@ -133,7 +152,7 @@ export type CreateProjectRequest = Message<"organization.v1.CreateProjectRequest
  * Use `create(CreateProjectRequestSchema)` to create a new message.
  */
 export const CreateProjectRequestSchema: GenMessage<CreateProjectRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 5);
+  messageDesc(file_v1_project, 6);
 
 /**
  * Create project response
@@ -152,7 +171,7 @@ export type CreateProjectResponse = Message<"organization.v1.CreateProjectRespon
  * Use `create(CreateProjectResponseSchema)` to create a new message.
  */
 export const CreateProjectResponseSchema: GenMessage<CreateProjectResponse> = /*@__PURE__*/
-  messageDesc(file_v1_project, 6);
+  messageDesc(file_v1_project, 7);
 
 /**
  * Update project request
@@ -176,7 +195,7 @@ export type UpdateProjectRequest = Message<"organization.v1.UpdateProjectRequest
  * Use `create(UpdateProjectRequestSchema)` to create a new message.
  */
 export const UpdateProjectRequestSchema: GenMessage<UpdateProjectRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 7);
+  messageDesc(file_v1_project, 8);
 
 /**
  * Delete project request
@@ -195,7 +214,7 @@ export type DeleteProjectRequest = Message<"organization.v1.DeleteProjectRequest
  * Use `create(DeleteProjectRequestSchema)` to create a new message.
  */
 export const DeleteProjectRequestSchema: GenMessage<DeleteProjectRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 8);
+  messageDesc(file_v1_project, 9);
 
 /**
  * List project namespaces request
@@ -214,7 +233,7 @@ export type ListProjectNamespacesRequest = Message<"organization.v1.ListProjectN
  * Use `create(ListProjectNamespacesRequestSchema)` to create a new message.
  */
 export const ListProjectNamespacesRequestSchema: GenMessage<ListProjectNamespacesRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 9);
+  messageDesc(file_v1_project, 10);
 
 /**
  * List project namespaces response
@@ -233,7 +252,7 @@ export type ListProjectNamespacesResponse = Message<"organization.v1.ListProject
  * Use `create(ListProjectNamespacesResponseSchema)` to create a new message.
  */
 export const ListProjectNamespacesResponseSchema: GenMessage<ListProjectNamespacesResponse> = /*@__PURE__*/
-  messageDesc(file_v1_project, 10);
+  messageDesc(file_v1_project, 11);
 
 /**
  * Project namespace information
@@ -267,7 +286,7 @@ export type ProjectNamespace = Message<"organization.v1.ProjectNamespace"> & {
  * Use `create(ProjectNamespaceSchema)` to create a new message.
  */
 export const ProjectNamespaceSchema: GenMessage<ProjectNamespace> = /*@__PURE__*/
-  messageDesc(file_v1_project, 11);
+  messageDesc(file_v1_project, 12);
 
 /**
  * ProjectService manages projects within an organization
@@ -293,6 +312,16 @@ export const ProjectService: GenService<{
   getProject: {
     methodKind: "unary";
     input: typeof GetProjectRequestSchema;
+    output: typeof GetProjectResponseSchema;
+  },
+  /**
+   * Get a project by name
+   *
+   * @generated from rpc organization.v1.ProjectService.GetProjectByName
+   */
+  getProjectByName: {
+    methodKind: "unary";
+    input: typeof GetProjectByNameRequestSchema;
     output: typeof GetProjectResponseSchema;
   },
   /**

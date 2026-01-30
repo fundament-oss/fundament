@@ -40,6 +40,9 @@ const (
 	// ProjectServiceGetProjectProcedure is the fully-qualified name of the ProjectService's GetProject
 	// RPC.
 	ProjectServiceGetProjectProcedure = "/organization.v1.ProjectService/GetProject"
+	// ProjectServiceGetProjectByNameProcedure is the fully-qualified name of the ProjectService's
+	// GetProjectByName RPC.
+	ProjectServiceGetProjectByNameProcedure = "/organization.v1.ProjectService/GetProjectByName"
 	// ProjectServiceCreateProjectProcedure is the fully-qualified name of the ProjectService's
 	// CreateProject RPC.
 	ProjectServiceCreateProjectProcedure = "/organization.v1.ProjectService/CreateProject"
@@ -60,6 +63,8 @@ type ProjectServiceClient interface {
 	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
 	// Get detailed information about a specific project
 	GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error)
+	// Get a project by name
+	GetProjectByName(context.Context, *connect.Request[v1.GetProjectByNameRequest]) (*connect.Response[v1.GetProjectResponse], error)
 	// Create a new project
 	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
 	// Update project configuration
@@ -93,6 +98,12 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(projectServiceMethods.ByName("GetProject")),
 			connect.WithClientOptions(opts...),
 		),
+		getProjectByName: connect.NewClient[v1.GetProjectByNameRequest, v1.GetProjectResponse](
+			httpClient,
+			baseURL+ProjectServiceGetProjectByNameProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("GetProjectByName")),
+			connect.WithClientOptions(opts...),
+		),
 		createProject: connect.NewClient[v1.CreateProjectRequest, v1.CreateProjectResponse](
 			httpClient,
 			baseURL+ProjectServiceCreateProjectProcedure,
@@ -124,6 +135,7 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 type projectServiceClient struct {
 	listProjects          *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
 	getProject            *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
+	getProjectByName      *connect.Client[v1.GetProjectByNameRequest, v1.GetProjectResponse]
 	createProject         *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
 	updateProject         *connect.Client[v1.UpdateProjectRequest, emptypb.Empty]
 	deleteProject         *connect.Client[v1.DeleteProjectRequest, emptypb.Empty]
@@ -138,6 +150,11 @@ func (c *projectServiceClient) ListProjects(ctx context.Context, req *connect.Re
 // GetProject calls organization.v1.ProjectService.GetProject.
 func (c *projectServiceClient) GetProject(ctx context.Context, req *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error) {
 	return c.getProject.CallUnary(ctx, req)
+}
+
+// GetProjectByName calls organization.v1.ProjectService.GetProjectByName.
+func (c *projectServiceClient) GetProjectByName(ctx context.Context, req *connect.Request[v1.GetProjectByNameRequest]) (*connect.Response[v1.GetProjectResponse], error) {
+	return c.getProjectByName.CallUnary(ctx, req)
 }
 
 // CreateProject calls organization.v1.ProjectService.CreateProject.
@@ -166,6 +183,8 @@ type ProjectServiceHandler interface {
 	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
 	// Get detailed information about a specific project
 	GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error)
+	// Get a project by name
+	GetProjectByName(context.Context, *connect.Request[v1.GetProjectByNameRequest]) (*connect.Response[v1.GetProjectResponse], error)
 	// Create a new project
 	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
 	// Update project configuration
@@ -193,6 +212,12 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 		ProjectServiceGetProjectProcedure,
 		svc.GetProject,
 		connect.WithSchema(projectServiceMethods.ByName("GetProject")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectServiceGetProjectByNameHandler := connect.NewUnaryHandler(
+		ProjectServiceGetProjectByNameProcedure,
+		svc.GetProjectByName,
+		connect.WithSchema(projectServiceMethods.ByName("GetProjectByName")),
 		connect.WithHandlerOptions(opts...),
 	)
 	projectServiceCreateProjectHandler := connect.NewUnaryHandler(
@@ -225,6 +250,8 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 			projectServiceListProjectsHandler.ServeHTTP(w, r)
 		case ProjectServiceGetProjectProcedure:
 			projectServiceGetProjectHandler.ServeHTTP(w, r)
+		case ProjectServiceGetProjectByNameProcedure:
+			projectServiceGetProjectByNameHandler.ServeHTTP(w, r)
 		case ProjectServiceCreateProjectProcedure:
 			projectServiceCreateProjectHandler.ServeHTTP(w, r)
 		case ProjectServiceUpdateProjectProcedure:
@@ -248,6 +275,10 @@ func (UnimplementedProjectServiceHandler) ListProjects(context.Context, *connect
 
 func (UnimplementedProjectServiceHandler) GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.GetProject is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) GetProjectByName(context.Context, *connect.Request[v1.GetProjectByNameRequest]) (*connect.Response[v1.GetProjectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.GetProjectByName is not implemented"))
 }
 
 func (UnimplementedProjectServiceHandler) CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error) {
