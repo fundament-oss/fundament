@@ -21,7 +21,14 @@ CREATE SCHEMA zappstore;
 ALTER SCHEMA zappstore OWNER TO fun_owner;
 -- ddl-end --
 
-SET search_path TO pg_catalog,public,tenant,zappstore;
+-- object: authn | type: SCHEMA --
+-- DROP SCHEMA IF EXISTS authn CASCADE;
+CREATE SCHEMA authn;
+-- ddl-end --
+ALTER SCHEMA authn OWNER TO fun_owner;
+-- ddl-end --
+
+SET search_path TO pg_catalog,public,tenant,zappstore,authn;
 -- ddl-end --
 
 -- object: tenant.organizations | type: TABLE --
@@ -118,6 +125,85 @@ CREATE TABLE tenant.users (
 );
 -- ddl-end --
 ALTER TABLE tenant.users OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authn.api_keys | type: TABLE --
+-- DROP TABLE IF EXISTS authn.api_keys CASCADE;
+CREATE TABLE authn.api_keys (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	organization_id uuid NOT NULL,
+	user_id uuid NOT NULL,
+	name text NOT NULL,
+	token_hash bytea NOT NULL,
+	token_prefix text NOT NULL,
+	expires timestamptz,
+	revoked timestamptz,
+	last_used timestamptz,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT api_keys_pk PRIMARY KEY (id),
+	CONSTRAINT api_keys_uq_token_hash UNIQUE (token_hash),
+	CONSTRAINT api_keys_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
+);
+-- ddl-end --
+ALTER TABLE authn.api_keys OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE authn.api_keys ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: api_keys_organization_policy | type: POLICY --
+-- DROP POLICY IF EXISTS api_keys_organization_policy ON authn.api_keys CASCADE;
+CREATE POLICY api_keys_organization_policy ON authn.api_keys
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (organization_id = current_setting('app.current_organization_id')::uuid AND user_id = current_setting('app.current_user_id')::uuid);
+-- ddl-end --
+
+-- object: authn.api_key_get_by_hash | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authn.api_key_get_by_hash(bytea) CASCADE;
+CREATE OR REPLACE FUNCTION authn.api_key_get_by_hash (IN p_token_hash bytea)
+	RETURNS authn.api_keys
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 10
+	AS 
+$function$
+DECLARE
+	result authn.api_keys;
+	key_record authn.api_keys;
+BEGIN
+	SELECT * INTO key_record FROM authn.api_keys WHERE token_hash = p_token_hash;
+
+	IF NOT FOUND THEN
+		RETURN NULL;
+	END IF;
+
+	IF key_record.deleted IS NOT NULL THEN
+		RAISE EXCEPTION 'API key has been deleted' USING HINT = 'api_key_deleted';
+	END IF;
+
+	IF key_record.revoked IS NOT NULL THEN
+		RAISE EXCEPTION 'API key has been revoked' USING HINT = 'api_key_revoked';
+	END IF;
+
+	IF key_record.expires IS NOT NULL AND key_record.expires <= NOW() THEN
+		RAISE EXCEPTION 'API key has expired' USING HINT = 'api_key_expired';
+	END IF;
+
+	UPDATE authn.api_keys
+	SET last_used = NOW()
+	WHERE id = key_record.id
+	RETURNING * INTO result;
+
+	RETURN result;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authn.api_key_get_by_hash(bytea) OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.clusters | type: TABLE --
@@ -380,6 +466,20 @@ REFERENCES tenant.organizations (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
+-- object: api_keys_fk_organization | type: CONSTRAINT --
+-- ALTER TABLE authn.api_keys DROP CONSTRAINT IF EXISTS api_keys_fk_organization CASCADE;
+ALTER TABLE authn.api_keys ADD CONSTRAINT api_keys_fk_organization FOREIGN KEY (organization_id)
+REFERENCES tenant.organizations (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: api_keys_fk_user | type: CONSTRAINT --
+-- ALTER TABLE authn.api_keys DROP CONSTRAINT IF EXISTS api_keys_fk_user CASCADE;
+ALTER TABLE authn.api_keys ADD CONSTRAINT api_keys_fk_user FOREIGN KEY (user_id)
+REFERENCES tenant.users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
 -- object: clusters_fk_organization | type: CONSTRAINT --
 -- ALTER TABLE tenant.clusters DROP CONSTRAINT IF EXISTS clusters_fk_organization CASCADE;
 ALTER TABLE tenant.clusters ADD CONSTRAINT clusters_fk_organization FOREIGN KEY (organization_id)
@@ -612,6 +712,38 @@ GRANT SELECT,INSERT,UPDATE
 -- object: grant_raw_1585801963 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE zappstore.tags
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_3e9a923f30" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authn
+   TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_rw_a72779b347 | type: PERMISSION --
+GRANT SELECT,UPDATE
+   ON TABLE authn.api_keys
+   TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_3b85772350 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE authn.api_keys
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_1f3f81f05c" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authn
    TO fun_fundament_api;
 
 -- ddl-end --

@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, ViewChild, ElementRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { AUTHN, ORGANIZATION } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
@@ -139,5 +140,10 @@ export class OrganizationComponent implements OnInit {
     } catch {
       return dateString;
     }
+  }
+
+  timestampToDate(timestamp: Timestamp | undefined): string {
+    if (!timestamp) return '';
+    return timestampDate(timestamp).toISOString();
   }
 }

@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -37,7 +37,6 @@ interface InstallWithCluster extends Install {
   standalone: true,
   imports: [
     CommonModule,
-    RouterLink,
     InstallPluginModalComponent,
     NgIcon,
     LoadingIndicatorComponent,

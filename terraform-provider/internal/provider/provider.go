@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"net/url"
+	"strings"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -22,14 +24,18 @@ type FundamentProvider struct {
 
 // FundamentProviderModel describes the provider data model.
 type FundamentProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
-	Token    types.String `tfsdk:"token"`
+	Endpoint      types.String `tfsdk:"endpoint"`
+	Token         types.String `tfsdk:"token"`
+	ApiKey        types.String `tfsdk:"api_key"`
+	AuthnEndpoint types.String `tfsdk:"authn_endpoint"`
 }
 
 // FundamentEnvConfig describes the environment variable configuration.
 type FundamentEnvConfig struct {
-	Endpoint string `env:"FUNDAMENT_ENDPOINT"`
-	Token    string `env:"FUNDAMENT_TOKEN"`
+	Endpoint      string `env:"FUNDAMENT_ENDPOINT"`
+	Token         string `env:"FUNDAMENT_TOKEN"`
+	ApiKey        string `env:"FUNDAMENT_API_KEY"`
+	AuthnEndpoint string `env:"FUNDAMENT_AUTHN_ENDPOINT"`
 }
 
 // New returns a function that creates a new FundamentProvider.
@@ -57,9 +63,18 @@ func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaReque
 				Optional:    true,
 			},
 			"token": schema.StringAttribute{
-				Description: "The JWT token for authenticating with the Fundament API. Can also be set via the FUNDAMENT_TOKEN environment variable.",
+				Description: "The JWT token for authenticating with the Fundament API. Can also be set via the FUNDAMENT_TOKEN environment variable. Mutually exclusive with api_key.",
 				Optional:    true,
 				Sensitive:   true,
+			},
+			"api_key": schema.StringAttribute{
+				Description: "API key for authenticating with the Fundament API. Can also be set via the FUNDAMENT_API_KEY environment variable. Mutually exclusive with token.",
+				Optional:    true,
+				Sensitive:   true,
+			},
+			"authn_endpoint": schema.StringAttribute{
+				Description: "The endpoint URL for the Fundament authentication API (for API key exchange). Can also be set via the FUNDAMENT_AUTHN_ENDPOINT environment variable. If not provided, derived from endpoint by replacing 'organization' with 'authn' in the subdomain.",
+				Optional:    true,
 			},
 		},
 	}
@@ -99,26 +114,72 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	// Get token: config takes precedence over environment variable
+	// Get authentication credentials: config takes precedence over environment variable
 	token := config.Token.ValueString()
 	if token == "" {
 		token = envConfig.Token
 	}
 
-	if token == "" {
+	apiKey := config.ApiKey.ValueString()
+	if apiKey == "" {
+		apiKey = envConfig.ApiKey
+	}
+
+	authnEndpoint := config.AuthnEndpoint.ValueString()
+	if authnEndpoint == "" {
+		authnEndpoint = envConfig.AuthnEndpoint
+	}
+
+	// Validate mutual exclusivity of token and api_key
+	if token != "" && apiKey != "" {
 		resp.Diagnostics.AddError(
-			"Missing Token",
-			"The provider cannot create the Fundament API client as there is a missing or empty value for the Fundament API token. "+
-				"Set the token value in the configuration or use the FUNDAMENT_TOKEN environment variable.",
+			"Invalid Authentication Configuration",
+			"Both 'token' and 'api_key' are provided. Please provide only one authentication method.",
 		)
 		return
 	}
 
-	// Create the Fundament client
-	tflog.Debug(ctx, "Creating Fundament client", map[string]any{
-		"endpoint": endpoint,
-	})
-	client := NewFundamentClient(endpoint, token)
+	if token == "" && apiKey == "" {
+		resp.Diagnostics.AddError(
+			"Missing Authentication",
+			"Either 'token' (FUNDAMENT_TOKEN) or 'api_key' (FUNDAMENT_API_KEY) must be provided.",
+		)
+		return
+	}
+
+	var client *FundamentClient
+
+	if apiKey != "" {
+		// API key authentication - derive authn_endpoint if not provided
+		if authnEndpoint == "" {
+			authnEndpoint = deriveAuthnEndpoint(endpoint)
+		}
+
+		tflog.Debug(ctx, "Using API key authentication", map[string]any{
+			"endpoint":       endpoint,
+			"authn_endpoint": authnEndpoint,
+		})
+
+		tm := NewTokenManager(apiKey, authnEndpoint)
+
+		// Validate API key by doing initial token exchange
+		_, err := tm.GetToken(ctx)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"API Key Authentication Failed",
+				"Failed to exchange API key for token: "+err.Error(),
+			)
+			return
+		}
+
+		client = NewFundamentClientWithTokenManager(endpoint, tm)
+	} else {
+		// Direct token authentication
+		tflog.Debug(ctx, "Using token authentication", map[string]any{
+			"endpoint": endpoint,
+		})
+		client = NewFundamentClient(endpoint, token)
+	}
 
 	tflog.Info(ctx, "Fundament provider configured successfully")
 
@@ -129,12 +190,32 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 
 // Resources defines the resources implemented in the provider.
 func (p *FundamentProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		NewClusterResource,
+		NewProjectResource,
+	}
 }
 
 // DataSources defines the data sources implemented in the provider.
 func (p *FundamentProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		NewClusterDataSource,
 		NewClustersDataSource,
+		NewProjectDataSource,
+		NewProjectsDataSource,
 	}
+}
+
+// deriveAuthnEndpoint derives the authn endpoint from the organization endpoint
+// by replacing 'organization' with 'authn' in the subdomain.
+func deriveAuthnEndpoint(organizationEndpoint string) string {
+	u, err := url.Parse(organizationEndpoint)
+	if err != nil {
+		// Fall back to simple string replacement if URL parsing fails
+		return strings.Replace(organizationEndpoint, "organization", "authn", 1)
+	}
+
+	// Replace "organization" with "authn" in the host
+	u.Host = strings.Replace(u.Host, "organization", "authn", 1)
+	return u.String()
 }

@@ -13,6 +13,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -112,7 +113,7 @@ export class OrganizationMembersComponent implements OnInit {
         role: member.role,
         isCurrentUser: currentUser?.id === member.id,
         isPending: !member.externalId,
-        createdAt: member.createdAt?.value ? new Date(member.createdAt.value) : undefined,
+        createdAt: member.createdAt ? timestampDate(member.createdAt) : undefined,
       }));
 
       this.allMembers.set(members);

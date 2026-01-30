@@ -26,6 +26,7 @@ authnApi:
 organizationApi:
   enabled: true
   replicas: 1
+  logLevel: debug
 
 consoleFrontend:
   enabled: true

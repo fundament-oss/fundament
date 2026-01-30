@@ -2,8 +2,9 @@ syntax = "proto3";
 
 package organization.v1;
 
-import "v1/common.proto";
+import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
+import "v1/common.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
@@ -50,7 +51,7 @@ message GetProjectResponse {
 message Project {
   string id = 10;
   string name = 20;
-  Timestamp created_at = 30;
+  google.protobuf.Timestamp created_at = 30;
 }
 
 // Create project request
@@ -89,5 +90,5 @@ message ProjectNamespace {
   string id = 10;
   string name = 20;
   string cluster_id = 30;
-  Timestamp created_at = 40;
+  google.protobuf.Timestamp created_at = 40;
 }

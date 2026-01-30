@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { PROJECT } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
@@ -69,5 +70,10 @@ export class ProjectsComponent implements OnInit {
       month: 'long',
       day: 'numeric',
     });
+  }
+
+  timestampToDate(timestamp: Timestamp | undefined): string | undefined {
+    if (!timestamp) return undefined;
+    return timestampDate(timestamp).toISOString();
   }
 }

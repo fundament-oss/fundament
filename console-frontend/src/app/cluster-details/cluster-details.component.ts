@@ -10,6 +10,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -240,6 +241,11 @@ export class ClusterDetailsComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  timestampToDate(timestamp: Timestamp | undefined): string {
+    if (!timestamp) return '';
+    return timestampDate(timestamp).toISOString();
   }
 
   getUsagePercentage(used: number, limit: number): number {

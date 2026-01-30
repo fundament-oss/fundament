@@ -10,6 +10,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -294,6 +295,11 @@ export class ProjectDetailComponent implements OnInit {
       month: 'long',
       day: 'numeric',
     });
+  }
+
+  timestampToDate(timestamp: Timestamp | undefined): string | undefined {
+    if (!timestamp) return undefined;
+    return timestampDate(timestamp).toISOString();
   }
 
   getNameError(): string {
