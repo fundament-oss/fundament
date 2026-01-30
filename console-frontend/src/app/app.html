@@ -296,6 +296,18 @@
             } @else if (getSelectedType() === 'project') {
               <li>
                 <a
+                  [routerLink]="['/projects', selectedProjectId()]"
+                  routerLinkActive="active"
+                  [routerLinkActiveOptions]="{ exact: true }"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <ng-icon name="tablerFolder" size="1.25rem" class="mr-3" />
+                  General
+                </a>
+              </li>
+              <li>
+                <a
                   [routerLink]="['/projects', selectedProjectId(), 'namespaces']"
                   routerLinkActive="active"
                   class="nav-link"

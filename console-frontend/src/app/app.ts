@@ -1,5 +1,6 @@
 import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { AuthnApiService } from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
@@ -122,10 +123,57 @@ export class App implements OnInit {
     versionMismatch$.subscribe((mismatch) => {
       this.apiVersionMismatch.set(mismatch);
     });
+
+    // Subscribe to route changes to update sidebar state based on current route
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe((event: NavigationEnd) => {
+        this.updateSidebarStateFromRoute(event.url);
+      });
+
+    // Initialize sidebar state from current route
+    this.updateSidebarStateFromRoute(this.router.url);
   }
 
   reloadApp() {
     window.location.reload();
+  }
+
+  // Update sidebar state based on current route
+  private updateSidebarStateFromRoute(url: string) {
+    // Match project routes: /projects/:projectId or /projects/:projectId/...
+    const projectRouteMatch = url.match(/^\/projects\/([^/]+)/);
+
+    if (projectRouteMatch) {
+      const projectId = projectRouteMatch[1];
+
+      // Check if this is a namespace route: /projects/:projectId/namespaces/:namespaceId
+      const namespaceRouteMatch = url.match(/^\/projects\/[^/]+\/namespaces\/([^/]+)/);
+
+      if (namespaceRouteMatch) {
+        const namespaceId = namespaceRouteMatch[1];
+        this.selectedNamespaceId.set(namespaceId);
+        this.selectedProjectId.set(projectId);
+        this.selectedOrgId.set(null);
+      } else {
+        // Project route (without namespace)
+        this.selectedProjectId.set(projectId);
+        this.selectedNamespaceId.set(null);
+        this.selectedOrgId.set(null);
+      }
+    } else {
+      // Organization routes or other routes
+      // Only update if we're not already in a valid state
+      if (this.selectedProjectId() || this.selectedNamespaceId()) {
+        // We're on an organization route, so select the organization
+        const orgs = this.organizationDataService.organizations();
+        if (orgs.length > 0) {
+          this.selectedOrgId.set(orgs[0].id);
+          this.selectedProjectId.set(null);
+          this.selectedNamespaceId.set(null);
+        }
+      }
+    }
   }
 
   // Check if current route is login
@@ -240,14 +288,14 @@ export class App implements OnInit {
   }
 
   selectProjectItem(projectId: string) {
-    // Select project and navigate to namespaces page
+    // Select project and navigate to project general page
     this.selectedProjectId.set(projectId);
     this.selectedOrgId.set(null);
     this.selectedNamespaceId.set(null);
 
     // Close modal and navigate
     this.selectorModalOpen.set(false);
-    this.router.navigate(['/projects', projectId, 'namespaces']);
+    this.router.navigate(['/projects', projectId]);
   }
 
   selectNamespaceItem(namespaceId: string) {
