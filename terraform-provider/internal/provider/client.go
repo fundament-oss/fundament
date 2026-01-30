@@ -11,6 +11,7 @@ import (
 // FundamentClient wraps the Connect RPC clients for the Fundament API.
 type FundamentClient struct {
 	ClusterService organizationv1connect.ClusterServiceClient
+	ProjectService organizationv1connect.ProjectServiceClient
 }
 
 // TokenSource provides authentication tokens.
@@ -68,5 +69,6 @@ func newFundamentClientWithTransport(endpoint string, transport http.RoundTrippe
 
 	return &FundamentClient{
 		ClusterService: organizationv1connect.NewClusterServiceClient(httpClient, endpoint),
+		ProjectService: organizationv1connect.NewProjectServiceClient(httpClient, endpoint),
 	}
 }
