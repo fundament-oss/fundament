@@ -1,7 +1,7 @@
 package adapter
 
 import (
-	"time"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -19,9 +19,7 @@ func FromInstall(i *db.ZappstoreInstall) *organizationv1.Install {
 	return &organizationv1.Install{
 		Id:       i.ID.String(),
 		PluginId: i.PluginID.String(),
-		CreatedAt: &organizationv1.Timestamp{
-			Value: i.Created.Time.Format(time.RFC3339),
-		},
+		CreatedAt: timestamppb.New(i.Created.Time),
 	}
 
 }

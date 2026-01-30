@@ -1,7 +1,7 @@
 package adapter
 
 import (
-	"time"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -20,9 +20,7 @@ func FromMemberListRow(m *db.MemberListByOrganizationIDRow) *organizationv1.Memb
 		Id:   m.ID.String(),
 		Name: m.Name,
 		Role: m.Role,
-		CreatedAt: &organizationv1.Timestamp{
-			Value: m.Created.Time.Format(time.RFC3339),
-		},
+		CreatedAt: timestamppb.New(m.Created.Time),
 	}
 
 	if m.ExternalID.Valid {
@@ -41,9 +39,7 @@ func FromMemberInviteRow(m *db.MemberInviteRow) *organizationv1.Member {
 		Id:   m.ID.String(),
 		Name: m.Name,
 		Role: m.Role,
-		CreatedAt: &organizationv1.Timestamp{
-			Value: m.Created.Time.Format(time.RFC3339),
-		},
+		CreatedAt: timestamppb.New(m.Created.Time),
 	}
 
 	if m.ExternalID.Valid {

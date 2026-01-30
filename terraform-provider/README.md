@@ -30,7 +30,7 @@ terraform {
 
 provider "fundament" {
   endpoint = "http://organization.127.0.0.1.nip.io:8080"
-  token    = var.fundament_token  # Or use FUNDAMENT_TOKEN environment variable
+  api_key  = var.fundament_api_key  # Or use FUNDAMENT_API_KEY environment variable
 }
 ```
 
@@ -39,11 +39,47 @@ provider "fundament" {
 | Name | Description | Required |
 |------|-------------|----------|
 | `endpoint` | The URL of the Fundament organization API | Yes |
-| `token` | JWT token for authentication. Can also be set via `FUNDAMENT_TOKEN` environment variable | Yes |
+| `api_key` | API key for authentication. Can also be set via `FUNDAMENT_API_KEY` environment variable. Mutually exclusive with `token`. | No* |
+| `token` | JWT token for authentication. Can also be set via `FUNDAMENT_TOKEN` environment variable. Mutually exclusive with `api_key`. | No* |
+| `authn_endpoint` | The URL of the Fundament authentication API (for API key exchange). Can also be set via `FUNDAMENT_AUTHN_ENDPOINT` environment variable. If not provided, it's automatically derived from the organization endpoint. | No |
+
+\* Either `api_key` or `token` must be provided.
 
 ### Authentication
 
-The provider uses JWT tokens for authentication. You can obtain a token by:
+The provider supports two authentication methods:
+
+#### API Key (Recommended)
+
+API keys provide a more convenient authentication method that automatically handles token exchange and refresh:
+
+```hcl
+provider "fundament" {
+  endpoint = "http://organization.127.0.0.1.nip.io:8080"
+  api_key  = var.fundament_api_key
+}
+```
+
+Or using environment variables:
+
+```bash
+export FUNDAMENT_API_KEY="your-api-key"
+```
+
+The provider automatically exchanges the API key for a JWT token and refreshes it as needed.
+
+#### JWT Token
+
+You can also authenticate directly with a JWT token:
+
+```hcl
+provider "fundament" {
+  endpoint = "http://organization.127.0.0.1.nip.io:8080"
+  token    = var.fundament_token
+}
+```
+
+You can obtain a token by:
 
 1. Logging into the Fundament console and extracting the token from the `fundament_auth` cookie
 2. Using the authn-api's password grant flow
@@ -194,7 +230,7 @@ just terraform-clean
 3. Navigate to the example directory and run tofu:
    ```bash
    cd terraform-provider/examples/data-sources/clusters
-   FUNDAMENT_TOKEN=your-jwt-token tofu plan
+   FUNDAMENT_API_KEY=your-api-key tofu plan
    ```
 
 ### Running Acceptance Tests
@@ -204,7 +240,7 @@ Acceptance tests run against a real Fundament API. To run them:
 ```bash
 export TF_ACC=1
 export FUNDAMENT_ENDPOINT="http://organization.127.0.0.1.nip.io:8080"
-export FUNDAMENT_TOKEN="your-jwt-token"
+export FUNDAMENT_API_KEY="your-api-key"  # Or use FUNDAMENT_TOKEN instead
 # Optional: for project filter tests
 export FUNDAMENT_TEST_PROJECT_ID="your-project-uuid"
 # Optional: for cluster data source tests

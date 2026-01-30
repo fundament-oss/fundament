@@ -15,10 +15,10 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/authn-api/pkg/model"
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )
@@ -53,31 +53,19 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 
 const AuthCookieName = "fundament_auth"
 
-// User represents user data for JWT generation.
-type User struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	Name           string
-	ExternalID     string
+func (s *AuthnServer) generateJWT(user *model.User, groups []string) (string, error) {
+	return s.generateJWTWithExpiry(user, groups, s.config.TokenExpiry)
 }
 
-type Claims struct {
-	jwt.RegisteredClaims
-	UserID         uuid.UUID `json:"user_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Groups         []string  `json:"groups"`
-	Name           string    `json:"name"`
-}
-
-func (s *AuthnServer) generateJWT(user *User, groups []string) (string, error) {
+func (s *AuthnServer) generateJWTWithExpiry(user *model.User, groups []string, expiry time.Duration) (string, error) {
 	now := time.Now()
 
-	claims := Claims{
+	claims := model.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "fundament-authn-api",
 			Subject:   user.ExternalID,
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(s.config.TokenExpiry)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
 		},
 		UserID:         user.ID,
 		OrganizationID: user.OrganizationID,
@@ -93,7 +81,7 @@ func (s *AuthnServer) generateJWT(user *User, groups []string) (string, error) {
 	return signed, nil
 }
 
-func (s *AuthnServer) validateRequest(header http.Header) (*Claims, error) {
+func (s *AuthnServer) validateRequest(header http.Header) (*model.Claims, error) {
 	authHeader := header.Get("Authorization")
 	if len(authHeader) < 8 || authHeader[:7] != "Bearer " {
 		s.logger.Debug("missing or invalid authorization header")
@@ -102,7 +90,7 @@ func (s *AuthnServer) validateRequest(header http.Header) (*Claims, error) {
 
 	tokenString := authHeader[7:]
 
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &model.Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			s.logger.Debug("unexpected signing method", "alg", token.Header["alg"])
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -115,7 +103,7 @@ func (s *AuthnServer) validateRequest(header http.Header) (*Claims, error) {
 		return nil, fmt.Errorf("invalid token: %w", err)
 	}
 
-	claims, ok := token.Claims.(*Claims)
+	claims, ok := token.Claims.(*model.Claims)
 	if !ok || !token.Valid {
 		s.logger.Debug("invalid token claims")
 		return nil, fmt.Errorf("invalid token claims")
@@ -167,18 +155,6 @@ func parseState(state string) (*StateData, error) {
 	}
 
 	return &data, nil
-}
-
-// getDevGroups returns groups for dev/test users when OIDC provider doesn't support groups.
-// In production, groups should come from the OIDC provider (e.g., LDAP, Azure AD).
-func getDevGroups(email string) []string {
-	devGroups := map[string][]string{
-		"admin@example.com": {"admins", "users"},
-	}
-	if groups, ok := devGroups[email]; ok {
-		return groups
-	}
-	return []string{"users"}
 }
 
 // signCookieValue signs a value using HMAC-SHA256 and returns "value.signature"
@@ -235,7 +211,7 @@ func (s *AuthnServer) buildClearAuthCookie() *http.Cookie {
 
 // validateRequestOrCookie validates auth from either Authorization header or Cookie header
 // This works with http.Header which is used by Connect RPC
-func (s *AuthnServer) validateRequestOrCookie(header http.Header) (*Claims, error) {
+func (s *AuthnServer) validateRequestOrCookie(header http.Header) (*model.Claims, error) {
 	// First try Authorization header
 	authHeader := header.Get("Authorization")
 	if len(authHeader) >= 8 && authHeader[:7] == "Bearer " {
@@ -270,7 +246,7 @@ func (s *AuthnServer) validateRequestOrCookie(header http.Header) (*Claims, erro
 	}
 
 	// Parse and validate JWT
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &model.Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -280,7 +256,7 @@ func (s *AuthnServer) validateRequestOrCookie(header http.Header) (*Claims, erro
 		return nil, fmt.Errorf("invalid token: %w", err)
 	}
 
-	claims, ok := token.Claims.(*Claims)
+	claims, ok := token.Claims.(*model.Claims)
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid token claims")
 	}

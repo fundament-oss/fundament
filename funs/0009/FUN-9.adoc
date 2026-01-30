@@ -1,0 +1,247 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: prediscussion
+
+= FUN-9 API Keys
+
+== Introduction
+
+This FUN describes the API key system in Fundament: how tokens are generated, stored, validated, and why we chose this design. API keys provide programmatic access for CI/CD pipelines, CLI tools, and service accounts that cannot perform browser-based OIDC authentication.
+
+== The Anatomy of a Token
+
+Every API key follows this format:
+
+----
+fun_aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890
+----
+
+Breaking it down:
+
+[cols="1,2,3"]
+|===
+|Part |Length |Purpose
+
+|`fun_`
+|4 chars
+|Recognizable prefix for identification
+
+|Random
+|30 chars
+|Cryptographically secure base62 characters (a-z, A-Z, 0-9)
+
+|Checksum
+|6 chars
+|CRC32 checksum for format validation
+|===
+
+Total length: 40 characters.
+
+== Design Decisions
+
+=== The "fun_" Prefix
+
+The prefix makes tokens instantly recognizable. When scanning logs or debugging, you immediately know "that's an API key" versus random strings. It also allows the system to quickly identify API key authentication attempts before performing expensive operations.
+
+=== CRC32 Checksum
+
+Before hitting the database, the system validates if a token is even _plausibly_ correct. Typos, truncated pastes, and garbage inputs are rejected instantly with no database query needed. This provides:
+
+* Faster rejection of invalid tokens
+* Reduced database load from malformed requests
+* Better error messages to users ("invalid format" vs "not found")
+
+=== SHA256 Storage
+
+The actual token is **never stored**. Only its SHA256 hash lives in the database. Even if someone gains database access, they cannot reverse-engineer valid tokens.
+
+The lookup happens via `authn.api_key_get_by_hash()`, a `SECURITY DEFINER` function that bypasses RLS since we don't know the organization until we've validated the token.
+
+=== One-Time Display
+
+When creating an API key, users see the full token exactly once. After creation, only the prefix (`fun_abcd`) is ever shown. Lost your token? Create a new one.
+
+This is intentional: the token cannot leak from the UI or API responses after initial creation.
+
+== Authentication Flow
+
+----
+┌─────────────────────┐
+│   Your API Call     │
+│  Bearer fun_abc...  │
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ 1. Format Check     │  ← Is it fun_*? CRC32 valid?
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ 2. Hash & Lookup    │  ← SHA256 → DB lookup
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ 3. Status Checks    │  ← Deleted? Revoked? Expired?
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ 4. Issue JWT        │  ← 15-minute access token
+└─────────────────────┘
+----
+
+The API key is exchanged for a short-lived JWT via the `TokenService/ExchangeToken` endpoint. This means:
+
+* API keys are long-lived but don't travel with every request
+* JWTs expire in 15 minutes, limiting damage if intercepted
+* The `last_used` timestamp is updated on each exchange for auditing
+
+== Why API Keys Instead of Just JWTs?
+
+JWTs work well for web sessions but are awkward for:
+
+* **CI/CD pipelines** — Cannot perform browser-based OIDC login
+* **CLI tools** — Same limitation
+* **Long-running scripts** — JWTs expire; API keys optionally don't
+* **Service accounts** — No human to click "login"
+
+API keys bridge this gap: generate once, use until revoked or expired.
+
+== Security Layers
+
+[cols="1,3"]
+|===
+|Layer |Purpose
+
+|Token format validation
+|Rejects malformed tokens before database lookup
+
+|SHA256 hashing
+|Plaintext tokens never stored
+
+|RLS policies
+|Keys isolated by organization and user
+
+|Soft revocation
+|Instant invalidation without deletion, preserving audit trail
+
+|Optional expiration
+|Time-limited tokens for extra security
+
+|`last_used` tracking
+|Audit trail and anomaly detection
+|===
+
+== Database Schema
+
+The `authn.api_keys` table stores:
+
+[cols="1,1,2"]
+|===
+|Column |Type |Purpose
+
+|`id`
+|uuid
+|Primary key (uuidv7)
+
+|`organization_id`
+|uuid
+|FK to organization
+
+|`user_id`
+|uuid
+|FK to user who created the key
+
+|`name`
+|text
+|User-provided name for identification
+
+|`token_hash`
+|bytea
+|SHA256 hash of the token (unique)
+
+|`token_prefix`
+|text
+|First 8 characters for display
+
+|`expires`
+|timestamptz
+|Optional expiration time
+
+|`revoked`
+|timestamptz
+|Soft revocation timestamp
+
+|`last_used`
+|timestamptz
+|Updated on each successful validation
+
+|`created`
+|timestamptz
+|Creation timestamp
+
+|`deleted`
+|timestamptz
+|Soft deletion timestamp
+|===
+
+Row-level security ensures users can only see and manage their own keys within their organization.
+
+== API Endpoints
+
+=== Management (organization-api)
+
+[cols="1,2"]
+|===
+|Endpoint |Purpose
+
+|`CreateAPIKey`
+|Generate new key, returns full token once
+
+|`ListAPIKeys`
+|List user's keys (prefix only)
+
+|`GetAPIKey`
+|Get key details (prefix only)
+
+|`RevokeAPIKey`
+|Soft revoke, immediate effect
+
+|`DeleteAPIKey`
+|Soft delete, removes from lists
+|===
+
+=== Authentication (authn-api)
+
+[cols="1,2"]
+|===
+|Endpoint |Purpose
+
+|`ExchangeToken`
+|Validate API key, return 15-minute JWT
+|===
+
+== Implementation
+
+Key source files:
+
+[cols="1,2"]
+|===
+|File |Purpose
+
+|`common/apitoken/token.go`
+|Token generation, CRC32 validation, SHA256 hashing
+
+|`organization-api/pkg/organization/apikey.go`
+|Management endpoints
+
+|`authn-api/pkg/authn/token.go`
+|Token exchange endpoint
+
+|`db/fundament.sql`
+|Schema and `api_key_get_by_hash()` function
+|===

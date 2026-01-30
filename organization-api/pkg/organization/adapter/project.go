@@ -2,9 +2,9 @@ package adapter
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/models"
@@ -41,9 +41,7 @@ func FromProject(p *db.TenantProject) *organizationv1.Project {
 	return &organizationv1.Project{
 		Id:   p.ID.String(),
 		Name: p.Name,
-		CreatedAt: &organizationv1.Timestamp{
-			Value: p.Created.Time.Format(time.RFC3339),
-		},
+		CreatedAt: timestamppb.New(p.Created.Time),
 	}
 }
 
@@ -60,8 +58,6 @@ func FromProjectNamespace(ns *db.TenantNamespace) *organizationv1.ProjectNamespa
 		Id:        ns.ID.String(),
 		Name:      ns.Name,
 		ClusterId: ns.ClusterID.String(),
-		CreatedAt: &organizationv1.Timestamp{
-			Value: ns.Created.Time.Format(time.RFC3339),
-		},
+		CreatedAt: timestamppb.New(ns.Created.Time),
 	}
 }

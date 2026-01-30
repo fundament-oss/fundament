@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package organization.v1; // TODO: Should maybe be renamed to `fundament.v1`?
 
+import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
@@ -22,7 +23,7 @@ message Organization {
   // Organization name
   string name = 20;
   // Creation timestamp (RFC3339)
-  string created = 30;
+  google.protobuf.Timestamp created = 30;
 }
 
 // GetOrganization request

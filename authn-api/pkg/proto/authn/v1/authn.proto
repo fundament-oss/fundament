@@ -10,22 +10,42 @@ service AuthnService {
   rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse);
 }
 
+// TokenService handles API token operations
+service TokenService {
+  // ExchangeToken exchanges an API key for a short-lived JWT
+  // The API key should be provided in the Authorization header as Bearer token
+  rpc ExchangeToken(ExchangeTokenRequest) returns (ExchangeTokenResponse);
+}
+
 message GetUserInfoRequest {}
 
 message GetUserInfoResponse {
   // User information
-  User user = 1;
+  User user = 10;
 }
 
 message User {
   // User ID
-  string id = 1;
+  string id = 10;
   // Organization ID
-  string organization_id = 2;
+  string organization_id = 20;
   // User name
-  string name = 3;
+  string name = 30;
   // External ID from OIDC provider
-  string external_id = 4;
+  string external_id = 40;
   // Groups the user belongs to
-  repeated string groups = 5;
+  repeated string groups = 50;
+}
+
+// ExchangeToken request - empty, API key is in Authorization header
+message ExchangeTokenRequest {}
+
+// ExchangeToken response
+message ExchangeTokenResponse {
+  // JWT access token for API calls
+  string access_token = 10;
+  // Token type (always "Bearer")
+  string token_type = 20;
+  // Seconds until token expires
+  int64 expires_in = 30;
 }
