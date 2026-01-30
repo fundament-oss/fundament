@@ -171,8 +171,8 @@ func (d *ClusterNamespacesDataSource) Read(ctx context.Context, req datasource.R
 		}
 	}
 
-	// Set the data source ID
-	state.ID = types.StringValue("namespaces-" + clusterID)
+	// Set the data source ID to the cluster ID
+	state.ID = types.StringValue(clusterID)
 
 	tflog.Debug(ctx, "Fetched namespaces successfully", map[string]any{
 		"namespace_count": len(state.Namespaces),

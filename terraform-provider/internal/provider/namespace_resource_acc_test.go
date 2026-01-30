@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 // TestAccNamespaceResource_basic tests basic namespace CRUD operations.
@@ -44,6 +45,15 @@ func TestAccNamespaceResource_basic(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("Resource not found: %s", resourceName)
+					}
+					clusterID := rs.Primary.Attributes["cluster_id"]
+					namespaceID := rs.Primary.ID
+					return fmt.Sprintf("%s:%s", clusterID, namespaceID), nil
+				},
 			},
 			// Delete testing automatically occurs in TestCase
 		},

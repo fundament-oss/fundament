@@ -171,8 +171,8 @@ func (d *ProjectNamespacesDataSource) Read(ctx context.Context, req datasource.R
 		}
 	}
 
-	// Set the data source ID
-	state.ID = types.StringValue("project-namespaces-" + projectID)
+	// Set the data source ID to the project ID
+	state.ID = types.StringValue(projectID)
 
 	tflog.Debug(ctx, "Fetched project namespaces successfully", map[string]any{
 		"namespace_count": len(state.Namespaces),

@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -345,12 +346,28 @@ func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteReque
 func (r *NamespaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// The import ID should be in the format "cluster_id:namespace_id"
 	// We need cluster_id to be able to read the namespace details
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	parts := strings.SplitN(req.ID, ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID Format",
+			fmt.Sprintf(
+				"Expected import ID in format 'cluster_id:namespace_id', got: %q\n\n"+
+					"Example: terraform import fundament_namespace.example 01234567-89ab-cdef-0123-456789abcdef:fedcba98-7654-3210-fedc-ba9876543210",
+				req.ID,
+			),
+		)
+		return
+	}
 
-	// Note: The imported namespace will need cluster_id to be readable
-	// Users will need to manually set cluster_id in their configuration after import
-	resp.Diagnostics.AddWarning(
-		"Import Requires Configuration",
-		"After importing, you must add the cluster_id to your configuration for Terraform to manage this namespace properly.",
-	)
+	clusterID := parts[0]
+	namespaceID := parts[1]
+
+	tflog.Debug(ctx, "Importing namespace", map[string]any{
+		"cluster_id":   clusterID,
+		"namespace_id": namespaceID,
+	})
+
+	// Set the cluster_id and id in state
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cluster_id"), clusterID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), namespaceID)...)
 }
