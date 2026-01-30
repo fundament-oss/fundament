@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+
+	"github.com/fundament-oss/fundament/common/auth"
 )
 
 type contextKeyOrganizationID struct{}
@@ -22,13 +24,13 @@ func OrganizationIDFromContext(ctx context.Context) (uuid.UUID, bool) {
 }
 
 // WithClaims stores full claims in context for additional metadata like Groups.
-func WithClaims(ctx context.Context, claims *Claims) context.Context {
+func WithClaims(ctx context.Context, claims *auth.Claims) context.Context {
 	return context.WithValue(ctx, contextKeyClaims{}, claims)
 }
 
 // ClaimsFromContext extracts claims from context.
 // Returns the claims and true if found, or nil and false if not found.
-func ClaimsFromContext(ctx context.Context) (*Claims, bool) {
-	claims, ok := ctx.Value(contextKeyClaims{}).(*Claims)
+func ClaimsFromContext(ctx context.Context) (*auth.Claims, bool) {
+	claims, ok := ctx.Value(contextKeyClaims{}).(*auth.Claims)
 	return claims, ok
 }
