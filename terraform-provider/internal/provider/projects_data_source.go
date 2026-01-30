@@ -3,13 +3,13 @@ package provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -136,10 +136,16 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 	// Map response to state
 	state.Projects = make([]ProjectModel, len(rpcResp.Msg.Projects))
 	for i, project := range rpcResp.Msg.Projects {
+		var createdAt basetypes.StringValue
+
+		if project.CreatedAt.CheckValid() == nil {
+			createdAt = types.StringValue(project.CreatedAt.String())
+		}
+
 		state.Projects[i] = ProjectModel{
 			ID:        types.StringValue(project.Id),
 			Name:      types.StringValue(project.Name),
-			CreatedAt: types.StringValue(project.CreatedAt.AsTime().Format(time.RFC3339)),
+			CreatedAt: createdAt,
 		}
 	}
 

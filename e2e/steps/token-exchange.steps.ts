@@ -4,6 +4,7 @@ import { ICustomWorld } from '../support/world.ts';
 import { APIKeyService, type APIKey } from '../support/api/apikey-service.ts';
 import { type ExchangeTokenResponse } from '../support/api/token-service.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { currentApiKey, API_TOKEN_PREFIX } from './common.steps.ts';
 
 // Track state for token exchange tests
@@ -139,9 +140,9 @@ Then('the last used timestamp should be recent', async function (this: ICustomWo
   expect(response.apiKey.lastUsedAt).toBeDefined();
 
   // Check that last_used is within the last minute
-  const lastUsed = new Date(response.apiKey.lastUsedAt!.value);
+  const lastUsed = timestampDate(response.apiKey.lastUsedAt!);
   const now = new Date();
-  const diffMs = now.getTime() - lastUsed.getTime();
+  const diffMs = Math.abs(now.getTime() - lastUsed.getTime());
   expect(diffMs).toBeLessThan(60000); // Within 1 minute
 });
 

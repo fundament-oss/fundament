@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -26,7 +25,6 @@ var _ resource.ResourceWithImportState = &ProjectResource{}
 type ProjectResource struct {
 	client *FundamentClient
 }
-
 
 // NewProjectResource creates a new ProjectResource.
 func NewProjectResource() resource.Resource {
@@ -85,9 +83,9 @@ func (r *ProjectResource) Configure(ctx context.Context, req resource.ConfigureR
 
 // Create creates a new project.
 func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan ProjectModel
+	var state ProjectModel
 
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -101,12 +99,12 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	tflog.Debug(ctx, "Creating project", map[string]any{
-		"name": plan.Name.ValueString(),
+		"name": state.Name.ValueString(),
 	})
 
 	// Create the project
 	createReq := connect.NewRequest(&organizationv1.CreateProjectRequest{
-		Name: plan.Name.ValueString(),
+		Name: state.Name.ValueString(),
 	})
 
 	createResp, err := r.client.ProjectService.CreateProject(ctx, createReq)
@@ -119,7 +117,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Set the ID from the response
-	plan.ID = types.StringValue(createResp.Msg.ProjectId)
+	state.ID = types.StringValue(createResp.Msg.ProjectId)
 
 	// Read the project to get the full state including created_at
 	getReq := connect.NewRequest(&organizationv1.GetProjectRequest{
@@ -136,13 +134,15 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Map response to state
-	plan.CreatedAt = types.StringValue(getResp.Msg.Project.CreatedAt.AsTime().Format(time.RFC3339))
+	if getResp.Msg.Project.CreatedAt.CheckValid() == nil {
+		state.CreatedAt = types.StringValue(getResp.Msg.Project.CreatedAt.String())
+	}
 
 	tflog.Info(ctx, "Created project", map[string]any{
-		"id": plan.ID.ValueString(),
+		"id": state.ID.ValueString(),
 	})
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -193,7 +193,10 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	// Map response to state
 	state.ID = types.StringValue(project.Id)
 	state.Name = types.StringValue(project.Name)
-	state.CreatedAt = types.StringValue(project.CreatedAt.AsTime().Format(time.RFC3339))
+
+	if project.CreatedAt.CheckValid() == nil {
+		state.CreatedAt = types.StringValue(project.CreatedAt.String())
+	}
 
 	tflog.Debug(ctx, "Read project successfully", map[string]any{
 		"id": state.ID.ValueString(),
@@ -287,7 +290,10 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 	// Update the plan with the server response
 	plan.ID = types.StringValue(project.Id)
 	plan.Name = types.StringValue(project.Name)
-	plan.CreatedAt = types.StringValue(project.CreatedAt.AsTime().Format(time.RFC3339))
+
+	if project.CreatedAt.CheckValid() == nil {
+		state.CreatedAt = types.StringValue(project.CreatedAt.String())
+	}
 
 	tflog.Info(ctx, "Updated project", map[string]any{
 		"id": plan.ID.ValueString(),
