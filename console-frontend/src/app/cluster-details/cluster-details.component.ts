@@ -447,9 +447,7 @@ export class ClusterDetailsComponent implements OnInit {
   }
 
   get breadcrumbSegments(): BreadcrumbSegment[] {
-    const segments: BreadcrumbSegment[] = [
-      { label: 'Clusters', route: '/' }
-    ];
+    const segments: BreadcrumbSegment[] = [{ label: 'Clusters', route: '/' }];
 
     if (this.clusterData.basics.name) {
       segments.push({ label: this.clusterData.basics.name });

@@ -428,9 +428,7 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   get breadcrumbSegments(): BreadcrumbSegment[] {
-    const segments: BreadcrumbSegment[] = [
-      { label: 'Projects', route: '/projects' }
-    ];
+    const segments: BreadcrumbSegment[] = [{ label: 'Projects', route: '/projects' }];
 
     if (this.project()) {
       segments.push({ label: this.project()!.name });

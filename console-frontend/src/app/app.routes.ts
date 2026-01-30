@@ -73,9 +73,7 @@ export const routes: Routes = [
   {
     path: 'clusters/:id',
     loadComponent: () =>
-      import('./cluster-details/cluster-details.component').then(
-        (m) => m.ClusterDetailsComponent,
-      ),
+      import('./cluster-details/cluster-details.component').then((m) => m.ClusterDetailsComponent),
   },
   {
     path: 'projects/:id/namespaces',

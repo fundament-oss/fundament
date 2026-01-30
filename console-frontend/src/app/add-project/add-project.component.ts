@@ -114,9 +114,6 @@ export class AddProjectComponent implements AfterViewInit {
   }
 
   get breadcrumbSegments(): BreadcrumbSegment[] {
-    return [
-      { label: 'Projects', route: '/projects' },
-      { label: 'Add project' }
-    ];
+    return [{ label: 'Projects', route: '/projects' }, { label: 'Add project' }];
   }
 }

@@ -57,7 +57,9 @@ export class OrganizationDataService {
 
       // Get all projects for the organization
       const projectsRequest = create(ListProjectsRequestSchema, {});
-      const projectsResponse = await firstValueFrom(this.projectClient.listProjects(projectsRequest));
+      const projectsResponse = await firstValueFrom(
+        this.projectClient.listProjects(projectsRequest),
+      );
 
       // For each project, get its namespaces
       const projectsData: ProjectData[] = await Promise.all(

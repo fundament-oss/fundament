@@ -108,11 +108,7 @@ export class SelectorModalComponent implements AfterViewInit, OnChanges {
 
   isOrganizationSelected(orgId: string): boolean {
     // Only highlight organization if no project or namespace is selected
-    return (
-      this.selectedOrgId === orgId &&
-      !this.selectedProjectId &&
-      !this.selectedNamespaceId
-    );
+    return this.selectedOrgId === orgId && !this.selectedProjectId && !this.selectedNamespaceId;
   }
 
   isProjectSelected(projectId: string): boolean {

@@ -256,7 +256,7 @@
   [show]="showCreateNamespaceModal()"
   title="Create namespace"
   [maxWidth]="'max-w-lg'"
-  (close)="showCreateNamespaceModal.set(false)"
+  (modalClose)="showCreateNamespaceModal.set(false)"
 >
   <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
     <!-- Cluster Selection -->
@@ -342,7 +342,7 @@
   [show]="showDeleteModal()"
   title="Delete project"
   [maxWidth]="'max-w-lg'"
-  (close)="showDeleteModal.set(false)"
+  (modalClose)="showDeleteModal.set(false)"
 >
   <div class="sm:flex sm:items-start">
     <div
@@ -383,7 +383,7 @@
   [show]="showAddMemberModal()"
   [title]="editingMember() ? 'Edit member' : 'Add member to project'"
   [maxWidth]="'max-w-lg'"
-  (close)="showAddMemberModal.set(false)"
+  (modalClose)="showAddMemberModal.set(false)"
 >
   <form [formGroup]="memberForm" (ngSubmit)="saveMember()">
     <!-- User Selection (only show when adding) -->

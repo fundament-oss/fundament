@@ -1,7 +1,7 @@
 <app-modal
   [show]="show"
   [title]="isEditMode ? 'Edit permission' : 'Add permission'"
-  (close)="onClose()"
+  (modalClose)="onClose()"
 >
   @if (!isEditMode) {
     <div>

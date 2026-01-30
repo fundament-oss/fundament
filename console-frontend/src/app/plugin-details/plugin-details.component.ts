@@ -208,9 +208,7 @@ export class PluginDetailsComponent implements OnInit {
   }
 
   get breadcrumbSegments(): BreadcrumbSegment[] {
-    const segments: BreadcrumbSegment[] = [
-      { label: 'Plugins', route: '/plugins' }
-    ];
+    const segments: BreadcrumbSegment[] = [{ label: 'Plugins', route: '/plugins' }];
 
     if (this.plugin()) {
       segments.push({ label: this.plugin()!.name });

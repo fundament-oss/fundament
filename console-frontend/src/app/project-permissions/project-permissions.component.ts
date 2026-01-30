@@ -16,7 +16,14 @@ interface Permission {
 @Component({
   selector: 'app-project-permissions',
   standalone: true,
-  imports: [CommonModule, PermissionModalComponent, RouterLink, RouterLinkActive, NgIcon, BreadcrumbComponent],
+  imports: [
+    CommonModule,
+    PermissionModalComponent,
+    RouterLink,
+    RouterLinkActive,
+    NgIcon,
+    BreadcrumbComponent,
+  ],
   viewProviders: [
     provideIcons({
       tablerPlus,

@@ -159,14 +159,12 @@ export class ClusterNodesComponent implements OnInit {
   }
 
   get breadcrumbSegments(): BreadcrumbSegment[] {
-    const segments: BreadcrumbSegment[] = [
-      { label: 'Clusters', route: '/' }
-    ];
+    const segments: BreadcrumbSegment[] = [{ label: 'Clusters', route: '/' }];
 
     if (this.clusterName()) {
       segments.push({
         label: this.clusterName()!,
-        route: `/clusters/${this.clusterId}`
+        route: `/clusters/${this.clusterId}`,
       });
     }
 

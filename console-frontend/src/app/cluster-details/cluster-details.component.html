@@ -490,7 +490,7 @@
   [show]="showDeleteModal()"
   title="Delete cluster"
   [maxWidth]="'max-w-lg'"
-  (close)="showDeleteModal.set(false)"
+  (modalClose)="showDeleteModal.set(false)"
 >
   <div class="sm:flex sm:items-start">
     <div
@@ -533,7 +533,7 @@
   [show]="showAddNamespaceModal()"
   title="Add namespace"
   [maxWidth]="'max-w-lg'"
-  (close)="showAddNamespaceModal.set(false)"
+  (modalClose)="showAddNamespaceModal.set(false)"
 >
   <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
     <!-- Project Selection -->
