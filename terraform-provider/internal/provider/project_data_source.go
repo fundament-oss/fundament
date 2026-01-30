@@ -127,7 +127,10 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	// Map response to state
 	config.ID = types.StringValue(project.Id)
 	config.Name = types.StringValue(project.Name)
-	config.CreatedAt = types.StringValue(project.CreatedAt.Value)
+
+	if project.CreatedAt.CheckValid() == nil {
+		config.CreatedAt = types.StringValue(project.CreatedAt.String())
+	}
 
 	tflog.Debug(ctx, "Read project successfully", map[string]any{
 		"id":   config.ID.ValueString(),
