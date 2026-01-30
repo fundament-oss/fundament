@@ -23,19 +23,19 @@ func TestAccClusterDataSource(t *testing.T) {
 		t.Fatal("FUNDAMENT_TOKEN must be set for acceptance tests")
 	}
 
-	clusterID := os.Getenv("FUNDAMENT_TEST_CLUSTER_ID")
-	if clusterID == "" {
-		t.Skip("FUNDAMENT_TEST_CLUSTER_ID not set, skipping cluster data source test")
+	clusterName := os.Getenv("FUNDAMENT_TEST_CLUSTER_NAME")
+	if clusterName == "" {
+		t.Skip("FUNDAMENT_TEST_CLUSTER_NAME not set, skipping cluster data source test")
 	}
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccClusterDataSourceConfig(clusterID),
+				Config: testAccClusterDataSourceConfig(clusterName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.fundament_cluster.test", "id", clusterID),
-					resource.TestCheckResourceAttrSet("data.fundament_cluster.test", "name"),
+					resource.TestCheckResourceAttr("data.fundament_cluster.test", "name", clusterName),
+					resource.TestCheckResourceAttrSet("data.fundament_cluster.test", "id"),
 					resource.TestCheckResourceAttrSet("data.fundament_cluster.test", "region"),
 					resource.TestCheckResourceAttrSet("data.fundament_cluster.test", "kubernetes_version"),
 					resource.TestCheckResourceAttrSet("data.fundament_cluster.test", "status"),
@@ -45,14 +45,14 @@ func TestAccClusterDataSource(t *testing.T) {
 	})
 }
 
-func testAccClusterDataSourceConfig(clusterID string) string {
+func testAccClusterDataSourceConfig(clusterName string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
   # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN from environment
 }
 
 data "fundament_cluster" "test" {
-  id = %[1]q
+  name = %[1]q
 }
-`, clusterID)
+`, clusterName)
 }

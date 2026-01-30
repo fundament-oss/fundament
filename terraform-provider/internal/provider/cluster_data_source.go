@@ -43,15 +43,15 @@ func (d *ClusterDataSource) Metadata(ctx context.Context, req datasource.Metadat
 // Schema defines the schema for the data source.
 func (d *ClusterDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Fetches a single Kubernetes cluster by ID.",
+		Description: "Fetches a single Kubernetes cluster by name.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "The unique identifier of the cluster to look up.",
-				Required:    true,
+				Description: "The unique identifier of the cluster.",
+				Computed:    true,
 			},
 			"name": schema.StringAttribute{
-				Description: "The name of the cluster.",
-				Computed:    true,
+				Description: "The name of the cluster to look up.",
+				Required:    true,
 			},
 			"region": schema.StringAttribute{
 				Description: "The region where the cluster is deployed.",
@@ -105,35 +105,35 @@ func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	tflog.Debug(ctx, "Reading cluster", map[string]any{
-		"id": config.ID.ValueString(),
+		"name": config.Name.ValueString(),
 	})
 
-	getReq := connect.NewRequest(&organizationv1.GetClusterRequest{
-		ClusterId: config.ID.ValueString(),
+	getReq := connect.NewRequest(&organizationv1.GetClusterByNameRequest{
+		Name: config.Name.ValueString(),
 	})
 
-	getResp, err := d.client.ClusterService.GetCluster(ctx, getReq)
+	getResp, err := d.client.ClusterService.GetClusterByName(ctx, getReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeNotFound:
 			resp.Diagnostics.AddError(
 				"Cluster Not Found",
-				fmt.Sprintf("Cluster with ID %q does not exist.", config.ID.ValueString()),
+				fmt.Sprintf("Cluster with name %q does not exist.", config.Name.ValueString()),
 			)
 		case connect.CodeInvalidArgument:
 			resp.Diagnostics.AddError(
-				"Invalid Cluster ID",
-				fmt.Sprintf("The cluster ID %q is not valid: %s", config.ID.ValueString(), err.Error()),
+				"Invalid Cluster Name",
+				fmt.Sprintf("The cluster name %q is not valid: %s", config.Name.ValueString(), err.Error()),
 			)
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				fmt.Sprintf("You do not have permission to access cluster %q.", config.ID.ValueString()),
+				fmt.Sprintf("You do not have permission to access cluster %q.", config.Name.ValueString()),
 			)
 		default:
 			resp.Diagnostics.AddError(
 				"Unable to Read Cluster",
-				fmt.Sprintf("Unable to read cluster with ID %q: %s", config.ID.ValueString(), err.Error()),
+				fmt.Sprintf("Unable to read cluster with name %q: %s", config.Name.ValueString(), err.Error()),
 			)
 		}
 		return

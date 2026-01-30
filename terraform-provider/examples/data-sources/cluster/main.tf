@@ -12,14 +12,14 @@ provider "fundament" {
   # token = ""
 }
 
-# Look up an existing cluster by ID
+# Look up an existing cluster by name
 data "fundament_cluster" "example" {
-  id = "your-cluster-uuid"
+  name = "my-cluster"
 }
 
-output "cluster_name" {
-  description = "The name of the cluster"
-  value       = data.fundament_cluster.example.name
+output "cluster_id" {
+  description = "The unique identifier of the cluster"
+  value       = data.fundament_cluster.example.id
 }
 
 output "cluster_status" {

@@ -10,6 +10,11 @@ SELECT id, organization_id, name, created, deleted
 FROM tenant.projects
 WHERE id = $1 AND deleted IS NULL;
 
+-- name: ProjectGetByName :one
+SELECT id, organization_id, name, created, deleted
+FROM tenant.projects
+WHERE organization_id = $1 AND name = $2 AND deleted IS NULL;
+
 -- name: ProjectCreate :one
 INSERT INTO tenant.projects (organization_id, name)
 VALUES ($1, $2)

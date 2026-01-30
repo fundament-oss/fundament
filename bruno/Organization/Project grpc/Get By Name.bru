@@ -1,0 +1,22 @@
+meta {
+  name: Get By Name
+  type: grpc
+  seq: 3
+}
+
+grpc {
+  url: {{organizationUrl}}
+  method: /organization.v1.ProjectService/GetProjectByName
+  body: grpc
+  auth: inherit
+  methodType: unary
+}
+
+body:grpc {
+  name: message 1
+  content: '''
+    {
+      "name": "my-project"
+    }
+  '''
+}

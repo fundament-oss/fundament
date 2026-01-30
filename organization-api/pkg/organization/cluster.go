@@ -61,6 +61,31 @@ func (s *OrganizationServer) GetCluster(
 	}), nil
 }
 
+func (s *OrganizationServer) GetClusterByName(
+	ctx context.Context,
+	req *connect.Request[organizationv1.GetClusterByNameRequest],
+) (*connect.Response[organizationv1.GetClusterResponse], error) {
+	organizationID, ok := OrganizationIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	cluster, err := s.queries.ClusterGetByName(ctx, db.ClusterGetByNameParams{
+		OrganizationID: organizationID,
+		Name:           req.Msg.Name,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+	}
+
+	return connect.NewResponse(&organizationv1.GetClusterResponse{
+		Cluster: adapter.FromClusterDetail(cluster),
+	}), nil
+}
+
 func (s *OrganizationServer) CreateCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.CreateClusterRequest],
