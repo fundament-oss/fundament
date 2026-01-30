@@ -9,26 +9,28 @@ import (
 func TestClusterNamespacesDataSourceModel(t *testing.T) {
 	// Test that the model can be created with expected values
 	model := ClusterNamespacesDataSourceModel{
-		ID:        types.StringValue("namespaces-test-cluster-id"),
+		ID:        types.StringValue("test-cluster-id"),
 		ClusterID: types.StringValue("test-cluster-id"),
-		Namespaces: []ClusterNamespaceModel{
+		Namespaces: []NamespaceModel{
 			{
 				ID:        types.StringValue("namespace-1"),
 				Name:      types.StringValue("ns-1"),
 				ProjectID: types.StringValue("project-1"),
+				ClusterID: types.StringValue("test-cluster-id"),
 				CreatedAt: types.StringValue("2024-01-01T00:00:00Z"),
 			},
 			{
 				ID:        types.StringValue("namespace-2"),
 				Name:      types.StringValue("ns-2"),
 				ProjectID: types.StringValue("project-2"),
+				ClusterID: types.StringValue("test-cluster-id"),
 				CreatedAt: types.StringValue("2024-01-02T00:00:00Z"),
 			},
 		},
 	}
 
-	if model.ID.ValueString() != "namespaces-test-cluster-id" {
-		t.Errorf("Expected ID 'namespaces-test-cluster-id', got '%s'", model.ID.ValueString())
+	if model.ID.ValueString() != "test-cluster-id" {
+		t.Errorf("Expected ID 'test-cluster-id', got '%s'", model.ID.ValueString())
 	}
 
 	if model.ClusterID.ValueString() != "test-cluster-id" {

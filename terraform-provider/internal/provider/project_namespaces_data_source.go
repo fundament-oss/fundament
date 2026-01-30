@@ -24,17 +24,9 @@ type ProjectNamespacesDataSource struct {
 
 // ProjectNamespacesDataSourceModel describes the data source data model.
 type ProjectNamespacesDataSourceModel struct {
-	ID         types.String                `tfsdk:"id"`
-	ProjectID  types.String                `tfsdk:"project_id"`
-	Namespaces []ProjectNamespaceModel     `tfsdk:"namespaces"`
-}
-
-// ProjectNamespaceModel describes a single namespace in the project data source.
-type ProjectNamespaceModel struct {
-	ID        types.String `tfsdk:"id"`
-	Name      types.String `tfsdk:"name"`
-	ClusterID types.String `tfsdk:"cluster_id"`
-	CreatedAt types.String `tfsdk:"created_at"`
+	ID         types.String      `tfsdk:"id"`
+	ProjectID  types.String      `tfsdk:"project_id"`
+	Namespaces []NamespaceModel  `tfsdk:"namespaces"`
 }
 
 // NewProjectNamespacesDataSource creates a new ProjectNamespacesDataSource.
@@ -71,6 +63,10 @@ func (d *ProjectNamespacesDataSource) Schema(ctx context.Context, req datasource
 						},
 						"name": schema.StringAttribute{
 							Description: "The name of the namespace.",
+							Computed:    true,
+						},
+						"project_id": schema.StringAttribute{
+							Description: "The ID of the project that owns this namespace.",
 							Computed:    true,
 						},
 						"cluster_id": schema.StringAttribute{
@@ -161,11 +157,12 @@ func (d *ProjectNamespacesDataSource) Read(ctx context.Context, req datasource.R
 	}
 
 	// Map response to state
-	state.Namespaces = make([]ProjectNamespaceModel, len(rpcResp.Msg.Namespaces))
+	state.Namespaces = make([]NamespaceModel, len(rpcResp.Msg.Namespaces))
 	for i, ns := range rpcResp.Msg.Namespaces {
-		state.Namespaces[i] = ProjectNamespaceModel{
+		state.Namespaces[i] = NamespaceModel{
 			ID:        types.StringValue(ns.Id),
 			Name:      types.StringValue(ns.Name),
+			ProjectID: types.StringValue(projectID), // Set from request context
 			ClusterID: types.StringValue(ns.ClusterId),
 			CreatedAt: types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339)),
 		}
