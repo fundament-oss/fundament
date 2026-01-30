@@ -42,19 +42,17 @@
                 isOrganizationSelected(org.id),
             }"
           >
-            <ng-icon
-              name="tablerChevronRight"
-              class="mr-1.5 shrink-0 transition-transform"
-              [class.rotate-90]="isOrganizationExpanded(org.id)"
-              size="1rem"
-            />
             <ng-icon name="tablerBuilding" class="mr-2 shrink-0" size="1rem" />
             <span class="truncate">{{ org.name }}</span>
           </button>
 
-          <!-- Projects (visible when org is expanded) -->
-          @if (isOrganizationExpanded(org.id)) {
-            <div class="ml-5 space-y-1">
+          <!-- Projects (always visible) -->
+          <div class="ml-5 space-y-1">
+            @if (org.projects.length === 0) {
+              <div class="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">
+                No projects yet
+              </div>
+            } @else {
               @for (project of org.projects; track project.id) {
                 <div>
                   <!-- Project -->
@@ -72,19 +70,17 @@
                         isProjectSelected(project.id),
                     }"
                   >
-                    <ng-icon
-                      name="tablerChevronRight"
-                      class="mr-1.5 shrink-0 transition-transform"
-                      [class.rotate-90]="isProjectExpanded(project.id)"
-                      size="0.875rem"
-                    />
                     <ng-icon name="tablerFolder" class="mr-2 shrink-0" size="1rem" />
                     <span class="truncate">{{ project.name }}</span>
                   </button>
 
-                  <!-- Namespaces (visible when project is expanded) -->
-                  @if (isProjectExpanded(project.id)) {
-                    <div class="ml-5 space-y-0.5">
+                  <!-- Namespaces (always visible) -->
+                  <div class="ml-5 space-y-0.5">
+                    @if (project.namespaces.length === 0) {
+                      <div class="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">
+                        No namespaces yet
+                      </div>
+                    } @else {
                       <div class="mb-0.5 px-2">
                         <span
                           class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
@@ -104,12 +100,12 @@
                           <span class="truncate">{{ namespace.name }}</span>
                         </button>
                       }
-                    </div>
-                  }
+                    }
+                  </div>
                 </div>
               }
-            </div>
-          }
+            }
+          </div>
         </div>
       }
     }

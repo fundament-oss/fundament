@@ -12,6 +12,7 @@ import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
+import { OrganizationDataService } from '../organization-data.service';
 import { PROJECT, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
@@ -77,6 +78,7 @@ export class ProjectDetailComponent implements OnInit {
   private projectClient = inject(PROJECT);
   private clusterClient = inject(CLUSTER);
   private toastService = inject(ToastService);
+  private organizationDataService = inject(OrganizationDataService);
 
   project = signal<Project | null>(null);
   namespaces = signal<ProjectNamespace[]>([]);
@@ -213,7 +215,12 @@ export class ProjectDetailComponent implements OnInit {
 
       this.showCreateNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
-      await this.loadNamespaces(this.project()!.id);
+
+      // Reload organization data to update the selector modal
+      await Promise.all([
+        this.loadNamespaces(this.project()!.id),
+        this.organizationDataService.reloadOrganizationData(),
+      ]);
     } catch (error) {
       console.error('Failed to create namespace:', error);
       this.errorMessage.set(
@@ -236,7 +243,12 @@ export class ProjectDetailComponent implements OnInit {
       await firstValueFrom(this.clusterClient.deleteNamespace(request));
 
       this.toastService.info(`Namespace '${namespaceName}' deleted`);
-      await this.loadNamespaces(this.project()!.id);
+
+      // Reload organization data to update the selector modal
+      await Promise.all([
+        this.loadNamespaces(this.project()!.id),
+        this.organizationDataService.reloadOrganizationData(),
+      ]);
     } catch (error) {
       console.error('Failed to delete namespace:', error);
       this.errorMessage.set(
@@ -259,6 +271,10 @@ export class ProjectDetailComponent implements OnInit {
 
       this.showDeleteModal.set(false);
       this.toastService.info(`Project '${this.project()!.name}' deleted`);
+
+      // Reload organization data to update the selector modal
+      await this.organizationDataService.reloadOrganizationData();
+
       this.router.navigate(['/projects']);
     } catch (error) {
       console.error('Failed to delete project:', error);

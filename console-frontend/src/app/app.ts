@@ -6,6 +6,7 @@ import type { User } from '../generated/authn/v1/authn_pb';
 import { ToastService } from './toast.service';
 import { versionMismatch$ } from './app.config';
 import { SelectorModalComponent } from './selector-modal/selector-modal.component';
+import { OrganizationDataService } from './organization-data.service';
 import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -74,6 +75,7 @@ export class App implements OnInit {
   private router = inject(Router);
   private apiService = inject(AuthnApiService);
   protected toastService = inject(ToastService);
+  protected organizationDataService = inject(OrganizationDataService);
 
   // Version mismatch state
   apiVersionMismatch = signal(false);
@@ -90,74 +92,9 @@ export class App implements OnInit {
   currentUser = signal<User | undefined>(undefined);
 
   // Nested selector state
-  expandedOrganizations = signal<Set<string>>(new Set(['org-1', 'org-2', 'org-3']));
-  expandedProjects = signal<Set<string>>(
-    new Set(['proj-1', 'proj-2', 'proj-3', 'proj-4', 'proj-5']),
-  );
   selectedOrgId = signal<string | null>(null);
   selectedProjectId = signal<string | null>(null);
   selectedNamespaceId = signal<string | null>(null);
-
-  // Mock data for nested selector
-  mockOrganizations = signal([
-    {
-      id: 'org-1',
-      name: 'Acme Corporation',
-      projects: [
-        {
-          id: 'proj-1',
-          name: 'e-commerce-platform',
-          namespaces: [
-            { id: 'ns-1', name: 'production' },
-            { id: 'ns-2', name: 'staging' },
-            { id: 'ns-3', name: 'development' },
-          ],
-        },
-        {
-          id: 'proj-2',
-          name: 'analytics-service',
-          namespaces: [
-            { id: 'ns-4', name: 'production' },
-            { id: 'ns-5', name: 'staging' },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'org-2',
-      name: 'TechStart Inc',
-      projects: [
-        {
-          id: 'proj-3',
-          name: 'mobile-app-backend',
-          namespaces: [
-            { id: 'ns-6', name: 'production' },
-            { id: 'ns-7', name: 'qa' },
-            { id: 'ns-8', name: 'development' },
-          ],
-        },
-        {
-          id: 'proj-4',
-          name: 'payment-gateway',
-          namespaces: [{ id: 'ns-9', name: 'production' }],
-        },
-      ],
-    },
-    {
-      id: 'org-3',
-      name: 'Global Dynamics',
-      projects: [
-        {
-          id: 'proj-5',
-          name: 'internal-tools',
-          namespaces: [
-            { id: 'ns-10', name: 'production' },
-            { id: 'ns-11', name: 'testing' },
-          ],
-        },
-      ],
-    },
-  ]);
 
   async ngOnInit() {
     this.initializeTheme();
@@ -165,21 +102,26 @@ export class App implements OnInit {
     // Initialize authentication state
     await this.apiService.initializeAuth();
 
-    // Subscribe to user state changes
+    // Subscribe to user state changes and load organization data when user is available
     this.apiService.currentUser$.subscribe((user) => {
       this.currentUser.set(user);
+
+      // Load organization data when user is logged in
+      if (user?.organizationId) {
+        this.organizationDataService.loadOrganizationData().then(() => {
+          // Initialize selector with the organization selected
+          const orgs = this.organizationDataService.organizations();
+          if (orgs.length > 0) {
+            this.selectedOrgId.set(orgs[0].id);
+          }
+        });
+      }
     });
 
     // Subscribe to API version mismatch
     versionMismatch$.subscribe((mismatch) => {
       this.apiVersionMismatch.set(mismatch);
     });
-
-    // Initialize selector with first organization selected
-    const firstOrg = this.mockOrganizations()[0];
-    if (firstOrg) {
-      this.selectedOrgId.set(firstOrg.id);
-    }
   }
 
   reloadApp() {
@@ -283,49 +225,25 @@ export class App implements OnInit {
 
   // Nested selector methods
   selectOrganization(orgId: string) {
-    // If already selected, toggle collapse/expand
-    if (this.selectedOrgId() === orgId) {
-      this.toggleOrganizationExpansion(orgId);
-    } else {
-      // Select and ensure it's expanded
-      this.selectedOrgId.set(orgId);
-      this.selectedProjectId.set(null);
-      this.selectedNamespaceId.set(null);
+    // Select organization and navigate to clusters page
+    this.selectedOrgId.set(orgId);
+    this.selectedProjectId.set(null);
+    this.selectedNamespaceId.set(null);
 
-      // Expand if not already expanded
-      const expanded = this.expandedOrganizations();
-      if (!expanded.has(orgId)) {
-        const newExpanded = new Set(expanded);
-        newExpanded.add(orgId);
-        this.expandedOrganizations.set(newExpanded);
-      }
-
-      // Close modal
-      this.selectorModalOpen.set(false);
-    }
+    // Close modal and navigate
+    this.selectorModalOpen.set(false);
+    this.router.navigate(['/']);
   }
 
   selectProjectItem(projectId: string) {
-    // If already selected, toggle collapse/expand
-    if (this.selectedProjectId() === projectId) {
-      this.toggleProjectExpansion(projectId);
-    } else {
-      // Select and ensure it's expanded
-      this.selectedProjectId.set(projectId);
-      this.selectedOrgId.set(null);
-      this.selectedNamespaceId.set(null);
+    // Select project and navigate to namespaces page
+    this.selectedProjectId.set(projectId);
+    this.selectedOrgId.set(null);
+    this.selectedNamespaceId.set(null);
 
-      // Expand if not already expanded
-      const expanded = this.expandedProjects();
-      if (!expanded.has(projectId)) {
-        const newExpanded = new Set(expanded);
-        newExpanded.add(projectId);
-        this.expandedProjects.set(newExpanded);
-      }
-
-      // Close modal
-      this.selectorModalOpen.set(false);
-    }
+    // Close modal and navigate
+    this.selectorModalOpen.set(false);
+    this.router.navigate(['/projects', projectId, 'namespaces']);
   }
 
   selectNamespaceItem(namespaceId: string) {
@@ -334,7 +252,7 @@ export class App implements OnInit {
 
     // Find the project that contains this namespace
     let projectId: string | null = null;
-    for (const org of this.mockOrganizations()) {
+    for (const org of this.organizationDataService.organizations()) {
       for (const project of org.projects) {
         if (project.namespaces.some((ns) => ns.id === namespaceId)) {
           projectId = project.id;
@@ -346,38 +264,11 @@ export class App implements OnInit {
 
     this.selectedProjectId.set(projectId);
 
-    // Close modal
+    // Close modal and navigate
     this.selectorModalOpen.set(false);
-  }
-
-  private toggleOrganizationExpansion(orgId: string) {
-    const expanded = this.expandedOrganizations();
-    const newExpanded = new Set(expanded);
-    if (newExpanded.has(orgId)) {
-      newExpanded.delete(orgId);
-    } else {
-      newExpanded.add(orgId);
+    if (projectId) {
+      this.router.navigate(['/projects', projectId, 'namespaces', namespaceId, 'members']);
     }
-    this.expandedOrganizations.set(newExpanded);
-  }
-
-  private toggleProjectExpansion(projectId: string) {
-    const expanded = this.expandedProjects();
-    const newExpanded = new Set(expanded);
-    if (newExpanded.has(projectId)) {
-      newExpanded.delete(projectId);
-    } else {
-      newExpanded.add(projectId);
-    }
-    this.expandedProjects.set(newExpanded);
-  }
-
-  isOrganizationExpanded(orgId: string): boolean {
-    return this.expandedOrganizations().has(orgId);
-  }
-
-  isProjectExpanded(projectId: string): boolean {
-    return this.expandedProjects().has(projectId);
   }
 
   getSelectedType(): 'organization' | 'project' | 'namespace' | null {
@@ -417,7 +308,7 @@ export class App implements OnInit {
 
     if (selectedType === 'namespace') {
       const namespaceId = this.selectedNamespaceId();
-      for (const org of this.mockOrganizations()) {
+      for (const org of this.organizationDataService.organizations()) {
         for (const project of org.projects) {
           const namespace = project.namespaces.find((ns) => ns.id === namespaceId);
           if (namespace) {
@@ -427,7 +318,7 @@ export class App implements OnInit {
       }
     } else if (selectedType === 'project') {
       const projectId = this.selectedProjectId();
-      for (const org of this.mockOrganizations()) {
+      for (const org of this.organizationDataService.organizations()) {
         const project = org.projects.find((p) => p.id === projectId);
         if (project) {
           return { type: 'project', name: project.name };
@@ -435,7 +326,7 @@ export class App implements OnInit {
       }
     } else if (selectedType === 'organization') {
       const orgId = this.selectedOrgId();
-      const org = this.mockOrganizations().find((o) => o.id === orgId);
+      const org = this.organizationDataService.organizations().find((o) => o.id === orgId);
       if (org) {
         return { type: 'organization', name: org.name };
       }

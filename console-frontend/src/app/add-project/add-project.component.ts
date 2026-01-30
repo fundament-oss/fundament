@@ -12,6 +12,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
+import { OrganizationDataService } from '../organization-data.service';
 import { PROJECT } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { CreateProjectRequestSchema } from '../../generated/v1/project_pb';
@@ -38,6 +39,7 @@ export class AddProjectComponent implements AfterViewInit {
   private fb = inject(FormBuilder);
   private client = inject(PROJECT);
   private toastService = inject(ToastService);
+  private organizationDataService = inject(OrganizationDataService);
 
   errorMessage = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
@@ -80,6 +82,10 @@ export class AddProjectComponent implements AfterViewInit {
       const response = await firstValueFrom(this.client.createProject(request));
 
       this.toastService.success(`Project '${this.projectForm.value.name}' created successfully`);
+
+      // Reload organization data to update the selector modal
+      await this.organizationDataService.reloadOrganizationData();
+
       this.router.navigate(['/projects', response.projectId]);
     } catch (error) {
       console.error('Failed to create project:', error);

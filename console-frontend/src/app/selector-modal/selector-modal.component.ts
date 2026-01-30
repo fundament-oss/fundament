@@ -13,7 +13,6 @@ import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
   tablerSearch,
-  tablerChevronRight,
   tablerFolder,
   tablerBracketsContain,
   tablerBuilding,
@@ -44,7 +43,6 @@ interface Organization {
   viewProviders: [
     provideIcons({
       tablerSearch,
-      tablerChevronRight,
       tablerFolder,
       tablerBracketsContain,
       tablerBuilding,
@@ -58,8 +56,6 @@ export class SelectorModalComponent implements AfterViewInit, OnChanges {
   @Input() selectedOrgId: string | null = null;
   @Input() selectedProjectId: string | null = null;
   @Input() selectedNamespaceId: string | null = null;
-  @Input() expandedOrganizations: Set<string> = new Set<string>();
-  @Input() expandedProjects: Set<string> = new Set<string>();
 
   @Output() closeModal = new EventEmitter<void>();
   @Output() selectOrganization = new EventEmitter<string>();
@@ -110,23 +106,22 @@ export class SelectorModalComponent implements AfterViewInit, OnChanges {
     this.selectNamespace.emit(namespaceId);
   }
 
-  isOrganizationExpanded(orgId: string): boolean {
-    return this.expandedOrganizations.has(orgId);
-  }
-
-  isProjectExpanded(projectId: string): boolean {
-    return this.expandedProjects.has(projectId);
-  }
-
   isOrganizationSelected(orgId: string): boolean {
-    return this.selectedOrgId === orgId;
+    // Only highlight organization if no project or namespace is selected
+    return (
+      this.selectedOrgId === orgId &&
+      !this.selectedProjectId &&
+      !this.selectedNamespaceId
+    );
   }
 
   isProjectSelected(projectId: string): boolean {
-    return this.selectedProjectId === projectId;
+    // Only highlight project if it's selected and no namespace is selected
+    return this.selectedProjectId === projectId && !this.selectedNamespaceId;
   }
 
   isNamespaceSelected(namespaceId: string): boolean {
+    // Highlight namespace if it's selected (takes precedence)
     return this.selectedNamespaceId === namespaceId;
   }
 

@@ -406,12 +406,10 @@
   <!-- Selector Modal -->
   <app-selector-modal
     [show]="selectorModalOpen()"
-    [organizations]="mockOrganizations()"
+    [organizations]="organizationDataService.organizations()"
     [selectedOrgId]="selectedOrgId()"
     [selectedProjectId]="selectedProjectId()"
     [selectedNamespaceId]="selectedNamespaceId()"
-    [expandedOrganizations]="expandedOrganizations()"
-    [expandedProjects]="expandedProjects()"
     (closeModal)="closeSelectorModal()"
     (selectOrganization)="selectOrganization($event)"
     (selectProject)="selectProjectItem($event)"

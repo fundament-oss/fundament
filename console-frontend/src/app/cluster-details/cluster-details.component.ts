@@ -12,6 +12,7 @@ import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
+import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER, PROJECT, PLUGIN } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
@@ -79,6 +80,7 @@ export class ClusterDetailsComponent implements OnInit {
   private projectClient = inject(PROJECT);
   private pluginClient = inject(PLUGIN);
   private toastService = inject(ToastService);
+  private organizationDataService = inject(OrganizationDataService);
   private fb = inject(FormBuilder);
 
   // Expose enum for use in template
@@ -352,7 +354,12 @@ export class ClusterDetailsComponent implements OnInit {
 
       this.showAddNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
-      await this.loadNamespaces(this.clusterData.basics.id);
+
+      // Reload organization data to update the selector modal
+      await Promise.all([
+        this.loadNamespaces(this.clusterData.basics.id),
+        this.organizationDataService.reloadOrganizationData(),
+      ]);
     } catch (error) {
       console.error('Failed to create namespace:', error);
       this.errorMessage.set(
@@ -375,7 +382,12 @@ export class ClusterDetailsComponent implements OnInit {
       await firstValueFrom(this.client.deleteNamespace(request));
 
       this.toastService.info(`Namespace '${namespaceName}' deleted`);
-      await this.loadNamespaces(this.clusterData.basics.id);
+
+      // Reload organization data to update the selector modal
+      await Promise.all([
+        this.loadNamespaces(this.clusterData.basics.id),
+        this.organizationDataService.reloadOrganizationData(),
+      ]);
     } catch (error) {
       console.error('Failed to delete namespace:', error);
       this.errorMessage.set(
