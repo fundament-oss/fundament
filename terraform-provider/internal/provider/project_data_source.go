@@ -21,7 +21,6 @@ type ProjectDataSource struct {
 	client *FundamentClient
 }
 
-
 // NewProjectDataSource creates a new ProjectDataSource.
 func NewProjectDataSource() datasource.DataSource {
 	return &ProjectDataSource{}
