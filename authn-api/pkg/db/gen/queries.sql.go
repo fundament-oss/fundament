@@ -12,6 +12,47 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const aPIKeyGetByHash = `-- name: APIKeyGetByHash :one
+SELECT id, organization_id, user_id, name, token_prefix, expires, revoked, last_used, created, deleted
+FROM authn.api_key_get_by_hash($1)
+`
+
+type APIKeyGetByHashParams struct {
+	PTokenHash []byte
+}
+
+type APIKeyGetByHashRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	UserID         uuid.UUID
+	Name           string
+	TokenPrefix    string
+	Expires        pgtype.Timestamptz
+	Revoked        pgtype.Timestamptz
+	LastUsed       pgtype.Timestamptz
+	Created        pgtype.Timestamptz
+	Deleted        pgtype.Timestamptz
+}
+
+// Uses SECURITY DEFINER function to bypass RLS (we don't know org_id before lookup)
+func (q *Queries) APIKeyGetByHash(ctx context.Context, arg APIKeyGetByHashParams) (APIKeyGetByHashRow, error) {
+	row := q.db.QueryRow(ctx, aPIKeyGetByHash, arg.PTokenHash)
+	var i APIKeyGetByHashRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.UserID,
+		&i.Name,
+		&i.TokenPrefix,
+		&i.Expires,
+		&i.Revoked,
+		&i.LastUsed,
+		&i.Created,
+		&i.Deleted,
+	)
+	return i, err
+}
+
 const organizationCreate = `-- name: OrganizationCreate :one
 INSERT INTO tenant.organizations (name)
 VALUES ($1)
@@ -138,7 +179,7 @@ func (q *Queries) UserGetByExternalID(ctx context.Context, arg UserGetByExternal
 }
 
 const userGetByID = `-- name: UserGetByID :one
-SELECT id, organization_id, name, external_id, email, created
+SELECT id, organization_id, name, external_id, email, role, created
 FROM tenant.users
 WHERE id = $1 AND deleted IS NULL
 `
@@ -153,6 +194,7 @@ type UserGetByIDRow struct {
 	Name           string
 	ExternalID     pgtype.Text
 	Email          pgtype.Text
+	Role           string
 	Created        pgtype.Timestamptz
 }
 
@@ -165,6 +207,7 @@ func (q *Queries) UserGetByID(ctx context.Context, arg UserGetByIDParams) (UserG
 		&i.Name,
 		&i.ExternalID,
 		&i.Email,
+		&i.Role,
 		&i.Created,
 	)
 	return i, err

@@ -153,9 +153,13 @@ func run() error {
 	path, handler := authnv1connect.NewAuthnServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
 	mux.Handle(path, handler)
 
+	tokenPath, tokenHandler := authnv1connect.NewTokenServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
+	mux.Handle(tokenPath, tokenHandler)
+
 	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)
 	reflector := grpcreflect.NewStaticReflector(
 		"authn.v1.AuthnService",
+		"authn.v1.TokenService",
 	)
 	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
 	mux.Handle(reflectPath, reflectHandler)

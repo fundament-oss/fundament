@@ -13,7 +13,7 @@ post {
 script:post-response {
   // If the response is JSON, you can also parse and extract specific fields
   if (res.headers['content-type']?.includes('application/json')) {
-    bru.setEnvVar("jwtToken", res.body.access_token);
+    bru.setVar("jwtToken", res.body.access_token);
   }
     
 }

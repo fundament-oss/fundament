@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -20,7 +21,6 @@ var _ datasource.DataSourceWithConfigure = &ProjectDataSource{}
 type ProjectDataSource struct {
 	client *FundamentClient
 }
-
 
 // NewProjectDataSource creates a new ProjectDataSource.
 func NewProjectDataSource() datasource.DataSource {
@@ -128,7 +128,7 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	// Map response to state
 	config.ID = types.StringValue(project.Id)
 	config.Name = types.StringValue(project.Name)
-	config.CreatedAt = types.StringValue(project.CreatedAt.Value)
+	config.CreatedAt = types.StringValue(project.CreatedAt.AsTime().Format(time.RFC3339))
 
 	tflog.Debug(ctx, "Read project successfully", map[string]any{
 		"id":   config.ID.ValueString(),
