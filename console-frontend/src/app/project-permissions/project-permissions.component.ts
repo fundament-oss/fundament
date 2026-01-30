@@ -1,10 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { PermissionModalComponent } from '../permission-modal/permission-modal.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
+import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 interface Permission {
   name: string;
@@ -15,7 +16,14 @@ interface Permission {
 @Component({
   selector: 'app-project-permissions',
   standalone: true,
-  imports: [CommonModule, PermissionModalComponent, RouterLink, RouterLinkActive, NgIcon],
+  imports: [
+    CommonModule,
+    PermissionModalComponent,
+    RouterLink,
+    RouterLinkActive,
+    NgIcon,
+    BreadcrumbComponent,
+  ],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -25,8 +33,11 @@ interface Permission {
   ],
   templateUrl: './project-permissions.component.html',
 })
-export class ProjectPermissionsComponent {
+export class ProjectPermissionsComponent implements OnInit {
   private titleService = inject(TitleService);
+  private route = inject(ActivatedRoute);
+
+  projectId = signal<string>('');
 
   // Permissions data for the project
   permissions: Permission[] = [
@@ -51,6 +62,13 @@ export class ProjectPermissionsComponent {
 
   constructor() {
     this.titleService.setTitle('Project permissions');
+  }
+
+  ngOnInit() {
+    const id = this.route.snapshot.params['id'];
+    if (id) {
+      this.projectId.set(id);
+    }
   }
 
   onAddPermission(): void {

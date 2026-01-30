@@ -1,3 +1,6 @@
+<!-- Breadcrumb -->
+<app-breadcrumb currentPage="Projects" />
+
 <!-- Error Message -->
 @if (errorMessage()) {
   <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
@@ -60,7 +63,7 @@
               <div>
                 <h3 class="font-medium dark:text-white">{{ project.name }}</h3>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Created {{ formatDate(project.createdAt) }}
+                  Created {{ formatDate(timestampToDate(project.createdAt)) }}
                 </p>
               </div>
               <ng-icon

@@ -1,0 +1,34 @@
+@if (show) {
+  <div
+    class="modal-backdrop"
+    (click)="onBackdropClick($event)"
+    (keydown)="onBackdropClick($event)"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="modal-container w-full" [ngClass]="maxWidth" role="document">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <ng-content select="[modal-title]" />
+          @if (title) {
+            {{ title }}
+          }
+        </h2>
+        <button
+          type="button"
+          (click)="onClose()"
+          class="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          aria-label="Close"
+        >
+          <ng-icon name="tablerX" size="1.5rem" />
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <ng-content />
+      </div>
+
+      <ng-content select="[modal-footer]" />
+    </div>
+  </div>
+}

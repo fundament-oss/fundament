@@ -1,3 +1,5 @@
+<app-breadcrumb currentPage="Project permissions" />
+
 <div class="card">
   <!-- Header -->
   <div class="card-header pb-0!">
@@ -6,7 +8,9 @@
 
     <!-- Tabs -->
     <nav class="tabs">
-      <a routerLink="/project-members" routerLinkActive="active"> Members </a>
+      <a [routerLink]="['/projects', projectId(), 'members']" routerLinkActive="active">
+        Members
+      </a>
       <a routerLink="/project-permissions" routerLinkActive="active"> Permissions </a>
     </nav>
   </div>

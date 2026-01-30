@@ -5,7 +5,9 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["src/*"]
-    }
+    },
+    "module": "ESNext",
+    "moduleResolution": "bundler"
   },
   "include": ["src/", "astro.config.ts"]
 }

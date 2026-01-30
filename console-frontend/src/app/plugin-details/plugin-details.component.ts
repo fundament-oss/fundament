@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -11,6 +11,7 @@ import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { GetPluginDetailRequestSchema, type PluginDetail } from '../../generated/v1/plugin_pb';
+import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 import {
   ListClustersRequestSchema,
   ListInstallsRequestSchema,
@@ -36,10 +37,10 @@ interface InstallWithCluster extends Install {
   standalone: true,
   imports: [
     CommonModule,
-    RouterLink,
     InstallPluginModalComponent,
     NgIcon,
     LoadingIndicatorComponent,
+    BreadcrumbComponent,
   ],
   viewProviders: [
     provideIcons({
@@ -152,7 +153,7 @@ export class PluginDetailsComponent implements OnInit {
       .replace(/\n\n/g, '</p><p class="mb-3">')
       .trim();
 
-    html = '<p class="mb-3">' + html + '</p>';
+    html = `<p class="mb-3">${html}</p>`;
 
     return this.sanitizer.sanitize(1, html) || '';
   }
@@ -204,5 +205,15 @@ export class PluginDetailsComponent implements OnInit {
 
   getInstalledClusterCount(): number {
     return this.clusters().filter((c) => c.installed).length;
+  }
+
+  get breadcrumbSegments(): BreadcrumbSegment[] {
+    const segments: BreadcrumbSegment[] = [{ label: 'Plugins', route: '/plugins' }];
+
+    if (this.plugin()) {
+      segments.push({ label: this.plugin()!.name });
+    }
+
+    return segments;
   }
 }

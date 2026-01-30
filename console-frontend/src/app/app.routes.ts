@@ -73,9 +73,12 @@ export const routes: Routes = [
   {
     path: 'clusters/:id',
     loadComponent: () =>
-      import('./cluster-overview/cluster-overview.component').then(
-        (m) => m.ClusterOverviewComponent,
-      ),
+      import('./cluster-details/cluster-details.component').then((m) => m.ClusterDetailsComponent),
+  },
+  {
+    path: 'projects/:id/namespaces',
+    loadComponent: () =>
+      import('./namespaces/namespaces.component').then((m) => m.NamespacesComponent),
   },
   {
     path: 'project-permissions',
@@ -85,9 +88,30 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'project-members',
+    path: 'projects/:id/members',
     loadComponent: () =>
       import('./project-members/project-members.component').then((m) => m.ProjectMembersComponent),
+  },
+  {
+    path: 'projects/:id/settings',
+    loadComponent: () =>
+      import('./project-settings/project-settings.component').then(
+        (m) => m.ProjectSettingsComponent,
+      ),
+  },
+  {
+    path: 'projects/:id/namespaces/:namespaceId/members',
+    loadComponent: () =>
+      import('./namespace-members/namespace-members.component').then(
+        (m) => m.NamespaceMembersComponent,
+      ),
+  },
+  {
+    path: 'projects/:id/namespaces/:namespaceId/settings',
+    loadComponent: () =>
+      import('./namespace-settings/namespace-settings.component').then(
+        (m) => m.NamespaceSettingsComponent,
+      ),
   },
   {
     path: 'plugins',
@@ -105,6 +129,14 @@ export const routes: Routes = [
   },
   {
     path: 'usage',
+    loadComponent: () => import('./usage/usage.component').then((m) => m.UsageComponent),
+  },
+  {
+    path: 'projects/:id/usage',
+    loadComponent: () => import('./usage/usage.component').then((m) => m.UsageComponent),
+  },
+  {
+    path: 'projects/:id/namespaces/:namespaceId/usage',
     loadComponent: () => import('./usage/usage.component').then((m) => m.UsageComponent),
   },
   {

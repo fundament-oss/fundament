@@ -1,10 +1,13 @@
 import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { AuthnApiService } from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { ToastService } from './toast.service';
 import { versionMismatch$ } from './app.config';
+import { SelectorModalComponent } from './selector-modal/selector-modal.component';
+import { OrganizationDataService } from './organization-data.service';
 import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -19,10 +22,14 @@ import {
   tablerUserCircle,
   tablerLayoutDashboard,
   tablerFolder,
+  tablerFolders,
   tablerPuzzle,
   tablerUsers,
   tablerSettings,
   tablerChartLine,
+  tablerChevronRight,
+  tablerBracketsContain,
+  tablerBuilding,
 } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 
@@ -33,6 +40,7 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
     RouterLink,
     RouterLinkActive,
     CommonModule,
+    SelectorModalComponent,
     FundamentLogoIconComponent,
     KubernetesIconComponent,
     NgIcon,
@@ -51,10 +59,14 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
       tablerUserCircle,
       tablerLayoutDashboard,
       tablerFolder,
+      tablerFolders,
       tablerPuzzle,
       tablerUsers,
       tablerSettings,
       tablerChartLine,
+      tablerChevronRight,
+      tablerBracketsContain,
+      tablerBuilding,
     }),
   ],
   templateUrl: './app.html',
@@ -64,15 +76,15 @@ export class App implements OnInit {
   private router = inject(Router);
   private apiService = inject(AuthnApiService);
   protected toastService = inject(ToastService);
+  protected organizationDataService = inject(OrganizationDataService);
 
   // Version mismatch state
   apiVersionMismatch = signal(false);
 
   // Dropdown states
-  projectDropdownOpen = signal(false);
   userDropdownOpen = signal(false);
-  selectedProject = signal('Project 1');
   sidebarOpen = signal(false);
+  selectorModalOpen = signal(false);
 
   // Theme state
   isDarkMode = signal(false);
@@ -80,25 +92,88 @@ export class App implements OnInit {
   // User state
   currentUser = signal<User | undefined>(undefined);
 
+  // Nested selector state
+  selectedOrgId = signal<string | null>(null);
+  selectedProjectId = signal<string | null>(null);
+  selectedNamespaceId = signal<string | null>(null);
+
   async ngOnInit() {
     this.initializeTheme();
 
     // Initialize authentication state
     await this.apiService.initializeAuth();
 
-    // Subscribe to user state changes
+    // Subscribe to user state changes and load organization data when user is available
     this.apiService.currentUser$.subscribe((user) => {
       this.currentUser.set(user);
+
+      // Load organization data when user is logged in
+      if (user?.organizationId) {
+        this.organizationDataService.loadOrganizationData().then(() => {
+          // Initialize selector with the organization selected
+          const orgs = this.organizationDataService.organizations();
+          if (orgs.length > 0) {
+            this.selectedOrgId.set(orgs[0].id);
+          }
+        });
+      }
     });
 
     // Subscribe to API version mismatch
     versionMismatch$.subscribe((mismatch) => {
       this.apiVersionMismatch.set(mismatch);
     });
+
+    // Subscribe to route changes to update sidebar state based on current route
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe((event: NavigationEnd) => {
+        this.updateSidebarStateFromRoute(event.url);
+      });
+
+    // Initialize sidebar state from current route
+    this.updateSidebarStateFromRoute(this.router.url);
   }
 
   reloadApp() {
     window.location.reload();
+  }
+
+  // Update sidebar state based on current route
+  private updateSidebarStateFromRoute(url: string) {
+    // Match project routes: /projects/:projectId or /projects/:projectId/...
+    const projectRouteMatch = url.match(/^\/projects\/([^/]+)/);
+
+    if (projectRouteMatch) {
+      const projectId = projectRouteMatch[1];
+
+      // Check if this is a namespace route: /projects/:projectId/namespaces/:namespaceId
+      const namespaceRouteMatch = url.match(/^\/projects\/[^/]+\/namespaces\/([^/]+)/);
+
+      if (namespaceRouteMatch) {
+        const namespaceId = namespaceRouteMatch[1];
+        this.selectedNamespaceId.set(namespaceId);
+        this.selectedProjectId.set(projectId);
+        this.selectedOrgId.set(null);
+      } else {
+        // Project route (without namespace)
+        this.selectedProjectId.set(projectId);
+        this.selectedNamespaceId.set(null);
+        this.selectedOrgId.set(null);
+      }
+    } else {
+      // Organization routes or other routes
+      // Only update if we're not already in a valid state
+      if (this.selectedProjectId() || this.selectedNamespaceId()) {
+        // We're on an organization route, so select the organization
+        const orgs = this.organizationDataService.organizations();
+        if (orgs.length > 0) {
+          this.selectedOrgId.set(orgs[0].id);
+          this.selectedProjectId.set(null);
+          this.selectedNamespaceId.set(null);
+        }
+      }
+    }
   }
 
   // Check if current route is login
@@ -108,12 +183,16 @@ export class App implements OnInit {
 
   // Check if current route is project members or permissions
   isProjectMembersOrPermissions(): boolean {
-    return this.router.url === '/project-members' || this.router.url === '/project-permissions';
+    return this.router.url.includes('/members') || this.router.url === '/project-permissions';
   }
 
   // Check if current route is clusters or add-cluster
   isClustersActive(): boolean {
-    return this.router.url.startsWith('/clusters/') || this.router.url.startsWith('/add-cluster');
+    return (
+      this.router.url === '/' ||
+      this.router.url.startsWith('/clusters/') ||
+      this.router.url.startsWith('/add-cluster')
+    );
   }
 
   // Initialize theme from localStorage or system preference
@@ -160,25 +239,23 @@ export class App implements OnInit {
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
     const target = event.target as HTMLElement;
-    const projectDropdown = target.closest('.project-dropdown');
     const userDropdown = target.closest('.user-dropdown');
 
-    if (!projectDropdown) {
-      this.projectDropdownOpen.set(false);
-    }
     if (!userDropdown) {
       this.userDropdownOpen.set(false);
     }
   }
 
-  toggleProjectDropdown() {
-    this.projectDropdownOpen.set(!this.projectDropdownOpen());
-    this.userDropdownOpen.set(false); // Close other dropdown
-  }
-
   toggleUserDropdown() {
     this.userDropdownOpen.set(!this.userDropdownOpen());
-    this.projectDropdownOpen.set(false); // Close other dropdown
+  }
+
+  openSelectorModal() {
+    this.selectorModalOpen.set(true);
+  }
+
+  closeSelectorModal() {
+    this.selectorModalOpen.set(false);
   }
 
   async handleLogout() {
@@ -190,16 +267,123 @@ export class App implements OnInit {
     }
   }
 
-  selectProject(project: string) {
-    this.selectedProject.set(project);
-    this.projectDropdownOpen.set(false);
-  }
-
   toggleSidebar() {
     this.sidebarOpen.update((value) => !value);
   }
 
   closeSidebar() {
     this.sidebarOpen.set(false);
+  }
+
+  // Nested selector methods
+  selectOrganization(orgId: string) {
+    // Select organization and navigate to clusters page
+    this.selectedOrgId.set(orgId);
+    this.selectedProjectId.set(null);
+    this.selectedNamespaceId.set(null);
+
+    // Close modal and navigate
+    this.selectorModalOpen.set(false);
+    this.router.navigate(['/']);
+  }
+
+  selectProjectItem(projectId: string) {
+    // Select project and navigate to project general page
+    this.selectedProjectId.set(projectId);
+    this.selectedOrgId.set(null);
+    this.selectedNamespaceId.set(null);
+
+    // Close modal and navigate
+    this.selectorModalOpen.set(false);
+    this.router.navigate(['/projects', projectId]);
+  }
+
+  selectNamespaceItem(namespaceId: string) {
+    this.selectedNamespaceId.set(namespaceId);
+    this.selectedOrgId.set(null);
+
+    // Find the project that contains this namespace
+    let projectId: string | null = null;
+    for (const org of this.organizationDataService.organizations()) {
+      for (const project of org.projects) {
+        if (project.namespaces.some((ns) => ns.id === namespaceId)) {
+          projectId = project.id;
+          break;
+        }
+      }
+      if (projectId) break;
+    }
+
+    this.selectedProjectId.set(projectId);
+
+    // Close modal and navigate
+    this.selectorModalOpen.set(false);
+    if (projectId) {
+      this.router.navigate(['/projects', projectId, 'namespaces', namespaceId, 'members']);
+    }
+  }
+
+  getSelectedType(): 'organization' | 'project' | 'namespace' | null {
+    if (this.selectedNamespaceId()) return 'namespace';
+    if (this.selectedProjectId()) return 'project';
+    if (this.selectedOrgId()) return 'organization';
+    return null;
+  }
+
+  getSettingsHeader(): string {
+    const type = this.getSelectedType();
+    if (type === 'organization') return 'Organization-specific';
+    if (type === 'project') return 'Project-specific';
+    if (type === 'namespace') return 'Namespace-specific';
+    return '';
+  }
+
+  isOrganizationSelected(orgId: string): boolean {
+    return this.selectedOrgId() === orgId;
+  }
+
+  isProjectSelected(projectId: string): boolean {
+    return this.selectedProjectId() === projectId;
+  }
+
+  isNamespaceSelected(namespaceId: string): boolean {
+    return this.selectedNamespaceId() === namespaceId;
+  }
+
+  getSelectedItemDisplay(): {
+    type: 'organization' | 'project' | 'namespace';
+    name: string;
+  } | null {
+    const selectedType = this.getSelectedType();
+
+    if (!selectedType) return null;
+
+    if (selectedType === 'namespace') {
+      const namespaceId = this.selectedNamespaceId();
+      for (const org of this.organizationDataService.organizations()) {
+        for (const project of org.projects) {
+          const namespace = project.namespaces.find((ns) => ns.id === namespaceId);
+          if (namespace) {
+            return { type: 'namespace', name: namespace.name };
+          }
+        }
+      }
+    } else if (selectedType === 'project') {
+      const projectId = this.selectedProjectId();
+      for (const org of this.organizationDataService.organizations()) {
+        const project = org.projects.find((p) => p.id === projectId);
+        if (project) {
+          return { type: 'project', name: project.name };
+        }
+      }
+    } else if (selectedType === 'organization') {
+      const orgId = this.selectedOrgId();
+      const org = this.organizationDataService.organizations().find((o) => o.id === orgId);
+      if (org) {
+        return { type: 'organization', name: org.name };
+      }
+    }
+
+    return null;
   }
 }

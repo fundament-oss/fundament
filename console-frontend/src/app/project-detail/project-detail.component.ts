@@ -10,11 +10,12 @@ import {
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
+import { OrganizationDataService } from '../organization-data.service';
 import { PROJECT, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import {
   GetProjectRequestSchema,
   DeleteProjectRequestSchema,
@@ -33,6 +34,8 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerTrash, tablerAlertTriangle, tablerPencil } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
+import { ModalComponent } from '../modal/modal.component';
+import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 
 type ProjectMemberRole = 'viewer' | 'admin';
 
@@ -47,7 +50,15 @@ interface ProjectMember {
 
 @Component({
   selector: 'app-project-detail',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    NgIcon,
+    LoadingIndicatorComponent,
+    ModalComponent,
+    BreadcrumbComponent,
+  ],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -68,6 +79,7 @@ export class ProjectDetailComponent implements OnInit {
   private projectClient = inject(PROJECT);
   private clusterClient = inject(CLUSTER);
   private toastService = inject(ToastService);
+  private organizationDataService = inject(OrganizationDataService);
 
   project = signal<Project | null>(null);
   namespaces = signal<ProjectNamespace[]>([]);
@@ -204,7 +216,12 @@ export class ProjectDetailComponent implements OnInit {
 
       this.showCreateNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
-      await this.loadNamespaces(this.project()!.id);
+
+      // Reload organization data to update the selector modal
+      await Promise.all([
+        this.loadNamespaces(this.project()!.id),
+        this.organizationDataService.reloadOrganizationData(),
+      ]);
     } catch (error) {
       console.error('Failed to create namespace:', error);
       this.errorMessage.set(
@@ -227,7 +244,12 @@ export class ProjectDetailComponent implements OnInit {
       await firstValueFrom(this.clusterClient.deleteNamespace(request));
 
       this.toastService.info(`Namespace '${namespaceName}' deleted`);
-      await this.loadNamespaces(this.project()!.id);
+
+      // Reload organization data to update the selector modal
+      await Promise.all([
+        this.loadNamespaces(this.project()!.id),
+        this.organizationDataService.reloadOrganizationData(),
+      ]);
     } catch (error) {
       console.error('Failed to delete namespace:', error);
       this.errorMessage.set(
@@ -250,6 +272,10 @@ export class ProjectDetailComponent implements OnInit {
 
       this.showDeleteModal.set(false);
       this.toastService.info(`Project '${this.project()!.name}' deleted`);
+
+      // Reload organization data to update the selector modal
+      await this.organizationDataService.reloadOrganizationData();
+
       this.router.navigate(['/projects']);
     } catch (error) {
       console.error('Failed to delete project:', error);
@@ -262,13 +288,18 @@ export class ProjectDetailComponent implements OnInit {
     }
   }
 
-  formatDate(timestamp: Timestamp | undefined): string {
-    if (!timestamp) return 'Unknown';
-    return timestampDate(timestamp).toLocaleDateString('en-US', {
+  formatDate(dateString?: string): string {
+    if (!dateString) return 'Unknown';
+    return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
+  }
+
+  timestampToDate(timestamp: Timestamp | undefined): string | undefined {
+    if (!timestamp) return undefined;
+    return timestampDate(timestamp).toISOString();
   }
 
   getNameError(): string {
@@ -394,5 +425,15 @@ export class ProjectDetailComponent implements OnInit {
     ]);
     this.members.update((members) => members.filter((m) => m.id !== memberId));
     this.toastService.info(`${member.name} removed from project`);
+  }
+
+  get breadcrumbSegments(): BreadcrumbSegment[] {
+    const segments: BreadcrumbSegment[] = [{ label: 'Projects', route: '/projects' }];
+
+    if (this.project()) {
+      segments.push({ label: this.project()!.name });
+    }
+
+    return segments;
   }
 }
