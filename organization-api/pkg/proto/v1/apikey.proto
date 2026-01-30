@@ -3,6 +3,7 @@ syntax = "proto3";
 package organization.v1;
 
 import "v1/common.proto";
+import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
@@ -30,10 +31,10 @@ message APIKey {
   string id = 10;
   string name = 20;
   string token_prefix = 30;  // First 8 chars for display (fun_XXXX)
-  Timestamp expires_at = 40;  // null if never expires
-  Timestamp last_used_at = 50;
-  Timestamp created_at = 60;
-  Timestamp revoked_at = 70;  // null if not revoked
+  google.protobuf.Timestamp expires_at = 40;  // null if never expires
+  google.protobuf.Timestamp last_used_at = 50;
+  google.protobuf.Timestamp created_at = 60;
+  google.protobuf.Timestamp revoked_at = 70;  // null if not revoked
 }
 
 // Create API key request

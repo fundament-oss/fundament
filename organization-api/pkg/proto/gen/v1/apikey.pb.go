@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -28,10 +29,10 @@ type APIKey struct {
 	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	TokenPrefix   string                 `protobuf:"bytes,30,opt,name=token_prefix,json=tokenPrefix,proto3" json:"token_prefix,omitempty"` // First 8 chars for display (fun_XXXX)
-	ExpiresAt     *Timestamp             `protobuf:"bytes,40,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`       // null if never expires
-	LastUsedAt    *Timestamp             `protobuf:"bytes,50,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
-	CreatedAt     *Timestamp             `protobuf:"bytes,60,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	RevokedAt     *Timestamp             `protobuf:"bytes,70,opt,name=revoked_at,json=revokedAt,proto3" json:"revoked_at,omitempty"` // null if not revoked
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`       // null if never expires
+	LastUsedAt    *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	RevokedAt     *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=revoked_at,json=revokedAt,proto3" json:"revoked_at,omitempty"` // null if not revoked
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -87,28 +88,28 @@ func (x *APIKey) GetTokenPrefix() string {
 	return ""
 }
 
-func (x *APIKey) GetExpiresAt() *Timestamp {
+func (x *APIKey) GetExpiresAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.ExpiresAt
 	}
 	return nil
 }
 
-func (x *APIKey) GetLastUsedAt() *Timestamp {
+func (x *APIKey) GetLastUsedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.LastUsedAt
 	}
 	return nil
 }
 
-func (x *APIKey) GetCreatedAt() *Timestamp {
+func (x *APIKey) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
 	}
 	return nil
 }
 
-func (x *APIKey) GetRevokedAt() *Timestamp {
+func (x *APIKey) GetRevokedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.RevokedAt
 	}
@@ -495,20 +496,20 @@ var File_v1_apikey_proto protoreflect.FileDescriptor
 
 const file_v1_apikey_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/apikey.proto\x12\x0forganization.v1\x1a\x0fv1/common.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xbe\x02\n" +
+	"\x0fv1/apikey.proto\x12\x0forganization.v1\x1a\x0fv1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xbe\x02\n" +
 	"\x06APIKey\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12!\n" +
 	"\ftoken_prefix\x18\x1e \x01(\tR\vtokenPrefix\x129\n" +
 	"\n" +
-	"expires_at\x18( \x01(\v2\x1a.organization.v1.TimestampR\texpiresAt\x12<\n" +
-	"\flast_used_at\x182 \x01(\v2\x1a.organization.v1.TimestampR\n" +
+	"expires_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12<\n" +
+	"\flast_used_at\x182 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"lastUsedAt\x129\n" +
 	"\n" +
-	"created_at\x18< \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"revoked_at\x18F \x01(\v2\x1a.organization.v1.TimestampR\trevokedAt\"j\n" +
+	"revoked_at\x18F \x01(\v2\x1a.google.protobuf.TimestampR\trevokedAt\"j\n" +
 	"\x13CreateAPIKeyRequest\x12\x12\n" +
 	"\x04name\x18\n" +
 	" \x01(\tR\x04name\x12+\n" +
@@ -559,23 +560,23 @@ func file_v1_apikey_proto_rawDescGZIP() []byte {
 
 var file_v1_apikey_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_v1_apikey_proto_goTypes = []any{
-	(*APIKey)(nil),               // 0: organization.v1.APIKey
-	(*CreateAPIKeyRequest)(nil),  // 1: organization.v1.CreateAPIKeyRequest
-	(*CreateAPIKeyResponse)(nil), // 2: organization.v1.CreateAPIKeyResponse
-	(*ListAPIKeysRequest)(nil),   // 3: organization.v1.ListAPIKeysRequest
-	(*ListAPIKeysResponse)(nil),  // 4: organization.v1.ListAPIKeysResponse
-	(*GetAPIKeyRequest)(nil),     // 5: organization.v1.GetAPIKeyRequest
-	(*GetAPIKeyResponse)(nil),    // 6: organization.v1.GetAPIKeyResponse
-	(*RevokeAPIKeyRequest)(nil),  // 7: organization.v1.RevokeAPIKeyRequest
-	(*DeleteAPIKeyRequest)(nil),  // 8: organization.v1.DeleteAPIKeyRequest
-	(*Timestamp)(nil),            // 9: organization.v1.Timestamp
-	(*emptypb.Empty)(nil),        // 10: google.protobuf.Empty
+	(*APIKey)(nil),                // 0: organization.v1.APIKey
+	(*CreateAPIKeyRequest)(nil),   // 1: organization.v1.CreateAPIKeyRequest
+	(*CreateAPIKeyResponse)(nil),  // 2: organization.v1.CreateAPIKeyResponse
+	(*ListAPIKeysRequest)(nil),    // 3: organization.v1.ListAPIKeysRequest
+	(*ListAPIKeysResponse)(nil),   // 4: organization.v1.ListAPIKeysResponse
+	(*GetAPIKeyRequest)(nil),      // 5: organization.v1.GetAPIKeyRequest
+	(*GetAPIKeyResponse)(nil),     // 6: organization.v1.GetAPIKeyResponse
+	(*RevokeAPIKeyRequest)(nil),   // 7: organization.v1.RevokeAPIKeyRequest
+	(*DeleteAPIKeyRequest)(nil),   // 8: organization.v1.DeleteAPIKeyRequest
+	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 10: google.protobuf.Empty
 }
 var file_v1_apikey_proto_depIdxs = []int32{
-	9,  // 0: organization.v1.APIKey.expires_at:type_name -> organization.v1.Timestamp
-	9,  // 1: organization.v1.APIKey.last_used_at:type_name -> organization.v1.Timestamp
-	9,  // 2: organization.v1.APIKey.created_at:type_name -> organization.v1.Timestamp
-	9,  // 3: organization.v1.APIKey.revoked_at:type_name -> organization.v1.Timestamp
+	9,  // 0: organization.v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
+	9,  // 1: organization.v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
+	9,  // 2: organization.v1.APIKey.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 3: organization.v1.APIKey.revoked_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: organization.v1.ListAPIKeysResponse.api_keys:type_name -> organization.v1.APIKey
 	0,  // 5: organization.v1.GetAPIKeyResponse.api_key:type_name -> organization.v1.APIKey
 	1,  // 6: organization.v1.APIKeyService.CreateAPIKey:input_type -> organization.v1.CreateAPIKeyRequest
