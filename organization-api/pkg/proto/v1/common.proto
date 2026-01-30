@@ -4,11 +4,6 @@ package organization.v1;
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
-// Common timestamp message
-message Timestamp {
-  string value = 10;  // ISO 8601 format
-}
-
 // Resource usage information
 message ResourceUsage {
   double used = 10;

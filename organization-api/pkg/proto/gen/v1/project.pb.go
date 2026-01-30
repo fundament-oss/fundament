@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -199,7 +200,7 @@ type Project struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	CreatedAt     *Timestamp             `protobuf:"bytes,30,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -248,7 +249,7 @@ func (x *Project) GetName() string {
 	return ""
 }
 
-func (x *Project) GetCreatedAt() *Timestamp {
+func (x *Project) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
 	}
@@ -539,7 +540,7 @@ type ProjectNamespace struct {
 	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	ClusterId     string                 `protobuf:"bytes,30,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
-	CreatedAt     *Timestamp             `protobuf:"bytes,40,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -595,7 +596,7 @@ func (x *ProjectNamespace) GetClusterId() string {
 	return ""
 }
 
-func (x *ProjectNamespace) GetCreatedAt() *Timestamp {
+func (x *ProjectNamespace) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
 	}
@@ -606,7 +607,7 @@ var File_v1_project_proto protoreflect.FileDescriptor
 
 const file_v1_project_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/project.proto\x12\x0forganization.v1\x1a\x0fv1/common.proto\x1a\x1bgoogle/protobuf/empty.proto\"\x15\n" +
+	"\x10v1/project.proto\x12\x0forganization.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fv1/common.proto\"\x15\n" +
 	"\x13ListProjectsRequest\"L\n" +
 	"\x14ListProjectsResponse\x124\n" +
 	"\bprojects\x18\n" +
@@ -623,7 +624,7 @@ const file_v1_project_proto_rawDesc = "" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x129\n" +
 	"\n" +
-	"created_at\x18\x1e \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAt\"*\n" +
+	"created_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"*\n" +
 	"\x14CreateProjectRequest\x12\x12\n" +
 	"\x04name\x18\n" +
 	" \x01(\tR\x04name\"6\n" +
@@ -657,7 +658,7 @@ const file_v1_project_proto_rawDesc = "" +
 	"\n" +
 	"cluster_id\x18\x1e \x01(\tR\tclusterId\x129\n" +
 	"\n" +
-	"created_at\x18( \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAt2\xbc\x04\n" +
+	"created_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\xbc\x04\n" +
 	"\x0eProjectService\x12[\n" +
 	"\fListProjects\x12$.organization.v1.ListProjectsRequest\x1a%.organization.v1.ListProjectsResponse\x12U\n" +
 	"\n" +
@@ -693,15 +694,15 @@ var file_v1_project_proto_goTypes = []any{
 	(*ListProjectNamespacesRequest)(nil),  // 9: organization.v1.ListProjectNamespacesRequest
 	(*ListProjectNamespacesResponse)(nil), // 10: organization.v1.ListProjectNamespacesResponse
 	(*ProjectNamespace)(nil),              // 11: organization.v1.ProjectNamespace
-	(*Timestamp)(nil),                     // 12: organization.v1.Timestamp
+	(*timestamppb.Timestamp)(nil),         // 12: google.protobuf.Timestamp
 	(*emptypb.Empty)(nil),                 // 13: google.protobuf.Empty
 }
 var file_v1_project_proto_depIdxs = []int32{
 	4,  // 0: organization.v1.ListProjectsResponse.projects:type_name -> organization.v1.Project
 	4,  // 1: organization.v1.GetProjectResponse.project:type_name -> organization.v1.Project
-	12, // 2: organization.v1.Project.created_at:type_name -> organization.v1.Timestamp
+	12, // 2: organization.v1.Project.created_at:type_name -> google.protobuf.Timestamp
 	11, // 3: organization.v1.ListProjectNamespacesResponse.namespaces:type_name -> organization.v1.ProjectNamespace
-	12, // 4: organization.v1.ProjectNamespace.created_at:type_name -> organization.v1.Timestamp
+	12, // 4: organization.v1.ProjectNamespace.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 5: organization.v1.ProjectService.ListProjects:input_type -> organization.v1.ListProjectsRequest
 	2,  // 6: organization.v1.ProjectService.GetProject:input_type -> organization.v1.GetProjectRequest
 	5,  // 7: organization.v1.ProjectService.CreateProject:input_type -> organization.v1.CreateProjectRequest

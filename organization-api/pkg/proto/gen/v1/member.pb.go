@@ -9,6 +9,7 @@ package organizationv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -294,8 +295,8 @@ type Member struct {
 	// email is set for invited members
 	Email *string `protobuf:"bytes,50,opt,name=email,proto3,oneof" json:"email,omitempty"`
 	// role is "viewer" or "admin"
-	Role          string     `protobuf:"bytes,60,opt,name=role,proto3" json:"role,omitempty"`
-	CreatedAt     *Timestamp `protobuf:"bytes,40,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Role          string                 `protobuf:"bytes,60,opt,name=role,proto3" json:"role,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -365,7 +366,7 @@ func (x *Member) GetRole() string {
 	return ""
 }
 
-func (x *Member) GetCreatedAt() *Timestamp {
+func (x *Member) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
 	}
@@ -376,7 +377,7 @@ var File_v1_member_proto protoreflect.FileDescriptor
 
 const file_v1_member_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/member.proto\x12\x0forganization.v1\x1a\x0fv1/common.proto\"\x14\n" +
+	"\x0fv1/member.proto\x12\x0forganization.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x14\n" +
 	"\x12ListMembersRequest\"H\n" +
 	"\x13ListMembersResponse\x121\n" +
 	"\amembers\x18\n" +
@@ -401,7 +402,7 @@ const file_v1_member_proto_rawDesc = "" +
 	"\x05email\x182 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x12\n" +
 	"\x04role\x18< \x01(\tR\x04role\x129\n" +
 	"\n" +
-	"created_at\x18( \x01(\v2\x1a.organization.v1.TimestampR\tcreatedAtB\x0e\n" +
+	"created_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\x0e\n" +
 	"\f_external_idB\b\n" +
 	"\x06_email2\xa3\x02\n" +
 	"\rMemberService\x12X\n" +
@@ -423,19 +424,19 @@ func file_v1_member_proto_rawDescGZIP() []byte {
 
 var file_v1_member_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_v1_member_proto_goTypes = []any{
-	(*ListMembersRequest)(nil),   // 0: organization.v1.ListMembersRequest
-	(*ListMembersResponse)(nil),  // 1: organization.v1.ListMembersResponse
-	(*InviteMemberRequest)(nil),  // 2: organization.v1.InviteMemberRequest
-	(*InviteMemberResponse)(nil), // 3: organization.v1.InviteMemberResponse
-	(*DeleteMemberRequest)(nil),  // 4: organization.v1.DeleteMemberRequest
-	(*DeleteMemberResponse)(nil), // 5: organization.v1.DeleteMemberResponse
-	(*Member)(nil),               // 6: organization.v1.Member
-	(*Timestamp)(nil),            // 7: organization.v1.Timestamp
+	(*ListMembersRequest)(nil),    // 0: organization.v1.ListMembersRequest
+	(*ListMembersResponse)(nil),   // 1: organization.v1.ListMembersResponse
+	(*InviteMemberRequest)(nil),   // 2: organization.v1.InviteMemberRequest
+	(*InviteMemberResponse)(nil),  // 3: organization.v1.InviteMemberResponse
+	(*DeleteMemberRequest)(nil),   // 4: organization.v1.DeleteMemberRequest
+	(*DeleteMemberResponse)(nil),  // 5: organization.v1.DeleteMemberResponse
+	(*Member)(nil),                // 6: organization.v1.Member
+	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
 }
 var file_v1_member_proto_depIdxs = []int32{
 	6, // 0: organization.v1.ListMembersResponse.members:type_name -> organization.v1.Member
 	6, // 1: organization.v1.InviteMemberResponse.member:type_name -> organization.v1.Member
-	7, // 2: organization.v1.Member.created_at:type_name -> organization.v1.Timestamp
+	7, // 2: organization.v1.Member.created_at:type_name -> google.protobuf.Timestamp
 	0, // 3: organization.v1.MemberService.ListMembers:input_type -> organization.v1.ListMembersRequest
 	2, // 4: organization.v1.MemberService.InviteMember:input_type -> organization.v1.InviteMemberRequest
 	4, // 5: organization.v1.MemberService.DeleteMember:input_type -> organization.v1.DeleteMemberRequest
