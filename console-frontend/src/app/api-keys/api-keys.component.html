@@ -1,7 +1,7 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-bold dark:text-white">API Keys</h1>
+    <h1 class="text-2xl font-bold dark:text-white">API keys</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
       Manage API keys for programmatic access to your organization
     </p>
@@ -10,21 +10,27 @@
   <div class="p-6">
     <!-- Token Display (only shown once after creation) -->
     @if (createdToken()) {
-      <div class="mb-6 rounded-md border-2 border-green-500 bg-green-50 p-6 dark:border-green-600 dark:bg-green-950">
+      <div
+        class="mb-6 rounded-md border-2 border-green-500 bg-green-50 p-6 dark:border-green-600 dark:bg-green-950"
+      >
         <div class="mb-4">
           <h3 class="text-lg font-semibold text-green-900 dark:text-green-100">
-            API Key Created Successfully!
+            API key created successfully!
           </h3>
           <p class="mt-1 text-sm text-green-800 dark:text-green-200">
             Copy this token now. For security reasons, it will not be shown again.
           </p>
         </div>
         <div class="mb-4">
-          <label class="mb-2 block text-sm font-medium text-green-900 dark:text-green-100">
-            Your API Token
+          <label
+            for="apiToken"
+            class="mb-2 block text-sm font-medium text-green-900 dark:text-green-100"
+          >
+            Your API token
           </label>
           <div class="flex gap-2">
             <input
+              id="apiToken"
               type="text"
               [value]="createdToken()"
               readonly
@@ -39,11 +45,7 @@
             </button>
           </div>
         </div>
-        <button
-          type="button"
-          (click)="dismissToken()"
-          class="btn-primary inline-flex items-center"
-        >
+        <button type="button" (click)="dismissToken()" class="btn-primary inline-flex items-center">
           <ng-icon name="tablerCheck" class="mr-1.5" /> I've saved the token
         </button>
       </div>
@@ -58,39 +60,58 @@
 
     <!-- Create Form -->
     @if (isCreating()) {
-      <div class="mb-6 rounded-md border border-gray-300 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-900">
-        <h3 class="mb-4 text-lg font-semibold dark:text-white">Create New API Key</h3>
+      <div class="card card-body-lg mb-6 bg-gray-50! dark:bg-gray-900!">
+        <h3 class="-mt-2 mb-4 text-lg font-semibold dark:text-white">Create new API key</h3>
         <div class="space-y-4">
           <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Name <span class="text-red-500">*</span>
+            <label
+              for="name"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Name
             </label>
             <input
               #nameInput
+              #nameField="ngModel"
+              id="name"
+              class="validate-on-touch"
               type="text"
               [(ngModel)]="newKeyName"
-              placeholder="e.g., Production API Key"
-              class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              placeholder="E.g. Production API key"
               (keyup.enter)="createApiKey()"
               (keyup.escape)="cancelCreating()"
+              required
             />
-            @if (getNameError()) {
-              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
+            @if (getNameError(nameField)) {
+              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+                {{ getNameError(nameField) }}
+              </p>
             }
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              for="expiresInDays"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
               Expires in (days)
             </label>
-            <input
-              type="number"
-              [(ngModel)]="newKeyExpiresInDays"
-              placeholder="Leave empty for no expiration"
-              min="1"
-              class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-              (keyup.enter)="createApiKey()"
-              (keyup.escape)="cancelCreating()"
-            />
+            <div class="flex items-center">
+              <input
+                id="expiresInDays"
+                class="rounded-r-none!"
+                type="number"
+                [(ngModel)]="newKeyExpiresInDays"
+                placeholder="Leave empty for no expiration"
+                min="1"
+                (keyup.enter)="createApiKey()"
+                (keyup.escape)="cancelCreating()"
+              />
+              <span
+                class="rounded-r-md border border-l-0 border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400"
+              >
+                days
+              </span>
+            </div>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Optional. Leave empty for a key that never expires.
             </p>
@@ -99,18 +120,18 @@
             <button
               type="button"
               (click)="createApiKey()"
-              [disabled]="loading() || !newKeyName().trim()"
-              class="btn-primary inline-flex shrink-0 items-center"
+              [disabled]="loading()"
+              class="btn-primary"
             >
-              <ng-icon name="tablerCheck" class="mr-1.5" /> Create
+              Create
             </button>
             <button
               type="button"
               (click)="cancelCreating()"
               [disabled]="loading()"
-              class="btn-secondary inline-flex shrink-0 items-center"
+              class="btn-secondary"
             >
-              <ng-icon name="tablerX" class="mr-1.5" /> Cancel
+              Cancel
             </button>
           </div>
         </div>
@@ -171,7 +192,7 @@
                       {{ formatDate(apiKey.expiresAt) }}
                     </span>
                   } @else {
-                    <span class="text-gray-500">Never</span>
+                    <span class="text-gray-600 dark:text-gray-400">Never</span>
                   }
                 </td>
                 <td>

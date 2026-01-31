@@ -14,7 +14,14 @@ import {
 } from '../../generated/v1/apikey_pb';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerTrash, tablerX, tablerCheck, tablerCopy, tablerBan } from '@ng-icons/tabler-icons';
+import {
+  tablerPlus,
+  tablerTrash,
+  tablerX,
+  tablerCheck,
+  tablerCopy,
+  tablerBan,
+} from '@ng-icons/tabler-icons';
 import { Router } from '@angular/router';
 
 @Component({
@@ -48,14 +55,13 @@ export class ApiKeysComponent implements OnInit {
   isCreating = signal(false);
   newKeyName = signal('');
   newKeyExpiresInDays = signal<number | null>(null);
-  formSubmitted = signal(false);
 
   // Newly created token (only shown once)
   createdToken = signal<string | null>(null);
   createdTokenPrefix = signal<string | null>(null);
 
   constructor() {
-    this.titleService.setTitle('API Keys');
+    this.titleService.setTitle('API keys');
   }
 
   async ngOnInit() {
@@ -128,7 +134,6 @@ export class ApiKeysComponent implements OnInit {
     this.isCreating.set(true);
     this.newKeyName.set('');
     this.newKeyExpiresInDays.set(null);
-    this.formSubmitted.set(false);
     this.error.set(null);
 
     // Focus the name input field after Angular updates the view
@@ -141,12 +146,9 @@ export class ApiKeysComponent implements OnInit {
     this.isCreating.set(false);
     this.newKeyName.set('');
     this.newKeyExpiresInDays.set(null);
-    this.formSubmitted.set(false);
   }
 
   async createApiKey() {
-    this.formSubmitted.set(true);
-
     const name = this.newKeyName().trim();
     if (!name) {
       return;
@@ -172,7 +174,6 @@ export class ApiKeysComponent implements OnInit {
       this.isCreating.set(false);
       this.newKeyName.set('');
       this.newKeyExpiresInDays.set(null);
-      this.formSubmitted.set(false);
 
       // Reload the list to show the new key
       await this.loadApiKeys();
@@ -214,8 +215,8 @@ export class ApiKeysComponent implements OnInit {
     this.createdTokenPrefix.set(null);
   }
 
-  getNameError(): string {
-    if (this.formSubmitted() && !this.newKeyName().trim()) {
+  getNameError(field?: { invalid: boolean | null; touched: boolean | null }): string {
+    if (field?.invalid && field?.touched) {
       return 'Name is required';
     }
     return '';
