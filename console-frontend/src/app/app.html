@@ -166,6 +166,13 @@
                     >
                       My profile
                     </a>
+                    <a
+                      routerLink="/api-keys"
+                      (click)="userDropdownOpen.set(false)"
+                      class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900"
+                    >
+                      API keys
+                    </a>
                     <button
                       (click)="handleLogout()"
                       class="block w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900"
