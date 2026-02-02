@@ -1,0 +1,18 @@
+{
+  "id": "demo-widget-v1",
+  "name": "Demo Widget Plugin",
+  "version": "1.0.0",
+  "type": "component",
+  "template": "<div class=\"card\">\n  <div class=\"card-header\">\n    <h2 class=\"text-xl font-bold dark:text-white\">{{ title }}</h2>\n    <p class=\"text-sm text-gray-600 dark:text-gray-300\">{{ description }}</p>\n  </div>\n  <div class=\"p-6\">\n    <div class=\"space-y-4\">\n      <div class=\"rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20\">\n        <h3 class=\"font-medium text-blue-900 dark:text-blue-100\">Counter Example</h3>\n        <p class=\"text-3xl font-bold text-blue-600 dark:text-blue-400\">{{ count() }}</p>\n        <div class=\"mt-2 flex gap-2\">\n          <button (click)=\"increment()\" class=\"btn-primary\">Increment</button>\n          <button (click)=\"decrement()\" class=\"btn-secondary\">Decrement</button>\n          <button (click)=\"reset()\" class=\"btn-secondary\">Reset</button>\n        </div>\n      </div>\n      \n      <div class=\"rounded-lg bg-green-50 p-4 dark:bg-green-900/20\">\n        <h3 class=\"font-medium text-green-900 dark:text-green-100\">Dynamic Content</h3>\n        <p class=\"text-sm text-gray-700 dark:text-gray-300\">Component loaded at: {{ loadedAt | date:'medium' }}</p>\n        <p class=\"text-sm text-gray-700 dark:text-gray-300\">Last updated: {{ lastUpdated() }}</p>\n      </div>\n\n      <div class=\"rounded-lg bg-purple-50 p-4 dark:bg-purple-900/20\">\n        <h3 class=\"font-medium text-purple-900 dark:text-purple-100\">User Input</h3>\n        <input \n          type=\"text\" \n          [(ngModel)]=\"userInput\" \n          placeholder=\"Type something...\"\n          class=\"mb-2\"\n        />\n        <p class=\"text-sm\">You typed: <strong>{{ userInput }}</strong></p>\n      </div>\n\n      <div class=\"rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20\">\n        <h3 class=\"font-medium text-amber-900 dark:text-amber-100\">Component Info</h3>\n        <ul class=\"text-sm text-gray-700 dark:text-gray-300\">\n          <li>✓ Loaded via XHR from remote source</li>\n          <li>✓ Compiled dynamically at runtime</li>\n          <li>✓ Full Angular features (signals, directives, pipes)</li>\n          <li>✓ Reactive state management</li>\n        </ul>\n      </div>\n    </div>\n  </div>\n</div>",
+  "styles": "",
+  "componentClass": "class DynamicPluginComponent {\n  title = 'Dynamically Loaded Component';\n  description = 'This entire component was fetched via XHR and compiled at runtime!';\n  loadedAt = new Date();\n  count = signal(0);\n  lastUpdated = signal(new Date().toLocaleTimeString());\n  userInput = '';\n\n  ngOnInit() {\n    console.log('[Dynamic Plugin] Component initialized!');\n  }\n\n  increment() {\n    this.count.update(v => v + 1);\n    this.updateTimestamp();\n  }\n\n  decrement() {\n    this.count.update(v => v - 1);\n    this.updateTimestamp();\n  }\n\n  reset() {\n    this.count.set(0);\n    this.updateTimestamp();\n  }\n\n  updateTimestamp() {\n    this.lastUpdated.set(new Date().toLocaleTimeString());\n  }\n}",
+  "imports": [
+    "CommonModule",
+    "FormsModule"
+  ],
+  "metadata": {
+    "author": "Fundament Team",
+    "description": "A fully dynamic component loaded and compiled at runtime",
+    "tags": ["dynamic", "xhr", "jit-compiled"]
+  }
+}

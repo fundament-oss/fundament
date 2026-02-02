@@ -1,200 +1,162 @@
-<div class="card">
-  <!-- Header -->
-  <div class="card-header">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold dark:text-white">
-          @if (pluginInfo()) {
-            {{ pluginInfo()?.name }}
-          } @else {
-            Runtime Plugin Demo
-          }
-        </h1>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          @if (pluginInfo()) {
-            {{ pluginInfo()?.description }}
-          } @else {
-            Loading plugin configuration via XHR...
-          }
-        </p>
+<div class="space-y-6">
+  <!-- Info Card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold dark:text-white">Dynamic Component Loading via XHR</h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Fully customizable components loaded and compiled at runtime
+          </p>
+        </div>
+        <ng-icon name="tablerRocket" class="text-4xl text-blue-500 dark:text-blue-400" />
       </div>
-      <ng-icon name="tablerRocket" class="text-4xl text-blue-500 dark:text-blue-400" />
     </div>
+
+    @if (isLoading()) {
+      <div class="flex justify-center p-6">
+        <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+          <ng-icon name="tablerRefresh" class="animate-spin text-xl" />
+          <span>Loading and compiling component via XHR...</span>
+        </div>
+      </div>
+    } @else if (error()) {
+      <div class="p-6">
+        <div class="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
+          <p class="mb-2 font-medium text-red-800 dark:text-red-200">
+            Component Loading Failed
+          </p>
+          <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+          <button (click)="reloadComponent()" class="btn-primary mt-4">Retry</button>
+        </div>
+      </div>
+    } @else {
+      <!-- Component Info -->
+      <div class="border-b border-gray-200 bg-blue-50 p-6 dark:border-gray-800 dark:bg-blue-900/10">
+        <h3 class="mb-4 flex items-center gap-2 text-lg font-medium dark:text-white">
+          <ng-icon name="tablerPlugConnected" class="text-xl" />
+          Component Information
+        </h3>
+        <div class="space-y-3">
+          <div class="sm:flex">
+            <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Component ID:</p>
+            <p class="dark:text-white">{{ componentDefinition?.id }}</p>
+          </div>
+          <div class="sm:flex">
+            <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Name:</p>
+            <p class="dark:text-white">{{ componentDefinition?.name }}</p>
+          </div>
+          <div class="sm:flex">
+            <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Version:</p>
+            <p class="dark:text-white">{{ componentDefinition?.version }}</p>
+          </div>
+          <div class="sm:flex">
+            <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Loaded At:</p>
+            <p class="dark:text-white">{{ componentInfo()?.loadedAt | date: 'medium' }}</p>
+          </div>
+          <div class="sm:flex">
+            <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Load & Compile Time:</p>
+            <p class="dark:text-white">{{ componentInfo()?.loadTime }}ms</p>
+          </div>
+          <div class="sm:flex">
+            <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Load Count:</p>
+            <p class="dark:text-white">{{ loadCount() }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Details -->
+      <div class="border-b border-gray-200 p-6 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">Loading Process</h3>
+        <ol class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+          <li class="flex items-start gap-2">
+            <span class="font-bold text-blue-600 dark:text-blue-400">1.</span>
+            <span
+              ><strong>XHR Request:</strong> Fetch component definition (template, styles, class code)
+              from remote source</span
+            >
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="font-bold text-blue-600 dark:text-blue-400">2.</span>
+            <span
+              ><strong>Dynamic Compilation:</strong> Compile component using Angular JIT compiler at
+              runtime</span
+            >
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="font-bold text-blue-600 dark:text-blue-400">3.</span>
+            <span
+              ><strong>Instantiation:</strong> Create component instance and inject into
+              ViewContainerRef</span
+            >
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="font-bold text-blue-600 dark:text-blue-400">4.</span>
+            <span><strong>Rendering:</strong> Display fully functional Angular component</span>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Component Source Code -->
+      <div class="border-b border-gray-200 p-6 dark:border-gray-800">
+        <h3 class="mb-4 flex items-center gap-2 text-lg font-medium dark:text-white">
+          <ng-icon name="tablerCode" class="text-xl" />
+          Component Source (Loaded via XHR)
+        </h3>
+        <div class="space-y-4">
+          <div>
+            <p class="mb-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+              Template ({{ componentDefinition?.template?.length }} characters)
+            </p>
+            <pre
+              class="overflow-x-auto rounded-md bg-gray-100 p-4 text-xs text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+            ><code>{{ componentDefinition?.template }}</code></pre>
+          </div>
+          <div>
+            <p class="mb-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+              Component Class ({{ componentDefinition?.componentClass?.length }} characters)
+            </p>
+            <pre
+              class="overflow-x-auto rounded-md bg-gray-100 p-4 text-xs text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+            ><code>{{ componentDefinition?.componentClass }}</code></pre>
+          </div>
+          <div>
+            <p class="mb-2 text-sm font-medium text-gray-600 dark:text-gray-400">Imports</p>
+            <div class="flex gap-2">
+              @for (imp of componentDefinition?.imports; track imp) {
+                <span class="badge badge-blue">{{ imp }}</span>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="p-6">
+        <div class="flex gap-3">
+          <button (click)="reloadComponent()" class="btn-primary flex items-center gap-2">
+            <ng-icon name="tablerRefresh" />
+            Reload Component
+          </button>
+          <a routerLink="/" class="btn-secondary">Back to Dashboard</a>
+        </div>
+      </div>
+    }
   </div>
 
-  @if (isLoading()) {
-    <div class="flex justify-center p-6">
-      <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-        <ng-icon name="tablerRefresh" class="animate-spin text-xl" />
-        <span>Fetching plugin configuration via XHR...</span>
+  <!-- Dynamic Component Container (always in DOM for ViewChild) -->
+  <div>
+    @if (!isLoading() && !error()) {
+      <div class="mb-4 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 p-4 dark:border-blue-700 dark:bg-blue-900/10">
+        <p class="text-sm font-medium text-blue-900 dark:text-blue-100">
+          ↓ Dynamically Loaded Component Rendered Below ↓
+        </p>
+        <p class="text-xs text-blue-700 dark:text-blue-300">
+          This component was fetched, compiled, and rendered at runtime
+        </p>
       </div>
-    </div>
-  } @else if (error()) {
-    <div class="p-6">
-      <div class="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-        <p class="mb-2 font-medium text-red-800 dark:text-red-200">XHR Request Failed</p>
-        <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
-        <button (click)="reloadPlugin()" class="btn-primary mt-4">Retry XHR Request</button>
-      </div>
-    </div>
-  } @else {
-    <!-- Plugin Info Section -->
-    <div class="border-b border-gray-200 p-6 dark:border-gray-800">
-      <h3 class="mb-4 flex items-center gap-2 text-lg font-medium dark:text-white">
-        <ng-icon name="tablerPlugConnected" class="text-xl" />
-        Plugin Information
-      </h3>
-      <div class="space-y-3">
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Plugin ID:</p>
-          <p class="dark:text-white">{{ pluginInfo()?.id }}</p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Name:</p>
-          <p class="dark:text-white">{{ pluginInfo()?.name }}</p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Version:</p>
-          <p class="dark:text-white">{{ pluginInfo()?.version }}</p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Author:</p>
-          <p class="dark:text-white">
-            @if (pluginInfo()?.author?.url) {
-              <a
-                [href]="pluginInfo()!.author.url"
-                target="_blank"
-                class="text-blue-600 hover:underline dark:text-blue-400"
-              >
-                {{ pluginInfo()?.author?.name }}
-              </a>
-            } @else {
-              {{ pluginInfo()?.author?.name }}
-            }
-          </p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Status:</p>
-          <p>
-            <span class="badge {{ statusBadgeClass() }}">{{ pluginInfo()?.status }}</span>
-          </p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Loaded At:</p>
-          <p class="dark:text-white">{{ pluginInfo()?.loadedAt | date: 'medium' }}</p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Load Time:</p>
-          <p class="dark:text-white">{{ pluginInfo()?.loadTime }}ms</p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Load Count:</p>
-          <p class="dark:text-white">{{ loadCount() }}</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- XHR Loading Metadata -->
-    <div class="border-b border-gray-200 bg-blue-50 p-6 dark:border-gray-800 dark:bg-blue-900/10">
-      <h3 class="mb-4 text-lg font-medium dark:text-white">XHR Request Details</h3>
-      <div class="space-y-3">
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Loaded Via:</p>
-          <p class="dark:text-white">{{ pluginInfo()?.metadata?.loadedVia }}</p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Endpoint:</p>
-          <p class="font-mono text-sm dark:text-white">{{ pluginInfo()?.metadata?.endpoint }}</p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Content-Type:</p>
-          <p class="dark:text-white">{{ pluginInfo()?.metadata?.contentType }}</p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Cacheable:</p>
-          <p class="dark:text-white">
-            {{ pluginInfo()?.metadata?.cacheable ? 'Yes' : 'No (Cache-Control: no-cache)' }}
-          </p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">HTTP Method:</p>
-          <p class="dark:text-white">GET</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Dynamic Features Section -->
-    <div class="border-b border-gray-200 p-6 dark:border-gray-800">
-      <h3 class="mb-4 text-lg font-medium dark:text-white">
-        Plugin Features (Loaded Dynamically)
-      </h3>
-      <ul class="space-y-3">
-        @for (feature of pluginInfo()?.features; track feature.title) {
-          <li class="flex items-start gap-3">
-            <span class="mt-0.5 text-green-500">✓</span>
-            <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ feature.title }}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">{{ feature.description }}</p>
-            </div>
-          </li>
-        }
-      </ul>
-    </div>
-
-    <!-- Dynamic Actions Section -->
-    <div class="border-b border-gray-200 p-6 dark:border-gray-800">
-      <h3 class="mb-4 text-lg font-medium dark:text-white">Actions (Rendered Dynamically)</h3>
-      <div class="flex flex-wrap gap-3">
-        @for (action of pluginInfo()?.actions; track action.id) {
-          @if (action.route) {
-            <a
-              [routerLink]="action.route"
-              [class]="action.type === 'primary' ? 'btn-primary' : 'btn-secondary'"
-              class="flex items-center gap-2"
-            >
-              <ng-icon [name]="action.icon" />
-              {{ action.label }}
-            </a>
-          } @else {
-            <button
-              (click)="handleAction(action)"
-              [class]="action.type === 'primary' ? 'btn-primary' : 'btn-secondary'"
-              class="flex items-center gap-2"
-            >
-              <ng-icon [name]="action.icon" />
-              {{ action.label }}
-            </button>
-          }
-        }
-      </div>
-    </div>
-
-    <!-- Implementation Code -->
-    <div class="bg-gray-50 p-6 dark:bg-gray-900/30">
-      <h3 class="mb-4 text-lg font-medium dark:text-white">Implementation Code</h3>
-      <div class="rounded-md bg-white p-4 dark:bg-gray-800">
-        <pre
-          class="overflow-x-auto text-xs text-gray-800 dark:text-gray-200"
-        ><code>// Component loads configuration via XHR
-const config = await firstValueFrom(
-  this.http.get&lt;PluginConfig&gt;('/plugins/runtime-plugin-config.json', &#123;
-    headers: &#123; 'Cache-Control': 'no-cache' &#125;
-  &#125;)
-);
-
-// Route configuration (lazy-loaded component)
-&#123;
-  path: 'runtime-plugin',
-  loadComponent: () => import('./runtime-plugin/runtime-plugin.component')
-    .then(m => m.RuntimePluginComponent)
-&#125;
-
-// Features:
-// 1. Component code lazy-loaded via Angular Router
-// 2. Component configuration fetched via XHR at runtime
-// 3. Content rendered dynamically based on fetched data
-// 4. Demonstrates micro-frontend/plugin architecture</code></pre>
-      </div>
-    </div>
-  }
+    }
+    <!-- Container must always be in DOM for ViewChild to work -->
+    <div #dynamicComponentContainer></div>
+  </div>
 </div>
