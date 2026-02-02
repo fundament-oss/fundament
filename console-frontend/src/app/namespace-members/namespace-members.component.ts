@@ -1,10 +1,11 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 import { OrganizationDataService } from '../organization-data.service';
-import { PermissionModalComponent } from '../permission-modal/permission-modal.component';
+import { ModalComponent } from '../modal/modal.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
 
@@ -14,10 +15,20 @@ interface Permission {
   role: string;
 }
 
+interface NamespaceItem {
+  name: string;
+  type: 'namespace';
+}
+
+interface RoleItem {
+  name: string;
+  applicableTypes: 'namespace'[];
+}
+
 @Component({
   selector: 'app-namespace-members',
   standalone: true,
-  imports: [CommonModule, BreadcrumbComponent, PermissionModalComponent, NgIcon],
+  imports: [CommonModule, FormsModule, BreadcrumbComponent, ModalComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -51,6 +62,28 @@ export class NamespaceMembersComponent implements OnInit {
   isEditMode = false;
   selectedPermission: Permission | null = null;
   editingIndex = -1;
+
+  // Available options for selects
+  users = ['John Doe', 'Jane Smith', 'Alice Johnson', 'Bob Johnson', 'Charlie Brown'];
+
+  allNamespaces: NamespaceItem[] = [
+    { name: 'namespace-1', type: 'namespace' },
+    { name: 'namespace-2', type: 'namespace' },
+    { name: 'namespace-3', type: 'namespace' },
+  ];
+
+  allRoles: RoleItem[] = [
+    { name: 'Pod reader', applicableTypes: ['namespace'] },
+    { name: 'Secret reader', applicableTypes: ['namespace'] },
+    { name: 'Configmap updater', applicableTypes: ['namespace'] },
+    { name: 'Deployment editor', applicableTypes: ['namespace'] },
+    { name: 'Service viewer', applicableTypes: ['namespace'] },
+    { name: 'Pod executor', applicableTypes: ['namespace'] },
+  ];
+
+  selectedUser = '';
+  selectedNamespace = '';
+  selectedRole = '';
 
   constructor() {
     this.titleService.setTitle('Namespace Members');
@@ -110,15 +143,29 @@ export class NamespaceMembersComponent implements OnInit {
     return segments;
   }
 
+  get availableNamespaces(): NamespaceItem[] {
+    return this.allNamespaces;
+  }
+
+  get availableRoles(): RoleItem[] {
+    return this.allRoles;
+  }
+
   onAddPermission(): void {
     this.isEditMode = false;
     this.selectedPermission = null;
+    this.selectedUser = '';
+    this.selectedNamespace = '';
+    this.selectedRole = '';
     this.showModal = true;
   }
 
   onEditPermission(permission: Permission, index: number): void {
     this.isEditMode = true;
     this.selectedPermission = permission;
+    this.selectedUser = permission.name;
+    this.selectedNamespace = permission.namespace;
+    this.selectedRole = permission.role;
     this.editingIndex = index;
     this.showModal = true;
   }
@@ -129,24 +176,44 @@ export class NamespaceMembersComponent implements OnInit {
     this.editingIndex = -1;
   }
 
-  onSavePermission(permission: { name?: string; namespace: string; role: string }): void {
+  savePermission(): void {
+    if (!this.isFormValid()) {
+      return;
+    }
+
     if (this.isEditMode && this.editingIndex >= 0) {
       // Update existing permission
       this.permissions[this.editingIndex] = {
         ...this.permissions[this.editingIndex],
-        namespace: permission.namespace,
-        role: permission.role,
+        namespace: this.selectedNamespace,
+        role: this.selectedRole,
       };
     } else {
       // Add new permission
-      if (permission.name) {
-        this.permissions.push({
-          name: permission.name,
-          namespace: permission.namespace,
-          role: permission.role,
-        });
-      }
+      this.permissions.push({
+        name: this.selectedUser,
+        namespace: this.selectedNamespace,
+        role: this.selectedRole,
+      });
     }
     this.closeModal();
+  }
+
+  isFormValid(): boolean {
+    if (this.isEditMode) {
+      return !!this.selectedNamespace && !!this.selectedRole;
+    }
+    return !!this.selectedUser && !!this.selectedNamespace && !!this.selectedRole;
+  }
+
+  removePermission(index: number): void {
+    const permission = this.permissions[index];
+    if (!permission) return;
+
+    if (!confirm(`Are you sure you want to remove permission for ${permission.name}?`)) {
+      return;
+    }
+
+    this.permissions.splice(index, 1);
   }
 }

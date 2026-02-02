@@ -55,7 +55,11 @@
                   <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
                 </button>
 
-                <button type="button" class="btn-remove shrink-0">
+                <button
+                  type="button"
+                  (click)="removePermission($index)"
+                  class="btn-remove shrink-0"
+                >
                   <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
                 </button>
               </td>
@@ -68,10 +72,93 @@
 </div>
 
 <!-- Permission Modal -->
-<app-permission-modal
+<app-modal
   [show]="showModal"
-  [isEditMode]="isEditMode"
-  [permission]="selectedPermission"
-  (closeModal)="closeModal()"
-  (save)="onSavePermission($event)"
-></app-permission-modal>
+  [title]="isEditMode ? 'Edit permission' : 'Add permission'"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="closeModal()"
+>
+  <form>
+    <!-- User Selection (only show when adding) -->
+    @if (!isEditMode) {
+      <div class="mb-4">
+        <label
+          for="user-select"
+          class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+        >
+          User
+        </label>
+        <select
+          id="user-select"
+          [(ngModel)]="selectedUser"
+          name="user"
+          class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+        >
+          <option value="">Select a user</option>
+          @for (user of users; track user) {
+            <option [value]="user">{{ user }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    <!-- User name (only show when editing) -->
+    @if (isEditMode && selectedPermission) {
+      <div class="mb-4">
+        <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">User</span>
+        <p class="text-sm dark:text-white">{{ selectedPermission.name }}</p>
+      </div>
+    }
+
+    <!-- Namespace Selection -->
+    <div class="mb-4">
+      <label
+        for="namespace-select"
+        class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+      >
+        Namespace
+      </label>
+      <select
+        id="namespace-select"
+        [(ngModel)]="selectedNamespace"
+        name="namespace"
+        class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+      >
+        <option value="">Select a namespace</option>
+        @for (namespace of availableNamespaces; track namespace.name) {
+          <option [value]="namespace.name">{{ namespace.name }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Role Selection -->
+    <div class="mb-4">
+      <label for="role-select" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+        Role
+      </label>
+      <select
+        id="role-select"
+        [(ngModel)]="selectedRole"
+        name="role"
+        class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+      >
+        <option value="">Select a role</option>
+        @for (role of availableRoles; track role.name) {
+          <option [value]="role.name">{{ role.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div modal-footer class="modal-footer">
+      <button type="button" (click)="closeModal()" class="btn-secondary">Cancel</button>
+      <button
+        type="button"
+        (click)="savePermission()"
+        [disabled]="!isFormValid()"
+        class="btn-primary"
+      >
+        {{ isEditMode ? 'Save changes' : 'Add permission' }}
+      </button>
+    </div>
+  </form>
+</app-modal>
