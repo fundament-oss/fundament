@@ -120,6 +120,11 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'runtime-plugin',
+    loadComponent: () =>
+      import('./runtime-plugin/runtime-plugin.component').then((m) => m.RuntimePluginComponent),
+  },
+  {
     path: '',
     loadComponent: () =>
       import('./dashboard/dashboard.component').then((m) => m.DashboardComponent),
