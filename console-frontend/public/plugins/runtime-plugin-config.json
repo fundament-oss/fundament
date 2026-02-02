@@ -1,0 +1,54 @@
+{
+  "id": "runtime-plugin-demo",
+  "name": "XHR-Loaded Runtime Plugin",
+  "version": "2.0.0",
+  "description": "This plugin is dynamically loaded via HTTP request at runtime",
+  "author": {
+    "name": "Fundament Team",
+    "url": "https://fundament.dev"
+  },
+  "status": "active",
+  "features": [
+    {
+      "title": "XHR/HTTP Request Loading",
+      "description": "Plugin configuration fetched via HttpClient at runtime"
+    },
+    {
+      "title": "Dynamic Content Rendering",
+      "description": "Component renders based on remotely fetched data"
+    },
+    {
+      "title": "Micro-Frontend Architecture",
+      "description": "Demonstrates plugin system with remote configuration"
+    },
+    {
+      "title": "JSON Configuration",
+      "description": "Plugin metadata stored as JSON and loaded on-demand"
+    },
+    {
+      "title": "Lazy Module Loading",
+      "description": "Component code lazy-loaded, configuration fetched separately"
+    }
+  ],
+  "actions": [
+    {
+      "id": "refresh",
+      "label": "Refresh Plugin Data",
+      "icon": "tablerRefresh",
+      "type": "primary"
+    },
+    {
+      "id": "dashboard",
+      "label": "Back to Dashboard",
+      "icon": "tablerHome",
+      "type": "secondary",
+      "route": "/"
+    }
+  ],
+  "metadata": {
+    "loadedVia": "XMLHttpRequest (XHR)",
+    "endpoint": "/plugins/runtime-plugin-config.json",
+    "contentType": "application/json",
+    "cacheable": false
+  }
+}
