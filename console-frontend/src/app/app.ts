@@ -183,7 +183,7 @@ export class App implements OnInit {
 
   // Check if current route is project members or permissions
   isProjectMembersOrPermissions(): boolean {
-    return this.router.url.includes('/members') || this.router.url === '/project-permissions';
+    return this.router.url.includes('/members');
   }
 
   // Check if current route is clusters or add-cluster

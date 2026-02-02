@@ -91,7 +91,61 @@
             {{ formatDate(project()!.createdAt) }}
           </p>
         </div>
+
+        <!-- Danger Zone -->
+        <div
+          class="col-span-full rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-900/20"
+        >
+          <h3 class="mb-2 text-lg font-medium text-rose-800 dark:text-rose-200">Danger zone</h3>
+          <p class="mb-4 text-sm text-rose-700 dark:text-rose-300">
+            Deleting a project is permanent and cannot be undone.
+          </p>
+          <button type="button" (click)="showDeleteModal.set(true)" class="btn-remove">
+            Delete this project
+          </button>
+        </div>
       </div>
     }
   </div>
 </div>
+
+<!-- Delete Project Modal -->
+<app-modal
+  [show]="showDeleteModal()"
+  title="Delete project"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showDeleteModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Are you sure you want to delete project
+          <span class="font-semibold text-gray-900 dark:text-white">{{ project()?.name }}</span
+          >?
+        </p>
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">This cannot be undone.</p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="deleteProject()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, delete this project
+    </button>
+  </div>
+</app-modal>

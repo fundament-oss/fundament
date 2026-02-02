@@ -81,13 +81,6 @@ export const routes: Routes = [
       import('./namespaces/namespaces.component').then((m) => m.NamespacesComponent),
   },
   {
-    path: 'project-permissions',
-    loadComponent: () =>
-      import('./project-permissions/project-permissions.component').then(
-        (m) => m.ProjectPermissionsComponent,
-      ),
-  },
-  {
     path: 'projects/:id/members',
     loadComponent: () =>
       import('./project-members/project-members.component').then((m) => m.ProjectMembersComponent),

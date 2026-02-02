@@ -1,16 +1,20 @@
 import { Component, inject, ViewChild, ElementRef, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TitleService } from '../title.service';
+import { ToastService } from '../toast.service';
+import { OrganizationDataService } from '../organization-data.service';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { tablerX, tablerPencil, tablerCheck } from '@ng-icons/tabler-icons';
+import { tablerX, tablerPencil, tablerCheck, tablerAlertTriangle } from '@ng-icons/tabler-icons';
 import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
+import { ModalComponent } from '../modal/modal.component';
 import { PROJECT } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
   GetProjectRequestSchema,
   UpdateProjectRequestSchema,
+  DeleteProjectRequestSchema,
   type Project,
 } from '../../generated/v1/project_pb';
 import { firstValueFrom } from 'rxjs';
@@ -19,12 +23,13 @@ import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 @Component({
   selector: 'app-project-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIconComponent, BreadcrumbComponent],
+  imports: [CommonModule, FormsModule, NgIconComponent, BreadcrumbComponent, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerX,
       tablerPencil,
       tablerCheck,
+      tablerAlertTriangle,
     }),
   ],
   templateUrl: './project-settings.component.html',
@@ -32,7 +37,10 @@ import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 export class ProjectSettingsComponent implements OnInit {
   private titleService = inject(TitleService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private projectClient = inject(PROJECT);
+  private toastService = inject(ToastService);
+  private organizationDataService = inject(OrganizationDataService);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
@@ -43,6 +51,7 @@ export class ProjectSettingsComponent implements OnInit {
   editingName = signal('');
   loading = signal(false);
   error = signal<string | null>(null);
+  showDeleteModal = signal<boolean>(false);
 
   constructor() {
     this.titleService.setTitle('Project Settings');
@@ -137,6 +146,35 @@ export class ProjectSettingsComponent implements OnInit {
       this.error.set('Failed to update project name');
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  async deleteProject() {
+    const currentProject = this.project();
+    if (!currentProject) return;
+
+    try {
+      const request = create(DeleteProjectRequestSchema, {
+        projectId: currentProject.id,
+      });
+
+      await firstValueFrom(this.projectClient.deleteProject(request));
+
+      this.showDeleteModal.set(false);
+      this.toastService.info(`Project '${currentProject.name}' deleted`);
+
+      // Reload organization data to update the selector modal
+      await this.organizationDataService.reloadOrganizationData();
+
+      this.router.navigate(['/projects']);
+    } catch (err) {
+      console.error('Failed to delete project:', err);
+      this.showDeleteModal.set(false);
+      this.error.set(
+        err instanceof Error
+          ? `Failed to delete project: ${err.message}`
+          : 'Failed to delete project',
+      );
     }
   }
 
