@@ -10,7 +10,7 @@ import { tablerPlus, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
 
 interface Permission {
   name: string;
-  object: string;
+  namespace: string;
   role: string;
 }
 
@@ -39,18 +39,12 @@ export class NamespaceMembersComponent implements OnInit {
 
   // Permissions data for the namespace
   permissions: Permission[] = [
-    { name: 'John Doe', object: 'cluster-1', role: 'Cluster administrator' },
-    { name: 'Jane Smith', object: 'cluster-2', role: 'Cluster administrator' },
-    { name: 'Alice Johnson', object: 'namespace-1', role: 'Storage owner' },
-    { name: 'Bob Johnson', object: 'namespace-2', role: 'Pod reader' },
-    { name: 'Charlie Brown', object: 'namespace-1', role: 'Secret reader' },
-    { name: 'David Wilson', object: 'cluster-1', role: 'Configmap updater' },
-    { name: 'Emma Davis', object: 'namespace-3', role: 'Deployment editor' },
-    { name: 'Frank Miller', object: 'cluster-2', role: 'Service viewer' },
-    { name: 'Grace Lee', object: 'namespace-2', role: 'Ingress administrator' },
-    { name: 'Henry Adams', object: 'namespace-1', role: 'Volume manager' },
-    { name: 'Iris Chen', object: 'cluster-1', role: 'Network policy editor' },
-    { name: 'Jack Robinson', object: 'namespace-3', role: 'Pod executor' },
+    { name: 'Alice Johnson', namespace: 'namespace-1', role: 'Pod reader' },
+    { name: 'Bob Johnson', namespace: 'namespace-2', role: 'Pod reader' },
+    { name: 'Charlie Brown', namespace: 'namespace-1', role: 'Secret reader' },
+    { name: 'Emma Davis', namespace: 'namespace-3', role: 'Deployment editor' },
+    { name: 'Grace Lee', namespace: 'namespace-2', role: 'Service viewer' },
+    { name: 'Jack Robinson', namespace: 'namespace-3', role: 'Pod executor' },
   ];
 
   showModal = false;
@@ -135,12 +129,12 @@ export class NamespaceMembersComponent implements OnInit {
     this.editingIndex = -1;
   }
 
-  onSavePermission(permission: { name?: string; object: string; role: string }): void {
+  onSavePermission(permission: { name?: string; namespace: string; role: string }): void {
     if (this.isEditMode && this.editingIndex >= 0) {
       // Update existing permission
       this.permissions[this.editingIndex] = {
         ...this.permissions[this.editingIndex],
-        object: permission.object,
+        namespace: permission.namespace,
         role: permission.role,
       };
     } else {
@@ -148,7 +142,7 @@ export class NamespaceMembersComponent implements OnInit {
       if (permission.name) {
         this.permissions.push({
           name: permission.name,
-          object: permission.object,
+          namespace: permission.namespace,
           role: permission.role,
         });
       }

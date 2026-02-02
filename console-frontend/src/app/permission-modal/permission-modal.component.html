@@ -20,16 +20,18 @@
   }
 
   <div>
-    <label for="object-select" class="mb-1 block text-sm font-medium dark:text-white">Object</label>
+    <label for="namespace-select" class="mb-1 block text-sm font-medium dark:text-white"
+      >Namespace</label
+    >
     <select
-      id="object-select"
-      [(ngModel)]="selectedObject"
-      (ngModelChange)="onObjectChange()"
+      id="namespace-select"
+      [(ngModel)]="selectedNamespace"
+      (ngModelChange)="onNamespaceChange()"
       class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
     >
-      <option value="">Select an object</option>
-      @for (object of availableObjects; track object.name) {
-        <option [value]="object.name">{{ object.name }} ({{ object.type }})</option>
+      <option value="">Select a namespace</option>
+      @for (namespace of availableNamespaces; track namespace.name) {
+        <option [value]="namespace.name">{{ namespace.name }}</option>
       }
     </select>
   </div>

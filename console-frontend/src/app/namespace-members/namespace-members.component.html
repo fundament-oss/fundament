@@ -3,7 +3,7 @@
 
 <div class="card">
   <!-- Header -->
-  <div class="card-header pb-0!">
+  <div class="card-header">
     <h1 class="text-2xl font-bold dark:text-white">Namespace permissions</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
       Permissions for {{ namespaceName() }} namespace
@@ -14,7 +14,7 @@
     <button
       type="button"
       (click)="onAddPermission()"
-      class="btn-light mb-5 inline-flex items-center"
+      class="btn-primary mb-5 inline-flex items-center"
     >
       <ng-icon name="tablerPlus" class="mr-1.5" />
       Add a permission
@@ -25,19 +25,19 @@
         <thead>
           <tr>
             <th width="40%" scope="col">Name</th>
-            <th width="20%" scope="col">Object</th>
+            <th width="20%" scope="col">Namespace</th>
             <th width="25%" scope="col">Role</th>
             <th scope="col">Actions</th>
           </tr>
         </thead>
         <tbody>
-          @for (permission of permissions; track permission.name + permission.object) {
+          @for (permission of permissions; track permission.name + permission.namespace) {
             <tr>
               <td class="font-medium dark:text-white">
                 {{ permission.name }}
               </td>
               <td>
-                {{ permission.object }}
+                {{ permission.namespace }}
               </td>
               <td>
                 <span

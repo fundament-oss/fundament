@@ -1,11 +1,12 @@
 import { Component, inject, ViewChild, ElementRef, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TitleService } from '../title.service';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { tablerX, tablerPencil, tablerCheck } from '@ng-icons/tabler-icons';
+import { tablerX, tablerPencil, tablerCheck, tablerAlertTriangle } from '@ng-icons/tabler-icons';
 import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
+import { ModalComponent } from '../modal/modal.component';
 import { PROJECT } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {
@@ -19,12 +20,13 @@ import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 @Component({
   selector: 'app-namespace-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIconComponent, BreadcrumbComponent],
+  imports: [CommonModule, FormsModule, NgIconComponent, BreadcrumbComponent, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerX,
       tablerPencil,
       tablerCheck,
+      tablerAlertTriangle,
     }),
   ],
   templateUrl: './namespace-settings.component.html',
@@ -32,6 +34,7 @@ import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 export class NamespaceSettingsComponent implements OnInit {
   private titleService = inject(TitleService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private projectClient = inject(PROJECT);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
@@ -45,6 +48,7 @@ export class NamespaceSettingsComponent implements OnInit {
   editingName = signal('');
   loading = signal(false);
   error = signal<string | null>(null);
+  showDeleteModal = signal(false);
 
   constructor() {
     this.titleService.setTitle('Namespace Settings');
@@ -170,6 +174,29 @@ export class NamespaceSettingsComponent implements OnInit {
       });
     } catch {
       return '';
+    }
+  }
+
+  async deleteNamespace() {
+    const currentNamespace = this.namespace();
+    if (!currentNamespace) {
+      return;
+    }
+
+    this.loading.set(true);
+    this.error.set(null);
+
+    try {
+      // TODO: Delete namespace API endpoint not yet implemented
+      // For now, show an error message
+      this.error.set('Namespace deletion is not yet supported');
+      this.showDeleteModal.set(false);
+    } catch (err) {
+      console.error('Error deleting namespace:', err);
+      this.error.set('Failed to delete namespace');
+      this.showDeleteModal.set(false);
+    } finally {
+      this.loading.set(false);
     }
   }
 }

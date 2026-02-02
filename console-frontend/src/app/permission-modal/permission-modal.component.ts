@@ -5,18 +5,18 @@ import { ModalComponent } from '../modal/modal.component';
 
 interface Permission {
   name?: string;
-  object: string;
+  namespace: string;
   role: string;
 }
 
-interface ObjectItem {
+interface NamespaceItem {
   name: string;
-  type: 'cluster' | 'namespace' | 'storage' | 'network';
+  type: 'namespace';
 }
 
 interface RoleItem {
   name: string;
-  applicableTypes: ('cluster' | 'namespace' | 'storage' | 'network')[];
+  applicableTypes: 'namespace'[];
 }
 
 @Component({
@@ -36,87 +36,54 @@ export class PermissionModalComponent implements OnChanges {
   // Available options for selects
   users = ['John Doe', 'Jane Smith', 'Alice Johnson', 'Bob Johnson', 'Charlie Brown'];
 
-  allObjects: ObjectItem[] = [
-    { name: 'cluster-1', type: 'cluster' },
-    { name: 'cluster-2', type: 'cluster' },
-    { name: 'cluster-3', type: 'cluster' },
+  allNamespaces: NamespaceItem[] = [
     { name: 'namespace-1', type: 'namespace' },
     { name: 'namespace-2', type: 'namespace' },
     { name: 'namespace-3', type: 'namespace' },
-    { name: 'storage-1', type: 'storage' },
-    { name: 'storage-2', type: 'storage' },
-    { name: 'network-1', type: 'network' },
-    { name: 'network-2', type: 'network' },
   ];
 
   allRoles: RoleItem[] = [
-    { name: 'Cluster administrator', applicableTypes: ['cluster'] },
-    { name: 'Storage owner', applicableTypes: ['storage'] },
     { name: 'Pod reader', applicableTypes: ['namespace'] },
     { name: 'Secret reader', applicableTypes: ['namespace'] },
     { name: 'Configmap updater', applicableTypes: ['namespace'] },
     { name: 'Deployment editor', applicableTypes: ['namespace'] },
     { name: 'Service viewer', applicableTypes: ['namespace'] },
-    { name: 'Ingress administrator', applicableTypes: ['network'] },
-    { name: 'Volume manager', applicableTypes: ['storage'] },
-    { name: 'Network policy editor', applicableTypes: ['network'] },
     { name: 'Pod executor', applicableTypes: ['namespace'] },
   ];
 
   selectedUser = '';
-  selectedObject = '';
+  selectedNamespace = '';
   selectedRole = '';
 
   // Filtered lists based on selection
-  get availableObjects(): ObjectItem[] {
-    // Always show all objects - users can select any object
-    return this.allObjects;
+  get availableNamespaces(): NamespaceItem[] {
+    return this.allNamespaces;
   }
 
   get availableRoles(): RoleItem[] {
-    if (!this.selectedObject) {
-      return this.allRoles;
-    }
-    const object = this.allObjects.find((obj) => obj.name === this.selectedObject);
-    if (!object) {
-      return this.allRoles;
-    }
-    return this.allRoles.filter((role) => role.applicableTypes.includes(object.type));
+    return this.allRoles;
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (this.show) {
       if (this.isEditMode && this.permission) {
         this.selectedUser = this.permission.name || '';
-        this.selectedObject = this.permission.object;
+        this.selectedNamespace = this.permission.namespace;
         this.selectedRole = this.permission.role;
       } else {
         this.selectedUser = '';
-        this.selectedObject = '';
+        this.selectedNamespace = '';
         this.selectedRole = '';
       }
     }
-
-    // Reset selections if they're no longer valid after filtering
-    if (changes['show'] && this.show) {
-      this.validateSelections();
-    }
   }
 
-  validateSelections(): void {
-    // Only clear role if it's not applicable to the selected object
-    if (this.selectedRole && !this.availableRoles.find((role) => role.name === this.selectedRole)) {
-      this.selectedRole = '';
-    }
-  }
-
-  onObjectChange(): void {
-    // When object changes, check if current role is still applicable
-    this.validateSelections();
+  onNamespaceChange(): void {
+    // No validation needed since all roles are namespace-applicable
   }
 
   onRoleChange(): void {
-    // No validation needed when role changes since objects are always available
+    // No validation needed since all roles are namespace-applicable
   }
 
   onClose(): void {
@@ -125,7 +92,7 @@ export class PermissionModalComponent implements OnChanges {
 
   onSave(): void {
     const permission: Permission = {
-      object: this.selectedObject,
+      namespace: this.selectedNamespace,
       role: this.selectedRole,
     };
 
@@ -138,8 +105,8 @@ export class PermissionModalComponent implements OnChanges {
 
   isFormValid(): boolean {
     if (this.isEditMode) {
-      return !!this.selectedObject && !!this.selectedRole;
+      return !!this.selectedNamespace && !!this.selectedRole;
     }
-    return !!this.selectedUser && !!this.selectedObject && !!this.selectedRole;
+    return !!this.selectedUser && !!this.selectedNamespace && !!this.selectedRole;
   }
 }
