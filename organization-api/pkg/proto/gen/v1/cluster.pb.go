@@ -2022,6 +2022,7 @@ type ClusterNamespace struct {
 	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	ProjectId     string                 `protobuf:"bytes,30,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ClusterId     string                 `protobuf:"bytes,35,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2074,6 +2075,13 @@ func (x *ClusterNamespace) GetName() string {
 func (x *ClusterNamespace) GetProjectId() string {
 	if x != nil {
 		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *ClusterNamespace) GetClusterId() string {
+	if x != nil {
+		return x.ClusterId
 	}
 	return ""
 }
@@ -2618,13 +2626,15 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
 	"namespaces\x18\n" +
 	" \x03(\v2!.organization.v1.ClusterNamespaceR\n" +
-	"namespaces\"\x90\x01\n" +
+	"namespaces\"\xaf\x01\n" +
 	"\x10ClusterNamespace\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x1e \x01(\tR\tprojectId\x129\n" +
+	"project_id\x18\x1e \x01(\tR\tprojectId\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18# \x01(\tR\tclusterId\x129\n" +
 	"\n" +
 	"created_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"j\n" +
 	"\x16CreateNamespaceRequest\x12\x1d\n" +

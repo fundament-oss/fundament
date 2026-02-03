@@ -36,22 +36,30 @@ func (d *NamespaceDataSource) Metadata(ctx context.Context, req datasource.Metad
 // Schema defines the schema for the data source.
 func (d *NamespaceDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Fetches a single namespace by ID within a cluster.",
+		Description: "Fetches a single namespace by name. Requires either cluster_name or project_name (but not both) along with the namespace name.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "The unique identifier of the namespace to look up.",
-				Required:    true,
-			},
-			"cluster_id": schema.StringAttribute{
-				Description: "The ID of the cluster containing the namespace.",
-				Required:    true,
+				Description: "The unique identifier of the namespace.",
+				Computed:    true,
 			},
 			"name": schema.StringAttribute{
-				Description: "The name of the namespace.",
-				Computed:    true,
+				Description: "The name of the namespace to look up.",
+				Required:    true,
+			},
+			"cluster_name": schema.StringAttribute{
+				Description: "The name of the cluster containing the namespace. Either cluster_name or project_name must be specified, but not both.",
+				Optional:    true,
+			},
+			"project_name": schema.StringAttribute{
+				Description: "The name of the project owning the namespace. Either cluster_name or project_name must be specified, but not both.",
+				Optional:    true,
 			},
 			"project_id": schema.StringAttribute{
 				Description: "The ID of the project that owns this namespace.",
+				Computed:    true,
+			},
+			"cluster_id": schema.StringAttribute{
+				Description: "The ID of the cluster containing the namespace.",
 				Computed:    true,
 			},
 			"created_at": schema.StringAttribute{
@@ -97,68 +105,127 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	tflog.Debug(ctx, "Reading namespace", map[string]any{
-		"id":         config.ID.ValueString(),
-		"cluster_id": config.ClusterID.ValueString(),
-	})
+	// Validate that exactly one of cluster_name or project_name is provided
+	hasClusterName := !config.ClusterName.IsNull() && !config.ClusterName.IsUnknown()
+	hasProjectName := !config.ProjectName.IsNull() && !config.ProjectName.IsUnknown()
 
-	// Since there's no direct GetNamespace API, we list all namespaces in the cluster
-	// and filter for the one we want
-	listReq := connect.NewRequest(&organizationv1.ListClusterNamespacesRequest{
-		ClusterId: config.ClusterID.ValueString(),
-	})
-
-	listResp, err := d.client.ClusterService.ListClusterNamespaces(ctx, listReq)
-	if err != nil {
-		switch connect.CodeOf(err) {
-		case connect.CodeNotFound:
-			resp.Diagnostics.AddError(
-				"Cluster Not Found",
-				fmt.Sprintf("Cluster with ID %q does not exist.", config.ClusterID.ValueString()),
-			)
-		case connect.CodeInvalidArgument:
-			resp.Diagnostics.AddError(
-				"Invalid Cluster ID",
-				fmt.Sprintf("The cluster ID %q is not valid: %s", config.ClusterID.ValueString(), err.Error()),
-			)
-		case connect.CodePermissionDenied:
-			resp.Diagnostics.AddError(
-				"Permission Denied",
-				fmt.Sprintf("You do not have permission to access cluster %q.", config.ClusterID.ValueString()),
-			)
-		default:
-			resp.Diagnostics.AddError(
-				"Unable to List Namespaces",
-				fmt.Sprintf("Unable to list namespaces in cluster %q: %s", config.ClusterID.ValueString(), err.Error()),
-			)
-		}
-		return
-	}
-
-	// Find the namespace with the matching ID
-	var found bool
-	for _, ns := range listResp.Msg.Namespaces {
-		if ns.Id == config.ID.ValueString() {
-			config.Name = types.StringValue(ns.Name)
-			config.ProjectID = types.StringValue(ns.ProjectId)
-			config.CreatedAt = types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339))
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	if !hasClusterName && !hasProjectName {
 		resp.Diagnostics.AddError(
-			"Namespace Not Found",
-			fmt.Sprintf("Namespace with ID %q does not exist in cluster %q.", config.ID.ValueString(), config.ClusterID.ValueString()),
+			"Missing Required Attribute",
+			"Either 'cluster_name' or 'project_name' must be specified.",
 		)
 		return
+	}
+
+	if hasClusterName && hasProjectName {
+		resp.Diagnostics.AddError(
+			"Conflicting Attributes",
+			"Only one of 'cluster_name' or 'project_name' can be specified, not both.",
+		)
+		return
+	}
+
+	namespaceName := config.Name.ValueString()
+
+	// Call the appropriate API based on which identifier is provided
+	if hasClusterName {
+		clusterName := config.ClusterName.ValueString()
+		tflog.Debug(ctx, "Reading namespace by cluster and name", map[string]any{
+			"cluster_name":   clusterName,
+			"namespace_name": namespaceName,
+		})
+
+		rpcReq := connect.NewRequest(&organizationv1.GetNamespaceByClusterAndNameRequest{
+			ClusterName:   clusterName,
+			NamespaceName: namespaceName,
+		})
+
+		rpcResp, err := d.client.ClusterService.GetNamespaceByClusterAndName(ctx, rpcReq)
+		if err != nil {
+			switch connect.CodeOf(err) {
+			case connect.CodeNotFound:
+				resp.Diagnostics.AddError(
+					"Namespace Not Found",
+					fmt.Sprintf("Namespace %q does not exist in cluster %q.", namespaceName, clusterName),
+				)
+			case connect.CodeInvalidArgument:
+				resp.Diagnostics.AddError(
+					"Invalid Request",
+					fmt.Sprintf("Invalid request parameters: %s", err.Error()),
+				)
+			case connect.CodePermissionDenied:
+				resp.Diagnostics.AddError(
+					"Permission Denied",
+					"You do not have permission to access this namespace.",
+				)
+			default:
+				resp.Diagnostics.AddError(
+					"Unable to Get Namespace",
+					fmt.Sprintf("Unable to get namespace: %s", err.Error()),
+				)
+			}
+			return
+		}
+
+		ns := rpcResp.Msg.Namespace
+		config.ID = types.StringValue(ns.Id)
+		config.Name = types.StringValue(ns.Name)
+		config.ProjectID = types.StringValue(ns.ProjectId)
+		config.ClusterID = types.StringValue(ns.ClusterId)
+		config.CreatedAt = types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339))
+	} else {
+		// Use project_name
+		projectName := config.ProjectName.ValueString()
+		tflog.Debug(ctx, "Reading namespace by project and name", map[string]any{
+			"project_name":   projectName,
+			"namespace_name": namespaceName,
+		})
+
+		rpcReq := connect.NewRequest(&organizationv1.GetNamespaceByProjectAndNameRequest{
+			ProjectName:   projectName,
+			NamespaceName: namespaceName,
+		})
+
+		rpcResp, err := d.client.ClusterService.GetNamespaceByProjectAndName(ctx, rpcReq)
+		if err != nil {
+			switch connect.CodeOf(err) {
+			case connect.CodeNotFound:
+				resp.Diagnostics.AddError(
+					"Namespace Not Found",
+					fmt.Sprintf("Namespace %q does not exist in project %q.", namespaceName, projectName),
+				)
+			case connect.CodeInvalidArgument:
+				resp.Diagnostics.AddError(
+					"Invalid Request",
+					fmt.Sprintf("Invalid request parameters: %s", err.Error()),
+				)
+			case connect.CodePermissionDenied:
+				resp.Diagnostics.AddError(
+					"Permission Denied",
+					"You do not have permission to access this namespace.",
+				)
+			default:
+				resp.Diagnostics.AddError(
+					"Unable to Get Namespace",
+					fmt.Sprintf("Unable to get namespace: %s", err.Error()),
+				)
+			}
+			return
+		}
+
+		ns := rpcResp.Msg.Namespace
+		config.ID = types.StringValue(ns.Id)
+		config.Name = types.StringValue(ns.Name)
+		config.ProjectID = types.StringValue(ns.ProjectId)
+		config.ClusterID = types.StringValue(ns.ClusterId)
+		config.CreatedAt = types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339))
 	}
 
 	tflog.Debug(ctx, "Read namespace successfully", map[string]any{
 		"id":         config.ID.ValueString(),
 		"name":       config.Name.ValueString(),
 		"project_id": config.ProjectID.ValueString(),
+		"cluster_id": config.ClusterID.ValueString(),
 	})
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &config)...)

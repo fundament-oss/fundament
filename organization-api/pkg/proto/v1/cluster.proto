@@ -305,6 +305,7 @@ message ClusterNamespace {
   string id = 10;
   string name = 20;
   string project_id = 30;
+  string cluster_id = 35;
   google.protobuf.Timestamp created_at = 40;
 }
 

@@ -115,6 +115,7 @@ func FromClusterNamespace(ns *db.TenantNamespace) *organizationv1.ClusterNamespa
 		Id:        ns.ID.String(),
 		Name:      ns.Name,
 		ProjectId: ns.ProjectID.String(),
+		ClusterId: ns.ClusterID.String(),
 		CreatedAt: timestamppb.New(ns.Created.Time),
 	}
 }
