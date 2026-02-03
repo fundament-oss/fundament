@@ -24,9 +24,9 @@ type ProjectNamespacesDataSource struct {
 
 // ProjectNamespacesDataSourceModel describes the data source data model.
 type ProjectNamespacesDataSourceModel struct {
-	ID         types.String      `tfsdk:"id"`
-	ProjectID  types.String      `tfsdk:"project_id"`
-	Namespaces []NamespaceModel  `tfsdk:"namespaces"`
+	ID         types.String     `tfsdk:"id"`
+	ProjectID  types.String     `tfsdk:"project_id"`
+	Namespaces []NamespaceModel `tfsdk:"namespaces"`
 }
 
 // NewProjectNamespacesDataSource creates a new ProjectNamespacesDataSource.
@@ -169,7 +169,7 @@ func (d *ProjectNamespacesDataSource) Read(ctx context.Context, req datasource.R
 	}
 
 	// Set the data source ID to the project ID
-	state.ID = types.StringValue(projectID)
+	state.ID = state.ProjectID
 
 	tflog.Debug(ctx, "Fetched project namespaces successfully", map[string]any{
 		"namespace_count": len(state.Namespaces),
