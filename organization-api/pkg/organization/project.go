@@ -11,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -71,19 +73,56 @@ func (s *OrganizationServer) CreateProject(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	params := db.ProjectCreateParams{
-		OrganizationID: organizationID,
-		Name:           input.Name,
+	// Get user ID from context - the creator becomes the admin
+	userID, ok := UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
 	}
 
-	projectID, err := s.queries.ProjectCreate(ctx, params)
+	s.logger.DebugContext(ctx, "creating project with member",
+		"organization_id", organizationID,
+		"user_id", userID,
+		"name", input.Name,
+	)
+
+	// Start a transaction to create project and add creator as admin
+	tx, err := s.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
+	}
+	defer rollback.Rollback(ctx, tx, s.logger)
+
+	qtx := s.queries.WithTx(tx)
+
+	// Create the project
+	projectID, err := qtx.ProjectCreate(ctx, db.ProjectCreateParams{
+		OrganizationID: organizationID,
+		Name:           input.Name,
+	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create project: %w", err))
 	}
 
-	s.logger.InfoContext(ctx, "project created",
+	params := db.ProjectMemberCreateParams{
+		ProjectID: projectID,
+		UserID:    userID,
+		Role:      dbconst.ProjectMemberRole_Admin,
+	}
+
+	// Add creator as admin
+	_, err = qtx.ProjectMemberCreate(ctx, params)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to add project creator as admin: %w", err))
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
+	}
+
+	s.logger.DebugContext(ctx, "project created",
 		"project_id", projectID,
 		"organization_id", organizationID,
+		"user_id", userID,
 		"name", input.Name,
 	)
 

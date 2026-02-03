@@ -1,0 +1,32 @@
+meta {
+  name: List Members
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/ListProjectMembers
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{projectId}}"
+  }
+}
+
+script:post-response {
+  if (res.headers['content-type']?.includes('application/json') && res.body.members?.length > 0) {
+    bru.setVar("memberId", res.body.members[1].id);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

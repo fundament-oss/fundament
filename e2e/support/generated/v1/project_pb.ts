@@ -2,8 +2,8 @@
 // @generated from file v1/project.proto (package organization.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_empty, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import { file_v1_common } from "./common_pb";
@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/project.proto.
  */
 export const file_v1_project: GenFile = /*@__PURE__*/
-  fileDesc("ChB2MS9wcm9qZWN0LnByb3RvEg9vcmdhbml6YXRpb24udjEiFQoTTGlzdFByb2plY3RzUmVxdWVzdCJCChRMaXN0UHJvamVjdHNSZXNwb25zZRIqCghwcm9qZWN0cxgKIAMoCzIYLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0IicKEUdldFByb2plY3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYCiABKAkiPwoSR2V0UHJvamVjdFJlc3BvbnNlEikKB3Byb2plY3QYCiABKAsyGC5vcmdhbml6YXRpb24udjEuUHJvamVjdCJTCgdQcm9qZWN0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSLgoKY3JlYXRlZF9hdBgeIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiJAoUQ3JlYXRlUHJvamVjdFJlcXVlc3QSDAoEbmFtZRgKIAEoCSIrChVDcmVhdGVQcm9qZWN0UmVzcG9uc2USEgoKcHJvamVjdF9pZBgKIAEoCSJGChRVcGRhdGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJEhEKBG5hbWUYFCABKAlIAIgBAUIHCgVfbmFtZSIqChREZWxldGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJIjIKHExpc3RQcm9qZWN0TmFtZXNwYWNlc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgKIAEoCSJWCh1MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXNwb25zZRI1CgpuYW1lc3BhY2VzGAogAygLMiEub3JnYW5pemF0aW9uLnYxLlByb2plY3ROYW1lc3BhY2UicAoQUHJvamVjdE5hbWVzcGFjZRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhIKCmNsdXN0ZXJfaWQYHiABKAkSLgoKY3JlYXRlZF9hdBgoIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAyvAQKDlByb2plY3RTZXJ2aWNlElsKDExpc3RQcm9qZWN0cxIkLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdHNSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0c1Jlc3BvbnNlElUKCkdldFByb2plY3QSIi5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdFJlcXVlc3QaIy5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdFJlc3BvbnNlEl4KDUNyZWF0ZVByb2plY3QSJS5vcmdhbml6YXRpb24udjEuQ3JlYXRlUHJvamVjdFJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuQ3JlYXRlUHJvamVjdFJlc3BvbnNlEk4KDVVwZGF0ZVByb2plY3QSJS5vcmdhbml6YXRpb24udjEuVXBkYXRlUHJvamVjdFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSTgoNRGVsZXRlUHJvamVjdBIlLm9yZ2FuaXphdGlvbi52MS5EZWxldGVQcm9qZWN0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJ2ChVMaXN0UHJvamVjdE5hbWVzcGFjZXMSLS5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3ROYW1lc3BhY2VzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXNwb25zZUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_google_protobuf_timestamp, file_google_protobuf_empty, file_v1_common]);
+  fileDesc("ChB2MS9wcm9qZWN0LnByb3RvEg9vcmdhbml6YXRpb24udjEiFQoTTGlzdFByb2plY3RzUmVxdWVzdCJCChRMaXN0UHJvamVjdHNSZXNwb25zZRIqCghwcm9qZWN0cxgKIAMoCzIYLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0IicKEUdldFByb2plY3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYCiABKAkiPwoSR2V0UHJvamVjdFJlc3BvbnNlEikKB3Byb2plY3QYCiABKAsyGC5vcmdhbml6YXRpb24udjEuUHJvamVjdCJTCgdQcm9qZWN0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSLgoKY3JlYXRlZF9hdBgeIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiJAoUQ3JlYXRlUHJvamVjdFJlcXVlc3QSDAoEbmFtZRgKIAEoCSIrChVDcmVhdGVQcm9qZWN0UmVzcG9uc2USEgoKcHJvamVjdF9pZBgKIAEoCSJGChRVcGRhdGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJEhEKBG5hbWUYFCABKAlIAIgBAUIHCgVfbmFtZSIqChREZWxldGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAogASgJIjIKHExpc3RQcm9qZWN0TmFtZXNwYWNlc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgKIAEoCSJWCh1MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXNwb25zZRI1CgpuYW1lc3BhY2VzGAogAygLMiEub3JnYW5pemF0aW9uLnYxLlByb2plY3ROYW1lc3BhY2UicAoQUHJvamVjdE5hbWVzcGFjZRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhIKCmNsdXN0ZXJfaWQYHiABKAkSLgoKY3JlYXRlZF9hdBgoIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAitQEKDVByb2plY3RNZW1iZXISCgoCaWQYCiABKAkSEgoKcHJvamVjdF9pZBgUIAEoCRIPCgd1c2VyX2lkGB4gASgJEhEKCXVzZXJfbmFtZRgoIAEoCRIwCgRyb2xlGDIgASgOMiIub3JnYW5pemF0aW9uLnYxLlByb2plY3RNZW1iZXJSb2xlEi4KCmNyZWF0ZWRfYXQYPCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIi8KGUxpc3RQcm9qZWN0TWVtYmVyc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgKIAEoCSJNChpMaXN0UHJvamVjdE1lbWJlcnNSZXNwb25zZRIvCgdtZW1iZXJzGAogAygLMh4ub3JnYW5pemF0aW9uLnYxLlByb2plY3RNZW1iZXIicAoXQWRkUHJvamVjdE1lbWJlclJlcXVlc3QSEgoKcHJvamVjdF9pZBgKIAEoCRIPCgd1c2VyX2lkGBQgASgJEjAKBHJvbGUYHiABKA4yIi5vcmdhbml6YXRpb24udjEuUHJvamVjdE1lbWJlclJvbGUiLQoYQWRkUHJvamVjdE1lbWJlclJlc3BvbnNlEhEKCW1lbWJlcl9pZBgKIAEoCSJlCh5VcGRhdGVQcm9qZWN0TWVtYmVyUm9sZVJlcXVlc3QSEQoJbWVtYmVyX2lkGAogASgJEjAKBHJvbGUYFCABKA4yIi5vcmdhbml6YXRpb24udjEuUHJvamVjdE1lbWJlclJvbGUiLwoaUmVtb3ZlUHJvamVjdE1lbWJlclJlcXVlc3QSEQoJbWVtYmVyX2lkGAogASgJKncKEVByb2plY3RNZW1iZXJSb2xlEiMKH1BST0pFQ1RfTUVNQkVSX1JPTEVfVU5TUEVDSUZJRUQQABIdChlQUk9KRUNUX01FTUJFUl9ST0xFX0FETUlOEAESHgoaUFJPSkVDVF9NRU1CRVJfUk9MRV9WSUVXRVIQAjLUBwoOUHJvamVjdFNlcnZpY2USWwoMTGlzdFByb2plY3RzEiQub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0c1JlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3RzUmVzcG9uc2USVQoKR2V0UHJvamVjdBIiLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0UmVxdWVzdBojLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0UmVzcG9uc2USXgoNQ3JlYXRlUHJvamVjdBIlLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVQcm9qZWN0UmVxdWVzdBomLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVQcm9qZWN0UmVzcG9uc2USTgoNVXBkYXRlUHJvamVjdBIlLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVQcm9qZWN0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJOCg1EZWxldGVQcm9qZWN0EiUub3JnYW5pemF0aW9uLnYxLkRlbGV0ZVByb2plY3RSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EnYKFUxpc3RQcm9qZWN0TmFtZXNwYWNlcxItLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXF1ZXN0Gi4ub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0TmFtZXNwYWNlc1Jlc3BvbnNlEm0KEkxpc3RQcm9qZWN0TWVtYmVycxIqLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE1lbWJlcnNSZXF1ZXN0Gisub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0TWVtYmVyc1Jlc3BvbnNlEmcKEEFkZFByb2plY3RNZW1iZXISKC5vcmdhbml6YXRpb24udjEuQWRkUHJvamVjdE1lbWJlclJlcXVlc3QaKS5vcmdhbml6YXRpb24udjEuQWRkUHJvamVjdE1lbWJlclJlc3BvbnNlEmIKF1VwZGF0ZVByb2plY3RNZW1iZXJSb2xlEi8ub3JnYW5pemF0aW9uLnYxLlVwZGF0ZVByb2plY3RNZW1iZXJSb2xlUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJaChNSZW1vdmVQcm9qZWN0TWVtYmVyEisub3JnYW5pemF0aW9uLnYxLlJlbW92ZVByb2plY3RNZW1iZXJSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5QlVaU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_google_protobuf_empty, file_v1_common]);
 
 /**
  * List projects request
@@ -270,6 +270,207 @@ export const ProjectNamespaceSchema: GenMessage<ProjectNamespace> = /*@__PURE__*
   messageDesc(file_v1_project, 11);
 
 /**
+ * Project member information
+ *
+ * @generated from message organization.v1.ProjectMember
+ */
+export type ProjectMember = Message<"organization.v1.ProjectMember"> & {
+  /**
+   * @generated from field: string id = 10;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string project_id = 20;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string user_id = 30;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string user_name = 40;
+   */
+  userName: string;
+
+  /**
+   * @generated from field: organization.v1.ProjectMemberRole role = 50;
+   */
+  role: ProjectMemberRole;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 60;
+   */
+  createdAt?: Timestamp;
+};
+
+/**
+ * Describes the message organization.v1.ProjectMember.
+ * Use `create(ProjectMemberSchema)` to create a new message.
+ */
+export const ProjectMemberSchema: GenMessage<ProjectMember> = /*@__PURE__*/
+  messageDesc(file_v1_project, 12);
+
+/**
+ * List project members request
+ *
+ * @generated from message organization.v1.ListProjectMembersRequest
+ */
+export type ListProjectMembersRequest = Message<"organization.v1.ListProjectMembersRequest"> & {
+  /**
+   * @generated from field: string project_id = 10;
+   */
+  projectId: string;
+};
+
+/**
+ * Describes the message organization.v1.ListProjectMembersRequest.
+ * Use `create(ListProjectMembersRequestSchema)` to create a new message.
+ */
+export const ListProjectMembersRequestSchema: GenMessage<ListProjectMembersRequest> = /*@__PURE__*/
+  messageDesc(file_v1_project, 13);
+
+/**
+ * List project members response
+ *
+ * @generated from message organization.v1.ListProjectMembersResponse
+ */
+export type ListProjectMembersResponse = Message<"organization.v1.ListProjectMembersResponse"> & {
+  /**
+   * @generated from field: repeated organization.v1.ProjectMember members = 10;
+   */
+  members: ProjectMember[];
+};
+
+/**
+ * Describes the message organization.v1.ListProjectMembersResponse.
+ * Use `create(ListProjectMembersResponseSchema)` to create a new message.
+ */
+export const ListProjectMembersResponseSchema: GenMessage<ListProjectMembersResponse> = /*@__PURE__*/
+  messageDesc(file_v1_project, 14);
+
+/**
+ * Add project member request
+ *
+ * @generated from message organization.v1.AddProjectMemberRequest
+ */
+export type AddProjectMemberRequest = Message<"organization.v1.AddProjectMemberRequest"> & {
+  /**
+   * @generated from field: string project_id = 10;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string user_id = 20;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: organization.v1.ProjectMemberRole role = 30;
+   */
+  role: ProjectMemberRole;
+};
+
+/**
+ * Describes the message organization.v1.AddProjectMemberRequest.
+ * Use `create(AddProjectMemberRequestSchema)` to create a new message.
+ */
+export const AddProjectMemberRequestSchema: GenMessage<AddProjectMemberRequest> = /*@__PURE__*/
+  messageDesc(file_v1_project, 15);
+
+/**
+ * Add project member response
+ *
+ * @generated from message organization.v1.AddProjectMemberResponse
+ */
+export type AddProjectMemberResponse = Message<"organization.v1.AddProjectMemberResponse"> & {
+  /**
+   * @generated from field: string member_id = 10;
+   */
+  memberId: string;
+};
+
+/**
+ * Describes the message organization.v1.AddProjectMemberResponse.
+ * Use `create(AddProjectMemberResponseSchema)` to create a new message.
+ */
+export const AddProjectMemberResponseSchema: GenMessage<AddProjectMemberResponse> = /*@__PURE__*/
+  messageDesc(file_v1_project, 16);
+
+/**
+ * Update project member role request
+ *
+ * @generated from message organization.v1.UpdateProjectMemberRoleRequest
+ */
+export type UpdateProjectMemberRoleRequest = Message<"organization.v1.UpdateProjectMemberRoleRequest"> & {
+  /**
+   * @generated from field: string member_id = 10;
+   */
+  memberId: string;
+
+  /**
+   * @generated from field: organization.v1.ProjectMemberRole role = 20;
+   */
+  role: ProjectMemberRole;
+};
+
+/**
+ * Describes the message organization.v1.UpdateProjectMemberRoleRequest.
+ * Use `create(UpdateProjectMemberRoleRequestSchema)` to create a new message.
+ */
+export const UpdateProjectMemberRoleRequestSchema: GenMessage<UpdateProjectMemberRoleRequest> = /*@__PURE__*/
+  messageDesc(file_v1_project, 17);
+
+/**
+ * Remove project member request
+ *
+ * @generated from message organization.v1.RemoveProjectMemberRequest
+ */
+export type RemoveProjectMemberRequest = Message<"organization.v1.RemoveProjectMemberRequest"> & {
+  /**
+   * @generated from field: string member_id = 10;
+   */
+  memberId: string;
+};
+
+/**
+ * Describes the message organization.v1.RemoveProjectMemberRequest.
+ * Use `create(RemoveProjectMemberRequestSchema)` to create a new message.
+ */
+export const RemoveProjectMemberRequestSchema: GenMessage<RemoveProjectMemberRequest> = /*@__PURE__*/
+  messageDesc(file_v1_project, 18);
+
+/**
+ * Project member role
+ *
+ * @generated from enum organization.v1.ProjectMemberRole
+ */
+export enum ProjectMemberRole {
+  /**
+   * @generated from enum value: PROJECT_MEMBER_ROLE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: PROJECT_MEMBER_ROLE_ADMIN = 1;
+   */
+  ADMIN = 1,
+
+  /**
+   * @generated from enum value: PROJECT_MEMBER_ROLE_VIEWER = 2;
+   */
+  VIEWER = 2,
+}
+
+/**
+ * Describes the enum organization.v1.ProjectMemberRole.
+ */
+export const ProjectMemberRoleSchema: GenEnum<ProjectMemberRole> = /*@__PURE__*/
+  enumDesc(file_v1_project, 0);
+
+/**
  * ProjectService manages projects within an organization
  *
  * @generated from service organization.v1.ProjectService
@@ -334,6 +535,46 @@ export const ProjectService: GenService<{
     methodKind: "unary";
     input: typeof ListProjectNamespacesRequestSchema;
     output: typeof ListProjectNamespacesResponseSchema;
+  },
+  /**
+   * List all members of a project
+   *
+   * @generated from rpc organization.v1.ProjectService.ListProjectMembers
+   */
+  listProjectMembers: {
+    methodKind: "unary";
+    input: typeof ListProjectMembersRequestSchema;
+    output: typeof ListProjectMembersResponseSchema;
+  },
+  /**
+   * Add a member to a project (requires admin role)
+   *
+   * @generated from rpc organization.v1.ProjectService.AddProjectMember
+   */
+  addProjectMember: {
+    methodKind: "unary";
+    input: typeof AddProjectMemberRequestSchema;
+    output: typeof AddProjectMemberResponseSchema;
+  },
+  /**
+   * Update a member's role (requires admin role)
+   *
+   * @generated from rpc organization.v1.ProjectService.UpdateProjectMemberRole
+   */
+  updateProjectMemberRole: {
+    methodKind: "unary";
+    input: typeof UpdateProjectMemberRoleRequestSchema;
+    output: typeof EmptySchema;
+  },
+  /**
+   * Remove a member from a project (requires admin role)
+   *
+   * @generated from rpc organization.v1.ProjectService.RemoveProjectMember
+   */
+  removeProjectMember: {
+    methodKind: "unary";
+    input: typeof RemoveProjectMemberRequestSchema;
+    output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_project, 0);

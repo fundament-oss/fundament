@@ -1,0 +1,26 @@
+meta {
+  name: Remove Member
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/RemoveProjectMember
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "memberId": "{{memberId}}"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

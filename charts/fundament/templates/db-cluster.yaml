@@ -12,6 +12,11 @@ spec:
   instances: {{ $.Values.db.instances }}
   imageName: ghcr.io/cloudnative-pg/postgresql:18
   enableSuperuserAccess: true
+  {{- if $.Values.db.postgresql }}
+  postgresql:
+    parameters:
+      {{- toYaml $.Values.db.postgresql.parameters | nindent 6 }}
+  {{- end }}
   bootstrap:
     initdb:
       database: fundament
@@ -36,6 +41,9 @@ spec:
           name: {{ $.Release.Name }}-db-fun-operator
       - name: fun_owner
         login: false
+      - name: fun_authz
+        login: false
+        bypassrls: true
 
 {{- if gt (int $.Values.db.exposePort) 0 }}
 ---
