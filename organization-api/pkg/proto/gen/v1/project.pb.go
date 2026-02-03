@@ -7,6 +7,7 @@
 package organizationv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -1036,15 +1037,15 @@ var File_v1_project_proto protoreflect.FileDescriptor
 
 const file_v1_project_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/project.proto\x12\x0forganization.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fv1/common.proto\"\x15\n" +
+	"\x10v1/project.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x15\n" +
 	"\x13ListProjectsRequest\"L\n" +
 	"\x14ListProjectsResponse\x124\n" +
 	"\bprojects\x18\n" +
-	" \x03(\v2\x18.organization.v1.ProjectR\bprojects\"2\n" +
-	"\x11GetProjectRequest\x12\x1d\n" +
+	" \x03(\v2\x18.organization.v1.ProjectR\bprojects\"<\n" +
+	"\x11GetProjectRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\"H\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"H\n" +
 	"\x12GetProjectResponse\x122\n" +
 	"\aproject\x18\n" +
 	" \x01(\v2\x18.organization.v1.ProjectR\aproject\"h\n" +
@@ -1053,28 +1054,30 @@ const file_v1_project_proto_rawDesc = "" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x129\n" +
 	"\n" +
-	"created_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"*\n" +
-	"\x14CreateProjectRequest\x12\x12\n" +
+	"created_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x93\x01\n" +
+	"\x14CreateProjectRequest\x12{\n" +
 	"\x04name\x18\n" +
-	" \x01(\tR\x04name\"6\n" +
+	" \x01(\tBg\xbaHd\xba\x01a\n" +
+	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\x04name\"6\n" +
 	"\x15CreateProjectResponse\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\"W\n" +
-	"\x14UpdateProjectRequest\x12\x1d\n" +
+	" \x01(\tR\tprojectId\"m\n" +
+	"\x14UpdateProjectRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\x12\x17\n" +
-	"\x04name\x18\x14 \x01(\tH\x00R\x04name\x88\x01\x01B\a\n" +
-	"\x05_name\"5\n" +
-	"\x14DeleteProjectRequest\x12\x1d\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\x12#\n" +
+	"\x04name\x18\x14 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01H\x00R\x04name\x88\x01\x01B\a\n" +
+	"\x05_name\"?\n" +
+	"\x14DeleteProjectRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\"=\n" +
-	"\x1cListProjectNamespacesRequest\x12\x1d\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"G\n" +
+	"\x1cListProjectNamespacesRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\"b\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"b\n" +
 	"\x1dListProjectNamespacesResponse\x12A\n" +
 	"\n" +
 	"namespaces\x18\n" +
@@ -1097,30 +1100,30 @@ const file_v1_project_proto_rawDesc = "" +
 	"\tuser_name\x18( \x01(\tR\buserName\x126\n" +
 	"\x04role\x182 \x01(\x0e2\".organization.v1.ProjectMemberRoleR\x04role\x129\n" +
 	"\n" +
-	"created_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\":\n" +
-	"\x19ListProjectMembersRequest\x12\x1d\n" +
+	"created_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"D\n" +
+	"\x19ListProjectMembersRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\"V\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"V\n" +
 	"\x1aListProjectMembersResponse\x128\n" +
 	"\amembers\x18\n" +
-	" \x03(\v2\x1e.organization.v1.ProjectMemberR\amembers\"\x89\x01\n" +
-	"\x17AddProjectMemberRequest\x12\x1d\n" +
+	" \x03(\v2\x1e.organization.v1.ProjectMemberR\amembers\"\xa7\x01\n" +
+	"\x17AddProjectMemberRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\x12\x17\n" +
-	"\auser_id\x18\x14 \x01(\tR\x06userId\x126\n" +
-	"\x04role\x18\x1e \x01(\x0e2\".organization.v1.ProjectMemberRoleR\x04role\"7\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\x12!\n" +
+	"\auser_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12@\n" +
+	"\x04role\x18\x1e \x01(\x0e2\".organization.v1.ProjectMemberRoleB\b\xbaH\x05\x82\x01\x02 \x00R\x04role\"7\n" +
 	"\x18AddProjectMemberResponse\x12\x1b\n" +
 	"\tmember_id\x18\n" +
-	" \x01(\tR\bmemberId\"u\n" +
-	"\x1eUpdateProjectMemberRoleRequest\x12\x1b\n" +
+	" \x01(\tR\bmemberId\"\x89\x01\n" +
+	"\x1eUpdateProjectMemberRoleRequest\x12%\n" +
 	"\tmember_id\x18\n" +
-	" \x01(\tR\bmemberId\x126\n" +
-	"\x04role\x18\x14 \x01(\x0e2\".organization.v1.ProjectMemberRoleR\x04role\"9\n" +
-	"\x1aRemoveProjectMemberRequest\x12\x1b\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bmemberId\x12@\n" +
+	"\x04role\x18\x14 \x01(\x0e2\".organization.v1.ProjectMemberRoleB\b\xbaH\x05\x82\x01\x02 \x00R\x04role\"C\n" +
+	"\x1aRemoveProjectMemberRequest\x12%\n" +
 	"\tmember_id\x18\n" +
-	" \x01(\tR\bmemberId*w\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bmemberId*w\n" +
 	"\x11ProjectMemberRole\x12#\n" +
 	"\x1fPROJECT_MEMBER_ROLE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19PROJECT_MEMBER_ROLE_ADMIN\x10\x01\x12\x1e\n" +

@@ -7,6 +7,7 @@
 package organizationv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -377,21 +378,21 @@ var File_v1_member_proto protoreflect.FileDescriptor
 
 const file_v1_member_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/member.proto\x12\x0forganization.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x14\n" +
+	"\x0fv1/member.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x14\n" +
 	"\x12ListMembersRequest\"H\n" +
 	"\x13ListMembersResponse\x121\n" +
 	"\amembers\x18\n" +
-	" \x03(\v2\x17.organization.v1.MemberR\amembers\"?\n" +
-	"\x13InviteMemberRequest\x12\x14\n" +
+	" \x03(\v2\x17.organization.v1.MemberR\amembers\"^\n" +
+	"\x13InviteMemberRequest\x12\x1d\n" +
 	"\x05email\x18\n" +
-	" \x01(\tR\x05email\x12\x12\n" +
-	"\x04role\x18\x14 \x01(\tR\x04role\"G\n" +
+	" \x01(\tB\a\xbaH\x04r\x02`\x01R\x05email\x12(\n" +
+	"\x04role\x18\x14 \x01(\tB\x14\xbaH\x11r\x0fR\x06viewerR\x05adminR\x04role\"G\n" +
 	"\x14InviteMemberResponse\x12/\n" +
 	"\x06member\x18\n" +
-	" \x01(\v2\x17.organization.v1.MemberR\x06member\"%\n" +
-	"\x13DeleteMemberRequest\x12\x0e\n" +
+	" \x01(\v2\x17.organization.v1.MemberR\x06member\"/\n" +
+	"\x13DeleteMemberRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tR\x02id\"\x16\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x16\n" +
 	"\x14DeleteMemberResponse\"\xd6\x01\n" +
 	"\x06Member\x12\x0e\n" +
 	"\x02id\x18\n" +

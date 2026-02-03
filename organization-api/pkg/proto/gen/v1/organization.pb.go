@@ -7,6 +7,7 @@
 package organizationv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -238,22 +239,23 @@ var File_v1_organization_proto protoreflect.FileDescriptor
 
 const file_v1_organization_proto_rawDesc = "" +
 	"\n" +
-	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"h\n" +
+	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"h\n" +
 	"\fOrganization\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x124\n" +
-	"\acreated\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"(\n" +
-	"\x16GetOrganizationRequest\x12\x0e\n" +
+	"\acreated\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"2\n" +
+	"\x16GetOrganizationRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tR\x02id\"\\\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\\\n" +
 	"\x17GetOrganizationResponse\x12A\n" +
 	"\forganization\x18\n" +
-	" \x01(\v2\x1d.organization.v1.OrganizationR\forganization\"?\n" +
-	"\x19UpdateOrganizationRequest\x12\x0e\n" +
+	" \x01(\v2\x1d.organization.v1.OrganizationR\forganization\"U\n" +
+	"\x19UpdateOrganizationRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name2\xd5\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1e\n" +
+	"\x04name\x18\x14 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name2\xd5\x01\n" +
 	"\x13OrganizationService\x12d\n" +
 	"\x0fGetOrganization\x12'.organization.v1.GetOrganizationRequest\x1a(.organization.v1.GetOrganizationResponse\x12X\n" +
 	"\x12UpdateOrganization\x12*.organization.v1.UpdateOrganizationRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"

@@ -7,6 +7,7 @@
 package organizationv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -2195,11 +2196,11 @@ var File_v1_cluster_proto protoreflect.FileDescriptor
 
 const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x0fv1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"4\n" +
-	"\x13ListClustersRequest\x12\x1d\n" +
+	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"A\n" +
+	"\x13ListClustersRequest\x12*\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\"S\n" +
+	" \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\tprojectId\"S\n" +
 	"\x14ListClustersResponse\x12;\n" +
 	"\bclusters\x18\n" +
 	" \x03(\v2\x1f.organization.v1.ClusterSummaryR\bclusters\"\x84\x01\n" +
@@ -2208,11 +2209,11 @@ const file_v1_cluster_proto_rawDesc = "" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x126\n" +
 	"\x06status\x18\x1e \x01(\x0e2\x1e.organization.v1.ClusterStatusR\x06status\x12\x16\n" +
-	"\x06region\x18( \x01(\tR\x06region\"2\n" +
-	"\x11GetClusterRequest\x12\x1d\n" +
+	"\x06region\x18( \x01(\tR\x06region\"<\n" +
+	"\x11GetClusterRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\"O\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"O\n" +
 	"\x12GetClusterResponse\x129\n" +
 	"\acluster\x18\n" +
 	" \x01(\v2\x1f.organization.v1.ClusterDetailsR\acluster\"\xb9\x02\n" +
@@ -2256,12 +2257,13 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12\x1e\n" +
 	"\n" +
 	"namespaces\x18\x1e \x03(\tR\n" +
-	"namespaces\"q\n" +
-	"\x14CreateClusterRequest\x12\x12\n" +
+	"namespaces\"\x8f\x01\n" +
+	"\x14CreateClusterRequest\x12\x1e\n" +
 	"\x04name\x18\n" +
-	" \x01(\tR\x04name\x12\x16\n" +
-	"\x06region\x18\x14 \x01(\tR\x06region\x12-\n" +
-	"\x12kubernetes_version\x18\x1e \x01(\tR\x11kubernetesVersion\"\x8f\x01\n" +
+	" \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\x12\x1f\n" +
+	"\x06region\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06region\x126\n" +
+	"\x12kubernetes_version\x18\x1e \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x11kubernetesVersion\"\x8f\x01\n" +
 	"\fNodePoolSpec\x12\x12\n" +
 	"\x04name\x18\n" +
 	" \x01(\tR\x04name\x12!\n" +
@@ -2271,21 +2273,21 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\x15CreateClusterResponse\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\"\x80\x01\n" +
-	"\x14UpdateClusterRequest\x12\x1d\n" +
+	" \x01(\tR\tclusterId\"\x8a\x01\n" +
+	"\x14UpdateClusterRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\x122\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x122\n" +
 	"\x12kubernetes_version\x18\x14 \x01(\tH\x00R\x11kubernetesVersion\x88\x01\x01B\x15\n" +
-	"\x13_kubernetes_version\"5\n" +
-	"\x14DeleteClusterRequest\x12\x1d\n" +
+	"\x13_kubernetes_version\"?\n" +
+	"\x14DeleteClusterRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\":\n" +
-	"\x19GetClusterActivityRequest\x12\x1d\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"D\n" +
+	"\x19GetClusterActivityRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\"\\\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"\\\n" +
 	"\x1aGetClusterActivityResponse\x12>\n" +
 	"\n" +
 	"activities\x18\n" +
@@ -2295,47 +2297,50 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\ttimestamp\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x16\n" +
 	"\x06action\x18\x14 \x01(\tR\x06action\x12\x18\n" +
-	"\adetails\x18\x1e \x01(\tR\adetails\"5\n" +
-	"\x14GetKubeconfigRequest\x12\x1d\n" +
+	"\adetails\x18\x1e \x01(\tR\adetails\"?\n" +
+	"\x14GetKubeconfigRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\"F\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"F\n" +
 	"\x15GetKubeconfigResponse\x12-\n" +
 	"\x12kubeconfig_content\x18\n" +
-	" \x01(\tR\x11kubeconfigContent\"\xb7\x01\n" +
-	"\x15CreateNodePoolRequest\x12\x1d\n" +
+	" \x01(\tR\x11kubeconfigContent\"\xd8\x02\n" +
+	"\x15CreateNodePoolRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x12!\n" +
-	"\fmachine_type\x18\x1e \x01(\tR\vmachineType\x12#\n" +
-	"\rautoscale_min\x18( \x01(\x05R\fautoscaleMin\x12#\n" +
-	"\rautoscale_max\x182 \x01(\x05R\fautoscaleMax\":\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x12\x1e\n" +
+	"\x04name\x18\x14 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\x12*\n" +
+	"\fmachine_type\x18\x1e \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vmachineType\x12,\n" +
+	"\rautoscale_min\x18( \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fautoscaleMin\x12,\n" +
+	"\rautoscale_max\x182 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fautoscaleMax:n\xbaHk\x1ai\n" +
+	"\x15autoscale_max_gte_min\x12&autoscale_max must be >= autoscale_min\x1a(this.autoscale_max >= this.autoscale_min\":\n" +
 	"\x16CreateNodePoolResponse\x12 \n" +
 	"\fnode_pool_id\x18\n" +
 	" \x01(\tR\n" +
-	"nodePoolId\"\x83\x01\n" +
-	"\x15UpdateNodePoolRequest\x12 \n" +
+	"nodePoolId\"\x8f\x02\n" +
+	"\x15UpdateNodePoolRequest\x12*\n" +
 	"\fnode_pool_id\x18\n" +
-	" \x01(\tR\n" +
-	"nodePoolId\x12#\n" +
-	"\rautoscale_min\x18\x14 \x01(\x05R\fautoscaleMin\x12#\n" +
-	"\rautoscale_max\x18\x1e \x01(\x05R\fautoscaleMax\"9\n" +
-	"\x15DeleteNodePoolRequest\x12 \n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"nodePoolId\x12,\n" +
+	"\rautoscale_min\x18\x14 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fautoscaleMin\x12,\n" +
+	"\rautoscale_max\x18\x1e \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fautoscaleMax:n\xbaHk\x1ai\n" +
+	"\x15autoscale_max_gte_min\x12&autoscale_max must be >= autoscale_min\x1a(this.autoscale_max >= this.autoscale_min\"C\n" +
+	"\x15DeleteNodePoolRequest\x12*\n" +
 	"\fnode_pool_id\x18\n" +
-	" \x01(\tR\n" +
-	"nodePoolId\"5\n" +
-	"\x14ListNodePoolsRequest\x12\x1d\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"nodePoolId\"?\n" +
+	"\x14ListNodePoolsRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\"Q\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"Q\n" +
 	"\x15ListNodePoolsResponse\x128\n" +
 	"\n" +
 	"node_pools\x18\n" +
-	" \x03(\v2\x19.organization.v1.NodePoolR\tnodePools\"6\n" +
-	"\x12GetNodePoolRequest\x12 \n" +
+	" \x03(\v2\x19.organization.v1.NodePoolR\tnodePools\"@\n" +
+	"\x12GetNodePoolRequest\x12*\n" +
 	"\fnode_pool_id\x18\n" +
-	" \x01(\tR\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
 	"nodePoolId\"M\n" +
 	"\x13GetNodePoolResponse\x126\n" +
 	"\tnode_pool\x18\n" +
@@ -2345,31 +2350,31 @@ const file_v1_cluster_proto_rawDesc = "" +
 	" \x01(\tR\x02id\x12\x1b\n" +
 	"\tplugin_id\x18\x14 \x01(\tR\bpluginId\x129\n" +
 	"\n" +
-	"created_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"4\n" +
-	"\x13ListInstallsRequest\x12\x1d\n" +
+	"created_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\">\n" +
+	"\x13ListInstallsRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\"L\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"L\n" +
 	"\x14ListInstallsResponse\x124\n" +
 	"\binstalls\x18\n" +
-	" \x03(\v2\x18.organization.v1.InstallR\binstalls\"O\n" +
-	"\x11AddInstallRequest\x12\x1d\n" +
+	" \x03(\v2\x18.organization.v1.InstallR\binstalls\"c\n" +
+	"\x11AddInstallRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\x12\x1b\n" +
-	"\tplugin_id\x18\x14 \x01(\tR\bpluginId\"3\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x12%\n" +
+	"\tplugin_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bpluginId\"3\n" +
 	"\x12AddInstallResponse\x12\x1d\n" +
 	"\n" +
 	"install_id\x18\n" +
-	" \x01(\tR\tinstallId\"5\n" +
-	"\x14RemoveInstallRequest\x12\x1d\n" +
+	" \x01(\tR\tinstallId\"?\n" +
+	"\x14RemoveInstallRequest\x12'\n" +
 	"\n" +
 	"install_id\x18\n" +
-	" \x01(\tR\tinstallId\"=\n" +
-	"\x1cListClusterNamespacesRequest\x12\x1d\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tinstallId\"G\n" +
+	"\x1cListClusterNamespacesRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\"b\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"b\n" +
 	"\x1dListClusterNamespacesResponse\x12A\n" +
 	"\n" +
 	"namespaces\x18\n" +
@@ -2382,20 +2387,21 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
 	"project_id\x18\x1e \x01(\tR\tprojectId\x129\n" +
 	"\n" +
-	"created_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"j\n" +
-	"\x16CreateNamespaceRequest\x12\x1d\n" +
+	"created_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xeb\x01\n" +
+	"\x16CreateNamespaceRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\x12\x1d\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\x12'\n" +
 	"\n" +
-	"cluster_id\x18\x14 \x01(\tR\tclusterId\x12\x12\n" +
-	"\x04name\x18\x1e \x01(\tR\x04name\"<\n" +
+	"cluster_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x12\x7f\n" +
+	"\x04name\x18\x1e \x01(\tBk\xbaHh\xba\x01a\n" +
+	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')r\x02\x18?R\x04name\"<\n" +
 	"\x17CreateNamespaceResponse\x12!\n" +
 	"\fnamespace_id\x18\n" +
-	" \x01(\tR\vnamespaceId\";\n" +
-	"\x16DeleteNamespaceRequest\x12!\n" +
+	" \x01(\tR\vnamespaceId\"E\n" +
+	"\x16DeleteNamespaceRequest\x12+\n" +
 	"\fnamespace_id\x18\n" +
-	" \x01(\tR\vnamespaceId2\x8a\r\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vnamespaceId2\x8a\r\n" +
 	"\x0eClusterService\x12[\n" +
 	"\fListClusters\x12$.organization.v1.ListClustersRequest\x1a%.organization.v1.ListClustersResponse\x12U\n" +
 	"\n" +

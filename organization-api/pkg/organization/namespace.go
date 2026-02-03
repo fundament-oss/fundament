@@ -7,10 +7,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/organization-api/pkg/models"
-	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -23,18 +22,25 @@ func (s *OrganizationServer) ListClusterNamespaces(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	clusterID, err := uuid.Parse(req.Msg.ClusterId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
-	}
+	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	namespaces, err := s.queries.NamespaceListByClusterID(ctx, db.NamespaceListByClusterIDParams{ClusterID: clusterID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list namespaces: %w", err))
 	}
 
+	result := make([]*organizationv1.ClusterNamespace, 0, len(namespaces))
+	for i := range namespaces {
+		result = append(result, &organizationv1.ClusterNamespace{
+			Id:        namespaces[i].ID.String(),
+			Name:      namespaces[i].Name,
+			ProjectId: namespaces[i].ProjectID.String(),
+			CreatedAt: timestamppb.New(namespaces[i].Created.Time),
+		})
+	}
+
 	return connect.NewResponse(&organizationv1.ListClusterNamespacesResponse{
-		Namespaces: adapter.FromClusterNamespaces(namespaces),
+		Namespaces: result,
 	}), nil
 }
 
@@ -47,28 +53,13 @@ func (s *OrganizationServer) CreateNamespace(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	projectID, err := uuid.Parse(req.Msg.ProjectId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid project id: %w", err))
-	}
-
-	clusterID, err := uuid.Parse(req.Msg.ClusterId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
-	}
-
-	input := models.NamespaceCreate{
-		Name: req.Msg.Name,
-	}
-
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
+	projectID := uuid.MustParse(req.Msg.ProjectId)
+	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	params := db.NamespaceCreateParams{
 		ProjectID: projectID,
 		ClusterID: clusterID,
-		Name:      input.Name,
+		Name:      req.Msg.Name,
 	}
 
 	namespaceID, err := s.queries.NamespaceCreate(ctx, params)
@@ -80,7 +71,7 @@ func (s *OrganizationServer) CreateNamespace(
 		"namespace_id", namespaceID,
 		"project_id", projectID,
 		"cluster_id", clusterID,
-		"name", input.Name,
+		"name", req.Msg.Name,
 	)
 
 	return connect.NewResponse(&organizationv1.CreateNamespaceResponse{
@@ -97,10 +88,7 @@ func (s *OrganizationServer) DeleteNamespace(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	namespaceID, err := uuid.Parse(req.Msg.NamespaceId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid namespace id: %w", err))
-	}
+	namespaceID := uuid.MustParse(req.Msg.NamespaceId)
 
 	rowsAffected, err := s.queries.NamespaceDelete(ctx, db.NamespaceDeleteParams{ID: namespaceID})
 	if err != nil {
@@ -125,17 +113,24 @@ func (s *OrganizationServer) ListProjectNamespaces(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	projectID, err := uuid.Parse(req.Msg.ProjectId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid project id: %w", err))
-	}
+	projectID := uuid.MustParse(req.Msg.ProjectId)
 
 	namespaces, err := s.queries.NamespaceListByProjectID(ctx, db.NamespaceListByProjectIDParams{ProjectID: projectID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list namespaces: %w", err))
 	}
 
+	result := make([]*organizationv1.ProjectNamespace, 0, len(namespaces))
+	for i := range namespaces {
+		result = append(result, &organizationv1.ProjectNamespace{
+			Id:        namespaces[i].ID.String(),
+			Name:      namespaces[i].Name,
+			ClusterId: namespaces[i].ClusterID.String(),
+			CreatedAt: timestamppb.New(namespaces[i].Created.Time),
+		})
+	}
+
 	return connect.NewResponse(&organizationv1.ListProjectNamespacesResponse{
-		Namespaces: adapter.FromProjectNamespaces(namespaces),
+		Namespaces: result,
 	}), nil
 }

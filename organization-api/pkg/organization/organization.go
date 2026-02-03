@@ -1,12 +1,10 @@
 package organization
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/psqldb"
-	"github.com/fundament-oss/fundament/common/validate"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 )
 
@@ -19,22 +17,15 @@ type OrganizationServer struct {
 	db            *psqldb.DB
 	queries       *db.Queries
 	logger        *slog.Logger
-	validator     *validate.Validator
 	authValidator *auth.Validator
 }
 
 func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*OrganizationServer, error) {
-	validator, err := validate.New()
-	if err != nil {
-		return nil, fmt.Errorf("new validator: %w", err)
-	}
-
 	return &OrganizationServer{
 		logger:        logger,
 		config:        cfg,
 		db:            database,
 		queries:       db.New(database.Pool),
-		validator:     validator,
 		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
 	}, nil
 }
