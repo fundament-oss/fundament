@@ -77,7 +77,7 @@
               class="validate-on-touch"
               type="text"
               [(ngModel)]="newKeyName"
-              placeholder="E.g. Production API key"
+              placeholder="E.g. CLI key"
               (keyup.enter)="createApiKey()"
               (keyup.escape)="cancelCreating()"
               required
@@ -237,9 +237,7 @@
     @if (!loading() && apiKeys().length === 0 && !error()) {
       <div class="py-8 text-center">
         <p class="text-gray-600 dark:text-gray-300">No API keys found</p>
-        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Create your first API key to get started with programmatic access
-        </p>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Create your first API key</p>
       </div>
     }
   </div>

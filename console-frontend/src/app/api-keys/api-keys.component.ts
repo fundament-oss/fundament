@@ -22,7 +22,6 @@ import {
   tablerCopy,
   tablerBan,
 } from '@ng-icons/tabler-icons';
-import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-api-keys',
@@ -45,7 +44,6 @@ export class ApiKeysComponent implements OnInit {
 
   private titleService = inject(TitleService);
   private apiKeyClient = inject(APIKEY);
-  private router = inject(Router);
 
   apiKeys = signal<APIKey[]>([]);
   loading = signal(false);
