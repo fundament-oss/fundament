@@ -86,6 +86,8 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 // formatClusterStatus formats a cluster status for display.
 func formatClusterStatus(status organizationv1.ClusterStatus) string {
 	switch status {
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED:
+		return "unspecified"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING:
 		return "provisioning"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING:
