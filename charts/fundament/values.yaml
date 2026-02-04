@@ -51,6 +51,15 @@ docsFrontend:
   enabled: false
   replicas: 1
 
+# OpenFGA (Fine-Grained Authorization)
+openfga:
+  enabled: false
+  image: openfga/openfga:latest
+  replicas: 1
+  playground:
+    enabled: false
+    apiPort: 18080
+
 # Dex (OIDC Identity Provider)
 dex:
   enabled: true
