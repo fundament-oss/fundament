@@ -91,6 +91,14 @@ dex:
       username: Grace Lee
       userID: "019b4000-1000-7000-8000-000000000007"
 
+openfga:
+  enabled: true
+  image: openfga/openfga:latest
+  replicas: 1
+  playground:
+    enabled: true
+    apiPort: 18080
+
 ingress:
   enabled: true
   className: nginx
