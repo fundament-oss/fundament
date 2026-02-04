@@ -311,17 +311,9 @@ export class App implements OnInit {
     this.selectedNamespaceId.set(namespaceId);
     this.selectedOrgId.set(null);
 
-    // Find the project that contains this namespace
-    let projectId: string | null = null;
-    for (const org of this.organizationDataService.organizations()) {
-      for (const project of org.projects) {
-        if (project.namespaces.some((ns) => ns.id === namespaceId)) {
-          projectId = project.id;
-          break;
-        }
-      }
-      if (projectId) break;
-    }
+    // Find the project that contains this namespace (O(1) lookup)
+    const namespaceData = this.organizationDataService.getNamespaceById(namespaceId);
+    const projectId = namespaceData?.project.id ?? null;
 
     this.selectedProjectId.set(projectId);
 
@@ -407,34 +399,23 @@ export class App implements OnInit {
     if (selectedType === 'namespace') {
       const namespaceId = currentNamespaceId;
       if (namespaceId) {
-        for (const org of this.organizationDataService.organizations()) {
-          for (const project of org.projects) {
-            const namespace = project.namespaces.find((ns) => ns.id === namespaceId);
-            if (namespace) {
-              result = { type: 'namespace', name: namespace.name };
-              break;
-            }
-          }
-          if (result) {
-            break;
-          }
+        const namespaceData = this.organizationDataService.getNamespaceById(namespaceId);
+        if (namespaceData) {
+          result = { type: 'namespace', name: namespaceData.namespace.name };
         }
       }
     } else if (selectedType === 'project') {
       const projectId = currentProjectId;
       if (projectId) {
-        for (const org of this.organizationDataService.organizations()) {
-          const project = org.projects.find((p) => p.id === projectId);
-          if (project) {
-            result = { type: 'project', name: project.name };
-            break;
-          }
+        const projectData = this.organizationDataService.getProjectById(projectId);
+        if (projectData) {
+          result = { type: 'project', name: projectData.project.name };
         }
       }
     } else if (selectedType === 'organization') {
       const orgId = currentOrgId;
       if (orgId) {
-        const org = this.organizationDataService.organizations().find((o) => o.id === orgId);
+        const org = this.organizationDataService.getOrganizationById(orgId);
         if (org) {
           result = { type: 'organization', name: org.name };
         }

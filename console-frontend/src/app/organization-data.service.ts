@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { AUTHN, ORGANIZATION, PROJECT } from '../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { GetOrganizationRequestSchema } from '../generated/v1/organization_pb';
@@ -35,6 +35,32 @@ export class OrganizationDataService {
 
   organizations = signal<OrganizationData[]>([]);
   loading = signal(false);
+
+  // Lookup maps for O(1) access
+  private namespaceMap = computed(() => {
+    const map = new Map<
+      string,
+      { namespace: NamespaceData; project: ProjectData; organization: OrganizationData }
+    >();
+    for (const org of this.organizations()) {
+      for (const project of org.projects) {
+        for (const namespace of project.namespaces) {
+          map.set(namespace.id, { namespace, project, organization: org });
+        }
+      }
+    }
+    return map;
+  });
+
+  private projectMap = computed(() => {
+    const map = new Map<string, { project: ProjectData; organization: OrganizationData }>();
+    for (const org of this.organizations()) {
+      for (const project of org.projects) {
+        map.set(project.id, { project, organization: org });
+      }
+    }
+    return map;
+  });
 
   async loadOrganizationData() {
     this.loading.set(true);
@@ -99,5 +125,26 @@ export class OrganizationDataService {
 
   async reloadOrganizationData() {
     await this.loadOrganizationData();
+  }
+
+  /**
+   * Get namespace by ID with its parent project and organization (O(1) lookup)
+   */
+  getNamespaceById(namespaceId: string) {
+    return this.namespaceMap().get(namespaceId);
+  }
+
+  /**
+   * Get project by ID with its parent organization (O(1) lookup)
+   */
+  getProjectById(projectId: string) {
+    return this.projectMap().get(projectId);
+  }
+
+  /**
+   * Get organization by ID (O(n) lookup, but typically only one organization)
+   */
+  getOrganizationById(organizationId: string) {
+    return this.organizations().find((org) => org.id === organizationId);
   }
 }
