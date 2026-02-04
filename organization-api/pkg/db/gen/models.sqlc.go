@@ -5,6 +5,7 @@
 package db
 
 import (
+	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -15,7 +16,7 @@ type TenantCluster struct {
 	Name              string
 	Region            string
 	KubernetesVersion string
-	Status            string
+	Status            dbconst.ClusterStatus
 	Created           pgtype.Timestamptz
 	Deleted           pgtype.Timestamptz
 }

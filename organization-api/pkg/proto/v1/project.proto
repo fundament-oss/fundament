@@ -2,8 +2,9 @@ syntax = "proto3";
 
 package organization.v1;
 
-import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
@@ -51,7 +52,7 @@ message ListProjectsResponse {
 
 // Get project request
 message GetProjectRequest {
-  string project_id = 10;
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Get project response
@@ -68,7 +69,11 @@ message Project {
 
 // Create project request
 message CreateProjectRequest {
-  string name = 10;
+  string name = 10 [(buf.validate.field).cel = {
+    id: "dns1123label"
+    message: "must be a valid DNS-1123 label"
+    expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+  }];
 }
 
 // Create project response
@@ -78,18 +83,21 @@ message CreateProjectResponse {
 
 // Update project request
 message UpdateProjectRequest {
-  string project_id = 10;
-  optional string name = 20;
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
+  optional string name = 20 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
 }
 
 // Delete project request
 message DeleteProjectRequest {
-  string project_id = 10;
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // List project namespaces request
 message ListProjectNamespacesRequest {
-  string project_id = 10;
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // List project namespaces response
@@ -124,7 +132,7 @@ message ProjectMember {
 
 // List project members request
 message ListProjectMembersRequest {
-  string project_id = 10;
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // List project members response
@@ -134,9 +142,11 @@ message ListProjectMembersResponse {
 
 // Add project member request
 message AddProjectMemberRequest {
-  string project_id = 10;
-  string user_id = 20;
-  ProjectMemberRole role = 30;
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string user_id = 20 [(buf.validate.field).string = {uuid: true}];
+  ProjectMemberRole role = 30 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
 }
 
 // Add project member response
@@ -146,11 +156,13 @@ message AddProjectMemberResponse {
 
 // Update project member role request
 message UpdateProjectMemberRoleRequest {
-  string member_id = 10;
-  ProjectMemberRole role = 20;
+  string member_id = 10 [(buf.validate.field).string = {uuid: true}];
+  ProjectMemberRole role = 20 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
 }
 
 // Remove project member request
 message RemoveProjectMemberRequest {
-  string member_id = 10;
+  string member_id = 10 [(buf.validate.field).string = {uuid: true}];
 }

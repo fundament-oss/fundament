@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -23,7 +24,7 @@ type ClusterCreateParams struct {
 	Name              string
 	Region            string
 	KubernetesVersion string
-	Status            string
+	Status            dbconst.ClusterStatus
 }
 
 func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (uuid.UUID, error) {

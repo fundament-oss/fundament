@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package organization.v1;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
 
@@ -27,9 +28,14 @@ message ListMembersResponse {
 
 // Invite member request
 message InviteMemberRequest {
-  string email = 10;
+  string email = 10 [(buf.validate.field).string = {email: true}];
   // Role for the invited user: "viewer" or "admin"
-  string role = 20;
+  string role = 20 [(buf.validate.field).string = {
+    in: [
+      "viewer",
+      "admin"
+    ]
+  }];
 }
 
 // Invite member response
@@ -39,7 +45,7 @@ message InviteMemberResponse {
 
 // Delete member request
 message DeleteMemberRequest {
-  string id = 10;
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Delete member response

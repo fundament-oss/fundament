@@ -10,10 +10,10 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -21,18 +21,27 @@ func (s *OrganizationServer) ListProjectMembers(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListProjectMembersRequest],
 ) (*connect.Response[organizationv1.ListProjectMembersResponse], error) {
-	projectID, err := uuid.Parse(req.Msg.ProjectId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid project id: %w", err))
-	}
+	projectID := uuid.MustParse(req.Msg.ProjectId)
 
 	members, err := s.queries.ProjectMemberList(ctx, db.ProjectMemberListParams{ProjectID: projectID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list project members: %w", err))
 	}
 
+	result := make([]*organizationv1.ProjectMember, 0, len(members))
+	for i := range members {
+		result = append(result, &organizationv1.ProjectMember{
+			Id:        members[i].ID.String(),
+			ProjectId: members[i].ProjectID.String(),
+			UserId:    members[i].UserID.String(),
+			UserName:  members[i].UserName,
+			Role:      projectMemberRoleFromDB(members[i].Role),
+			CreatedAt: timestamppb.New(members[i].Created.Time),
+		})
+	}
+
 	return connect.NewResponse(&organizationv1.ListProjectMembersResponse{
-		Members: adapter.FromProjectMembers(members),
+		Members: result,
 	}), nil
 }
 
@@ -40,17 +49,10 @@ func (s *OrganizationServer) AddProjectMember(
 	ctx context.Context,
 	req *connect.Request[organizationv1.AddProjectMemberRequest],
 ) (*connect.Response[organizationv1.AddProjectMemberResponse], error) {
-	projectID, err := uuid.Parse(req.Msg.ProjectId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid project id: %w", err))
-	}
+	projectID := uuid.MustParse(req.Msg.ProjectId)
+	userID := uuid.MustParse(req.Msg.UserId)
 
-	userID, err := uuid.Parse(req.Msg.UserId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid user id: %w", err))
-	}
-
-	role := adapter.ToProjectMemberRole(req.Msg.Role)
+	role := projectMemberRoleToDB(req.Msg.Role)
 	if role == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid role"))
 	}
@@ -88,12 +90,9 @@ func (s *OrganizationServer) UpdateProjectMemberRole(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateProjectMemberRoleRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	memberID, err := uuid.Parse(req.Msg.MemberId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid member id: %w", err))
-	}
+	memberID := uuid.MustParse(req.Msg.MemberId)
 
-	role := adapter.ToProjectMemberRole(req.Msg.Role)
+	role := projectMemberRoleToDB(req.Msg.Role)
 	if role == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid role"))
 	}
@@ -129,10 +128,7 @@ func (s *OrganizationServer) RemoveProjectMember(
 	ctx context.Context,
 	req *connect.Request[organizationv1.RemoveProjectMemberRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	memberID, err := uuid.Parse(req.Msg.MemberId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid member id: %w", err))
-	}
+	memberID := uuid.MustParse(req.Msg.MemberId)
 
 	rowsAffected, err := s.queries.ProjectMemberDelete(ctx, db.ProjectMemberDeleteParams{ID: memberID})
 	if err != nil {
@@ -157,4 +153,26 @@ func (s *OrganizationServer) RemoveProjectMember(
 	)
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
+func projectMemberRoleFromDB(role dbconst.ProjectMemberRole) organizationv1.ProjectMemberRole {
+	switch role {
+	case dbconst.ProjectMemberRole_Admin:
+		return organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN
+	case dbconst.ProjectMemberRole_Viewer:
+		return organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER
+	default:
+		return organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED
+	}
+}
+
+func projectMemberRoleToDB(role organizationv1.ProjectMemberRole) dbconst.ProjectMemberRole {
+	switch role {
+	case organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN:
+		return dbconst.ProjectMemberRole_Admin
+	case organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER:
+		return dbconst.ProjectMemberRole_Viewer
+	default:
+		return ""
+	}
 }
