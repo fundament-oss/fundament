@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -14,7 +14,6 @@ interface Permission {
 
 @Component({
   selector: 'app-project-permissions',
-  standalone: true,
   imports: [CommonModule, PermissionModalComponent, RouterLink, RouterLinkActive, NgIcon],
   viewProviders: [
     provideIcons({
@@ -23,6 +22,7 @@ interface Permission {
       tablerTrash,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-permissions.component.html',
 })
 export class ProjectPermissionsComponent {

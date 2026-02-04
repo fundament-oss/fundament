@@ -1,4 +1,11 @@
-import { Component, inject, computed, signal, OnInit } from '@angular/core';
+import {
+  Component,
+  inject,
+  computed,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -23,13 +30,13 @@ import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-add-cluster-summary',
-  standalone: true,
   imports: [CommonModule, RouterLink, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-summary.component.html',
 })
 export class AddClusterSummaryComponent implements OnInit {

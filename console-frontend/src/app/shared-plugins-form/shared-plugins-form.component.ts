@@ -1,4 +1,13 @@
-import { Component, Output, EventEmitter, inject, OnInit, signal, Input } from '@angular/core';
+import {
+  Component,
+  Output,
+  EventEmitter,
+  inject,
+  OnInit,
+  signal,
+  Input,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PLUGIN } from '../../connect/tokens';
@@ -20,8 +29,8 @@ export interface Plugin {
 
 @Component({
   selector: 'app-shared-plugins-form',
-  standalone: true,
   imports: [CommonModule, FormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-plugins-form.component.html',
 })
 export class SharedPluginsFormComponent implements OnInit {

@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -56,7 +56,6 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
 
 @Component({
   selector: 'app-plugins',
-  standalone: true,
   imports: [
     CommonModule,
     RouterLink,
@@ -70,6 +69,7 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
       tablerHelpCircle,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',
 })
 export class PluginsComponent implements OnInit {

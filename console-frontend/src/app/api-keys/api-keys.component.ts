@@ -1,4 +1,12 @@
-import { Component, inject, OnInit, signal, ViewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  signal,
+  ViewChild,
+  ElementRef,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
@@ -25,7 +33,6 @@ import {
 
 @Component({
   selector: 'app-api-keys',
-  standalone: true,
   imports: [CommonModule, FormsModule, NgIcon],
   viewProviders: [
     provideIcons({
@@ -37,6 +44,7 @@ import {
       tablerBan,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './api-keys.component.html',
 })
 export class ApiKeysComponent implements OnInit {
