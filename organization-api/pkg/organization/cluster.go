@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -24,6 +25,10 @@ func (s *OrganizationServer) ListClusters(
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationMember, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
 	}
 
 	clusters, err := s.queries.ClusterListByOrganizationID(ctx, db.ClusterListByOrganizationIDParams{
@@ -52,6 +57,15 @@ func (s *OrganizationServer) GetCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetClusterRequest],
 ) (*connect.Response[organizationv1.GetClusterResponse], error) {
+	organizationID, ok := OrganizationIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationMember, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
+	}
+
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
@@ -86,6 +100,10 @@ func (s *OrganizationServer) CreateCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
+	if err := s.checkPermission(ctx, authz.RelationAdmin, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
+	}
+
 	params := db.ClusterCreateParams{
 		OrganizationID:    organizationID,
 		Name:              req.Msg.Name,
@@ -115,6 +133,15 @@ func (s *OrganizationServer) UpdateCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateClusterRequest],
 ) (*connect.Response[emptypb.Empty], error) {
+	organizationID, ok := OrganizationIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationAdmin, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
+	}
+
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	params := db.ClusterUpdateParams{
@@ -143,6 +170,15 @@ func (s *OrganizationServer) DeleteCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteClusterRequest],
 ) (*connect.Response[emptypb.Empty], error) {
+	organizationID, ok := OrganizationIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationAdmin, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
+	}
+
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	rowsAffected, err := s.queries.ClusterDelete(ctx, db.ClusterDeleteParams{ID: clusterID})
@@ -163,6 +199,15 @@ func (s *OrganizationServer) GetClusterActivity(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetClusterActivityRequest],
 ) (*connect.Response[organizationv1.GetClusterActivityResponse], error) {
+	organizationID, ok := OrganizationIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationMember, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
+	}
+
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	// Verify cluster exists and belongs to tenant
@@ -186,6 +231,15 @@ func (s *OrganizationServer) GetKubeconfig(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetKubeconfigRequest],
 ) (*connect.Response[organizationv1.GetKubeconfigResponse], error) {
+	organizationID, ok := OrganizationIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationMember, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
+	}
+
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{

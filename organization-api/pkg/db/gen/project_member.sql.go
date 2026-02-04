@@ -51,6 +51,36 @@ func (q *Queries) ProjectMemberDelete(ctx context.Context, arg ProjectMemberDele
 	return result.RowsAffected(), nil
 }
 
+const projectMemberGetByID = `-- name: ProjectMemberGetByID :one
+SELECT id, project_id, user_id, role
+FROM tenant.project_members
+WHERE id = $1
+AND deleted IS NULL
+`
+
+type ProjectMemberGetByIDParams struct {
+	ID uuid.UUID
+}
+
+type ProjectMemberGetByIDRow struct {
+	ID        uuid.UUID
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	Role      dbconst.ProjectMemberRole
+}
+
+func (q *Queries) ProjectMemberGetByID(ctx context.Context, arg ProjectMemberGetByIDParams) (ProjectMemberGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, projectMemberGetByID, arg.ID)
+	var i ProjectMemberGetByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UserID,
+		&i.Role,
+	)
+	return i, err
+}
+
 const projectMemberList = `-- name: ProjectMemberList :many
 SELECT
     project_members.id,

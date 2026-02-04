@@ -62,6 +62,42 @@ func (q *Queries) MemberGetByEmail(ctx context.Context, arg MemberGetByEmailPara
 	return i, err
 }
 
+const memberGetByID = `-- name: MemberGetByID :one
+SELECT id, organization_id, name, external_id, email, role, created
+FROM tenant.users
+WHERE id = $1 AND organization_id = $2 AND deleted IS NULL
+`
+
+type MemberGetByIDParams struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+}
+
+type MemberGetByIDRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     pgtype.Text
+	Email          pgtype.Text
+	Role           string
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) MemberGetByID(ctx context.Context, arg MemberGetByIDParams) (MemberGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, memberGetByID, arg.ID, arg.OrganizationID)
+	var i MemberGetByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.ExternalID,
+		&i.Email,
+		&i.Role,
+		&i.Created,
+	)
+	return i, err
+}
+
 const memberInvite = `-- name: MemberInvite :one
 INSERT INTO tenant.users (organization_id, name, email, role)
 VALUES ($1, $2, $2, $3)
