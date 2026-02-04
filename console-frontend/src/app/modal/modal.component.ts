@@ -1,18 +1,21 @@
-import { Component, Input, Output, EventEmitter, HostListener } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerX } from '@ng-icons/tabler-icons';
 
 @Component({
   selector: 'app-modal',
-  standalone: true,
   imports: [CommonModule, NgIconComponent],
   viewProviders: [
     provideIcons({
       tablerX,
     }),
   ],
+  host: {
+    '(document:keydown)': 'handleEscapeKey($event)',
+  },
   templateUrl: './modal.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModalComponent {
   @Input() show = false;
@@ -20,7 +23,6 @@ export class ModalComponent {
   @Input() maxWidth = 'max-w-md';
   @Output() modalClose = new EventEmitter<void>();
 
-  @HostListener('document:keydown', ['$event'])
   handleEscapeKey(event: KeyboardEvent): void {
     if (this.show && event.key === 'Escape') {
       event.preventDefault();

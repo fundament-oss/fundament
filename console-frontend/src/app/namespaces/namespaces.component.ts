@@ -35,7 +35,6 @@ import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb
 
 @Component({
   selector: 'app-namespaces',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule, NgIcon, ModalComponent, BreadcrumbComponent],
   viewProviders: [
     provideIcons({

@@ -1,4 +1,12 @@
-import { Component, inject, ViewChild, ElementRef, signal, OnInit } from '@angular/core';
+import {
+  Component,
+  inject,
+  ViewChild,
+  ElementRef,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -22,7 +30,6 @@ import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 
 @Component({
   selector: 'app-project-settings',
-  standalone: true,
   imports: [CommonModule, FormsModule, NgIconComponent, BreadcrumbComponent, ModalComponent],
   viewProviders: [
     provideIcons({
@@ -33,6 +40,7 @@ import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
     }),
   ],
   templateUrl: './project-settings.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectSettingsComponent implements OnInit {
   private titleService = inject(TitleService);

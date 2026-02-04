@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -27,7 +27,6 @@ interface RoleItem {
 
 @Component({
   selector: 'app-namespace-members',
-  standalone: true,
   imports: [CommonModule, FormsModule, BreadcrumbComponent, ModalComponent, NgIcon],
   viewProviders: [
     provideIcons({
@@ -37,6 +36,7 @@ interface RoleItem {
     }),
   ],
   templateUrl: './namespace-members.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NamespaceMembersComponent implements OnInit {
   private titleService = inject(TitleService);

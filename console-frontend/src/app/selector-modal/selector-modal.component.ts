@@ -8,6 +8,7 @@ import {
   ElementRef,
   AfterViewInit,
   OnChanges,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
@@ -38,7 +39,6 @@ interface Organization {
 
 @Component({
   selector: 'app-selector-modal',
-  standalone: true,
   imports: [CommonModule, NgIconComponent, ModalComponent],
   viewProviders: [
     provideIcons({
@@ -49,6 +49,7 @@ interface Organization {
     }),
   ],
   templateUrl: './selector-modal.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SelectorModalComponent implements AfterViewInit, OnChanges {
   @Input() show = false;

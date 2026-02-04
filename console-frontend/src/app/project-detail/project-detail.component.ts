@@ -22,7 +22,6 @@ import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb
 
 @Component({
   selector: 'app-project-detail',
-  standalone: true,
   imports: [CommonModule, RouterLink, NgIcon, LoadingIndicatorComponent, BreadcrumbComponent],
   viewProviders: [
     provideIcons({

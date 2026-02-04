@@ -1,4 +1,4 @@
-import { Component, inject, Input, OnInit, signal } from '@angular/core';
+import { Component, inject, Input, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -15,7 +15,6 @@ export interface BreadcrumbSegment {
 
 @Component({
   selector: 'app-breadcrumb',
-  standalone: true,
   imports: [CommonModule, RouterLink, NgIcon],
   viewProviders: [
     provideIcons({
@@ -23,6 +22,7 @@ export interface BreadcrumbSegment {
     }),
   ],
   templateUrl: './breadcrumb.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BreadcrumbComponent implements OnInit {
   private authnClient = inject(AUTHN);
