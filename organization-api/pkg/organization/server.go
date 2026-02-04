@@ -12,7 +12,7 @@ type Config struct {
 	JWTSecret []byte
 }
 
-type OrganizationServer struct {
+type Server struct {
 	config        *Config
 	db            *psqldb.DB
 	queries       *db.Queries
@@ -20,8 +20,8 @@ type OrganizationServer struct {
 	authValidator *auth.Validator
 }
 
-func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*OrganizationServer, error) {
-	return &OrganizationServer{
+func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*Server, error) {
+	return &Server{
 		logger:        logger,
 		config:        cfg,
 		db:            database,
