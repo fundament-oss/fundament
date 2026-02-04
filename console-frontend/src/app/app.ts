@@ -161,18 +161,22 @@ export class App implements OnInit {
         this.selectedNamespaceId.set(null);
         this.selectedOrgId.set(null);
       }
-    } else {
-      // Organization routes or other routes
-      // Only update if we're not already in a valid state
-      if (this.selectedProjectId() || this.selectedNamespaceId()) {
-        // We're on an organization route, so select the organization
-        const orgs = this.organizationDataService.organizations();
-        if (orgs.length > 0) {
-          this.selectedOrgId.set(orgs[0].id);
-          this.selectedProjectId.set(null);
-          this.selectedNamespaceId.set(null);
-        }
-      }
+      return;
+    }
+
+    // Organization routes or other routes
+    // Only update if we currently have a project or namespace selected
+    const hasProjectOrNamespaceSelection = !!(this.selectedProjectId() || this.selectedNamespaceId());
+    if (!hasProjectOrNamespaceSelection) {
+      return;
+    }
+
+    // We're on an organization (or other non-project) route, so select the organization
+    const orgs = this.organizationDataService.organizations();
+    if (orgs.length > 0) {
+      this.selectedOrgId.set(orgs[0].id);
+      this.selectedProjectId.set(null);
+      this.selectedNamespaceId.set(null);
     }
   }
 
@@ -350,40 +354,97 @@ export class App implements OnInit {
     return this.selectedNamespaceId() === namespaceId;
   }
 
+  // Cached values to avoid recomputing the selected item display on every change detection run.
+  private cachedSelectedDisplay:
+    | {
+        type: 'organization' | 'project' | 'namespace';
+        name: string;
+      }
+    | null = null;
+
+  private cachedSelectedType: 'organization' | 'project' | 'namespace' | null = null;
+  private cachedOrgId: string | null = null;
+  private cachedProjectId: string | null = null;
+  private cachedNamespaceId: string | null = null;
+
   getSelectedItemDisplay(): {
     type: 'organization' | 'project' | 'namespace';
     name: string;
   } | null {
     const selectedType = this.getSelectedType();
 
-    if (!selectedType) return null;
+    if (!selectedType) {
+      this.cachedSelectedDisplay = null;
+      this.cachedSelectedType = null;
+      this.cachedOrgId = null;
+      this.cachedProjectId = null;
+      this.cachedNamespaceId = null;
+      return null;
+    }
+
+    const currentOrgId = this.selectedOrgId();
+    const currentProjectId = this.selectedProjectId();
+    const currentNamespaceId = this.selectedNamespaceId();
+
+    // Return cached value if the selection (type and IDs) hasn't changed.
+    if (
+      this.cachedSelectedType === selectedType &&
+      this.cachedOrgId === currentOrgId &&
+      this.cachedProjectId === currentProjectId &&
+      this.cachedNamespaceId === currentNamespaceId
+    ) {
+      return this.cachedSelectedDisplay;
+    }
+
+    let result: {
+      type: 'organization' | 'project' | 'namespace';
+      name: string;
+    } | null = null;
 
     if (selectedType === 'namespace') {
-      const namespaceId = this.selectedNamespaceId();
-      for (const org of this.organizationDataService.organizations()) {
-        for (const project of org.projects) {
-          const namespace = project.namespaces.find((ns) => ns.id === namespaceId);
-          if (namespace) {
-            return { type: 'namespace', name: namespace.name };
+      const namespaceId = currentNamespaceId;
+      if (namespaceId) {
+        for (const org of this.organizationDataService.organizations()) {
+          for (const project of org.projects) {
+            const namespace = project.namespaces.find((ns) => ns.id === namespaceId);
+            if (namespace) {
+              result = { type: 'namespace', name: namespace.name };
+              break;
+            }
+          }
+          if (result) {
+            break;
           }
         }
       }
     } else if (selectedType === 'project') {
-      const projectId = this.selectedProjectId();
-      for (const org of this.organizationDataService.organizations()) {
-        const project = org.projects.find((p) => p.id === projectId);
-        if (project) {
-          return { type: 'project', name: project.name };
+      const projectId = currentProjectId;
+      if (projectId) {
+        for (const org of this.organizationDataService.organizations()) {
+          const project = org.projects.find((p) => p.id === projectId);
+          if (project) {
+            result = { type: 'project', name: project.name };
+            break;
+          }
         }
       }
     } else if (selectedType === 'organization') {
-      const orgId = this.selectedOrgId();
-      const org = this.organizationDataService.organizations().find((o) => o.id === orgId);
-      if (org) {
-        return { type: 'organization', name: org.name };
+      const orgId = currentOrgId;
+      if (orgId) {
+        const org = this.organizationDataService.organizations().find((o) => o.id === orgId);
+        if (org) {
+          result = { type: 'organization', name: org.name };
+        }
       }
     }
 
-    return null;
+    // Update cache before returning.
+    this.cachedSelectedDisplay = result;
+    this.cachedSelectedType = selectedType;
+    this.cachedOrgId = currentOrgId;
+    this.cachedProjectId = currentProjectId;
+    this.cachedNamespaceId = currentNamespaceId;
+
+    return result;
   }
 }
