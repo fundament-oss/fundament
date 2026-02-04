@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
+	"connectrpc.com/validate"
 	"github.com/caarlos0/env/v11"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/rs/cors"
@@ -154,6 +155,7 @@ func run() error {
 
 	interceptors := connect.WithInterceptors(
 		connectrecovery.NewInterceptor(logger),
+		validate.NewInterceptor(),
 		loggingInterceptor,
 	)
 
