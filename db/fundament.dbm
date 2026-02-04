@@ -1294,4 +1294,9 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<roles names="fun_fundament_api"/>
 	<privileges usage="true"/>
 </permission>
+<permission>
+	<object name="authn" type="schema"/>
+	<roles names="fun_authz"/>
+	<privileges usage="true"/>
+</permission>
 </dbmodel>

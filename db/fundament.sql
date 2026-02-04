@@ -85,12 +85,12 @@ ALTER TABLE tenant.namespaces ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_deleted ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
 	IF EXISTS (
@@ -114,12 +114,12 @@ ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO postgres;
 CREATE OR REPLACE FUNCTION authn.current_user_id ()
 	RETURNS uuid
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT current_setting('app.current_user_id')::uuid
 $function$;
@@ -132,12 +132,12 @@ ALTER FUNCTION authn.current_user_id() OWNER TO fun_fundament_api;
 CREATE OR REPLACE FUNCTION authn.current_organization_id ()
 	RETURNS uuid
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT current_setting('app.current_organization_id')::uuid
 $function$;
@@ -150,12 +150,12 @@ ALTER FUNCTION authn.current_organization_id() OWNER TO fun_fundament_api;
 CREATE OR REPLACE FUNCTION authn.is_project_member (IN p_project_id uuid, IN p_user_id uuid, IN p_role text)
 	RETURNS boolean
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.project_members
@@ -174,12 +174,12 @@ ALTER FUNCTION authn.is_project_member(uuid,uuid,text) OWNER TO fun_authz;
 CREATE OR REPLACE FUNCTION authn.is_project_in_organization (IN p_project_id uuid)
 	RETURNS boolean
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.projects
@@ -196,12 +196,12 @@ ALTER FUNCTION authn.is_project_in_organization(uuid) OWNER TO fun_authz;
 CREATE OR REPLACE FUNCTION authn.is_cluster_in_organization (IN p_cluster_id uuid)
 	RETURNS boolean
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.clusters
@@ -218,12 +218,12 @@ ALTER FUNCTION authn.is_cluster_in_organization(uuid) OWNER TO fun_authz;
 CREATE OR REPLACE FUNCTION authn.is_user_in_organization (IN p_user_id uuid)
 	RETURNS boolean
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.users
@@ -240,12 +240,12 @@ ALTER FUNCTION authn.is_user_in_organization(uuid) OWNER TO fun_authz;
 CREATE OR REPLACE FUNCTION tenant.project_has_members (IN p_project_id uuid)
 	RETURNS boolean
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.project_members
@@ -262,12 +262,12 @@ ALTER FUNCTION tenant.project_has_members(uuid) OWNER TO fun_authz;
 CREATE OR REPLACE FUNCTION tenant.project_members_tr_protect_last_admin ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 DECLARE
     admin_count integer;
@@ -302,12 +302,12 @@ ALTER FUNCTION tenant.project_members_tr_protect_last_admin() OWNER TO postgres;
 CREATE OR REPLACE FUNCTION tenant.projects_tr_require_admin ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     IF NOT EXISTS (
@@ -381,12 +381,12 @@ CREATE POLICY api_keys_organization_policy ON authn.api_keys
 CREATE OR REPLACE FUNCTION authn.api_key_get_by_hash (IN p_token_hash bytea)
 	RETURNS authn.api_keys
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 10
-	AS
+	AS 
 $function$
 DECLARE
 	result authn.api_keys;
@@ -448,7 +448,7 @@ ALTER TABLE tenant.clusters ENABLE ROW LEVEL SECURITY;
 CREATE CONSTRAINT TRIGGER verify_deleted
 	AFTER INSERT OR UPDATE
 	ON tenant.clusters
-	NOT DEFERRABLE
+	NOT DEFERRABLE 
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.clusters_tr_verify_deleted();
 -- ddl-end --
@@ -627,7 +627,7 @@ ALTER TABLE zappstore.plugin_documentation_links OWNER TO fun_owner;
 -- object: require_admin | type: TRIGGER --
 -- require_admin ON tenant.projects CASCADE;
 CREATE CONSTRAINT TRIGGER require_admin
-	AFTER INSERT
+	AFTER INSERT 
 	ON tenant.projects
 	DEFERRABLE INITIALLY DEFERRED
 	FOR EACH ROW
@@ -1122,6 +1122,14 @@ GRANT USAGE
 GRANT USAGE
    ON SCHEMA authn
    TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_0c2c87179d" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authn
+   TO fun_authz;
 
 -- ddl-end --
 
