@@ -765,13 +765,31 @@ CREATE POLICY namespaces_organization_policy ON tenant.namespaces
 -- DROP TABLE IF EXISTS authz.outbox CASCADE;
 CREATE TABLE authz.outbox (
 	id uuid NOT NULL DEFAULT uuidv7(),
-	aggregate_type text NOT NULL,
-	aggregate_id text NOT NULL,
-	event_type text NOT NULL,
-	payload jsonb NOT NULL,
-	created_at timestamptz NOT NULL DEFAULT now(),
-	processed_at timestamptz,
-	CONSTRAINT outbox_pk PRIMARY KEY (id)
+	organization_id uuid,
+	user_id uuid,
+	project_id uuid,
+	project_member_id uuid,
+	cluster_id uuid,
+	node_pool_id uuid,
+	namespace_id uuid,
+	api_key_id uuid,
+	install_id uuid,
+	created timestamptz NOT NULL DEFAULT now(),
+	processed timestamptz,
+	retries integer NOT NULL DEFAULT 0,
+	failed timestamptz,
+	CONSTRAINT outbox_pk PRIMARY KEY (id),
+	CONSTRAINT outbox_ck_single_fk CHECK ((
+    (organization_id IS NOT NULL)::int +
+    (user_id IS NOT NULL)::int +
+    (project_id IS NOT NULL)::int +
+    (project_member_id IS NOT NULL)::int +
+    (cluster_id IS NOT NULL)::int +
+    (node_pool_id IS NOT NULL)::int +
+    (namespace_id IS NOT NULL)::int +
+    (api_key_id IS NOT NULL)::int +
+    (install_id IS NOT NULL)::int
+) = 1)
 );
 -- ddl-end --
 ALTER TABLE authz.outbox OWNER TO fun_owner;
@@ -782,14 +800,14 @@ ALTER TABLE authz.outbox OWNER TO fun_owner;
 CREATE INDEX outbox_idx_unprocessed ON authz.outbox
 USING btree
 (
-	created_at
+	created
 )
-WHERE (processed_at IS NULL);
+WHERE (processed IS NULL);
 -- ddl-end --
 
--- object: authz.outbox_trigger | type: FUNCTION --
--- DROP FUNCTION IF EXISTS authz.outbox_trigger() CASCADE;
-CREATE OR REPLACE FUNCTION authz.outbox_trigger ()
+-- object: authz.organizations_sync_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.organizations_sync_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.organizations_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
 	VOLATILE 
@@ -800,27 +818,198 @@ CREATE OR REPLACE FUNCTION authz.outbox_trigger ()
 	AS 
 $function$
 BEGIN
-    IF TG_OP = 'INSERT' THEN
-        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-        VALUES (TG_TABLE_NAME, NEW.id::text, 'created', to_jsonb(NEW));
-    ELSIF TG_OP = 'UPDATE' THEN
-        IF NEW.deleted IS NOT NULL AND OLD.deleted IS NULL THEN
-            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-            VALUES (TG_TABLE_NAME, NEW.id::text, 'deleted', to_jsonb(NEW));
-        ELSE
-            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-            VALUES (TG_TABLE_NAME, NEW.id::text, 'updated', to_jsonb(NEW));
-        END IF;
-    ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-        VALUES (TG_TABLE_NAME, OLD.id::text, 'deleted', to_jsonb(OLD));
-    END IF;
+    INSERT INTO authz.outbox (organization_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
     PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
 -- ddl-end --
-ALTER FUNCTION authz.outbox_trigger() OWNER TO fun_owner;
+ALTER FUNCTION authz.organizations_sync_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authz.users_sync_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.users_sync_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.users_sync_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    INSERT INTO authz.outbox (user_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.users_sync_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authz.projects_sync_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.projects_sync_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.projects_sync_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    INSERT INTO authz.outbox (project_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.projects_sync_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authz.project_members_sync_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.project_members_sync_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.project_members_sync_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    INSERT INTO authz.outbox (project_member_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.project_members_sync_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authz.clusters_sync_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.clusters_sync_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.clusters_sync_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    INSERT INTO authz.outbox (cluster_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.clusters_sync_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authz.node_pools_sync_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.node_pools_sync_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.node_pools_sync_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    INSERT INTO authz.outbox (node_pool_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.node_pools_sync_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authz.namespaces_sync_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.namespaces_sync_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.namespaces_sync_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    INSERT INTO authz.outbox (namespace_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.namespaces_sync_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authz.api_keys_sync_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.api_keys_sync_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.api_keys_sync_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    INSERT INTO authz.outbox (api_key_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.api_keys_sync_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authz.installs_sync_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.installs_sync_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.installs_sync_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    INSERT INTO authz.outbox (install_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.installs_sync_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: organizations_outbox | type: TRIGGER --
@@ -829,7 +1018,7 @@ CREATE OR REPLACE TRIGGER organizations_outbox
 	AFTER INSERT OR DELETE OR UPDATE
 	ON tenant.organizations
 	FOR EACH ROW
-	EXECUTE PROCEDURE authz.outbox_trigger();
+	EXECUTE PROCEDURE authz.organizations_sync_trigger();
 -- ddl-end --
 
 -- object: users_outbox | type: TRIGGER --
@@ -838,7 +1027,7 @@ CREATE OR REPLACE TRIGGER users_outbox
 	AFTER INSERT OR DELETE OR UPDATE
 	ON tenant.users
 	FOR EACH ROW
-	EXECUTE PROCEDURE authz.outbox_trigger();
+	EXECUTE PROCEDURE authz.users_sync_trigger();
 -- ddl-end --
 
 -- object: project_members_outbox | type: TRIGGER --
@@ -847,7 +1036,7 @@ CREATE OR REPLACE TRIGGER project_members_outbox
 	AFTER INSERT OR DELETE OR UPDATE
 	ON tenant.project_members
 	FOR EACH ROW
-	EXECUTE PROCEDURE authz.outbox_trigger();
+	EXECUTE PROCEDURE authz.project_members_sync_trigger();
 -- ddl-end --
 
 -- object: projects_outbox | type: TRIGGER --
@@ -856,7 +1045,7 @@ CREATE OR REPLACE TRIGGER projects_outbox
 	AFTER INSERT OR DELETE OR UPDATE
 	ON tenant.projects
 	FOR EACH ROW
-	EXECUTE PROCEDURE authz.outbox_trigger();
+	EXECUTE PROCEDURE authz.projects_sync_trigger();
 -- ddl-end --
 
 -- object: clusters_outbox | type: TRIGGER --
@@ -865,7 +1054,7 @@ CREATE OR REPLACE TRIGGER clusters_outbox
 	AFTER INSERT OR DELETE OR UPDATE
 	ON tenant.clusters
 	FOR EACH ROW
-	EXECUTE PROCEDURE authz.outbox_trigger();
+	EXECUTE PROCEDURE authz.clusters_sync_trigger();
 -- ddl-end --
 
 -- object: node_pools_outbox | type: TRIGGER --
@@ -874,7 +1063,7 @@ CREATE OR REPLACE TRIGGER node_pools_outbox
 	AFTER INSERT OR DELETE OR UPDATE
 	ON tenant.node_pools
 	FOR EACH ROW
-	EXECUTE PROCEDURE authz.outbox_trigger();
+	EXECUTE PROCEDURE authz.node_pools_sync_trigger();
 -- ddl-end --
 
 -- object: namespaces_outbox | type: TRIGGER --
@@ -883,7 +1072,7 @@ CREATE OR REPLACE TRIGGER namespaces_outbox
 	AFTER INSERT OR DELETE OR UPDATE
 	ON tenant.namespaces
 	FOR EACH ROW
-	EXECUTE PROCEDURE authz.outbox_trigger();
+	EXECUTE PROCEDURE authz.namespaces_sync_trigger();
 -- ddl-end --
 
 -- object: api_keys_outbox | type: TRIGGER --
@@ -892,7 +1081,7 @@ CREATE OR REPLACE TRIGGER api_keys_outbox
 	AFTER INSERT OR DELETE OR UPDATE
 	ON authn.api_keys
 	FOR EACH ROW
-	EXECUTE PROCEDURE authz.outbox_trigger();
+	EXECUTE PROCEDURE authz.api_keys_sync_trigger();
 -- ddl-end --
 
 -- object: installs_outbox | type: TRIGGER --
@@ -901,7 +1090,7 @@ CREATE OR REPLACE TRIGGER installs_outbox
 	AFTER INSERT OR DELETE OR UPDATE
 	ON zappstore.installs
 	FOR EACH ROW
-	EXECUTE PROCEDURE authz.outbox_trigger();
+	EXECUTE PROCEDURE authz.installs_sync_trigger();
 -- ddl-end --
 
 -- object: projects_fk_organization | type: CONSTRAINT --
@@ -1034,6 +1223,69 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.project_members DROP CONSTRAINT IF EXISTS project_members_fk_user CASCADE;
 ALTER TABLE tenant.project_members ADD CONSTRAINT project_members_fk_user FOREIGN KEY (user_id)
 REFERENCES tenant.users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: outbox_fk_organization | type: CONSTRAINT --
+-- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_organization CASCADE;
+ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_organization FOREIGN KEY (organization_id)
+REFERENCES tenant.organizations (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: outbox_fk_user | type: CONSTRAINT --
+-- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_user CASCADE;
+ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_user FOREIGN KEY (user_id)
+REFERENCES tenant.users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: outbox_fk_project | type: CONSTRAINT --
+-- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_project CASCADE;
+ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_project FOREIGN KEY (project_id)
+REFERENCES tenant.projects (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: outbox_fk_project_member | type: CONSTRAINT --
+-- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_project_member CASCADE;
+ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_project_member FOREIGN KEY (project_member_id)
+REFERENCES tenant.project_members (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: outbox_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_cluster CASCADE;
+ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: outbox_fk_node_pool | type: CONSTRAINT --
+-- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_node_pool CASCADE;
+ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_node_pool FOREIGN KEY (node_pool_id)
+REFERENCES tenant.node_pools (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: outbox_fk_namespace | type: CONSTRAINT --
+-- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_namespace CASCADE;
+ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_namespace FOREIGN KEY (namespace_id)
+REFERENCES tenant.namespaces (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: outbox_fk_api_key | type: CONSTRAINT --
+-- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_api_key CASCADE;
+ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_api_key FOREIGN KEY (api_key_id)
+REFERENCES authn.api_keys (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: outbox_fk_install | type: CONSTRAINT --
+-- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_install CASCADE;
+ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_install FOREIGN KEY (install_id)
+REFERENCES zappstore.installs (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 

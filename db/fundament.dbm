@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="36"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="43"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="-441,-35" last-zoom="0.75" scene-rect="-588,-47,4506.2,2145.92"
+	 last-position="264,-28" last-zoom="0.6" scene-rect="-588,-47,4506.2,2926.52"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -451,7 +451,7 @@ END;]]> </definition>
 <table name="api_keys" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="13" z-value="0">
 	<schema name="authn"/>
 	<role name="fun_owner"/>
-	<position x="-420" y="380"/>
+	<position x="-500" y="0"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -641,7 +641,7 @@ END;]]> </definition>
 <table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="-240" y="1000"/>
+	<position x="440" y="1020"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -668,7 +668,7 @@ END;]]> </definition>
 <table name="plugins" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="480" y="1260"/>
+	<position x="1160" y="1280"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -707,7 +707,7 @@ END;]]> </definition>
 <table name="presets" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="-560" y="1720"/>
+	<position x="120" y="1740"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -728,7 +728,7 @@ END;]]> </definition>
 <table name="preset_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="-40" y="1520"/>
+	<position x="640" y="1540"/>
 	<column name="preset_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -747,7 +747,7 @@ END;]]> </definition>
 <table name="tags" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1840" y="1700"/>
+	<position x="2520" y="1720"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -771,7 +771,7 @@ END;]]> </definition>
 <table name="plugins_tags" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1200" y="1700"/>
+	<position x="1880" y="1720"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -786,7 +786,7 @@ END;]]> </definition>
 <table name="categories" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1900" y="1300"/>
+	<position x="2580" y="1320"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -810,7 +810,7 @@ END;]]> </definition>
 <table name="categories_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1180" y="1300"/>
+	<position x="1860" y="1320"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -825,7 +825,7 @@ END;]]> </definition>
 <table name="plugin_documentation_links" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1200" y="980"/>
+	<position x="1880" y="1000"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -942,33 +942,67 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
-<table name="outbox" layers="0" collapse-mode="2" max-obj-count="7" z-value="0">
+<table name="outbox" layers="0" collapse-mode="2" max-obj-count="16" z-value="0">
 	<schema name="authz"/>
 	<role name="fun_owner"/>
-	<position x="-420" y="100"/>
+	<position x="2200" y="0"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="aggregate_type" not-null="true">
-		<type name="text" length="0"/>
+	<column name="organization_id">
+		<type name="uuid" length="0"/>
 	</column>
-	<column name="aggregate_id" not-null="true">
-		<type name="text" length="0"/>
+	<column name="user_id">
+		<type name="uuid" length="0"/>
 	</column>
-	<column name="event_type" not-null="true">
-		<type name="text" length="0"/>
+	<column name="project_id">
+		<type name="uuid" length="0"/>
 	</column>
-	<column name="payload" not-null="true">
-		<type name="jsonb" length="0"/>
+	<column name="project_member_id">
+		<type name="uuid" length="0"/>
 	</column>
-	<column name="created_at" not-null="true" default-value="now()">
+	<column name="cluster_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="node_pool_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="namespace_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="api_key_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="install_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<column name="processed_at">
+	<column name="processed">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="retries" not-null="true" default-value="0">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="failed">
 		<type name="timestamptz" length="0"/>
 	</column>
 	<constraint name="outbox_pk" type="pk-constr" table="authz.outbox">
 		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="outbox_ck_single_fk" type="ck-constr" table="authz.outbox">
+			<expression> <![CDATA[(
+    (organization_id IS NOT NULL)::int +
+    (user_id IS NOT NULL)::int +
+    (project_id IS NOT NULL)::int +
+    (project_member_id IS NOT NULL)::int +
+    (cluster_id IS NOT NULL)::int +
+    (node_pool_id IS NOT NULL)::int +
+    (namespace_id IS NOT NULL)::int +
+    (api_key_id IS NOT NULL)::int +
+    (install_id IS NOT NULL)::int
+) = 1]]> </expression>
 	</constraint>
 </table>
 
@@ -976,12 +1010,12 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
 	 index-type="btree" factor="0">
 		<idxelement use-sorting="false">
-			<column name="created_at"/>
+			<column name="created"/>
 		</idxelement>
-	<predicate> <![CDATA[processed_at IS NULL]]> </predicate>
+	<predicate> <![CDATA[processed IS NULL]]> </predicate>
 </index>
 
-<function name="outbox_trigger"
+<function name="organizations_sync_trigger"
 		window-func="false"
 		returns-setof="false"
 		behavior-type="CALLED ON NULL INPUT"
@@ -997,21 +1031,192 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-    IF TG_OP = 'INSERT' THEN
-        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-        VALUES (TG_TABLE_NAME, NEW.id::text, 'created', to_jsonb(NEW));
-    ELSIF TG_OP = 'UPDATE' THEN
-        IF NEW.deleted IS NOT NULL AND OLD.deleted IS NULL THEN
-            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-            VALUES (TG_TABLE_NAME, NEW.id::text, 'deleted', to_jsonb(NEW));
-        ELSE
-            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-            VALUES (TG_TABLE_NAME, NEW.id::text, 'updated', to_jsonb(NEW));
-        END IF;
-    ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-        VALUES (TG_TABLE_NAME, OLD.id::text, 'deleted', to_jsonb(OLD));
-    END IF;
+    INSERT INTO authz.outbox (organization_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
+<function name="users_sync_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    INSERT INTO authz.outbox (user_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
+<function name="projects_sync_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    INSERT INTO authz.outbox (project_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
+<function name="project_members_sync_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    INSERT INTO authz.outbox (project_member_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
+<function name="clusters_sync_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    INSERT INTO authz.outbox (cluster_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
+<function name="node_pools_sync_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    INSERT INTO authz.outbox (node_pool_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
+<function name="namespaces_sync_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    INSERT INTO authz.outbox (namespace_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
+<function name="api_keys_sync_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    INSERT INTO authz.outbox (api_key_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
+<function name="installs_sync_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    INSERT INTO authz.outbox (install_id)
+    VALUES (COALESCE(NEW.id, OLD.id));
     PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
@@ -1020,55 +1225,55 @@ END;]]> </definition>
 <trigger name="organizations_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
 	 table="tenant.organizations">
-		<function signature="authz.outbox_trigger()"/>
+		<function signature="authz.organizations_sync_trigger()"/>
 </trigger>
 
 <trigger name="users_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
 	 table="tenant.users">
-		<function signature="authz.outbox_trigger()"/>
+		<function signature="authz.users_sync_trigger()"/>
 </trigger>
 
 <trigger name="project_members_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
 	 table="tenant.project_members">
-		<function signature="authz.outbox_trigger()"/>
+		<function signature="authz.project_members_sync_trigger()"/>
 </trigger>
 
 <trigger name="projects_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
 	 table="tenant.projects">
-		<function signature="authz.outbox_trigger()"/>
+		<function signature="authz.projects_sync_trigger()"/>
 </trigger>
 
 <trigger name="clusters_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
 	 table="tenant.clusters">
-		<function signature="authz.outbox_trigger()"/>
+		<function signature="authz.clusters_sync_trigger()"/>
 </trigger>
 
 <trigger name="node_pools_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
 	 table="tenant.node_pools">
-		<function signature="authz.outbox_trigger()"/>
+		<function signature="authz.node_pools_sync_trigger()"/>
 </trigger>
 
 <trigger name="namespaces_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
 	 table="tenant.namespaces">
-		<function signature="authz.outbox_trigger()"/>
+		<function signature="authz.namespaces_sync_trigger()"/>
 </trigger>
 
 <trigger name="api_keys_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
 	 table="authn.api_keys">
-		<function signature="authz.outbox_trigger()"/>
+		<function signature="authz.api_keys_sync_trigger()"/>
 </trigger>
 
 <trigger name="installs_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
 	 table="zappstore.installs">
-		<function signature="authz.outbox_trigger()"/>
+		<function signature="authz.installs_sync_trigger()"/>
 </trigger>
 
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
@@ -1185,6 +1390,60 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="outbox_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="authz.outbox">
+	<columns names="organization_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="outbox_fk_user" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.users" table="authz.outbox">
+	<columns names="user_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="outbox_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="authz.outbox">
+	<columns names="project_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="outbox_fk_project_member" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.project_members" table="authz.outbox">
+	<columns names="project_member_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="outbox_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="authz.outbox">
+	<columns names="cluster_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="outbox_fk_node_pool" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.node_pools" table="authz.outbox">
+	<columns names="node_pool_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="outbox_fk_namespace" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.namespaces" table="authz.outbox">
+	<columns names="namespace_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="outbox_fk_api_key" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="authn.api_keys" table="authz.outbox">
+	<columns names="api_key_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="outbox_fk_install" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.installs" table="authz.outbox">
+	<columns names="install_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <relationship name="rel_projects_organizations" type="relfk" layers="0"
 	 src-table="tenant.projects"
 	 dst-table="tenant.organizations" reference-fk="projects_fk_organization"
@@ -1283,6 +1542,51 @@ END;]]> </definition>
 	 src-table="tenant.project_members"
 	 dst-table="tenant.users" reference-fk="project_members_fk_user"
 	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_outbox_organizations" type="relfk" layers="0"
+	 src-table="authz.outbox"
+	 dst-table="tenant.organizations" reference-fk="outbox_fk_organization"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_outbox_users" type="relfk" layers="0"
+	 src-table="authz.outbox"
+	 dst-table="tenant.users" reference-fk="outbox_fk_user"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_outbox_projects" type="relfk" layers="0"
+	 src-table="authz.outbox"
+	 dst-table="tenant.projects" reference-fk="outbox_fk_project"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_outbox_project_members" type="relfk" layers="0"
+	 src-table="authz.outbox"
+	 dst-table="tenant.project_members" reference-fk="outbox_fk_project_member"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_outbox_clusters" type="relfk" layers="0"
+	 src-table="authz.outbox"
+	 dst-table="tenant.clusters" reference-fk="outbox_fk_cluster"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_outbox_node_pools" type="relfk" layers="0"
+	 src-table="authz.outbox"
+	 dst-table="tenant.node_pools" reference-fk="outbox_fk_node_pool"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_outbox_namespaces" type="relfk" layers="0"
+	 src-table="authz.outbox"
+	 dst-table="tenant.namespaces" reference-fk="outbox_fk_namespace"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_outbox_api_keys" type="relfk" layers="0"
+	 src-table="authz.outbox"
+	 dst-table="authn.api_keys" reference-fk="outbox_fk_api_key"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_outbox_installs" type="relfk" layers="0"
+	 src-table="authz.outbox"
+	 dst-table="zappstore.installs" reference-fk="outbox_fk_install"
+	 src-required="false" dst-required="false"/>
 
 <permission>
 	<object name="zappstore" type="schema"/>
