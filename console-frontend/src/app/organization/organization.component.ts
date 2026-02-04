@@ -1,4 +1,12 @@
-import { Component, inject, OnInit, ViewChild, ElementRef, signal } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
@@ -17,7 +25,6 @@ import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-organization',
-  standalone: true,
   imports: [CommonModule, FormsModule, NgIcon, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
@@ -26,6 +33,7 @@ import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
       tablerCheck,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './organization.component.html',
 })
 export class OrganizationComponent implements OnInit {

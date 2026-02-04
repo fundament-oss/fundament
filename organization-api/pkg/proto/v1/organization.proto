@@ -2,8 +2,9 @@ syntax = "proto3";
 
 package organization.v1; // TODO: Should maybe be renamed to `fundament.v1`?
 
-import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
@@ -29,7 +30,7 @@ message Organization {
 // GetOrganization request
 message GetOrganizationRequest {
   // ID of the organization to retrieve
-  string id = 10;
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // GetOrganization response
@@ -41,7 +42,10 @@ message GetOrganizationResponse {
 // UpdateOrganization request
 message UpdateOrganizationRequest {
   // ID of the organization to update
-  string id = 10;
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
   // New name for the organization
-  string name = 20;
+  string name = 20 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
 }

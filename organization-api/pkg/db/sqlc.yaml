@@ -17,3 +17,11 @@ sql:
             go_type:
               import: "github.com/google/uuid"
               type: "UUID"
+          - column: "tenant.clusters.status"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "ClusterStatus"
+          - column: "tenant.project_members.role"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "ProjectMemberRole"

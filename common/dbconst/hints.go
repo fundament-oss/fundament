@@ -9,4 +9,6 @@ const (
 	HintApiKeyExpired = "api_key_expired"
 	// HintApiKeyRevoked can be thrown by authn.api_key_get_by_hash.
 	HintApiKeyRevoked = "api_key_revoked"
+	// HintProjectContainsOneAdmin can be thrown by tenant.project_members_tr_protect_last_admin.
+	HintProjectContainsOneAdmin = "project_contains_one_admin"
 )

@@ -1,0 +1,34 @@
+meta {
+  name: 15 - Admin - Can List Namespaces
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/ListProjectNamespaces
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{testProjectId}}"
+  }
+}
+
+tests {
+  test("admin should be able to list project namespaces", function() {
+    expect(res.status).to.equal(200);
+    // namespaces field may be omitted when empty (valid protobuf JSON)
+    const namespaces = res.body.namespaces || [];
+    expect(namespaces).to.be.an('array');
+  });
+}

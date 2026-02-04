@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -13,7 +13,6 @@ import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-dashboard',
-  standalone: true,
   imports: [CommonModule, RouterLink, NgIcon, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
@@ -22,6 +21,7 @@ import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
       tablerEye,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {

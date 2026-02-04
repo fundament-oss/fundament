@@ -22,14 +22,7 @@ interface ProjectMember {
 
 @Component({
   selector: 'app-project-members',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    NgIcon,
-    ModalComponent,
-    BreadcrumbComponent,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, NgIcon, ModalComponent, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -37,8 +30,8 @@ interface ProjectMember {
       tablerPencil,
     }),
   ],
-  templateUrl: './project-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './project-members.component.html',
 })
 export class ProjectMembersComponent implements OnInit {
   private titleService = inject(TitleService);

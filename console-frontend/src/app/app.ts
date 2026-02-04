@@ -1,4 +1,4 @@
-import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
@@ -69,6 +69,9 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
       tablerBuilding,
     }),
   ],
+  host: {
+    '(document:click)': 'onDocumentClick($event)',
+  },
   templateUrl: './app.html',
 })
 export class App implements OnInit {
@@ -166,7 +169,9 @@ export class App implements OnInit {
 
     // Organization routes or other routes
     // Only update if we currently have a project or namespace selected
-    const hasProjectOrNamespaceSelection = !!(this.selectedProjectId() || this.selectedNamespaceId());
+    const hasProjectOrNamespaceSelection = !!(
+      this.selectedProjectId() || this.selectedNamespaceId()
+    );
     if (!hasProjectOrNamespaceSelection) {
       return;
     }
@@ -240,7 +245,6 @@ export class App implements OnInit {
     localStorage.setItem('theme', this.isDarkMode() ? 'dark' : 'light');
   }
 
-  @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
     const target = event.target as HTMLElement;
     const userDropdown = target.closest('.user-dropdown');
@@ -355,12 +359,10 @@ export class App implements OnInit {
   }
 
   // Cached values to avoid recomputing the selected item display on every change detection run.
-  private cachedSelectedDisplay:
-    | {
-        type: 'organization' | 'project' | 'namespace';
-        name: string;
-      }
-    | null = null;
+  private cachedSelectedDisplay: {
+    type: 'organization' | 'project' | 'namespace';
+    name: string;
+  } | null = null;
 
   private cachedSelectedType: 'organization' | 'project' | 'namespace' | null = null;
   private cachedOrgId: string | null = null;

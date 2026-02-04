@@ -12,13 +12,22 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/authn-api/pkg/model"
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )
+
+// user represents user data for JWT generation.
+// This is an internal adapter type between sqlc row types and JWT claims.
+type user struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	ExternalID     string
+}
 
 type Config struct {
 	TokenExpiry  time.Duration
@@ -52,23 +61,23 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 	}, nil
 }
 
-func (s *AuthnServer) generateJWT(user *model.User, groups []string) (string, error) {
-	return s.generateJWTWithExpiry(user, groups, s.config.TokenExpiry)
+func (s *AuthnServer) generateJWT(u *user, groups []string) (string, error) {
+	return s.generateJWTWithExpiry(u, groups, s.config.TokenExpiry)
 }
 
-func (s *AuthnServer) generateJWTWithExpiry(user *model.User, groups []string, expiry time.Duration) (string, error) {
+func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, expiry time.Duration) (string, error) {
 	now := time.Now()
 
 	claims := auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "fundament-authn-api",
-			Subject:   user.ExternalID,
+			Subject:   u.ExternalID,
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
 		},
-		UserID:         user.ID,
-		OrganizationID: user.OrganizationID,
-		Name:           user.Name,
+		UserID:         u.ID,
+		OrganizationID: u.OrganizationID,
+		Name:           u.Name,
 		Groups:         groups,
 	}
 

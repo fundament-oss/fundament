@@ -1,11 +1,11 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-loading-indicator',
-  standalone: true,
   host: {
     class: 'contents',
   },
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <svg
       aria-hidden="true"

@@ -1,0 +1,24 @@
+meta {
+  name: Create Namespace
+  type: grpc
+  seq: 5
+}
+
+grpc {
+  url: {{organizationUrl}}
+  method: /organization.v1.ClusterService/CreateNamespace
+  body: grpc
+  auth: inherit
+  methodType: unary
+}
+
+body:grpc {
+  name: message 1
+  content: '''
+    {
+      "project_id": "{{projectId}}",
+      "cluster_id": "{{clusterId}}",
+      "name": "my-namespace"
+    }
+  '''
+}

@@ -57,10 +57,20 @@ const (
 	ConstraintPluginsUqName = "plugins_uq_name"
 	// ConstraintPresetsUqName is defined on zappstore.presets.
 	ConstraintPresetsUqName = "presets_uq_name"
+	// ConstraintProjectMembersCkRole is defined on tenant.project_members.
+	ConstraintProjectMembersCkRole = "project_members_ck_role"
+	// ConstraintProjectMembersFkProject is defined on tenant.project_members.
+	ConstraintProjectMembersFkProject = "project_members_fk_project"
+	// ConstraintProjectMembersFkUser is defined on tenant.project_members.
+	ConstraintProjectMembersFkUser = "project_members_fk_user"
+	// ConstraintProjectMembersUqProjectUser is defined on tenant.project_members.
+	ConstraintProjectMembersUqProjectUser = "project_members_uq_project_user"
 	// ConstraintProjectsFkOrganization is defined on tenant.projects.
 	ConstraintProjectsFkOrganization = "projects_fk_organization"
 	// ConstraintProjectsUqOrganizationName is defined on tenant.projects.
 	ConstraintProjectsUqOrganizationName = "projects_uq_organization_name"
+	// ConstraintRequireAdmin is defined on (constraint trigger).
+	ConstraintRequireAdmin = "require_admin"
 	// ConstraintTagsUqName is defined on zappstore.tags.
 	ConstraintTagsUqName = "tags_uq_name"
 	// ConstraintUsersFkOrganization is defined on tenant.users.

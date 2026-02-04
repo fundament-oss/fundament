@@ -47,7 +47,8 @@
 /* Form validation */
 
 input.ng-invalid.ng-dirty:not([type='email']), /* Exclude email inputs to avoid instant validation while typing */
-input[type='email'].ng-invalid.ng-touched {
+input[type='email'].ng-invalid.ng-touched,
+input.validate-on-touch.ng-invalid.ng-touched {
   @apply border-rose-500 ring-rose-500 focus:border-rose-500;
 }
 
@@ -109,7 +110,7 @@ input[type='email'].ng-invalid.ng-touched {
 }
 
 .badge-gray {
-  @apply bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200;
+  @apply bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200;
 }
 
 .badge-emerald {

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
@@ -10,8 +10,8 @@ import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-profile',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, BreadcrumbComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile.component.html',
 })
 export class ProfileComponent implements OnInit {

@@ -10,7 +10,7 @@ watch-d2:
 
 # Format all code and text in this repo
 fmt:
-    @find . -type f \( -name "*.md" -o -name "*.d2" \) -exec sed -i 's/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
+    @find . -type f \( -name "*.md" -o -name "*.d2" \) -exec sed -i 's/enterprise/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
     d2 fmt docs/assets/*.d2
     # TODO md fmt
     # TODO go fmt
@@ -65,7 +65,10 @@ logs:
 
 # Open a shell to the PostgreSQL database
 db-shell:
-    kubectl exec -it -n fundament fundament-db-1 -- psql -U postgres -d fundament
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PASSWORD=$(kubectl get secret -n fundament fundament-db-fun-fundament-api -o jsonpath='{.data.password}' |  {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
+    kubectl exec -it -n fundament fundament-db-1 -- env PGPASSWORD="$PASSWORD" psql -h localhost -U fun_fundament_api -d fundament
 
 generate:
     cd db && trek generate --stdout
@@ -83,3 +86,7 @@ functl *args:
     set -euo pipefail
     PASSWORD=$(kubectl --context k3d-fundament get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' | {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
     DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./functl/cmd/functl {{ args }}
+
+# Run fundament CLI
+fundament *args:
+    go run ./fundament-cli/cmd/fundament {{ args }}

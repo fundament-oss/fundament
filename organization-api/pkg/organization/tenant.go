@@ -9,10 +9,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/organization-api/pkg/models"
-	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -20,10 +19,7 @@ func (s *OrganizationServer) GetOrganization(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetOrganizationRequest],
 ) (*connect.Response[organizationv1.GetOrganizationResponse], error) {
-	organizationID, err := uuid.Parse(req.Msg.Id)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid organization id: %w", err))
-	}
+	organizationID := uuid.MustParse(req.Msg.Id)
 
 	organization, err := s.queries.OrganizationGetByID(ctx, db.OrganizationGetByIDParams{ID: organizationID})
 	if err != nil {
@@ -34,7 +30,11 @@ func (s *OrganizationServer) GetOrganization(
 	}
 
 	return connect.NewResponse(&organizationv1.GetOrganizationResponse{
-		Organization: adapter.FromOrganization(organization),
+		Organization: &organizationv1.Organization{
+			Id:      organization.ID.String(),
+			Name:    organization.Name,
+			Created: timestamppb.New(organization.Created.Time),
+		},
 	}), nil
 }
 
@@ -42,19 +42,11 @@ func (s *OrganizationServer) UpdateOrganization(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateOrganizationRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	organizationID, err := uuid.Parse(req.Msg.Id)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid organization id: %w", err))
-	}
-
-	input := models.OrganizationUpdate{ID: organizationID, Name: req.Msg.Name}
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
+	organizationID := uuid.MustParse(req.Msg.Id)
 
 	params := db.OrganizationUpdateParams{
-		ID:   input.ID,
-		Name: input.Name,
+		ID:   organizationID,
+		Name: req.Msg.Name,
 	}
 
 	organization, err := s.queries.OrganizationUpdate(ctx, params)

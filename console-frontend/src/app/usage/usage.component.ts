@@ -6,6 +6,7 @@ import {
   ElementRef,
   ViewChild,
   signal,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -54,13 +55,13 @@ interface Project {
 
 @Component({
   selector: 'app-usage',
-  standalone: true,
   imports: [CommonModule, FormsModule, DateRangePickerComponent, NgIcon, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
       tablerTableDown,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './usage.component.html',
 })
 export class UsageComponent implements OnInit, AfterViewInit {

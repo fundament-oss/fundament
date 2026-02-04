@@ -4,15 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/apitoken"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -20,11 +22,6 @@ func (s *OrganizationServer) CreateAPIKey(
 	ctx context.Context,
 	req *connect.Request[organizationv1.CreateAPIKeyRequest],
 ) (*connect.Response[organizationv1.CreateAPIKeyResponse], error) {
-	input := adapter.ToAPIKeyCreate(req.Msg)
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
@@ -45,10 +42,10 @@ func (s *OrganizationServer) CreateAPIKey(
 	params := db.APIKeyCreateParams{
 		OrganizationID: organizationID,
 		UserID:         claims.UserID,
-		Name:           input.Name,
+		Name:           req.Msg.Name,
 		TokenHash:      hash,
 		TokenPrefix:    prefix,
-		Expires:        adapter.ToExpires(input.ExpiresInDays),
+		Expires:        toExpires(req.Msg.ExpiresInDays),
 	}
 
 	id, err := s.queries.APIKeyCreate(ctx, params)
@@ -60,7 +57,7 @@ func (s *OrganizationServer) CreateAPIKey(
 		"api_key_id", id,
 		"organization_id", organizationID,
 		"user_id", claims.UserID,
-		"name", input.Name,
+		"name", req.Msg.Name,
 	)
 
 	return connect.NewResponse(&organizationv1.CreateAPIKeyResponse{
@@ -92,8 +89,13 @@ func (s *OrganizationServer) ListAPIKeys(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list api keys: %w", err))
 	}
 
+	result := make([]*organizationv1.APIKey, 0, len(keys))
+	for idx := range keys {
+		result = append(result, apiKeyFromDB((*db.APIKeyGetByIDRow)(&keys[idx])))
+	}
+
 	return connect.NewResponse(&organizationv1.ListAPIKeysResponse{
-		ApiKeys: adapter.FromAPIKeys(keys),
+		ApiKeys: result,
 	}), nil
 }
 
@@ -101,10 +103,7 @@ func (s *OrganizationServer) GetAPIKey(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetAPIKeyRequest],
 ) (*connect.Response[organizationv1.GetAPIKeyResponse], error) {
-	apiKeyID, err := uuid.Parse(req.Msg.ApiKeyId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid api_key_id: %w", err))
-	}
+	apiKeyID := uuid.MustParse(req.Msg.ApiKeyId)
 
 	key, err := s.queries.APIKeyGetByID(ctx, db.APIKeyGetByIDParams{
 		ID: apiKeyID,
@@ -117,7 +116,7 @@ func (s *OrganizationServer) GetAPIKey(
 	}
 
 	return connect.NewResponse(&organizationv1.GetAPIKeyResponse{
-		ApiKey: adapter.FromAPIKey(&key),
+		ApiKey: apiKeyFromDB(&key),
 	}), nil
 }
 
@@ -125,10 +124,7 @@ func (s *OrganizationServer) RevokeAPIKey(
 	ctx context.Context,
 	req *connect.Request[organizationv1.RevokeAPIKeyRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	apiKeyID, err := uuid.Parse(req.Msg.ApiKeyId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid api_key_id: %w", err))
-	}
+	apiKeyID := uuid.MustParse(req.Msg.ApiKeyId)
 
 	rowsAffected, err := s.queries.APIKeyRevoke(ctx, db.APIKeyRevokeParams{ID: apiKeyID})
 	if err != nil {
@@ -148,10 +144,7 @@ func (s *OrganizationServer) DeleteAPIKey(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteAPIKeyRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	apiKeyID, err := uuid.Parse(req.Msg.ApiKeyId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid api_key_id: %w", err))
-	}
+	apiKeyID := uuid.MustParse(req.Msg.ApiKeyId)
 
 	rowsAffected, err := s.queries.APIKeyDelete(ctx, db.APIKeyDeleteParams{ID: apiKeyID})
 	if err != nil {
@@ -165,4 +158,33 @@ func (s *OrganizationServer) DeleteAPIKey(
 	s.logger.InfoContext(ctx, "api key deleted", "api_key_id", apiKeyID)
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
+func toExpires(expiresInDays *int64) pgtype.Timestamptz {
+	if expiresInDays == nil {
+		return pgtype.Timestamptz{Valid: false}
+	}
+	return pgtype.Timestamptz{
+		Time:  time.Now().AddDate(0, 0, int(*expiresInDays)),
+		Valid: true,
+	}
+}
+
+func apiKeyFromDB(record *db.APIKeyGetByIDRow) *organizationv1.APIKey {
+	apiKey := &organizationv1.APIKey{
+		Id:          record.ID.String(),
+		Name:        record.Name,
+		TokenPrefix: record.TokenPrefix,
+		CreatedAt:   timestamppb.New(record.Created.Time),
+	}
+	if record.Expires.Valid {
+		apiKey.ExpiresAt = timestamppb.New(record.Expires.Time)
+	}
+	if record.LastUsed.Valid {
+		apiKey.LastUsedAt = timestamppb.New(record.LastUsed.Time)
+	}
+	if record.Revoked.Valid {
+		apiKey.RevokedAt = timestamppb.New(record.Revoked.Time)
+	}
+	return apiKey
 }

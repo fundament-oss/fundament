@@ -1,0 +1,35 @@
+meta {
+  name: 25 - Viewer - Cannot Delete Project
+  type: http
+  seq: 25
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/DeleteProject
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{bobToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{testProjectId}}"
+  }
+}
+
+tests {
+  test("viewer should not be able to delete project", function() {
+    expect(res.status).to.not.equal(200);
+  });
+
+  test("should return not_found error (RLS blocks access)", function() {
+    expect(res.body.code).to.equal("not_found");
+  });
+}

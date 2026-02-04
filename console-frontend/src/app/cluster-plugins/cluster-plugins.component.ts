@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -18,13 +18,13 @@ import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb
 
 @Component({
   selector: 'app-cluster-plugins',
-  standalone: true,
   imports: [CommonModule, SharedPluginsFormComponent, NgIcon, BreadcrumbComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-plugins.component.html',
 })
 export class ClusterPluginsComponent implements OnInit {

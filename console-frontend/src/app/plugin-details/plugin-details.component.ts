@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
@@ -34,7 +34,6 @@ interface InstallWithCluster extends Install {
 
 @Component({
   selector: 'app-plugin-details',
-  standalone: true,
   imports: [
     CommonModule,
     InstallPluginModalComponent,
@@ -49,6 +48,7 @@ interface InstallWithCluster extends Install {
       tablerCircleXFill,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
 })
 export class PluginDetailsComponent implements OnInit {

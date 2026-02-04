@@ -1,0 +1,32 @@
+meta {
+  name: 99 - Cleanup - Delete Test Project
+  type: http
+  seq: 99
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/DeleteProject
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{bobToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{testProjectId}}"
+  }
+}
+
+tests {
+  test("should delete test project", function() {
+    // Bob is admin after test 44, so he can delete
+    expect(res.status).to.equal(200);
+  });
+}

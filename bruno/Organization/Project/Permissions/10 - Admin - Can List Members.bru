@@ -1,0 +1,56 @@
+meta {
+  name: 10 - Admin - Can List Members
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/ListProjectMembers
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{testProjectId}}"
+  }
+}
+
+script:post-response {
+  if (res.headers['content-type']?.includes('application/json') && res.body.members) {
+    // Find and store Alice's member ID by userId (not role, since Bob becomes admin later)
+    const aliceMember = res.body.members.find(m => m.userId === "019b4000-1000-7000-8000-000000000001");
+    if (aliceMember) {
+      bru.setVar("aliceMemberId", aliceMember.id);
+    }
+  }
+}
+
+tests {
+  test("admin should be able to list project members", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.members).to.be.an('array');
+  });
+
+  test("should have at least 2 members (alice and bob)", function() {
+    expect(res.body.members.length).to.be.at.least(2);
+  });
+
+  test("should include alice as admin", function() {
+    const admin = res.body.members.find(m => m.role === "PROJECT_MEMBER_ROLE_ADMIN");
+    expect(admin).to.exist;
+  });
+
+  test("should include bob as viewer", function() {
+    const viewer = res.body.members.find(m => m.role === "PROJECT_MEMBER_ROLE_VIEWER");
+    expect(viewer).to.exist;
+  });
+}

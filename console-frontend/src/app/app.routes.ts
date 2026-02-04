@@ -145,6 +145,10 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'api-keys',
+    loadComponent: () => import('./api-keys/api-keys.component').then((m) => m.ApiKeysComponent),
+  },
+  {
     path: '',
     loadComponent: () =>
       import('./dashboard/dashboard.component').then((m) => m.DashboardComponent),

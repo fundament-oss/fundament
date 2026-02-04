@@ -1,0 +1,36 @@
+meta {
+  name: 24 - Viewer - Cannot Update Project
+  type: http
+  seq: 24
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/UpdateProject
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{bobToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "projectId": "{{testProjectId}}",
+    "name": "viewer-attempted-update"
+  }
+}
+
+tests {
+  test("viewer should not be able to update project", function() {
+    expect(res.status).to.not.equal(200);
+  });
+
+  test("should return not_found error (RLS blocks access)", function() {
+    expect(res.body.code).to.equal("not_found");
+  });
+}

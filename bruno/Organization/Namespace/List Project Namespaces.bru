@@ -1,0 +1,22 @@
+meta {
+  name: List Project Namespaces
+  type: grpc
+  seq: 4
+}
+
+grpc {
+  url: {{organizationUrl}}
+  method: /organization.v1.ProjectService/ListProjectNamespaces
+  body: grpc
+  auth: inherit
+  methodType: unary
+}
+
+body:grpc {
+  name: message 1
+  content: '''
+    {
+      "project_id": "{{projectId}}"
+    }
+  '''
+}

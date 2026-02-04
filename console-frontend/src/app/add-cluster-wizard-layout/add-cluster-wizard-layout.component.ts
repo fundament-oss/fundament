@@ -1,4 +1,11 @@
-import { Component, inject, computed, signal, OnDestroy } from '@angular/core';
+import {
+  Component,
+  inject,
+  computed,
+  signal,
+  OnDestroy,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CheckmarkIconComponent } from '../icons';
@@ -12,8 +19,8 @@ interface ProgressStep {
 
 @Component({
   selector: 'app-add-cluster-wizard-layout',
-  standalone: true,
   imports: [CommonModule, RouterOutlet, RouterLink, CheckmarkIconComponent, BreadcrumbComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-wizard-layout.component.html',
 })
 export class AddClusterWizardLayoutComponent implements OnDestroy {
