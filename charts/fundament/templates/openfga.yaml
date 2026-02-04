@@ -67,6 +67,11 @@ spec:
                 sleep 3
               done
               echo "Database is ready!"
+              {{- if $.Values.db.reset }}
+              echo "Resetting OpenFGA database..."
+              psql "$OPENFGA_DATASTORE_URI" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+              echo "OpenFGA database reset complete."
+              {{- end }}
           env:
             - name: OPENFGA_DATASTORE_URI
               valueFrom:
