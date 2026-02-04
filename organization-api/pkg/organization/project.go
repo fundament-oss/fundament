@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -25,6 +26,10 @@ func (s *OrganizationServer) ListProjects(
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationMember, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
 	}
 
 	projects, err := s.queries.ProjectListByOrganizationID(ctx, db.ProjectListByOrganizationIDParams{OrganizationID: organizationID})
@@ -52,6 +57,10 @@ func (s *OrganizationServer) GetProject(
 ) (*connect.Response[organizationv1.GetProjectResponse], error) {
 	projectID := uuid.MustParse(req.Msg.ProjectId)
 
+	if err := s.checkPermission(ctx, authz.RelationCanView, authz.ProjectObject(projectID)); err != nil {
+		return nil, err
+	}
+
 	project, err := s.queries.ProjectGetByID(ctx, db.ProjectGetByIDParams{ID: projectID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -76,6 +85,10 @@ func (s *OrganizationServer) CreateProject(
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationMember, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
 	}
 
 	// Get user ID from context - the creator becomes the admin
@@ -142,6 +155,10 @@ func (s *OrganizationServer) UpdateProject(
 ) (*connect.Response[emptypb.Empty], error) {
 	projectID := uuid.MustParse(req.Msg.ProjectId)
 
+	if err := s.checkPermission(ctx, authz.RelationCanEdit, authz.ProjectObject(projectID)); err != nil {
+		return nil, err
+	}
+
 	params := db.ProjectUpdateParams{
 		ID: projectID,
 	}
@@ -169,6 +186,10 @@ func (s *OrganizationServer) DeleteProject(
 	req *connect.Request[organizationv1.DeleteProjectRequest],
 ) (*connect.Response[emptypb.Empty], error) {
 	projectID := uuid.MustParse(req.Msg.ProjectId)
+
+	if err := s.checkPermission(ctx, authz.RelationCanDelete, authz.ProjectObject(projectID)); err != nil {
+		return nil, err
+	}
 
 	rowsAffected, err := s.queries.ProjectDelete(ctx, db.ProjectDeleteParams{ID: projectID})
 	if err != nil {

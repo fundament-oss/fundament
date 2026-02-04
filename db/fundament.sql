@@ -28,7 +28,14 @@ CREATE SCHEMA authn;
 ALTER SCHEMA authn OWNER TO fun_owner;
 -- ddl-end --
 
-SET search_path TO pg_catalog,public,tenant,zappstore,authn;
+-- object: authz | type: SCHEMA --
+-- DROP SCHEMA IF EXISTS authz CASCADE;
+CREATE SCHEMA authz;
+-- ddl-end --
+ALTER SCHEMA authz OWNER TO fun_owner;
+-- ddl-end --
+
+SET search_path TO pg_catalog,public,tenant,zappstore,authn,authz;
 -- ddl-end --
 
 -- object: tenant.organizations | type: TABLE --
@@ -753,6 +760,185 @@ CREATE POLICY namespaces_organization_policy ON tenant.namespaces
 	USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
+-- object: authz.outbox | type: TABLE --
+-- DROP TABLE IF EXISTS authz.outbox CASCADE;
+CREATE TABLE authz.outbox (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	aggregate_type text NOT NULL,
+	aggregate_id text NOT NULL,
+	event_type text NOT NULL,
+	payload jsonb NOT NULL,
+	created_at timestamptz NOT NULL DEFAULT now(),
+	processed_at timestamptz,
+	CONSTRAINT outbox_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE authz.outbox OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: outbox_idx_unprocessed | type: INDEX --
+-- DROP INDEX IF EXISTS authz.outbox_idx_unprocessed CASCADE;
+CREATE INDEX outbox_idx_unprocessed ON authz.outbox
+USING btree
+(
+	created_at
+)
+WHERE (processed_at IS NULL);
+-- ddl-end --
+
+-- object: authz.users_outbox_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.users_outbox_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.users_outbox_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS
+$function$
+BEGIN
+    IF TG_OP = 'INSERT' AND NEW.deleted IS NULL THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('user', NEW.id::text, 'created', jsonb_build_object(
+            'user_id', NEW.id,
+            'organization_id', NEW.organization_id,
+            'role', NEW.role
+        ));
+    ELSIF TG_OP = 'UPDATE' AND OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('user', OLD.id::text, 'deleted', jsonb_build_object(
+            'user_id', OLD.id,
+            'organization_id', OLD.organization_id,
+            'role', OLD.role
+        ));
+    ELSIF TG_OP = 'UPDATE' AND OLD.role IS DISTINCT FROM NEW.role THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('user', NEW.id::text, 'role_changed', jsonb_build_object(
+            'user_id', NEW.id,
+            'organization_id', NEW.organization_id,
+            'old_role', OLD.role,
+            'new_role', NEW.role
+        ));
+    END IF;
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.users_outbox_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authz.project_members_outbox_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.project_members_outbox_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.project_members_outbox_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS
+$function$
+BEGIN
+    IF TG_OP = 'INSERT' AND NEW.deleted IS NULL THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('project_member', NEW.id::text, 'created', jsonb_build_object(
+            'project_id', NEW.project_id,
+            'user_id', NEW.user_id,
+            'role', NEW.role
+        ));
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+            VALUES ('project_member', OLD.id::text, 'deleted', jsonb_build_object(
+                'project_id', OLD.project_id,
+                'user_id', OLD.user_id,
+                'role', OLD.role
+            ));
+        ELSIF OLD.role IS DISTINCT FROM NEW.role THEN
+            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+            VALUES ('project_member', NEW.id::text, 'role_changed', jsonb_build_object(
+                'project_id', NEW.project_id,
+                'user_id', NEW.user_id,
+                'old_role', OLD.role,
+                'new_role', NEW.role
+            ));
+        END IF;
+    END IF;
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.project_members_outbox_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authz.projects_outbox_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.projects_outbox_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.projects_outbox_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS
+$function$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('project', NEW.id::text, 'created', jsonb_build_object(
+            'project_id', NEW.id,
+            'organization_id', NEW.organization_id,
+            'name', NEW.name
+        ));
+    ELSIF TG_OP = 'UPDATE' AND OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+        VALUES ('project', OLD.id::text, 'deleted', jsonb_build_object(
+            'project_id', OLD.id,
+            'organization_id', OLD.organization_id,
+            'name', OLD.name
+        ));
+    END IF;
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.projects_outbox_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: users_outbox | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS users_outbox ON tenant.users CASCADE;
+CREATE OR REPLACE TRIGGER users_outbox
+	AFTER INSERT OR UPDATE
+	ON tenant.users
+	FOR EACH ROW
+	EXECUTE PROCEDURE authz.users_outbox_trigger();
+-- ddl-end --
+
+-- object: project_members_outbox | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS project_members_outbox ON tenant.project_members CASCADE;
+CREATE OR REPLACE TRIGGER project_members_outbox
+	AFTER INSERT OR UPDATE
+	ON tenant.project_members
+	FOR EACH ROW
+	EXECUTE PROCEDURE authz.project_members_outbox_trigger();
+-- ddl-end --
+
+-- object: projects_outbox | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS projects_outbox ON tenant.projects CASCADE;
+CREATE OR REPLACE TRIGGER projects_outbox
+	AFTER INSERT OR UPDATE
+	ON tenant.projects
+	FOR EACH ROW
+	EXECUTE PROCEDURE authz.projects_outbox_trigger();
+-- ddl-end --
+
 -- object: projects_fk_organization | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_organization CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_organization FOREIGN KEY (organization_id)
@@ -1122,6 +1308,54 @@ GRANT USAGE
 GRANT USAGE
    ON SCHEMA authn
    TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_a_9bf38d7215 | type: PERMISSION --
+GRANT INSERT
+   ON TABLE authz.outbox
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_a_c5790f0447 | type: PERMISSION --
+GRANT INSERT
+   ON TABLE authz.outbox
+   TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_rw_c2f3317443 | type: PERMISSION --
+GRANT SELECT,UPDATE
+   ON TABLE authz.outbox
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: "grant_U_d5971f40d9" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authz
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: "grant_U_9d480d2da8" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authz
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_1a39a09721" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authz
+   TO fun_authn_api;
 
 -- ddl-end --
 

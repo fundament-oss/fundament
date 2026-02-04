@@ -25,6 +25,12 @@ SET role = $2
 WHERE id = $1
 AND deleted IS NULL;
 
+-- name: ProjectMemberGetByID :one
+SELECT id, project_id, user_id, role
+FROM tenant.project_members
+WHERE id = $1
+AND deleted IS NULL;
+
 -- name: ProjectMemberDelete :execrows
 UPDATE tenant.project_members
 SET deleted = now()

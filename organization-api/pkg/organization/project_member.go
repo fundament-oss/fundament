@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -22,6 +23,10 @@ func (s *OrganizationServer) ListProjectMembers(
 	req *connect.Request[organizationv1.ListProjectMembersRequest],
 ) (*connect.Response[organizationv1.ListProjectMembersResponse], error) {
 	projectID := uuid.MustParse(req.Msg.ProjectId)
+
+	if err := s.checkPermission(ctx, authz.RelationCanView, authz.ProjectObject(projectID)); err != nil {
+		return nil, err
+	}
 
 	members, err := s.queries.ProjectMemberList(ctx, db.ProjectMemberListParams{ProjectID: projectID})
 	if err != nil {
@@ -55,6 +60,10 @@ func (s *OrganizationServer) AddProjectMember(
 	role := projectMemberRoleToDB(req.Msg.Role)
 	if role == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid role"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationCanManageMembers, authz.ProjectObject(projectID)); err != nil {
+		return nil, err
 	}
 
 	memberID, err := s.queries.ProjectMemberCreate(ctx, db.ProjectMemberCreateParams{
@@ -97,6 +106,16 @@ func (s *OrganizationServer) UpdateProjectMemberRole(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid role"))
 	}
 
+	// Look up member to get project_id and current role for authz check and tuple management
+	member, err := s.queries.ProjectMemberGetByID(ctx, db.ProjectMemberGetByIDParams{ID: memberID})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("member not found"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationCanManageMembers, authz.ProjectObject(member.ProjectID)); err != nil {
+		return nil, err
+	}
+
 	rowsAffected, err := s.queries.ProjectMemberUpdateRole(ctx, db.ProjectMemberUpdateRoleParams{
 		ID:   memberID,
 		Role: role,
@@ -130,9 +149,18 @@ func (s *OrganizationServer) RemoveProjectMember(
 ) (*connect.Response[emptypb.Empty], error) {
 	memberID := uuid.MustParse(req.Msg.MemberId)
 
+	// Look up member to get project_id and role for authz check and tuple deletion
+	member, err := s.queries.ProjectMemberGetByID(ctx, db.ProjectMemberGetByIDParams{ID: memberID})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("member not found"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationCanManageMembers, authz.ProjectObject(member.ProjectID)); err != nil {
+		return nil, err
+	}
+
 	rowsAffected, err := s.queries.ProjectMemberDelete(ctx, db.ProjectMemberDeleteParams{ID: memberID})
 	if err != nil {
-
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.RaiseException &&

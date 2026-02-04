@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -21,6 +22,10 @@ func (s *OrganizationServer) ListMembers(
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationMember, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
 	}
 
 	members, err := s.queries.MemberListByOrganizationID(ctx, db.MemberListByOrganizationIDParams{OrganizationID: organizationID})
@@ -45,6 +50,10 @@ func (s *OrganizationServer) InviteMember(
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationAdmin, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
 	}
 
 	email := req.Msg.Email
@@ -83,6 +92,10 @@ func (s *OrganizationServer) DeleteMember(
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.RelationAdmin, authz.OrganizationObject(organizationID)); err != nil {
+		return nil, err
 	}
 
 	memberID := uuid.MustParse(req.Msg.Id)
