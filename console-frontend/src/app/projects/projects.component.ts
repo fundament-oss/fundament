@@ -1,17 +1,17 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
-import { TitleService } from '../title.service';
-import { PROJECT } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
-import { firstValueFrom } from 'rxjs';
+import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerChevronRight } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
-import { LoadingIndicatorComponent } from '../icons';
+import { firstValueFrom } from 'rxjs';
 import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
+import { LoadingIndicatorComponent } from '../icons';
+import { TitleService } from '../title.service';
+import { PROJECT } from '../../connect/tokens';
+import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 
 @Component({
   selector: 'app-projects',

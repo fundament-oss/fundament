@@ -1,12 +1,9 @@
 @if (show) {
   <div
     class="modal-backdrop"
-    (click)="onBackdropClick($event)"
-
-    role="dialog"
-    aria-modal="true"
+    (mouseup)="onBackdropClick($event)"
   >
-    <div class="modal-container w-full" [ngClass]="maxWidth" role="document">
+    <div class="modal-container w-full" [ngClass]="maxWidth" role="dialog" aria-modal="true">
       <div class="modal-header">
         <h2 class="modal-title">
           <ng-content select="[modal-title]" />
