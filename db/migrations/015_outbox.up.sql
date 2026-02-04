@@ -3,62 +3,10 @@ SET SESSION lock_timeout = 3000;
 
 CREATE SCHEMA "authz";
 
-GRANT USAGE
-   ON SCHEMA authz
-   TO fun_authn_api;
-
-GRANT USAGE
-   ON SCHEMA authz
-   TO fun_fundament_api;
-
-GRANT USAGE
-   ON SCHEMA authz
-   TO fun_authz_worker;
-
 /* Hazards:
  - HAS_UNTRACKABLE_DEPENDENCIES: Dependencies, i.e. other functions used in the function body, of non-sql functions cannot be tracked. As a result, we cannot guarantee that function dependencies are ordered properly relative to this statement. For adds, this means you need to ensure that all functions this function depends on are created/altered before this statement.
 */
-CREATE OR REPLACE FUNCTION authz.project_members_outbox_trigger()
- RETURNS trigger
- LANGUAGE plpgsql
- COST 1
-AS $function$
-BEGIN
-    IF TG_OP = 'INSERT' AND NEW.deleted IS NULL THEN
-        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-        VALUES ('project_member', NEW.id::text, 'created', jsonb_build_object(
-            'project_id', NEW.project_id,
-            'user_id', NEW.user_id,
-            'role', NEW.role
-        ));
-    ELSIF TG_OP = 'UPDATE' THEN
-        IF OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
-            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-            VALUES ('project_member', OLD.id::text, 'deleted', jsonb_build_object(
-                'project_id', OLD.project_id,
-                'user_id', OLD.user_id,
-                'role', OLD.role
-            ));
-        ELSIF OLD.role IS DISTINCT FROM NEW.role THEN
-            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-            VALUES ('project_member', NEW.id::text, 'role_changed', jsonb_build_object(
-                'project_id', NEW.project_id,
-                'user_id', NEW.user_id,
-                'old_role', OLD.role,
-                'new_role', NEW.role
-            ));
-        END IF;
-    END IF;
-    PERFORM pg_notify('authz_outbox', '');
-    RETURN NEW;
-END;
-$function$
-;
-
-/* Hazards:
- - HAS_UNTRACKABLE_DEPENDENCIES: Dependencies, i.e. other functions used in the function body, of non-sql functions cannot be tracked. As a result, we cannot guarantee that function dependencies are ordered properly relative to this statement. For adds, this means you need to ensure that all functions this function depends on are created/altered before this statement.
-*/
-CREATE OR REPLACE FUNCTION authz.projects_outbox_trigger()
+CREATE OR REPLACE FUNCTION authz.outbox_trigger()
  RETURNS trigger
  LANGUAGE plpgsql
  COST 1
@@ -66,62 +14,28 @@ AS $function$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-        VALUES ('project', NEW.id::text, 'created', jsonb_build_object(
-            'project_id', NEW.id,
-            'organization_id', NEW.organization_id,
-            'name', NEW.name
-        ));
-    ELSIF TG_OP = 'UPDATE' AND OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+        VALUES (TG_TABLE_NAME, NEW.id::text, 'created', to_jsonb(NEW));
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF NEW.deleted IS NOT NULL AND OLD.deleted IS NULL THEN
+            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+            VALUES (TG_TABLE_NAME, NEW.id::text, 'deleted', to_jsonb(NEW));
+        ELSE
+            INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
+            VALUES (TG_TABLE_NAME, NEW.id::text, 'updated', to_jsonb(NEW));
+        END IF;
+    ELSIF TG_OP = 'DELETE' THEN
         INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-        VALUES ('project', OLD.id::text, 'deleted', jsonb_build_object(
-            'project_id', OLD.id,
-            'organization_id', OLD.organization_id,
-            'name', OLD.name
-        ));
+        VALUES (TG_TABLE_NAME, OLD.id::text, 'deleted', to_jsonb(OLD));
     END IF;
     PERFORM pg_notify('authz_outbox', '');
-    RETURN NEW;
+    RETURN COALESCE(NEW, OLD);
 END;
 $function$
 ;
 
-/* Hazards:
- - HAS_UNTRACKABLE_DEPENDENCIES: Dependencies, i.e. other functions used in the function body, of non-sql functions cannot be tracked. As a result, we cannot guarantee that function dependencies are ordered properly relative to this statement. For adds, this means you need to ensure that all functions this function depends on are created/altered before this statement.
-*/
-CREATE OR REPLACE FUNCTION authz.users_outbox_trigger()
- RETURNS trigger
- LANGUAGE plpgsql
- COST 1
-AS $function$
-BEGIN
-    IF TG_OP = 'INSERT' AND NEW.deleted IS NULL THEN
-        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-        VALUES ('user', NEW.id::text, 'created', jsonb_build_object(
-            'user_id', NEW.id,
-            'organization_id', NEW.organization_id,
-            'role', NEW.role
-        ));
-    ELSIF TG_OP = 'UPDATE' AND OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
-        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-        VALUES ('user', OLD.id::text, 'deleted', jsonb_build_object(
-            'user_id', OLD.id,
-            'organization_id', OLD.organization_id,
-            'role', OLD.role
-        ));
-    ELSIF TG_OP = 'UPDATE' AND OLD.role IS DISTINCT FROM NEW.role THEN
-        INSERT INTO authz.outbox (aggregate_type, aggregate_id, event_type, payload)
-        VALUES ('user', NEW.id::text, 'role_changed', jsonb_build_object(
-            'user_id', NEW.id,
-            'organization_id', NEW.organization_id,
-            'old_role', OLD.role,
-            'new_role', NEW.role
-        ));
-    END IF;
-    PERFORM pg_notify('authz_outbox', '');
-    RETURN NEW;
-END;
-$function$
-;
+ALTER INDEX "tenant"."organizations_uq_name" RENAME TO "pgschemadiff_tmpidx_organizations_uq_nam_BEZReNXkSeeA9_hjkAeIRQ";
+
+CREATE TRIGGER api_keys_outbox AFTER INSERT OR DELETE OR UPDATE ON authn.api_keys FOR EACH ROW EXECUTE FUNCTION authz.outbox_trigger();
 
 CREATE TABLE "authz"."outbox" (
 	"id" uuid DEFAULT uuidv7() NOT NULL,
@@ -147,16 +61,39 @@ ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_pk" PRIMARY KEY USING INDEX 
 
 CREATE INDEX outbox_idx_unprocessed ON authz.outbox USING btree (created_at) WHERE (processed_at IS NULL);
 
-CREATE TRIGGER project_members_outbox AFTER INSERT OR UPDATE ON tenant.project_members FOR EACH ROW EXECUTE FUNCTION authz.project_members_outbox_trigger();
+CREATE TRIGGER clusters_outbox AFTER INSERT OR DELETE OR UPDATE ON tenant.clusters FOR EACH ROW EXECUTE FUNCTION authz.outbox_trigger();
 
-CREATE TRIGGER projects_outbox AFTER INSERT OR UPDATE ON tenant.projects FOR EACH ROW EXECUTE FUNCTION authz.projects_outbox_trigger();
+CREATE TRIGGER namespaces_outbox AFTER INSERT OR DELETE OR UPDATE ON tenant.namespaces FOR EACH ROW EXECUTE FUNCTION authz.outbox_trigger();
 
-CREATE TRIGGER users_outbox AFTER INSERT OR UPDATE ON tenant.users FOR EACH ROW EXECUTE FUNCTION authz.users_outbox_trigger();
+CREATE TRIGGER node_pools_outbox AFTER INSERT OR DELETE OR UPDATE ON tenant.node_pools FOR EACH ROW EXECUTE FUNCTION authz.outbox_trigger();
+
+ALTER TABLE "tenant"."organizations" ADD COLUMN "deleted" timestamp with time zone;
+
+/* Hazards:
+ - ACQUIRES_SHARE_LOCK: Non-concurrent index creates will lock out writes to the table during the duration of the index build.
+*/
+CREATE UNIQUE INDEX organizations_uq_name ON tenant.organizations USING btree (name, deleted) NULLS NOT DISTINCT;
+
+ALTER TABLE "tenant"."organizations" ADD CONSTRAINT "organizations_uq_name" UNIQUE USING INDEX "organizations_uq_name";
+
+CREATE TRIGGER organizations_outbox AFTER INSERT OR DELETE OR UPDATE ON tenant.organizations FOR EACH ROW EXECUTE FUNCTION authz.outbox_trigger();
+
+CREATE TRIGGER project_members_outbox AFTER INSERT OR DELETE OR UPDATE ON tenant.project_members FOR EACH ROW EXECUTE FUNCTION authz.outbox_trigger();
+
+CREATE TRIGGER projects_outbox AFTER INSERT OR DELETE OR UPDATE ON tenant.projects FOR EACH ROW EXECUTE FUNCTION authz.outbox_trigger();
+
+CREATE TRIGGER users_outbox AFTER INSERT OR DELETE OR UPDATE ON tenant.users FOR EACH ROW EXECUTE FUNCTION authz.outbox_trigger();
+
+CREATE TRIGGER installs_outbox AFTER INSERT OR DELETE OR UPDATE ON zappstore.installs FOR EACH ROW EXECUTE FUNCTION authz.outbox_trigger();
+
+/* Hazards:
+ - ACQUIRES_ACCESS_EXCLUSIVE_LOCK: Index drops will lock out all accesses to the table. They should be fast.
+ - INDEX_DROPPED: Dropping this index means queries that use this index might perform worse because they will no longer will be able to leverage it.
+*/
+ALTER TABLE "tenant"."organizations" DROP CONSTRAINT "pgschemadiff_tmpidx_organizations_uq_nam_BEZReNXkSeeA9_hjkAeIRQ";
 
 
 -- Statements generated automatically, please review:
 ALTER SCHEMA authz OWNER TO fun_owner;
-ALTER FUNCTION authz.project_members_outbox_trigger() OWNER TO fun_owner;
-ALTER FUNCTION authz.projects_outbox_trigger() OWNER TO fun_owner;
-ALTER FUNCTION authz.users_outbox_trigger() OWNER TO fun_owner;
+ALTER FUNCTION authz.outbox_trigger() OWNER TO fun_owner;
 ALTER TABLE authz.outbox OWNER TO fun_owner;
