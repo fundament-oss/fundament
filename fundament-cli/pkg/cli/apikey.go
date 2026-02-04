@@ -10,6 +10,7 @@ type APIKeyCmd struct {
 	List   APIKeyListCmd   `cmd:"" help:"List all API keys."`
 	Create APIKeyCreateCmd `cmd:"" help:"Create a new API key."`
 	Revoke APIKeyRevokeCmd `cmd:"" help:"Revoke an API key."`
+	Delete APIKeyDeleteCmd `cmd:"" help:"Delete an API key."`
 }
 
 // APIKeyListCmd handles the apikey list command.
@@ -116,5 +117,25 @@ func (c *APIKeyRevokeCmd) Run(ctx *Context) error {
 	}
 
 	fmt.Printf("API key %s has been revoked\n", c.APIKeyID)
+	return nil
+}
+
+// APIKeyDeleteCmd handles the apikey delete command.
+type APIKeyDeleteCmd struct {
+	APIKeyID string `arg:"" help:"ID of the API key to delete."`
+}
+
+// Run executes the apikey delete command.
+func (c *APIKeyDeleteCmd) Run(ctx *Context) error {
+	apiClient, err := NewClientFromConfig()
+	if err != nil {
+		return err
+	}
+
+	if err := apiClient.DeleteAPIKey(context.Background(), c.APIKeyID); err != nil {
+		return fmt.Errorf("failed to delete API key: %w", err)
+	}
+
+	fmt.Printf("API key %s has been deleted\n", c.APIKeyID)
 	return nil
 }

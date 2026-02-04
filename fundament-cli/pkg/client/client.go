@@ -1,4 +1,4 @@
-// Package client provides an authenticated API client for the fundament CLI.
+// Package client provides an authenticated API client for the Fundament CLI.
 package client
 
 import (

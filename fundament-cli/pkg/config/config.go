@@ -1,4 +1,4 @@
-// Package config provides configuration and credentials management for the fundament CLI.
+// Package config provides configuration and credentials management for the Fundament CLI.
 package config
 
 import (
@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config holds the fundament CLI configuration.
+// Config holds the Fundament CLI configuration.
 type Config struct {
 	APIEndpoint string `yaml:"api_endpoint"`
 	AuthnURL    string `yaml:"authn_url"`

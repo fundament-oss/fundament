@@ -1,4 +1,4 @@
-// Package cli provides the command-line interface for the fundament CLI.
+// Package cli provides the command-line interface for the Fundament CLI.
 package cli
 
 import (

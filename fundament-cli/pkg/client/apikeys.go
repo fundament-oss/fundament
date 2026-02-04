@@ -39,3 +39,11 @@ func (c *Client) RevokeAPIKey(ctx context.Context, apiKeyID string) error {
 	}))
 	return err
 }
+
+// DeleteAPIKey deletes an API key.
+func (c *Client) DeleteAPIKey(ctx context.Context, apiKeyID string) error {
+	_, err := c.apiKeys().DeleteAPIKey(ctx, connect.NewRequest(&organizationv1.DeleteAPIKeyRequest{
+		ApiKeyId: apiKeyID,
+	}))
+	return err
+}
