@@ -89,7 +89,7 @@
         <select
           id="userId"
           formControlName="userId"
-          class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          class="w-full"
         >
           <option value="">Select a user</option>
           @for (user of availableUsers(); track user.id) {
@@ -125,7 +125,7 @@
       <select
         id="role"
         formControlName="role"
-        class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+        class="w-full"
       >
         <option value="viewer">Project member - Read access to project resources</option>
         <option value="admin">Project admin - Full access to project resources</option>
