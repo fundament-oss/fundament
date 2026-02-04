@@ -63,9 +63,15 @@ type OrganizationCreateParams struct {
 	Name string
 }
 
-func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreateParams) (TenantOrganization, error) {
+type OrganizationCreateRow struct {
+	ID      uuid.UUID
+	Name    string
+	Created pgtype.Timestamptz
+}
+
+func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreateParams) (OrganizationCreateRow, error) {
 	row := q.db.QueryRow(ctx, organizationCreate, arg.Name)
-	var i TenantOrganization
+	var i OrganizationCreateRow
 	err := row.Scan(&i.ID, &i.Name, &i.Created)
 	return i, err
 }
