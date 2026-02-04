@@ -820,7 +820,6 @@ $function$
 BEGIN
     INSERT INTO authz.outbox (organization_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -843,7 +842,6 @@ $function$
 BEGIN
     INSERT INTO authz.outbox (user_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -866,7 +864,6 @@ $function$
 BEGIN
     INSERT INTO authz.outbox (project_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -889,7 +886,6 @@ $function$
 BEGIN
     INSERT INTO authz.outbox (project_member_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -912,7 +908,6 @@ $function$
 BEGIN
     INSERT INTO authz.outbox (cluster_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -935,7 +930,6 @@ $function$
 BEGIN
     INSERT INTO authz.outbox (node_pool_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -958,7 +952,6 @@ $function$
 BEGIN
     INSERT INTO authz.outbox (namespace_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -981,7 +974,6 @@ $function$
 BEGIN
     INSERT INTO authz.outbox (api_key_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -1004,12 +996,32 @@ $function$
 BEGIN
     INSERT INTO authz.outbox (install_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION authz.installs_sync_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authz.outbox_notify_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.outbox_notify_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.outbox_notify_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.outbox_notify_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: organizations_outbox | type: TRIGGER --
@@ -1091,6 +1103,15 @@ CREATE OR REPLACE TRIGGER installs_outbox
 	ON zappstore.installs
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.installs_sync_trigger();
+-- ddl-end --
+
+-- object: outbox_notify | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS outbox_notify ON authz.outbox CASCADE;
+CREATE OR REPLACE TRIGGER outbox_notify
+	AFTER INSERT 
+	ON authz.outbox
+	FOR EACH ROW
+	EXECUTE PROCEDURE authz.outbox_notify_trigger();
 -- ddl-end --
 
 -- object: projects_fk_organization | type: CONSTRAINT --

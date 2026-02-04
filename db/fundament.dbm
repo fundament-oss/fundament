@@ -1029,7 +1029,6 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<definition> <![CDATA[BEGIN
     INSERT INTO authz.outbox (organization_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1052,7 +1051,6 @@ END;]]> </definition>
 	<definition> <![CDATA[BEGIN
     INSERT INTO authz.outbox (user_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1075,7 +1073,6 @@ END;]]> </definition>
 	<definition> <![CDATA[BEGIN
     INSERT INTO authz.outbox (project_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1098,7 +1095,6 @@ END;]]> </definition>
 	<definition> <![CDATA[BEGIN
     INSERT INTO authz.outbox (project_member_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1121,7 +1117,6 @@ END;]]> </definition>
 	<definition> <![CDATA[BEGIN
     INSERT INTO authz.outbox (cluster_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1144,7 +1139,6 @@ END;]]> </definition>
 	<definition> <![CDATA[BEGIN
     INSERT INTO authz.outbox (node_pool_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1167,7 +1161,6 @@ END;]]> </definition>
 	<definition> <![CDATA[BEGIN
     INSERT INTO authz.outbox (namespace_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1190,7 +1183,6 @@ END;]]> </definition>
 	<definition> <![CDATA[BEGIN
     INSERT INTO authz.outbox (api_key_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1213,8 +1205,28 @@ END;]]> </definition>
 	<definition> <![CDATA[BEGIN
     INSERT INTO authz.outbox (install_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
+<function name="outbox_notify_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN NEW;
 END;]]> </definition>
 </function>
 
@@ -1270,6 +1282,12 @@ END;]]> </definition>
 	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
 	 table="zappstore.installs">
 		<function signature="authz.installs_sync_trigger()"/>
+</trigger>
+
+<trigger name="outbox_notify" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="false" trunc-event="false"
+	 table="authz.outbox">
+		<function signature="authz.outbox_notify_trigger()"/>
 </trigger>
 
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"

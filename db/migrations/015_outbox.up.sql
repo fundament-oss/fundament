@@ -14,7 +14,6 @@ AS $function$
 BEGIN
     INSERT INTO authz.outbox (api_key_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$
@@ -31,7 +30,6 @@ AS $function$
 BEGIN
     INSERT INTO authz.outbox (cluster_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$
@@ -48,7 +46,6 @@ AS $function$
 BEGIN
     INSERT INTO authz.outbox (install_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$
@@ -65,7 +62,6 @@ AS $function$
 BEGIN
     INSERT INTO authz.outbox (namespace_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$
@@ -82,7 +78,6 @@ AS $function$
 BEGIN
     INSERT INTO authz.outbox (node_pool_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$
@@ -99,8 +94,22 @@ AS $function$
 BEGIN
     INSERT INTO authz.outbox (organization_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
+END;
+$function$
+;
+
+/* Hazards:
+ - HAS_UNTRACKABLE_DEPENDENCIES: Dependencies, i.e. other functions used in the function body, of non-sql functions cannot be tracked. As a result, we cannot guarantee that function dependencies are ordered properly relative to this statement. For adds, this means you need to ensure that all functions this function depends on are created/altered before this statement.
+*/
+CREATE OR REPLACE FUNCTION authz.outbox_notify_trigger()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ COST 1
+AS $function$
+BEGIN
+    PERFORM pg_notify('authz_outbox', '');
+    RETURN NEW;
 END;
 $function$
 ;
@@ -116,7 +125,6 @@ AS $function$
 BEGIN
     INSERT INTO authz.outbox (project_member_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$
@@ -133,7 +141,6 @@ AS $function$
 BEGIN
     INSERT INTO authz.outbox (project_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$
@@ -150,13 +157,12 @@ AS $function$
 BEGIN
     INSERT INTO authz.outbox (user_id)
     VALUES (COALESCE(NEW.id, OLD.id));
-    PERFORM pg_notify('authz_outbox', '');
     RETURN COALESCE(NEW, OLD);
 END;
 $function$
 ;
 
-ALTER INDEX "tenant"."organizations_uq_name" RENAME TO "pgschemadiff_tmpidx_organizations_uq_nam_SlS4TalqScme7Yc3MlNHxQ";
+ALTER INDEX "tenant"."organizations_uq_name" RENAME TO "pgschemadiff_tmpidx_organizations_uq_nam_NBpQ2fVUQxWyTLPTtuqhKw";
 
 CREATE TRIGGER api_keys_outbox AFTER INSERT OR DELETE OR UPDATE ON authn.api_keys FOR EACH ROW EXECUTE FUNCTION authz.api_keys_sync_trigger();
 
@@ -192,6 +198,8 @@ CREATE UNIQUE INDEX outbox_pk ON authz.outbox USING btree (id);
 ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_pk" PRIMARY KEY USING INDEX "outbox_pk";
 
 CREATE INDEX outbox_idx_unprocessed ON authz.outbox USING btree (created) WHERE (processed IS NULL);
+
+CREATE TRIGGER outbox_notify AFTER INSERT ON authz.outbox FOR EACH ROW EXECUTE FUNCTION authz.outbox_notify_trigger();
 
 CREATE TRIGGER clusters_outbox AFTER INSERT OR DELETE OR UPDATE ON tenant.clusters FOR EACH ROW EXECUTE FUNCTION authz.clusters_sync_trigger();
 
@@ -254,7 +262,7 @@ ALTER TABLE "authz"."outbox" VALIDATE CONSTRAINT "outbox_fk_install";
  - ACQUIRES_ACCESS_EXCLUSIVE_LOCK: Index drops will lock out all accesses to the table. They should be fast.
  - INDEX_DROPPED: Dropping this index means queries that use this index might perform worse because they will no longer will be able to leverage it.
 */
-ALTER TABLE "tenant"."organizations" DROP CONSTRAINT "pgschemadiff_tmpidx_organizations_uq_nam_SlS4TalqScme7Yc3MlNHxQ";
+ALTER TABLE "tenant"."organizations" DROP CONSTRAINT "pgschemadiff_tmpidx_organizations_uq_nam_NBpQ2fVUQxWyTLPTtuqhKw";
 
 
 -- Statements generated automatically, please review:
@@ -265,6 +273,7 @@ ALTER FUNCTION authz.installs_sync_trigger() OWNER TO fun_owner;
 ALTER FUNCTION authz.namespaces_sync_trigger() OWNER TO fun_owner;
 ALTER FUNCTION authz.node_pools_sync_trigger() OWNER TO fun_owner;
 ALTER FUNCTION authz.organizations_sync_trigger() OWNER TO fun_owner;
+ALTER FUNCTION authz.outbox_notify_trigger() OWNER TO fun_owner;
 ALTER FUNCTION authz.project_members_sync_trigger() OWNER TO fun_owner;
 ALTER FUNCTION authz.projects_sync_trigger() OWNER TO fun_owner;
 ALTER FUNCTION authz.users_sync_trigger() OWNER TO fun_owner;
