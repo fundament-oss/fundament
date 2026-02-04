@@ -62,7 +62,6 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
     InstallPluginModalComponent,
     NgIcon,
     LoadingIndicatorComponent,
-    BreadcrumbComponent,
   ],
   viewProviders: [
     provideIcons({

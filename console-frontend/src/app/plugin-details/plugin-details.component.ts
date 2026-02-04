@@ -33,13 +33,7 @@ interface InstallWithCluster extends Install {
 
 @Component({
   selector: 'app-plugin-details',
-  imports: [
-    CommonModule,
-    InstallPluginModalComponent,
-    NgIcon,
-    LoadingIndicatorComponent,
-    BreadcrumbComponent,
-  ],
+  imports: [CommonModule, InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerChevronRight,

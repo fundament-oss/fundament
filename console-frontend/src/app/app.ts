@@ -30,6 +30,7 @@ import {
   tablerChartLine,
   tablerChevronRight,
   tablerBuilding,
+  tablerBracketsContain,
 } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 
@@ -67,6 +68,7 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
       tablerChartLine,
       tablerChevronRight,
       tablerBuilding,
+      tablerBracketsContain,
     }),
   ],
   host: {
