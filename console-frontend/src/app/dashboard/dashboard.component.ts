@@ -9,11 +9,10 @@ import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerEye } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
-import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, RouterLink, NgIcon, BreadcrumbComponent],
+  imports: [CommonModule, RouterLink, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,

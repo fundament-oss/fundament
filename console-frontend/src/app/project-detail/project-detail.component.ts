@@ -18,12 +18,11 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPencil } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
-import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-detail',
-  imports: [CommonModule, RouterLink, NgIcon, LoadingIndicatorComponent, BreadcrumbComponent],
+  imports: [CommonModule, RouterLink, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -112,15 +111,5 @@ export class ProjectDetailComponent implements OnInit {
   timestampToDate(timestamp: Timestamp | undefined): string | undefined {
     if (!timestamp) return undefined;
     return timestampDate(timestamp).toISOString();
-  }
-
-  get breadcrumbSegments(): BreadcrumbSegment[] {
-    const segments: BreadcrumbSegment[] = [{ label: 'Projects', route: '/projects' }];
-
-    if (this.project()) {
-      segments.push({ label: this.project()!.name });
-    }
-
-    return segments;
   }
 }

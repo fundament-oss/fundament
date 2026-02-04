@@ -31,12 +31,11 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerTrash } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { ModalComponent } from '../modal/modal.component';
-import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-namespaces',
-  imports: [CommonModule, ReactiveFormsModule, NgIcon, ModalComponent, BreadcrumbComponent],
+  imports: [CommonModule, ReactiveFormsModule, NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -211,13 +210,5 @@ export class NamespacesComponent implements OnInit {
       return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
     }
     return '';
-  }
-
-  get breadcrumbSegments(): BreadcrumbSegment[] {
-    return [
-      { label: 'Projects', route: '/projects' },
-      { label: 'Project', route: `/projects/${this.projectId()}` },
-      { label: 'Namespaces' },
-    ];
   }
 }

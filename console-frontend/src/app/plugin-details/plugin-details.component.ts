@@ -11,7 +11,6 @@ import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { GetPluginDetailRequestSchema, type PluginDetail } from '../../generated/v1/plugin_pb';
-import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 import {
   ListClustersRequestSchema,
   ListInstallsRequestSchema,
@@ -205,15 +204,5 @@ export class PluginDetailsComponent implements OnInit {
 
   getInstalledClusterCount(): number {
     return this.clusters().filter((c) => c.installed).length;
-  }
-
-  get breadcrumbSegments(): BreadcrumbSegment[] {
-    const segments: BreadcrumbSegment[] = [{ label: 'Plugins', route: '/plugins' }];
-
-    if (this.plugin()) {
-      segments.push({ label: this.plugin()!.name });
-    }
-
-    return segments;
   }
 }

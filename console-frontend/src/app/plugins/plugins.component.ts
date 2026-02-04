@@ -6,7 +6,6 @@ import { InstallPluginModalComponent } from '../install-plugin-modal/install-plu
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCheck, tablerHelpCircle } from '@ng-icons/tabler-icons';
 import { LoadingIndicatorComponent } from '../icons';
-import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import {

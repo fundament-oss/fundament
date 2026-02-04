@@ -14,11 +14,10 @@ import {
   GetClusterRequestSchema,
 } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
-import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-cluster-plugins',
-  imports: [CommonModule, SharedPluginsFormComponent, NgIcon, BreadcrumbComponent],
+  imports: [CommonModule, SharedPluginsFormComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -124,20 +123,5 @@ export class ClusterPluginsComponent implements OnInit {
 
   onCancel() {
     this.router.navigate(['/clusters', this.clusterId]);
-  }
-
-  get breadcrumbSegments(): BreadcrumbSegment[] {
-    const segments: BreadcrumbSegment[] = [{ label: 'Clusters', route: '/' }];
-
-    if (this.clusterName()) {
-      segments.push({
-        label: this.clusterName()!,
-        route: `/clusters/${this.clusterId}`,
-      });
-    }
-
-    segments.push({ label: 'Plugins' });
-
-    return segments;
   }
 }

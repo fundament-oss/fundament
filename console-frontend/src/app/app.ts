@@ -9,6 +9,7 @@ import { versionMismatch$ } from './app.config';
 import { SelectorModalComponent } from './selector-modal/selector-modal.component';
 import { OrganizationDataService } from './organization-data.service';
 import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
+import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerCircleCheck,
@@ -42,6 +43,7 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
     SelectorModalComponent,
     FundamentLogoIconComponent,
     KubernetesIconComponent,
+    BreadcrumbComponent,
     NgIcon,
   ],
   viewProviders: [
@@ -98,6 +100,9 @@ export class App implements OnInit {
   selectedOrgId = signal<string | null>(null);
   selectedProjectId = signal<string | null>(null);
 
+  // Breadcrumb state
+  breadcrumbSegments = signal<BreadcrumbSegment[]>([]);
+
   async ngOnInit() {
     this.initializeTheme();
 
@@ -125,15 +130,17 @@ export class App implements OnInit {
       this.apiVersionMismatch.set(mismatch);
     });
 
-    // Subscribe to route changes to update sidebar state based on current route
+    // Subscribe to route changes to update sidebar state and breadcrumbs based on current route
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         this.updateSidebarStateFromRoute(event.url);
+        this.updateBreadcrumbs(event.url);
       });
 
-    // Initialize sidebar state from current route
+    // Initialize sidebar state and breadcrumbs from current route
     this.updateSidebarStateFromRoute(this.router.url);
+    this.updateBreadcrumbs(this.router.url);
   }
 
   reloadApp() {
@@ -166,6 +173,109 @@ export class App implements OnInit {
       this.selectedOrgId.set(orgs[0].id);
       this.selectedProjectId.set(null);
     }
+  }
+
+  // Update breadcrumbs based on current route
+  private updateBreadcrumbs(url: string) {
+    const segments: BreadcrumbSegment[] = [];
+
+    // Home/Dashboard - Clusters
+    if (url === '/') {
+      segments.push({ label: 'Clusters' });
+    }
+    // Projects list
+    else if (url === '/projects') {
+      segments.push({ label: 'Projects', route: '/projects' });
+    }
+    // Add project
+    else if (url === '/projects/add') {
+      segments.push({ label: 'Projects', route: '/projects' });
+      segments.push({ label: 'Add project' });
+    }
+    // Project routes
+    else if (url.startsWith('/projects/')) {
+      const projectMatch = url.match(/^\/projects\/([^/]+)(\/(.+))?$/);
+      if (projectMatch) {
+        const projectId = projectMatch[1];
+        const subRoute = projectMatch[3];
+
+        // Get project name
+        const projectData = this.organizationDataService.getProjectById(projectId);
+        const projectName = projectData?.project.name || 'Project';
+
+        segments.push({ label: projectName, route: `/projects/${projectId}` });
+
+        // Add sub-route segment
+        if (subRoute === 'namespaces') {
+          segments.push({ label: 'Namespaces' });
+        } else if (subRoute === 'members') {
+          segments.push({ label: 'Members' });
+        } else if (subRoute === 'usage') {
+          segments.push({ label: 'Usage' });
+        } else if (subRoute === 'settings') {
+          segments.push({ label: 'Settings' });
+        } else if (!subRoute) {
+          segments.push({ label: 'General' });
+        }
+      }
+    }
+    // Cluster detail routes
+    else if (url.startsWith('/clusters/')) {
+      const clusterMatch = url.match(/^\/clusters\/([^/]+)(\/(.+))?$/);
+      if (clusterMatch) {
+        const subRoute = clusterMatch[3];
+
+        segments.push({ label: 'Clusters', route: '/' });
+        segments.push({ label: 'Cluster details' });
+
+        // Add sub-route segment
+        if (subRoute === 'nodes') {
+          segments.push({ label: 'Nodes' });
+        } else if (subRoute === 'plugins') {
+          segments.push({ label: 'Plugins' });
+        }
+      }
+    }
+    // Add cluster wizard
+    else if (url.startsWith('/add-cluster')) {
+      segments.push({ label: 'Clusters', route: '/' });
+      segments.push({ label: 'Add cluster' });
+    }
+    // Plugins list
+    else if (url === '/plugins') {
+      segments.push({ label: 'Plugins' });
+    }
+    // Plugin details
+    else if (url.startsWith('/plugins/')) {
+      const pluginMatch = url.match(/^\/plugins\/([^/]+)$/);
+      if (pluginMatch) {
+        segments.push({ label: 'Plugins', route: '/plugins' });
+        // We could fetch plugin name here, but for now just show "Plugin details"
+        segments.push({ label: 'Plugin details' });
+      }
+    }
+    // Organization settings
+    else if (url === '/organization') {
+      segments.push({ label: 'Organization' });
+    }
+    // Organization members
+    else if (url === '/organization/members') {
+      segments.push({ label: 'Organization members' });
+    }
+    // Usage
+    else if (url === '/usage') {
+      segments.push({ label: 'Usage' });
+    }
+    // Profile
+    else if (url === '/profile') {
+      segments.push({ label: 'Profile' });
+    }
+    // API Keys
+    else if (url === '/api-keys') {
+      segments.push({ label: 'API keys' });
+    }
+
+    this.breadcrumbSegments.set(segments);
   }
 
   // Check if current route is login

@@ -45,7 +45,6 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 import { ModalComponent } from '../modal/modal.component';
-import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 @Component({
@@ -57,7 +56,6 @@ import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
     NgIcon,
     LoadingIndicatorComponent,
     ModalComponent,
-    BreadcrumbComponent,
   ],
   viewProviders: [
     provideIcons({
@@ -437,15 +435,5 @@ export class ClusterDetailsComponent implements OnInit {
     } finally {
       this.isLoadingPlugins.set(false);
     }
-  }
-
-  get breadcrumbSegments(): BreadcrumbSegment[] {
-    const segments: BreadcrumbSegment[] = [{ label: 'Clusters', route: '/' }];
-
-    if (this.clusterData.basics.name) {
-      segments.push({ label: this.clusterData.basics.name });
-    }
-
-    return segments;
   }
 }

@@ -19,11 +19,10 @@ import { CreateProjectRequestSchema } from '../../generated/v1/project_pb';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
-import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-add-project',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon, BreadcrumbComponent],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -111,9 +110,5 @@ export class AddProjectComponent implements AfterViewInit {
       return 'Project name must contain only lowercase letters, numbers, and hyphens, start with a letter, and end with a letter or number.';
     }
     return '';
-  }
-
-  get breadcrumbSegments(): BreadcrumbSegment[] {
-    return [{ label: 'Projects', route: '/projects' }, { label: 'Add project' }];
   }
 }

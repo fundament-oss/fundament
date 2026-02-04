@@ -363,6 +363,9 @@
 
     <!-- Main Content -->
     <main class="mx-auto max-w-7xl flex-1 px-4 py-6 sm:px-6">
+      @if (!isLoginPage()) {
+        <app-breadcrumb [segments]="breadcrumbSegments()" />
+      }
       <router-outlet />
     </main>
   </div>

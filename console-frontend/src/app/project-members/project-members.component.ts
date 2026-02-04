@@ -7,7 +7,6 @@ import { ToastService } from '../toast.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerTrash, tablerPencil } from '@ng-icons/tabler-icons';
 import { ModalComponent } from '../modal/modal.component';
-import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 
 type ProjectMemberRole = 'viewer' | 'admin';
 
@@ -22,7 +21,7 @@ interface ProjectMember {
 
 @Component({
   selector: 'app-project-members',
-  imports: [CommonModule, ReactiveFormsModule, NgIcon, ModalComponent, BreadcrumbComponent],
+  imports: [CommonModule, ReactiveFormsModule, NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -169,13 +168,5 @@ export class ProjectMembersComponent implements OnInit {
     ]);
     this.members.update((members) => members.filter((m) => m.id !== memberId));
     this.toastService.info(`${member.name} removed from project`);
-  }
-
-  get breadcrumbSegments(): BreadcrumbSegment[] {
-    return [
-      { label: 'Projects', route: '/projects' },
-      { label: 'Project', route: `/projects/${this.projectId()}` },
-      { label: 'Members' },
-    ];
   }
 }

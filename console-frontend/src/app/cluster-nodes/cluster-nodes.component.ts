@@ -19,11 +19,10 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
-import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-cluster-nodes',
-  imports: [CommonModule, SharedNodePoolsFormComponent, NgIcon, BreadcrumbComponent],
+  imports: [CommonModule, SharedNodePoolsFormComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -156,20 +155,5 @@ export class ClusterNodesComponent implements OnInit {
 
   onCancel() {
     this.router.navigate(['/clusters', this.clusterId]);
-  }
-
-  get breadcrumbSegments(): BreadcrumbSegment[] {
-    const segments: BreadcrumbSegment[] = [{ label: 'Clusters', route: '/' }];
-
-    if (this.clusterName()) {
-      segments.push({
-        label: this.clusterName()!,
-        route: `/clusters/${this.clusterId}`,
-      });
-    }
-
-    segments.push({ label: 'Nodes' });
-
-    return segments;
   }
 }

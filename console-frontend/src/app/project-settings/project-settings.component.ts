@@ -15,7 +15,6 @@ import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerX, tablerPencil, tablerCheck, tablerAlertTriangle } from '@ng-icons/tabler-icons';
-import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 import { ModalComponent } from '../modal/modal.component';
 import { PROJECT } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
@@ -30,7 +29,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-settings',
-  imports: [CommonModule, FormsModule, NgIconComponent, BreadcrumbComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, NgIconComponent, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerX,
@@ -88,22 +87,6 @@ export class ProjectSettingsComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
-  }
-
-  get breadcrumbSegments(): BreadcrumbSegment[] {
-    const segments: BreadcrumbSegment[] = [];
-
-    const currentProject = this.project();
-    if (currentProject?.name) {
-      segments.push({
-        label: currentProject.name,
-        route: `/projects/${this.projectId()}`,
-      });
-    }
-
-    segments.push({ label: 'Settings' });
-
-    return segments;
   }
 
   startEdit() {

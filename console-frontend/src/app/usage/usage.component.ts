@@ -16,7 +16,6 @@ import { TitleService } from '../title.service';
 import { DateRangePickerComponent } from '../date-range-picker/date-range-picker.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerTableDown } from '@ng-icons/tabler-icons';
-import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
 import { OrganizationDataService } from '../organization-data.service';
 
 Chart.register(...registerables);
@@ -55,7 +54,7 @@ interface Project {
 
 @Component({
   selector: 'app-usage',
-  imports: [CommonModule, FormsModule, DateRangePickerComponent, NgIcon, BreadcrumbComponent],
+  imports: [CommonModule, FormsModule, DateRangePickerComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerTableDown,
@@ -206,31 +205,6 @@ export class UsageComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.initializeCharts();
-  }
-
-  get breadcrumbSegments(): BreadcrumbSegment[] {
-    const segments: BreadcrumbSegment[] = [];
-
-    // Add project segment if we're in a project context
-    if (this.projectName()) {
-      segments.push({
-        label: this.projectName(),
-        route: `/projects/${this.selectedProjectId}`,
-      });
-    }
-
-    // Add namespace segment if we're in a namespace context
-    if (this.namespaceName()) {
-      segments.push({
-        label: this.namespaceName(),
-        route: `/projects/${this.selectedProjectId}/namespaces/${this.selectedNamespace}`,
-      });
-    }
-
-    // Always add Usage as the final segment
-    segments.push({ label: 'Usage' });
-
-    return segments;
   }
 
   get availableClusters(): Cluster[] {

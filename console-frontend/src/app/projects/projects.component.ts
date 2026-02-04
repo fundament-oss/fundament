@@ -7,7 +7,6 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerChevronRight } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { firstValueFrom } from 'rxjs';
-import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 import { LoadingIndicatorComponent } from '../icons';
 import { TitleService } from '../title.service';
 import { PROJECT } from '../../connect/tokens';
@@ -16,7 +15,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-projects',
-  imports: [CommonModule, RouterLink, NgIcon, LoadingIndicatorComponent, BreadcrumbComponent],
+  imports: [CommonModule, RouterLink, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,

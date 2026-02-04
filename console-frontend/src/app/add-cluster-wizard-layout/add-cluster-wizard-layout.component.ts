@@ -10,7 +10,6 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CheckmarkIconComponent } from '../icons';
 import { ClusterWizardStateService } from './cluster-wizard-state.service';
-import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
 interface ProgressStep {
   name: string;
@@ -19,7 +18,7 @@ interface ProgressStep {
 
 @Component({
   selector: 'app-add-cluster-wizard-layout',
-  imports: [CommonModule, RouterOutlet, RouterLink, CheckmarkIconComponent, BreadcrumbComponent],
+  imports: [CommonModule, RouterOutlet, RouterLink, CheckmarkIconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-wizard-layout.component.html',
 })
