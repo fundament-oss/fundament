@@ -4,6 +4,16 @@
       Loading...
     } @else if (organizationName()) {
       {{ organizationName() }}
+    } @else if (organizationError()) {
+      <span
+        class="error-message"
+        role="button"
+        tabindex="0"
+        (click)="loadOrganization()"
+        title="Click to retry"
+      >
+        {{ organizationError() }} - Click to retry
+      </span>
     } @else {
       Unknown organization
     }

@@ -71,21 +71,20 @@ export class OrganizationDataService {
         return;
       }
 
-      // Get organization details
+      // Parallelize organization and projects requests (they don't depend on each other)
       const orgRequest = create(GetOrganizationRequestSchema, {
         id: userResponse.user.organizationId,
       });
-      const orgResponse = await firstValueFrom(this.organizationClient.getOrganization(orgRequest));
+      const projectsRequest = create(ListProjectsRequestSchema, {});
+
+      const [orgResponse, projectsResponse] = await Promise.all([
+        firstValueFrom(this.organizationClient.getOrganization(orgRequest)),
+        firstValueFrom(this.projectClient.listProjects(projectsRequest)),
+      ]);
 
       if (!orgResponse.organization) {
         return;
       }
-
-      // Get all projects for the organization
-      const projectsRequest = create(ListProjectsRequestSchema, {});
-      const projectsResponse = await firstValueFrom(
-        this.projectClient.listProjects(projectsRequest),
-      );
 
       // For each project, get its namespaces
       const projectsData: ProjectData[] = await Promise.all(

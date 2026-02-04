@@ -34,6 +34,7 @@ export class BreadcrumbComponent implements OnInit {
 
   organizationName = signal<string | null>(null);
   organizationLoading = signal(true);
+  organizationError = signal<string | null>(null);
 
   async ngOnInit() {
     await this.loadOrganization();
@@ -52,6 +53,7 @@ export class BreadcrumbComponent implements OnInit {
 
   async loadOrganization() {
     this.organizationLoading.set(true);
+    this.organizationError.set(null);
 
     try {
       const userResponse = await firstValueFrom(this.authnClient.getUserInfo({}));
@@ -72,6 +74,7 @@ export class BreadcrumbComponent implements OnInit {
     } catch (err) {
       console.error('Error loading organization:', err);
       this.organizationName.set(null);
+      this.organizationError.set('Failed to load organization');
     } finally {
       this.organizationLoading.set(false);
     }
