@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"connectrpc.com/connect"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
 type NamespaceCmd struct {
@@ -28,10 +32,14 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 	}
 
 	if c.Cluster != "" {
-		namespaces, err := apiClient.ListClusterNamespaces(context.Background(), c.Cluster)
+		resp, err := apiClient.Clusters().ListClusterNamespaces(context.Background(), connect.NewRequest(&organizationv1.ListClusterNamespacesRequest{
+			ClusterId: c.Cluster,
+		}))
 		if err != nil {
 			return fmt.Errorf("failed to list namespaces: %w", err)
 		}
+
+		namespaces := resp.Msg.Namespaces
 
 		if ctx.Output == OutputJSON {
 			return PrintJSON(namespaces)
@@ -61,10 +69,14 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 	}
 
 	// List by project
-	namespaces, err := apiClient.ListProjectNamespaces(context.Background(), c.Project)
+	resp, err := apiClient.Projects().ListProjectNamespaces(context.Background(), connect.NewRequest(&organizationv1.ListProjectNamespacesRequest{
+		ProjectId: c.Project,
+	}))
 	if err != nil {
 		return fmt.Errorf("failed to list namespaces: %w", err)
 	}
+
+	namespaces := resp.Msg.Namespaces
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(namespaces)
@@ -107,10 +119,16 @@ func (c *NamespaceCreateCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	namespaceID, err := apiClient.CreateNamespace(context.Background(), c.Project, c.Cluster, c.Name)
+	resp, err := apiClient.Clusters().CreateNamespace(context.Background(), connect.NewRequest(&organizationv1.CreateNamespaceRequest{
+		ProjectId: c.Project,
+		ClusterId: c.Cluster,
+		Name:      c.Name,
+	}))
 	if err != nil {
 		return fmt.Errorf("failed to create namespace: %w", err)
 	}
+
+	namespaceID := resp.Msg.NamespaceId
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]string{
@@ -137,7 +155,10 @@ func (c *NamespaceDeleteCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	if err := apiClient.DeleteNamespace(context.Background(), c.NamespaceID); err != nil {
+	_, err = apiClient.Clusters().DeleteNamespace(context.Background(), connect.NewRequest(&organizationv1.DeleteNamespaceRequest{
+		NamespaceId: c.NamespaceID,
+	}))
+	if err != nil {
 		return fmt.Errorf("failed to delete namespace: %w", err)
 	}
 
