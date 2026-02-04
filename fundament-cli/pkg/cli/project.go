@@ -76,9 +76,11 @@ func (c *ProjectGetCmd) Run(ctx *Context) error {
 	w := NewTableWriter()
 	PrintKeyValue(w, "ID", project.Id)
 	PrintKeyValue(w, "Name", project.Name)
-	if project.CreatedAt != nil {
+
+	if project.CreatedAt.IsValid() {
 		PrintKeyValue(w, "Created", project.CreatedAt.AsTime().Format(TimeFormat))
 	}
+
 	return w.Flush()
 }
 

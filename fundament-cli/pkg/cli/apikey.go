@@ -40,19 +40,19 @@ func (c *APIKeyListCmd) Run(ctx *Context) error {
 	fmt.Fprintln(w, "ID\tNAME\tPREFIX\tCREATED\tEXPIRES\tLAST USED\tREVOKED")
 	for _, key := range apiKeys {
 		created := ""
-		if key.CreatedAt != nil {
+		if key.CreatedAt.IsValid() {
 			created = key.CreatedAt.AsTime().Format(TimeFormat)
 		}
 		expires := "never"
-		if key.ExpiresAt != nil {
+		if key.ExpiresAt.IsValid() {
 			expires = key.ExpiresAt.AsTime().Format(TimeFormat)
 		}
 		lastUsed := "never"
-		if key.LastUsedAt != nil {
+		if key.LastUsedAt.IsValid() {
 			lastUsed = key.LastUsedAt.AsTime().Format(TimeFormat)
 		}
 		revoked := "no"
-		if key.RevokedAt != nil {
+		if key.RevokedAt.IsValid() {
 			revoked = key.RevokedAt.AsTime().Format(TimeFormat)
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s...\t%s\t%s\t%s\t%s\n",
