@@ -28,7 +28,6 @@ import {
   tablerSettings,
   tablerChartLine,
   tablerChevronRight,
-  tablerBracketsContain,
   tablerBuilding,
 } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
@@ -65,7 +64,6 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
       tablerSettings,
       tablerChartLine,
       tablerChevronRight,
-      tablerBracketsContain,
       tablerBuilding,
     }),
   ],
@@ -99,7 +97,6 @@ export class App implements OnInit {
   // Nested selector state
   selectedOrgId = signal<string | null>(null);
   selectedProjectId = signal<string | null>(null);
-  selectedNamespaceId = signal<string | null>(null);
 
   async ngOnInit() {
     this.initializeTheme();
@@ -150,30 +147,16 @@ export class App implements OnInit {
 
     if (projectRouteMatch) {
       const projectId = projectRouteMatch[1];
-
-      // Check if this is a namespace route: /projects/:projectId/namespaces/:namespaceId
-      const namespaceRouteMatch = url.match(/^\/projects\/[^/]+\/namespaces\/([^/]+)/);
-
-      if (namespaceRouteMatch) {
-        const namespaceId = namespaceRouteMatch[1];
-        this.selectedNamespaceId.set(namespaceId);
-        this.selectedProjectId.set(projectId);
-        this.selectedOrgId.set(null);
-      } else {
-        // Project route (without namespace)
-        this.selectedProjectId.set(projectId);
-        this.selectedNamespaceId.set(null);
-        this.selectedOrgId.set(null);
-      }
+      // Project route
+      this.selectedProjectId.set(projectId);
+      this.selectedOrgId.set(null);
       return;
     }
 
     // Organization routes or other routes
-    // Only update if we currently have a project or namespace selected
-    const hasProjectOrNamespaceSelection = !!(
-      this.selectedProjectId() || this.selectedNamespaceId()
-    );
-    if (!hasProjectOrNamespaceSelection) {
+    // Only update if we currently have a project selected
+    const hasProjectSelection = !!this.selectedProjectId();
+    if (!hasProjectSelection) {
       return;
     }
 
@@ -182,7 +165,6 @@ export class App implements OnInit {
     if (orgs.length > 0) {
       this.selectedOrgId.set(orgs[0].id);
       this.selectedProjectId.set(null);
-      this.selectedNamespaceId.set(null);
     }
   }
 
@@ -289,7 +271,6 @@ export class App implements OnInit {
     // Select organization and navigate to clusters page
     this.selectedOrgId.set(orgId);
     this.selectedProjectId.set(null);
-    this.selectedNamespaceId.set(null);
 
     // Close modal and navigate
     this.selectorModalOpen.set(false);
@@ -300,32 +281,13 @@ export class App implements OnInit {
     // Select project and navigate to project general page
     this.selectedProjectId.set(projectId);
     this.selectedOrgId.set(null);
-    this.selectedNamespaceId.set(null);
 
     // Close modal and navigate
     this.selectorModalOpen.set(false);
     this.router.navigate(['/projects', projectId]);
   }
 
-  selectNamespaceItem(namespaceId: string) {
-    this.selectedNamespaceId.set(namespaceId);
-    this.selectedOrgId.set(null);
-
-    // Find the project that contains this namespace (O(1) lookup)
-    const namespaceData = this.organizationDataService.getNamespaceById(namespaceId);
-    const projectId = namespaceData?.project.id ?? null;
-
-    this.selectedProjectId.set(projectId);
-
-    // Close modal and navigate
-    this.selectorModalOpen.set(false);
-    if (projectId) {
-      this.router.navigate(['/projects', projectId, 'namespaces', namespaceId, 'members']);
-    }
-  }
-
-  getSelectedType(): 'organization' | 'project' | 'namespace' | null {
-    if (this.selectedNamespaceId()) return 'namespace';
+  getSelectedType(): 'organization' | 'project' | null {
     if (this.selectedProjectId()) return 'project';
     if (this.selectedOrgId()) return 'organization';
     return null;
@@ -335,7 +297,6 @@ export class App implements OnInit {
     const type = this.getSelectedType();
     if (type === 'organization') return 'Organization-specific';
     if (type === 'project') return 'Project-specific';
-    if (type === 'namespace') return 'Namespace-specific';
     return '';
   }
 
@@ -347,23 +308,18 @@ export class App implements OnInit {
     return this.selectedProjectId() === projectId;
   }
 
-  isNamespaceSelected(namespaceId: string): boolean {
-    return this.selectedNamespaceId() === namespaceId;
-  }
-
   // Cached values to avoid recomputing the selected item display on every change detection run.
   private cachedSelectedDisplay: {
-    type: 'organization' | 'project' | 'namespace';
+    type: 'organization' | 'project';
     name: string;
   } | null = null;
 
-  private cachedSelectedType: 'organization' | 'project' | 'namespace' | null = null;
+  private cachedSelectedType: 'organization' | 'project' | null = null;
   private cachedOrgId: string | null = null;
   private cachedProjectId: string | null = null;
-  private cachedNamespaceId: string | null = null;
 
   getSelectedItemDisplay(): {
-    type: 'organization' | 'project' | 'namespace';
+    type: 'organization' | 'project';
     name: string;
   } | null {
     const selectedType = this.getSelectedType();
@@ -373,38 +329,27 @@ export class App implements OnInit {
       this.cachedSelectedType = null;
       this.cachedOrgId = null;
       this.cachedProjectId = null;
-      this.cachedNamespaceId = null;
       return null;
     }
 
     const currentOrgId = this.selectedOrgId();
     const currentProjectId = this.selectedProjectId();
-    const currentNamespaceId = this.selectedNamespaceId();
 
     // Return cached value if the selection (type and IDs) hasn't changed.
     if (
       this.cachedSelectedType === selectedType &&
       this.cachedOrgId === currentOrgId &&
-      this.cachedProjectId === currentProjectId &&
-      this.cachedNamespaceId === currentNamespaceId
+      this.cachedProjectId === currentProjectId
     ) {
       return this.cachedSelectedDisplay;
     }
 
     let result: {
-      type: 'organization' | 'project' | 'namespace';
+      type: 'organization' | 'project';
       name: string;
     } | null = null;
 
-    if (selectedType === 'namespace') {
-      const namespaceId = currentNamespaceId;
-      if (namespaceId) {
-        const namespaceData = this.organizationDataService.getNamespaceById(namespaceId);
-        if (namespaceData) {
-          result = { type: 'namespace', name: namespaceData.namespace.name };
-        }
-      }
-    } else if (selectedType === 'project') {
+    if (selectedType === 'project') {
       const projectId = currentProjectId;
       if (projectId) {
         const projectData = this.organizationDataService.getProjectById(projectId);
@@ -427,7 +372,6 @@ export class App implements OnInit {
     this.cachedSelectedType = selectedType;
     this.cachedOrgId = currentOrgId;
     this.cachedProjectId = currentProjectId;
-    this.cachedNamespaceId = currentNamespaceId;
 
     return result;
   }

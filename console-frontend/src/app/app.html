@@ -193,7 +193,7 @@
         <div class="px-4 pt-4">
           <!-- Label -->
           <div class="mb-2 px-2 text-xs font-medium text-gray-700 dark:text-gray-300">
-            Organization, project, or namespace:
+            Organization or project:
           </div>
 
           <!-- Button to open modal -->
@@ -208,8 +208,6 @@
                   <ng-icon name="tablerBuilding" class="mr-2 shrink-0" />
                 } @else if (selected.type === 'project') {
                   <ng-icon name="tablerFolder" class="mr-2 shrink-0" />
-                } @else if (selected.type === 'namespace') {
-                  <ng-icon name="tablerBracketsContain" class="mr-2 shrink-0" />
                 }
                 <span class="truncate">{{ selected.name }}</span>
               } @else {
@@ -357,58 +355,6 @@
                   Settings
                 </a>
               </li>
-            } @else if (getSelectedType() === 'namespace') {
-              <li>
-                <a
-                  [routerLink]="[
-                    '/projects',
-                    selectedProjectId(),
-                    'namespaces',
-                    selectedNamespaceId(),
-                    'members',
-                  ]"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
-                  Members
-                </a>
-              </li>
-              <li>
-                <a
-                  [routerLink]="[
-                    '/projects',
-                    selectedProjectId(),
-                    'namespaces',
-                    selectedNamespaceId(),
-                    'usage',
-                  ]"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
-                  Usage
-                </a>
-              </li>
-              <li>
-                <a
-                  [routerLink]="[
-                    '/projects',
-                    selectedProjectId(),
-                    'namespaces',
-                    selectedNamespaceId(),
-                    'settings',
-                  ]"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
-                  Settings
-                </a>
-              </li>
             }
           </ul>
         </nav>
@@ -427,10 +373,8 @@
     [organizations]="organizationDataService.organizations()"
     [selectedOrgId]="selectedOrgId()"
     [selectedProjectId]="selectedProjectId()"
-    [selectedNamespaceId]="selectedNamespaceId()"
     (closeModal)="closeSelectorModal()"
     (selectOrganization)="selectOrganization($event)"
     (selectProject)="selectProjectItem($event)"
-    (selectNamespace)="selectNamespaceItem($event)"
   />
 </div>

@@ -12,23 +12,12 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import {
-  tablerSearch,
-  tablerFolder,
-  tablerBracketsContain,
-  tablerBuilding,
-} from '@ng-icons/tabler-icons';
+import { tablerSearch, tablerFolder, tablerBuilding } from '@ng-icons/tabler-icons';
 import { ModalComponent } from '../modal/modal.component';
-
-interface Namespace {
-  id: string;
-  name: string;
-}
 
 interface Project {
   id: string;
   name: string;
-  namespaces: Namespace[];
 }
 
 interface Organization {
@@ -44,7 +33,6 @@ interface Organization {
     provideIcons({
       tablerSearch,
       tablerFolder,
-      tablerBracketsContain,
       tablerBuilding,
     }),
   ],
@@ -56,12 +44,10 @@ export class SelectorModalComponent implements AfterViewInit, OnChanges {
   @Input() organizations: Organization[] = [];
   @Input() selectedOrgId: string | null = null;
   @Input() selectedProjectId: string | null = null;
-  @Input() selectedNamespaceId: string | null = null;
 
   @Output() closeModal = new EventEmitter<void>();
   @Output() selectOrganization = new EventEmitter<string>();
   @Output() selectProject = new EventEmitter<string>();
-  @Output() selectNamespace = new EventEmitter<string>();
 
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
 
@@ -103,23 +89,13 @@ export class SelectorModalComponent implements AfterViewInit, OnChanges {
     this.selectProject.emit(projectId);
   }
 
-  onSelectNamespace(namespaceId: string): void {
-    this.selectNamespace.emit(namespaceId);
-  }
-
   isOrganizationSelected(orgId: string): boolean {
-    // Only highlight organization if no project or namespace is selected
-    return this.selectedOrgId === orgId && !this.selectedProjectId && !this.selectedNamespaceId;
+    // Only highlight organization if no project is selected
+    return this.selectedOrgId === orgId && !this.selectedProjectId;
   }
 
   isProjectSelected(projectId: string): boolean {
-    // Only highlight project if it's selected and no namespace is selected
-    return this.selectedProjectId === projectId && !this.selectedNamespaceId;
-  }
-
-  isNamespaceSelected(namespaceId: string): boolean {
-    // Highlight namespace if it's selected (takes precedence)
-    return this.selectedNamespaceId === namespaceId;
+    return this.selectedProjectId === projectId;
   }
 
   filteredOrganizations(): Organization[] {
@@ -131,22 +107,9 @@ export class SelectorModalComponent implements AfterViewInit, OnChanges {
     return this.organizations
       .map((org) => {
         const orgMatches = org.name.toLowerCase().includes(filterText);
-        const filteredProjects = org.projects
-          .map((project) => {
-            const projectMatches = project.name.toLowerCase().includes(filterText);
-            const filteredNamespaces = project.namespaces.filter((ns) =>
-              ns.name.toLowerCase().includes(filterText),
-            );
-
-            if (projectMatches || filteredNamespaces.length > 0) {
-              return {
-                ...project,
-                namespaces: projectMatches ? project.namespaces : filteredNamespaces,
-              };
-            }
-            return null;
-          })
-          .filter((p): p is Project => p !== null);
+        const filteredProjects = org.projects.filter((project) =>
+          project.name.toLowerCase().includes(filterText),
+        );
 
         if (orgMatches || filteredProjects.length > 0) {
           return {

@@ -1,8 +1,4 @@
-<app-modal
-  [show]="show"
-  title="Select organization, project, or namespace"
-  (modalClose)="onClose()"
->
+<app-modal [show]="show" title="Select organization or project" (modalClose)="onClose()">
   <!-- Filter Input -->
   <div class="mb-4">
     <div class="relative">
@@ -75,36 +71,6 @@
                     <ng-icon name="tablerFolder" class="mr-2 shrink-0" size="1rem" />
                     <span class="truncate">{{ project.name }}</span>
                   </button>
-
-                  <!-- Namespaces (always visible) -->
-                  <div class="ml-5 space-y-0.5">
-                    @if (project.namespaces.length === 0) {
-                      <div class="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">
-                        No namespaces yet
-                      </div>
-                    } @else {
-                      <div class="mb-0.5 px-2">
-                        <span
-                          class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                          >Namespaces</span
-                        >
-                      </div>
-                      @for (namespace of project.namespaces; track namespace.id) {
-                        <button
-                          (click)="onSelectNamespace(namespace.id)"
-                          [class]="
-                            'flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950 dark:hover:bg-gray-800 ' +
-                            (isNamespaceSelected(namespace.id)
-                              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
-                              : 'text-gray-700 dark:text-gray-400')
-                          "
-                        >
-                          <ng-icon name="tablerBracketsContain" class="mr-2 shrink-0" size="1rem" />
-                          <span class="truncate">{{ namespace.name }}</span>
-                        </button>
-                      }
-                    }
-                  </div>
                 </div>
               }
             }

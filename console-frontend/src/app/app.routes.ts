@@ -93,20 +93,6 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'projects/:id/namespaces/:namespaceId/members',
-    loadComponent: () =>
-      import('./namespace-members/namespace-members.component').then(
-        (m) => m.NamespaceMembersComponent,
-      ),
-  },
-  {
-    path: 'projects/:id/namespaces/:namespaceId/settings',
-    loadComponent: () =>
-      import('./namespace-settings/namespace-settings.component').then(
-        (m) => m.NamespaceSettingsComponent,
-      ),
-  },
-  {
     path: 'plugins',
     loadComponent: () => import('./plugins/plugins.component').then((m) => m.PluginsComponent),
   },
@@ -126,10 +112,6 @@ export const routes: Routes = [
   },
   {
     path: 'projects/:id/usage',
-    loadComponent: () => import('./usage/usage.component').then((m) => m.UsageComponent),
-  },
-  {
-    path: 'projects/:id/namespaces/:namespaceId/usage',
     loadComponent: () => import('./usage/usage.component').then((m) => m.UsageComponent),
   },
   {
