@@ -1,0 +1,20 @@
+model
+  schema 1.1
+
+type user
+
+type organization
+  relations
+    define member: [user]
+    define admin: [user]
+    define viewer: [user] or member
+
+type project
+  relations
+    define organization: [organization]
+    define admin: [user]
+    define viewer: [user]
+    define can_view: admin or viewer
+    define can_edit: admin
+    define can_delete: admin
+    define can_manage_members: admin

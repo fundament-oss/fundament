@@ -1,0 +1,334 @@
+{{- if $.Values.openfga.enabled }}
+
+{{- /* Generate or reuse a stable password for the OpenFGA database user */ -}}
+{{- $openfgaSecretName := printf "%s-db-fun-openfga" $.Release.Name }}
+{{- $openfgaExisting := lookup "v1" "Secret" $.Release.Namespace $openfgaSecretName }}
+{{- $openfgaPassword := "" }}
+{{- if $openfgaExisting }}
+{{- $openfgaPassword = index $openfgaExisting.data "password" | b64dec }}
+{{- else }}
+{{- $openfgaPassword = randAlphaNum 32 }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $openfgaSecretName }}
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+type: kubernetes.io/basic-auth
+stringData:
+  username: fun_openfga
+  password: {{ $openfgaPassword | quote }}
+  uri: postgresql://fun_openfga:{{ $openfgaPassword }}@{{ include "fundament.db.host" . }}:5432/openfga?sslmode=disable
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: {{ $.Release.Name }}-openfga-db
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+spec:
+  name: openfga
+  owner: fun_openfga
+  cluster:
+    name: {{ include "fundament.db.name" . }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $.Release.Name }}-openfga-migrate
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: openfga-migrate
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-db
+          image: ghcr.io/cloudnative-pg/postgresql:18
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for OpenFGA database and role to be ready..."
+              until psql "$OPENFGA_DATASTORE_URI" -c "SELECT 1" > /dev/null 2>&1; do
+                echo "Database not ready, waiting..."
+                sleep 3
+              done
+              echo "Database is ready!"
+          env:
+            - name: OPENFGA_DATASTORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $openfgaSecretName }}
+                  key: uri
+      containers:
+        - name: migrate
+          image: {{ $.Values.openfga.image }}
+          args:
+            - migrate
+          env:
+            - name: OPENFGA_DATASTORE_ENGINE
+              value: postgres
+            - name: OPENFGA_DATASTORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $openfgaSecretName }}
+                  key: uri
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $.Release.Name }}-openfga-setup
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: openfga-setup
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-openfga
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for OpenFGA to be ready..."
+              until wget -qO- http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.playground.apiPort | default 8080 }}/healthz > /dev/null 2>&1; do
+                echo "OpenFGA not ready, waiting..."
+                sleep 2
+              done
+              echo "OpenFGA is ready!"
+      containers:
+        - name: setup
+          image: bitnami/kubectl:latest
+          command:
+            - bash
+            - -c
+            - |
+              set -e
+
+              # Install fga CLI
+              FGA_VERSION=$(curl -s https://api.github.com/repos/openfga/cli/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+              curl -sL "https://github.com/openfga/cli/releases/download/v${FGA_VERSION}/fga_${FGA_VERSION}_linux_amd64.tar.gz" | tar xz -C /tmp fga
+              export PATH="/tmp:$PATH"
+
+              export FGA_API_URL=http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.playground.apiPort | default 8080 }}
+
+              # Check if a store named "fundament" already exists
+              EXISTING_STORE_ID=$(fga store list 2>/dev/null | jq -r '.stores[] | select(.name == "fundament") | .id' | head -1)
+
+              if [ -n "$EXISTING_STORE_ID" ]; then
+                echo "Store 'fundament' already exists with ID: $EXISTING_STORE_ID"
+                export FGA_STORE_ID="$EXISTING_STORE_ID"
+                # Write the latest model
+                fga model write --file /model/model.fga
+              else
+                echo "Creating new store 'fundament' with model..."
+                RESULT=$(fga store create --name fundament --model /model/model.fga)
+                export FGA_STORE_ID=$(echo "$RESULT" | jq -r '.store.id')
+                echo "Store created with ID: $FGA_STORE_ID"
+              fi
+
+              MODEL_ID=$(fga model get --field id | sed 's/^# Model ID: //')
+              echo "Authorization model ID: $MODEL_ID"
+
+              # Write store ID and model ID to a ConfigMap for the organization-api to read
+              cat <<ENDOFCM | kubectl apply -f -
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: {{ $.Release.Name }}-openfga-config
+                namespace: {{ $.Release.Namespace }}
+                labels:
+                  {{- include "fundament.labels" . | nindent 18 }}
+                  app.kubernetes.io/component: openfga
+              data:
+                store-id: "$FGA_STORE_ID"
+                authorization-model-id: "$MODEL_ID"
+              ENDOFCM
+
+              echo "ConfigMap updated successfully"
+          volumeMounts:
+            - name: model
+              mountPath: /model
+      serviceAccountName: {{ $.Release.Name }}-openfga-setup
+      volumes:
+        - name: model
+          configMap:
+            name: {{ $.Release.Name }}-openfga-model
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $.Release.Name }}-openfga-model
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+data:
+  model.fga: |
+    model
+      schema 1.1
+
+    type user
+
+    type organization
+      relations
+        define member: [user]
+        define admin: [user]
+        define viewer: [user] or member
+
+    type project
+      relations
+        define organization: [organization]
+        define admin: [user]
+        define viewer: [user]
+        define can_view: admin or viewer
+        define can_edit: admin
+        define can_delete: admin
+        define can_manage_members: admin
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $.Release.Name }}-openfga-setup
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "4"
+    "helm.sh/hook-delete-policy": before-hook-creation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $.Release.Name }}-openfga-setup
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "4"
+    "helm.sh/hook-delete-policy": before-hook-creation
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $.Release.Name }}-openfga-setup
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "4"
+    "helm.sh/hook-delete-policy": before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $.Release.Name }}-openfga-setup
+subjects:
+  - kind: ServiceAccount
+    name: {{ $.Release.Name }}-openfga-setup
+    namespace: {{ $.Release.Namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-openfga
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+spec:
+  replicas: {{ $.Values.openfga.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: openfga
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: openfga
+    spec:
+      containers:
+        - name: openfga
+          image: {{ $.Values.openfga.image }}
+          args:
+            - run
+          ports:
+            - name: http
+              containerPort: {{ $.Values.openfga.playground.apiPort | default 8080 }}
+            - name: grpc
+              containerPort: 8081
+            - name: playground
+              containerPort: 3000
+          env:
+            - name: OPENFGA_DATASTORE_ENGINE
+              value: postgres
+            - name: OPENFGA_DATASTORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $openfgaSecretName }}
+                  key: uri
+            - name: OPENFGA_PLAYGROUND_ENABLED
+              value: {{ $.Values.openfga.playground.enabled | quote }}
+            - name: OPENFGA_HTTP_ADDR
+              value: "0.0.0.0:{{ $.Values.openfga.playground.apiPort | default 8080 }}"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Release.Name }}-openfga
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ $.Values.openfga.playground.apiPort | default 8080 }}
+      targetPort: http
+      name: http
+    - port: 8081
+      targetPort: grpc
+      name: grpc
+    - port: 3000
+      targetPort: playground
+      name: playground
+  selector:
+    app.kubernetes.io/component: openfga
+{{- end }}

@@ -103,6 +103,27 @@ stringData:
   password: {{ $fundamentApiPassword | quote }}
   uri: postgresql://fun_fundament_api:{{ $fundamentApiPassword }}@{{ include "fundament.db.host" . }}:5432/fundament
 ---
+{{- $authzWorkerSecretName := printf "%s-db-fun-authz-worker" $.Release.Name }}
+{{- $authzWorkerExisting := lookup "v1" "Secret" $.Release.Namespace $authzWorkerSecretName }}
+{{- $authzWorkerPassword := "" }}
+{{- if $authzWorkerExisting }}
+{{- $authzWorkerPassword = index $authzWorkerExisting.data "password" | b64dec }}
+{{- else }}
+{{- $authzWorkerPassword = randAlphaNum 32 }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $authzWorkerSecretName }}
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+type: kubernetes.io/basic-auth
+stringData:
+  username: fun_authz_worker
+  password: {{ $authzWorkerPassword | quote }}
+  uri: postgresql://fun_authz_worker:{{ $authzWorkerPassword }}@{{ include "fundament.db.host" . }}:5432/fundament
+---
 {{- $operatorSecretName := printf "%s-db-fun-operator" $.Release.Name }}
 {{- $operatorExisting := lookup "v1" "Secret" $.Release.Namespace $operatorSecretName }}
 {{- $operatorPassword := "" }}
