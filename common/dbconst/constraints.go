@@ -39,6 +39,24 @@ const (
 	ConstraintNodePoolsUqName = "node_pools_uq_name"
 	// ConstraintOrganizationsUqName is defined on tenant.organizations.
 	ConstraintOrganizationsUqName = "organizations_uq_name"
+	// ConstraintOutboxCkSingleFk is defined on authz.outbox.
+	ConstraintOutboxCkSingleFk = "outbox_ck_single_fk"
+	// ConstraintOutboxFkApiKey is defined on authz.outbox.
+	ConstraintOutboxFkApiKey = "outbox_fk_api_key"
+	// ConstraintOutboxFkCluster is defined on authz.outbox.
+	ConstraintOutboxFkCluster = "outbox_fk_cluster"
+	// ConstraintOutboxFkInstall is defined on authz.outbox.
+	ConstraintOutboxFkInstall = "outbox_fk_install"
+	// ConstraintOutboxFkNamespace is defined on authz.outbox.
+	ConstraintOutboxFkNamespace = "outbox_fk_namespace"
+	// ConstraintOutboxFkNodePool is defined on authz.outbox.
+	ConstraintOutboxFkNodePool = "outbox_fk_node_pool"
+	// ConstraintOutboxFkProject is defined on authz.outbox.
+	ConstraintOutboxFkProject = "outbox_fk_project"
+	// ConstraintOutboxFkProjectMember is defined on authz.outbox.
+	ConstraintOutboxFkProjectMember = "outbox_fk_project_member"
+	// ConstraintOutboxFkUser is defined on authz.outbox.
+	ConstraintOutboxFkUser = "outbox_fk_user"
 	// ConstraintPluginDocumentationLinksFkPlugin is defined on zappstore.plugin_documentation_links.
 	ConstraintPluginDocumentationLinksFkPlugin = "plugin_documentation_links_fk_plugin"
 	// ConstraintPluginsCategoriesCategoryId is defined on zappstore.categories_plugins.

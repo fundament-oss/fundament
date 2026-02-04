@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const organizationCreate = `-- name: OrganizationCreate :one
@@ -24,9 +25,15 @@ type OrganizationCreateParams struct {
 	Name string
 }
 
-func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreateParams) (TenantOrganization, error) {
+type OrganizationCreateRow struct {
+	ID      uuid.UUID
+	Name    string
+	Created pgtype.Timestamptz
+}
+
+func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreateParams) (OrganizationCreateRow, error) {
 	row := q.db.QueryRow(ctx, organizationCreate, arg.Name)
-	var i TenantOrganization
+	var i OrganizationCreateRow
 	err := row.Scan(&i.ID, &i.Name, &i.Created)
 	return i, err
 }
@@ -74,15 +81,21 @@ FROM tenant.organizations
 ORDER BY created DESC
 `
 
-func (q *Queries) OrganizationList(ctx context.Context) ([]TenantOrganization, error) {
+type OrganizationListRow struct {
+	ID      uuid.UUID
+	Name    string
+	Created pgtype.Timestamptz
+}
+
+func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, error) {
 	rows, err := q.db.Query(ctx, organizationList)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TenantOrganization
+	var items []OrganizationListRow
 	for rows.Next() {
-		var i TenantOrganization
+		var i OrganizationListRow
 		if err := rows.Scan(&i.ID, &i.Name, &i.Created); err != nil {
 			return nil, err
 		}

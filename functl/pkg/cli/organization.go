@@ -95,7 +95,7 @@ type organizationCreateOutput struct {
 	ID string `json:"id"`
 }
 
-func outputOrganizationCreate(format OutputFormat, org db.TenantOrganization) error {
+func outputOrganizationCreate(format OutputFormat, org db.OrganizationCreateRow) error {
 	switch format {
 	case OutputJSON:
 		return PrintJSON(organizationCreateOutput{
@@ -109,7 +109,7 @@ func outputOrganizationCreate(format OutputFormat, org db.TenantOrganization) er
 	}
 }
 
-func outputOrganizationList(format OutputFormat, orgs []db.TenantOrganization) error {
+func outputOrganizationList(format OutputFormat, orgs []db.OrganizationListRow) error {
 	switch format {
 	case OutputJSON:
 		output := make([]organizationOutput, len(orgs))
