@@ -36,6 +36,11 @@ build:
       context: .
       docker:
         dockerfile: docs-frontend/Dockerfile
+
+    - image: outbox-worker
+      context: .
+      docker:
+        dockerfile: outbox-worker/Dockerfile
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheckDeadlineSeconds: 300
@@ -51,6 +56,7 @@ deploy:
           images.organizationApi: "{{.IMAGE_FULLY_QUALIFIED_organization_api}}"
           images.consoleFrontend: "{{.IMAGE_FULLY_QUALIFIED_console_frontend}}"
           images.docsFrontend: "{{.IMAGE_FULLY_QUALIFIED_docs_frontend}}"
+          images.outboxWorker: "{{.IMAGE_FULLY_QUALIFIED_outbox_worker}}"
 
 profiles:
   - name: env-local

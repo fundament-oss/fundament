@@ -14,7 +14,7 @@ db:
   enabled: true
   instances: 1
   storageSize: 1Gi
-  reset: false
+  reset: true
   insertTestData: true
   exposePort: 54328
   postgresql:
@@ -90,6 +90,13 @@ dex:
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: Grace Lee
       userID: "019b4000-1000-7000-8000-000000000007"
+
+outboxWorker:
+  enabled: true
+  replicas: 1
+  logLevel: debug
+  pollInterval: "2s"
+  batchSize: 100
 
 openfga:
   enabled: true

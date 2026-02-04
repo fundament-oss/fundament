@@ -19,6 +19,7 @@ images:
   organizationApi: organization-api:latest
   consoleFrontend: console-frontend:latest
   docsFrontend: docs-frontend:latest
+  outboxWorker: outbox-worker:latest
 
 # Database (CloudNativePG)
 db:
@@ -50,6 +51,14 @@ consoleFrontend:
 docsFrontend:
   enabled: false
   replicas: 1
+
+# Outbox Worker (outbox pattern for OpenFGA tuple sync)
+outboxWorker:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  pollInterval: "5s"
+  batchSize: 100
 
 # OpenFGA (Fine-Grained Authorization)
 openfga:
