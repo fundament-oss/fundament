@@ -765,7 +765,6 @@ CREATE POLICY namespaces_organization_policy ON tenant.namespaces
 -- DROP TABLE IF EXISTS authz.outbox CASCADE;
 CREATE TABLE authz.outbox (
 	id uuid NOT NULL DEFAULT uuidv7(),
-	organization_id uuid,
 	user_id uuid,
 	project_id uuid,
 	project_member_id uuid,
@@ -780,7 +779,6 @@ CREATE TABLE authz.outbox (
 	failed timestamptz,
 	CONSTRAINT outbox_pk PRIMARY KEY (id),
 	CONSTRAINT outbox_ck_single_fk CHECK (num_nonnulls(
-	organization_id,
 	user_id,
 	project_id,
 	project_member_id,
@@ -803,28 +801,6 @@ USING btree
 	created
 )
 WHERE (processed IS NULL);
--- ddl-end --
-
--- object: authz.organizations_sync_trigger | type: FUNCTION --
--- DROP FUNCTION IF EXISTS authz.organizations_sync_trigger() CASCADE;
-CREATE OR REPLACE FUNCTION authz.organizations_sync_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE 
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS 
-$function$
-BEGIN
-    INSERT INTO authz.outbox (organization_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
-    RETURN COALESCE(NEW, OLD);
-END;
-$function$;
--- ddl-end --
-ALTER FUNCTION authz.organizations_sync_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: authz.users_sync_trigger | type: FUNCTION --
@@ -1024,19 +1000,10 @@ $function$;
 ALTER FUNCTION authz.outbox_notify_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
--- object: organizations_outbox | type: TRIGGER --
--- DROP TRIGGER IF EXISTS organizations_outbox ON tenant.organizations CASCADE;
-CREATE OR REPLACE TRIGGER organizations_outbox
-	AFTER INSERT OR DELETE OR UPDATE
-	ON tenant.organizations
-	FOR EACH ROW
-	EXECUTE PROCEDURE authz.organizations_sync_trigger();
--- ddl-end --
-
 -- object: users_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS users_outbox ON tenant.users CASCADE;
 CREATE OR REPLACE TRIGGER users_outbox
-	AFTER INSERT OR DELETE OR UPDATE
+	AFTER INSERT OR UPDATE
 	ON tenant.users
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.users_sync_trigger();
@@ -1045,7 +1012,7 @@ CREATE OR REPLACE TRIGGER users_outbox
 -- object: project_members_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS project_members_outbox ON tenant.project_members CASCADE;
 CREATE OR REPLACE TRIGGER project_members_outbox
-	AFTER INSERT OR DELETE OR UPDATE
+	AFTER INSERT OR UPDATE
 	ON tenant.project_members
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.project_members_sync_trigger();
@@ -1054,7 +1021,7 @@ CREATE OR REPLACE TRIGGER project_members_outbox
 -- object: projects_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS projects_outbox ON tenant.projects CASCADE;
 CREATE OR REPLACE TRIGGER projects_outbox
-	AFTER INSERT OR DELETE OR UPDATE
+	AFTER INSERT OR UPDATE
 	ON tenant.projects
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.projects_sync_trigger();
@@ -1063,7 +1030,7 @@ CREATE OR REPLACE TRIGGER projects_outbox
 -- object: clusters_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS clusters_outbox ON tenant.clusters CASCADE;
 CREATE OR REPLACE TRIGGER clusters_outbox
-	AFTER INSERT OR DELETE OR UPDATE
+	AFTER INSERT OR UPDATE
 	ON tenant.clusters
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.clusters_sync_trigger();
@@ -1072,7 +1039,7 @@ CREATE OR REPLACE TRIGGER clusters_outbox
 -- object: node_pools_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS node_pools_outbox ON tenant.node_pools CASCADE;
 CREATE OR REPLACE TRIGGER node_pools_outbox
-	AFTER INSERT OR DELETE OR UPDATE
+	AFTER INSERT OR UPDATE
 	ON tenant.node_pools
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.node_pools_sync_trigger();
@@ -1081,7 +1048,7 @@ CREATE OR REPLACE TRIGGER node_pools_outbox
 -- object: namespaces_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS namespaces_outbox ON tenant.namespaces CASCADE;
 CREATE OR REPLACE TRIGGER namespaces_outbox
-	AFTER INSERT OR DELETE OR UPDATE
+	AFTER INSERT OR UPDATE
 	ON tenant.namespaces
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.namespaces_sync_trigger();
@@ -1099,7 +1066,7 @@ CREATE OR REPLACE TRIGGER api_keys_outbox
 -- object: installs_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS installs_outbox ON zappstore.installs CASCADE;
 CREATE OR REPLACE TRIGGER installs_outbox
-	AFTER INSERT OR DELETE OR UPDATE
+	AFTER INSERT OR UPDATE
 	ON zappstore.installs
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.installs_sync_trigger();
@@ -1244,13 +1211,6 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.project_members DROP CONSTRAINT IF EXISTS project_members_fk_user CASCADE;
 ALTER TABLE tenant.project_members ADD CONSTRAINT project_members_fk_user FOREIGN KEY (user_id)
 REFERENCES tenant.users (id) MATCH SIMPLE
-ON DELETE NO ACTION ON UPDATE NO ACTION;
--- ddl-end --
-
--- object: outbox_fk_organization | type: CONSTRAINT --
--- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_organization CASCADE;
-ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_organization FOREIGN KEY (organization_id)
-REFERENCES tenant.organizations (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 

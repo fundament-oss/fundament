@@ -5,7 +5,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 -->
 <dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="40"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="264,-28" last-zoom="0.6" scene-rect="-588,-47,4506.2,2926.52"
+	 last-position="-145,-28" last-zoom="0.6" scene-rect="-528,-47,3406.2,1946.52"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -637,7 +637,7 @@ END;]]> </definition>
 <table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="440" y="1020"/>
+	<position x="400" y="1000"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -664,7 +664,7 @@ END;]]> </definition>
 <table name="plugins" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1160" y="1280"/>
+	<position x="1120" y="1260"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -703,7 +703,7 @@ END;]]> </definition>
 <table name="presets" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="120" y="1740"/>
+	<position x="80" y="1720"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -724,7 +724,7 @@ END;]]> </definition>
 <table name="preset_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="640" y="1540"/>
+	<position x="600" y="1520"/>
 	<column name="preset_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -743,7 +743,7 @@ END;]]> </definition>
 <table name="tags" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="2520" y="1720"/>
+	<position x="2480" y="1700"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -767,7 +767,7 @@ END;]]> </definition>
 <table name="plugins_tags" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1880" y="1720"/>
+	<position x="1840" y="1700"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -782,7 +782,7 @@ END;]]> </definition>
 <table name="categories" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="2580" y="1320"/>
+	<position x="2540" y="1300"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -806,7 +806,7 @@ END;]]> </definition>
 <table name="categories_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1860" y="1320"/>
+	<position x="1820" y="1300"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -821,7 +821,7 @@ END;]]> </definition>
 <table name="plugin_documentation_links" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1880" y="1000"/>
+	<position x="1840" y="980"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -938,14 +938,11 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
-<table name="outbox" layers="0" collapse-mode="2" max-obj-count="16" z-value="0">
+<table name="outbox" layers="0" collapse-mode="2" max-obj-count="15" z-value="0">
 	<schema name="authz"/>
 	<role name="fun_owner"/>
 	<position x="2200" y="0"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="organization_id">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="user_id">
@@ -989,7 +986,6 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	</constraint>
 	<constraint name="outbox_ck_single_fk" type="ck-constr" table="authz.outbox">
 			<expression> <![CDATA[num_nonnulls(
-	organization_id,
 	user_id,
 	project_id,
 	project_member_id,
@@ -1010,28 +1006,6 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 		</idxelement>
 	<predicate> <![CDATA[processed IS NULL]]> </predicate>
 </index>
-
-<function name="organizations_sync_trigger"
-		window-func="false"
-		returns-setof="false"
-		behavior-type="CALLED ON NULL INPUT"
-		function-type="VOLATILE"
-		security-type="SECURITY INVOKER"
-		parallel-type="PARALLEL UNSAFE"
-		execution-cost="1"
-		row-amount="0">
-	<schema name="authz"/>
-	<role name="fun_owner"/>
-	<language name="plpgsql"/>
-	<return-type>
-	<type name="trigger" length="0"/>
-	</return-type>
-	<definition> <![CDATA[BEGIN
-    INSERT INTO authz.outbox (organization_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
-    RETURN COALESCE(NEW, OLD);
-END;]]> </definition>
-</function>
 
 <function name="users_sync_trigger"
 		window-func="false"
@@ -1230,44 +1204,38 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
-<trigger name="organizations_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
-	 table="tenant.organizations">
-		<function signature="authz.organizations_sync_trigger()"/>
-</trigger>
-
 <trigger name="users_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.users">
 		<function signature="authz.users_sync_trigger()"/>
 </trigger>
 
 <trigger name="project_members_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.project_members">
 		<function signature="authz.project_members_sync_trigger()"/>
 </trigger>
 
 <trigger name="projects_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.projects">
 		<function signature="authz.projects_sync_trigger()"/>
 </trigger>
 
 <trigger name="clusters_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.clusters">
 		<function signature="authz.clusters_sync_trigger()"/>
 </trigger>
 
 <trigger name="node_pools_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.node_pools">
 		<function signature="authz.node_pools_sync_trigger()"/>
 </trigger>
 
 <trigger name="namespaces_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.namespaces">
 		<function signature="authz.namespaces_sync_trigger()"/>
 </trigger>
@@ -1279,7 +1247,7 @@ END;]]> </definition>
 </trigger>
 
 <trigger name="installs_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="zappstore.installs">
 		<function signature="authz.installs_sync_trigger()"/>
 </trigger>
@@ -1401,12 +1369,6 @@ END;]]> </definition>
 <constraint name="project_members_fk_user" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.users" table="tenant.project_members">
 	<columns names="user_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="outbox_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="authz.outbox">
-	<columns names="organization_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
@@ -1556,11 +1518,6 @@ END;]]> </definition>
 	 src-table="tenant.project_members"
 	 dst-table="tenant.users" reference-fk="project_members_fk_user"
 	 src-required="false" dst-required="true"/>
-
-<relationship name="rel_outbox_organizations" type="relfk" layers="0"
-	 src-table="authz.outbox"
-	 dst-table="tenant.organizations" reference-fk="outbox_fk_organization"
-	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_outbox_users" type="relfk" layers="0"
 	 src-table="authz.outbox"

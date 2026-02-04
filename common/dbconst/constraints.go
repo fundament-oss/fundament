@@ -51,8 +51,6 @@ const (
 	ConstraintOutboxFkNamespace = "outbox_fk_namespace"
 	// ConstraintOutboxFkNodePool is defined on authz.outbox.
 	ConstraintOutboxFkNodePool = "outbox_fk_node_pool"
-	// ConstraintOutboxFkOrganization is defined on authz.outbox.
-	ConstraintOutboxFkOrganization = "outbox_fk_organization"
 	// ConstraintOutboxFkProject is defined on authz.outbox.
 	ConstraintOutboxFkProject = "outbox_fk_project"
 	// ConstraintOutboxFkProjectMember is defined on authz.outbox.
