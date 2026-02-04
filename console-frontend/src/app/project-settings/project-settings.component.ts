@@ -26,7 +26,7 @@ import {
   type Project,
 } from '../../generated/v1/project_pb';
 import { firstValueFrom } from 'rxjs';
-import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
+import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-settings',
@@ -186,18 +186,5 @@ export class ProjectSettingsComponent implements OnInit {
     }
   }
 
-  formatDate(timestamp: Timestamp | undefined): string {
-    try {
-      if (!timestamp) {
-        return '';
-      }
-      return timestampDate(timestamp).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch {
-      return '';
-    }
-  }
+  readonly formatDate = formatDateUtil;
 }

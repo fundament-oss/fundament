@@ -12,6 +12,7 @@ import { LoadingIndicatorComponent } from '../icons';
 import { TitleService } from '../title.service';
 import { PROJECT } from '../../connect/tokens';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
+import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-projects',
@@ -63,14 +64,7 @@ export class ProjectsComponent implements OnInit {
     }
   }
 
-  formatDate(dateString?: string): string {
-    if (!dateString) return 'Unknown';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
+  readonly formatDate = formatDateUtil;
 
   timestampToDate(timestamp: Timestamp | undefined): string | undefined {
     if (!timestamp) return undefined;

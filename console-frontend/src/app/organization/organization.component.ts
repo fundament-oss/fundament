@@ -22,6 +22,7 @@ import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
 import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
+import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-organization',
@@ -138,17 +139,7 @@ export class OrganizationComponent implements OnInit {
     }
   }
 
-  formatDate(dateString: string): string {
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch {
-      return dateString;
-    }
-  }
+  readonly formatDate = formatDateUtil;
 
   timestampToDate(timestamp: Timestamp | undefined): string {
     if (!timestamp) return '';

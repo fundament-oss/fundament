@@ -19,6 +19,7 @@ import { tablerPencil } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
 import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
+import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-detail',
@@ -106,14 +107,7 @@ export class ProjectDetailComponent implements OnInit {
     return cluster?.name || clusterId;
   }
 
-  formatDate(dateString?: string): string {
-    if (!dateString) return 'Unknown';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
+  readonly formatDate = formatDateUtil;
 
   timestampToDate(timestamp: Timestamp | undefined): string | undefined {
     if (!timestamp) return undefined;

@@ -46,6 +46,7 @@ import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 import { ModalComponent } from '../modal/modal.component';
 import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
+import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-cluster-details',
@@ -233,15 +234,7 @@ export class ClusterDetailsComponent implements OnInit {
     }
   }
 
-  formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+  readonly formatDate = formatDateTimeUtil;
 
   timestampToDate(timestamp: Timestamp | undefined): string {
     if (!timestamp) return '';

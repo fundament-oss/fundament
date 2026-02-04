@@ -32,6 +32,7 @@ import { tablerPlus, tablerTrash } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { ModalComponent } from '../modal/modal.component';
 import { BreadcrumbComponent, BreadcrumbSegment } from '../breadcrumb/breadcrumb.component';
+import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-namespaces',
@@ -191,14 +192,7 @@ export class NamespacesComponent implements OnInit {
     }
   }
 
-  formatDate(dateString?: string): string {
-    if (!dateString) return 'Unknown';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
+  readonly formatDate = formatDateUtil;
 
   timestampToDate(timestamp: Timestamp | undefined): string | undefined {
     if (!timestamp) return undefined;
