@@ -156,7 +156,7 @@ END;
 $function$
 ;
 
-ALTER INDEX "tenant"."organizations_uq_name" RENAME TO "pgschemadiff_tmpidx_organizations_uq_nam_R3y015VZQt$ku2GVio6wIg";
+ALTER INDEX "tenant"."organizations_uq_name" RENAME TO "pgschemadiff_tmpidx_organizations_uq_nam_SlS4TalqScme7Yc3MlNHxQ";
 
 CREATE TRIGGER api_keys_outbox AFTER INSERT OR DELETE OR UPDATE ON authn.api_keys FOR EACH ROW EXECUTE FUNCTION authz.api_keys_sync_trigger();
 
@@ -177,13 +177,9 @@ CREATE TABLE "authz"."outbox" (
 	"failed" timestamp with time zone
 );
 
-ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_ck_single_fk" CHECK((((((((((((organization_id IS NOT NULL))::integer + ((user_id IS NOT NULL))::integer) + ((project_id IS NOT NULL))::integer) + ((project_member_id IS NOT NULL))::integer) + ((cluster_id IS NOT NULL))::integer) + ((node_pool_id IS NOT NULL))::integer) + ((namespace_id IS NOT NULL))::integer) + ((api_key_id IS NOT NULL))::integer) + ((install_id IS NOT NULL))::integer) = 1));
+ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_ck_single_fk" CHECK((num_nonnulls(organization_id, user_id, project_id, project_member_id, cluster_id, node_pool_id, namespace_id, api_key_id, install_id) = 1));
 
 GRANT INSERT ON "authz"."outbox" TO "fun_authn_api";
-
-GRANT SELECT ON "authz"."outbox" TO "fun_authz_worker";
-
-GRANT UPDATE ON "authz"."outbox" TO "fun_authz_worker";
 
 GRANT INSERT ON "authz"."outbox" TO "fun_fundament_api";
 
@@ -258,7 +254,7 @@ ALTER TABLE "authz"."outbox" VALIDATE CONSTRAINT "outbox_fk_install";
  - ACQUIRES_ACCESS_EXCLUSIVE_LOCK: Index drops will lock out all accesses to the table. They should be fast.
  - INDEX_DROPPED: Dropping this index means queries that use this index might perform worse because they will no longer will be able to leverage it.
 */
-ALTER TABLE "tenant"."organizations" DROP CONSTRAINT "pgschemadiff_tmpidx_organizations_uq_nam_R3y015VZQt$ku2GVio6wIg";
+ALTER TABLE "tenant"."organizations" DROP CONSTRAINT "pgschemadiff_tmpidx_organizations_uq_nam_SlS4TalqScme7Yc3MlNHxQ";
 
 
 -- Statements generated automatically, please review:

@@ -3,7 +3,7 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="43"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="40"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
 	 last-position="264,-28" last-zoom="0.6" scene-rect="-588,-47,4506.2,2926.52"
 	 default-owner="postgres"
@@ -32,10 +32,6 @@ CAUTION: Do not modify this file unless you know what you are doing.
 </role>
 
 <role name="fun_authz"
- sql-disabled="true">
-</role>
-
-<role name="fun_authz_worker"
  sql-disabled="true">
 </role>
 
@@ -992,16 +988,16 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="outbox_ck_single_fk" type="ck-constr" table="authz.outbox">
-			<expression> <![CDATA[(
-    (organization_id IS NOT NULL)::int +
-    (user_id IS NOT NULL)::int +
-    (project_id IS NOT NULL)::int +
-    (project_member_id IS NOT NULL)::int +
-    (cluster_id IS NOT NULL)::int +
-    (node_pool_id IS NOT NULL)::int +
-    (namespace_id IS NOT NULL)::int +
-    (api_key_id IS NOT NULL)::int +
-    (install_id IS NOT NULL)::int
+			<expression> <![CDATA[num_nonnulls(
+	organization_id,
+	user_id,
+	project_id,
+	project_member_id,
+	cluster_id,
+	node_pool_id,
+	namespace_id,
+	api_key_id,
+	install_id
 ) = 1]]> </expression>
 	</constraint>
 </table>
@@ -1752,16 +1748,6 @@ END;]]> </definition>
 	<object name="authz.outbox" type="table"/>
 	<roles names="fun_authn_api"/>
 	<privileges insert="true"/>
-</permission>
-<permission>
-	<object name="authz.outbox" type="table"/>
-	<roles names="fun_authz_worker"/>
-	<privileges select="true" update="true"/>
-</permission>
-<permission>
-	<object name="authz" type="schema"/>
-	<roles names="fun_authz_worker"/>
-	<privileges usage="true"/>
 </permission>
 <permission>
 	<object name="authz" type="schema"/>
