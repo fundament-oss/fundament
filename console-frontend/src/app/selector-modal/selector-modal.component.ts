@@ -4,10 +4,6 @@ import {
   Output,
   EventEmitter,
   signal,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
-  OnChanges,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -39,7 +35,7 @@ interface Organization {
   templateUrl: './selector-modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SelectorModalComponent implements AfterViewInit, OnChanges {
+export class SelectorModalComponent {
   @Input() show = false;
   @Input() organizations: Organization[] = [];
   @Input() selectedOrgId: string | null = null;
@@ -49,27 +45,8 @@ export class SelectorModalComponent implements AfterViewInit, OnChanges {
   @Output() selectOrganization = new EventEmitter<string>();
   @Output() selectProject = new EventEmitter<string>();
 
-  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
-
   filterText = signal('');
   filterInputValue = signal('');
-
-  ngAfterViewInit(): void {
-    if (this.show) {
-      this.focusSearchInput();
-    }
-  }
-
-  ngOnChanges(): void {
-    if (this.show) {
-      // Use setTimeout to ensure the DOM is ready
-      setTimeout(() => this.focusSearchInput(), 0);
-    }
-  }
-
-  private focusSearchInput(): void {
-    this.searchInput?.nativeElement.focus();
-  }
 
   onClose(): void {
     this.closeModal.emit();

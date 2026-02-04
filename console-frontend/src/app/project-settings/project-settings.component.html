@@ -41,7 +41,6 @@
           @if (isEditing()) {
             <div class="flex gap-2">
               <input
-                #nameInput
                 type="text"
                 [ngModel]="editingName()"
                 (ngModelChange)="editingName.set($event)"

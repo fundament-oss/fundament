@@ -1,12 +1,4 @@
-import {
-  Component,
-  inject,
-  signal,
-  OnInit,
-  ChangeDetectionStrategy,
-  viewChild,
-  ElementRef,
-} from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -104,8 +96,6 @@ export class ClusterDetailsComponent implements OnInit {
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
   isLoadingPlugins = signal<boolean>(true);
-
-  namespaceNameInput = viewChild<ElementRef<HTMLInputElement>>('namespaceNameInput');
 
   namespaceForm = this.fb.group({
     projectId: ['', Validators.required],
@@ -329,7 +319,6 @@ export class ClusterDetailsComponent implements OnInit {
     this.namespaceForm.reset();
     this.showAddNamespaceModal.set(true);
     this.loadProjects();
-    setTimeout(() => this.namespaceNameInput()?.nativeElement.focus());
   }
 
   async createNamespace(): Promise<void> {

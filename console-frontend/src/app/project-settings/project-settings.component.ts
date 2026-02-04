@@ -1,12 +1,4 @@
-import {
-  Component,
-  inject,
-  ViewChild,
-  ElementRef,
-  signal,
-  OnInit,
-  ChangeDetectionStrategy,
-} from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -48,8 +40,6 @@ export class ProjectSettingsComponent implements OnInit {
   private projectClient = inject(PROJECT);
   private toastService = inject(ToastService);
   private organizationDataService = inject(OrganizationDataService);
-
-  @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   projectId = signal<string>('');
   project = signal<Project | undefined>(undefined);
@@ -94,11 +84,6 @@ export class ProjectSettingsComponent implements OnInit {
     if (currentProject) {
       this.isEditing.set(true);
       this.editingName.set(currentProject.name);
-
-      // Focus the input field after Angular updates the view
-      setTimeout(() => {
-        this.nameInput?.nativeElement.focus();
-      });
     }
   }
 

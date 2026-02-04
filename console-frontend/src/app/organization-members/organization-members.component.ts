@@ -1,14 +1,4 @@
-import {
-  Component,
-  inject,
-  OnInit,
-  signal,
-  ChangeDetectionStrategy,
-  viewChild,
-  ElementRef,
-  afterNextRender,
-  Injector,
-} from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -61,7 +51,6 @@ export class OrganizationMembersComponent implements OnInit {
   private titleService = inject(TitleService);
   private memberClient = inject(MEMBER);
   private authnService = inject(AuthnApiService);
-  private injector = inject(Injector);
 
   // Loading and error state
   isLoading = signal(true);
@@ -73,7 +62,6 @@ export class OrganizationMembersComponent implements OnInit {
   inviteEmail = signal('');
   inviteRole = signal('viewer');
   inviteError = signal<string | null>(null);
-  private emailInput = viewChild<ElementRef<HTMLInputElement>>('emailInput');
 
   // All members loaded from API (includes both active and pending)
   allMembers = signal<OrganizationMember[]>([]);
@@ -129,12 +117,6 @@ export class OrganizationMembersComponent implements OnInit {
     this.inviteRole.set('viewer');
     this.inviteError.set(null);
     this.isModalOpen.set(true);
-    afterNextRender(
-      () => {
-        this.emailInput()?.nativeElement.focus();
-      },
-      { injector: this.injector },
-    );
   }
 
   closeModal() {

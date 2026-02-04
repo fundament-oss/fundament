@@ -1,8 +1,16 @@
 @if (show) {
   <div class="modal-backdrop" (mouseup)="onBackdropClick($event)">
-    <div class="modal-container w-full" [class]="maxWidth" role="dialog" aria-modal="true">
+    <div
+      #modalDialog
+      class="modal-container w-full"
+      [class]="maxWidth"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="title ? 'modal-title' : null"
+      tabindex="-1"
+    >
       <div class="modal-header">
-        <h2 class="modal-title">
+        <h2 id="modal-title" class="modal-title">
           <ng-content select="[modal-title]" />
           @if (title) {
             {{ title }}
@@ -11,10 +19,10 @@
         <button
           type="button"
           (click)="onClose()"
-          class="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          class="cursor-pointer rounded-md text-gray-500 ring-indigo-500 hover:text-gray-700 focus:border-indigo-500 focus:ring-2 focus:outline-none dark:text-gray-400 dark:ring-offset-gray-950 dark:hover:text-gray-200"
           aria-label="Close"
         >
-          <ng-icon name="tablerX" size="1.5rem" />
+          <ng-icon name="tablerX" size="1.5rem" class="block!" />
         </button>
       </div>
 
