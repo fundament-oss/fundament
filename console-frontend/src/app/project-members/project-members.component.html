@@ -86,11 +86,7 @@
         <label for="userId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
           User
         </label>
-        <select
-          id="userId"
-          formControlName="userId"
-          class="w-full"
-        >
+        <select id="userId" formControlName="userId" class="w-full">
           <option value="">Select a user</option>
           @for (user of availableUsers(); track user.id) {
             <option [value]="user.id">{{ user.name }} ({{ user.email }})</option>
@@ -122,11 +118,7 @@
       <label for="role" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
         Role
       </label>
-      <select
-        id="role"
-        formControlName="role"
-        class="w-full"
-      >
+      <select id="role" formControlName="role" class="w-full">
         <option value="viewer">Project member - Read access to project resources</option>
         <option value="admin">Project admin - Full access to project resources</option>
       </select>

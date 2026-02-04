@@ -545,11 +545,7 @@
           <span class="text-sm text-gray-500 dark:text-gray-400">Loading projects...</span>
         </div>
       } @else {
-        <select
-          id="projectId"
-          formControlName="projectId"
-          class="w-full"
-        >
+        <select id="projectId" formControlName="projectId" class="w-full">
           @for (project of projects(); track project.id) {
             <option [value]="project.id">{{ project.name }}</option>
           }
