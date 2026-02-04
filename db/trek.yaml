@@ -6,7 +6,6 @@ roles:
   - name: fun_operator
   - name: fun_owner
   - name: fun_authz
-  - name: fun_authz_worker
 outputs:
   - sql
 templates:

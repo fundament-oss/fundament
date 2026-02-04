@@ -779,16 +779,16 @@ CREATE TABLE authz.outbox (
 	retries integer NOT NULL DEFAULT 0,
 	failed timestamptz,
 	CONSTRAINT outbox_pk PRIMARY KEY (id),
-	CONSTRAINT outbox_ck_single_fk CHECK ((
-    (organization_id IS NOT NULL)::int +
-    (user_id IS NOT NULL)::int +
-    (project_id IS NOT NULL)::int +
-    (project_member_id IS NOT NULL)::int +
-    (cluster_id IS NOT NULL)::int +
-    (node_pool_id IS NOT NULL)::int +
-    (namespace_id IS NOT NULL)::int +
-    (api_key_id IS NOT NULL)::int +
-    (install_id IS NOT NULL)::int
+	CONSTRAINT outbox_ck_single_fk CHECK (num_nonnulls(
+	organization_id,
+	user_id,
+	project_id,
+	project_member_id,
+	cluster_id,
+	node_pool_id,
+	namespace_id,
+	api_key_id,
+	install_id
 ) = 1)
 );
 -- ddl-end --
@@ -1541,22 +1541,6 @@ GRANT INSERT
 GRANT INSERT
    ON TABLE authz.outbox
    TO fun_authn_api;
-
--- ddl-end --
-
-
--- object: grant_rw_c2f3317443 | type: PERMISSION --
-GRANT SELECT,UPDATE
-   ON TABLE authz.outbox
-   TO fun_authz_worker;
-
--- ddl-end --
-
-
--- object: "grant_U_d5971f40d9" | type: PERMISSION --
-GRANT USAGE
-   ON SCHEMA authz
-   TO fun_authz_worker;
 
 -- ddl-end --
 
