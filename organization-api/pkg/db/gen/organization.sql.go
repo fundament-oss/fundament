@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const organizationGetByID = `-- name: OrganizationGetByID :one
@@ -21,9 +22,15 @@ type OrganizationGetByIDParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) OrganizationGetByID(ctx context.Context, arg OrganizationGetByIDParams) (TenantOrganization, error) {
+type OrganizationGetByIDRow struct {
+	ID      uuid.UUID
+	Name    string
+	Created pgtype.Timestamptz
+}
+
+func (q *Queries) OrganizationGetByID(ctx context.Context, arg OrganizationGetByIDParams) (OrganizationGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, organizationGetByID, arg.ID)
-	var i TenantOrganization
+	var i OrganizationGetByIDRow
 	err := row.Scan(&i.ID, &i.Name, &i.Created)
 	return i, err
 }
@@ -40,9 +47,15 @@ type OrganizationUpdateParams struct {
 	Name string
 }
 
-func (q *Queries) OrganizationUpdate(ctx context.Context, arg OrganizationUpdateParams) (TenantOrganization, error) {
+type OrganizationUpdateRow struct {
+	ID      uuid.UUID
+	Name    string
+	Created pgtype.Timestamptz
+}
+
+func (q *Queries) OrganizationUpdate(ctx context.Context, arg OrganizationUpdateParams) (OrganizationUpdateRow, error) {
 	row := q.db.QueryRow(ctx, organizationUpdate, arg.ID, arg.Name)
-	var i TenantOrganization
+	var i OrganizationUpdateRow
 	err := row.Scan(&i.ID, &i.Name, &i.Created)
 	return i, err
 }
