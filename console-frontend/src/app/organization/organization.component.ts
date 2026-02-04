@@ -1,4 +1,12 @@
-import { Component, inject, OnInit, ViewChild, ElementRef, signal } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
@@ -16,7 +24,6 @@ import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
 
 @Component({
   selector: 'app-organization',
-  standalone: true,
   imports: [CommonModule, FormsModule, NgIcon],
   viewProviders: [
     provideIcons({
@@ -25,6 +32,7 @@ import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
       tablerCheck,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './organization.component.html',
 })
 export class OrganizationComponent implements OnInit {

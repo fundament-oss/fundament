@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -16,13 +16,13 @@ import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-cluster-plugins',
-  standalone: true,
   imports: [CommonModule, SharedPluginsFormComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-plugins.component.html',
 })
 export class ClusterPluginsComponent implements OnInit {

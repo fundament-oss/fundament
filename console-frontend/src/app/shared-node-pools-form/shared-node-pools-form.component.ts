@@ -8,6 +8,7 @@ import {
   ElementRef,
   AfterViewInit,
   inject,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -31,7 +32,6 @@ export interface NodePoolData {
 
 @Component({
   selector: 'app-shared-node-pools-form',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule, NgIcon],
   viewProviders: [
     provideIcons({
@@ -39,6 +39,7 @@ export interface NodePoolData {
       tablerPlus,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-node-pools-form.component.html',
 })
 export class SharedNodePoolsFormComponent implements AfterViewInit {

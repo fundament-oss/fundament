@@ -1,4 +1,11 @@
-import { Component, inject, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import {
+  Component,
+  inject,
+  AfterViewInit,
+  ElementRef,
+  ViewChild,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
@@ -43,13 +50,13 @@ interface Project {
 
 @Component({
   selector: 'app-usage',
-  standalone: true,
   imports: [CommonModule, FormsModule, DateRangePickerComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerTableDown,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './usage.component.html',
 })
 export class UsageComponent implements AfterViewInit {

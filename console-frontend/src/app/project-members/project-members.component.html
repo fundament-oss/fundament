@@ -40,10 +40,8 @@
                   <td>
                     <span
                       class="badge"
-                      [ngClass]="{
-                        'badge-purple': user.role === 'Project admin',
-                        'badge-blue': user.role === 'Project member',
-                      }"
+                      [class.badge-purple]="user.role === 'Project admin'"
+                      [class.badge-blue]="user.role === 'Project member'"
                     >
                       {{ user.role }}
                     </span>
