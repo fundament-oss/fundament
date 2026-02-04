@@ -95,6 +95,13 @@ dex:
       username: Grace Lee
       userID: "019b4000-1000-7000-8000-000000000007"
 
+authzWorker:
+  enabled: true
+  replicas: 1
+  logLevel: debug
+  pollInterval: "2s"
+  batchSize: 100
+
 openfga:
   enabled: true
   # Use a non-standard API port since 8080 is used by ingress.

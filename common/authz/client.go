@@ -29,7 +29,7 @@ func New(cfg Config) (*Client, error) {
 		AuthorizationModelId: cfg.AuthorizationModelID,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create OpenFGA client: %w", err)
 	}
 
 	return &Client{fga: fgaClient}, nil
@@ -80,7 +80,7 @@ func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision,
 
 	resp, err := c.fga.Check(ctx).Body(checkReq).Execute()
 	if err != nil {
-		return Decision{Decision: false}, err
+		return Decision{Decision: false}, fmt.Errorf("check: %w", err)
 	}
 
 	decision := false
@@ -119,6 +119,8 @@ func (c *Client) Evaluations(ctx context.Context, req EvaluationsRequest) (Evalu
 
 		// Apply semantic short-circuiting
 		switch semantic {
+		case ExecuteAll:
+			// Continue processing all evaluations
 		case DenyOnFirstDeny:
 			if !decision.Decision {
 				return EvaluationsResponse{Evaluations: results}, nil
