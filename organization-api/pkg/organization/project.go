@@ -90,7 +90,11 @@ func (s *OrganizationServer) GetProjectByName(
 	}
 
 	return connect.NewResponse(&organizationv1.GetProjectResponse{
-		Project: adapter.FromProject(&project),
+		Project: &organizationv1.Project{
+			Id:        project.ID.String(),
+			Name:      project.Name,
+			CreatedAt: timestamppb.New(project.Created.Time),
+		},
 	}), nil
 }
 

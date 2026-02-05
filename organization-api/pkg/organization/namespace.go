@@ -155,7 +155,12 @@ func (s *OrganizationServer) GetNamespaceByClusterAndName(
 	}
 
 	return connect.NewResponse(&organizationv1.GetNamespaceByClusterAndNameResponse{
-		Namespace: adapter.FromClusterNamespace(&namespace),
+		Namespace: &organizationv1.ClusterNamespace{
+			Id:        namespace.ID.String(),
+			Name:      namespace.Name,
+			ProjectId: namespace.ProjectID.String(),
+			CreatedAt: timestamppb.New(namespace.Created.Time),
+		},
 	}), nil
 }
 
@@ -179,6 +184,11 @@ func (s *OrganizationServer) GetNamespaceByProjectAndName(
 	}
 
 	return connect.NewResponse(&organizationv1.GetNamespaceByProjectAndNameResponse{
-		Namespace: adapter.FromClusterNamespace(&namespace),
+		Namespace: &organizationv1.ClusterNamespace{
+			Id:        namespace.ID.String(),
+			Name:      namespace.Name,
+			ProjectId: namespace.ProjectID.String(),
+			CreatedAt: timestamppb.New(namespace.Created.Time),
+		},
 	}), nil
 }

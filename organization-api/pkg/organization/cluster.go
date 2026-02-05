@@ -98,7 +98,15 @@ func (s *OrganizationServer) GetClusterByName(
 	}
 
 	return connect.NewResponse(&organizationv1.GetClusterResponse{
-		Cluster: adapter.FromClusterDetail(cluster),
+		Cluster: &organizationv1.ClusterDetails{
+			Id:                cluster.ID.String(),
+			Name:              cluster.Name,
+			Region:            cluster.Region,
+			KubernetesVersion: cluster.KubernetesVersion,
+			Status:            clusterStatusFromDB(cluster.Status),
+			CreatedAt:         timestamppb.New(cluster.Created.Time),
+			ResourceUsage:     nil, // Stub
+		},
 	}), nil
 }
 
