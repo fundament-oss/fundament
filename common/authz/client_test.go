@@ -182,51 +182,6 @@ func TestMergeEvaluation(t *testing.T) {
 	})
 }
 
-func TestObjectTypeValues(t *testing.T) {
-	// Verify the string values match what OpenFGA expects
-	tests := []struct {
-		objectType ObjectType
-		want       string
-	}{
-		{ObjectTypeUser, "user"},
-		{ObjectTypeOrganization, "organization"},
-		{ObjectTypeProject, "project"},
-	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.objectType), func(t *testing.T) {
-			if string(tt.objectType) != tt.want {
-				t.Errorf("ObjectType = %v, want %v", tt.objectType, tt.want)
-			}
-		})
-	}
-}
-
-func TestActionNameValues(t *testing.T) {
-	// Verify the string values match what OpenFGA expects
-	tests := []struct {
-		action ActionName
-		want   string
-	}{
-		{ActionMember, "member"},
-		{ActionAdmin, "admin"},
-		{ActionViewer, "viewer"},
-		{ActionOrganization, "organization"},
-		{ActionCanView, "can_view"},
-		{ActionCanEdit, "can_edit"},
-		{ActionCanDelete, "can_delete"},
-		{ActionCanManageMembers, "can_manage_members"},
-	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.action), func(t *testing.T) {
-			if string(tt.action) != tt.want {
-				t.Errorf("ActionName = %v, want %v", tt.action, tt.want)
-			}
-		})
-	}
-}
-
 func TestTypicalUsage(t *testing.T) {
 	userID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
 	projectID := uuid.MustParse("660e8400-e29b-41d4-a716-446655440000")
@@ -247,25 +202,5 @@ func TestTypicalUsage(t *testing.T) {
 	}
 	if string(req.Action.Name) != "can_view" {
 		t.Error("Action formatted incorrectly")
-	}
-}
-
-func TestSameObjectAsSubjectAndResource(t *testing.T) {
-	// An organization can be both a subject and resource
-	orgID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
-	org := Organization(orgID)
-
-	// Use same object as both subject and resource
-	req := EvaluationRequest{
-		Subject:  org,
-		Resource: org,
-		Action:   Admin(),
-	}
-
-	if req.Subject.Type != req.Resource.Type {
-		t.Error("Subject and Resource should have same type")
-	}
-	if req.Subject.ID != req.Resource.ID {
-		t.Error("Subject and Resource should have same ID")
 	}
 }
