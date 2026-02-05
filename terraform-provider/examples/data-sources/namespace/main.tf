@@ -28,7 +28,7 @@ output "namespace_project" {
   value       = data.fundament_namespace.example.project_id
 }
 
-output "namespace_created_at" {
+output "namespace_created" {
   description = "When the namespace was created"
-  value       = data.fundament_namespace.example.created_at
+  value       = data.fundament_namespace.example.created
 }

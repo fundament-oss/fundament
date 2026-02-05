@@ -6,5 +6,5 @@ import "github.com/hashicorp/terraform-plugin-framework/types"
 type ProjectModel struct {
 	ID        types.String `tfsdk:"id"`
 	Name      types.String `tfsdk:"name"`
-	CreatedAt types.String `tfsdk:"created_at"`
+	Created types.String `tfsdk:"created"`
 }

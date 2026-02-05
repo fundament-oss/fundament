@@ -87,7 +87,7 @@ func clusterDetailsFromRow(row *db.TenantCluster) *organizationv1.ClusterDetails
 		Region:            row.Region,
 		KubernetesVersion: row.KubernetesVersion,
 		Status:            clusterStatusFromDB(row.Status),
-		CreatedAt:         timestamppb.New(row.Created.Time),
+		Created:         timestamppb.New(row.Created.Time),
 		ResourceUsage:     nil, // Stub
 	}
 }

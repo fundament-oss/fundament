@@ -36,7 +36,7 @@ func TestAccProjectDataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.fundament_project.test", "id", projectID),
 					resource.TestCheckResourceAttrSet("data.fundament_project.test", "name"),
-					resource.TestCheckResourceAttrSet("data.fundament_project.test", "created_at"),
+					resource.TestCheckResourceAttrSet("data.fundament_project.test", "created"),
 				),
 			},
 		},

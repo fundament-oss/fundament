@@ -54,8 +54,8 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 		fmt.Fprintln(w, "ID\tNAME\tPROJECT_ID\tCREATED")
 		for _, ns := range namespaces {
 			created := ""
-			if ns.CreatedAt.IsValid() {
-				created = ns.CreatedAt.AsTime().Format(TimeFormat)
+			if ns.Created.IsValid() {
+				created = ns.Created.AsTime().Format(TimeFormat)
 			}
 
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
@@ -91,8 +91,8 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 	fmt.Fprintln(w, "ID\tNAME\tCLUSTER_ID\tCREATED")
 	for _, ns := range namespaces {
 		created := ""
-		if ns.CreatedAt.IsValid() {
-			created = ns.CreatedAt.AsTime().Format(TimeFormat)
+		if ns.Created.IsValid() {
+			created = ns.Created.AsTime().Format(TimeFormat)
 		}
 
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",

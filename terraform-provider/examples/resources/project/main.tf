@@ -22,7 +22,7 @@ output "project_id" {
   value       = fundament_project.example.id
 }
 
-output "project_created_at" {
+output "project_created" {
   description = "The creation timestamp of the project"
-  value       = fundament_project.example.created_at
+  value       = fundament_project.example.created
 }

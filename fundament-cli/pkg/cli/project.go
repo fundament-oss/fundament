@@ -46,8 +46,8 @@ func (c *ProjectListCmd) Run(ctx *Context) error {
 	fmt.Fprintln(w, "ID\tNAME\tCREATED")
 	for _, project := range projects {
 		created := ""
-		if project.CreatedAt != nil {
-			created = project.CreatedAt.AsTime().Format(TimeFormat)
+		if project.Created != nil {
+			created = project.Created.AsTime().Format(TimeFormat)
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\n",
 			project.Id,
@@ -87,8 +87,8 @@ func (c *ProjectGetCmd) Run(ctx *Context) error {
 	PrintKeyValue(w, "ID", project.Id)
 	PrintKeyValue(w, "Name", project.Name)
 
-	if project.CreatedAt.IsValid() {
-		PrintKeyValue(w, "Created", project.CreatedAt.AsTime().Format(TimeFormat))
+	if project.Created.IsValid() {
+		PrintKeyValue(w, "Created", project.Created.AsTime().Format(TimeFormat))
 	}
 
 	return w.Flush()

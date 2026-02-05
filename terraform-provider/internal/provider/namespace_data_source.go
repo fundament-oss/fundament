@@ -54,7 +54,7 @@ func (d *NamespaceDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				Description: "The ID of the project that owns this namespace.",
 				Computed:    true,
 			},
-			"created_at": schema.StringAttribute{
+			"created": schema.StringAttribute{
 				Description: "The timestamp when the namespace was created.",
 				Computed:    true,
 			},
@@ -141,7 +141,7 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		if ns.Id == config.ID.ValueString() {
 			config.Name = types.StringValue(ns.Name)
 			config.ProjectID = types.StringValue(ns.ProjectId)
-			config.CreatedAt = types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339))
+			config.Created = types.StringValue(ns.Created.AsTime().Format(time.RFC3339))
 			found = true
 			break
 		}
