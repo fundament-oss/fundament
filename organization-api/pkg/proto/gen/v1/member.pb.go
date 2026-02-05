@@ -297,7 +297,7 @@ type Member struct {
 	Email *string `protobuf:"bytes,50,opt,name=email,proto3,oneof" json:"email,omitempty"`
 	// role is "viewer" or "admin"
 	Role          string                 `protobuf:"bytes,60,opt,name=role,proto3" json:"role,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Created       *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created,proto3" json:"created,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -367,9 +367,9 @@ func (x *Member) GetRole() string {
 	return ""
 }
 
-func (x *Member) GetCreatedAt() *timestamppb.Timestamp {
+func (x *Member) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.CreatedAt
+		return x.Created
 	}
 	return nil
 }
@@ -393,7 +393,7 @@ const file_v1_member_proto_rawDesc = "" +
 	"\x13DeleteMemberRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x16\n" +
-	"\x14DeleteMemberResponse\"\xd6\x01\n" +
+	"\x14DeleteMemberResponse\"\xd1\x01\n" +
 	"\x06Member\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -401,9 +401,8 @@ const file_v1_member_proto_rawDesc = "" +
 	"\vexternal_id\x18\x1e \x01(\tH\x00R\n" +
 	"externalId\x88\x01\x01\x12\x19\n" +
 	"\x05email\x182 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x12\n" +
-	"\x04role\x18< \x01(\tR\x04role\x129\n" +
-	"\n" +
-	"created_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\x0e\n" +
+	"\x04role\x18< \x01(\tR\x04role\x124\n" +
+	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreatedB\x0e\n" +
 	"\f_external_idB\b\n" +
 	"\x06_email2\xa3\x02\n" +
 	"\rMemberService\x12X\n" +
@@ -437,7 +436,7 @@ var file_v1_member_proto_goTypes = []any{
 var file_v1_member_proto_depIdxs = []int32{
 	6, // 0: organization.v1.ListMembersResponse.members:type_name -> organization.v1.Member
 	6, // 1: organization.v1.InviteMemberResponse.member:type_name -> organization.v1.Member
-	7, // 2: organization.v1.Member.created_at:type_name -> google.protobuf.Timestamp
+	7, // 2: organization.v1.Member.created:type_name -> google.protobuf.Timestamp
 	0, // 3: organization.v1.MemberService.ListMembers:input_type -> organization.v1.ListMembersRequest
 	2, // 4: organization.v1.MemberService.InviteMember:input_type -> organization.v1.InviteMemberRequest
 	4, // 5: organization.v1.MemberService.DeleteMember:input_type -> organization.v1.DeleteMemberRequest

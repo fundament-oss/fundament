@@ -71,7 +71,7 @@ func (r *NamespaceResource) Schema(ctx context.Context, req resource.SchemaReque
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"created_at": schema.StringAttribute{
+			"created": schema.StringAttribute{
 				Description: "The timestamp when the namespace was created.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
@@ -165,7 +165,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	// Set the ID from the response
 	plan.ID = types.StringValue(createResp.Msg.NamespaceId)
 
-	// Read back the namespace to get created_at and other computed fields
+	// Read back the namespace to get created and other computed fields
 	// We need to list namespaces in the cluster to get the full details
 	listReq := connect.NewRequest(&organizationv1.ListClusterNamespacesRequest{
 		ClusterId: plan.ClusterID.ValueString(),
@@ -184,7 +184,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	var found bool
 	for _, ns := range listResp.Msg.Namespaces {
 		if ns.Id == plan.ID.ValueString() {
-			plan.CreatedAt = types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339))
+			plan.Created = types.StringValue(ns.Created.AsTime().Format(time.RFC3339))
 			found = true
 			break
 		}
@@ -200,7 +200,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 
 	tflog.Info(ctx, "Created namespace", map[string]any{
 		"id":         plan.ID.ValueString(),
-		"created_at": plan.CreatedAt.ValueString(),
+		"created": plan.Created.ValueString(),
 	})
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -258,7 +258,7 @@ func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 		if ns.Id == state.ID.ValueString() {
 			state.Name = types.StringValue(ns.Name)
 			state.ProjectID = types.StringValue(ns.ProjectId)
-			state.CreatedAt = types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339))
+			state.Created = types.StringValue(ns.Created.AsTime().Format(time.RFC3339))
 			found = true
 			break
 		}

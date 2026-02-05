@@ -55,7 +55,7 @@ func memberFromInviteRow(m *db.MemberInviteRow) *organizationv1.Member {
 		Id:        m.ID.String(),
 		Name:      m.Name,
 		Role:      m.Role,
-		CreatedAt: timestamppb.New(m.Created.Time),
+		Created: timestamppb.New(m.Created.Time),
 	}
 
 	if m.ExternalID.Valid {

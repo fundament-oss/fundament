@@ -36,7 +36,7 @@ interface OrganizationMember {
   role: string;
   isCurrentUser?: boolean;
   isPending: boolean;
-  createdAt?: Date;
+  created?: Date;
 }
 
 @Component({
@@ -111,7 +111,7 @@ export class OrganizationMembersComponent implements OnInit {
         role: member.role,
         isCurrentUser: currentUser?.id === member.id,
         isPending: !member.externalId,
-        createdAt: member.createdAt ? timestampDate(member.createdAt) : undefined,
+        created: member.created ? timestampDate(member.created) : undefined,
       }));
 
       this.allMembers.set(members);

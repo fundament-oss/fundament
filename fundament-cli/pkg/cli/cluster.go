@@ -85,8 +85,8 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 	PrintKeyValue(w, "Region", cluster.Region)
 	PrintKeyValue(w, "Kubernetes Version", cluster.KubernetesVersion)
 	PrintKeyValue(w, "Status", formatClusterStatus(cluster.Status))
-	if cluster.CreatedAt != nil {
-		PrintKeyValue(w, "Created", cluster.CreatedAt.AsTime().Format(TimeFormat))
+	if cluster.Created != nil {
+		PrintKeyValue(w, "Created", cluster.Created.AsTime().Format(TimeFormat))
 	}
 	return w.Flush()
 }

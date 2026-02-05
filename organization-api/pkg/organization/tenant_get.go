@@ -33,7 +33,7 @@ func (s *Server) GetOrganization(
 	}), nil
 }
 
-func organizationFromRow(row *db.TenantOrganization) *organizationv1.Organization {
+func organizationFromRow(row *db.OrganizationGetByIDRow) *organizationv1.Organization {
 	return &organizationv1.Organization{
 		Id:      row.ID.String(),
 		Name:    row.Name,

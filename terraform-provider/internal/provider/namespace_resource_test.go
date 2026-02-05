@@ -13,7 +13,7 @@ func TestNamespaceModel_Resource(t *testing.T) {
 		Name:      types.StringValue("test-namespace"),
 		ProjectID: types.StringValue("test-project-id"),
 		ClusterID: types.StringValue("test-cluster-id"),
-		CreatedAt: types.StringValue("2024-01-01T00:00:00Z"),
+		Created: types.StringValue("2024-01-01T00:00:00Z"),
 	}
 
 	if model.ID.ValueString() != "test-namespace-id" {
@@ -32,8 +32,8 @@ func TestNamespaceModel_Resource(t *testing.T) {
 		t.Errorf("Expected cluster_id 'test-cluster-id', got '%s'", model.ClusterID.ValueString())
 	}
 
-	if model.CreatedAt.ValueString() != "2024-01-01T00:00:00Z" {
-		t.Errorf("Expected created_at '2024-01-01T00:00:00Z', got '%s'", model.CreatedAt.ValueString())
+	if model.Created.ValueString() != "2024-01-01T00:00:00Z" {
+		t.Errorf("Expected created '2024-01-01T00:00:00Z', got '%s'", model.Created.ValueString())
 	}
 }
 
@@ -44,15 +44,15 @@ func TestNamespaceModel_NullValues(t *testing.T) {
 		Name:      types.StringValue("test-namespace"),
 		ProjectID: types.StringValue("test-project-id"),
 		ClusterID: types.StringValue("test-cluster-id"),
-		CreatedAt: types.StringNull(),
+		Created: types.StringNull(),
 	}
 
 	if !model.ID.IsNull() {
 		t.Error("Expected ID to be null")
 	}
 
-	if !model.CreatedAt.IsNull() {
-		t.Error("Expected CreatedAt to be null")
+	if !model.Created.IsNull() {
+		t.Error("Expected Created to be null")
 	}
 
 	if model.Name.IsNull() {

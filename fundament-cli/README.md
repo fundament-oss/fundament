@@ -100,7 +100,7 @@ fundament project list -o json
   {
     "id": "019424a8-1234-7000-8000-000000000001",
     "name": "my-project",
-    "created_at": "2024-01-15T10:30:00Z"
+    "created": "2024-01-15T10:30:00Z"
   }
 ]
 ```

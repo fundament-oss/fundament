@@ -37,6 +37,6 @@ func projectFromGetRow(row *db.TenantProject) *organizationv1.Project {
 	return &organizationv1.Project{
 		Id:        row.ID.String(),
 		Name:      row.Name,
-		CreatedAt: timestamppb.New(row.Created.Time),
+		Created: timestamppb.New(row.Created.Time),
 	}
 }

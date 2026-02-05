@@ -37,6 +37,6 @@ func installFromRow(row *db.ZappstoreInstall) *organizationv1.Install {
 	return &organizationv1.Install{
 		Id:        row.ID.String(),
 		PluginId:  row.PluginID.String(),
-		CreatedAt: timestamppb.New(row.Created.Time),
+		Created: timestamppb.New(row.Created.Time),
 	}
 }

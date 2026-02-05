@@ -40,7 +40,7 @@ func memberFromListRow(m *db.MemberListByOrganizationIDRow) *organizationv1.Memb
 		Id:        m.ID.String(),
 		Name:      m.Name,
 		Role:      m.Role,
-		CreatedAt: timestamppb.New(m.Created.Time),
+		Created: timestamppb.New(m.Created.Time),
 	}
 
 	if m.ExternalID.Valid {

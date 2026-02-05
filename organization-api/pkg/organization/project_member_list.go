@@ -40,6 +40,6 @@ func projectMemberFromListRow(row *db.ProjectMemberListRow) *organizationv1.Proj
 		UserId:    row.UserID.String(),
 		UserName:  row.UserName,
 		Role:      projectMemberRoleFromDB(row.Role),
-		CreatedAt: timestamppb.New(row.Created.Time),
+		Created: timestamppb.New(row.Created.Time),
 	}
 }

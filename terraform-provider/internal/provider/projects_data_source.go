@@ -60,7 +60,7 @@ func (d *ProjectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 							Description: "The name of the project.",
 							Computed:    true,
 						},
-						"created_at": schema.StringAttribute{
+						"created": schema.StringAttribute{
 							Description: "The timestamp when the project was created.",
 							Computed:    true,
 						},
@@ -136,16 +136,16 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 	// Map response to state
 	state.Projects = make([]ProjectModel, len(rpcResp.Msg.Projects))
 	for i, project := range rpcResp.Msg.Projects {
-		var createdAt basetypes.StringValue
+		var created basetypes.StringValue
 
-		if project.CreatedAt.CheckValid() == nil {
-			createdAt = types.StringValue(project.CreatedAt.String())
+		if project.Created.CheckValid() == nil {
+			created = types.StringValue(project.Created.String())
 		}
 
 		state.Projects[i] = ProjectModel{
-			ID:        types.StringValue(project.Id),
-			Name:      types.StringValue(project.Name),
-			CreatedAt: createdAt,
+			ID:      types.StringValue(project.Id),
+			Name:    types.StringValue(project.Name),
+			Created: created,
 		}
 	}
 

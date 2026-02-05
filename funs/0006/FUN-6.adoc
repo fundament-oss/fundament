@@ -174,7 +174,7 @@ Messages follow consistent naming patterns:
 ===== Fields
 
 * **IDs**: Use `<object>_id` for foreign key references (e.g., `cluster_id`, `node_pool_id`, `plugin_id`)
-* **Timestamps**: Use `created_at` for creation timestamps
+* **Timestamps**: Use past tense for timestamp fields (e.g., `created`, `deleted`, `revoked`)
 * **snake_case**: All field names use snake_case (e.g., `kubernetes_version`, `machine_type`, `autoscale_min`)
 
 ===== Identifiers (UUIDv7)

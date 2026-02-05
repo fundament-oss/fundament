@@ -73,7 +73,7 @@ func (d *ProjectNamespacesDataSource) Schema(ctx context.Context, req datasource
 							Description: "The ID of the cluster where this namespace is deployed.",
 							Computed:    true,
 						},
-						"created_at": schema.StringAttribute{
+						"created": schema.StringAttribute{
 							Description: "The timestamp when the namespace was created.",
 							Computed:    true,
 						},
@@ -164,7 +164,7 @@ func (d *ProjectNamespacesDataSource) Read(ctx context.Context, req datasource.R
 			Name:      types.StringValue(ns.Name),
 			ProjectID: types.StringValue(projectID), // Set from request context
 			ClusterID: types.StringValue(ns.ClusterId),
-			CreatedAt: types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339)),
+			Created: types.StringValue(ns.Created.AsTime().Format(time.RFC3339)),
 		}
 	}
 

@@ -67,7 +67,7 @@ func clusterNamespaceFromRow(row *db.TenantNamespace) *organizationv1.ClusterNam
 		Id:        row.ID.String(),
 		Name:      row.Name,
 		ProjectId: row.ProjectID.String(),
-		CreatedAt: timestamppb.New(row.Created.Time),
+		Created: timestamppb.New(row.Created.Time),
 	}
 }
 
@@ -76,6 +76,6 @@ func projectNamespaceFromRow(row *db.TenantNamespace) *organizationv1.ProjectNam
 		Id:        row.ID.String(),
 		Name:      row.Name,
 		ClusterId: row.ClusterID.String(),
-		CreatedAt: timestamppb.New(row.Created.Time),
+		Created: timestamppb.New(row.Created.Time),
 	}
 }
