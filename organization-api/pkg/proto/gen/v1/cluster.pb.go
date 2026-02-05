@@ -2462,10 +2462,11 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\x11GetClusterRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"-\n" +
-	"\x17GetClusterByNameRequest\x12\x12\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"9\n" +
+	"\x17GetClusterByNameRequest\x12\x1e\n" +
 	"\x04name\x18\n" +
-	" \x01(\tR\x04name\"O\n" +
+	" \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\"O\n" +
 	"\x12GetClusterResponse\x129\n" +
 	"\acluster\x18\n" +
 	" \x01(\v2\x1f.organization.v1.ClusterDetailsR\acluster\"\xb9\x02\n" +
@@ -2655,18 +2656,22 @@ const file_v1_cluster_proto_rawDesc = "" +
 	" \x01(\tR\vnamespaceId\"E\n" +
 	"\x16DeleteNamespaceRequest\x12+\n" +
 	"\fnamespace_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vnamespaceId\"o\n" +
-	"#GetNamespaceByClusterAndNameRequest\x12!\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vnamespaceId\"\xe9\x01\n" +
+	"#GetNamespaceByClusterAndNameRequest\x12-\n" +
 	"\fcluster_name\x18\n" +
-	" \x01(\tR\vclusterName\x12%\n" +
-	"\x0enamespace_name\x18\x14 \x01(\tR\rnamespaceName\"g\n" +
+	" \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\vclusterName\x12\x92\x01\n" +
+	"\x0enamespace_name\x18\x14 \x01(\tBk\xbaHh\xba\x01a\n" +
+	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')r\x02\x18?R\rnamespaceName\"g\n" +
 	"$GetNamespaceByClusterAndNameResponse\x12?\n" +
 	"\tnamespace\x18\n" +
-	" \x01(\v2!.organization.v1.ClusterNamespaceR\tnamespace\"o\n" +
-	"#GetNamespaceByProjectAndNameRequest\x12!\n" +
+	" \x01(\v2!.organization.v1.ClusterNamespaceR\tnamespace\"\xc7\x02\n" +
+	"#GetNamespaceByProjectAndNameRequest\x12\x8a\x01\n" +
 	"\fproject_name\x18\n" +
-	" \x01(\tR\vprojectName\x12%\n" +
-	"\x0enamespace_name\x18\x14 \x01(\tR\rnamespaceName\"g\n" +
+	" \x01(\tBg\xbaHd\xba\x01a\n" +
+	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\vprojectName\x12\x92\x01\n" +
+	"\x0enamespace_name\x18\x14 \x01(\tBk\xbaHh\xba\x01a\n" +
+	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')r\x02\x18?R\rnamespaceName\"g\n" +
 	"$GetNamespaceByProjectAndNameResponse\x12?\n" +
 	"\tnamespace\x18\n" +
 	" \x01(\v2!.organization.v1.ClusterNamespaceR\tnamespace2\x89\x10\n" +

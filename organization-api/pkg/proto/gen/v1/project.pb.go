@@ -1090,10 +1090,11 @@ const file_v1_project_proto_rawDesc = "" +
 	"\x11GetProjectRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"-\n" +
-	"\x17GetProjectByNameRequest\x12\x12\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"\x96\x01\n" +
+	"\x17GetProjectByNameRequest\x12{\n" +
 	"\x04name\x18\n" +
-	" \x01(\tR\x04name\"H\n" +
+	" \x01(\tBg\xbaHd\xba\x01a\n" +
+	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\x04name\"H\n" +
 	"\x12GetProjectResponse\x122\n" +
 	"\aproject\x18\n" +
 	" \x01(\v2\x18.organization.v1.ProjectR\aproject\"h\n" +

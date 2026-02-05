@@ -35,6 +35,7 @@ func (s *OrganizationServer) ListClusterNamespaces(
 			Id:        namespaces[i].ID.String(),
 			Name:      namespaces[i].Name,
 			ProjectId: namespaces[i].ProjectID.String(),
+			ClusterId: namespaces[i].ClusterID.String(),
 			CreatedAt: timestamppb.New(namespaces[i].Created.Time),
 		})
 	}
@@ -159,6 +160,7 @@ func (s *OrganizationServer) GetNamespaceByClusterAndName(
 			Id:        namespace.ID.String(),
 			Name:      namespace.Name,
 			ProjectId: namespace.ProjectID.String(),
+			ClusterId: namespace.ClusterID.String(),
 			CreatedAt: timestamppb.New(namespace.Created.Time),
 		},
 	}), nil
@@ -188,6 +190,7 @@ func (s *OrganizationServer) GetNamespaceByProjectAndName(
 			Id:        namespace.ID.String(),
 			Name:      namespace.Name,
 			ProjectId: namespace.ProjectID.String(),
+			ClusterId: namespace.ClusterID.String(),
 			CreatedAt: timestamppb.New(namespace.Created.Time),
 		},
 	}), nil

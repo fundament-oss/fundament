@@ -103,7 +103,10 @@ message GetClusterRequest {
 
 // Get cluster by name request
 message GetClusterByNameRequest {
-  string name = 10;
+  string name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
 }
 
 // Get cluster response
@@ -360,8 +363,18 @@ message DeleteNamespaceRequest {
 
 // Get namespace by cluster and name request
 message GetNamespaceByClusterAndNameRequest {
-  string cluster_name = 10;
-  string namespace_name = 20;
+  string cluster_name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string namespace_name = 20 [
+    (buf.validate.field).string = {max_len: 63},
+    (buf.validate.field).cel = {
+      id: "dns1123label"
+      message: "must be a valid DNS-1123 label"
+      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+    }
+  ];
 }
 
 // Get namespace by cluster and name response
@@ -371,8 +384,19 @@ message GetNamespaceByClusterAndNameResponse {
 
 // Get namespace by project and name request
 message GetNamespaceByProjectAndNameRequest {
-  string project_name = 10;
-  string namespace_name = 20;
+  string project_name = 10 [(buf.validate.field).cel = {
+    id: "dns1123label"
+    message: "must be a valid DNS-1123 label"
+    expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+  }];
+  string namespace_name = 20 [
+    (buf.validate.field).string = {max_len: 63},
+    (buf.validate.field).cel = {
+      id: "dns1123label"
+      message: "must be a valid DNS-1123 label"
+      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+    }
+  ];
 }
 
 // Get namespace by project and name response

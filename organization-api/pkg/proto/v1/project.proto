@@ -60,7 +60,11 @@ message GetProjectRequest {
 
 // Get project by name request
 message GetProjectByNameRequest {
-  string name = 10;
+  string name = 10 [(buf.validate.field).cel = {
+    id: "dns1123label"
+    message: "must be a valid DNS-1123 label"
+    expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+  }];
 }
 
 // Get project response
