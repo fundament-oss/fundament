@@ -2,9 +2,8 @@ package authz
 
 import (
 	"context"
-	"fmt"
+	"maps"
 
-	openfga "github.com/openfga/go-sdk"
 	"github.com/openfga/go-sdk/client"
 )
 
@@ -15,12 +14,13 @@ type Config struct {
 	AuthorizationModelID string `env:"OPENFGA_AUTHORIZATION_MODEL_ID"`
 }
 
-// Client wraps the OpenFGA SDK client with convenience methods.
+// Client wraps the OpenFGA SDK client with an AuthZEN-compatible interface.
+// See https://openid.github.io/authzen/ for the AuthZEN specification.
 type Client struct {
 	fga *client.OpenFgaClient
 }
 
-// New creates a new OpenFGA authorization client.
+// New creates a new authorization client.
 func New(cfg Config) (*Client, error) {
 	fgaClient, err := client.NewSdkClient(&client.ClientConfiguration{
 		ApiUrl:               cfg.APIURL,
@@ -28,73 +28,95 @@ func New(cfg Config) (*Client, error) {
 		AuthorizationModelId: cfg.AuthorizationModelID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create OpenFGA client: %w", err)
+		return nil, err
 	}
 
 	return &Client{fga: fgaClient}, nil
 }
 
-// Check performs an authorization check.
-// Returns true if the user has the specified relation on the object.
-func (c *Client) Check(ctx context.Context, user, relation, object string) (bool, error) {
+// Evaluate performs a single access evaluation following the AuthZEN Access Evaluation API.
+// Returns a Decision indicating whether the subject can perform the action on the resource.
+func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision, error) {
 	resp, err := c.fga.Check(ctx).Body(client.ClientCheckRequest{
-		User:     user,
-		Relation: relation,
-		Object:   object,
+		User:     string(req.Subject.Type) + ":" + req.Subject.ID,
+		Relation: string(req.Action.Name),
+		Object:   string(req.Resource.Type) + ":" + req.Resource.ID,
 	}).Execute()
 	if err != nil {
-		return false, fmt.Errorf("OpenFGA check failed: %w", err)
+		return Decision{Decision: false}, err
 	}
 
-	if resp.Allowed == nil {
-		return false, nil
+	decision := false
+	if resp.Allowed != nil {
+		decision = *resp.Allowed
 	}
 
-	return *resp.Allowed, nil
+	return Decision{Decision: decision}, nil
 }
 
-// WriteTuples writes relationship tuples to OpenFGA.
-func (c *Client) WriteTuples(ctx context.Context, tuples ...openfga.TupleKey) error {
-	if len(tuples) == 0 {
-		return nil
+// Evaluations performs batch access evaluations following the AuthZEN Access Evaluations API.
+// Supports default values and evaluation semantics (execute_all, deny_on_first_deny, permit_on_first_permit).
+func (c *Client) Evaluations(ctx context.Context, req EvaluationsRequest) (EvaluationsResponse, error) {
+	semantic := ExecuteAll
+	if req.Options != nil && req.Options.Semantic != "" {
+		semantic = req.Options.Semantic
 	}
 
-	_, err := c.fga.WriteTuples(ctx).Body(tuples).Execute()
-	if err != nil {
-		return fmt.Errorf("OpenFGA write tuples failed: %w", err)
+	results := make([]Decision, 0, len(req.Evaluations))
+
+	for _, eval := range req.Evaluations {
+		// Apply defaults from top-level request
+		merged := mergeEvaluation(eval, req)
+
+		decision, err := c.Evaluate(ctx, merged)
+		if err != nil {
+			return EvaluationsResponse{}, err
+		}
+
+		results = append(results, decision)
+
+		// Apply semantic short-circuiting
+		switch semantic {
+		case DenyOnFirstDeny:
+			if !decision.Decision {
+				return EvaluationsResponse{Evaluations: results}, nil
+			}
+		case PermitOnFirstPermit:
+			if decision.Decision {
+				return EvaluationsResponse{Evaluations: results}, nil
+			}
+		}
 	}
 
-	return nil
+	return EvaluationsResponse{Evaluations: results}, nil
 }
 
-// DeleteTuples removes relationship tuples from OpenFGA.
-func (c *Client) DeleteTuples(ctx context.Context, tuples ...openfga.TupleKeyWithoutCondition) error {
-	if len(tuples) == 0 {
-		return nil
+// mergeEvaluation applies defaults from the batch request to an individual evaluation.
+func mergeEvaluation(eval EvaluationRequest, req EvaluationsRequest) EvaluationRequest {
+	result := eval
+
+	// Apply subject default if not specified in evaluation
+	if eval.Subject.Type == "" && req.Subject != nil {
+		result.Subject = *req.Subject
 	}
 
-	_, err := c.fga.DeleteTuples(ctx).Body(tuples).Execute()
-	if err != nil {
-		return fmt.Errorf("OpenFGA delete tuples failed: %w", err)
+	// Apply resource default if not specified in evaluation
+	if eval.Resource.Type == "" && req.Resource != nil {
+		result.Resource = *req.Resource
 	}
 
-	return nil
-}
-
-// Tuple creates a TupleKey for writing.
-func Tuple(user, relation, object string) openfga.TupleKey {
-	return openfga.TupleKey{
-		User:     user,
-		Relation: relation,
-		Object:   object,
+	// Apply action default if not specified in evaluation
+	if eval.Action.Name == "" && req.Action != nil {
+		result.Action = *req.Action
 	}
-}
 
-// TupleDelete creates a TupleKeyWithoutCondition for deletion.
-func TupleDelete(user, relation, object string) openfga.TupleKeyWithoutCondition {
-	return openfga.TupleKeyWithoutCondition{
-		User:     user,
-		Relation: relation,
-		Object:   object,
+	// Merge context (evaluation context overrides defaults)
+	if req.Context != nil || eval.Context != nil {
+		merged := make(Context)
+		maps.Copy(merged, req.Context)
+		maps.Copy(merged, eval.Context)
+		result.Context = merged
 	}
+
+	return result
 }
