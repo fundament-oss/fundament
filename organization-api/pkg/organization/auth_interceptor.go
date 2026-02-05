@@ -8,7 +8,7 @@ import (
 
 // AuthInterceptor is a Connect unary interceptor that validates JWT and injects context.
 // It skips authentication for public endpoints defined in isPublicEndpoint.
-func (s *OrganizationServer) AuthInterceptor() connect.UnaryInterceptorFunc {
+func (s *Server) AuthInterceptor() connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			// Skip auth for public endpoints
@@ -43,7 +43,7 @@ func (s *OrganizationServer) AuthInterceptor() connect.UnaryInterceptorFunc {
 
 // isPublicEndpoint checks if an endpoint should skip authentication.
 // Public endpoints are defined in a map and can be extended as needed.
-func (s *OrganizationServer) isPublicEndpoint(procedure string) bool {
+func (s *Server) isPublicEndpoint(procedure string) bool {
 	publicEndpoints := map[string]bool{
 		"/fundament.organization.v1.OrganizationService/HealthCheck": true,
 		// Add more public endpoints as needed
