@@ -8,5 +8,5 @@ type NamespaceModel struct {
 	Name      types.String `tfsdk:"name"`
 	ProjectID types.String `tfsdk:"project_id"`
 	ClusterID types.String `tfsdk:"cluster_id"`
-	Created types.String `tfsdk:"created"`
+	Created   types.String `tfsdk:"created"`
 }

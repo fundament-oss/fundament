@@ -164,7 +164,7 @@ func (d *ProjectNamespacesDataSource) Read(ctx context.Context, req datasource.R
 			Name:      types.StringValue(ns.Name),
 			ProjectID: types.StringValue(projectID), // Set from request context
 			ClusterID: types.StringValue(ns.ClusterId),
-			Created: types.StringValue(ns.Created.AsTime().Format(time.RFC3339)),
+			Created:   types.StringValue(ns.Created.AsTime().Format(time.RFC3339)),
 		}
 	}
 

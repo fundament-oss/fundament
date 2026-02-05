@@ -22,7 +22,6 @@ type NamespaceDataSource struct {
 	client *FundamentClient
 }
 
-
 // NewNamespaceDataSource creates a new NamespaceDataSource.
 func NewNamespaceDataSource() datasource.DataSource {
 	return &NamespaceDataSource{}

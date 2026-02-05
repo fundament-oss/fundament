@@ -13,7 +13,7 @@ func TestNamespaceModel_Resource(t *testing.T) {
 		Name:      types.StringValue("test-namespace"),
 		ProjectID: types.StringValue("test-project-id"),
 		ClusterID: types.StringValue("test-cluster-id"),
-		Created: types.StringValue("2024-01-01T00:00:00Z"),
+		Created:   types.StringValue("2024-01-01T00:00:00Z"),
 	}
 
 	if model.ID.ValueString() != "test-namespace-id" {
@@ -44,7 +44,7 @@ func TestNamespaceModel_NullValues(t *testing.T) {
 		Name:      types.StringValue("test-namespace"),
 		ProjectID: types.StringValue("test-project-id"),
 		ClusterID: types.StringValue("test-cluster-id"),
-		Created: types.StringNull(),
+		Created:   types.StringNull(),
 	}
 
 	if !model.ID.IsNull() {

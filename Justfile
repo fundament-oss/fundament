@@ -10,10 +10,10 @@ watch-d2:
 
 # Format all code and text in this repo
 fmt:
-    @find . -type f \( -name "*.md" -o -name "*.d2" \) -exec sed -i 's/enterprise/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
+    @find . -type f \( -name "*.md" -o -name "*.adoc" -o -name "*.d2" \) -exec sed -i 's/enterprise/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
     d2 fmt docs/assets/*.d2
+    go fmt ./...
     # TODO md fmt
-    # TODO go fmt
 
 # --- Cluster commands ---
 

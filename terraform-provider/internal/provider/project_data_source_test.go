@@ -9,8 +9,8 @@ import (
 func TestProjectModel_DataSource(t *testing.T) {
 	// Test that the model can be created with expected values
 	model := ProjectModel{
-		ID:        types.StringValue("test-id"),
-		Name:      types.StringValue("test-project"),
+		ID:      types.StringValue("test-id"),
+		Name:    types.StringValue("test-project"),
 		Created: types.StringValue("2024-01-15T10:30:00Z"),
 	}
 

@@ -17,14 +17,14 @@ func TestProjectNamespacesDataSourceModel(t *testing.T) {
 				Name:      types.StringValue("ns-1"),
 				ProjectID: types.StringValue("test-project-id"),
 				ClusterID: types.StringValue("cluster-1"),
-				Created: types.StringValue("2024-01-01T00:00:00Z"),
+				Created:   types.StringValue("2024-01-01T00:00:00Z"),
 			},
 			{
 				ID:        types.StringValue("namespace-2"),
 				Name:      types.StringValue("ns-2"),
 				ProjectID: types.StringValue("test-project-id"),
 				ClusterID: types.StringValue("cluster-2"),
-				Created: types.StringValue("2024-01-02T00:00:00Z"),
+				Created:   types.StringValue("2024-01-02T00:00:00Z"),
 			},
 		},
 	}

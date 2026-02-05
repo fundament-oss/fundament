@@ -15,8 +15,8 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 
-	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
+	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )

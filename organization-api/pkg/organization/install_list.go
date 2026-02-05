@@ -35,8 +35,8 @@ func (s *Server) ListInstalls(
 
 func installFromRow(row *db.ZappstoreInstall) *organizationv1.Install {
 	return &organizationv1.Install{
-		Id:        row.ID.String(),
-		PluginId:  row.PluginID.String(),
-		Created: timestamppb.New(row.Created.Time),
+		Id:       row.ID.String(),
+		PluginId: row.PluginID.String(),
+		Created:  timestamppb.New(row.Created.Time),
 	}
 }

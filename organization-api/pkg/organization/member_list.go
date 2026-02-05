@@ -37,9 +37,9 @@ func (s *Server) ListMembers(
 
 func memberFromListRow(m *db.MemberListByOrganizationIDRow) *organizationv1.Member {
 	member := &organizationv1.Member{
-		Id:        m.ID.String(),
-		Name:      m.Name,
-		Role:      m.Role,
+		Id:      m.ID.String(),
+		Name:    m.Name,
+		Role:    m.Role,
 		Created: timestamppb.New(m.Created.Time),
 	}
 
@@ -53,4 +53,3 @@ func memberFromListRow(m *db.MemberListByOrganizationIDRow) *organizationv1.Memb
 
 	return member
 }
-

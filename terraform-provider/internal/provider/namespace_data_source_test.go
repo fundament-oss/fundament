@@ -13,7 +13,7 @@ func TestNamespaceModel_DataSource(t *testing.T) {
 		ClusterID: types.StringValue("test-cluster-id"),
 		Name:      types.StringValue("test-namespace"),
 		ProjectID: types.StringValue("test-project-id"),
-		Created: types.StringValue("2024-01-01T00:00:00Z"),
+		Created:   types.StringValue("2024-01-01T00:00:00Z"),
 	}
 
 	if model.ID.ValueString() != "test-namespace-id" {

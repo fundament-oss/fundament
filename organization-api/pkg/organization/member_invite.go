@@ -52,9 +52,9 @@ func (s *Server) InviteMember(
 
 func memberFromInviteRow(m *db.MemberInviteRow) *organizationv1.Member {
 	member := &organizationv1.Member{
-		Id:        m.ID.String(),
-		Name:      m.Name,
-		Role:      m.Role,
+		Id:      m.ID.String(),
+		Name:    m.Name,
+		Role:    m.Role,
 		Created: timestamppb.New(m.Created.Time),
 	}
 
@@ -68,4 +68,3 @@ func memberFromInviteRow(m *db.MemberInviteRow) *organizationv1.Member {
 
 	return member
 }
-

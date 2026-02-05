@@ -27,7 +27,6 @@ type NamespaceResource struct {
 	client *FundamentClient
 }
 
-
 // NewNamespaceResource creates a new NamespaceResource.
 func NewNamespaceResource() resource.Resource {
 	return &NamespaceResource{}
@@ -199,7 +198,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	tflog.Info(ctx, "Created namespace", map[string]any{
-		"id":         plan.ID.ValueString(),
+		"id":      plan.ID.ValueString(),
 		"created": plan.Created.ValueString(),
 	})
 
