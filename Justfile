@@ -75,6 +75,7 @@ generate:
     go generate -x ./...
     cd console-frontend && buf generate
     cd e2e && buf generate
+    just fmt
 
 # Lint all Go code
 lint:
