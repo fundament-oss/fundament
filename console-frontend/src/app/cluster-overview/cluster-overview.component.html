@@ -317,11 +317,9 @@
                 <div class="text-right">
                   <span
                     class="badge-sm"
-                    [ngClass]="{
-                      'badge-purple': member.role === 'admin',
-                      'badge-blue': member.role === 'edit',
-                      'badge-green': member.role === 'view',
-                    }"
+                    [class.badge-purple]="member.role === 'admin'"
+                    [class.badge-blue]="member.role === 'edit'"
+                    [class.badge-green]="member.role === 'view'"
                   >
                     {{ member.role }}
                   </span>

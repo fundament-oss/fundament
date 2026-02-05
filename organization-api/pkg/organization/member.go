@@ -4,14 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/mail"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -29,8 +28,13 @@ func (s *OrganizationServer) ListMembers(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list members: %w", err))
 	}
 
+	result := make([]*organizationv1.Member, 0, len(members))
+	for i := range members {
+		result = append(result, memberFromListRow(&members[i]))
+	}
+
 	return connect.NewResponse(&organizationv1.ListMembersResponse{
-		Members: adapter.FromMembers(members),
+		Members: result,
 	}), nil
 }
 
@@ -44,23 +48,7 @@ func (s *OrganizationServer) InviteMember(
 	}
 
 	email := req.Msg.Email
-	if email == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("email is required"))
-	}
-
-	// Validate email format
-	if _, err := mail.ParseAddress(email); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid email address"))
-	}
-
-	// Validate and default role
 	role := req.Msg.Role
-	if role == "" {
-		role = "viewer"
-	}
-	if role != "viewer" && role != "admin" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("role must be 'viewer' or 'admin'"))
-	}
 
 	// Check if email is already in use within this organization
 	_, err := s.queries.MemberGetByEmail(ctx, db.MemberGetByEmailParams{
@@ -84,7 +72,7 @@ func (s *OrganizationServer) InviteMember(
 	}
 
 	return connect.NewResponse(&organizationv1.InviteMemberResponse{
-		Member: adapter.FromMemberInviteRow(&member),
+		Member: memberFromInviteRow(&member),
 	}), nil
 }
 
@@ -97,12 +85,9 @@ func (s *OrganizationServer) DeleteMember(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	memberID, err := uuid.Parse(req.Msg.Id)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid member id: %w", err))
-	}
+	memberID := uuid.MustParse(req.Msg.Id)
 
-	err = s.queries.MemberDelete(ctx, db.MemberDeleteParams{
+	err := s.queries.MemberDelete(ctx, db.MemberDeleteParams{
 		ID:             memberID,
 		OrganizationID: organizationID,
 	})
@@ -111,4 +96,42 @@ func (s *OrganizationServer) DeleteMember(
 	}
 
 	return connect.NewResponse(&organizationv1.DeleteMemberResponse{}), nil
+}
+
+func memberFromListRow(m *db.MemberListByOrganizationIDRow) *organizationv1.Member {
+	member := &organizationv1.Member{
+		Id:        m.ID.String(),
+		Name:      m.Name,
+		Role:      m.Role,
+		CreatedAt: timestamppb.New(m.Created.Time),
+	}
+
+	if m.ExternalID.Valid {
+		member.ExternalId = &m.ExternalID.String
+	}
+
+	if m.Email.Valid {
+		member.Email = &m.Email.String
+	}
+
+	return member
+}
+
+func memberFromInviteRow(m *db.MemberInviteRow) *organizationv1.Member {
+	member := &organizationv1.Member{
+		Id:        m.ID.String(),
+		Name:      m.Name,
+		Role:      m.Role,
+		CreatedAt: timestamppb.New(m.Created.Time),
+	}
+
+	if m.ExternalID.Valid {
+		member.ExternalId = &m.ExternalID.String
+	}
+
+	if m.Email.Valid {
+		member.Email = &m.Email.String
+	}
+
+	return member
 }

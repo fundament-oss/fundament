@@ -10,9 +10,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -32,8 +33,18 @@ func (s *OrganizationServer) ListClusters(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list clusters: %w", err))
 	}
 
+	summaries := make([]*organizationv1.ClusterSummary, 0, len(clusters))
+	for _, c := range clusters {
+		summaries = append(summaries, &organizationv1.ClusterSummary{
+			Id:     c.ID.String(),
+			Name:   c.Name,
+			Status: clusterStatusFromDB(c.Status),
+			Region: c.Region,
+		})
+	}
+
 	return connect.NewResponse(&organizationv1.ListClustersResponse{
-		Clusters: adapter.FromClustersSummary(clusters),
+		Clusters: summaries,
 	}), nil
 }
 
@@ -41,10 +52,7 @@ func (s *OrganizationServer) GetCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetClusterRequest],
 ) (*connect.Response[organizationv1.GetClusterResponse], error) {
-	clusterID, err := uuid.Parse(req.Msg.ClusterId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
-	}
+	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,
@@ -57,7 +65,15 @@ func (s *OrganizationServer) GetCluster(
 	}
 
 	return connect.NewResponse(&organizationv1.GetClusterResponse{
-		Cluster: adapter.FromClusterDetail(cluster),
+		Cluster: &organizationv1.ClusterDetails{
+			Id:                cluster.ID.String(),
+			Name:              cluster.Name,
+			Region:            cluster.Region,
+			KubernetesVersion: cluster.KubernetesVersion,
+			Status:            clusterStatusFromDB(cluster.Status),
+			CreatedAt:         timestamppb.New(cluster.Created.Time),
+			ResourceUsage:     nil, // Stub
+		},
 	}), nil
 }
 
@@ -90,11 +106,6 @@ func (s *OrganizationServer) CreateCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.CreateClusterRequest],
 ) (*connect.Response[organizationv1.CreateClusterResponse], error) {
-	input := adapter.ToClusterCreate(req.Msg)
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
@@ -102,10 +113,10 @@ func (s *OrganizationServer) CreateCluster(
 
 	params := db.ClusterCreateParams{
 		OrganizationID:    organizationID,
-		Name:              input.Name,
-		Region:            input.Region,
-		KubernetesVersion: input.KubernetesVersion,
-		Status:            "unspecified",
+		Name:              req.Msg.Name,
+		Region:            req.Msg.Region,
+		KubernetesVersion: req.Msg.KubernetesVersion,
+		Status:            dbconst.ClusterStatus_Unspecified,
 	}
 
 	clusterID, err := s.queries.ClusterCreate(ctx, params)
@@ -116,8 +127,8 @@ func (s *OrganizationServer) CreateCluster(
 	s.logger.InfoContext(ctx, "cluster created",
 		"cluster_id", clusterID,
 		"organization_id", organizationID,
-		"name", input.Name,
-		"region", input.Region,
+		"name", req.Msg.Name,
+		"region", req.Msg.Region,
 	)
 
 	return connect.NewResponse(&organizationv1.CreateClusterResponse{
@@ -129,21 +140,14 @@ func (s *OrganizationServer) UpdateCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateClusterRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	input, err := adapter.ToClusterUpdate(req.Msg)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
+	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	params := db.ClusterUpdateParams{
-		ID: input.ClusterID,
+		ID: clusterID,
 	}
 
-	if input.KubernetesVersion != nil {
-		params.KubernetesVersion = pgtype.Text{String: *input.KubernetesVersion, Valid: true}
+	if req.Msg.KubernetesVersion != nil {
+		params.KubernetesVersion = pgtype.Text{String: *req.Msg.KubernetesVersion, Valid: true}
 	}
 
 	rowsAffected, err := s.queries.ClusterUpdate(ctx, params)
@@ -155,7 +159,7 @@ func (s *OrganizationServer) UpdateCluster(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 	}
 
-	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", input.ClusterID)
+	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", clusterID)
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
@@ -164,10 +168,7 @@ func (s *OrganizationServer) DeleteCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteClusterRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	clusterID, err := uuid.Parse(req.Msg.ClusterId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
-	}
+	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	rowsAffected, err := s.queries.ClusterDelete(ctx, db.ClusterDeleteParams{ID: clusterID})
 	if err != nil {
@@ -187,13 +188,10 @@ func (s *OrganizationServer) GetClusterActivity(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetClusterActivityRequest],
 ) (*connect.Response[organizationv1.GetClusterActivityResponse], error) {
-	clusterID, err := uuid.Parse(req.Msg.ClusterId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
-	}
+	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	// Verify cluster exists and belongs to tenant
-	_, err = s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
+	_, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,
 	})
 	if err != nil {
@@ -213,10 +211,7 @@ func (s *OrganizationServer) GetKubeconfig(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetKubeconfigRequest],
 ) (*connect.Response[organizationv1.GetKubeconfigResponse], error) {
-	clusterID, err := uuid.Parse(req.Msg.ClusterId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster id: %w", err))
-	}
+	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,
@@ -249,4 +244,27 @@ users:
 	return connect.NewResponse(&organizationv1.GetKubeconfigResponse{
 		KubeconfigContent: kubeconfig,
 	}), nil
+}
+
+func clusterStatusFromDB(status dbconst.ClusterStatus) organizationv1.ClusterStatus {
+	switch status {
+	case dbconst.ClusterStatus_Provisioning:
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
+	case dbconst.ClusterStatus_Starting:
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING
+	case dbconst.ClusterStatus_Running:
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING
+	case dbconst.ClusterStatus_Upgrading:
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING
+	case dbconst.ClusterStatus_Error:
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR
+	case dbconst.ClusterStatus_Stopping:
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING
+	case dbconst.ClusterStatus_Stopped:
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED
+	case dbconst.ClusterStatus_Unspecified:
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED
+	default:
+		panic(fmt.Sprintf("unknown cluster status from db: %s", status))
+	}
 }

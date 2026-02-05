@@ -10,9 +10,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/organization-api/pkg/organization/adapter"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -30,8 +32,17 @@ func (s *OrganizationServer) ListProjects(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list projects: %w", err))
 	}
 
+	result := make([]*organizationv1.Project, 0, len(projects))
+	for i := range projects {
+		result = append(result, &organizationv1.Project{
+			Id:        projects[i].ID.String(),
+			Name:      projects[i].Name,
+			CreatedAt: timestamppb.New(projects[i].Created.Time),
+		})
+	}
+
 	return connect.NewResponse(&organizationv1.ListProjectsResponse{
-		Projects: adapter.FromProjects(projects),
+		Projects: result,
 	}), nil
 }
 
@@ -39,10 +50,7 @@ func (s *OrganizationServer) GetProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetProjectRequest],
 ) (*connect.Response[organizationv1.GetProjectResponse], error) {
-	projectID, err := uuid.Parse(req.Msg.ProjectId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid project id: %w", err))
-	}
+	projectID := uuid.MustParse(req.Msg.ProjectId)
 
 	project, err := s.queries.ProjectGetByID(ctx, db.ProjectGetByIDParams{ID: projectID})
 	if err != nil {
@@ -53,7 +61,11 @@ func (s *OrganizationServer) GetProject(
 	}
 
 	return connect.NewResponse(&organizationv1.GetProjectResponse{
-		Project: adapter.FromProject(&project),
+		Project: &organizationv1.Project{
+			Id:        project.ID.String(),
+			Name:      project.Name,
+			CreatedAt: timestamppb.New(project.Created.Time),
+		},
 	}), nil
 }
 
@@ -86,30 +98,62 @@ func (s *OrganizationServer) CreateProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.CreateProjectRequest],
 ) (*connect.Response[organizationv1.CreateProjectResponse], error) {
-	input := adapter.ToProjectCreate(req.Msg)
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	params := db.ProjectCreateParams{
-		OrganizationID: organizationID,
-		Name:           input.Name,
+	// Get user ID from context - the creator becomes the admin
+	userID, ok := UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
 	}
 
-	projectID, err := s.queries.ProjectCreate(ctx, params)
+	s.logger.DebugContext(ctx, "creating project with member",
+		"organization_id", organizationID,
+		"user_id", userID,
+		"name", req.Msg.Name,
+	)
+
+	// Start a transaction to create project and add creator as admin
+	tx, err := s.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
+	}
+	defer rollback.Rollback(ctx, tx, s.logger)
+
+	qtx := s.queries.WithTx(tx)
+
+	// Create the project
+	projectID, err := qtx.ProjectCreate(ctx, db.ProjectCreateParams{
+		OrganizationID: organizationID,
+		Name:           req.Msg.Name,
+	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create project: %w", err))
 	}
 
-	s.logger.InfoContext(ctx, "project created",
+	params := db.ProjectMemberCreateParams{
+		ProjectID: projectID,
+		UserID:    userID,
+		Role:      dbconst.ProjectMemberRole_Admin,
+	}
+
+	// Add creator as admin
+	_, err = qtx.ProjectMemberCreate(ctx, params)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to add project creator as admin: %w", err))
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
+	}
+
+	s.logger.DebugContext(ctx, "project created",
 		"project_id", projectID,
 		"organization_id", organizationID,
-		"name", input.Name,
+		"user_id", userID,
+		"name", req.Msg.Name,
 	)
 
 	return connect.NewResponse(&organizationv1.CreateProjectResponse{
@@ -121,21 +165,14 @@ func (s *OrganizationServer) UpdateProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateProjectRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	input, err := adapter.ToProjectUpdate(req.Msg)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	if err := s.validator.Validate(input); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
+	projectID := uuid.MustParse(req.Msg.ProjectId)
 
 	params := db.ProjectUpdateParams{
-		ID: input.ProjectID,
+		ID: projectID,
 	}
 
-	if input.Name != nil {
-		params.Name = pgtype.Text{String: *input.Name, Valid: true}
+	if req.Msg.Name != nil {
+		params.Name = pgtype.Text{String: *req.Msg.Name, Valid: true}
 	}
 
 	rowsAffected, err := s.queries.ProjectUpdate(ctx, params)
@@ -147,7 +184,7 @@ func (s *OrganizationServer) UpdateProject(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
 	}
 
-	s.logger.InfoContext(ctx, "project updated", "project_id", input.ProjectID)
+	s.logger.InfoContext(ctx, "project updated", "project_id", projectID)
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
@@ -156,10 +193,7 @@ func (s *OrganizationServer) DeleteProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteProjectRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	projectID, err := uuid.Parse(req.Msg.ProjectId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid project id: %w", err))
-	}
+	projectID := uuid.MustParse(req.Msg.ProjectId)
 
 	rowsAffected, err := s.queries.ProjectDelete(ctx, db.ProjectDeleteParams{ID: projectID})
 	if err != nil {

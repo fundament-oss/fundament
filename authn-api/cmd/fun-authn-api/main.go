@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
+	"connectrpc.com/validate"
 	"github.com/caarlos0/env/v11"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/rs/cors"
@@ -23,6 +24,7 @@ import (
 	"github.com/fundament-oss/fundament/authn-api/pkg/authn"
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
+	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )
@@ -150,10 +152,17 @@ func run() error {
 		}),
 		logging.WithLogOnEvents(logging.FinishCall),
 	)
-	path, handler := authnv1connect.NewAuthnServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
+
+	interceptors := connect.WithInterceptors(
+		connectrecovery.NewInterceptor(logger),
+		validate.NewInterceptor(),
+		loggingInterceptor,
+	)
+
+	path, handler := authnv1connect.NewAuthnServiceHandler(server, interceptors)
 	mux.Handle(path, handler)
 
-	tokenPath, tokenHandler := authnv1connect.NewTokenServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
+	tokenPath, tokenHandler := authnv1connect.NewTokenServiceHandler(server, interceptors)
 	mux.Handle(tokenPath, tokenHandler)
 
 	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)

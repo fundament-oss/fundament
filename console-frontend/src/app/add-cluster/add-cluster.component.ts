@@ -1,4 +1,12 @@
-import { Component, ViewChild, ElementRef, AfterViewInit, inject, OnInit } from '@angular/core';
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  inject,
+  OnInit,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -7,8 +15,8 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
 
 @Component({
   selector: 'app-add-cluster',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster.component.html',
 })
 export class AddClusterComponent implements AfterViewInit, OnInit {

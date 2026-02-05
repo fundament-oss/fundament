@@ -14,7 +14,6 @@ import (
 
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/authn-api/pkg/model"
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 )
 
@@ -190,13 +189,13 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := &model.User{
+	u := &user{
 		ID:             claims.UserID,
 		OrganizationID: claims.OrganizationID,
 		Name:           claims.Name,
 	}
 
-	accessToken, err := s.generateJWT(user, claims.Groups)
+	accessToken, err := s.generateJWT(u, claims.Groups)
 	if err != nil {
 		s.logger.Error("failed to generate token", "error", err)
 		if err := s.writeJSON(w, http.StatusInternalServerError, authnhttp.ErrorResponse{Error: "Failed to generate token"}); err != nil {
@@ -326,7 +325,7 @@ type oidcClaims struct {
 // processOIDCLogin handles the common logic for processing an OIDC login,
 // including user lookup/creation and JWT generation.
 // Returns the user, groups, and access token on success.
-func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, loginMethod string) (*model.User, string, error) {
+func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
 	// Try by external ID
 	existingUser, err := s.queries.UserGetByExternalID(ctx, db.UserGetByExternalIDParams{
 		ExternalID: pgtype.Text{String: claims.Sub, Valid: true},
@@ -357,9 +356,9 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 	return s.handleNewUser(ctx, claims, loginMethod)
 }
 
-// userFromUpsertRow converts a db.UserUpsertRow to *User.
-func userFromUpsertRow(row *db.UserUpsertRow) *model.User {
-	return &model.User{
+// userFromUpsertRow converts a db.UserUpsertRow to *user.
+func userFromUpsertRow(row *db.UserUpsertRow) *user {
+	return &user{
 		ID:             row.ID,
 		OrganizationID: row.OrganizationID,
 		Name:           row.Name,
@@ -367,9 +366,9 @@ func userFromUpsertRow(row *db.UserUpsertRow) *model.User {
 	}
 }
 
-// userFromGetByIDRow converts a db.UserGetByIDRow to *User.
-func userFromGetByIDRow(row *db.UserGetByIDRow) *model.User {
-	return &model.User{
+// userFromGetByIDRow converts a db.UserGetByIDRow to *user.
+func userFromGetByIDRow(row *db.UserGetByIDRow) *user {
+	return &user{
 		ID:             row.ID,
 		OrganizationID: row.OrganizationID,
 		Name:           row.Name,
@@ -377,8 +376,8 @@ func userFromGetByIDRow(row *db.UserGetByIDRow) *model.User {
 	}
 }
 
-// generateAccessToken creates a User from a db row and generates a JWT.
-func (s *AuthnServer) generateAccessToken(row *db.UserUpsertRow, groups []string) (*model.User, string, error) {
+// generateAccessToken creates a user from a db row and generates a JWT.
+func (s *AuthnServer) generateAccessToken(row *db.UserUpsertRow, groups []string) (*user, string, error) {
 	user := userFromUpsertRow(row)
 	accessToken, err := s.generateJWT(user, groups)
 	if err != nil {
@@ -388,7 +387,7 @@ func (s *AuthnServer) generateAccessToken(row *db.UserUpsertRow, groups []string
 }
 
 // handleExistingUser handles login for users with a matching external_id.
-func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims, existingUser *db.UserGetByExternalIDRow, loginMethod string) (*model.User, string, error) {
+func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims, existingUser *db.UserGetByExternalIDRow, loginMethod string) (*user, string, error) {
 	params := db.UserUpsertParams{
 		OrganizationID: existingUser.OrganizationID,
 		Name:           claims.Name,
@@ -417,7 +416,7 @@ func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims
 }
 
 // handleInvitedUser handles login for users who were invited by email.
-func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims, invitedUser *db.UserGetByEmailRow, loginMethod string) (*model.User, string, error) {
+func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims, invitedUser *db.UserGetByEmailRow, loginMethod string) (*user, string, error) {
 	err := s.queries.UserSetExternalID(ctx, db.UserSetExternalIDParams{
 		ID:         invitedUser.ID,
 		ExternalID: pgtype.Text{String: claims.Sub, Valid: true},
@@ -453,7 +452,7 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 }
 
 // handleNewUser creates a new organization and user for first-time registration.
-func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, loginMethod string) (*model.User, string, error) {
+func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
 	organizationName := claims.Name
 	if organizationName == "" {
 		organizationName = claims.Email

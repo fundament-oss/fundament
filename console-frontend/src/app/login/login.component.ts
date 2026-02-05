@@ -6,6 +6,7 @@ import {
   ElementRef,
   AfterViewInit,
   signal,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -15,8 +16,8 @@ import { AuthnApiService } from '../authn-api.service';
 
 @Component({
   selector: 'app-login',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.component.html',
 })
 export class LoginComponent implements OnInit, AfterViewInit {

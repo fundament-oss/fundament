@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/authn-api/pkg/model"
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 	"github.com/fundament-oss/fundament/common/apitoken"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -81,18 +80,18 @@ func (s *AuthnServer) ExchangeToken(
 	}
 
 	// Get the user associated with this API key
-	user, err := s.queries.UserGetByID(ctx, db.UserGetByIDParams{ID: apiKey.UserID})
+	dbUser, err := s.queries.UserGetByID(ctx, db.UserGetByIDParams{ID: apiKey.UserID})
 	if err != nil {
 		s.logger.Error("failed to get user for api key", "error", err, "api_key_id", apiKey.ID, "user_id", apiKey.UserID)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))
 	}
 
 	// Generate a short-lived JWT (empty groups - authorization uses DB role, not JWT)
-	accessToken, err := s.generateJWTWithExpiry(&model.User{
-		ID:             user.ID,
-		OrganizationID: user.OrganizationID,
-		Name:           user.Name,
-		ExternalID:     user.ExternalID.String,
+	accessToken, err := s.generateJWTWithExpiry(&user{
+		ID:             dbUser.ID,
+		OrganizationID: dbUser.OrganizationID,
+		Name:           dbUser.Name,
+		ExternalID:     dbUser.ExternalID.String,
 	}, []string{}, APITokenExpiry)
 	if err != nil {
 		s.logger.Error("failed to generate jwt for api token", "error", err)
@@ -101,8 +100,8 @@ func (s *AuthnServer) ExchangeToken(
 
 	s.logger.Info("api token exchanged for jwt",
 		"api_key_id", apiKey.ID,
-		"user_id", user.ID,
-		"organization_id", user.OrganizationID,
+		"user_id", dbUser.ID,
+		"organization_id", dbUser.OrganizationID,
 	)
 
 	return connect.NewResponse(&authnv1.ExchangeTokenResponse{

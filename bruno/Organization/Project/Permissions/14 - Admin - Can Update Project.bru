@@ -1,0 +1,38 @@
+meta {
+  name: 14 - Admin - Can Update Project
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/UpdateProject
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+script:pre-request {
+  // Generate unique updated project name with timestamp
+  const timestamp = Date.now();
+  bru.setVar("updatedProjectName", `permissions-test-updated-${timestamp}`);
+}
+
+body:json {
+  {
+    "projectId": "{{testProjectId}}",
+    "name": "{{updatedProjectName}}"
+  }
+}
+
+tests {
+  test("admin should be able to update project", function() {
+    expect(res.status).to.equal(200);
+  });
+}

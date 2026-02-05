@@ -2,9 +2,10 @@ syntax = "proto3";
 
 package organization.v1; // TODO: Should maybe be renamed to `fundament.v1`?
 
-import "v1/common.proto";
-import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "v1/common.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
@@ -76,7 +77,10 @@ service ClusterService {
 
 // List clusters request
 message ListClustersRequest {
-  string project_id = 10; // Optional: filter by project
+  string project_id = 10 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string.uuid = true
+  ]; // Optional: filter by project
 }
 
 // List clusters response
@@ -94,7 +98,7 @@ message ClusterSummary {
 
 // Get cluster request
 message GetClusterRequest {
-  string cluster_id = 10;
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Get cluster by name request
@@ -155,9 +159,12 @@ message ClusterProject {
 
 // Create cluster request
 message CreateClusterRequest {
-  string name = 10;
-  string region = 20;
-  string kubernetes_version = 30;
+  string name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string region = 20 [(buf.validate.field).string = {min_len: 1}];
+  string kubernetes_version = 30 [(buf.validate.field).string = {min_len: 1}];
 }
 
 // Node pool specification
@@ -175,18 +182,18 @@ message CreateClusterResponse {
 
 // Update cluster request
 message UpdateClusterRequest {
-  string cluster_id = 10;
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
   optional string kubernetes_version = 20;
 }
 
 // Delete cluster request
 message DeleteClusterRequest {
-  string cluster_id = 10;
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Get cluster activity request
 message GetClusterActivityRequest {
-  string cluster_id = 10;
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Get cluster activity response
@@ -203,7 +210,7 @@ message ActivityEntry {
 
 // Get kubeconfig request
 message GetKubeconfigRequest {
-  string cluster_id = 10;
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Get kubeconfig response
@@ -213,11 +220,20 @@ message GetKubeconfigResponse {
 
 // Create node pool request
 message CreateNodePoolRequest {
-  string cluster_id = 10;
-  string name = 20;
-  string machine_type = 30;
-  int32 autoscale_min = 40;
-  int32 autoscale_max = 50;
+  option (buf.validate.message).cel = {
+    id: "autoscale_max_gte_min"
+    message: "autoscale_max must be >= autoscale_min"
+    expression: "this.autoscale_max >= this.autoscale_min"
+  };
+
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string name = 20 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string machine_type = 30 [(buf.validate.field).string = {min_len: 1}];
+  int32 autoscale_min = 40 [(buf.validate.field).int32 = {gte: 0}];
+  int32 autoscale_max = 50 [(buf.validate.field).int32 = {gte: 0}];
 }
 
 // Create node pool response
@@ -227,19 +243,25 @@ message CreateNodePoolResponse {
 
 // Update node pool request
 message UpdateNodePoolRequest {
-  string node_pool_id = 10;
-  int32 autoscale_min = 20;
-  int32 autoscale_max = 30;
+  option (buf.validate.message).cel = {
+    id: "autoscale_max_gte_min"
+    message: "autoscale_max must be >= autoscale_min"
+    expression: "this.autoscale_max >= this.autoscale_min"
+  };
+
+  string node_pool_id = 10 [(buf.validate.field).string = {uuid: true}];
+  int32 autoscale_min = 20 [(buf.validate.field).int32 = {gte: 0}];
+  int32 autoscale_max = 30 [(buf.validate.field).int32 = {gte: 0}];
 }
 
 // Delete node pool request
 message DeleteNodePoolRequest {
-  string node_pool_id = 10;
+  string node_pool_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // List node pools request
 message ListNodePoolsRequest {
-  string cluster_id = 10;
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // List node pools response
@@ -249,7 +271,7 @@ message ListNodePoolsResponse {
 
 // Get node pool request
 message GetNodePoolRequest {
-  string node_pool_id = 10;
+  string node_pool_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Get node pool response
@@ -266,7 +288,7 @@ message Install {
 
 // List installs request
 message ListInstallsRequest {
-  string cluster_id = 10;
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // List installs response
@@ -276,8 +298,8 @@ message ListInstallsResponse {
 
 // Add install request
 message AddInstallRequest {
-  string cluster_id = 10;
-  string plugin_id = 20;
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string plugin_id = 20 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Add install response
@@ -287,12 +309,12 @@ message AddInstallResponse {
 
 // Remove install request
 message RemoveInstallRequest {
-  string install_id = 10;  // The UUID of the install record
+  string install_id = 10 [(buf.validate.field).string = {uuid: true}]; // The UUID of the install record
 }
 
 // List cluster namespaces request
 message ListClusterNamespacesRequest {
-  string cluster_id = 10;
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // List cluster namespaces response
@@ -311,9 +333,19 @@ message ClusterNamespace {
 
 // Create namespace request
 message CreateNamespaceRequest {
-  string project_id = 10;
-  string cluster_id = 20;
-  string name = 30;
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string cluster_id = 20 [(buf.validate.field).string = {uuid: true}];
+  string name = 30 [
+    (buf.validate.field).string = {max_len: 63},
+    (buf.validate.field).cel = {
+      // TODO: This expression is duplicated in at least one other place.
+      // We should use a predefined rule once we've moved to edition 2023.
+      // https://protovalidate.com/schemas/predefined-rules/
+      id: "dns1123label"
+      message: "must be a valid DNS-1123 label"
+      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+    }
+  ];
 }
 
 // Create namespace response
@@ -323,7 +355,7 @@ message CreateNamespaceResponse {
 
 // Delete namespace request
 message DeleteNamespaceRequest {
-  string namespace_id = 10;
+  string namespace_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Get namespace by cluster and name request

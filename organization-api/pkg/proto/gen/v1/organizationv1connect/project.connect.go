@@ -5,13 +5,14 @@
 package organizationv1connect
 
 import (
-	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
+
+	connect "connectrpc.com/connect"
+	v1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are
@@ -55,6 +56,18 @@ const (
 	// ProjectServiceListProjectNamespacesProcedure is the fully-qualified name of the ProjectService's
 	// ListProjectNamespaces RPC.
 	ProjectServiceListProjectNamespacesProcedure = "/organization.v1.ProjectService/ListProjectNamespaces"
+	// ProjectServiceListProjectMembersProcedure is the fully-qualified name of the ProjectService's
+	// ListProjectMembers RPC.
+	ProjectServiceListProjectMembersProcedure = "/organization.v1.ProjectService/ListProjectMembers"
+	// ProjectServiceAddProjectMemberProcedure is the fully-qualified name of the ProjectService's
+	// AddProjectMember RPC.
+	ProjectServiceAddProjectMemberProcedure = "/organization.v1.ProjectService/AddProjectMember"
+	// ProjectServiceUpdateProjectMemberRoleProcedure is the fully-qualified name of the
+	// ProjectService's UpdateProjectMemberRole RPC.
+	ProjectServiceUpdateProjectMemberRoleProcedure = "/organization.v1.ProjectService/UpdateProjectMemberRole"
+	// ProjectServiceRemoveProjectMemberProcedure is the fully-qualified name of the ProjectService's
+	// RemoveProjectMember RPC.
+	ProjectServiceRemoveProjectMemberProcedure = "/organization.v1.ProjectService/RemoveProjectMember"
 )
 
 // ProjectServiceClient is a client for the organization.v1.ProjectService service.
@@ -73,6 +86,14 @@ type ProjectServiceClient interface {
 	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error)
 	// List all namespaces belonging to a project
 	ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error)
+	// List all members of a project
+	ListProjectMembers(context.Context, *connect.Request[v1.ListProjectMembersRequest]) (*connect.Response[v1.ListProjectMembersResponse], error)
+	// Add a member to a project (requires admin role)
+	AddProjectMember(context.Context, *connect.Request[v1.AddProjectMemberRequest]) (*connect.Response[v1.AddProjectMemberResponse], error)
+	// Update a member's role (requires admin role)
+	UpdateProjectMemberRole(context.Context, *connect.Request[v1.UpdateProjectMemberRoleRequest]) (*connect.Response[emptypb.Empty], error)
+	// Remove a member from a project (requires admin role)
+	RemoveProjectMember(context.Context, *connect.Request[v1.RemoveProjectMemberRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewProjectServiceClient constructs a client for the organization.v1.ProjectService service. By
@@ -128,18 +149,46 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(projectServiceMethods.ByName("ListProjectNamespaces")),
 			connect.WithClientOptions(opts...),
 		),
+		listProjectMembers: connect.NewClient[v1.ListProjectMembersRequest, v1.ListProjectMembersResponse](
+			httpClient,
+			baseURL+ProjectServiceListProjectMembersProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("ListProjectMembers")),
+			connect.WithClientOptions(opts...),
+		),
+		addProjectMember: connect.NewClient[v1.AddProjectMemberRequest, v1.AddProjectMemberResponse](
+			httpClient,
+			baseURL+ProjectServiceAddProjectMemberProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("AddProjectMember")),
+			connect.WithClientOptions(opts...),
+		),
+		updateProjectMemberRole: connect.NewClient[v1.UpdateProjectMemberRoleRequest, emptypb.Empty](
+			httpClient,
+			baseURL+ProjectServiceUpdateProjectMemberRoleProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("UpdateProjectMemberRole")),
+			connect.WithClientOptions(opts...),
+		),
+		removeProjectMember: connect.NewClient[v1.RemoveProjectMemberRequest, emptypb.Empty](
+			httpClient,
+			baseURL+ProjectServiceRemoveProjectMemberProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("RemoveProjectMember")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // projectServiceClient implements ProjectServiceClient.
 type projectServiceClient struct {
-	listProjects          *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
-	getProject            *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
-	getProjectByName      *connect.Client[v1.GetProjectByNameRequest, v1.GetProjectResponse]
-	createProject         *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
-	updateProject         *connect.Client[v1.UpdateProjectRequest, emptypb.Empty]
-	deleteProject         *connect.Client[v1.DeleteProjectRequest, emptypb.Empty]
-	listProjectNamespaces *connect.Client[v1.ListProjectNamespacesRequest, v1.ListProjectNamespacesResponse]
+	listProjects            *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
+	getProject              *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
+	getProjectByName        *connect.Client[v1.GetProjectByNameRequest, v1.GetProjectResponse]
+	createProject           *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
+	updateProject           *connect.Client[v1.UpdateProjectRequest, emptypb.Empty]
+	deleteProject           *connect.Client[v1.DeleteProjectRequest, emptypb.Empty]
+	listProjectNamespaces   *connect.Client[v1.ListProjectNamespacesRequest, v1.ListProjectNamespacesResponse]
+	listProjectMembers      *connect.Client[v1.ListProjectMembersRequest, v1.ListProjectMembersResponse]
+	addProjectMember        *connect.Client[v1.AddProjectMemberRequest, v1.AddProjectMemberResponse]
+	updateProjectMemberRole *connect.Client[v1.UpdateProjectMemberRoleRequest, emptypb.Empty]
+	removeProjectMember     *connect.Client[v1.RemoveProjectMemberRequest, emptypb.Empty]
 }
 
 // ListProjects calls organization.v1.ProjectService.ListProjects.
@@ -177,6 +226,26 @@ func (c *projectServiceClient) ListProjectNamespaces(ctx context.Context, req *c
 	return c.listProjectNamespaces.CallUnary(ctx, req)
 }
 
+// ListProjectMembers calls organization.v1.ProjectService.ListProjectMembers.
+func (c *projectServiceClient) ListProjectMembers(ctx context.Context, req *connect.Request[v1.ListProjectMembersRequest]) (*connect.Response[v1.ListProjectMembersResponse], error) {
+	return c.listProjectMembers.CallUnary(ctx, req)
+}
+
+// AddProjectMember calls organization.v1.ProjectService.AddProjectMember.
+func (c *projectServiceClient) AddProjectMember(ctx context.Context, req *connect.Request[v1.AddProjectMemberRequest]) (*connect.Response[v1.AddProjectMemberResponse], error) {
+	return c.addProjectMember.CallUnary(ctx, req)
+}
+
+// UpdateProjectMemberRole calls organization.v1.ProjectService.UpdateProjectMemberRole.
+func (c *projectServiceClient) UpdateProjectMemberRole(ctx context.Context, req *connect.Request[v1.UpdateProjectMemberRoleRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.updateProjectMemberRole.CallUnary(ctx, req)
+}
+
+// RemoveProjectMember calls organization.v1.ProjectService.RemoveProjectMember.
+func (c *projectServiceClient) RemoveProjectMember(ctx context.Context, req *connect.Request[v1.RemoveProjectMemberRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.removeProjectMember.CallUnary(ctx, req)
+}
+
 // ProjectServiceHandler is an implementation of the organization.v1.ProjectService service.
 type ProjectServiceHandler interface {
 	// List all projects for the current organization
@@ -193,6 +262,14 @@ type ProjectServiceHandler interface {
 	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error)
 	// List all namespaces belonging to a project
 	ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error)
+	// List all members of a project
+	ListProjectMembers(context.Context, *connect.Request[v1.ListProjectMembersRequest]) (*connect.Response[v1.ListProjectMembersResponse], error)
+	// Add a member to a project (requires admin role)
+	AddProjectMember(context.Context, *connect.Request[v1.AddProjectMemberRequest]) (*connect.Response[v1.AddProjectMemberResponse], error)
+	// Update a member's role (requires admin role)
+	UpdateProjectMemberRole(context.Context, *connect.Request[v1.UpdateProjectMemberRoleRequest]) (*connect.Response[emptypb.Empty], error)
+	// Remove a member from a project (requires admin role)
+	RemoveProjectMember(context.Context, *connect.Request[v1.RemoveProjectMemberRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewProjectServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -244,6 +321,30 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 		connect.WithSchema(projectServiceMethods.ByName("ListProjectNamespaces")),
 		connect.WithHandlerOptions(opts...),
 	)
+	projectServiceListProjectMembersHandler := connect.NewUnaryHandler(
+		ProjectServiceListProjectMembersProcedure,
+		svc.ListProjectMembers,
+		connect.WithSchema(projectServiceMethods.ByName("ListProjectMembers")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectServiceAddProjectMemberHandler := connect.NewUnaryHandler(
+		ProjectServiceAddProjectMemberProcedure,
+		svc.AddProjectMember,
+		connect.WithSchema(projectServiceMethods.ByName("AddProjectMember")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectServiceUpdateProjectMemberRoleHandler := connect.NewUnaryHandler(
+		ProjectServiceUpdateProjectMemberRoleProcedure,
+		svc.UpdateProjectMemberRole,
+		connect.WithSchema(projectServiceMethods.ByName("UpdateProjectMemberRole")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectServiceRemoveProjectMemberHandler := connect.NewUnaryHandler(
+		ProjectServiceRemoveProjectMemberProcedure,
+		svc.RemoveProjectMember,
+		connect.WithSchema(projectServiceMethods.ByName("RemoveProjectMember")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/organization.v1.ProjectService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProjectServiceListProjectsProcedure:
@@ -260,6 +361,14 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 			projectServiceDeleteProjectHandler.ServeHTTP(w, r)
 		case ProjectServiceListProjectNamespacesProcedure:
 			projectServiceListProjectNamespacesHandler.ServeHTTP(w, r)
+		case ProjectServiceListProjectMembersProcedure:
+			projectServiceListProjectMembersHandler.ServeHTTP(w, r)
+		case ProjectServiceAddProjectMemberProcedure:
+			projectServiceAddProjectMemberHandler.ServeHTTP(w, r)
+		case ProjectServiceUpdateProjectMemberRoleProcedure:
+			projectServiceUpdateProjectMemberRoleHandler.ServeHTTP(w, r)
+		case ProjectServiceRemoveProjectMemberProcedure:
+			projectServiceRemoveProjectMemberHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -295,4 +404,20 @@ func (UnimplementedProjectServiceHandler) DeleteProject(context.Context, *connec
 
 func (UnimplementedProjectServiceHandler) ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.ListProjectNamespaces is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) ListProjectMembers(context.Context, *connect.Request[v1.ListProjectMembersRequest]) (*connect.Response[v1.ListProjectMembersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.ListProjectMembers is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) AddProjectMember(context.Context, *connect.Request[v1.AddProjectMemberRequest]) (*connect.Response[v1.AddProjectMemberResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.AddProjectMember is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) UpdateProjectMemberRole(context.Context, *connect.Request[v1.UpdateProjectMemberRoleRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.UpdateProjectMemberRole is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) RemoveProjectMember(context.Context, *connect.Request[v1.RemoveProjectMemberRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.RemoveProjectMember is not implemented"))
 }

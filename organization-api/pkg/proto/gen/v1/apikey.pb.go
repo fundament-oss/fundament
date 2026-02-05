@@ -7,6 +7,7 @@
 package organizationv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -496,7 +497,7 @@ var File_v1_apikey_proto protoreflect.FileDescriptor
 
 const file_v1_apikey_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/apikey.proto\x12\x0forganization.v1\x1a\x0fv1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xbe\x02\n" +
+	"\x0fv1/apikey.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xbe\x02\n" +
 	"\x06APIKey\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -509,11 +510,13 @@ const file_v1_apikey_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"revoked_at\x18F \x01(\v2\x1a.google.protobuf.TimestampR\trevokedAt\"j\n" +
-	"\x13CreateAPIKeyRequest\x12\x12\n" +
+	"revoked_at\x18F \x01(\v2\x1a.google.protobuf.TimestampR\trevokedAt\"\x82\x01\n" +
+	"\x13CreateAPIKeyRequest\x12\x1e\n" +
 	"\x04name\x18\n" +
-	" \x01(\tR\x04name\x12+\n" +
-	"\x0fexpires_in_days\x18\x14 \x01(\x03H\x00R\rexpiresInDays\x88\x01\x01B\x12\n" +
+	" \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\x127\n" +
+	"\x0fexpires_in_days\x18\x14 \x01(\x03B\n" +
+	"\xbaH\a\"\x05\x18\xed\x02(\x01H\x00R\rexpiresInDays\x88\x01\x01B\x12\n" +
 	"\x10_expires_in_days\"_\n" +
 	"\x14CreateAPIKeyResponse\x12\x0e\n" +
 	"\x02id\x18\n" +
@@ -523,22 +526,22 @@ const file_v1_apikey_proto_rawDesc = "" +
 	"\x12ListAPIKeysRequest\"I\n" +
 	"\x13ListAPIKeysResponse\x122\n" +
 	"\bapi_keys\x18\n" +
-	" \x03(\v2\x17.organization.v1.APIKeyR\aapiKeys\"0\n" +
-	"\x10GetAPIKeyRequest\x12\x1c\n" +
+	" \x03(\v2\x17.organization.v1.APIKeyR\aapiKeys\":\n" +
+	"\x10GetAPIKeyRequest\x12&\n" +
 	"\n" +
 	"api_key_id\x18\n" +
-	" \x01(\tR\bapiKeyId\"E\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId\"E\n" +
 	"\x11GetAPIKeyResponse\x120\n" +
 	"\aapi_key\x18\n" +
-	" \x01(\v2\x17.organization.v1.APIKeyR\x06apiKey\"3\n" +
-	"\x13RevokeAPIKeyRequest\x12\x1c\n" +
+	" \x01(\v2\x17.organization.v1.APIKeyR\x06apiKey\"=\n" +
+	"\x13RevokeAPIKeyRequest\x12&\n" +
 	"\n" +
 	"api_key_id\x18\n" +
-	" \x01(\tR\bapiKeyId\"3\n" +
-	"\x13DeleteAPIKeyRequest\x12\x1c\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId\"=\n" +
+	"\x13DeleteAPIKeyRequest\x12&\n" +
 	"\n" +
 	"api_key_id\x18\n" +
-	" \x01(\tR\bapiKeyId2\xb6\x03\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId2\xb6\x03\n" +
 	"\rAPIKeyService\x12[\n" +
 	"\fCreateAPIKey\x12$.organization.v1.CreateAPIKeyRequest\x1a%.organization.v1.CreateAPIKeyResponse\x12X\n" +
 	"\vListAPIKeys\x12#.organization.v1.ListAPIKeysRequest\x1a$.organization.v1.ListAPIKeysResponse\x12R\n" +

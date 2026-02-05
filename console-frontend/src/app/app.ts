@@ -1,4 +1,4 @@
-import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthnApiService } from './authn-api.service';
@@ -57,6 +57,9 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
       tablerChartLine,
     }),
   ],
+  host: {
+    '(document:click)': 'onDocumentClick($event)',
+  },
   templateUrl: './app.html',
 })
 export class App implements OnInit {
@@ -157,7 +160,6 @@ export class App implements OnInit {
     localStorage.setItem('theme', this.isDarkMode() ? 'dark' : 'light');
   }
 
-  @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
     const target = event.target as HTMLElement;
     const projectDropdown = target.closest('.project-dropdown');

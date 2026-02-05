@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -7,7 +7,6 @@ import { tablerPlus, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
 
 @Component({
   selector: 'app-project-members',
-  standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive, NgIcon],
   viewProviders: [
     provideIcons({
@@ -16,6 +15,7 @@ import { tablerPlus, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
       tablerTrash,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-members.component.html',
 })
 export class ProjectMembersComponent {

@@ -1,5 +1,8 @@
-- Always use 'go generate ./...' in the in project or 'just generate' in the root of the project to generate stuff.
-- You are not allowed to edit the files in: @db/migrations/
-- You are not allowed to edit the file: @db/fundament.sql
+- Always use 'just generate' to generate or regenerate files.
+- You are not allowed to edit the files in: db/migrations/
+- You are not allowed to edit the file: db/fundament.sql
 - For frontend development, use `bun` as package manager instead of `npm`
 - For frontend development in console-frontend, check for existing predefined classes in `console-frontend/src/styles.css` and use those if applicable
+- When working on the database schema you should always edit db/fundament.dbm.
+- When working on the database, never generate a migration. We generate that with trek
+- Always read @funs to find our architecture decision records
