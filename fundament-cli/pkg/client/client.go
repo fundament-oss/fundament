@@ -87,8 +87,8 @@ func (c *Client) authInterceptor() connect.UnaryInterceptorFunc {
 	}
 }
 
-// clusters returns the cluster service client.
-func (c *Client) clusters() organizationv1connect.ClusterServiceClient {
+// Clusters returns the cluster service client.
+func (c *Client) Clusters() organizationv1connect.ClusterServiceClient {
 	return organizationv1connect.NewClusterServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
@@ -96,8 +96,8 @@ func (c *Client) clusters() organizationv1connect.ClusterServiceClient {
 	)
 }
 
-// projects returns the project service client.
-func (c *Client) projects() organizationv1connect.ProjectServiceClient {
+// Projects returns the project service client.
+func (c *Client) Projects() organizationv1connect.ProjectServiceClient {
 	return organizationv1connect.NewProjectServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
@@ -105,8 +105,8 @@ func (c *Client) projects() organizationv1connect.ProjectServiceClient {
 	)
 }
 
-// apiKeys returns the API key service client.
-func (c *Client) apiKeys() organizationv1connect.APIKeyServiceClient {
+// APIKeys returns the API key service client.
+func (c *Client) APIKeys() organizationv1connect.APIKeyServiceClient {
 	return organizationv1connect.NewAPIKeyServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
@@ -114,8 +114,8 @@ func (c *Client) apiKeys() organizationv1connect.APIKeyServiceClient {
 	)
 }
 
-// authn returns the authn service client (for user info).
-func (c *Client) authn() authnv1connect.AuthnServiceClient {
+// Authn returns the authn service client (for user info).
+func (c *Client) Authn() authnv1connect.AuthnServiceClient {
 	return authnv1connect.NewAuthnServiceClient(
 		c.httpClient,
 		c.authnURL,
