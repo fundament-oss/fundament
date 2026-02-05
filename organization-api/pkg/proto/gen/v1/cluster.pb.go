@@ -2462,14 +2462,10 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\x11GetClusterRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-<<<<<<< HEAD
-	" \x01(\tR\tclusterId\"-\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"-\n" +
 	"\x17GetClusterByNameRequest\x12\x12\n" +
 	"\x04name\x18\n" +
 	" \x01(\tR\x04name\"O\n" +
-=======
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"O\n" +
->>>>>>> master
 	"\x12GetClusterResponse\x129\n" +
 	"\acluster\x18\n" +
 	" \x01(\v2\x1f.organization.v1.ClusterDetailsR\acluster\"\xb9\x02\n" +
@@ -2659,8 +2655,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	" \x01(\tR\vnamespaceId\"E\n" +
 	"\x16DeleteNamespaceRequest\x12+\n" +
 	"\fnamespace_id\x18\n" +
-<<<<<<< HEAD
-	" \x01(\tR\vnamespaceId\"o\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vnamespaceId\"o\n" +
 	"#GetNamespaceByClusterAndNameRequest\x12!\n" +
 	"\fcluster_name\x18\n" +
 	" \x01(\tR\vclusterName\x12%\n" +
@@ -2675,9 +2670,6 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"$GetNamespaceByProjectAndNameResponse\x12?\n" +
 	"\tnamespace\x18\n" +
 	" \x01(\v2!.organization.v1.ClusterNamespaceR\tnamespace2\x89\x10\n" +
-=======
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vnamespaceId2\x8a\r\n" +
->>>>>>> master
 	"\x0eClusterService\x12[\n" +
 	"\fListClusters\x12$.organization.v1.ListClustersRequest\x1a%.organization.v1.ListClustersResponse\x12U\n" +
 	"\n" +
