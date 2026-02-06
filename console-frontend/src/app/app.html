@@ -203,7 +203,7 @@
             class="btn-secondary flex w-full items-center"
           >
             <div class="flex min-w-0 flex-1 items-center">
-              @if (getSelectedItemDisplay(); as selected) {
+              @if (selectedItemDisplay(); as selected) {
                 @if (selected.type === 'organization') {
                   <ng-icon name="tablerBuilding" class="mr-2 shrink-0" />
                 } @else if (selected.type === 'project') {
@@ -219,18 +219,18 @@
         </div>
 
         <nav class="overflow-y-auto px-4 pb-6">
-          @if (getSelectedType()) {
+          @if (selectedType()) {
             <div class="mb-3 pt-5 dark:border-gray-800">
               <p
                 class="px-3 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
               >
-                {{ getSettingsHeader() }}
+                {{ settingsHeader() }}
               </p>
             </div>
           }
 
           <ul class="space-y-2">
-            @if (getSelectedType() === 'organization') {
+            @if (selectedType() === 'organization') {
               <li>
                 <a
                   routerLink="/"
@@ -298,7 +298,7 @@
                   Settings
                 </a>
               </li>
-            } @else if (getSelectedType() === 'project') {
+            } @else if (selectedType() === 'project') {
               <li>
                 <a
                   [routerLink]="['/projects', selectedProjectId()]"

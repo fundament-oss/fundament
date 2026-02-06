@@ -1,4 +1,11 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  signal,
+  computed,
+  inject,
+  OnInit,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
@@ -398,18 +405,40 @@ export class App implements OnInit {
     this.router.navigate(['/projects', projectId]);
   }
 
-  getSelectedType(): 'organization' | 'project' | null {
+  selectedType = computed<'organization' | 'project' | null>(() => {
     if (this.selectedProjectId()) return 'project';
     if (this.selectedOrgId()) return 'organization';
     return null;
-  }
+  });
 
-  getSettingsHeader(): string {
-    const type = this.getSelectedType();
+  settingsHeader = computed(() => {
+    const type = this.selectedType();
     if (type === 'organization') return 'Organization-specific';
     if (type === 'project') return 'Project-specific';
     return '';
-  }
+  });
+
+  selectedItemDisplay = computed<{ type: 'organization' | 'project'; name: string } | null>(() => {
+    const type = this.selectedType();
+    if (type === 'project') {
+      const projectId = this.selectedProjectId();
+      if (projectId) {
+        const projectData = this.organizationDataService.getProjectById(projectId);
+        if (projectData) {
+          return { type: 'project', name: projectData.project.name };
+        }
+      }
+    } else if (type === 'organization') {
+      const orgId = this.selectedOrgId();
+      if (orgId) {
+        const org = this.organizationDataService.getOrganizationById(orgId);
+        if (org) {
+          return { type: 'organization', name: org.name };
+        }
+      }
+    }
+    return null;
+  });
 
   isOrganizationSelected(orgId: string): boolean {
     return this.selectedOrgId() === orgId;
@@ -417,73 +446,5 @@ export class App implements OnInit {
 
   isProjectSelected(projectId: string): boolean {
     return this.selectedProjectId() === projectId;
-  }
-
-  // Cached values to avoid recomputing the selected item display on every change detection run.
-  private cachedSelectedDisplay: {
-    type: 'organization' | 'project';
-    name: string;
-  } | null = null;
-
-  private cachedSelectedType: 'organization' | 'project' | null = null;
-  private cachedOrgId: string | null = null;
-  private cachedProjectId: string | null = null;
-
-  getSelectedItemDisplay(): {
-    type: 'organization' | 'project';
-    name: string;
-  } | null {
-    const selectedType = this.getSelectedType();
-
-    if (!selectedType) {
-      this.cachedSelectedDisplay = null;
-      this.cachedSelectedType = null;
-      this.cachedOrgId = null;
-      this.cachedProjectId = null;
-      return null;
-    }
-
-    const currentOrgId = this.selectedOrgId();
-    const currentProjectId = this.selectedProjectId();
-
-    // Return cached value if the selection (type and IDs) hasn't changed.
-    if (
-      this.cachedSelectedType === selectedType &&
-      this.cachedOrgId === currentOrgId &&
-      this.cachedProjectId === currentProjectId
-    ) {
-      return this.cachedSelectedDisplay;
-    }
-
-    let result: {
-      type: 'organization' | 'project';
-      name: string;
-    } | null = null;
-
-    if (selectedType === 'project') {
-      const projectId = currentProjectId;
-      if (projectId) {
-        const projectData = this.organizationDataService.getProjectById(projectId);
-        if (projectData) {
-          result = { type: 'project', name: projectData.project.name };
-        }
-      }
-    } else if (selectedType === 'organization') {
-      const orgId = currentOrgId;
-      if (orgId) {
-        const org = this.organizationDataService.getOrganizationById(orgId);
-        if (org) {
-          result = { type: 'organization', name: org.name };
-        }
-      }
-    }
-
-    // Update cache before returning.
-    this.cachedSelectedDisplay = result;
-    this.cachedSelectedType = selectedType;
-    this.cachedOrgId = currentOrgId;
-    this.cachedProjectId = currentProjectId;
-
-    return result;
   }
 }
