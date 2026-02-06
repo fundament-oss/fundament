@@ -102,6 +102,9 @@ export class App implements OnInit {
   selectedOrgId = signal<string | null>(null);
   selectedProjectId = signal<string | null>(null);
 
+  // Route state
+  isLoginPage = signal(window.location.pathname === '/login');
+
   // Breadcrumb state
   breadcrumbSegments = signal<BreadcrumbSegment[]>([]);
 
@@ -136,6 +139,7 @@ export class App implements OnInit {
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
+        this.isLoginPage.set(event.urlAfterRedirects === '/login');
         this.updateSidebarStateFromRoute(event.url);
         this.updateBreadcrumbs(event.url);
       });
@@ -278,11 +282,6 @@ export class App implements OnInit {
     }
 
     this.breadcrumbSegments.set(segments);
-  }
-
-  // Check if current route is login
-  isLoginPage(): boolean {
-    return this.router.url === '/login';
   }
 
   // Check if current route is project members or permissions
