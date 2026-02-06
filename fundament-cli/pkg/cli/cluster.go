@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"connectrpc.com/connect"
+
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -23,10 +25,12 @@ func (c *ClusterListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	clusters, err := apiClient.ListClusters(context.Background())
+	resp, err := apiClient.Clusters().ListClusters(context.Background(), connect.NewRequest(&organizationv1.ListClustersRequest{}))
 	if err != nil {
 		return fmt.Errorf("failed to list clusters: %w", err)
 	}
+
+	clusters := resp.Msg.Clusters
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(clusters)
@@ -62,10 +66,14 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	cluster, err := apiClient.GetCluster(context.Background(), c.ClusterID)
+	resp, err := apiClient.Clusters().GetCluster(context.Background(), connect.NewRequest(&organizationv1.GetClusterRequest{
+		ClusterId: c.ClusterID,
+	}))
 	if err != nil {
 		return fmt.Errorf("failed to get cluster: %w", err)
 	}
+
+	cluster := resp.Msg.Cluster
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(cluster)
@@ -77,8 +85,8 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 	PrintKeyValue(w, "Region", cluster.Region)
 	PrintKeyValue(w, "Kubernetes Version", cluster.KubernetesVersion)
 	PrintKeyValue(w, "Status", formatClusterStatus(cluster.Status))
-	if cluster.CreatedAt != nil {
-		PrintKeyValue(w, "Created", cluster.CreatedAt.AsTime().Format(TimeFormat))
+	if cluster.Created != nil {
+		PrintKeyValue(w, "Created", cluster.Created.AsTime().Format(TimeFormat))
 	}
 	return w.Flush()
 }

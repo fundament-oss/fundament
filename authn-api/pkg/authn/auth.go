@@ -15,10 +15,14 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 
+	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )
+
+// Ensure AuthnServer implements ServerInterface
+var _ authnhttp.ServerInterface = (*AuthnServer)(nil)
 
 // user represents user data for JWT generation.
 // This is an internal adapter type between sqlc row types and JWT claims.
@@ -29,6 +33,7 @@ type user struct {
 	ExternalID     string
 }
 
+// Config holds the configuration for the authentication server.
 type Config struct {
 	TokenExpiry  time.Duration
 	JWTSecret    []byte
@@ -37,6 +42,7 @@ type Config struct {
 	FrontendURL  string
 }
 
+// AuthnServer handles authentication operations.
 type AuthnServer struct {
 	config        *Config
 	oauth2Config  *oauth2.Config
@@ -48,6 +54,7 @@ type AuthnServer struct {
 	cookieBuilder *auth.CookieBuilder
 }
 
+// New creates a new AuthnServer.
 func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB) (*AuthnServer, error) {
 	return &AuthnServer{
 		config:        cfg,
@@ -61,10 +68,12 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 	}, nil
 }
 
+// generateJWT generates a JWT for the given user with the default expiry.
 func (s *AuthnServer) generateJWT(u *user, groups []string) (string, error) {
 	return s.generateJWTWithExpiry(u, groups, s.config.TokenExpiry)
 }
 
+// generateJWTWithExpiry generates a JWT for the given user with a custom expiry.
 func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, expiry time.Duration) (string, error) {
 	now := time.Now()
 
@@ -96,7 +105,6 @@ type StateData struct {
 }
 
 // generateState creates an encoded OAuth state with a CSRF nonce and optional return URL.
-// If returnTo is empty, the default frontend URL will be used after login.
 func generateState(returnTo string) (string, error) {
 	b := make([]byte, 32)
 
@@ -145,11 +153,9 @@ func (s *AuthnServer) buildClearAuthCookie() *http.Cookie {
 
 // authenticateWithPassword authenticates with OIDC using the password grant flow.
 func (s *AuthnServer) authenticateWithPassword(ctx context.Context, email, password string) (*oauth2.Token, error) {
-	// Use the password grant type
 	token, err := s.oauth2Config.PasswordCredentialsToken(ctx, email, password)
 	if err != nil {
 		return nil, fmt.Errorf("password authentication failed: %w", err)
 	}
-
 	return token, nil
 }

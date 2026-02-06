@@ -181,24 +181,24 @@
                   {{ apiKey.tokenPrefix }}
                 </td>
                 <td class="text-sm text-gray-600 dark:text-gray-400">
-                  {{ formatDate(apiKey.createdAt) }}
+                  {{ formatDate(apiKey.created) }}
                 </td>
                 <td class="text-sm text-gray-600 dark:text-gray-400">
-                  {{ formatDateTime(apiKey.lastUsedAt) }}
+                  {{ formatDateTime(apiKey.lastUsed) }}
                 </td>
                 <td class="text-sm text-gray-600 dark:text-gray-400">
-                  @if (apiKey.expiresAt) {
-                    <span [class.text-red-600]="isExpired(apiKey.expiresAt)">
-                      {{ formatDate(apiKey.expiresAt) }}
+                  @if (apiKey.expires) {
+                    <span [class.text-red-600]="isExpired(apiKey.expires)">
+                      {{ formatDate(apiKey.expires) }}
                     </span>
                   } @else {
                     <span class="text-gray-600 dark:text-gray-400">Never</span>
                   }
                 </td>
                 <td>
-                  @if (isRevoked(apiKey.revokedAt)) {
+                  @if (isRevoked(apiKey.revoked)) {
                     <span class="badge badge-gray">Revoked</span>
-                  } @else if (isExpired(apiKey.expiresAt)) {
+                  } @else if (isExpired(apiKey.expires)) {
                     <span class="badge badge-red">Expired</span>
                   } @else {
                     <span class="badge badge-green">Active</span>
@@ -206,7 +206,7 @@
                 </td>
                 <td>
                   <div class="flex gap-2">
-                    @if (!isRevoked(apiKey.revokedAt) && !isExpired(apiKey.expiresAt)) {
+                    @if (!isRevoked(apiKey.revoked) && !isExpired(apiKey.expires)) {
                       <button
                         type="button"
                         (click)="revokeApiKey(apiKey.id)"

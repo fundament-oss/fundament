@@ -61,5 +61,5 @@ message Member {
   optional string email = 50;
   // role is "viewer" or "admin"
   string role = 60;
-  google.protobuf.Timestamp created_at = 40;
+  google.protobuf.Timestamp created = 40;
 }

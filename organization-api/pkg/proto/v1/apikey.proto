@@ -32,10 +32,10 @@ message APIKey {
   string id = 10;
   string name = 20;
   string token_prefix = 30; // First 8 chars for display (fun_XXXX)
-  google.protobuf.Timestamp expires_at = 40; // null if never expires
-  google.protobuf.Timestamp last_used_at = 50;
-  google.protobuf.Timestamp created_at = 60;
-  google.protobuf.Timestamp revoked_at = 70; // null if not revoked
+  google.protobuf.Timestamp expires = 40; // null if never expires
+  google.protobuf.Timestamp last_used = 50;
+  google.protobuf.Timestamp created = 60;
+  google.protobuf.Timestamp revoked = 70; // null if not revoked
 }
 
 // Create API key request

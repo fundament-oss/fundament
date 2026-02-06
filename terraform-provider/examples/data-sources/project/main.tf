@@ -22,7 +22,7 @@ output "project_name" {
   value       = data.fundament_project.example.name
 }
 
-output "project_created_at" {
+output "project_created" {
   description = "The creation timestamp of the project"
-  value       = data.fundament_project.example.created_at
+  value       = data.fundament_project.example.created
 }

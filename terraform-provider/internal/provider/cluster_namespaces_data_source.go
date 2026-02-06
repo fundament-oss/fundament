@@ -24,9 +24,9 @@ type ClusterNamespacesDataSource struct {
 
 // ClusterNamespacesDataSourceModel describes the data source data model.
 type ClusterNamespacesDataSourceModel struct {
-	ID         types.String      `tfsdk:"id"`
-	ClusterID  types.String      `tfsdk:"cluster_id"`
-	Namespaces []NamespaceModel  `tfsdk:"namespaces"`
+	ID         types.String     `tfsdk:"id"`
+	ClusterID  types.String     `tfsdk:"cluster_id"`
+	Namespaces []NamespaceModel `tfsdk:"namespaces"`
 }
 
 // NewClusterNamespacesDataSource creates a new ClusterNamespacesDataSource.
@@ -73,7 +73,7 @@ func (d *ClusterNamespacesDataSource) Schema(ctx context.Context, req datasource
 							Description: "The ID of the cluster containing this namespace.",
 							Computed:    true,
 						},
-						"created_at": schema.StringAttribute{
+						"created": schema.StringAttribute{
 							Description: "The timestamp when the namespace was created.",
 							Computed:    true,
 						},
@@ -164,7 +164,7 @@ func (d *ClusterNamespacesDataSource) Read(ctx context.Context, req datasource.R
 			Name:      types.StringValue(ns.Name),
 			ProjectID: types.StringValue(ns.ProjectId),
 			ClusterID: types.StringValue(clusterID), // Set from request context
-			CreatedAt: types.StringValue(ns.CreatedAt.AsTime().Format(time.RFC3339)),
+			Created:   types.StringValue(ns.Created.AsTime().Format(time.RFC3339)),
 		}
 	}
 

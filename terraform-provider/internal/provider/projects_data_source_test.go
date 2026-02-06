@@ -12,14 +12,14 @@ func TestProjectsDataSourceModel(t *testing.T) {
 		ID: types.StringValue("projects"),
 		Projects: []ProjectModel{
 			{
-				ID:        types.StringValue("project-1"),
-				Name:      types.StringValue("test-project-1"),
-				CreatedAt: types.StringValue("2024-01-15T10:30:00Z"),
+				ID:      types.StringValue("project-1"),
+				Name:    types.StringValue("test-project-1"),
+				Created: types.StringValue("2024-01-15T10:30:00Z"),
 			},
 			{
-				ID:        types.StringValue("project-2"),
-				Name:      types.StringValue("test-project-2"),
-				CreatedAt: types.StringValue("2024-01-16T11:45:00Z"),
+				ID:      types.StringValue("project-2"),
+				Name:    types.StringValue("test-project-2"),
+				Created: types.StringValue("2024-01-16T11:45:00Z"),
 			},
 		},
 	}

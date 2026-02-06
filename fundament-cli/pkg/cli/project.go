@@ -3,6 +3,10 @@ package cli
 import (
 	"context"
 	"fmt"
+
+	"connectrpc.com/connect"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
 // ProjectCmd contains project subcommands.
@@ -22,10 +26,12 @@ func (c *ProjectListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	projects, err := apiClient.ListProjects(context.Background())
+	resp, err := apiClient.Projects().ListProjects(context.Background(), connect.NewRequest(&organizationv1.ListProjectsRequest{}))
 	if err != nil {
 		return fmt.Errorf("failed to list projects: %w", err)
 	}
+
+	projects := resp.Msg.Projects
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(projects)
@@ -40,8 +46,8 @@ func (c *ProjectListCmd) Run(ctx *Context) error {
 	fmt.Fprintln(w, "ID\tNAME\tCREATED")
 	for _, project := range projects {
 		created := ""
-		if project.CreatedAt != nil {
-			created = project.CreatedAt.AsTime().Format(TimeFormat)
+		if project.Created != nil {
+			created = project.Created.AsTime().Format(TimeFormat)
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\n",
 			project.Id,
@@ -64,10 +70,14 @@ func (c *ProjectGetCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	project, err := apiClient.GetProject(context.Background(), c.ProjectID)
+	resp, err := apiClient.Projects().GetProject(context.Background(), connect.NewRequest(&organizationv1.GetProjectRequest{
+		ProjectId: c.ProjectID,
+	}))
 	if err != nil {
 		return fmt.Errorf("failed to get project: %w", err)
 	}
+
+	project := resp.Msg.Project
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(project)
@@ -77,8 +87,8 @@ func (c *ProjectGetCmd) Run(ctx *Context) error {
 	PrintKeyValue(w, "ID", project.Id)
 	PrintKeyValue(w, "Name", project.Name)
 
-	if project.CreatedAt.IsValid() {
-		PrintKeyValue(w, "Created", project.CreatedAt.AsTime().Format(TimeFormat))
+	if project.Created.IsValid() {
+		PrintKeyValue(w, "Created", project.Created.AsTime().Format(TimeFormat))
 	}
 
 	return w.Flush()
@@ -96,10 +106,14 @@ func (c *ProjectCreateCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	projectID, err := apiClient.CreateProject(context.Background(), c.Name)
+	resp, err := apiClient.Projects().CreateProject(context.Background(), connect.NewRequest(&organizationv1.CreateProjectRequest{
+		Name: c.Name,
+	}))
 	if err != nil {
 		return fmt.Errorf("failed to create project: %w", err)
 	}
+
+	projectID := resp.Msg.ProjectId
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]string{

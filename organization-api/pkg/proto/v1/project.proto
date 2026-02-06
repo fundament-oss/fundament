@@ -64,7 +64,7 @@ message GetProjectResponse {
 message Project {
   string id = 10;
   string name = 20;
-  google.protobuf.Timestamp created_at = 30;
+  google.protobuf.Timestamp created = 30;
 }
 
 // Create project request
@@ -110,7 +110,7 @@ message ProjectNamespace {
   string id = 10;
   string name = 20;
   string cluster_id = 30;
-  google.protobuf.Timestamp created_at = 40;
+  google.protobuf.Timestamp created = 40;
 }
 
 // Project member role
@@ -127,7 +127,7 @@ message ProjectMember {
   string user_id = 30;
   string user_name = 40;
   ProjectMemberRole role = 50;
-  google.protobuf.Timestamp created_at = 60;
+  google.protobuf.Timestamp created = 60;
 }
 
 // List project members request
