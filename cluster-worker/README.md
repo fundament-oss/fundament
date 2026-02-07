@@ -208,7 +208,7 @@ just cluster-worker gardener-up
 just dev -p local-gardener
 
 # 4. Access the console frontend
-open http://console.127.0.0.1.nip.io:8080
+open http://console.fundament.localhost:8080
 
 # 5. Create a test cluster via console or CLI:
 just cluster-worker create-test-cluster t1

@@ -7,8 +7,8 @@ terraform {
 }
 
 provider "fundament" {
-  endpoint = "http://organization.127.0.0.1.nip.io:8080"
-  authn_endpoint = "http://authn.127.0.0.1.nip.io:8080"
+  endpoint = "http://organization.fundament.localhost:8080"
+  authn_endpoint = "http://authn.fundament.localhost:8080"
   # Token can be set via FUNDAMENT_TOKEN environment variable
   # token = ""
 }

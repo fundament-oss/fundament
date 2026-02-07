@@ -2,7 +2,7 @@
 
 ## Development server
 
-Run the cluster with `just dev` or `just dev-hotreload`, open your browser, and navigate to `http://console.127.0.0.1.nip.io:8080/`. When using `just dev-hotreload`, the application will automatically reload whenever you modify any of the source files.
+Run the cluster with `just dev` or `just dev-hotreload`, open your browser, and navigate to `http://console.fundament.localhost:8080/`. When using `just dev-hotreload`, the application will automatically reload whenever you modify any of the source files.
 
 Credentials:
 
