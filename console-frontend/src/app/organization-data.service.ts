@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { AUTHN, ORGANIZATION, PROJECT } from '../connect/tokens';
+import { ORGANIZATION, PROJECT } from '../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { GetOrganizationRequestSchema } from '../generated/v1/organization_pb';
 import {
@@ -29,7 +29,6 @@ export interface OrganizationData {
   providedIn: 'root',
 })
 export class OrganizationDataService {
-  private authnClient = inject(AUTHN);
   private organizationClient = inject(ORGANIZATION);
   private projectClient = inject(PROJECT);
 
@@ -62,18 +61,18 @@ export class OrganizationDataService {
     return map;
   });
 
-  async loadOrganizationData() {
+  private cachedOrganizationId: string | null = null;
+
+  async loadOrganizationData(organizationId?: string) {
+    const orgId = organizationId ?? this.cachedOrganizationId;
+    if (!orgId) return;
+    this.cachedOrganizationId = orgId;
+
     this.loading.set(true);
     try {
-      // Get current user to retrieve organization ID
-      const userResponse = await firstValueFrom(this.authnClient.getUserInfo({}));
-      if (!userResponse.user?.organizationId) {
-        return;
-      }
-
       // Parallelize organization and projects requests (they don't depend on each other)
       const orgRequest = create(GetOrganizationRequestSchema, {
-        id: userResponse.user.organizationId,
+        id: orgId,
       });
       const projectsRequest = create(ListProjectsRequestSchema, {});
 
@@ -120,10 +119,6 @@ export class OrganizationDataService {
     } finally {
       this.loading.set(false);
     }
-  }
-
-  async reloadOrganizationData() {
-    await this.loadOrganizationData();
   }
 
   /**

@@ -1,8 +1,6 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -27,7 +25,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-namespaces',
-  imports: [CommonModule, ReactiveFormsModule, NgIcon, ModalComponent],
+  imports: [ReactiveFormsModule, NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -140,7 +138,7 @@ export class NamespacesComponent implements OnInit {
       // Reload organization data to update the selector modal
       await Promise.all([
         this.loadNamespaces(this.projectId()),
-        this.organizationDataService.reloadOrganizationData(),
+        this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
       console.error('Failed to create namespace:', error);
@@ -168,7 +166,7 @@ export class NamespacesComponent implements OnInit {
       // Reload organization data to update the selector modal
       await Promise.all([
         this.loadNamespaces(this.projectId()),
-        this.organizationDataService.reloadOrganizationData(),
+        this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
       console.error('Failed to delete namespace:', error);
@@ -181,11 +179,6 @@ export class NamespacesComponent implements OnInit {
   }
 
   readonly formatDate = formatDateUtil;
-
-  timestampToDate(timestamp: Timestamp | undefined): string | undefined {
-    if (!timestamp) return undefined;
-    return timestampDate(timestamp).toISOString();
-  }
 
   getNameError(): string {
     const nameControl = this.namespaceForm.get('name');

@@ -1,5 +1,4 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import {
@@ -13,16 +12,16 @@ import {
   CreateNodePoolRequestSchema,
   UpdateNodePoolRequestSchema,
   DeleteNodePoolRequestSchema,
-  GetClusterRequestSchema,
   NodePool,
 } from '../../generated/v1/cluster_pb';
+import { fetchClusterName } from '../utils/cluster-status';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 
 @Component({
   selector: 'app-cluster-nodes',
-  imports: [CommonModule, SharedNodePoolsFormComponent, NgIcon],
+  imports: [SharedNodePoolsFormComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -51,19 +50,10 @@ export class ClusterNodesComponent implements OnInit {
   }
 
   async ngOnInit() {
-    await Promise.all([this.loadClusterName(), this.loadNodePools()]);
-  }
-
-  async loadClusterName() {
-    try {
-      const request = create(GetClusterRequestSchema, { clusterId: this.clusterId });
-      const response = await firstValueFrom(this.client.getCluster(request));
-      if (response.cluster) {
-        this.clusterName.set(response.cluster.name);
-      }
-    } catch (error) {
-      console.error('Failed to load cluster name:', error);
-    }
+    await Promise.all([
+      fetchClusterName(this.client, this.clusterId).then((name) => this.clusterName.set(name)),
+      this.loadNodePools(),
+    ]);
   }
 
   async loadNodePools() {

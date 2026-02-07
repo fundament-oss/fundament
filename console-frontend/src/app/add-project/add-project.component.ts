@@ -7,7 +7,6 @@ import {
   signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TitleService } from '../title.service';
@@ -22,7 +21,7 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 
 @Component({
   selector: 'app-add-project',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon],
+  imports: [RouterLink, ReactiveFormsModule, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -83,7 +82,7 @@ export class AddProjectComponent implements AfterViewInit {
       this.toastService.success(`Project '${this.projectForm.value.name}' created successfully`);
 
       // Reload organization data to update the selector modal
-      await this.organizationDataService.reloadOrganizationData();
+      await this.organizationDataService.loadOrganizationData();
 
       this.router.navigate(['/projects', response.projectId]);
     } catch (error) {

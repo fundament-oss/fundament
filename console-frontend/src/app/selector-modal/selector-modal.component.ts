@@ -1,12 +1,12 @@
 import {
   Component,
-  Input,
-  Output,
-  EventEmitter,
+  input,
+  output,
   signal,
+  computed,
+  effect,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerSearch, tablerFolder, tablerBuilding } from '@ng-icons/tabler-icons';
 import { ModalComponent } from '../modal/modal.component';
@@ -24,7 +24,7 @@ interface Organization {
 
 @Component({
   selector: 'app-selector-modal',
-  imports: [CommonModule, NgIconComponent, ModalComponent],
+  imports: [NgIconComponent, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerSearch,
@@ -36,17 +36,50 @@ interface Organization {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SelectorModalComponent {
-  @Input() show = false;
-  @Input() organizations: Organization[] = [];
-  @Input() selectedOrgId: string | null = null;
-  @Input() selectedProjectId: string | null = null;
+  show = input(false);
+  organizations = input<Organization[]>([]);
+  selectedOrgId = input<string | null>(null);
+  selectedProjectId = input<string | null>(null);
 
-  @Output() closeModal = new EventEmitter<void>();
-  @Output() selectOrganization = new EventEmitter<string>();
-  @Output() selectProject = new EventEmitter<string>();
+  closeModal = output();
+  selectOrganization = output<string>();
+  selectProject = output<string>();
 
   filterText = signal('');
   filterInputValue = signal('');
+
+  // Reset filter when modal opens
+  private resetOnOpen = effect(() => {
+    if (this.show()) {
+      this.filterText.set('');
+      this.filterInputValue.set('');
+    }
+  });
+
+  filteredOrganizations = computed(() => {
+    const filterText = this.filterText();
+    const orgs = this.organizations();
+    if (!filterText) {
+      return orgs;
+    }
+
+    return orgs
+      .map((org) => {
+        const orgMatches = org.name.toLowerCase().includes(filterText);
+        const filteredProjects = org.projects.filter((project) =>
+          project.name.toLowerCase().includes(filterText),
+        );
+
+        if (orgMatches || filteredProjects.length > 0) {
+          return {
+            ...org,
+            projects: orgMatches ? org.projects : filteredProjects,
+          };
+        }
+        return null;
+      })
+      .filter((org): org is Organization => org !== null);
+  });
 
   onClose(): void {
     this.closeModal.emit();
@@ -67,35 +100,10 @@ export class SelectorModalComponent {
   }
 
   isOrganizationSelected(orgId: string): boolean {
-    // Only highlight organization if no project is selected
-    return this.selectedOrgId === orgId && !this.selectedProjectId;
+    return this.selectedOrgId() === orgId && !this.selectedProjectId();
   }
 
   isProjectSelected(projectId: string): boolean {
-    return this.selectedProjectId === projectId;
-  }
-
-  filteredOrganizations(): Organization[] {
-    const filterText = this.filterText();
-    if (!filterText) {
-      return this.organizations;
-    }
-
-    return this.organizations
-      .map((org) => {
-        const orgMatches = org.name.toLowerCase().includes(filterText);
-        const filteredProjects = org.projects.filter((project) =>
-          project.name.toLowerCase().includes(filterText),
-        );
-
-        if (orgMatches || filteredProjects.length > 0) {
-          return {
-            ...org,
-            projects: orgMatches ? org.projects : filteredProjects,
-          };
-        }
-        return null;
-      })
-      .filter((org): org is Organization => org !== null);
+    return this.selectedProjectId() === projectId;
   }
 }

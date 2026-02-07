@@ -7,9 +7,7 @@ import {
   signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { AUTHN, ORGANIZATION } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
@@ -25,7 +23,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-organization',
-  imports: [CommonModule, FormsModule, NgIcon],
+  imports: [FormsModule, NgIcon],
   viewProviders: [
     provideIcons({
       tablerPencil,
@@ -139,9 +137,4 @@ export class OrganizationComponent implements OnInit {
   }
 
   readonly formatDate = formatDateUtil;
-
-  timestampToDate(timestamp: Timestamp | undefined): string {
-    if (!timestamp) return '';
-    return timestampDate(timestamp).toISOString();
-  }
 }

@@ -1,8 +1,6 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -41,14 +39,7 @@ import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-cluster-details',
-  imports: [
-    CommonModule,
-    RouterLink,
-    ReactiveFormsModule,
-    NgIcon,
-    LoadingIndicatorComponent,
-    ModalComponent,
-  ],
+  imports: [RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -224,11 +215,6 @@ export class ClusterDetailsComponent implements OnInit {
 
   readonly formatDate = formatDateTimeUtil;
 
-  timestampToDate(timestamp: Timestamp | undefined): string {
-    if (!timestamp) return '';
-    return timestampDate(timestamp).toISOString();
-  }
-
   getUsagePercentage(used: number, limit: number): number {
     return Math.round((used / limit) * 100);
   }
@@ -344,7 +330,7 @@ export class ClusterDetailsComponent implements OnInit {
       // Reload organization data to update the selector modal
       await Promise.all([
         this.loadNamespaces(this.clusterData.basics.id),
-        this.organizationDataService.reloadOrganizationData(),
+        this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
       console.error('Failed to create namespace:', error);
@@ -372,7 +358,7 @@ export class ClusterDetailsComponent implements OnInit {
       // Reload organization data to update the selector modal
       await Promise.all([
         this.loadNamespaces(this.clusterData.basics.id),
-        this.organizationDataService.reloadOrganizationData(),
+        this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
       console.error('Failed to delete namespace:', error);

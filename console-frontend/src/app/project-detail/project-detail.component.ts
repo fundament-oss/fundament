@@ -1,7 +1,5 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
-import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { PROJECT, CLUSTER } from '../../connect/tokens';
@@ -22,7 +20,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-detail',
-  imports: [CommonModule, RouterLink, NgIcon, LoadingIndicatorComponent],
+  imports: [RouterLink, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -107,9 +105,4 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   readonly formatDate = formatDateUtil;
-
-  timestampToDate(timestamp: Timestamp | undefined): string | undefined {
-    if (!timestamp) return undefined;
-    return timestampDate(timestamp).toISOString();
-  }
 }

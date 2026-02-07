@@ -1,8 +1,6 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
-import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerChevronRight } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
@@ -15,7 +13,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-projects',
-  imports: [CommonModule, RouterLink, NgIcon, LoadingIndicatorComponent],
+  imports: [RouterLink, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -64,9 +62,4 @@ export class ProjectsComponent implements OnInit {
   }
 
   readonly formatDate = formatDateUtil;
-
-  timestampToDate(timestamp: Timestamp | undefined): string | undefined {
-    if (!timestamp) return undefined;
-    return timestampDate(timestamp).toISOString();
-  }
 }

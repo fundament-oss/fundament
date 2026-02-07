@@ -1,5 +1,4 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
@@ -11,13 +10,13 @@ import {
   ListInstallsRequestSchema,
   AddInstallRequestSchema,
   RemoveInstallRequestSchema,
-  GetClusterRequestSchema,
 } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
+import { fetchClusterName } from '../utils/cluster-status';
 
 @Component({
   selector: 'app-cluster-plugins',
-  imports: [CommonModule, SharedPluginsFormComponent, NgIcon],
+  imports: [SharedPluginsFormComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -44,7 +43,7 @@ export class ClusterPluginsComponent implements OnInit {
   }
 
   async ngOnInit() {
-    await this.loadClusterName();
+    await fetchClusterName(this.client, this.clusterId).then((name) => this.clusterName.set(name));
     try {
       // Fetch current installs for the cluster
       const listRequest = create(ListInstallsRequestSchema, {
@@ -57,18 +56,6 @@ export class ClusterPluginsComponent implements OnInit {
       this.errorMessage.set(
         error instanceof Error ? error.message : 'Failed to load current plugins',
       );
-    }
-  }
-
-  async loadClusterName() {
-    try {
-      const request = create(GetClusterRequestSchema, { clusterId: this.clusterId });
-      const response = await firstValueFrom(this.client.getCluster(request));
-      if (response.cluster) {
-        this.clusterName.set(response.cluster.name);
-      }
-    } catch (error) {
-      console.error('Failed to load cluster name:', error);
     }
   }
 

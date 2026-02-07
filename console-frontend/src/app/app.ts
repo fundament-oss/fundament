@@ -134,12 +134,14 @@ export class App implements OnInit {
 
       // Load organization data when user is logged in
       if (user?.organizationId) {
-        this.organizationDataService.loadOrganizationData().then(() => {
+        this.organizationDataService.loadOrganizationData(user.organizationId).then(() => {
           // Initialize selector with the organization selected
           const orgs = this.organizationDataService.organizations();
           if (orgs.length > 0) {
             this.selectedOrgId.set(orgs[0].id);
           }
+          // Re-evaluate sidebar state now that org data is available
+          this.updateSidebarStateFromRoute(this.router.url);
         });
       }
     });
@@ -230,11 +232,6 @@ export class App implements OnInit {
     }
 
     return { label, route };
-  }
-
-  // Check if current route is project members or permissions
-  isProjectMembersOrPermissions(): boolean {
-    return this.router.url.includes('/members');
   }
 
   // Check if current route is clusters or add-cluster

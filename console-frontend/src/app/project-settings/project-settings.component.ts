@@ -1,5 +1,4 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -21,7 +20,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-settings',
-  imports: [CommonModule, FormsModule, NgIconComponent, ModalComponent],
+  imports: [FormsModule, NgIconComponent, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerX,
@@ -140,7 +139,7 @@ export class ProjectSettingsComponent implements OnInit {
       this.toastService.info(`Project '${currentProject.name}' deleted`);
 
       // Reload organization data to update the selector modal
-      await this.organizationDataService.reloadOrganizationData();
+      await this.organizationDataService.loadOrganizationData();
 
       this.router.navigate(['/projects']);
     } catch (err) {
