@@ -4,7 +4,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerTrash } from '@ng-icons/tabler-icons';
+import { tablerPlus, tablerTrash, tablerAlertTriangle } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
@@ -31,6 +31,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
       tablerCircleXFill,
       tablerPlus,
       tablerTrash,
+      tablerAlertTriangle,
     }),
   ],
   templateUrl: './namespaces.component.html',
@@ -64,6 +65,12 @@ export default class NamespacesComponent implements OnInit {
   isLoadingClusters = signal<boolean>(false);
 
   isCreatingNamespace = signal<boolean>(false);
+
+  showDeleteNamespaceModal = signal<boolean>(false);
+
+  pendingNamespaceId = signal<string | null>(null);
+
+  pendingNamespaceName = signal<string | null>(null);
 
   namespaceForm = this.fb.group({
     clusterId: ['', Validators.required],
@@ -169,11 +176,18 @@ export default class NamespacesComponent implements OnInit {
     }
   }
 
-  async deleteNamespace(namespaceId: string, namespaceName: string) {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(`Are you sure you want to delete namespace '${namespaceName}'?`)) {
-      return;
-    }
+  openDeleteNamespaceModal(namespaceId: string, namespaceName: string) {
+    this.pendingNamespaceId.set(namespaceId);
+    this.pendingNamespaceName.set(namespaceName);
+    this.showDeleteNamespaceModal.set(true);
+  }
+
+  async confirmDeleteNamespace() {
+    const namespaceId = this.pendingNamespaceId();
+    const namespaceName = this.pendingNamespaceName();
+    if (!namespaceId) return;
+
+    this.showDeleteNamespaceModal.set(false);
 
     try {
       const request = create(DeleteNamespaceRequestSchema, { namespaceId });

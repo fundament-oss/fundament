@@ -118,6 +118,12 @@ export default class ClusterDetailsComponent implements OnInit {
 
   isCreatingNamespace = signal<boolean>(false);
 
+  showDeleteNamespaceModal = signal<boolean>(false);
+
+  pendingNamespaceId = signal<string | null>(null);
+
+  pendingNamespaceName = signal<string | null>(null);
+
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
 
@@ -370,11 +376,18 @@ export default class ClusterDetailsComponent implements OnInit {
     }
   }
 
-  async deleteNamespace(namespaceId: string, namespaceName: string): Promise<void> {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(`Are you sure you want to delete namespace '${namespaceName}'?`)) {
-      return;
-    }
+  openDeleteNamespaceModal(namespaceId: string, namespaceName: string): void {
+    this.pendingNamespaceId.set(namespaceId);
+    this.pendingNamespaceName.set(namespaceName);
+    this.showDeleteNamespaceModal.set(true);
+  }
+
+  async confirmDeleteNamespace(): Promise<void> {
+    const namespaceId = this.pendingNamespaceId();
+    const namespaceName = this.pendingNamespaceName();
+    if (!namespaceId) return;
+
+    this.showDeleteNamespaceModal.set(false);
 
     try {
       const request = create(DeleteNamespaceRequestSchema, { namespaceId });
