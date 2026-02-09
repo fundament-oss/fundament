@@ -19,7 +19,7 @@ body:grpc {
   '''
 }
 
-script:pre-request {
+script:post-response {
   // If the response is JSON, you can also parse and extract specific fields
   if (res.headers['content-type']?.includes('application/json')) {
     bru.setVar("projectId", res.body.projects[0].id);

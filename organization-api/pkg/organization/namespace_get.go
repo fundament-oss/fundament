@@ -2,9 +2,11 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -25,6 +27,9 @@ func (s *Server) GetNamespaceByClusterAndName(
 		NamespaceName:  req.Msg.NamespaceName,
 	})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("namespace not found"))
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get namespace: %w", err))
 	}
 
@@ -48,6 +53,9 @@ func (s *Server) GetNamespaceByProjectAndName(
 		NamespaceName:  req.Msg.NamespaceName,
 	})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("namespace not found"))
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get namespace: %w", err))
 	}
 

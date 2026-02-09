@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -171,7 +170,7 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		config.Name = types.StringValue(ns.Name)
 		config.ProjectID = types.StringValue(ns.ProjectId)
 		config.ClusterID = types.StringValue(ns.ClusterId)
-		config.Created = types.StringValue(ns.Created.AsTime().Format(time.RFC3339))
+		config.Created = types.StringValue(ns.Created.String())
 	} else {
 		// Use project_name
 		projectName := config.ProjectName.ValueString()
@@ -217,7 +216,7 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		config.Name = types.StringValue(ns.Name)
 		config.ProjectID = types.StringValue(ns.ProjectId)
 		config.ClusterID = types.StringValue(ns.ClusterId)
-		config.Created = types.StringValue(ns.Created.AsTime().Format(time.RFC3339))
+		config.Created = types.StringValue(ns.Created.String())
 	}
 
 	tflog.Debug(ctx, "Read namespace successfully", map[string]any{
