@@ -16,8 +16,8 @@ body:grpc {
   name: message 1
   content: '''
     {
-      "cluster_name": "my-cluster",
-      "namespace_name": "my-namespace"
+      "cluster_name": "{{clusterName}}",
+      "namespace_name": "{{namespaceName}}"
     }
   '''
 }
