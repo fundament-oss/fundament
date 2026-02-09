@@ -209,7 +209,7 @@
                     @if (!isRevoked(apiKey.revoked) && !isExpired(apiKey.expires)) {
                       <button
                         type="button"
-                        (click)="revokeApiKey(apiKey.id)"
+                        (click)="openRevokeModal(apiKey.id, apiKey.name)"
                         [disabled]="loading()"
                         class="btn-light inline-flex shrink-0 items-center"
                       >
@@ -218,7 +218,7 @@
                     }
                     <button
                       type="button"
-                      (click)="deleteApiKey(apiKey.id)"
+                      (click)="openDeleteModal(apiKey.id, apiKey.name)"
                       [disabled]="loading()"
                       class="btn-remove inline-flex shrink-0 items-center"
                     >
@@ -242,3 +242,84 @@
     }
   </div>
 </div>
+
+<!-- Revoke API Key Modal -->
+<app-modal
+  [show]="showRevokeModal()"
+  title="Revoke API key"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showRevokeModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Are you sure you want to revoke API key
+          <span class="font-semibold text-gray-900 dark:text-white">{{ pendingKeyName() }}</span
+          >? It will no longer be usable.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showRevokeModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="confirmRevoke()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, revoke this key
+    </button>
+  </div>
+</app-modal>
+
+<!-- Delete API Key Modal -->
+<app-modal
+  [show]="showDeleteModal()"
+  title="Delete API key"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showDeleteModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Are you sure you want to delete API key
+          <span class="font-semibold text-gray-900 dark:text-white">{{ pendingKeyName() }}</span
+          >?
+        </p>
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">This cannot be undone.</p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="confirmDelete()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, delete this key
+    </button>
+  </div>
+</app-modal>
