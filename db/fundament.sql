@@ -1542,6 +1542,14 @@ GRANT SELECT,INSERT
 -- ddl-end --
 
 
+-- object: grant_r_a11f270e5c | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.namespaces
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
 -- object: grant_raw_31f2fce1d0 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.node_pools
@@ -1738,6 +1746,22 @@ GRANT USAGE
 GRANT USAGE
    ON SCHEMA authz
    TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_634099cb32" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authz
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_a_3ac1cf1633 | type: PERMISSION --
+GRANT INSERT
+   ON TABLE authz.outbox
+   TO fun_cluster_worker;
 
 -- ddl-end --
 

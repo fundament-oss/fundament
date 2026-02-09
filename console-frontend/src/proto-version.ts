@@ -1,2 +1,2 @@
 // Auto-generated file - do not edit
-export const PROTO_API_VERSION = 'b6367fbd53d5';
+export default '6507096c5ea3';

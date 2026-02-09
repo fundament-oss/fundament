@@ -1801,6 +1801,11 @@ END;]]> </definition>
 	<privileges select="true" insert="true"/>
 </permission>
 <permission>
+	<object name="tenant.namespaces" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
 	<object name="tenant.node_pools" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
@@ -1924,5 +1929,15 @@ END;]]> </definition>
 	<object name="authz" type="schema"/>
 	<roles names="fun_authn_api"/>
 	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authz" type="schema"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authz.outbox" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges insert="true"/>
 </permission>
 </dbmodel>

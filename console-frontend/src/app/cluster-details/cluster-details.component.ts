@@ -30,6 +30,7 @@ import {
   NodePool,
   ClusterNamespace,
   type ClusterEvent,
+  type SyncState,
 } from '../../generated/v1/cluster_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';

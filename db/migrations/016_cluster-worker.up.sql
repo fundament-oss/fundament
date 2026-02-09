@@ -36,6 +36,13 @@ END;
 $function$
 ;
 
+-- WARNING: The following grants were added manually because trek does not
+-- generate USAGE grants or cross-schema permissions in migration diffs.
+GRANT USAGE ON SCHEMA "tenant" TO "fun_cluster_worker";
+GRANT USAGE ON SCHEMA "authz" TO "fun_cluster_worker";
+GRANT INSERT ON "authz"."outbox" TO "fun_cluster_worker";
+GRANT SELECT ON "tenant"."namespaces" TO "fun_cluster_worker";
+
 CREATE TABLE "tenant"."cluster_events" (
 	"id" uuid DEFAULT uuidv7() NOT NULL,
 	"cluster_id" uuid NOT NULL,
@@ -112,11 +119,6 @@ GRANT SELECT ON "tenant"."clusters" TO "fun_cluster_worker";
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
 GRANT UPDATE ON "tenant"."clusters" TO "fun_cluster_worker";
-
-/* Hazards:
- - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
-*/
-GRANT USAGE ON SCHEMA "tenant" TO "fun_cluster_worker";
 
 ALTER TABLE "tenant"."clusters" DROP CONSTRAINT "clusters_ck_status";
 

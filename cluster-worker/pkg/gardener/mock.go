@@ -62,9 +62,9 @@ type MockClient struct {
 	ValidateSpecs bool // Enable spec validation (default: true)
 
 	// Async namespace simulation (like real Gardener)
-	SimulateAsyncNamespace bool                    // If true, first EnsureProject call returns empty namespace
-	projectCreatedAt       map[string]time.Time    // Track when projects were created
-	NamespaceReadyDelay    time.Duration           // Time before namespace becomes ready (default: 2s)
+	SimulateAsyncNamespace bool                 // If true, first EnsureProject call returns empty namespace
+	projectCreatedAt       map[string]time.Time // Track when projects were created
+	NamespaceReadyDelay    time.Duration        // Time before namespace becomes ready (default: 2s)
 }
 
 // mockShoot tracks a shoot's state and creation time for status progression.
@@ -97,7 +97,7 @@ func NewMock(logger *slog.Logger) *MockClient {
 		ReadyDelay:             5 * time.Second,
 		DeleteDelay:            3 * time.Second,
 		ValidateSpecs:          true,
-		SimulateAsyncNamespace: false,             // Default: instant namespace (backwards compatible)
+		SimulateAsyncNamespace: false, // Default: instant namespace (backwards compatible)
 		NamespaceReadyDelay:    2 * time.Second,
 	}
 }
