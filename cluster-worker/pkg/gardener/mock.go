@@ -321,9 +321,10 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 		// Handle creation status progression
 		elapsed := now.Sub(shoot.CreatedAt)
 
-		if elapsed < m.ProgressingDelay {
+		switch {
+		case elapsed < m.ProgressingDelay:
 			status = &ShootStatus{Status: StatusPending, Message: "Shoot creation initiated"}
-		} else if elapsed < m.ProgressingDelay+m.ReadyDelay {
+		case elapsed < m.ProgressingDelay+m.ReadyDelay:
 			progress := (elapsed - m.ProgressingDelay).Seconds() / m.ReadyDelay.Seconds() * 100
 			if m.ReadyDelay == 0 {
 				progress = 100
@@ -332,7 +333,7 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 				Status:  StatusProgressing,
 				Message: fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
 			}
-		} else {
+		default:
 			status = &ShootStatus{Status: StatusReady, Message: MsgShootReady}
 		}
 	}

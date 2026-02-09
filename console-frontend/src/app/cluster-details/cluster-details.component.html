@@ -117,7 +117,9 @@
           @if (clusterData.syncState?.shootMessage) {
             <dl class="sm:col-span-2 lg:col-span-3">
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Message</dt>
-              <dd class="mt-1 text-sm dark:text-white">{{ clusterData.syncState?.shootMessage }}</dd>
+              <dd class="mt-1 text-sm dark:text-white">
+                {{ clusterData.syncState?.shootMessage }}
+              </dd>
             </dl>
           }
           @if (clusterData.syncState?.syncError) {
@@ -156,14 +158,10 @@
               <table class="min-w-full text-sm">
                 <thead>
                   <tr class="border-b border-gray-200 dark:border-gray-700">
-                    <th
-                      class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400"
-                    >
+                    <th class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
                       Property
                     </th>
-                    <th
-                      class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400"
-                    >
+                    <th class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
                       Value
                     </th>
                   </tr>

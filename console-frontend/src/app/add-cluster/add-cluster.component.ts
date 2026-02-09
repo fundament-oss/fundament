@@ -35,9 +35,7 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
 
   // Dropdown options based on Gardener
   // TODO: Fetch from API based on cloud profile
-  regions = [
-    { value: 'local', label: 'Local' },
-  ];
+  regions = [{ value: 'local', label: 'Local' }];
 
   kubernetesVersions = ['1.31.1', '1.32.0', '1.33.0', '1.34.0'];
 

@@ -27,6 +27,7 @@ func TestStatusWorker_Creation(t *testing.T) {
 	sp := New(nil, mock, logger, cfg)
 	if sp == nil {
 		t.Fatal("status poller should not be nil")
+		return
 	}
 	if sp.cfg.PollInterval != 30*time.Second {
 		t.Errorf("expected poll interval 30s, got %v", sp.cfg.PollInterval)
