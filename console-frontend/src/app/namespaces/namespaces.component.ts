@@ -1,11 +1,15 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPlus, tablerTrash } from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { PROJECT, CLUSTER } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import {
   ListProjectNamespacesRequestSchema,
   ProjectNamespace,
@@ -16,11 +20,7 @@ import {
   DeleteNamespaceRequestSchema,
   ClusterSummary,
 } from '../../generated/v1/cluster_pb';
-import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerTrash } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
-import { ModalComponent } from '../modal/modal.component';
+import ModalComponent from '../modal/modal.component';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
@@ -36,22 +36,33 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
   templateUrl: './namespaces.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class NamespacesComponent implements OnInit {
+export default class NamespacesComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private route = inject(ActivatedRoute);
+
   private fb = inject(FormBuilder);
+
   private projectClient = inject(PROJECT);
+
   private clusterClient = inject(CLUSTER);
+
   private toastService = inject(ToastService);
+
   private organizationDataService = inject(OrganizationDataService);
 
   projectId = signal<string>('');
+
   namespaces = signal<ProjectNamespace[]>([]);
+
   clusters = signal<ClusterSummary[]>([]);
 
   errorMessage = signal<string | null>(null);
+
   showCreateNamespaceModal = signal<boolean>(false);
+
   isLoadingClusters = signal<boolean>(false);
+
   isCreatingNamespace = signal<boolean>(false);
 
   namespaceForm = this.fb.group({
@@ -83,8 +94,11 @@ export class NamespacesComponent implements OnInit {
       const response = await firstValueFrom(this.projectClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
-      console.error('Failed to fetch namespaces:', error);
-      this.toastService.error('Failed to load namespaces');
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to load namespaces: ${error.message}`
+          : 'Failed to load namespaces',
+      );
     }
   }
 
@@ -98,7 +112,11 @@ export class NamespacesComponent implements OnInit {
         this.namespaceForm.patchValue({ clusterId: response.clusters[0].id });
       }
     } catch (error) {
-      console.error('Failed to fetch clusters:', error);
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to load clusters: ${error.message}`
+          : 'Failed to load clusters',
+      );
     } finally {
       this.isLoadingClusters.set(false);
     }
@@ -141,7 +159,6 @@ export class NamespacesComponent implements OnInit {
         this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
-      console.error('Failed to create namespace:', error);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to create namespace: ${error.message}`
@@ -153,7 +170,8 @@ export class NamespacesComponent implements OnInit {
   }
 
   async deleteNamespace(namespaceId: string, namespaceName: string) {
-    if (!confirm(`Are you sure you want to delete namespace '${namespaceName}'?`)) {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(`Are you sure you want to delete namespace '${namespaceName}'?`)) {
       return;
     }
 
@@ -169,7 +187,6 @@ export class NamespacesComponent implements OnInit {
         this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
-      console.error('Failed to delete namespace:', error);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to delete namespace: ${error.message}`

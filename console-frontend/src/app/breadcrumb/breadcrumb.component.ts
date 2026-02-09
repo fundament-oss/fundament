@@ -26,9 +26,11 @@ export class BreadcrumbComponent {
 
   // Support both the old API (currentPage) and new API (segments)
   @Input() currentPage?: string;
+
   @Input() segments: BreadcrumbSegment[] = [];
 
   organizationName = computed(() => this.orgDataService.organizations()[0]?.name ?? null);
+
   organizationLoading = this.orgDataService.loading;
 
   // Computed segments that combines old and new API

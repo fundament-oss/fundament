@@ -9,15 +9,15 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { PROJECT } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import { CreateProjectRequestSchema } from '../../generated/v1/project_pb';
-import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 
 @Component({
   selector: 'app-add-project',
@@ -30,16 +30,23 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AddProjectComponent implements AfterViewInit {
+export default class AddProjectComponent implements AfterViewInit {
   @ViewChild('projectNameInput') projectNameInput!: ElementRef<HTMLInputElement>;
+
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private fb = inject(FormBuilder);
+
   private client = inject(PROJECT);
+
   private toastService = inject(ToastService);
+
   private organizationDataService = inject(OrganizationDataService);
 
   errorMessage = signal<string | null>(null);
+
   isSubmitting = signal<boolean>(false);
 
   projectForm = this.fb.group({
@@ -86,7 +93,6 @@ export class AddProjectComponent implements AfterViewInit {
 
       this.router.navigate(['/projects', response.projectId]);
     } catch (error) {
-      console.error('Failed to create project:', error);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to create project: ${error.message}`

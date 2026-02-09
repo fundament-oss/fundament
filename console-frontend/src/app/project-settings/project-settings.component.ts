@@ -1,21 +1,21 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NgIconComponent, provideIcons } from '@ng-icons/core';
+import { tablerX, tablerPencil, tablerCheck, tablerAlertTriangle } from '@ng-icons/tabler-icons';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { tablerX, tablerPencil, tablerCheck, tablerAlertTriangle } from '@ng-icons/tabler-icons';
-import { ModalComponent } from '../modal/modal.component';
+import ModalComponent from '../modal/modal.component';
 import { PROJECT } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import {
   GetProjectRequestSchema,
   UpdateProjectRequestSchema,
   DeleteProjectRequestSchema,
   type Project,
 } from '../../generated/v1/project_pb';
-import { firstValueFrom } from 'rxjs';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
@@ -32,21 +32,31 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
   templateUrl: './project-settings.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProjectSettingsComponent implements OnInit {
+export default class ProjectSettingsComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private route = inject(ActivatedRoute);
+
   private router = inject(Router);
+
   private projectClient = inject(PROJECT);
+
   private toastService = inject(ToastService);
+
   private organizationDataService = inject(OrganizationDataService);
 
   projectId = signal<string>('');
+
   project = signal<Project | undefined>(undefined);
 
   isEditing = signal(false);
+
   editingName = signal('');
+
   loading = signal(false);
+
   error = signal<string | null>(null);
+
   showDeleteModal = signal<boolean>(false);
 
   constructor() {
@@ -71,8 +81,9 @@ export class ProjectSettingsComponent implements OnInit {
         this.project.set(response.project);
       }
     } catch (err) {
-      console.error('Error loading project:', err);
-      this.error.set('Failed to load project');
+      this.error.set(
+        err instanceof Error ? `Failed to load project: ${err.message}` : 'Failed to load project',
+      );
     } finally {
       this.loading.set(false);
     }
@@ -117,8 +128,11 @@ export class ProjectSettingsComponent implements OnInit {
       this.isEditing.set(false);
       this.editingName.set('');
     } catch (err) {
-      console.error('Error updating project:', err);
-      this.error.set('Failed to update project name');
+      this.error.set(
+        err instanceof Error
+          ? `Failed to update project name: ${err.message}`
+          : 'Failed to update project name',
+      );
     } finally {
       this.loading.set(false);
     }
@@ -143,7 +157,6 @@ export class ProjectSettingsComponent implements OnInit {
 
       this.router.navigate(['/projects']);
     } catch (err) {
-      console.error('Failed to delete project:', err);
       this.showDeleteModal.set(false);
       this.error.set(
         err instanceof Error

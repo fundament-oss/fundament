@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from 
 import { CommonModule } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCheck } from '@ng-icons/tabler-icons';
-import { ModalComponent } from '../modal/modal.component';
+import ModalComponent from '../modal/modal.component';
 
 interface Cluster {
   id: string;
@@ -21,12 +21,15 @@ interface Cluster {
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class InstallPluginModalComponent {
+export default class InstallPluginModalComponent {
   @Input() pluginName = '';
+
   @Input() clusters: Cluster[] = [];
+
   @Input() show = false;
 
   @Output() closeModal = new EventEmitter<void>();
+
   @Output() install = new EventEmitter<string>();
 
   onClose(): void {

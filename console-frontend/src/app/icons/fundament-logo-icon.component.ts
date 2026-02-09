@@ -15,6 +15,6 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
     </svg>
   `,
 })
-export class FundamentLogoIconComponent {
+export default class FundamentLogoIconComponent {
   @Input() class = '';
 }

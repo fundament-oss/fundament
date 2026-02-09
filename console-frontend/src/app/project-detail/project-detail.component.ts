@@ -1,9 +1,13 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink, ActivatedRoute } from '@angular/router';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPencil } from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { PROJECT, CLUSTER } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import {
   GetProjectRequestSchema,
   ListProjectNamespacesRequestSchema,
@@ -11,10 +15,6 @@ import {
   ProjectNamespace,
 } from '../../generated/v1/project_pb';
 import { ListClustersRequestSchema, ClusterSummary } from '../../generated/v1/cluster_pb';
-import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPencil } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
@@ -30,18 +30,25 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProjectDetailComponent implements OnInit {
+export default class ProjectDetailComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private route = inject(ActivatedRoute);
+
   private projectClient = inject(PROJECT);
+
   private clusterClient = inject(CLUSTER);
+
   private toastService = inject(ToastService);
 
   project = signal<Project | null>(null);
+
   namespaces = signal<ProjectNamespace[]>([]);
+
   clusters = signal<ClusterSummary[]>([]);
 
   isLoading = signal<boolean>(true);
+
   errorMessage = signal<string | null>(null);
 
   async ngOnInit() {
@@ -67,7 +74,6 @@ export class ProjectDetailComponent implements OnInit {
       // Load namespaces and clusters for read-only display
       await Promise.all([this.loadNamespaces(projectId), this.loadClusters()]);
     } catch (error) {
-      console.error('Failed to fetch project:', error);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to load project: ${error.message}`
@@ -84,8 +90,11 @@ export class ProjectDetailComponent implements OnInit {
       const response = await firstValueFrom(this.projectClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
-      console.error('Failed to fetch namespaces:', error);
-      this.toastService.error('Failed to load namespaces');
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to load namespaces: ${error.message}`
+          : 'Failed to load namespaces',
+      );
     }
   }
 
@@ -95,7 +104,11 @@ export class ProjectDetailComponent implements OnInit {
       const response = await firstValueFrom(this.clusterClient.listClusters(request));
       this.clusters.set(response.clusters);
     } catch (error) {
-      console.error('Failed to fetch clusters:', error);
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to load clusters: ${error.message}`
+          : 'Failed to load clusters',
+      );
     }
   }
 

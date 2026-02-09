@@ -6,14 +6,12 @@ import {
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { createConnectTransport } from '@connectrpc/connect-web';
-import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
-import { PROTO_API_VERSION } from '../proto-version';
 import { BehaviorSubject } from 'rxjs';
-import { routes } from './app.routes';
-import { ConfigService } from './config.service';
 import { provideNgIconsConfig } from '@ng-icons/core';
-
-const EXPECTED_API_VERSION = PROTO_API_VERSION;
+import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
+import EXPECTED_API_VERSION from '../proto-version';
+import routes from './app.routes';
+import { ConfigService } from './config.service';
 
 // Global version mismatch observable
 export const versionMismatch$ = new BehaviorSubject<boolean>(false);
@@ -21,6 +19,7 @@ export const versionMismatch$ = new BehaviorSubject<boolean>(false);
 // Create a version mismatch handler
 const handleVersionMismatch = (serverVersion: string) => {
   if (serverVersion && serverVersion !== EXPECTED_API_VERSION) {
+    // eslint-disable-next-line no-console
     console.warn(`API version mismatch: expected ${EXPECTED_API_VERSION}, got ${serverVersion}`);
     versionMismatch$.next(true);
   }
@@ -46,12 +45,11 @@ export const appConfig: ApplicationConfig = {
         const config = configService.getConfig();
         return createConnectTransport({
           baseUrl: config.authnApiUrl,
-          fetch: (input, init) => {
-            return fetch(input, {
+          fetch: (input, init) =>
+            fetch(input, {
               ...init,
               credentials: 'include', // Include the HTTP-only authentication cookie with requests, also below
-            });
-          },
+            }),
         });
       },
     },

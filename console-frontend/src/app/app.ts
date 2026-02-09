@@ -16,14 +16,6 @@ import {
 } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
-import { AuthnApiService } from './authn-api.service';
-import type { User } from '../generated/authn/v1/authn_pb';
-import { ToastService } from './toast.service';
-import { versionMismatch$ } from './app.config';
-import { SelectorModalComponent } from './selector-modal/selector-modal.component';
-import { OrganizationDataService } from './organization-data.service';
-import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
-import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerCircleCheck,
@@ -47,6 +39,18 @@ import {
   tablerBracketsContain,
 } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import AuthnApiService from './authn-api.service';
+import type { User } from '../generated/authn/v1/authn_pb';
+import { ToastService } from './toast.service';
+import { versionMismatch$ } from './app.config';
+import SelectorModalComponent from './selector-modal/selector-modal.component';
+import { OrganizationDataService } from './organization-data.service';
+import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
+import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
+
+const reloadApp = () => {
+  window.location.reload();
+};
 
 @Component({
   selector: 'app-root',
@@ -91,11 +95,15 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
   templateUrl: './app.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class App implements OnInit {
+export default class App implements OnInit {
   protected readonly title = signal('fundament-console');
+
   private router = inject(Router);
+
   private apiService = inject(AuthnApiService);
+
   protected toastService = inject(ToastService);
+
   protected organizationDataService = inject(OrganizationDataService);
 
   // Version mismatch state
@@ -103,7 +111,9 @@ export class App implements OnInit {
 
   // Dropdown states
   userDropdownOpen = signal(false);
+
   sidebarOpen = signal(false);
+
   selectorModalOpen = signal(false);
 
   // Theme state
@@ -114,6 +124,7 @@ export class App implements OnInit {
 
   // Nested selector state
   selectedOrgId = signal<string | null>(null);
+
   selectedProjectId = signal<string | null>(null);
 
   // Route state
@@ -165,9 +176,7 @@ export class App implements OnInit {
     this.updateBreadcrumbs();
   }
 
-  reloadApp() {
-    window.location.reload();
-  }
+  reloadApp = reloadApp;
 
   // Update sidebar state based on current route
   private updateSidebarStateFromRoute(url: string) {
@@ -226,9 +235,10 @@ export class App implements OnInit {
     }
 
     if (route) {
-      for (const [key, value] of Object.entries(params)) {
-        route = route.replace(`:${key}`, value);
-      }
+      route = Object.entries(params).reduce(
+        (current, [key, value]) => current.replace(`:${key}`, value),
+        route,
+      );
     }
 
     return { label, route };
@@ -310,6 +320,7 @@ export class App implements OnInit {
       await this.apiService.logout();
       this.router.navigate(['/login']);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Logout failed:', error);
     }
   }

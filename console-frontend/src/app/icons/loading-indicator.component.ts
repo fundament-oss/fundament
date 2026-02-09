@@ -25,6 +25,6 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
     </svg>
   `,
 })
-export class LoadingIndicatorComponent {
+export default class LoadingIndicatorComponent {
   @Input() class = '';
 }

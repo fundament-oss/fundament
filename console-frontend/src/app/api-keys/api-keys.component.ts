@@ -9,17 +9,8 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TitleService } from '../title.service';
-import { APIKEY } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
-import {
-  type APIKey,
-  ListAPIKeysRequestSchema,
-  DeleteAPIKeyRequestSchema,
-  CreateAPIKeyRequestSchema,
-  RevokeAPIKeyRequestSchema,
-} from '../../generated/v1/apikey_pb';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -31,9 +22,37 @@ import {
   tablerBan,
 } from '@ng-icons/tabler-icons';
 import {
+  type APIKey,
+  ListAPIKeysRequestSchema,
+  DeleteAPIKeyRequestSchema,
+  CreateAPIKeyRequestSchema,
+  RevokeAPIKeyRequestSchema,
+} from '../../generated/v1/apikey_pb';
+import { APIKEY } from '../../connect/tokens';
+import { TitleService } from '../title.service';
+import {
   formatDate as formatDateUtil,
   formatDateTime as formatDateTimeUtil,
 } from '../utils/date-format';
+
+const getNameError = (field?: { invalid: boolean | null; touched: boolean | null }): string => {
+  if (field?.invalid && field?.touched) {
+    return 'Name is required';
+  }
+  return '';
+};
+
+const formatDate = (timestamp: Timestamp | undefined): string => formatDateUtil(timestamp, 'Never');
+
+const formatDateTime = (timestamp: Timestamp | undefined): string =>
+  formatDateTimeUtil(timestamp, 'Never');
+
+const isExpired = (timestamp: Timestamp | undefined): boolean => {
+  if (!timestamp) return false;
+  return timestampDate(timestamp) < new Date();
+};
+
+const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== undefined;
 
 @Component({
   selector: 'app-api-keys',
@@ -51,23 +70,29 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './api-keys.component.html',
 })
-export class ApiKeysComponent implements OnInit {
+export default class ApiKeysComponent implements OnInit {
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
+
   private apiKeyClient = inject(APIKEY);
 
   apiKeys = signal<APIKey[]>([]);
+
   loading = signal(false);
+
   error = signal<string | null>(null);
 
   // Creation form state
   isCreating = signal(false);
+
   newKeyName = signal('');
+
   newKeyExpiresInDays = signal<number | null>(null);
 
   // Newly created token (only shown once)
   createdToken = signal<string | null>(null);
+
   createdTokenPrefix = signal<string | null>(null);
 
   constructor() {
@@ -87,15 +112,21 @@ export class ApiKeysComponent implements OnInit {
       const response = await firstValueFrom(this.apiKeyClient.listAPIKeys(request));
       this.apiKeys.set(response.apiKeys);
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to load API keys');
-      console.error('Error loading API keys:', err);
+      this.error.set(
+        err instanceof Error
+          ? `Failed to load API keys: ${err.message}`
+          : 'Failed to load API keys',
+      );
     } finally {
       this.loading.set(false);
     }
   }
 
   async revokeApiKey(apiKeyId: string) {
-    if (!confirm('Are you sure you want to revoke this API key? It will no longer be usable.')) {
+    // eslint-disable-next-line no-alert
+    if (
+      !window.confirm('Are you sure you want to revoke this API key? It will no longer be usable.')
+    ) {
       return;
     }
 
@@ -111,14 +142,20 @@ export class ApiKeysComponent implements OnInit {
       // Reload the list after successful revocation
       await this.loadApiKeys();
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to revoke API key');
-      console.error('Error revoking API key:', err);
+      this.error.set(
+        err instanceof Error
+          ? `Failed to revoke API key: ${err.message}`
+          : 'Failed to revoke API key',
+      );
       this.loading.set(false);
     }
   }
 
   async deleteApiKey(apiKeyId: string) {
-    if (!confirm('Are you sure you want to delete this API key? This action cannot be undone.')) {
+    // eslint-disable-next-line no-alert
+    if (
+      !window.confirm('Are you sure you want to delete this API key? This action cannot be undone.')
+    ) {
       return;
     }
 
@@ -134,8 +171,11 @@ export class ApiKeysComponent implements OnInit {
       // Reload the list after successful deletion
       await this.loadApiKeys();
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to delete API key');
-      console.error('Error deleting API key:', err);
+      this.error.set(
+        err instanceof Error
+          ? `Failed to delete API key: ${err.message}`
+          : 'Failed to delete API key',
+      );
       this.loading.set(false);
     }
   }
@@ -188,8 +228,11 @@ export class ApiKeysComponent implements OnInit {
       // Reload the list to show the new key
       await this.loadApiKeys();
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to create API key');
-      console.error('Error creating API key:', err);
+      this.error.set(
+        err instanceof Error
+          ? `Failed to create API key: ${err.message}`
+          : 'Failed to create API key',
+      );
     } finally {
       this.loading.set(false);
     }
@@ -214,8 +257,7 @@ export class ApiKeysComponent implements OnInit {
         document.execCommand('copy');
         document.body.removeChild(textarea);
       }
-    } catch (err) {
-      console.error('Failed to copy token:', err);
+    } catch {
       this.error.set('Failed to copy token to clipboard. Please copy it manually.');
     }
   }
@@ -225,27 +267,13 @@ export class ApiKeysComponent implements OnInit {
     this.createdTokenPrefix.set(null);
   }
 
-  getNameError(field?: { invalid: boolean | null; touched: boolean | null }): string {
-    if (field?.invalid && field?.touched) {
-      return 'Name is required';
-    }
-    return '';
-  }
+  getNameError = getNameError;
 
-  formatDate(timestamp: Timestamp | undefined): string {
-    return formatDateUtil(timestamp, 'Never');
-  }
+  formatDate = formatDate;
 
-  formatDateTime(timestamp: Timestamp | undefined): string {
-    return formatDateTimeUtil(timestamp, 'Never');
-  }
+  formatDateTime = formatDateTime;
 
-  isExpired(timestamp: Timestamp | undefined): boolean {
-    if (!timestamp) return false;
-    return timestampDate(timestamp) < new Date();
-  }
+  isExpired = isExpired;
 
-  isRevoked(timestamp: Timestamp | undefined): boolean {
-    return timestamp !== undefined;
-  }
+  isRevoked = isRevoked;
 }

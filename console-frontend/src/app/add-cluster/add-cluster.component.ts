@@ -19,12 +19,15 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster.component.html',
 })
-export class AddClusterComponent implements AfterViewInit, OnInit {
+export default class AddClusterComponent implements AfterViewInit, OnInit {
   @ViewChild('clusterNameInput') clusterNameInput!: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private fb = inject(FormBuilder);
+
   private stateService = inject(ClusterWizardStateService);
 
   // Form
@@ -93,12 +96,11 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
   onSubmit() {
     if (this.clusterForm.invalid) {
       this.clusterForm.markAllAsTouched();
-      this.scrollToFirstError();
+      AddClusterComponent.scrollToFirstError();
       return;
     }
 
     const clusterData = this.clusterForm.value;
-    console.log('Creating cluster with data:', clusterData);
 
     // Save state
     this.stateService.updateBasicInfo({
@@ -112,7 +114,7 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
     this.router.navigate(['/add-cluster/nodes']);
   }
 
-  private scrollToFirstError() {
+  private static scrollToFirstError() {
     setTimeout(() => {
       const firstInvalidControl = document.querySelector('.ng-invalid:not(form)');
       if (firstInvalidControl) {

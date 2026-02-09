@@ -29,15 +29,19 @@ import { tablerX } from '@ng-icons/tabler-icons';
   templateUrl: './modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ModalComponent implements OnChanges, AfterViewChecked, OnDestroy {
+export default class ModalComponent implements OnChanges, AfterViewChecked, OnDestroy {
   @Input() show = false;
+
   @Input() title = '';
+
   @Input() maxWidth = 'max-w-md';
+
   @Output() modalClose = new EventEmitter<void>();
 
   @ViewChild('modalDialog', { read: ElementRef }) modalDialog?: ElementRef<HTMLDivElement>;
 
   private previouslyFocusedElement: HTMLElement | null = null;
+
   private shouldSetFocus = false;
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -143,12 +147,10 @@ export class ModalComponent implements OnChanges, AfterViewChecked, OnDestroy {
         event.preventDefault();
         lastElement.focus();
       }
-    } else {
+    } else if (document.activeElement === lastElement) {
       // Tab: moving forwards
-      if (document.activeElement === lastElement) {
-        event.preventDefault();
-        firstElement.focus();
-      }
+      event.preventDefault();
+      firstElement.focus();
     }
   }
 
