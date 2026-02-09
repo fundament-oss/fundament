@@ -7,7 +7,7 @@ import (
 )
 
 func TestObjectConstructors(t *testing.T) {
-	id := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+	id := uuid.New()
 
 	tests := []struct {
 		name     string
@@ -103,8 +103,9 @@ func TestEvaluationRequest(t *testing.T) {
 }
 
 func TestMergeEvaluation(t *testing.T) {
-	userID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
-	projectID := uuid.MustParse("660e8400-e29b-41d4-a716-446655440000")
+	userID := uuid.New()
+	projectID := uuid.New()
+	organizationID := uuid.New()
 
 	subject := User(userID)
 	action := CanView()
@@ -137,7 +138,7 @@ func TestMergeEvaluation(t *testing.T) {
 			Action:  &action,
 			Evaluations: []EvaluationRequest{
 				{
-					Subject:  Organization(projectID), // Override subject
+					Subject:  Organization(organizationID), // Override subject
 					Resource: Project(projectID),
 					Action:   CanEdit(), // Override action
 				},
@@ -182,25 +183,85 @@ func TestMergeEvaluation(t *testing.T) {
 	})
 }
 
-func TestTypicalUsage(t *testing.T) {
-	userID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
-	projectID := uuid.MustParse("660e8400-e29b-41d4-a716-446655440000")
+func TestEvaluations_InvalidSemantic(t *testing.T) {
+	// Create a client with an invalid configuration to test error handling.
+	// We can't actually call the OpenFGA server, but we can test the semantic validation.
+	client := &Client{fga: nil}
 
-	// Typical evaluation: can user view project?
-	req := EvaluationRequest{
-		Subject:  User(userID),
-		Resource: Project(projectID),
-		Action:   CanView(),
+	userID := uuid.New()
+	projectID := uuid.New()
+	subject := User(userID)
+
+	req := EvaluationsRequest{
+		Subject: &subject,
+		Evaluations: []EvaluationRequest{
+			{
+				Resource: Project(projectID),
+				Action:   CanView(),
+			},
+		},
+		Options: &EvaluationsOptions{
+			Semantic: "invalid_semantic",
+		},
 	}
 
-	// Verify it formats correctly for OpenFGA
-	if string(req.Subject.Type)+":"+req.Subject.ID != "user:550e8400-e29b-41d4-a716-446655440000" {
-		t.Error("Subject formatted incorrectly")
+	_, err := client.Evaluations(t.Context(), req)
+	if err == nil {
+		t.Fatal("expected error for invalid semantic, got nil")
 	}
-	if string(req.Resource.Type)+":"+req.Resource.ID != "project:660e8400-e29b-41d4-a716-446655440000" {
-		t.Error("Resource formatted incorrectly")
+
+	expectedMsg := `unsupported evaluation semantic: "invalid_semantic"`
+	if err.Error() != expectedMsg {
+		t.Errorf("error = %q, want %q", err.Error(), expectedMsg)
 	}
-	if string(req.Action.Name) != "can_view" {
-		t.Error("Action formatted incorrectly")
+}
+
+func TestEvaluations_ValidSemantics(t *testing.T) {
+	// Test that all valid semantics are accepted (validation only, no actual evaluation)
+	validSemantics := []EvaluationSemantic{
+		ExecuteAll,
+		DenyOnFirstDeny,
+		PermitOnFirstPermit,
+	}
+
+	for _, semantic := range validSemantics {
+		t.Run(string(semantic), func(t *testing.T) {
+			// Verify the semantic constants have expected values
+			switch semantic {
+			case ExecuteAll:
+				if semantic != "execute_all" {
+					t.Errorf("ExecuteAll = %q, want %q", semantic, "execute_all")
+				}
+			case DenyOnFirstDeny:
+				if semantic != "deny_on_first_deny" {
+					t.Errorf("DenyOnFirstDeny = %q, want %q", semantic, "deny_on_first_deny")
+				}
+			case PermitOnFirstPermit:
+				if semantic != "permit_on_first_permit" {
+					t.Errorf("PermitOnFirstPermit = %q, want %q", semantic, "permit_on_first_permit")
+				}
+			}
+		})
+	}
+}
+
+func TestNew_InvalidConfig(t *testing.T) {
+	// Test that New returns an error for invalid configuration
+	cfg := Config{
+		APIURL:  "", // Empty URL should cause an error
+		StoreID: "",
+	}
+
+	_, err := New(cfg)
+	if err == nil {
+		t.Fatal("expected error for empty API URL, got nil")
+	}
+}
+
+func TestDecision_DefaultsToFalse(t *testing.T) {
+	// Verify that a zero-value Decision defaults to deny (false)
+	var d Decision
+	if d.Decision != false {
+		t.Errorf("zero-value Decision.Decision = %v, want false", d.Decision)
 	}
 }

@@ -1,4 +1,7 @@
 {{- if $.Values.openfga.enabled }}
+{{- if not $.Values.db.enabled }}
+{{- fail "OpenFGA requires the database to be enabled. Set db.enabled=true or disable OpenFGA with openfga.enabled=false" }}
+{{- end }}
 
 {{- /* Generate or reuse a stable password for the OpenFGA database user */ -}}
 {{- $openfgaSecretName := printf "%s-db-fun-openfga" $.Release.Name }}
@@ -20,7 +23,7 @@ type: kubernetes.io/basic-auth
 stringData:
   username: fun_openfga
   password: {{ $openfgaPassword | quote }}
-  uri: postgresql://fun_openfga:{{ $openfgaPassword }}@{{ include "fundament.db.host" . }}:5432/openfga?sslmode=disable
+  uri: postgresql://fun_openfga:{{ $openfgaPassword }}@{{ include "fundament.db.host" . }}:5432/openfga
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: Database
@@ -48,6 +51,7 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation
 spec:
   backoffLimit: 3
+  ttlSecondsAfterFinished: 300
   template:
     metadata:
       labels:
@@ -105,6 +109,7 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation
 spec:
   backoffLimit: 3
+  ttlSecondsAfterFinished: 300
   template:
     metadata:
       labels:
@@ -119,29 +124,31 @@ spec:
             - -c
             - |
               echo "Waiting for OpenFGA to be ready..."
-              until wget -qO- http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.playground.apiPort | default 8080 }}/healthz > /dev/null 2>&1; do
+              until wget -qO- http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.apiPort | default 8080 }}/healthz > /dev/null 2>&1; do
                 echo "OpenFGA not ready, waiting..."
                 sleep 2
               done
               echo "OpenFGA is ready!"
       containers:
         - name: setup
-          image: bitnami/kubectl:latest
+          image: alpine/kubectl:1.35.0
           command:
-            - bash
+            - sh
             - -c
             - |
-              set -e
+              set -euo pipefail
 
-              # Install fga CLI
-              FGA_VERSION=$(curl -s https://api.github.com/repos/openfga/cli/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+              # Install jq and fga CLI
+              apk add --no-cache jq
+
+              FGA_VERSION="{{ $.Values.openfga.cliVersion }}"
               curl -sL "https://github.com/openfga/cli/releases/download/v${FGA_VERSION}/fga_${FGA_VERSION}_linux_amd64.tar.gz" | tar xz -C /tmp fga
               export PATH="/tmp:$PATH"
 
-              export FGA_API_URL=http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.playground.apiPort | default 8080 }}
+              export FGA_API_URL=http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.apiPort | default 8080 }}
 
               # Check if a store named "fundament" already exists
-              EXISTING_STORE_ID=$(fga store list 2>/dev/null | jq -r '.stores[] | select(.name == "fundament") | .id' | head -1)
+              EXISTING_STORE_ID=$(fga store list | jq -r '.stores[] | select(.name == "fundament") | .id' | head -1)
 
               if [ -n "$EXISTING_STORE_ID" ]; then
                 echo "Store 'fundament' already exists with ID: $EXISTING_STORE_ID"
@@ -192,26 +199,7 @@ metadata:
     app.kubernetes.io/component: openfga
 data:
   model.fga: |
-    model
-      schema 1.1
-
-    type user
-
-    type organization
-      relations
-        define member: [user]
-        define admin: [user]
-        define viewer: [user] or member
-
-    type project
-      relations
-        define organization: [organization]
-        define admin: [user]
-        define viewer: [user]
-        define can_view: admin or viewer
-        define can_edit: admin
-        define can_delete: admin
-        define can_manage_members: admin
+{{- .Files.Get "openfga/model.fga" | nindent 4 }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -285,11 +273,13 @@ spec:
             - run
           ports:
             - name: http
-              containerPort: {{ $.Values.openfga.playground.apiPort | default 8080 }}
+              containerPort: {{ $.Values.openfga.apiPort | default 8080 }}
             - name: grpc
               containerPort: 8081
+            {{- if $.Values.openfga.playground.enabled }}
             - name: playground
               containerPort: 3000
+            {{- end }}
           env:
             - name: OPENFGA_DATASTORE_ENGINE
               value: postgres
@@ -301,7 +291,7 @@ spec:
             - name: OPENFGA_PLAYGROUND_ENABLED
               value: {{ $.Values.openfga.playground.enabled | quote }}
             - name: OPENFGA_HTTP_ADDR
-              value: "0.0.0.0:{{ $.Values.openfga.playground.apiPort | default 8080 }}"
+              value: "0.0.0.0:{{ $.Values.openfga.apiPort | default 8080 }}"
           readinessProbe:
             httpGet:
               path: /healthz
@@ -325,15 +315,17 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: {{ $.Values.openfga.playground.apiPort | default 8080 }}
+    - port: {{ $.Values.openfga.apiPort | default 8080 }}
       targetPort: http
       name: http
     - port: 8081
       targetPort: grpc
       name: grpc
+    {{- if $.Values.openfga.playground.enabled }}
     - port: 3000
       targetPort: playground
       name: playground
+    {{- end }}
   selector:
     app.kubernetes.io/component: openfga
 {{- end }}

@@ -2,6 +2,7 @@ package authz
 
 import (
 	"context"
+	"fmt"
 	"maps"
 
 	"github.com/openfga/go-sdk/client"
@@ -10,7 +11,7 @@ import (
 // Config holds configuration for the OpenFGA client.
 type Config struct {
 	APIURL               string `env:"OPENFGA_API_URL,required,notEmpty"`
-	StoreID              string `env:"OPENFGA_STORE_ID"`
+	StoreID              string `env:"OPENFGA_STORE_ID,required,notEmpty"`
 	AuthorizationModelID string `env:"OPENFGA_AUTHORIZATION_MODEL_ID"`
 }
 
@@ -37,11 +38,47 @@ func New(cfg Config) (*Client, error) {
 // Evaluate performs a single access evaluation following the AuthZEN Access Evaluation API.
 // Returns a Decision indicating whether the subject can perform the action on the resource.
 func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision, error) {
-	resp, err := c.fga.Check(ctx).Body(client.ClientCheckRequest{
+	// Build OpenFGA check context from the AuthZEN request context and any
+	// object/action properties, so that conditions can be evaluated correctly.
+	checkContext := map[string]any{}
+	if req.Context != nil {
+		checkContext = maps.Clone(req.Context)
+	}
+
+	// Map resource (object) properties into the context under the "object" key.
+	if req.Resource.Properties != nil {
+		objProps, ok := checkContext["object"].(map[string]any)
+		if !ok || objProps == nil {
+			objProps = make(map[string]any)
+		}
+
+		maps.Copy(objProps, req.Resource.Properties)
+		checkContext["object"] = objProps
+	}
+
+	// Map action properties into the context under the "action" key.
+	if req.Action.Properties != nil {
+		actProps, ok := checkContext["action"].(map[string]any)
+		if !ok || actProps == nil {
+			actProps = make(map[string]any)
+		}
+
+		maps.Copy(actProps, req.Action.Properties)
+		checkContext["action"] = actProps
+	}
+
+	// Construct the OpenFGA check request, including context if any was provided.
+	checkReq := client.ClientCheckRequest{
 		User:     string(req.Subject.Type) + ":" + req.Subject.ID,
 		Relation: string(req.Action.Name),
 		Object:   string(req.Resource.Type) + ":" + req.Resource.ID,
-	}).Execute()
+	}
+
+	if len(checkContext) > 0 {
+		checkReq.Context = &checkContext
+	}
+
+	resp, err := c.fga.Check(ctx).Body(checkReq).Execute()
 	if err != nil {
 		return Decision{Decision: false}, err
 	}
@@ -59,7 +96,12 @@ func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision,
 func (c *Client) Evaluations(ctx context.Context, req EvaluationsRequest) (EvaluationsResponse, error) {
 	semantic := ExecuteAll
 	if req.Options != nil && req.Options.Semantic != "" {
-		semantic = req.Options.Semantic
+		switch req.Options.Semantic {
+		case ExecuteAll, DenyOnFirstDeny, PermitOnFirstPermit:
+			semantic = req.Options.Semantic
+		default:
+			return EvaluationsResponse{}, fmt.Errorf("unsupported evaluation semantic: %q", req.Options.Semantic)
+		}
 	}
 
 	results := make([]Decision, 0, len(req.Evaluations))

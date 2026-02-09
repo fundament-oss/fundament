@@ -27,7 +27,7 @@ db:
   storageSize: 1Gi
   reset: false
   insertTestData: false
-  exposePort: 0  # Expose postgres on this port via LoadBalancer (0 = disabled)
+  exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
 
 # Authentication API
 authnApi:
@@ -51,14 +51,13 @@ docsFrontend:
   enabled: false
   replicas: 1
 
-# OpenFGA (Fine-Grained Authorization)
 openfga:
   enabled: false
-  image: openfga/openfga:latest
+  image: openfga/openfga:v1.11.3
+  cliVersion: "0.7.8"
   replicas: 1
   playground:
     enabled: false
-    apiPort: 18080
 
 # Dex (OIDC Identity Provider)
 dex:

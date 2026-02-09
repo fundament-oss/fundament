@@ -93,11 +93,16 @@ dex:
 
 openfga:
   enabled: true
-  image: openfga/openfga:latest
-  replicas: 1
+  # Use a non-standard API port since 8080 is used by ingress.
+  # The playground auto-detects the API port from the URL it's served from.
+  apiPort: 18080
   playground:
+    # To use the playground, you must port-forward both the API and playground ports to localhost:
+    #   kubectl port-forward svc/fundament-openfga 18080:18080 3000:3000
+    # Then access the playground at http://localhost:3000/playground
+    # This is due to CSP restrictions in the embedded play.fga.dev iframe.
+    # See: https://github.com/openfga/openfga/issues/1174
     enabled: true
-    apiPort: 18080
 
 ingress:
   enabled: true

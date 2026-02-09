@@ -7,9 +7,9 @@ import "github.com/google/uuid"
 type ObjectType string
 
 const (
-	ObjectTypeUser ObjectType = "user"
+	ObjectTypeUser         ObjectType = "user"
 	ObjectTypeOrganization ObjectType = "organization"
-	ObjectTypeProject ObjectType = "project"
+	ObjectTypeProject      ObjectType = "project"
 )
 
 // ActionName identifies the operation being performed.
@@ -17,13 +17,13 @@ const (
 type ActionName string
 
 const (
-	ActionMember ActionName = "member"
-	ActionAdmin ActionName = "admin"
-	ActionViewer ActionName = "viewer"
-	ActionOrganization ActionName = "organization"
-	ActionCanView ActionName = "can_view"
-	ActionCanEdit ActionName = "can_edit"
-	ActionCanDelete ActionName = "can_delete"
+	ActionMember           ActionName = "member"
+	ActionAdmin            ActionName = "admin"
+	ActionViewer           ActionName = "viewer"
+	ActionOrganization     ActionName = "organization"
+	ActionCanView          ActionName = "can_view"
+	ActionCanEdit          ActionName = "can_edit"
+	ActionCanDelete        ActionName = "can_delete"
 	ActionCanManageMembers ActionName = "can_manage_members"
 )
 
@@ -118,7 +118,6 @@ func Project(id uuid.UUID) Object {
 	}
 }
 
-
 // Action constructors
 
 // Member creates an Action for the member relation.
@@ -160,4 +159,3 @@ func CanDelete() Action {
 func CanManageMembers() Action {
 	return Action{Name: ActionCanManageMembers}
 }
-
