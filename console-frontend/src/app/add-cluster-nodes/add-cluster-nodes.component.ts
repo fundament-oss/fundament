@@ -21,7 +21,7 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-nodes.component.html',
 })
-export class AddClusterNodesComponent {
+export default class AddClusterNodesComponent {
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -33,8 +33,6 @@ export class AddClusterNodesComponent {
   }
 
   onFormSubmit(data: { nodePools: NodePoolData[] }) {
-    console.log('Creating cluster with data:', data);
-
     // Save node pools to state
     this.stateService.updateNodePools(data.nodePools);
     this.stateService.markStepCompleted(1);

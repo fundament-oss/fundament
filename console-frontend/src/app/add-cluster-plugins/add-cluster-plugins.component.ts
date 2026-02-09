@@ -18,7 +18,7 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-plugins.component.html',
 })
-export class AddClusterPluginsComponent {
+export default class AddClusterPluginsComponent {
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -30,8 +30,6 @@ export class AddClusterPluginsComponent {
   }
 
   onFormSubmit(data: { preset: string; plugins: string[] }) {
-    console.log('Creating cluster with data:', data);
-
     // Save plugins to state
     this.stateService.updatePlugins({
       preset: data.preset,

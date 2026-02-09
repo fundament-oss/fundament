@@ -30,7 +30,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProjectDetailComponent implements OnInit {
+export default class ProjectDetailComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);
@@ -74,7 +74,6 @@ export class ProjectDetailComponent implements OnInit {
       // Load namespaces and clusters for read-only display
       await Promise.all([this.loadNamespaces(projectId), this.loadClusters()]);
     } catch (error) {
-      console.error('Failed to fetch project:', error);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to load project: ${error.message}`
@@ -91,8 +90,11 @@ export class ProjectDetailComponent implements OnInit {
       const response = await firstValueFrom(this.projectClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
-      console.error('Failed to fetch namespaces:', error);
-      this.toastService.error('Failed to load namespaces');
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to load namespaces: ${error.message}`
+          : 'Failed to load namespaces',
+      );
     }
   }
 
@@ -102,7 +104,11 @@ export class ProjectDetailComponent implements OnInit {
       const response = await firstValueFrom(this.clusterClient.listClusters(request));
       this.clusters.set(response.clusters);
     } catch (error) {
-      console.error('Failed to fetch clusters:', error);
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to load clusters: ${error.message}`
+          : 'Failed to load clusters',
+      );
     }
   }
 

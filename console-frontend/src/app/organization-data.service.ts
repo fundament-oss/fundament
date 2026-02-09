@@ -43,23 +43,23 @@ export class OrganizationDataService {
       string,
       { namespace: NamespaceData; project: ProjectData; organization: OrganizationData }
     >();
-    for (const org of this.organizations()) {
-      for (const project of org.projects) {
-        for (const namespace of project.namespaces) {
+    this.organizations().forEach((org) => {
+      org.projects.forEach((project) => {
+        project.namespaces.forEach((namespace) => {
           map.set(namespace.id, { namespace, project, organization: org });
-        }
-      }
-    }
+        });
+      });
+    });
     return map;
   });
 
   private projectMap = computed(() => {
     const map = new Map<string, { project: ProjectData; organization: OrganizationData }>();
-    for (const org of this.organizations()) {
-      for (const project of org.projects) {
+    this.organizations().forEach((org) => {
+      org.projects.forEach((project) => {
         map.set(project.id, { project, organization: org });
-      }
-    }
+      });
+    });
     return map;
   });
 
@@ -117,6 +117,7 @@ export class OrganizationDataService {
 
       this.organizations.set([organizationData]);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error loading organization data:', error);
     } finally {
       this.loading.set(false);

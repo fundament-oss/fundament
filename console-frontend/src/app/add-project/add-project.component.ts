@@ -30,7 +30,7 @@ import { CreateProjectRequestSchema } from '../../generated/v1/project_pb';
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AddProjectComponent implements AfterViewInit {
+export default class AddProjectComponent implements AfterViewInit {
   @ViewChild('projectNameInput') projectNameInput!: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
@@ -93,7 +93,6 @@ export class AddProjectComponent implements AfterViewInit {
 
       this.router.navigate(['/projects', response.projectId]);
     } catch (error) {
-      console.error('Failed to create project:', error);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to create project: ${error.message}`

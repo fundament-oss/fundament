@@ -13,7 +13,7 @@ import { TitleService } from '../title.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile.component.html',
 })
-export class ProfileComponent implements OnInit {
+export default class ProfileComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private fb = inject(FormBuilder);
@@ -54,8 +54,11 @@ export class ProfileComponent implements OnInit {
       });
       this.isLoading.set(false);
     } catch (error) {
-      console.error('Failed to load user info:', error);
-      this.error.set('Failed to load user information');
+      this.error.set(
+        error instanceof Error
+          ? `Failed to load user information: ${error.message}`
+          : 'Failed to load user information',
+      );
       this.isLoading.set(false);
       // Redirect to login if not authenticated
       this.router.navigate(['/login']);
@@ -98,15 +101,16 @@ export class ProfileComponent implements OnInit {
   onSave(): void {
     if (this.profileForm.invalid) {
       this.profileForm.markAllAsTouched();
-      this.scrollToFirstError();
+      ProfileComponent.scrollToFirstError();
       return;
     }
 
     // Save logic would go here
+    // eslint-disable-next-line no-console
     console.log('Saving profile:', this.profileForm.value);
   }
 
-  private scrollToFirstError() {
+  private static scrollToFirstError() {
     setTimeout(() => {
       const firstInvalidControl = document.querySelector('.ng-invalid:not(form)');
       if (firstInvalidControl) {

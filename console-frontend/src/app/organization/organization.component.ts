@@ -34,7 +34,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './organization.component.html',
 })
-export class OrganizationComponent implements OnInit {
+export default class OrganizationComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private authnClient = inject(AUTHN);
@@ -83,8 +83,11 @@ export class OrganizationComponent implements OnInit {
 
       this.organization.set(response.organization);
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to load organization');
-      console.error('Error loading organization:', err);
+      this.error.set(
+        err instanceof Error
+          ? `Failed to load organization: ${err.message}`
+          : 'Failed to load organization',
+      );
     } finally {
       this.loading.set(false);
     }
@@ -135,8 +138,11 @@ export class OrganizationComponent implements OnInit {
       this.isEditing.set(false);
       this.editingName.set('');
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to update organization');
-      console.error('Error updating organization:', err);
+      this.error.set(
+        err instanceof Error
+          ? `Failed to update organization: ${err.message}`
+          : 'Failed to update organization',
+      );
     } finally {
       this.loading.set(false);
     }

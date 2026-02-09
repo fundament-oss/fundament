@@ -8,7 +8,7 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
-import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
+import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { GetPluginDetailRequestSchema, type PluginDetail } from '../../generated/v1/plugin_pb';
@@ -44,7 +44,7 @@ interface InstallWithCluster extends Install {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
 })
-export class PluginDetailsComponent implements OnInit {
+export default class PluginDetailsComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private sanitizer = inject(DomSanitizer);
@@ -133,9 +133,10 @@ export class PluginDetailsComponent implements OnInit {
 
       this.isLoading.set(false);
     } catch (error) {
-      console.error('Failed to load plugin details:', error);
       this.errorMessage.set(
-        error instanceof Error ? error.message : 'Failed to load plugin details',
+        error instanceof Error
+          ? `Failed to load plugin details: ${error.message}`
+          : 'Failed to load plugin details',
       );
       this.isLoading.set(false);
     }
@@ -193,8 +194,11 @@ export class PluginDetailsComponent implements OnInit {
         `Plugin ${this.plugin()?.name} installed on cluster ${cluster.name}`,
       );
     } catch (error) {
-      console.error('Failed to install plugin:', error);
-      this.toastService.error(error instanceof Error ? error.message : 'Failed to install plugin');
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to install plugin: ${error.message}`
+          : 'Failed to install plugin',
+      );
     }
   }
 

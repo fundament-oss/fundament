@@ -6,7 +6,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerTrash, tablerPencil } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { ModalComponent } from '../modal/modal.component';
+import ModalComponent from '../modal/modal.component';
 
 type ProjectMemberRole = 'viewer' | 'admin';
 

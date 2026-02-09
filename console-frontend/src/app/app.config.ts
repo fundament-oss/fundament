@@ -10,7 +10,7 @@ import { BehaviorSubject } from 'rxjs';
 import { provideNgIconsConfig } from '@ng-icons/core';
 import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
 import EXPECTED_API_VERSION from '../proto-version';
-import { routes } from './app.routes';
+import routes from './app.routes';
 import { ConfigService } from './config.service';
 
 // Global version mismatch observable
@@ -19,6 +19,7 @@ export const versionMismatch$ = new BehaviorSubject<boolean>(false);
 // Create a version mismatch handler
 const handleVersionMismatch = (serverVersion: string) => {
   if (serverVersion && serverVersion !== EXPECTED_API_VERSION) {
+    // eslint-disable-next-line no-console
     console.warn(`API version mismatch: expected ${EXPECTED_API_VERSION}, got ${serverVersion}`);
     versionMismatch$.next(true);
   }

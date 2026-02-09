@@ -8,7 +8,7 @@ import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { ModalComponent } from '../modal/modal.component';
+import ModalComponent from '../modal/modal.component';
 import { PROJECT } from '../../connect/tokens';
 import {
   GetProjectRequestSchema,

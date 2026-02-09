@@ -34,8 +34,27 @@ import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
-import { ModalComponent } from '../modal/modal.component';
+import ModalComponent from '../modal/modal.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
+
+const getUsagePercentage = (used: number, limit: number): number =>
+  Math.round((used / limit) * 100);
+
+const getUsageColor = (percentage: number): string => {
+  if (percentage >= 90) return 'bg-red-500';
+  if (percentage >= 75) return 'bg-yellow-500';
+  return 'bg-green-500';
+};
+
+const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
+  const labels: Record<NodePoolStatus, string> = {
+    [NodePoolStatus.UNSPECIFIED]: 'Unknown status',
+    [NodePoolStatus.HEALTHY]: 'Healthy',
+    [NodePoolStatus.DEGRADED]: 'Degraded',
+    [NodePoolStatus.UNHEALTHY]: 'Unhealthy',
+  };
+  return labels[status];
+};
 
 @Component({
   selector: 'app-cluster-details',
@@ -55,7 +74,7 @@ import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
   templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ClusterDetailsComponent implements OnInit {
+export default class ClusterDetailsComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);
@@ -218,7 +237,6 @@ export class ClusterDetailsComponent implements OnInit {
         this.loadInstalledPlugins(clusterId),
       ]);
     } catch (error) {
-      console.error('Failed to fetch cluster data:', error);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to load cluster: ${error.message}`
@@ -231,35 +249,23 @@ export class ClusterDetailsComponent implements OnInit {
 
   readonly formatDate = formatDateTimeUtil;
 
-  getUsagePercentage(used: number, limit: number): number {
-    return Math.round((used / limit) * 100);
-  }
+  getUsagePercentage = getUsagePercentage;
 
-  getUsageColor(percentage: number): string {
-    if (percentage >= 90) return 'bg-red-500';
-    if (percentage >= 75) return 'bg-yellow-500';
-    return 'bg-green-500';
-  }
+  getUsageColor = getUsageColor;
 
   openTerminal(): void {
     // Mock implementation - would open terminal in real app
+    // eslint-disable-next-line no-console
     console.log('Opening terminal for cluster:', this.clusterData.basics.name);
   }
 
   downloadKubeconfig(): void {
     // Mock implementation - would download kubeconfig in real app
+    // eslint-disable-next-line no-console
     console.log('Downloading kubeconfig for cluster:', this.clusterData.basics.name);
   }
 
-  getNodePoolStatusLabel(status: NodePoolStatus): string {
-    const labels: Record<NodePoolStatus, string> = {
-      [NodePoolStatus.UNSPECIFIED]: 'Unknown status',
-      [NodePoolStatus.HEALTHY]: 'Healthy',
-      [NodePoolStatus.DEGRADED]: 'Degraded',
-      [NodePoolStatus.UNHEALTHY]: 'Unhealthy',
-    };
-    return labels[status];
-  }
+  getNodePoolStatusLabel = getNodePoolStatusLabel;
 
   async deleteCluster(): Promise<void> {
     try {
@@ -273,7 +279,6 @@ export class ClusterDetailsComponent implements OnInit {
       this.toastService.info(`The cluster '${this.clusterData.basics.name}' has been deleted`);
       this.router.navigate(['/']);
     } catch (error) {
-      console.error('Failed to delete cluster:', error);
       this.showDeleteModal.set(false);
       this.errorMessage.set(
         error instanceof Error
@@ -290,8 +295,11 @@ export class ClusterDetailsComponent implements OnInit {
       const response = await firstValueFrom(this.client.listClusterNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
-      console.error('Failed to load namespaces:', error);
-      this.toastService.error('Failed to load namespaces');
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to load namespaces: ${error.message}`
+          : 'Failed to load namespaces',
+      );
     }
   }
 
@@ -305,8 +313,11 @@ export class ClusterDetailsComponent implements OnInit {
         this.namespaceForm.patchValue({ projectId: response.projects[0].id });
       }
     } catch (error) {
-      console.error('Failed to load projects:', error);
-      this.toastService.error('Failed to load projects');
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to load projects: ${error.message}`
+          : 'Failed to load projects',
+      );
     } finally {
       this.isLoadingProjects.set(false);
     }
@@ -349,7 +360,6 @@ export class ClusterDetailsComponent implements OnInit {
         this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
-      console.error('Failed to create namespace:', error);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to create namespace: ${error.message}`
@@ -361,7 +371,8 @@ export class ClusterDetailsComponent implements OnInit {
   }
 
   async deleteNamespace(namespaceId: string, namespaceName: string): Promise<void> {
-    if (!confirm(`Are you sure you want to delete namespace '${namespaceName}'?`)) {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(`Are you sure you want to delete namespace '${namespaceName}'?`)) {
       return;
     }
 
@@ -377,7 +388,6 @@ export class ClusterDetailsComponent implements OnInit {
         this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
-      console.error('Failed to delete namespace:', error);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to delete namespace: ${error.message}`
@@ -421,8 +431,11 @@ export class ClusterDetailsComponent implements OnInit {
 
       this.installedPlugins.set(installed);
     } catch (error) {
-      console.error('Failed to load installed plugins:', error);
-      this.toastService.error('Failed to load installed plugins');
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to load installed plugins: ${error.message}`
+          : 'Failed to load installed plugins',
+      );
     } finally {
       this.isLoadingPlugins.set(false);
     }

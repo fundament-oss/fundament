@@ -15,7 +15,7 @@ import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerTableDown } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
-import { DateRangePickerComponent } from '../date-range-picker/date-range-picker.component';
+import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';
 import { OrganizationDataService } from '../organization-data.service';
 
 Chart.register(...registerables);

@@ -25,7 +25,7 @@ import { fetchClusterName } from '../utils/cluster-status';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-plugins.component.html',
 })
-export class ClusterPluginsComponent implements OnInit {
+export default class ClusterPluginsComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -59,9 +59,10 @@ export class ClusterPluginsComponent implements OnInit {
       const listResponse = await firstValueFrom(this.client.listInstalls(listRequest));
       this.currentPluginIds.set(listResponse.installs.map((install) => install.pluginId));
     } catch (error) {
-      console.error('Failed to load current plugins:', error);
       this.errorMessage.set(
-        error instanceof Error ? error.message : 'Failed to load current plugins',
+        error instanceof Error
+          ? `Failed to load current plugins: ${error.message}`
+          : 'Failed to load current plugins',
       );
     }
   }
@@ -82,33 +83,37 @@ export class ClusterPluginsComponent implements OnInit {
       const currentPluginIds = listResponse.installs.map((install) => install.pluginId);
 
       // Remove plugins that are no longer selected
-      for (const installId of listResponse.installs.map((install) => install.id)) {
-        const pluginId = listResponse.installs.find(
-          (install) => install.id === installId,
-        )?.pluginId;
-        if (pluginId && !data.plugins.includes(pluginId)) {
-          const removeRequest = create(RemoveInstallRequestSchema, {
-            installId,
-          });
-          await firstValueFrom(this.client.removeInstall(removeRequest));
-        }
-      }
+      await Promise.all(
+        listResponse.installs
+          .filter((install) => !data.plugins.includes(install.pluginId))
+          .map((install) => {
+            const removeRequest = create(RemoveInstallRequestSchema, {
+              installId: install.id,
+            });
+            return firstValueFrom(this.client.removeInstall(removeRequest));
+          }),
+      );
 
       // Add plugins that are newly selected
-      for (const pluginId of data.plugins) {
-        if (!currentPluginIds.includes(pluginId)) {
-          const addRequest = create(AddInstallRequestSchema, {
-            clusterId: this.clusterId,
-            pluginId,
-          });
-          await firstValueFrom(this.client.addInstall(addRequest));
-        }
-      }
+      await Promise.all(
+        data.plugins
+          .filter((pluginId) => !currentPluginIds.includes(pluginId))
+          .map((pluginId) => {
+            const addRequest = create(AddInstallRequestSchema, {
+              clusterId: this.clusterId,
+              pluginId,
+            });
+            return firstValueFrom(this.client.addInstall(addRequest));
+          }),
+      );
 
       // Navigate back to cluster detail
       this.router.navigate(['/clusters', this.clusterId]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update cluster plugins';
+      const message =
+        error instanceof Error
+          ? `Failed to update cluster plugins: ${error.message}`
+          : 'Failed to update cluster plugins';
       this.errorMessage.set(message);
     } finally {
       this.isSubmitting.set(false);

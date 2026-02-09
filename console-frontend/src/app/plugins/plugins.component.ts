@@ -6,7 +6,7 @@ import { tablerCheck, tablerHelpCircle } from '@ng-icons/tabler-icons';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
-import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
+import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import {
@@ -25,6 +25,9 @@ import {
   type Install,
 } from '../../generated/v1/cluster_pb';
 import { ToastService } from '../toast.service';
+
+const getPluginIconName = (pluginName: string): string =>
+  pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
 
 // Extended plugin type with presets array (computed from backend data)
 interface PluginWithPresets extends Pick<
@@ -72,7 +75,7 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',
 })
-export class PluginsComponent implements OnInit {
+export default class PluginsComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private pluginClient = inject(PLUGIN);
@@ -199,8 +202,9 @@ export class PluginsComponent implements OnInit {
 
       this.isLoading.set(false);
     } catch (error) {
-      console.error('Failed to load data:', error);
-      this.errorMessage.set(error instanceof Error ? error.message : 'Failed to load data');
+      this.errorMessage.set(
+        error instanceof Error ? `Failed to load data: ${error.message}` : 'Failed to load data',
+      );
       this.isLoading.set(false);
     }
   }
@@ -219,7 +223,7 @@ export class PluginsComponent implements OnInit {
         plugin.categories.forEach((category) => {
           const existing = categoryMap.get(category.id);
           if (existing) {
-            existing.count++;
+            existing.count += 1;
           } else {
             categoryMap.set(category.id, { name: category.name, count: 1 });
           }
@@ -346,12 +350,13 @@ export class PluginsComponent implements OnInit {
         `Plugin ${this.selectedPlugin.name} installed on cluster ${cluster.name}`,
       );
     } catch (error) {
-      console.error('Failed to install plugin:', error);
-      this.toastService.error(error instanceof Error ? error.message : 'Failed to install plugin');
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to install plugin: ${error.message}`
+          : 'Failed to install plugin',
+      );
     }
   }
 
-  getPluginIconName(pluginName: string): string {
-    return pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
-  }
+  getPluginIconName = getPluginIconName;
 }

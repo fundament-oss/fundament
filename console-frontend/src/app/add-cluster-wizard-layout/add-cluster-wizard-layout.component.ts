@@ -22,7 +22,7 @@ interface ProgressStep {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-wizard-layout.component.html',
 })
-export class AddClusterWizardLayoutComponent implements OnDestroy {
+export default class AddClusterWizardLayoutComponent implements OnDestroy {
   private router = inject(Router);
 
   protected stateService = inject(ClusterWizardStateService);
@@ -42,7 +42,7 @@ export class AddClusterWizardLayoutComponent implements OnDestroy {
     const currentRoute = this.routeSignal();
     // Find the last matching step (most specific route)
     // e.g., /add-cluster/nodes should match /add-cluster/nodes, not /add-cluster
-    for (let i = this.steps.length - 1; i >= 0; i--) {
+    for (let i = this.steps.length - 1; i >= 0; i -= 1) {
       if (currentRoute.startsWith(this.steps[i].route)) {
         return i;
       }

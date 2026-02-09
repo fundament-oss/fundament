@@ -7,7 +7,7 @@ import { ConfigService } from './config.service';
 @Injectable({
   providedIn: 'root',
 })
-export class AuthnApiService {
+export default class AuthnApiService {
   private client = inject(AUTHN);
 
   private configService = inject(ConfigService);
@@ -57,7 +57,7 @@ export class AuthnApiService {
   async initializeAuth(): Promise<void> {
     // Check hint flag to avoid unnecessary API calls when we know user isn't logged in
     // This is just an optimization - the server (via HTTP-only cookie) is still the source of truth
-    if (!this.hasAuthHint()) {
+    if (!AuthnApiService.hasAuthHint()) {
       this.currentUserSubject.next(undefined);
       return;
     }
@@ -107,7 +107,7 @@ export class AuthnApiService {
     return this.currentUserSubject.value !== undefined;
   }
 
-  private hasAuthHint(): boolean {
+  private static hasAuthHint(): boolean {
     // This is just an optimization hint, not the source of truth
     return localStorage.getItem('auth_hint') === 'true';
   }

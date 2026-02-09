@@ -39,7 +39,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-summary.component.html',
 })
-export class AddClusterSummaryComponent implements OnInit {
+export default class AddClusterSummaryComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -82,6 +82,7 @@ export class AddClusterSummaryComponent implements OnInit {
       this.plugins.set(pluginsResponse.plugins);
       this.presets.set(presetsResponse.presets);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to load plugins and presets:', error);
     } finally {
       this.isLoadingPlugins.set(false);
@@ -133,27 +134,31 @@ export class AddClusterSummaryComponent implements OnInit {
 
       // Create node pools if any are configured
       if (wizardState.nodePools && wizardState.nodePools.length > 0) {
-        for (const pool of wizardState.nodePools) {
-          const nodePoolRequest = create(CreateNodePoolRequestSchema, {
-            clusterId: response.clusterId,
-            name: pool.name,
-            machineType: pool.machineType,
-            autoscaleMin: pool.autoscaleMin,
-            autoscaleMax: pool.autoscaleMax,
-          });
-          await firstValueFrom(this.client.createNodePool(nodePoolRequest));
-        }
+        await Promise.all(
+          wizardState.nodePools.map((pool) => {
+            const nodePoolRequest = create(CreateNodePoolRequestSchema, {
+              clusterId: response.clusterId,
+              name: pool.name,
+              machineType: pool.machineType,
+              autoscaleMin: pool.autoscaleMin,
+              autoscaleMax: pool.autoscaleMax,
+            });
+            return firstValueFrom(this.client.createNodePool(nodePoolRequest));
+          }),
+        );
       }
 
       // Install plugins if any are configured
       if (wizardState.plugins && wizardState.plugins.length > 0) {
-        for (const pluginId of wizardState.plugins) {
-          const installRequest = create(AddInstallRequestSchema, {
-            clusterId: response.clusterId,
-            pluginId,
-          });
-          await firstValueFrom(this.client.addInstall(installRequest));
-        }
+        await Promise.all(
+          wizardState.plugins.map((pluginId) => {
+            const installRequest = create(AddInstallRequestSchema, {
+              clusterId: response.clusterId,
+              pluginId,
+            });
+            return firstValueFrom(this.client.addInstall(installRequest));
+          }),
+        );
       }
 
       // Reset wizard state
@@ -165,9 +170,10 @@ export class AddClusterSummaryComponent implements OnInit {
       // Navigate to the cluster detail page
       this.router.navigate(['/clusters', response.clusterId]);
     } catch (error) {
-      console.error('Failed to create cluster:', error);
       this.errorMessage.set(
-        error instanceof Error ? error.message : 'Failed to create cluster. Please try again.',
+        error instanceof Error
+          ? `Failed to create cluster: ${error.message}`
+          : 'Failed to create cluster. Please try again.',
       );
     } finally {
       this.isCreating.set(false);

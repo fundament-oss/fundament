@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerSearch, tablerFolder, tablerBuilding } from '@ng-icons/tabler-icons';
-import { ModalComponent } from '../modal/modal.component';
+import ModalComponent from '../modal/modal.component';
 
 interface Project {
   id: string;
