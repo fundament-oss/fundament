@@ -60,7 +60,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "angular-eslint": "21.1.0",
     "eslint": "^9.39.2",
-    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-airbnb-extended": "^3.0.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "jsdom": "^27.4.0",
