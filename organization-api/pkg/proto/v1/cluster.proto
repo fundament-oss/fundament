@@ -188,9 +188,9 @@ message GetClusterActivityResponse {
 // Cluster event from cluster_events table
 message ClusterEvent {
   string id = 10;
-  string event_type = 20;      // sync_requested, sync_claimed, sync_submitted, sync_failed, status_ready, status_error, status_deleted
+  string event_type = 20;      // sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted
   google.protobuf.Timestamp created_at = 30;
-  optional string sync_action = 40;  // create, update, delete (for sync events)
+  optional string sync_action = 40;  // sync, delete (for sync events)
   optional string message = 50;
   optional int32 attempt = 60;       // Sync attempt number (for sync events)
 }

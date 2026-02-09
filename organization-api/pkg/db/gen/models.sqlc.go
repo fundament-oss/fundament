@@ -39,12 +39,6 @@ type TenantNodePool struct {
 	Deleted      pgtype.Timestamptz
 }
 
-type TenantOrganization struct {
-	ID      uuid.UUID
-	Name    string
-	Created pgtype.Timestamptz
-}
-
 type TenantProject struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID

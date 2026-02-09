@@ -48,7 +48,6 @@ clusterWorker:
   replicas: 1
   logLevel: info
   gardenerMode: mock  # mock or real
-  gardenerNamespace: garden-fundament  # Gardener project namespace
   gardenerKubeconfigSecret: ""  # Secret name containing kubeconfig for real mode
 
 # Console Frontend

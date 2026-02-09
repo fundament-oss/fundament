@@ -23,3 +23,11 @@ const (
 	ClusterEventSyncAction_Sync ClusterEventSyncAction = "sync"
 	ClusterEventSyncAction_Delete ClusterEventSyncAction = "delete"
 )
+
+// ProjectMemberRole represents valid values for tenant.project_members.role.
+type ProjectMemberRole string
+
+const (
+	ProjectMemberRole_Admin ProjectMemberRole = "admin"
+	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
+)

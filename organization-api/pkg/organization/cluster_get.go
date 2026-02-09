@@ -112,7 +112,7 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 	}
 }
 
-func buildKubeconfig(cluster *db.TenantCluster) string {
+func buildKubeconfig(cluster *db.ClusterGetByIDRow) string {
 	return fmt.Sprintf(`apiVersion: v1
 kind: Config
 clusters:

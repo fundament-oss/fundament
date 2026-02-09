@@ -97,7 +97,7 @@ sequenceDiagram
 
     alt Success
         Worker->>DB: synced = now(), clear claim
-        Worker->>DB: INSERT cluster_events (sync_submitted)
+        Worker->>DB: INSERT cluster_events (sync_succeeded)
     else Error
         Worker->>DB: sync_error = msg, sync_attempts++
         Worker->>DB: INSERT cluster_events (sync_failed)
@@ -109,8 +109,8 @@ sequenceDiagram
         Worker->>Gardener: GetShootStatus(clusters...)
         Gardener-->>Worker: Status (progressing/ready/error/deleted)
         Worker->>DB: UPDATE shoot_status, shoot_status_message
-        opt Status changed to ready/error/deleted
-            Worker->>DB: INSERT cluster_events (status_ready/status_error/status_deleted)
+        opt Status changed (progressing/ready/error/deleted)
+            Worker->>DB: INSERT cluster_events (status_progressing/status_ready/status_error/status_deleted)
         end
     end
 
@@ -185,7 +185,8 @@ All sync and status changes are recorded in the `cluster_events` table for debug
 |------------|-------------|
 | `sync_requested` | Cluster created/updated/deleted via API, needs sync |
 | `sync_claimed` | Worker claimed the cluster for processing |
-| `sync_submitted` | Gardener accepted the Shoot manifest |
+| `sync_succeeded` | Gardener accepted the Shoot manifest |
+| `status_progressing` | Shoot reconciliation in progress |
 | `sync_failed` | Sync failed (with error message and attempt count) |
 | `status_ready` | Shoot reconciliation completed successfully |
 | `status_error` | Shoot reconciliation failed |
@@ -231,4 +232,3 @@ just cluster-worker gardener-status # overall status
 - `just dev -p local-gardener` → real local Gardener (requires step 2 first)
 
 First Gardener run takes ~15 minutes to build. Subsequent runs are instant.
-

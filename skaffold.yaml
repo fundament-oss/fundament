@@ -86,7 +86,6 @@ profiles:
         path: /deploy/helm/releases/0/setValues
         value:
           clusterWorker.gardenerMode: real
-          clusterWorker.gardenerNamespace: garden-local
           clusterWorker.gardenerKubeconfigSecret: gardener-kubeconfig
 
   # Hot reload profile for local development

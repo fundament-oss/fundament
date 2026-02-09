@@ -56,7 +56,7 @@ CREATE POLICY "cluster_events_organization_isolation" ON "tenant"."cluster_event
 	TO fun_fundament_api
 	USING ((EXISTS ( SELECT 1
    FROM tenant.clusters c
-  WHERE ((c.id = cluster_events.cluster_id) AND (c.organization_id = (current_setting('app.current_organization_id'::text))::uuid)))));
+  WHERE ((c.id = cluster_events.cluster_id) AND (c.organization_id = authn.current_organization_id())))));
 
 CREATE POLICY "cluster_events_worker_all_access" ON "tenant"."cluster_events"
 	AS PERMISSIVE
@@ -70,13 +70,9 @@ GRANT INSERT ON "tenant"."cluster_events" TO "fun_cluster_worker";
 
 GRANT SELECT ON "tenant"."cluster_events" TO "fun_cluster_worker";
 
-GRANT UPDATE ON "tenant"."cluster_events" TO "fun_cluster_worker";
-
 GRANT INSERT ON "tenant"."cluster_events" TO "fun_fundament_api";
 
 GRANT SELECT ON "tenant"."cluster_events" TO "fun_fundament_api";
-
-GRANT UPDATE ON "tenant"."cluster_events" TO "fun_fundament_api";
 
 CREATE UNIQUE INDEX cluster_events_pk ON tenant.cluster_events USING btree (id);
 
@@ -110,17 +106,17 @@ CREATE POLICY "cluster_worker_all_access" ON "tenant"."clusters"
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT INSERT ON "tenant"."clusters" TO "fun_cluster_worker";
-
-/* Hazards:
- - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
-*/
 GRANT SELECT ON "tenant"."clusters" TO "fun_cluster_worker";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
 GRANT UPDATE ON "tenant"."clusters" TO "fun_cluster_worker";
+
+/* Hazards:
+ - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
+*/
+GRANT USAGE ON SCHEMA "tenant" TO "fun_cluster_worker";
 
 ALTER TABLE "tenant"."clusters" DROP CONSTRAINT "clusters_ck_status";
 
@@ -136,16 +132,11 @@ CREATE INDEX clusters_idx_needs_sync ON tenant.clusters USING btree (created) WH
 
 CREATE TRIGGER cluster_reset_synced BEFORE UPDATE OF name, region, kubernetes_version, deleted ON tenant.clusters FOR EACH ROW WHEN (((old.name IS DISTINCT FROM new.name) OR (old.region IS DISTINCT FROM new.region) OR (old.kubernetes_version IS DISTINCT FROM new.kubernetes_version) OR ((old.deleted IS NULL) AND (new.deleted IS NOT NULL)))) EXECUTE FUNCTION tenant.cluster_reset_synced();
 
-CREATE TRIGGER cluster_sync_notify AFTER INSERT OR UPDATE OF synced ON tenant.clusters FOR EACH ROW EXECUTE FUNCTION tenant.cluster_sync_notify();
+CREATE TRIGGER cluster_sync_notify AFTER INSERT OR UPDATE ON tenant.clusters FOR EACH ROW EXECUTE FUNCTION tenant.cluster_sync_notify();
 
 ALTER TABLE "tenant"."cluster_events" ADD CONSTRAINT "cluster_events_fk_cluster" FOREIGN KEY (cluster_id) REFERENCES tenant.clusters(id) ON DELETE CASCADE NOT VALID;
 
 ALTER TABLE "tenant"."cluster_events" VALIDATE CONSTRAINT "cluster_events_fk_cluster";
-
-/* Hazards:
- - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
-*/
-GRANT SELECT ON "tenant"."namespaces" TO "fun_cluster_worker";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
@@ -156,7 +147,4 @@ GRANT SELECT ON "tenant"."organizations" TO "fun_cluster_worker";
 -- Statements generated automatically, please review:
 ALTER FUNCTION tenant.cluster_reset_synced() OWNER TO fun_owner;
 ALTER FUNCTION tenant.cluster_sync_notify() OWNER TO fun_owner;
-ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO fun_owner;
 ALTER TABLE tenant.cluster_events OWNER TO fun_owner;
-
-GRANT USAGE ON SCHEMA tenant TO fun_cluster_worker;

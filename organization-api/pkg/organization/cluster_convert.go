@@ -78,8 +78,7 @@ func clusterEventFromRow(e *db.TenantClusterEvent) *organizationv1.ClusterEvent 
 	}
 
 	if e.SyncAction.Valid {
-		s := string(e.SyncAction.TenantClusterSyncAction)
-		event.SyncAction = &s
+		event.SyncAction = &e.SyncAction.String
 	}
 	if e.Message.Valid {
 		event.Message = &e.Message.String

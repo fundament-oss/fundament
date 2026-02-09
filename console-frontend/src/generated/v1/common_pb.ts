@@ -10,28 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/common.proto.
  */
 export const file_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9jb21tb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSIaCglUaW1lc3RhbXASDQoFdmFsdWUYCiABKAkiOgoNUmVzb3VyY2VVc2FnZRIMCgR1c2VkGAogASgBEg0KBXRvdGFsGBQgASgBEgwKBHVuaXQYHiABKAkqlwIKDUNsdXN0ZXJTdGF0dXMSHgoaQ0xVU1RFUl9TVEFUVVNfVU5TUEVDSUZJRUQQABIfChtDTFVTVEVSX1NUQVRVU19QUk9WSVNJT05JTkcQARIbChdDTFVTVEVSX1NUQVRVU19TVEFSVElORxACEhoKFkNMVVNURVJfU1RBVFVTX1JVTk5JTkcQAxIcChhDTFVTVEVSX1NUQVRVU19VUEdSQURJTkcQBBIYChRDTFVTVEVSX1NUQVRVU19FUlJPUhAFEhsKF0NMVVNURVJfU1RBVFVTX1NUT1BQSU5HEAYSGgoWQ0xVU1RFUl9TVEFUVVNfU1RPUFBFRBAHEhsKF0NMVVNURVJfU1RBVFVTX0RFTEVUSU5HEAgqjwEKDk5vZGVQb29sU3RhdHVzEiAKHE5PREVfUE9PTF9TVEFUVVNfVU5TUEVDSUZJRUQQABIcChhOT0RFX1BPT0xfU1RBVFVTX0hFQUxUSFkQARIdChlOT0RFX1BPT0xfU1RBVFVTX0RFR1JBREVEEAISHgoaTk9ERV9QT09MX1NUQVRVU19VTkhFQUxUSFkQA0JVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z");
-
-/**
- * Common timestamp message
- *
- * @generated from message organization.v1.Timestamp
- */
-export type Timestamp = Message<"organization.v1.Timestamp"> & {
-  /**
-   * ISO 8601 format
-   *
-   * @generated from field: string value = 10;
-   */
-  value: string;
-};
-
-/**
- * Describes the message organization.v1.Timestamp.
- * Use `create(TimestampSchema)` to create a new message.
- */
-export const TimestampSchema: GenMessage<Timestamp> = /*@__PURE__*/
-  messageDesc(file_v1_common, 0);
+  fileDesc("Cg92MS9jb21tb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSI6Cg1SZXNvdXJjZVVzYWdlEgwKBHVzZWQYCiABKAESDQoFdG90YWwYFCABKAESDAoEdW5pdBgeIAEoCSqXAgoNQ2x1c3RlclN0YXR1cxIeChpDTFVTVEVSX1NUQVRVU19VTlNQRUNJRklFRBAAEh8KG0NMVVNURVJfU1RBVFVTX1BST1ZJU0lPTklORxABEhsKF0NMVVNURVJfU1RBVFVTX1NUQVJUSU5HEAISGgoWQ0xVU1RFUl9TVEFUVVNfUlVOTklORxADEhwKGENMVVNURVJfU1RBVFVTX1VQR1JBRElORxAEEhgKFENMVVNURVJfU1RBVFVTX0VSUk9SEAUSGwoXQ0xVU1RFUl9TVEFUVVNfU1RPUFBJTkcQBhIaChZDTFVTVEVSX1NUQVRVU19TVE9QUEVEEAcSGwoXQ0xVU1RFUl9TVEFUVVNfREVMRVRJTkcQCCqPAQoOTm9kZVBvb2xTdGF0dXMSIAocTk9ERV9QT09MX1NUQVRVU19VTlNQRUNJRklFRBAAEhwKGE5PREVfUE9PTF9TVEFUVVNfSEVBTFRIWRABEh0KGU5PREVfUE9PTF9TVEFUVVNfREVHUkFERUQQAhIeChpOT0RFX1BPT0xfU1RBVFVTX1VOSEVBTFRIWRADQlVaU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxYgZwcm90bzM");
 
 /**
  * Resource usage information
@@ -60,7 +39,7 @@ export type ResourceUsage = Message<"organization.v1.ResourceUsage"> & {
  * Use `create(ResourceUsageSchema)` to create a new message.
  */
 export const ResourceUsageSchema: GenMessage<ResourceUsage> = /*@__PURE__*/
-  messageDesc(file_v1_common, 1);
+  messageDesc(file_v1_common, 0);
 
 /**
  * Status enumeration for clusters

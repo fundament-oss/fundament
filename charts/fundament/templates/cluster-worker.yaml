@@ -30,8 +30,6 @@ spec:
                   key: uri
             - name: GARDENER_MODE
               value: {{ $.Values.clusterWorker.gardenerMode }}
-            - name: GARDENER_NAMESPACE
-              value: {{ $.Values.clusterWorker.gardenerNamespace }}
             - name: LOG_LEVEL
               value: {{ $.Values.clusterWorker.logLevel }}
             {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}

@@ -25,7 +25,6 @@ type config struct {
 	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
 	GardenerMode       string        `env:"GARDENER_MODE"`       // mock or real
 	GardenerKubeconfig string        `env:"GARDENER_KUBECONFIG"` // Required for real mode
-	GardenerNamespace  string        `env:"GARDENER_NAMESPACE" envDefault:"garden-fundament"`
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	HealthPort         int           `env:"HEALTH_PORT" envDefault:"8097"`
 	ShutdownTimeout    time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
@@ -99,8 +98,7 @@ func run() error {
 		"reconcile_interval", cfg.Sync.ReconcileInterval,
 		"status_poll_interval", cfg.Status.PollInterval,
 		"max_attempts", cfg.Sync.MaxAttempts,
-		"gardener_mode", cfg.GardenerMode,
-		"gardener_namespace", cfg.GardenerNamespace)
+		"gardener_mode", cfg.GardenerMode)
 
 	// Run both worker and status poller concurrently
 	g, ctx := errgroup.WithContext(ctx)
