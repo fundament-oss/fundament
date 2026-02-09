@@ -44,6 +44,13 @@ spec:
       - name: fun_authz
         login: false
         bypassrls: true
+{{- if $.Values.openfga.enabled }}
+      - name: fun_openfga
+        login: true
+        createdb: true
+        passwordSecret:
+          name: {{ $.Release.Name }}-db-fun-openfga
+{{- end }}
 
 {{- if gt (int $.Values.db.exposePort) 0 }}
 ---
