@@ -39,7 +39,7 @@ output "namespace_cluster_id" {
   value       = data.fundament_namespace.by_cluster.cluster_id
 }
 
-output "namespace_created_at" {
+output "namespace_created" {
   description = "When the namespace was created"
-  value       = data.fundament_namespace.by_cluster.created_at
+  value       = data.fundament_namespace.example.created
 }

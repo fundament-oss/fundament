@@ -57,7 +57,7 @@
                     {{ invitation.email || invitation.name }}
                   </p>
                   <p class="text-sm text-gray-500 dark:text-gray-400">
-                    Invited {{ formatTimeAgo(invitation.createdAt) }}
+                    Invited {{ formatTimeAgo(invitation.created) }}
                   </p>
                 </div>
               </div>
@@ -175,103 +175,72 @@
 </div>
 
 <!-- Invite Modal -->
-@if (isModalOpen()) {
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-    (click)="closeModal()"
-    (keydown.escape)="closeModal()"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="modal-title"
-  >
-    <div
-      class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-      tabindex="-1"
-    >
-      <div class="mb-4 flex items-center justify-between">
-        <h2 id="modal-title" class="text-xl font-bold dark:text-white">Invite user</h2>
-        <button
-          (click)="closeModal()"
-          class="cursor-pointer text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-          aria-label="Close modal"
-        >
-          <ng-icon name="tablerX" size="1.5rem" class="block!" />
-        </button>
-      </div>
+<app-modal [show]="isModalOpen()" title="Invite user" (modalClose)="closeModal()">
+  <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
+    Enter the email address of the user you want to invite. They will be able to sign in via SSO
+    once added.
+  </p>
 
-      <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
-        Enter the email address of the user you want to invite. They will be able to sign in via SSO
-        once added.
-      </p>
-
-      <form (ngSubmit)="submitInvitation()" novalidate>
-        <div class="mb-4">
-          <label
-            for="email"
-            class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
-            Email address
-          </label>
-          <input
-            #emailInput
-            #emailModel="ngModel"
-            type="email"
-            id="email"
-            email
-            [ngModel]="inviteEmail()"
-            (ngModelChange)="inviteEmail.set($event); inviteError.set(null)"
-            name="email"
-            placeholder="user@example.com"
-            [disabled]="isSubmitting()"
-            class="disabled:opacity-50"
-            [class]="
-              inviteError() || (emailModel.invalid && emailModel.touched)
-                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700'
-            "
-          />
-          @if (inviteError()) {
-            <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ inviteError() }}</p>
-          }
-        </div>
-
-        <div class="mb-6">
-          <label for="role" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Role
-          </label>
-          <select
-            id="role"
-            [ngModel]="inviteRole()"
-            (ngModelChange)="inviteRole.set($event)"
-            name="role"
-            [disabled]="isSubmitting()"
-            class="w-full disabled:opacity-50"
-          >
-            <option value="viewer">Viewer</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-
-        <div class="flex justify-end gap-3">
-          <button
-            type="button"
-            (click)="closeModal()"
-            class="btn-secondary"
-            [disabled]="isSubmitting()"
-          >
-            Cancel
-          </button>
-          <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
-            @if (isSubmitting()) {
-              Sending...
-            } @else {
-              Send invitation
-            }
-          </button>
-        </div>
-      </form>
+  <form (ngSubmit)="submitInvitation()" novalidate>
+    <div class="mb-4">
+      <label for="email" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        Email address
+      </label>
+      <input
+        #emailModel="ngModel"
+        type="email"
+        id="email"
+        email
+        [ngModel]="inviteEmail()"
+        (ngModelChange)="inviteEmail.set($event); inviteError.set(null)"
+        name="email"
+        placeholder="user@example.com"
+        [disabled]="isSubmitting()"
+        class="disabled:opacity-50"
+        [class]="
+          inviteError() || (emailModel.invalid && emailModel.touched)
+            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+            : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700'
+        "
+      />
+      @if (inviteError()) {
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ inviteError() }}</p>
+      }
     </div>
-  </div>
-}
+
+    <div class="mb-6">
+      <label for="role" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        Role
+      </label>
+      <select
+        id="role"
+        [ngModel]="inviteRole()"
+        (ngModelChange)="inviteRole.set($event)"
+        name="role"
+        [disabled]="isSubmitting()"
+        class="w-full disabled:opacity-50"
+      >
+        <option value="viewer">Viewer</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+
+    <div modal-footer class="modal-footer">
+      <button
+        type="button"
+        (click)="closeModal()"
+        class="btn-secondary"
+        [disabled]="isSubmitting()"
+      >
+        Cancel
+      </button>
+      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+        @if (isSubmitting()) {
+          Sending...
+        } @else {
+          Send invitation
+        }
+      </button>
+    </div>
+  </form>
+</app-modal>

@@ -13,10 +13,11 @@ type CLI struct {
 	Debug  bool         `help:"Enable debug logging."`
 	Output OutputFormat `help:"Output format: table or json." short:"o" default:"table" enum:"table,json"`
 
-	Auth    AuthCmd    `cmd:"" help:"Authentication commands."`
-	Cluster ClusterCmd `cmd:"" help:"Manage clusters."`
-	Project ProjectCmd `cmd:"" help:"Manage projects."`
-	APIKey  APIKeyCmd  `cmd:"" name:"apikey" help:"Manage API keys."`
+	Auth      AuthCmd      `cmd:"" help:"Authentication commands."`
+	Cluster   ClusterCmd   `cmd:"" help:"Manage clusters."`
+	Project   ProjectCmd   `cmd:"" help:"Manage projects."`
+	Namespace NamespaceCmd `cmd:"" help:"Manage namespaces."`
+	APIKey    APIKeyCmd    `cmd:"" name:"apikey" help:"Manage API keys."`
 }
 
 // Context holds shared dependencies for command execution.

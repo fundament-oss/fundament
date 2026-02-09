@@ -15,6 +15,6 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
     </svg>
   `,
 })
-export class CheckmarkIconComponent {
+export default class CheckmarkIconComponent {
   @Input() class = '';
 }

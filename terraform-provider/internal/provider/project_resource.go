@@ -52,7 +52,7 @@ func (r *ProjectResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Description: "The name of the project. Can be updated to rename the project.",
 				Required:    true,
 			},
-			"created_at": schema.StringAttribute{
+			"created": schema.StringAttribute{
 				Description: "The timestamp when the project was created.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
@@ -119,7 +119,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	// Set the ID from the response
 	state.ID = types.StringValue(createResp.Msg.ProjectId)
 
-	// Read the project to get the full state including created_at
+	// Read the project to get the full state including created
 	getReq := connect.NewRequest(&organizationv1.GetProjectRequest{
 		ProjectId: createResp.Msg.ProjectId,
 	})
@@ -134,8 +134,8 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Map response to state
-	if getResp.Msg.Project.CreatedAt.CheckValid() == nil {
-		state.CreatedAt = types.StringValue(getResp.Msg.Project.CreatedAt.String())
+	if getResp.Msg.Project.Created.CheckValid() == nil {
+		state.Created = types.StringValue(getResp.Msg.Project.Created.String())
 	}
 
 	tflog.Info(ctx, "Created project", map[string]any{
@@ -194,8 +194,8 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	state.ID = types.StringValue(project.Id)
 	state.Name = types.StringValue(project.Name)
 
-	if project.CreatedAt.CheckValid() == nil {
-		state.CreatedAt = types.StringValue(project.CreatedAt.String())
+	if project.Created.CheckValid() == nil {
+		state.Created = types.StringValue(project.Created.String())
 	}
 
 	tflog.Debug(ctx, "Read project successfully", map[string]any{
@@ -291,8 +291,8 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 	plan.ID = types.StringValue(project.Id)
 	plan.Name = types.StringValue(project.Name)
 
-	if project.CreatedAt.CheckValid() == nil {
-		state.CreatedAt = types.StringValue(project.CreatedAt.String())
+	if project.Created.CheckValid() == nil {
+		plan.Created = types.StringValue(project.Created.String())
 	}
 
 	tflog.Info(ctx, "Updated project", map[string]any{

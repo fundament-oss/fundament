@@ -7,6 +7,9 @@ import (
 	"os"
 	"strings"
 
+	"connectrpc.com/connect"
+
+	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 	"github.com/fundament-oss/fundament/fundament-cli/pkg/client"
 	"github.com/fundament-oss/fundament/fundament-cli/pkg/config"
 )
@@ -49,7 +52,7 @@ func (c *AuthLoginCmd) Run(ctx *Context) error {
 	}
 
 	testClient := client.New(apiKey, cfg.APIEndpoint, cfg.AuthnURL)
-	user, err := testClient.GetUserInfo(context.Background())
+	resp, err := testClient.Authn().GetUserInfo(context.Background(), connect.NewRequest(&authnv1.GetUserInfoRequest{}))
 	if err != nil {
 		return fmt.Errorf("invalid API key: %w", err)
 	}
@@ -62,7 +65,7 @@ func (c *AuthLoginCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	fmt.Printf("Logged in as %s\n", user.Name)
+	fmt.Printf("Logged in as %s\n", resp.Msg.User.Name)
 	return nil
 }
 
@@ -85,12 +88,14 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	}
 
 	apiClient := client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL)
-	user, err := apiClient.GetUserInfo(context.Background())
+	resp, err := apiClient.Authn().GetUserInfo(context.Background(), connect.NewRequest(&authnv1.GetUserInfoRequest{}))
 	if err != nil {
 		fmt.Println("Authentication failed: credentials may be invalid or expired")
 		fmt.Println("Run 'fundament auth login' to re-authenticate")
 		return nil
 	}
+
+	user := resp.Msg.User
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]any{

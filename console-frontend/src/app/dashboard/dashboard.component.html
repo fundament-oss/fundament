@@ -1,7 +1,7 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-bold dark:text-white">Dashboard</h1>
+    <h1 class="text-2xl font-bold dark:text-white">Clusters</h1>
   </div>
 
   <!-- Content -->
@@ -19,7 +19,7 @@
     }
 
     <!-- Create Cluster Button -->
-    <div class="mb-6">
+    <div>
       <a routerLink="/add-cluster" class="btn-primary inline-flex items-center">
         <ng-icon name="tablerPlus" class="mr-1.5" />
         Add a Kubernetes cluster
@@ -27,46 +27,48 @@
     </div>
 
     <!-- Clusters Grid -->
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      @for (cluster of clusters(); track cluster.id) {
-        <div class="card">
-          <!-- Card Header -->
-          <div class="card-header">
-            <div class="flex items-center justify-between">
-              <h2 class="text-xl font-bold dark:text-white">{{ cluster.name }}</h2>
-              <span class="badge" [class]="getStatusColor(cluster.status)">
-                {{ getStatusLabel(cluster.status) }}
-              </span>
+    @if (clusters().length > 0) {
+      <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        @for (cluster of clusters(); track cluster.id) {
+          <div class="card">
+            <!-- Card Header -->
+            <div class="card-header">
+              <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold dark:text-white">{{ cluster.name }}</h2>
+                <span class="badge" [class]="getStatusColor(cluster.status)">
+                  {{ getStatusLabel(cluster.status) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Card Content -->
+            <div class="card-body-lg">
+              <dl>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
+                <dd class="mt-0.5 mb-4 text-sm dark:text-white">
+                  {{ cluster.region.toUpperCase() }}
+                </dd>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Number of node pools
+                </dt>
+                <dd class="mt-0.5 mb-4 text-sm dark:text-white">
+                  {{ getNodePoolCount(cluster.id) }}
+                </dd>
+              </dl>
+
+              <!-- Card Actions -->
+              <div class="mt-6">
+                <a
+                  routerLink="/clusters/{{ cluster.id }}"
+                  class="btn-primary inline-flex items-center px-3!"
+                >
+                  <ng-icon name="tablerEye" class="mr-2" /> View details
+                </a>
+              </div>
             </div>
           </div>
-
-          <!-- Card Content -->
-          <div class="card-body-lg">
-            <dl>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
-              <dd class="mt-0.5 mb-4 text-sm dark:text-white">
-                {{ cluster.region.toUpperCase() }}
-              </dd>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Number of node pools
-              </dt>
-              <dd class="mt-0.5 mb-4 text-sm dark:text-white">
-                {{ getNodePoolCount(cluster.id) }}
-              </dd>
-            </dl>
-
-            <!-- Card Actions -->
-            <div class="mt-6">
-              <a
-                routerLink="/clusters/{{ cluster.id }}"
-                class="btn-primary inline-flex items-center px-3!"
-              >
-                <ng-icon name="tablerEye" class="mr-2" /> View details
-              </a>
-            </div>
-          </div>
-        </div>
-      }
-    </div>
+        }
+      </div>
+    }
   </div>
 </div>

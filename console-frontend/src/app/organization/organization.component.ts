@@ -7,24 +7,23 @@ import {
   signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TitleService } from '../title.service';
-import { AUTHN, ORGANIZATION } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
+import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
 import {
   GetOrganizationRequestSchema,
   UpdateOrganizationRequestSchema,
   Organization,
 } from '../../generated/v1/organization_pb';
-import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
+import { AUTHN, ORGANIZATION } from '../../connect/tokens';
+import { TitleService } from '../title.service';
+import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-organization',
-  imports: [CommonModule, FormsModule, NgIcon],
+  imports: [FormsModule, NgIcon],
   viewProviders: [
     provideIcons({
       tablerPencil,
@@ -35,17 +34,23 @@ import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './organization.component.html',
 })
-export class OrganizationComponent implements OnInit {
+export default class OrganizationComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private authnClient = inject(AUTHN);
+
   private organizationClient = inject(ORGANIZATION);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   organization = signal<Organization | null>(null);
+
   isEditing = signal(false);
+
   editingName = signal('');
+
   loading = signal(false);
+
   error = signal<string | null>(null);
 
   constructor() {
@@ -78,8 +83,11 @@ export class OrganizationComponent implements OnInit {
 
       this.organization.set(response.organization);
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to load organization');
-      console.error('Error loading organization:', err);
+      this.error.set(
+        err instanceof Error
+          ? `Failed to load organization: ${err.message}`
+          : 'Failed to load organization',
+      );
     } finally {
       this.loading.set(false);
     }
@@ -130,19 +138,15 @@ export class OrganizationComponent implements OnInit {
       this.isEditing.set(false);
       this.editingName.set('');
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to update organization');
-      console.error('Error updating organization:', err);
+      this.error.set(
+        err instanceof Error
+          ? `Failed to update organization: ${err.message}`
+          : 'Failed to update organization',
+      );
     } finally {
       this.loading.set(false);
     }
   }
 
-  formatDate(timestamp: Timestamp | undefined): string {
-    if (!timestamp) return 'Unknown';
-    return timestampDate(timestamp).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
+  readonly formatDate = formatDateUtil;
 }

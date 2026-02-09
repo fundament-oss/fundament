@@ -121,7 +121,7 @@ message ClusterDetails {
   string region = 30;
   string kubernetes_version = 40;
   ClusterStatus status = 50;
-  google.protobuf.Timestamp created_at = 60;
+  google.protobuf.Timestamp created = 60;
   ResourceUsageInfo resource_usage = 70;
 }
 
@@ -286,7 +286,7 @@ message GetNodePoolResponse {
 message Install {
   string id = 10;
   string plugin_id = 20;
-  google.protobuf.Timestamp created_at = 30;
+  google.protobuf.Timestamp created = 30;
 }
 
 // List installs request
@@ -331,7 +331,7 @@ message ClusterNamespace {
   string name = 20;
   string project_id = 30;
   string cluster_id = 35;
-  google.protobuf.Timestamp created_at = 40;
+  google.protobuf.Timestamp created = 40;
 }
 
 // Create namespace request

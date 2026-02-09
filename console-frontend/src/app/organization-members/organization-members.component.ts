@@ -1,32 +1,62 @@
-import {
-  Component,
-  inject,
-  OnInit,
-  signal,
-  ChangeDetectionStrategy,
-  viewChild,
-  ElementRef,
-  afterNextRender,
-  Injector,
-} from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { TitleService } from '../title.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerPlus,
-  tablerX,
   tablerTrash,
   tablerClockHour4,
   tablerMail,
   tablerAlertTriangle,
+  tablerX,
 } from '@ng-icons/tabler-icons';
 import { heroUserGroup } from '@ng-icons/heroicons/outline';
-import { AuthnApiService } from '../authn-api.service';
+import { TitleService } from '../title.service';
+import AuthnApiService from '../authn-api.service';
 import { MEMBER } from '../../connect/tokens';
+import ModalComponent from '../modal/modal.component';
+
+const formatTimeAgo = (date: Date | undefined): string => {
+  if (!date) {
+    return '';
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return 'today';
+  }
+  if (diffDays === 1) {
+    return 'yesterday';
+  }
+  return `${diffDays} days ago`;
+};
+
+const getInitials = (name: string): string =>
+  name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+const getAvatarColor = (name: string): string => {
+  const colors = [
+    'bg-indigo-600',
+    'bg-emerald-600',
+    'bg-purple-600',
+    'bg-rose-600',
+    'bg-amber-600',
+    'bg-cyan-600',
+  ];
+  const index = name.charCodeAt(0) % colors.length;
+  return colors[index];
+};
 
 interface OrganizationMember {
   id: string;
@@ -36,12 +66,12 @@ interface OrganizationMember {
   role: string;
   isCurrentUser?: boolean;
   isPending: boolean;
-  createdAt?: Date;
+  created?: Date;
 }
 
 @Component({
   selector: 'app-organization-members',
-  imports: [CommonModule, FormsModule, NgIcon],
+  imports: [CommonModule, FormsModule, NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -56,23 +86,28 @@ interface OrganizationMember {
   templateUrl: './organization-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class OrganizationMembersComponent implements OnInit {
+export default class OrganizationMembersComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private memberClient = inject(MEMBER);
+
   private authnService = inject(AuthnApiService);
-  private injector = inject(Injector);
 
   // Loading and error state
   isLoading = signal(true);
+
   error = signal<string | null>(null);
+
   isSubmitting = signal(false);
 
   // Modal state
   isModalOpen = signal(false);
+
   inviteEmail = signal('');
+
   inviteRole = signal('viewer');
+
   inviteError = signal<string | null>(null);
-  private emailInput = viewChild<ElementRef<HTMLInputElement>>('emailInput');
 
   // All members loaded from API (includes both active and pending)
   allMembers = signal<OrganizationMember[]>([]);
@@ -111,13 +146,14 @@ export class OrganizationMembersComponent implements OnInit {
         role: member.role,
         isCurrentUser: currentUser?.id === member.id,
         isPending: !member.externalId,
-        createdAt: member.createdAt ? timestampDate(member.createdAt) : undefined,
+        created: member.created ? timestampDate(member.created) : undefined,
       }));
 
       this.allMembers.set(members);
     } catch (err) {
-      this.error.set('Failed to load members. Please try again.');
-      console.error('Failed to load members:', err);
+      this.error.set(
+        err instanceof Error ? `Failed to load members: ${err.message}` : 'Failed to load members',
+      );
     } finally {
       this.isLoading.set(false);
     }
@@ -128,12 +164,6 @@ export class OrganizationMembersComponent implements OnInit {
     this.inviteRole.set('viewer');
     this.inviteError.set(null);
     this.isModalOpen.set(true);
-    afterNextRender(
-      () => {
-        this.emailInput()?.nativeElement.focus();
-      },
-      { injector: this.injector },
-    );
   }
 
   closeModal() {
@@ -155,7 +185,6 @@ export class OrganizationMembersComponent implements OnInit {
       this.closeModal();
       await this.loadMembers();
     } catch (err: unknown) {
-      console.error('Failed to invite member:', err);
       if (err instanceof ConnectError) {
         if (err.code === Code.AlreadyExists) {
           this.inviteError.set('This email address is already in use.');
@@ -177,48 +206,17 @@ export class OrganizationMembersComponent implements OnInit {
       await firstValueFrom(this.memberClient.deleteMember({ id }));
       await this.loadMembers();
     } catch (err) {
-      console.error('Failed to cancel invitation:', err);
-      this.error.set('Failed to cancel invitation. Please try again.');
+      this.error.set(
+        err instanceof Error
+          ? `Failed to cancel invitation: ${err.message}`
+          : 'Failed to cancel invitation',
+      );
     }
   }
 
-  formatTimeAgo(date: Date | undefined): string {
-    if (!date) {
-      return '';
-    }
+  formatTimeAgo = formatTimeAgo;
 
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  getInitials = getInitials;
 
-    if (diffDays === 0) {
-      return 'today';
-    } else if (diffDays === 1) {
-      return 'yesterday';
-    } else {
-      return `${diffDays} days ago`;
-    }
-  }
-
-  getInitials(name: string): string {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  }
-
-  getAvatarColor(name: string): string {
-    const colors = [
-      'bg-indigo-600',
-      'bg-emerald-600',
-      'bg-purple-600',
-      'bg-rose-600',
-      'bg-amber-600',
-      'bg-cyan-600',
-    ];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
-  }
+  getAvatarColor = getAvatarColor;
 }

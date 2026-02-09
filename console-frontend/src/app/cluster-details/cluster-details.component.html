@@ -1,0 +1,604 @@
+<!-- Error Message -->
+@if (errorMessage()) {
+  <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
+    <ng-icon
+      name="tablerCircleXFill"
+      size="1.25rem"
+      class="mr-3 shrink-0 text-rose-400! dark:text-rose-500!"
+    />
+    <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
+  </div>
+}
+
+<!-- Loading State -->
+@if (isLoading()) {
+  <div class="py-12 text-center">
+    <div role="status" class="flex justify-center">
+      <app-loading-indicator
+        class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+      />
+      <span class="sr-only">Loading...</span>
+    </div>
+    <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading cluster details...</p>
+  </div>
+}
+
+<!-- Content (only show when not loading) -->
+@if (!isLoading()) {
+  <div class="card">
+    <!-- Header -->
+    <div class="card-header">
+      <div class="grid items-center gap-3 lg:grid-cols-2">
+        <div>
+          <h1 class="text-2xl font-bold dark:text-white">
+            {{ clusterData.basics.name || 'Unknown cluster' }}
+          </h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Created {{ formatDate(clusterData.creationDate) }}
+          </p>
+        </div>
+
+        <div class="flex gap-2 lg:justify-end">
+          <button
+            type="button"
+            (click)="openTerminal()"
+            class="btn-secondary inline-flex shrink-0 items-center transition-transform duration-200 ease-in-out hover:-translate-y-px"
+          >
+            <ng-icon name="tablerTerminal" class="mr-2" /> Open terminal
+          </button>
+          <button
+            type="button"
+            (click)="downloadKubeconfig()"
+            class="btn-primary inline-flex shrink-0 items-center transition-transform duration-200 ease-in-out hover:-translate-y-px"
+          >
+            <ng-icon name="tablerDownload" class="mr-2" /> Download kubeconfig
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Content -->
+    <div class="card-body-lg space-y-6">
+      <!-- Basics Block -->
+      <div class="card card-body">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">Basics</h3>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <dl>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
+            <dd class="mt-1 text-sm dark:text-white">{{ clusterData.basics.name }}</dd>
+          </dl>
+          <dl>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
+            <dd class="mt-1 text-sm dark:text-white">
+              {{ clusterData.basics.region.toUpperCase() }}
+            </dd>
+          </dl>
+          <dl>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
+            <dd class="mt-1">
+              <span class="badge" [class]="getStatusColor(clusterData.status)">
+                {{ getStatusLabel(clusterData.status) }}
+              </span>
+            </dd>
+          </dl>
+          <dl>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
+            <dd class="mt-1 text-sm dark:text-white">
+              {{ clusterData.basics.kubernetesVersion }}
+              <button
+                type="button"
+                class="btn-light -my-0.5 ml-1 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
+              >
+                <ng-icon name="tablerArrowUp" size="0.875rem" class="mr-1" /> Upgrade
+              </button>
+            </dd>
+          </dl>
+        </div>
+      </div>
+
+      <!-- Resource Usage Stats -->
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <!-- Resource Usage Charts -->
+        <div class="card card-body">
+          <h3 class="mb-4 text-lg font-medium dark:text-white">Resource usage</h3>
+          <div class="space-y-4">
+            <!-- CPU Usage -->
+            <div>
+              <div class="mb-1 flex justify-between text-sm">
+                <span class="font-medium text-gray-700 dark:text-white">CPU</span>
+                <span class="text-gray-500 dark:text-gray-400"
+                  >{{ clusterData.resourceUsage.cpu.used }} /
+                  {{ clusterData.resourceUsage.cpu.limit }}
+                  {{ clusterData.resourceUsage.cpu.unit }}</span
+                >
+              </div>
+              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                <div
+                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                  [class]="
+                    getUsageColor(
+                      getUsagePercentage(
+                        clusterData.resourceUsage.cpu.used,
+                        clusterData.resourceUsage.cpu.limit
+                      )
+                    )
+                  "
+                  [style.width.%]="
+                    getUsagePercentage(
+                      clusterData.resourceUsage.cpu.used,
+                      clusterData.resourceUsage.cpu.limit
+                    )
+                  "
+                ></div>
+              </div>
+              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {{
+                  getUsagePercentage(
+                    clusterData.resourceUsage.cpu.used,
+                    clusterData.resourceUsage.cpu.limit
+                  )
+                }}% used
+              </div>
+            </div>
+
+            <!-- Memory Usage -->
+            <div>
+              <div class="mb-1 flex justify-between text-sm">
+                <span class="font-medium text-gray-700 dark:text-white">Memory</span>
+                <span class="text-gray-500 dark:text-gray-400"
+                  >{{ clusterData.resourceUsage.memory.used }} /
+                  {{ clusterData.resourceUsage.memory.limit }}
+                  {{ clusterData.resourceUsage.memory.unit }}</span
+                >
+              </div>
+              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                <div
+                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                  [class]="
+                    getUsageColor(
+                      getUsagePercentage(
+                        clusterData.resourceUsage.memory.used,
+                        clusterData.resourceUsage.memory.limit
+                      )
+                    )
+                  "
+                  [style.width.%]="
+                    getUsagePercentage(
+                      clusterData.resourceUsage.memory.used,
+                      clusterData.resourceUsage.memory.limit
+                    )
+                  "
+                ></div>
+              </div>
+              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {{
+                  getUsagePercentage(
+                    clusterData.resourceUsage.memory.used,
+                    clusterData.resourceUsage.memory.limit
+                  )
+                }}% used
+              </div>
+            </div>
+
+            <!-- Disk Usage -->
+            <div>
+              <div class="mb-1 flex justify-between text-sm">
+                <span class="font-medium text-gray-700 dark:text-white">Disk</span>
+                <span class="text-gray-500 dark:text-gray-400"
+                  >{{ clusterData.resourceUsage.disk.used }} /
+                  {{ clusterData.resourceUsage.disk.limit }}
+                  {{ clusterData.resourceUsage.disk.unit }}</span
+                >
+              </div>
+              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                <div
+                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                  [class]="
+                    getUsageColor(
+                      getUsagePercentage(
+                        clusterData.resourceUsage.disk.used,
+                        clusterData.resourceUsage.disk.limit
+                      )
+                    )
+                  "
+                  [style.width.%]="
+                    getUsagePercentage(
+                      clusterData.resourceUsage.disk.used,
+                      clusterData.resourceUsage.disk.limit
+                    )
+                  "
+                ></div>
+              </div>
+              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {{
+                  getUsagePercentage(
+                    clusterData.resourceUsage.disk.used,
+                    clusterData.resourceUsage.disk.limit
+                  )
+                }}% used
+              </div>
+            </div>
+
+            <!-- Pods Usage -->
+            <div>
+              <div class="mb-1 flex justify-between text-sm">
+                <span class="font-medium text-gray-700 dark:text-white">Pods</span>
+                <span class="text-gray-500 dark:text-gray-400"
+                  >{{ clusterData.resourceUsage.pods.used }} /
+                  {{ clusterData.resourceUsage.pods.limit }}
+                  {{ clusterData.resourceUsage.pods.unit }}</span
+                >
+              </div>
+              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                <div
+                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                  [class]="
+                    getUsageColor(
+                      getUsagePercentage(
+                        clusterData.resourceUsage.pods.used,
+                        clusterData.resourceUsage.pods.limit
+                      )
+                    )
+                  "
+                  [style.width.%]="
+                    getUsagePercentage(
+                      clusterData.resourceUsage.pods.used,
+                      clusterData.resourceUsage.pods.limit
+                    )
+                  "
+                ></div>
+              </div>
+              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {{
+                  getUsagePercentage(
+                    clusterData.resourceUsage.pods.used,
+                    clusterData.resourceUsage.pods.limit
+                  )
+                }}% used
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card card-body">
+          <h3 class="mb-4 text-lg font-medium dark:text-white">Recent activity</h3>
+          <div class="max-h-80 space-y-3 overflow-y-auto" tabindex="0">
+            @for (activity of clusterData.activity; track activity.timestamp) {
+              <div
+                class="relative flex items-start space-x-3 after:absolute after:top-6 after:bottom-0 after:left-1 after:w-px after:bg-gray-300 after:content-[''] last:after:hidden dark:after:bg-gray-600"
+              >
+                <div class="flex-0">
+                  <div
+                    class="mt-2 h-2.25 w-2.25 rounded-full bg-indigo-500 dark:bg-indigo-400"
+                  ></div>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-medium dark:text-white">{{ activity.action }}</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">{{ activity.details }}</p>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {{ formatDate(activity.timestamp) }}
+                  </p>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Members and Node Pools -->
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <!-- Members -->
+        <div class="card card-body">
+          <h3 class="mb-4 text-lg font-medium dark:text-white">
+            Members
+            <!-- TODO: Update this link - clusters belong to organizations, not projects
+            <a
+              routerLink="/project-members"
+              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
+            >
+              <ng-icon name="tablerPencil" class="mr-1" /> Edit
+            </a>
+            -->
+          </h3>
+          <div class="space-y-3">
+            @for (member of clusterData.members; track member.name) {
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <div class="flex-0">
+                    <div
+                      class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900"
+                    >
+                      <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">{{
+                        member.name.charAt(0)
+                      }}</span>
+                    </div>
+                  </div>
+                  <p class="text-sm font-medium dark:text-white">{{ member.name }}</p>
+                </div>
+                <div class="text-right">
+                  <span
+                    class="badge-sm"
+                    [class.badge-purple]="member.role === 'admin'"
+                    [class.badge-blue]="member.role === 'edit'"
+                    [class.badge-green]="member.role === 'view'"
+                  >
+                    {{ member.role }}
+                  </span>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Last active: {{ formatDate(member.lastActive) }}
+                  </p>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Node Pools -->
+        <div class="card card-body">
+          <h3 class="mb-4 text-lg font-medium dark:text-white">
+            Node pools
+            <a
+              [routerLink]="['/clusters', clusterData.basics.id, 'nodes']"
+              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
+            >
+              <ng-icon name="tablerPencil" class="mr-1" /> Edit
+            </a>
+          </h3>
+          @if (clusterData.nodePools.length === 0) {
+            <div class="py-4">
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                No node pools are configured yet.
+              </p>
+            </div>
+          } @else {
+            <div class="space-y-4">
+              @for (pool of clusterData.nodePools; track pool.name) {
+                <div class="card card-body-sm">
+                  <div class="mb-2 flex items-center justify-between">
+                    <h4 class="text-sm font-medium dark:text-white">{{ pool.name }}</h4>
+                    <span
+                      class="badge-sm"
+                      [class]="
+                        pool.status === NodePoolStatus.HEALTHY ? 'badge-green' : 'badge-rose'
+                      "
+                    >
+                      {{ getNodePoolStatusLabel(pool.status) }}
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span class="text-gray-500 dark:text-gray-400">Type:</span>
+                      <span class="ml-1 dark:text-white">{{ pool.machineType }}</span>
+                    </div>
+                    <!-- <div>
+                  <span class="text-gray-500 dark:text-gray-400">Version:</span>
+                  <span class="ml-1">{{ pool.version }}</span>
+                </div> -->
+                    <div class="text-right">
+                      <span class="text-gray-500 dark:text-gray-400">Nodes:</span>
+                      <span class="ml-1 dark:text-white"
+                        >{{ pool.currentNodes }} (min: {{ pool.minNodes }} - max:
+                        {{ pool.maxNodes }})</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Plugins Block -->
+        <div class="card card-body">
+          <h3 class="mb-4 text-lg font-medium dark:text-white">
+            Plugins
+            <a
+              [routerLink]="['/clusters', clusterData.basics.id, 'plugins']"
+              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
+            >
+              <ng-icon name="tablerPencil" class="mr-1" /> Edit
+            </a>
+          </h3>
+          @if (isLoadingPlugins()) {
+            <p class="text-sm text-gray-500 dark:text-gray-400">Loading plugins...</p>
+          } @else if (installedPlugins().length > 0) {
+            <dl>
+              <dt class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                Installed plugins ({{ installedPlugins().length }})
+              </dt>
+              <dd class="flex flex-wrap gap-1">
+                @for (plugin of installedPlugins(); track plugin.id) {
+                  <span class="badge-md badge-emerald">
+                    {{ plugin.name }}
+                  </span>
+                }
+              </dd>
+            </dl>
+          } @else {
+            <p class="text-sm text-gray-500 dark:text-gray-400">No plugins installed</p>
+          }
+        </div>
+
+        <!-- Namespaces Block -->
+        <div class="card card-body">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-medium dark:text-white">Namespaces</h3>
+            <button
+              type="button"
+              (click)="openAddNamespaceModal()"
+              class="btn-primary inline-flex items-center"
+            >
+              <ng-icon name="tablerPlus" class="mr-1.5" />
+              Add namespace
+            </button>
+          </div>
+          @if (namespaces().length === 0) {
+            <div class="py-4">
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                No namespaces in this cluster yet.
+              </p>
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (namespace of namespaces(); track namespace.id) {
+                <div class="card card-body-sm flex items-center justify-between">
+                  <div>
+                    <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Project: {{ getProjectName(namespace.projectId) }} &bull; Created
+                      {{ formatDate(namespace.created) }}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="deleteNamespace(namespace.id, namespace.name)"
+                    class="inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white"
+                  >
+                    <ng-icon name="tablerTrash" class="mr-1.5" />
+                    Delete
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div
+        class="rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-900/20"
+      >
+        <h3 class="mb-2 text-lg font-medium text-rose-800 dark:text-rose-200">Danger zone</h3>
+        <p class="mb-4 text-sm text-rose-700 dark:text-rose-300">
+          Deleting a cluster is permanent and cannot be undone.
+        </p>
+        <button type="button" (click)="showDeleteModal.set(true)" class="btn-remove">
+          Delete this cluster
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Delete Cluster Modal -->
+<app-modal
+  [show]="showDeleteModal()"
+  title="Delete cluster"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showDeleteModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Are you sure you want to delete cluster
+          <span class="font-semibold text-gray-900 dark:text-white">{{
+            clusterData.basics.name
+          }}</span
+          >?
+        </p>
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">This cannot be undone.</p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="deleteCluster()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, delete this cluster
+    </button>
+  </div>
+</app-modal>
+
+<!-- Add Namespace Modal -->
+<app-modal
+  [show]="showAddNamespaceModal()"
+  title="Add namespace"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showAddNamespaceModal.set(false)"
+>
+  <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
+    <!-- Project Selection -->
+    <div class="mb-4">
+      <label for="projectId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+        Project
+      </label>
+      @if (isLoadingProjects()) {
+        <div class="flex items-center py-2">
+          <div
+            class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
+          ></div>
+          <span class="text-sm text-gray-500 dark:text-gray-400">Loading projects...</span>
+        </div>
+      } @else {
+        <select id="projectId" formControlName="projectId" class="w-full">
+          @for (project of projects(); track project.id) {
+            <option [value]="project.id">{{ project.name }}</option>
+          }
+        </select>
+        @if (projects().length === 0) {
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            No projects available. Create a project first.
+          </p>
+        }
+      }
+    </div>
+
+    <!-- Namespace Name -->
+    <div class="mb-4">
+      <label
+        for="namespaceName"
+        class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+      >
+        Namespace name
+      </label>
+      <input
+        id="namespaceName"
+        formControlName="name"
+        type="text"
+        placeholder="E.g. my-namespace"
+      />
+      @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+          {{ getNamespaceNameError() }}
+        </p>
+      }
+    </div>
+
+    <div modal-footer class="modal-footer">
+      <button
+        type="button"
+        (click)="showAddNamespaceModal.set(false)"
+        class="btn-secondary"
+        [disabled]="isCreatingNamespace()"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="isCreatingNamespace() || !namespaceForm.valid"
+      >
+        @if (isCreatingNamespace()) {
+          Creating...
+        } @else {
+          Add namespace
+        }
+      </button>
+    </div>
+  </form>
+</app-modal>

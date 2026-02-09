@@ -44,7 +44,7 @@ func (d *ProjectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				Description: "The name of the project to look up.",
 				Required:    true,
 			},
-			"created_at": schema.StringAttribute{
+			"created": schema.StringAttribute{
 				Description: "The timestamp when the project was created.",
 				Computed:    true,
 			},
@@ -128,8 +128,8 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	config.ID = types.StringValue(project.Id)
 	config.Name = types.StringValue(project.Name)
 
-	if project.CreatedAt.CheckValid() == nil {
-		config.CreatedAt = types.StringValue(project.CreatedAt.String())
+	if project.Created.CheckValid() == nil {
+		config.Created = types.StringValue(project.Created.String())
 	}
 
 	tflog.Debug(ctx, "Read project successfully", map[string]any{

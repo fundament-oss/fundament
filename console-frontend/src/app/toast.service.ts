@@ -12,8 +12,11 @@ export interface Toast {
 })
 export class ToastService {
   private toastIdCounter = 0;
+
   private currentToast = signal<Toast | null>(null);
+
   private router = inject(Router);
+
   // When true, preserve the current toast through the next navigation
   private preserveThroughNextNavigation = false;
 
@@ -39,8 +42,9 @@ export class ToastService {
     const toast: Toast = {
       message,
       type,
-      id: this.toastIdCounter++,
+      id: this.toastIdCounter,
     };
+    this.toastIdCounter += 1;
     this.currentToast.set(toast);
 
     // Mark that we should preserve this toast across one navigation cycle

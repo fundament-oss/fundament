@@ -24,7 +24,7 @@ output "namespace_id" {
   value       = fundament_namespace.example.id
 }
 
-output "namespace_created_at" {
+output "namespace_created" {
   description = "When the namespace was created"
-  value       = fundament_namespace.example.created_at
+  value       = fundament_namespace.example.created
 }

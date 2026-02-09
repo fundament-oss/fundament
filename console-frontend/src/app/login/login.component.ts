@@ -12,7 +12,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
-import { AuthnApiService } from '../authn-api.service';
+import AuthnApiService from '../authn-api.service';
 
 @Component({
   selector: 'app-login',
@@ -20,16 +20,21 @@ import { AuthnApiService } from '../authn-api.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.component.html',
 })
-export class LoginComponent implements OnInit, AfterViewInit {
+export default class LoginComponent implements OnInit, AfterViewInit {
   @ViewChild('emailInput') emailInput!: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private apiService = inject(AuthnApiService);
+
   private fb = inject(FormBuilder);
 
   loginForm!: FormGroup;
+
   error = signal<string | null>(null);
+
   isLoading = signal(false);
 
   constructor() {
@@ -70,7 +75,6 @@ export class LoginComponent implements OnInit, AfterViewInit {
     if (this.apiService.isAuthenticated()) {
       // User already authenticated, redirect to dashboard
       this.router.navigate(['/']);
-      return;
     }
   }
 
@@ -97,7 +101,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
       this.router.navigateByUrl(returnUrl);
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Login failed');
+      this.error.set(err instanceof Error ? `Login failed: ${err.message}` : 'Login failed');
       this.isLoading.set(false);
     }
   }

@@ -15,6 +15,6 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
     </svg>
   `,
 })
-export class KubernetesIconComponent {
+export default class KubernetesIconComponent {
   @Input() class = '';
 }

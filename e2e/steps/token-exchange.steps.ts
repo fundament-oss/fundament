@@ -137,10 +137,10 @@ Then('the token type should be {string}', async function (this: ICustomWorld, to
 
 Then('the last used timestamp should be recent', async function (this: ICustomWorld) {
   const response = this.lastApiResponse as { apiKey: APIKey };
-  expect(response.apiKey.lastUsedAt).toBeDefined();
+  expect(response.apiKey.lastUsed).toBeDefined();
 
   // Check that last_used is within the last minute
-  const lastUsed = timestampDate(response.apiKey.lastUsedAt!);
+  const lastUsed = timestampDate(response.apiKey.lastUsed!);
   const now = new Date();
   const diffMs = Math.abs(now.getTime() - lastUsed.getTime());
   expect(diffMs).toBeLessThan(60000); // Within 1 minute

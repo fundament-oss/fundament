@@ -45,7 +45,7 @@ func TestAccNamespaceDataSource(t *testing.T) {
 						"data.fundament_namespace.test", "cluster_id",
 						"fundament_namespace.test", "cluster_id",
 					),
-					resource.TestCheckResourceAttrSet("data.fundament_namespace.test", "created_at"),
+					resource.TestCheckResourceAttrSet("data.fundament_namespace.test", "created"),
 				),
 			},
 		},

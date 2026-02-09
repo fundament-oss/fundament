@@ -8,13 +8,14 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { TitleService } from '../title.service';
+import { ToastService } from '../toast.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { CLUSTER, PLUGIN } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import {
   CreateClusterRequestSchema,
   CreateNodePoolRequestSchema,
@@ -26,7 +27,6 @@ import {
   type PluginSummary,
   type Preset,
 } from '../../generated/v1/plugin_pb';
-import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-add-cluster-summary',
@@ -39,12 +39,17 @@ import { firstValueFrom } from 'rxjs';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-summary.component.html',
 })
-export class AddClusterSummaryComponent implements OnInit {
+export default class AddClusterSummaryComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private client = inject(CLUSTER);
+
   private pluginClient = inject(PLUGIN);
+
   private toastService = inject(ToastService);
+
   protected stateService = inject(ClusterWizardStateService);
 
   // Computed signal to access state
@@ -52,11 +57,14 @@ export class AddClusterSummaryComponent implements OnInit {
 
   // Error state
   protected errorMessage = signal<string | null>(null);
+
   protected isCreating = signal<boolean>(false);
 
   // Plugin and preset data
   protected plugins = signal<PluginSummary[]>([]);
+
   protected presets = signal<Preset[]>([]);
+
   protected isLoadingPlugins = signal<boolean>(true);
 
   constructor() {
@@ -74,6 +82,7 @@ export class AddClusterSummaryComponent implements OnInit {
       this.plugins.set(pluginsResponse.plugins);
       this.presets.set(presetsResponse.presets);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to load plugins and presets:', error);
     } finally {
       this.isLoadingPlugins.set(false);
@@ -125,27 +134,31 @@ export class AddClusterSummaryComponent implements OnInit {
 
       // Create node pools if any are configured
       if (wizardState.nodePools && wizardState.nodePools.length > 0) {
-        for (const pool of wizardState.nodePools) {
-          const nodePoolRequest = create(CreateNodePoolRequestSchema, {
-            clusterId: response.clusterId,
-            name: pool.name,
-            machineType: pool.machineType,
-            autoscaleMin: pool.autoscaleMin,
-            autoscaleMax: pool.autoscaleMax,
-          });
-          await firstValueFrom(this.client.createNodePool(nodePoolRequest));
-        }
+        await Promise.all(
+          wizardState.nodePools.map((pool) => {
+            const nodePoolRequest = create(CreateNodePoolRequestSchema, {
+              clusterId: response.clusterId,
+              name: pool.name,
+              machineType: pool.machineType,
+              autoscaleMin: pool.autoscaleMin,
+              autoscaleMax: pool.autoscaleMax,
+            });
+            return firstValueFrom(this.client.createNodePool(nodePoolRequest));
+          }),
+        );
       }
 
       // Install plugins if any are configured
       if (wizardState.plugins && wizardState.plugins.length > 0) {
-        for (const pluginId of wizardState.plugins) {
-          const installRequest = create(AddInstallRequestSchema, {
-            clusterId: response.clusterId,
-            pluginId: pluginId,
-          });
-          await firstValueFrom(this.client.addInstall(installRequest));
-        }
+        await Promise.all(
+          wizardState.plugins.map((pluginId) => {
+            const installRequest = create(AddInstallRequestSchema, {
+              clusterId: response.clusterId,
+              pluginId,
+            });
+            return firstValueFrom(this.client.addInstall(installRequest));
+          }),
+        );
       }
 
       // Reset wizard state
@@ -157,9 +170,10 @@ export class AddClusterSummaryComponent implements OnInit {
       // Navigate to the cluster detail page
       this.router.navigate(['/clusters', response.clusterId]);
     } catch (error) {
-      console.error('Failed to create cluster:', error);
       this.errorMessage.set(
-        error instanceof Error ? error.message : 'Failed to create cluster. Please try again.',
+        error instanceof Error
+          ? `Failed to create cluster: ${error.message}`
+          : 'Failed to create cluster. Please try again.',
       );
     } finally {
       this.isCreating.set(false);

@@ -19,13 +19,19 @@ import 'vanilla-calendar-pro/styles/layout.css';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './date-range-picker.component.html',
 })
-export class DateRangePickerComponent implements AfterViewInit, OnDestroy {
+export default class DateRangePickerComponent implements AfterViewInit, OnDestroy {
   @ViewChild('dateInput') dateInputRef!: ElementRef<HTMLInputElement>;
+
   @Input() id?: string;
+
   @Input() dateFrom = '';
+
   @Input() dateTo = '';
+
   @Output() dateFromChange = new EventEmitter<string>();
+
   @Output() dateToChange = new EventEmitter<string>();
+
   @Output() dateRangeChange = new EventEmitter<{ dateFrom: string; dateTo: string }>();
 
   private calendar?: Calendar;
@@ -33,9 +39,9 @@ export class DateRangePickerComponent implements AfterViewInit, OnDestroy {
   get displayValue(): string {
     if (this.dateFrom && this.dateTo) {
       if (this.dateFrom === this.dateTo) {
-        return this.formatDate(this.dateFrom);
+        return DateRangePickerComponent.formatDate(this.dateFrom);
       }
-      return `${this.formatDate(this.dateFrom)} - ${this.formatDate(this.dateTo)}`;
+      return `${DateRangePickerComponent.formatDate(this.dateFrom)} - ${DateRangePickerComponent.formatDate(this.dateTo)}`;
     }
     return '';
   }
@@ -50,7 +56,7 @@ export class DateRangePickerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private formatDate(dateStr: string): string {
+  private static formatDate(dateStr: string): string {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }

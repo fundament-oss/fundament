@@ -49,7 +49,7 @@ try {
   // Write version to a TypeScript file
   const outputPath = path.join(__dirname, 'src', 'proto-version.ts');
   const content = `// Auto-generated file - do not edit
-export const PROTO_API_VERSION = '${version}';
+export default '${version}';
 `;
 
   fs.writeFileSync(outputPath, content);

@@ -1,13 +1,15 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import {
   SharedNodePoolsFormComponent,
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
 import { CLUSTER } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import {
   ListNodePoolsRequestSchema,
   CreateNodePoolRequestSchema,
@@ -15,13 +17,11 @@ import {
   DeleteNodePoolRequestSchema,
   NodePool,
 } from '../../generated/v1/cluster_pb';
-import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { fetchClusterName } from '../utils/cluster-status';
 
 @Component({
   selector: 'app-cluster-nodes',
-  imports: [CommonModule, SharedNodePoolsFormComponent, NgIcon],
+  imports: [SharedNodePoolsFormComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -30,18 +30,28 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-nodes.component.html',
 })
-export class ClusterNodesComponent implements OnInit {
+export default class ClusterNodesComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private route = inject(ActivatedRoute);
+
   private client = inject(CLUSTER);
 
   private clusterId = '';
+
   private existingNodePools: NodePool[] = [];
+
   errorMessage = signal<string | null>(null);
+
   isSubmitting = signal(false);
+
   isLoading = signal(true);
+
   initialNodePools = signal<NodePoolData[]>([]);
+
+  clusterName = signal<string | null>(null);
 
   constructor() {
     this.titleService.setTitle('Cluster nodes');
@@ -49,7 +59,10 @@ export class ClusterNodesComponent implements OnInit {
   }
 
   async ngOnInit() {
-    await this.loadNodePools();
+    await Promise.all([
+      fetchClusterName(this.client, this.clusterId).then((name) => this.clusterName.set(name)),
+      this.loadNodePools(),
+    ]);
   }
 
   async loadNodePools() {
@@ -71,7 +84,10 @@ export class ClusterNodesComponent implements OnInit {
         })),
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to load node pools';
+      const message =
+        error instanceof Error
+          ? `Failed to load node pools: ${error.message}`
+          : 'Failed to load node pools';
       this.errorMessage.set(message);
     } finally {
       this.isLoading.set(false);
@@ -90,49 +106,57 @@ export class ClusterNodesComponent implements OnInit {
       const newPoolsMap = new Map(newPools.map((p) => [p.name, p]));
 
       // Delete pools that no longer exist
-      for (const existingPool of this.existingNodePools) {
-        if (!newPoolsMap.has(existingPool.name)) {
-          const deleteRequest = create(DeleteNodePoolRequestSchema, {
-            nodePoolId: existingPool.id,
-          });
-          await firstValueFrom(this.client.deleteNodePool(deleteRequest));
-        }
-      }
+      await Promise.all(
+        this.existingNodePools
+          .filter((existingPool) => !newPoolsMap.has(existingPool.name))
+          .map((existingPool) => {
+            const deleteRequest = create(DeleteNodePoolRequestSchema, {
+              nodePoolId: existingPool.id,
+            });
+            return firstValueFrom(this.client.deleteNodePool(deleteRequest));
+          }),
+      );
 
       // Create or update pools
-      for (const newPool of newPools) {
-        const existingPool = existingPoolsMap.get(newPool.name);
+      await Promise.all(
+        newPools.map((newPool) => {
+          const existingPool = existingPoolsMap.get(newPool.name);
 
-        if (existingPool) {
-          // Update if values changed
-          if (
-            existingPool.minNodes !== newPool.autoscaleMin ||
-            existingPool.maxNodes !== newPool.autoscaleMax
-          ) {
-            const updateRequest = create(UpdateNodePoolRequestSchema, {
-              nodePoolId: existingPool.id,
+          if (existingPool) {
+            // Update if values changed
+            if (
+              existingPool.minNodes !== newPool.autoscaleMin ||
+              existingPool.maxNodes !== newPool.autoscaleMax
+            ) {
+              const updateRequest = create(UpdateNodePoolRequestSchema, {
+                nodePoolId: existingPool.id,
+                autoscaleMin: newPool.autoscaleMin,
+                autoscaleMax: newPool.autoscaleMax,
+              });
+              return firstValueFrom(this.client.updateNodePool(updateRequest));
+            }
+          } else {
+            // Create new pool
+            const createRequest = create(CreateNodePoolRequestSchema, {
+              clusterId: this.clusterId,
+              name: newPool.name,
+              machineType: newPool.machineType,
               autoscaleMin: newPool.autoscaleMin,
               autoscaleMax: newPool.autoscaleMax,
             });
-            await firstValueFrom(this.client.updateNodePool(updateRequest));
+            return firstValueFrom(this.client.createNodePool(createRequest));
           }
-        } else {
-          // Create new pool
-          const createRequest = create(CreateNodePoolRequestSchema, {
-            clusterId: this.clusterId,
-            name: newPool.name,
-            machineType: newPool.machineType,
-            autoscaleMin: newPool.autoscaleMin,
-            autoscaleMax: newPool.autoscaleMax,
-          });
-          await firstValueFrom(this.client.createNodePool(createRequest));
-        }
-      }
+          return undefined;
+        }),
+      );
 
       // Navigate back to cluster overview on success
       this.router.navigate(['/clusters', this.clusterId]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update cluster nodes';
+      const message =
+        error instanceof Error
+          ? `Failed to update cluster nodes: ${error.message}`
+          : 'Failed to update cluster nodes';
       this.errorMessage.set(message);
     } finally {
       this.isSubmitting.set(false);

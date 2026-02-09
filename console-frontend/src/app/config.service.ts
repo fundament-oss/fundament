@@ -24,6 +24,7 @@ export class ConfigService {
       this.config = await response.json();
       return this.config!;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to load configuration', error);
 
       this.config = {

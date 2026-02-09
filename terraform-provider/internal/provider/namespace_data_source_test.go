@@ -15,7 +15,7 @@ func TestNamespaceModel_DataSource(t *testing.T) {
 		ProjectName: types.StringValue("test-project"),
 		ProjectID:   types.StringValue("test-project-id"),
 		ClusterID:   types.StringValue("test-cluster-id"),
-		CreatedAt:   types.StringValue("2024-01-01T00:00:00Z"),
+		Created:     types.StringValue("2024-01-01T00:00:00Z"),
 	}
 
 	if model.ID.ValueString() != "test-namespace-id" {
@@ -42,7 +42,7 @@ func TestNamespaceModel_DataSource(t *testing.T) {
 		t.Errorf("Expected project_id 'test-project-id', got '%s'", model.ProjectID.ValueString())
 	}
 
-	if model.CreatedAt.ValueString() != "2024-01-01T00:00:00Z" {
-		t.Errorf("Expected created_at '2024-01-01T00:00:00Z', got '%s'", model.CreatedAt.ValueString())
+	if model.Created.ValueString() != "2024-01-01T00:00:00Z" {
+		t.Errorf("Expected created '2024-01-01T00:00:00Z', got '%s'", model.Created.ValueString())
 	}
 }

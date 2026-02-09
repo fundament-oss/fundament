@@ -296,7 +296,7 @@ type Project struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Created       *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created,proto3" json:"created,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -345,9 +345,9 @@ func (x *Project) GetName() string {
 	return ""
 }
 
-func (x *Project) GetCreatedAt() *timestamppb.Timestamp {
+func (x *Project) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.CreatedAt
+		return x.Created
 	}
 	return nil
 }
@@ -636,7 +636,7 @@ type ProjectNamespace struct {
 	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	ClusterId     string                 `protobuf:"bytes,30,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Created       *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created,proto3" json:"created,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -692,9 +692,9 @@ func (x *ProjectNamespace) GetClusterId() string {
 	return ""
 }
 
-func (x *ProjectNamespace) GetCreatedAt() *timestamppb.Timestamp {
+func (x *ProjectNamespace) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.CreatedAt
+		return x.Created
 	}
 	return nil
 }
@@ -707,7 +707,7 @@ type ProjectMember struct {
 	UserId        string                 `protobuf:"bytes,30,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	UserName      string                 `protobuf:"bytes,40,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
 	Role          ProjectMemberRole      `protobuf:"varint,50,opt,name=role,proto3,enum=organization.v1.ProjectMemberRole" json:"role,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Created       *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created,proto3" json:"created,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -777,9 +777,9 @@ func (x *ProjectMember) GetRole() ProjectMemberRole {
 	return ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED
 }
 
-func (x *ProjectMember) GetCreatedAt() *timestamppb.Timestamp {
+func (x *ProjectMember) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.CreatedAt
+		return x.Created
 	}
 	return nil
 }
@@ -1097,13 +1097,12 @@ const file_v1_project_proto_rawDesc = "" +
 	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\x04name\"H\n" +
 	"\x12GetProjectResponse\x122\n" +
 	"\aproject\x18\n" +
-	" \x01(\v2\x18.organization.v1.ProjectR\aproject\"h\n" +
+	" \x01(\v2\x18.organization.v1.ProjectR\aproject\"c\n" +
 	"\aProject\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x129\n" +
-	"\n" +
-	"created_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x93\x01\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x124\n" +
+	"\acreated\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"\x93\x01\n" +
 	"\x14CreateProjectRequest\x12{\n" +
 	"\x04name\x18\n" +
 	" \x01(\tBg\xbaHd\xba\x01a\n" +
@@ -1131,15 +1130,14 @@ const file_v1_project_proto_rawDesc = "" +
 	"\n" +
 	"namespaces\x18\n" +
 	" \x03(\v2!.organization.v1.ProjectNamespaceR\n" +
-	"namespaces\"\x90\x01\n" +
+	"namespaces\"\x8b\x01\n" +
 	"\x10ProjectNamespace\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12\x1d\n" +
 	"\n" +
-	"cluster_id\x18\x1e \x01(\tR\tclusterId\x129\n" +
-	"\n" +
-	"created_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xe7\x01\n" +
+	"cluster_id\x18\x1e \x01(\tR\tclusterId\x124\n" +
+	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"\xe2\x01\n" +
 	"\rProjectMember\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1d\n" +
@@ -1147,9 +1145,8 @@ const file_v1_project_proto_rawDesc = "" +
 	"project_id\x18\x14 \x01(\tR\tprojectId\x12\x17\n" +
 	"\auser_id\x18\x1e \x01(\tR\x06userId\x12\x1b\n" +
 	"\tuser_name\x18( \x01(\tR\buserName\x126\n" +
-	"\x04role\x182 \x01(\x0e2\".organization.v1.ProjectMemberRoleR\x04role\x129\n" +
-	"\n" +
-	"created_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"D\n" +
+	"\x04role\x182 \x01(\x0e2\".organization.v1.ProjectMemberRoleR\x04role\x124\n" +
+	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"D\n" +
 	"\x19ListProjectMembersRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
@@ -1233,11 +1230,11 @@ var file_v1_project_proto_goTypes = []any{
 var file_v1_project_proto_depIdxs = []int32{
 	6,  // 0: organization.v1.ListProjectsResponse.projects:type_name -> organization.v1.Project
 	6,  // 1: organization.v1.GetProjectResponse.project:type_name -> organization.v1.Project
-	21, // 2: organization.v1.Project.created_at:type_name -> google.protobuf.Timestamp
+	21, // 2: organization.v1.Project.created:type_name -> google.protobuf.Timestamp
 	13, // 3: organization.v1.ListProjectNamespacesResponse.namespaces:type_name -> organization.v1.ProjectNamespace
-	21, // 4: organization.v1.ProjectNamespace.created_at:type_name -> google.protobuf.Timestamp
+	21, // 4: organization.v1.ProjectNamespace.created:type_name -> google.protobuf.Timestamp
 	0,  // 5: organization.v1.ProjectMember.role:type_name -> organization.v1.ProjectMemberRole
-	21, // 6: organization.v1.ProjectMember.created_at:type_name -> google.protobuf.Timestamp
+	21, // 6: organization.v1.ProjectMember.created:type_name -> google.protobuf.Timestamp
 	14, // 7: organization.v1.ListProjectMembersResponse.members:type_name -> organization.v1.ProjectMember
 	0,  // 8: organization.v1.AddProjectMemberRequest.role:type_name -> organization.v1.ProjectMemberRole
 	0,  // 9: organization.v1.UpdateProjectMemberRoleRequest.role:type_name -> organization.v1.ProjectMemberRole
