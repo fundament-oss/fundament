@@ -1,5 +1,4 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import {
@@ -15,13 +14,14 @@ import {
   DeleteNodePoolRequestSchema,
   NodePool,
 } from '../../generated/v1/cluster_pb';
+import { fetchClusterName } from '../utils/cluster-status';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 
 @Component({
   selector: 'app-cluster-nodes',
-  imports: [CommonModule, SharedNodePoolsFormComponent, NgIcon],
+  imports: [SharedNodePoolsFormComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -42,6 +42,7 @@ export class ClusterNodesComponent implements OnInit {
   isSubmitting = signal(false);
   isLoading = signal(true);
   initialNodePools = signal<NodePoolData[]>([]);
+  clusterName = signal<string | null>(null);
 
   constructor() {
     this.titleService.setTitle('Cluster nodes');
@@ -49,7 +50,10 @@ export class ClusterNodesComponent implements OnInit {
   }
 
   async ngOnInit() {
-    await this.loadNodePools();
+    await Promise.all([
+      fetchClusterName(this.client, this.clusterId).then((name) => this.clusterName.set(name)),
+      this.loadNodePools(),
+    ]);
   }
 
   async loadNodePools() {

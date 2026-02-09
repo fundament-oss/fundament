@@ -1,20 +1,11 @@
-import {
-  Component,
-  inject,
-  signal,
-  OnInit,
-  ChangeDetectionStrategy,
-  viewChild,
-  ElementRef,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
+import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER, PROJECT, PLUGIN } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
@@ -43,10 +34,12 @@ import {
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
+import { ModalComponent } from '../modal/modal.component';
+import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 @Component({
-  selector: 'app-cluster-overview',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent],
+  selector: 'app-cluster-details',
+  imports: [RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -59,10 +52,10 @@ import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
       tablerAlertTriangle,
     }),
   ],
-  templateUrl: './cluster-overview.component.html',
+  templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ClusterOverviewComponent implements OnInit {
+export class ClusterDetailsComponent implements OnInit {
   private titleService = inject(TitleService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -70,6 +63,7 @@ export class ClusterOverviewComponent implements OnInit {
   private projectClient = inject(PROJECT);
   private pluginClient = inject(PLUGIN);
   private toastService = inject(ToastService);
+  private organizationDataService = inject(OrganizationDataService);
   private fb = inject(FormBuilder);
 
   // Expose enum for use in template
@@ -93,8 +87,6 @@ export class ClusterOverviewComponent implements OnInit {
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
   isLoadingPlugins = signal<boolean>(true);
-
-  namespaceNameInput = viewChild<ElementRef<HTMLInputElement>>('namespaceNameInput');
 
   namespaceForm = this.fb.group({
     projectId: ['', Validators.required],
@@ -221,17 +213,7 @@ export class ClusterOverviewComponent implements OnInit {
     }
   }
 
-  formatDate(timestamp: Timestamp | string | undefined): string {
-    if (!timestamp) return 'Unknown';
-    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestampDate(timestamp);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+  readonly formatDate = formatDateTimeUtil;
 
   getUsagePercentage(used: number, limit: number): number {
     return Math.round((used / limit) * 100);
@@ -323,7 +305,6 @@ export class ClusterOverviewComponent implements OnInit {
     this.namespaceForm.reset();
     this.showAddNamespaceModal.set(true);
     this.loadProjects();
-    setTimeout(() => this.namespaceNameInput()?.nativeElement.focus());
   }
 
   async createNamespace(): Promise<void> {
@@ -345,7 +326,12 @@ export class ClusterOverviewComponent implements OnInit {
 
       this.showAddNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
-      await this.loadNamespaces(this.clusterData.basics.id);
+
+      // Reload organization data to update the selector modal
+      await Promise.all([
+        this.loadNamespaces(this.clusterData.basics.id),
+        this.organizationDataService.loadOrganizationData(),
+      ]);
     } catch (error) {
       console.error('Failed to create namespace:', error);
       this.errorMessage.set(
@@ -368,7 +354,12 @@ export class ClusterOverviewComponent implements OnInit {
       await firstValueFrom(this.client.deleteNamespace(request));
 
       this.toastService.info(`Namespace '${namespaceName}' deleted`);
-      await this.loadNamespaces(this.clusterData.basics.id);
+
+      // Reload organization data to update the selector modal
+      await Promise.all([
+        this.loadNamespaces(this.clusterData.basics.id),
+        this.organizationDataService.loadOrganizationData(),
+      ]);
     } catch (error) {
       console.error('Failed to delete namespace:', error);
       this.errorMessage.set(

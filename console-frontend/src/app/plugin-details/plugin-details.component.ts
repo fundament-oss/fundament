@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -33,13 +33,7 @@ interface InstallWithCluster extends Install {
 
 @Component({
   selector: 'app-plugin-details',
-  imports: [
-    CommonModule,
-    RouterLink,
-    InstallPluginModalComponent,
-    NgIcon,
-    LoadingIndicatorComponent,
-  ],
+  imports: [CommonModule, InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerChevronRight,
@@ -152,7 +146,7 @@ export class PluginDetailsComponent implements OnInit {
       .replace(/\n\n/g, '</p><p class="mb-3">')
       .trim();
 
-    html = '<p class="mb-3">' + html + '</p>';
+    html = `<p class="mb-3">${html}</p>`;
 
     return this.sanitizer.sanitize(1, html) || '';
   }

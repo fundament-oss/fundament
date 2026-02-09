@@ -292,12 +292,14 @@
         <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Members
+            <!-- TODO: Update this link - clusters belong to organizations, not projects
             <a
               routerLink="/project-members"
               class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
             >
               <ng-icon name="tablerPencil" class="mr-1" /> Edit
             </a>
+            -->
           </h3>
           <div class="space-y-3">
             @for (member of clusterData.members; track member.name) {
@@ -480,158 +482,123 @@
 }
 
 <!-- Delete Cluster Modal -->
-@if (showDeleteModal()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+<app-modal
+  [show]="showDeleteModal()"
+  title="Delete cluster"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showDeleteModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
     <div
-      class="w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-950"
-      role="dialog"
-      aria-labelledby="modal-title"
-      aria-modal="true"
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
     >
-      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-950">
-        <div class="sm:flex sm:items-start">
-          <div
-            class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
-          >
-            <ng-icon
-              name="tablerAlertTriangle"
-              size="1.5rem"
-              class="text-rose-600! dark:text-rose-400!"
-            />
-          </div>
-          <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-            <h3
-              class="text-lg leading-6 font-semibold text-gray-900 dark:text-white"
-              id="modal-title"
-            >
-              Delete cluster
-            </h3>
-            <div class="mt-2">
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Are you sure you want to delete cluster
-                <span class="font-semibold text-gray-900 dark:text-white">{{
-                  clusterData.basics.name
-                }}</span
-                >?
-              </p>
-              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">This cannot be undone.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="bg-gray-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 dark:bg-gray-900">
-        <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary mr-3">
-          Cancel
-        </button>
-
-        <button
-          type="button"
-          (click)="deleteCluster()"
-          class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
-        >
-          Yes, delete this cluster
-        </button>
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Are you sure you want to delete cluster
+          <span class="font-semibold text-gray-900 dark:text-white">{{
+            clusterData.basics.name
+          }}</span
+          >?
+        </p>
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">This cannot be undone.</p>
       </div>
     </div>
   </div>
-}
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="deleteCluster()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, delete this cluster
+    </button>
+  </div>
+</app-modal>
 
 <!-- Add Namespace Modal -->
-@if (showAddNamespaceModal()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div
-      class="w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-950"
-      role="dialog"
-      aria-labelledby="add-namespace-modal-title"
-      aria-modal="true"
-    >
-      <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-950">
-          <h3
-            class="text-lg leading-6 font-semibold text-gray-900 dark:text-white"
-            id="add-namespace-modal-title"
-          >
-            Add namespace
-          </h3>
-
-          <!-- Project Selection -->
-          <div class="mt-4">
-            <label
-              for="projectId"
-              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-            >
-              Project
-            </label>
-            @if (isLoadingProjects()) {
-              <div class="flex items-center py-2">
-                <div
-                  class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
-                ></div>
-                <span class="text-sm text-gray-500 dark:text-gray-400">Loading projects...</span>
-              </div>
-            } @else {
-              <select
-                id="projectId"
-                formControlName="projectId"
-                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-              >
-                @for (project of projects(); track project.id) {
-                  <option [value]="project.id">{{ project.name }}</option>
-                }
-              </select>
-              @if (projects().length === 0) {
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  No projects available. Create a project first.
-                </p>
-              }
-            }
-          </div>
-
-          <!-- Namespace Name -->
-          <div class="mt-4">
-            <label
-              for="namespaceName"
-              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-            >
-              Namespace name
-            </label>
-            <input
-              #namespaceNameInput
-              id="namespaceName"
-              formControlName="name"
-              type="text"
-              placeholder="E.g. my-namespace"
-              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-            />
-            @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
-              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
-                {{ getNamespaceNameError() }}
-              </p>
-            }
-          </div>
+<app-modal
+  [show]="showAddNamespaceModal()"
+  title="Add namespace"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showAddNamespaceModal.set(false)"
+>
+  <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
+    <!-- Project Selection -->
+    <div class="mb-4">
+      <label for="projectId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+        Project
+      </label>
+      @if (isLoadingProjects()) {
+        <div class="flex items-center py-2">
+          <div
+            class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
+          ></div>
+          <span class="text-sm text-gray-500 dark:text-gray-400">Loading projects...</span>
         </div>
-        <div class="bg-gray-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 dark:bg-gray-900">
-          <button
-            type="button"
-            (click)="showAddNamespaceModal.set(false)"
-            class="btn-secondary mr-3"
-            [disabled]="isCreatingNamespace()"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="btn-primary"
-            [disabled]="isCreatingNamespace() || !namespaceForm.valid"
-          >
-            @if (isCreatingNamespace()) {
-              Creating...
-            } @else {
-              Add namespace
-            }
-          </button>
-        </div>
-      </form>
+      } @else {
+        <select id="projectId" formControlName="projectId" class="w-full">
+          @for (project of projects(); track project.id) {
+            <option [value]="project.id">{{ project.name }}</option>
+          }
+        </select>
+        @if (projects().length === 0) {
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            No projects available. Create a project first.
+          </p>
+        }
+      }
     </div>
-  </div>
-}
+
+    <!-- Namespace Name -->
+    <div class="mb-4">
+      <label
+        for="namespaceName"
+        class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+      >
+        Namespace name
+      </label>
+      <input
+        id="namespaceName"
+        formControlName="name"
+        type="text"
+        placeholder="E.g. my-namespace"
+      />
+      @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+          {{ getNamespaceNameError() }}
+        </p>
+      }
+    </div>
+
+    <div modal-footer class="modal-footer">
+      <button
+        type="button"
+        (click)="showAddNamespaceModal.set(false)"
+        class="btn-secondary"
+        [disabled]="isCreatingNamespace()"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="isCreatingNamespace() || !namespaceForm.valid"
+      >
+        @if (isCreatingNamespace()) {
+          Creating...
+        } @else {
+          Add namespace
+        }
+      </button>
+    </div>
+  </form>
+</app-modal>

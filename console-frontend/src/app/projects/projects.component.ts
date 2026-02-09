@@ -1,20 +1,19 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { TitleService } from '../title.service';
-import { PROJECT } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
-import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
-import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerChevronRight } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { firstValueFrom } from 'rxjs';
 import { LoadingIndicatorComponent } from '../icons';
+import { TitleService } from '../title.service';
+import { PROJECT } from '../../connect/tokens';
+import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
+import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-projects',
-  imports: [CommonModule, RouterLink, NgIcon, LoadingIndicatorComponent],
+  imports: [RouterLink, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -62,12 +61,5 @@ export class ProjectsComponent implements OnInit {
     }
   }
 
-  formatDate(timestamp: Timestamp | undefined): string {
-    if (!timestamp) return 'Unknown';
-    return timestampDate(timestamp).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
+  readonly formatDate = formatDateUtil;
 }

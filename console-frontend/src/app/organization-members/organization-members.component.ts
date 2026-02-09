@@ -1,14 +1,4 @@
-import {
-  Component,
-  inject,
-  OnInit,
-  signal,
-  ChangeDetectionStrategy,
-  viewChild,
-  ElementRef,
-  afterNextRender,
-  Injector,
-} from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -18,15 +8,16 @@ import { TitleService } from '../title.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerPlus,
-  tablerX,
   tablerTrash,
   tablerClockHour4,
   tablerMail,
   tablerAlertTriangle,
+  tablerX,
 } from '@ng-icons/tabler-icons';
 import { heroUserGroup } from '@ng-icons/heroicons/outline';
 import { AuthnApiService } from '../authn-api.service';
 import { MEMBER } from '../../connect/tokens';
+import { ModalComponent } from '../modal/modal.component';
 
 interface OrganizationMember {
   id: string;
@@ -41,7 +32,7 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [CommonModule, FormsModule, NgIcon],
+  imports: [CommonModule, FormsModule, NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -60,7 +51,6 @@ export class OrganizationMembersComponent implements OnInit {
   private titleService = inject(TitleService);
   private memberClient = inject(MEMBER);
   private authnService = inject(AuthnApiService);
-  private injector = inject(Injector);
 
   // Loading and error state
   isLoading = signal(true);
@@ -72,7 +62,6 @@ export class OrganizationMembersComponent implements OnInit {
   inviteEmail = signal('');
   inviteRole = signal('viewer');
   inviteError = signal<string | null>(null);
-  private emailInput = viewChild<ElementRef<HTMLInputElement>>('emailInput');
 
   // All members loaded from API (includes both active and pending)
   allMembers = signal<OrganizationMember[]>([]);
@@ -128,12 +117,6 @@ export class OrganizationMembersComponent implements OnInit {
     this.inviteRole.set('viewer');
     this.inviteError.set(null);
     this.isModalOpen.set(true);
-    afterNextRender(
-      () => {
-        this.emailInput()?.nativeElement.focus();
-      },
-      { injector: this.injector },
-    );
   }
 
   closeModal() {

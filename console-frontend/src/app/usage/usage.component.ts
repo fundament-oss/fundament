@@ -2,17 +2,21 @@ import {
   Component,
   inject,
   AfterViewInit,
+  OnInit,
   ElementRef,
   ViewChild,
+  signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { TitleService } from '../title.service';
 import { DateRangePickerComponent } from '../date-range-picker/date-range-picker.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerTableDown } from '@ng-icons/tabler-icons';
+import { OrganizationDataService } from '../organization-data.service';
 
 Chart.register(...registerables);
 
@@ -59,8 +63,10 @@ interface Project {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './usage.component.html',
 })
-export class UsageComponent implements AfterViewInit {
+export class UsageComponent implements OnInit, AfterViewInit {
   private titleService = inject(TitleService);
+  private route = inject(ActivatedRoute);
+  private organizationDataService = inject(OrganizationDataService);
 
   @ViewChild('cpuChart') cpuChartCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('memoryChart') memoryChartCanvas!: ElementRef<HTMLCanvasElement>;
@@ -76,6 +82,10 @@ export class UsageComponent implements AfterViewInit {
   selectedNamespace = '';
   dateFrom = '';
   dateTo = '';
+
+  // Route context for breadcrumbs
+  projectName = signal<string>('');
+  namespaceName = signal<string>('');
 
   // Mock data
   projects: Project[] = [
@@ -157,6 +167,40 @@ export class UsageComponent implements AfterViewInit {
 
     this.dateTo = today.toISOString().split('T')[0];
     this.dateFrom = weekAgo.toISOString().split('T')[0];
+  }
+
+  ngOnInit() {
+    // Get route parameters if they exist
+    const projectId = this.route.snapshot.params['id'];
+    const namespaceId = this.route.snapshot.params['namespaceId'];
+
+    if (projectId) {
+      this.selectedProjectId = projectId;
+      // Find the actual project name from organization data
+      const orgs = this.organizationDataService.organizations();
+      for (const org of orgs) {
+        const project = org.projects.find((p) => p.id === projectId);
+        if (project) {
+          this.projectName.set(project.name);
+          break;
+        }
+      }
+    }
+    if (namespaceId) {
+      this.selectedNamespace = namespaceId;
+      // Find the actual namespace name from organization data
+      const orgs = this.organizationDataService.organizations();
+      for (const org of orgs) {
+        for (const project of org.projects) {
+          const namespace = project.namespaces.find((ns) => ns.id === namespaceId);
+          if (namespace) {
+            this.namespaceName.set(namespace.name);
+            break;
+          }
+        }
+        if (this.namespaceName()) break;
+      }
+    }
   }
 
   ngAfterViewInit(): void {

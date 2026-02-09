@@ -30,6 +30,10 @@ import {
   tablerCopy,
   tablerBan,
 } from '@ng-icons/tabler-icons';
+import {
+  formatDate as formatDateUtil,
+  formatDateTime as formatDateTimeUtil,
+} from '../utils/date-format';
 
 @Component({
   selector: 'app-api-keys',
@@ -229,23 +233,11 @@ export class ApiKeysComponent implements OnInit {
   }
 
   formatDate(timestamp: Timestamp | undefined): string {
-    if (!timestamp) return 'Never';
-    return timestampDate(timestamp).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    return formatDateUtil(timestamp, 'Never');
   }
 
   formatDateTime(timestamp: Timestamp | undefined): string {
-    if (!timestamp) return 'Never';
-    return timestampDate(timestamp).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatDateTimeUtil(timestamp, 'Never');
   }
 
   isExpired(timestamp: Timestamp | undefined): boolean {

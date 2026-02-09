@@ -7,12 +7,10 @@ import {
   signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
 import { AUTHN, ORGANIZATION } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import {
   GetOrganizationRequestSchema,
   UpdateOrganizationRequestSchema,
@@ -21,10 +19,11 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
+import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-organization',
-  imports: [CommonModule, FormsModule, NgIcon],
+  imports: [FormsModule, NgIcon],
   viewProviders: [
     provideIcons({
       tablerPencil,
@@ -137,12 +136,5 @@ export class OrganizationComponent implements OnInit {
     }
   }
 
-  formatDate(timestamp: Timestamp | undefined): string {
-    if (!timestamp) return 'Unknown';
-    return timestampDate(timestamp).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
+  readonly formatDate = formatDateUtil;
 }

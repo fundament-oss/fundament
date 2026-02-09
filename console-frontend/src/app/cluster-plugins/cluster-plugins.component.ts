@@ -1,5 +1,4 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
@@ -13,10 +12,11 @@ import {
   RemoveInstallRequestSchema,
 } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
+import { fetchClusterName } from '../utils/cluster-status';
 
 @Component({
   selector: 'app-cluster-plugins',
-  imports: [CommonModule, SharedPluginsFormComponent, NgIcon],
+  imports: [SharedPluginsFormComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -35,6 +35,7 @@ export class ClusterPluginsComponent implements OnInit {
   errorMessage = signal<string | null>(null);
   isSubmitting = signal(false);
   currentPluginIds = signal<string[]>([]);
+  clusterName = signal<string | null>(null);
 
   constructor() {
     this.titleService.setTitle('Cluster plugins');
@@ -42,6 +43,7 @@ export class ClusterPluginsComponent implements OnInit {
   }
 
   async ngOnInit() {
+    await fetchClusterName(this.client, this.clusterId).then((name) => this.clusterName.set(name));
     try {
       // Fetch current installs for the cluster
       const listRequest = create(ListInstallsRequestSchema, {

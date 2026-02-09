@@ -1,0 +1,142 @@
+<!-- Error Message -->
+@if (errorMessage()) {
+  <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
+    <ng-icon
+      name="tablerCircleXFill"
+      size="1.25rem"
+      class="mr-3 shrink-0 text-rose-400! dark:text-rose-500!"
+    />
+    <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
+  </div>
+}
+
+<div class="card">
+  <!-- Header -->
+  <div class="card-header">
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Namespaces</h2>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Manage namespaces for this project</p>
+  </div>
+
+  <div class="p-6">
+    <button
+      type="button"
+      (click)="openCreateNamespaceModal()"
+      class="btn-primary mb-5 inline-flex items-center"
+    >
+      <ng-icon name="tablerPlus" class="mr-1.5" />
+      Create namespace
+    </button>
+
+    @if (namespaces().length === 0) {
+      <div class="py-4">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          No namespaces belong to this project yet.
+        </p>
+      </div>
+    } @else {
+      <div class="space-y-3">
+        @for (namespace of namespaces(); track namespace.id) {
+          <div
+            class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
+          >
+            <div>
+              <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Cluster: {{ getClusterName(namespace.clusterId) }} &bull; Created
+                {{ formatDate(namespace.created) }}
+              </p>
+            </div>
+            <button
+              type="button"
+              (click)="deleteNamespace(namespace.id, namespace.name)"
+              class="inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white"
+            >
+              <ng-icon name="tablerTrash" class="mr-1.5" />
+              Delete
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Create Namespace Modal -->
+<app-modal
+  [show]="showCreateNamespaceModal()"
+  title="Create namespace"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showCreateNamespaceModal.set(false)"
+>
+  <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
+    <!-- Cluster Selection -->
+    <div class="mb-4">
+      <label for="clusterId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+        Cluster
+      </label>
+      @if (isLoadingClusters()) {
+        <div class="flex items-center py-2">
+          <div
+            class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
+          ></div>
+          <span class="text-sm text-gray-500 dark:text-gray-400">Loading clusters...</span>
+        </div>
+      } @else {
+        <select id="clusterId" formControlName="clusterId" class="w-full">
+          @for (cluster of clusters(); track cluster.id) {
+            <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
+          }
+        </select>
+        @if (clusters().length === 0) {
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            No clusters available. Create a cluster first.
+          </p>
+        }
+      }
+      @if (namespaceForm.get('clusterId')?.invalid && namespaceForm.get('clusterId')?.dirty) {
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a cluster.</p>
+      }
+    </div>
+
+    <!-- Namespace Name -->
+    <div class="mb-4">
+      <label
+        for="namespaceName"
+        class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+      >
+        Namespace name
+      </label>
+      <input
+        id="namespaceName"
+        formControlName="name"
+        type="text"
+        placeholder="E.g. my-namespace"
+      />
+      @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
+      }
+    </div>
+
+    <div modal-footer class="modal-footer">
+      <button
+        type="button"
+        (click)="showCreateNamespaceModal.set(false)"
+        class="btn-secondary"
+        [disabled]="isCreatingNamespace()"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="isCreatingNamespace() || !namespaceForm.valid"
+      >
+        @if (isCreatingNamespace()) {
+          Creating...
+        } @else {
+          Create namespace
+        }
+      </button>
+    </div>
+  </form>
+</app-modal>
