@@ -1,12 +1,15 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import {
   SharedNodePoolsFormComponent,
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
 import { CLUSTER } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import {
   ListNodePoolsRequestSchema,
   CreateNodePoolRequestSchema,
@@ -15,9 +18,6 @@ import {
   NodePool,
 } from '../../generated/v1/cluster_pb';
 import { fetchClusterName } from '../utils/cluster-status';
-import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 
 @Component({
   selector: 'app-cluster-nodes',
@@ -32,16 +32,25 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 })
 export class ClusterNodesComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private route = inject(ActivatedRoute);
+
   private client = inject(CLUSTER);
 
   private clusterId = '';
+
   private existingNodePools: NodePool[] = [];
+
   errorMessage = signal<string | null>(null);
+
   isSubmitting = signal(false);
+
   isLoading = signal(true);
+
   initialNodePools = signal<NodePoolData[]>([]);
+
   clusterName = signal<string | null>(null);
 
   constructor() {

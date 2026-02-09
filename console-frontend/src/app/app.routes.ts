@@ -75,7 +75,7 @@ export const routes: Routes = [
   },
   {
     path: 'projects',
-    loadComponent: () => import('./projects/projects.component').then((m) => m.ProjectsComponent),
+    loadComponent: () => import('./projects/projects.component').then((m) => m.default),
     data: {
       breadcrumbs: [{ label: 'Projects', route: '/projects' }],
     },
@@ -115,7 +115,7 @@ export const routes: Routes = [
   {
     path: 'projects/:id/members',
     loadComponent: () =>
-      import('./project-members/project-members.component').then((m) => m.ProjectMembersComponent),
+      import('./project-members/project-members.component').then((m) => m.default),
     data: {
       breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Members' }],
     },
@@ -123,9 +123,7 @@ export const routes: Routes = [
   {
     path: 'projects/:id/settings',
     loadComponent: () =>
-      import('./project-settings/project-settings.component').then(
-        (m) => m.ProjectSettingsComponent,
-      ),
+      import('./project-settings/project-settings.component').then((m) => m.default),
     data: {
       breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Settings' }],
     },
@@ -155,14 +153,14 @@ export const routes: Routes = [
   },
   {
     path: 'usage',
-    loadComponent: () => import('./usage/usage.component').then((m) => m.UsageComponent),
+    loadComponent: () => import('./usage/usage.component').then((m) => m.default),
     data: {
       breadcrumbs: [{ label: 'Usage' }],
     },
   },
   {
     path: 'projects/:id/usage',
-    loadComponent: () => import('./usage/usage.component').then((m) => m.UsageComponent),
+    loadComponent: () => import('./usage/usage.component').then((m) => m.default),
     data: {
       breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Usage' }],
     },

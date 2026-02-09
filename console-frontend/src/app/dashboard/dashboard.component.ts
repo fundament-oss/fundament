@@ -1,14 +1,14 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { TitleService } from '../title.service';
-import { CLUSTER } from '../../connect/tokens';
-import { ClusterSummary } from '../../generated/v1/cluster_pb';
 import { firstValueFrom } from 'rxjs';
-import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerEye } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { TitleService } from '../title.service';
+import { CLUSTER } from '../../connect/tokens';
+import { ClusterSummary } from '../../generated/v1/cluster_pb';
+import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 
 @Component({
   selector: 'app-dashboard',
@@ -25,14 +25,18 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 })
 export class DashboardComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private client = inject(CLUSTER);
 
   clusters = signal<ClusterSummary[]>([]);
+
   errorMessage = signal<string>('');
+
   nodePoolCounts = signal<Map<string, number>>(new Map());
 
   // Expose utility functions for template
   getStatusColor = getStatusColor;
+
   getStatusLabel = getStatusLabel;
 
   constructor() {

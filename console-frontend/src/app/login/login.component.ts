@@ -24,12 +24,17 @@ export class LoginComponent implements OnInit, AfterViewInit {
   @ViewChild('emailInput') emailInput!: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private apiService = inject(AuthnApiService);
+
   private fb = inject(FormBuilder);
 
   loginForm!: FormGroup;
+
   error = signal<string | null>(null);
+
   isLoading = signal(false);
 
   constructor() {
@@ -70,7 +75,6 @@ export class LoginComponent implements OnInit, AfterViewInit {
     if (this.apiService.isAuthenticated()) {
       // User already authenticated, redirect to dashboard
       this.router.navigate(['/']);
-      return;
     }
   }
 

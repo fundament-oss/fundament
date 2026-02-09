@@ -9,17 +9,8 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TitleService } from '../title.service';
-import { APIKEY } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
-import {
-  type APIKey,
-  ListAPIKeysRequestSchema,
-  DeleteAPIKeyRequestSchema,
-  CreateAPIKeyRequestSchema,
-  RevokeAPIKeyRequestSchema,
-} from '../../generated/v1/apikey_pb';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -30,6 +21,15 @@ import {
   tablerCopy,
   tablerBan,
 } from '@ng-icons/tabler-icons';
+import {
+  type APIKey,
+  ListAPIKeysRequestSchema,
+  DeleteAPIKeyRequestSchema,
+  CreateAPIKeyRequestSchema,
+  RevokeAPIKeyRequestSchema,
+} from '../../generated/v1/apikey_pb';
+import { APIKEY } from '../../connect/tokens';
+import { TitleService } from '../title.service';
 import {
   formatDate as formatDateUtil,
   formatDateTime as formatDateTimeUtil,
@@ -55,19 +55,25 @@ export class ApiKeysComponent implements OnInit {
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
+
   private apiKeyClient = inject(APIKEY);
 
   apiKeys = signal<APIKey[]>([]);
+
   loading = signal(false);
+
   error = signal<string | null>(null);
 
   // Creation form state
   isCreating = signal(false);
+
   newKeyName = signal('');
+
   newKeyExpiresInDays = signal<number | null>(null);
 
   // Newly created token (only shown once)
   createdToken = signal<string | null>(null);
+
   createdTokenPrefix = signal<string | null>(null);
 
   constructor() {

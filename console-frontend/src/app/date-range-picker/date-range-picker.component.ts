@@ -21,11 +21,17 @@ import 'vanilla-calendar-pro/styles/layout.css';
 })
 export class DateRangePickerComponent implements AfterViewInit, OnDestroy {
   @ViewChild('dateInput') dateInputRef!: ElementRef<HTMLInputElement>;
+
   @Input() id?: string;
+
   @Input() dateFrom = '';
+
   @Input() dateTo = '';
+
   @Output() dateFromChange = new EventEmitter<string>();
+
   @Output() dateToChange = new EventEmitter<string>();
+
   @Output() dateRangeChange = new EventEmitter<{ dateFrom: string; dateTo: string }>();
 
   private calendar?: Calendar;

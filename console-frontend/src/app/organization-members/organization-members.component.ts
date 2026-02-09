@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { TitleService } from '../title.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerPlus,
@@ -15,6 +14,7 @@ import {
   tablerX,
 } from '@ng-icons/tabler-icons';
 import { heroUserGroup } from '@ng-icons/heroicons/outline';
+import { TitleService } from '../title.service';
 import { AuthnApiService } from '../authn-api.service';
 import { MEMBER } from '../../connect/tokens';
 import { ModalComponent } from '../modal/modal.component';
@@ -49,18 +49,25 @@ interface OrganizationMember {
 })
 export class OrganizationMembersComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private memberClient = inject(MEMBER);
+
   private authnService = inject(AuthnApiService);
 
   // Loading and error state
   isLoading = signal(true);
+
   error = signal<string | null>(null);
+
   isSubmitting = signal(false);
 
   // Modal state
   isModalOpen = signal(false);
+
   inviteEmail = signal('');
+
   inviteRole = signal('viewer');
+
   inviteError = signal<string | null>(null);
 
   // All members loaded from API (includes both active and pending)
@@ -176,11 +183,11 @@ export class OrganizationMembersComponent implements OnInit {
 
     if (diffDays === 0) {
       return 'today';
-    } else if (diffDays === 1) {
-      return 'yesterday';
-    } else {
-      return `${diffDays} days ago`;
     }
+    if (diffDays === 1) {
+      return 'yesterday';
+    }
+    return `${diffDays} days ago`;
   }
 
   getInitials(name: string): string {

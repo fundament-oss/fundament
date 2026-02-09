@@ -24,12 +24,15 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
   templateUrl: './projects.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProjectsComponent implements OnInit {
+export default class ProjectsComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private client = inject(PROJECT);
 
   projects = signal<Project[]>([]);
+
   isLoading = signal<boolean>(true);
+
   errorMessage = signal<string | null>(null);
 
   constructor() {
@@ -50,7 +53,6 @@ export class ProjectsComponent implements OnInit {
 
       this.projects.set(response.projects);
     } catch (error) {
-      console.error('Failed to fetch projects:', error);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to load projects: ${error.message}`

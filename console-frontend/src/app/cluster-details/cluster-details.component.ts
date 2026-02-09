@@ -1,11 +1,23 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  tablerTerminal,
+  tablerDownload,
+  tablerArrowUp,
+  tablerPencil,
+  tablerPlus,
+  tablerTrash,
+  tablerAlertTriangle,
+} from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER, PROJECT, PLUGIN } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
@@ -20,18 +32,6 @@ import {
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
-import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerTerminal,
-  tablerDownload,
-  tablerArrowUp,
-  tablerPencil,
-  tablerPlus,
-  tablerTrash,
-  tablerAlertTriangle,
-} from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 import { ModalComponent } from '../modal/modal.component';
@@ -57,13 +57,21 @@ import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 })
 export class ClusterDetailsComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private route = inject(ActivatedRoute);
+
   private router = inject(Router);
+
   private client = inject(CLUSTER);
+
   private projectClient = inject(PROJECT);
+
   private pluginClient = inject(PLUGIN);
+
   private toastService = inject(ToastService);
+
   private organizationDataService = inject(OrganizationDataService);
+
   private fb = inject(FormBuilder);
 
   // Expose enum for use in template
@@ -71,21 +79,29 @@ export class ClusterDetailsComponent implements OnInit {
 
   // Expose utility functions for template
   getStatusColor = getStatusColor;
+
   getStatusLabel = getStatusLabel;
 
   errorMessage = signal<string | null>(null);
+
   isLoading = signal<boolean>(true);
+
   showDeleteModal = signal<boolean>(false);
 
   // Namespace management
   namespaces = signal<ClusterNamespace[]>([]);
+
   projects = signal<Project[]>([]);
+
   showAddNamespaceModal = signal<boolean>(false);
+
   isLoadingProjects = signal<boolean>(false);
+
   isCreatingNamespace = signal<boolean>(false);
 
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
+
   isLoadingPlugins = signal<boolean>(true);
 
   namespaceForm = this.fb.group({

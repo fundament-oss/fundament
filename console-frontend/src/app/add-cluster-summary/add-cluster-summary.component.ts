@@ -8,13 +8,14 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { TitleService } from '../title.service';
+import { ToastService } from '../toast.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { CLUSTER, PLUGIN } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import {
   CreateClusterRequestSchema,
   CreateNodePoolRequestSchema,
@@ -26,7 +27,6 @@ import {
   type PluginSummary,
   type Preset,
 } from '../../generated/v1/plugin_pb';
-import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-add-cluster-summary',
@@ -41,10 +41,15 @@ import { firstValueFrom } from 'rxjs';
 })
 export class AddClusterSummaryComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private client = inject(CLUSTER);
+
   private pluginClient = inject(PLUGIN);
+
   private toastService = inject(ToastService);
+
   protected stateService = inject(ClusterWizardStateService);
 
   // Computed signal to access state
@@ -52,11 +57,14 @@ export class AddClusterSummaryComponent implements OnInit {
 
   // Error state
   protected errorMessage = signal<string | null>(null);
+
   protected isCreating = signal<boolean>(false);
 
   // Plugin and preset data
   protected plugins = signal<PluginSummary[]>([]);
+
   protected presets = signal<Preset[]>([]);
+
   protected isLoadingPlugins = signal<boolean>(true);
 
   constructor() {
@@ -142,7 +150,7 @@ export class AddClusterSummaryComponent implements OnInit {
         for (const pluginId of wizardState.plugins) {
           const installRequest = create(AddInstallRequestSchema, {
             clusterId: response.clusterId,
-            pluginId: pluginId,
+            pluginId,
           });
           await firstValueFrom(this.client.addInstall(installRequest));
         }

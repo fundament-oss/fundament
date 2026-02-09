@@ -35,17 +35,23 @@ interface Organization {
   templateUrl: './selector-modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SelectorModalComponent {
+export default class SelectorModalComponent {
   show = input(false);
+
   organizations = input<Organization[]>([]);
+
   selectedOrgId = input<string | null>(null);
+
   selectedProjectId = input<string | null>(null);
 
   closeModal = output();
+
   selectOrganization = output<string>();
+
   selectProject = output<string>();
 
   filterText = signal('');
+
   filterInputValue = signal('');
 
   // Reset filter when modal opens
@@ -86,9 +92,9 @@ export class SelectorModalComponent {
   }
 
   updateFilter(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.filterInputValue.set(input.value);
-    this.filterText.set(input.value.toLowerCase());
+    const inputEl = event.target as HTMLInputElement;
+    this.filterInputValue.set(inputEl.value);
+    this.filterText.set(inputEl.value.toLowerCase());
   }
 
   onSelectOrganization(orgId: string): void {

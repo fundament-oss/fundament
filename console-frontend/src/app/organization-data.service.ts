@@ -1,12 +1,12 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { ORGANIZATION, PROJECT } from '../connect/tokens';
 import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { ORGANIZATION, PROJECT } from '../connect/tokens';
 import { GetOrganizationRequestSchema } from '../generated/v1/organization_pb';
 import {
   ListProjectsRequestSchema,
   ListProjectNamespacesRequestSchema,
 } from '../generated/v1/project_pb';
-import { firstValueFrom } from 'rxjs';
 
 export interface NamespaceData {
   id: string;
@@ -30,9 +30,11 @@ export interface OrganizationData {
 })
 export class OrganizationDataService {
   private organizationClient = inject(ORGANIZATION);
+
   private projectClient = inject(PROJECT);
 
   organizations = signal<OrganizationData[]>([]);
+
   loading = signal(false);
 
   // Lookup maps for O(1) access

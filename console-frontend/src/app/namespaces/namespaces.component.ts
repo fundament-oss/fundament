@@ -1,11 +1,15 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPlus, tablerTrash } from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { PROJECT, CLUSTER } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import {
   ListProjectNamespacesRequestSchema,
   ProjectNamespace,
@@ -16,10 +20,6 @@ import {
   DeleteNamespaceRequestSchema,
   ClusterSummary,
 } from '../../generated/v1/cluster_pb';
-import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerTrash } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { ModalComponent } from '../modal/modal.component';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
@@ -38,20 +38,31 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 })
 export class NamespacesComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private route = inject(ActivatedRoute);
+
   private fb = inject(FormBuilder);
+
   private projectClient = inject(PROJECT);
+
   private clusterClient = inject(CLUSTER);
+
   private toastService = inject(ToastService);
+
   private organizationDataService = inject(OrganizationDataService);
 
   projectId = signal<string>('');
+
   namespaces = signal<ProjectNamespace[]>([]);
+
   clusters = signal<ClusterSummary[]>([]);
 
   errorMessage = signal<string | null>(null);
+
   showCreateNamespaceModal = signal<boolean>(false);
+
   isLoadingClusters = signal<boolean>(false);
+
   isCreatingNamespace = signal<boolean>(false);
 
   namespaceForm = this.fb.group({

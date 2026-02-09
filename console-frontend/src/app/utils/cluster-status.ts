@@ -1,7 +1,7 @@
-import { ClusterStatus } from '../../generated/v1/common_pb';
-import { GetClusterRequestSchema } from '../../generated/v1/cluster_pb';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom, type Observable } from 'rxjs';
+import { ClusterStatus } from '../../generated/v1/common_pb';
+import { GetClusterRequestSchema } from '../../generated/v1/cluster_pb';
 import type { GetClusterResponse } from '../../generated/v1/cluster_pb';
 
 interface ClusterClient {
@@ -17,6 +17,7 @@ export async function fetchClusterName(
     const response = await firstValueFrom(client.getCluster(request));
     return response.cluster?.name ?? null;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to load cluster name:', error);
     return null;
   }

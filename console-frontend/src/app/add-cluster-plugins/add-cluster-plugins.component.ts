@@ -1,10 +1,10 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { TitleService } from '../title.service';
-import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerArrowRight } from '@ng-icons/tabler-icons';
+import { TitleService } from '../title.service';
+import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 
 @Component({
@@ -20,7 +20,9 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
 })
 export class AddClusterPluginsComponent {
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private stateService = inject(ClusterWizardStateService);
 
   constructor() {

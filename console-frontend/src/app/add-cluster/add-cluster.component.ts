@@ -23,8 +23,11 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
   @ViewChild('clusterNameInput') clusterNameInput!: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private fb = inject(FormBuilder);
+
   private stateService = inject(ClusterWizardStateService);
 
   // Form

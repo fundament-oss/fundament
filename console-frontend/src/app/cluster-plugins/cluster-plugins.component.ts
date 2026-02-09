@@ -1,17 +1,17 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
-import { TitleService } from '../title.service';
-import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
-import { CLUSTER } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { TitleService } from '../title.service';
+import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
+import { CLUSTER } from '../../connect/tokens';
 import {
   ListInstallsRequestSchema,
   AddInstallRequestSchema,
   RemoveInstallRequestSchema,
 } from '../../generated/v1/cluster_pb';
-import { firstValueFrom } from 'rxjs';
 import { fetchClusterName } from '../utils/cluster-status';
 
 @Component({
@@ -27,14 +27,21 @@ import { fetchClusterName } from '../utils/cluster-status';
 })
 export class ClusterPluginsComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private route = inject(ActivatedRoute);
+
   private client = inject(CLUSTER);
 
   private clusterId = '';
+
   errorMessage = signal<string | null>(null);
+
   isSubmitting = signal(false);
+
   currentPluginIds = signal<string[]>([]);
+
   clusterName = signal<string | null>(null);
 
   constructor() {
@@ -81,7 +88,7 @@ export class ClusterPluginsComponent implements OnInit {
         )?.pluginId;
         if (pluginId && !data.plugins.includes(pluginId)) {
           const removeRequest = create(RemoveInstallRequestSchema, {
-            installId: installId,
+            installId,
           });
           await firstValueFrom(this.client.removeInstall(removeRequest));
         }
@@ -92,7 +99,7 @@ export class ClusterPluginsComponent implements OnInit {
         if (!currentPluginIds.includes(pluginId)) {
           const addRequest = create(AddInstallRequestSchema, {
             clusterId: this.clusterId,
-            pluginId: pluginId,
+            pluginId,
           });
           await firstValueFrom(this.client.addInstall(addRequest));
         }

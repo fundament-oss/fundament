@@ -23,10 +23,13 @@ interface Cluster {
 })
 export class InstallPluginModalComponent {
   @Input() pluginName = '';
+
   @Input() clusters: Cluster[] = [];
+
   @Input() show = false;
 
   @Output() closeModal = new EventEmitter<void>();
+
   @Output() install = new EventEmitter<string>();
 
   onClose(): void {

@@ -1,9 +1,13 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink, ActivatedRoute } from '@angular/router';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPencil } from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { PROJECT, CLUSTER } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import {
   GetProjectRequestSchema,
   ListProjectNamespacesRequestSchema,
@@ -11,10 +15,6 @@ import {
   ProjectNamespace,
 } from '../../generated/v1/project_pb';
 import { ListClustersRequestSchema, ClusterSummary } from '../../generated/v1/cluster_pb';
-import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPencil } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
@@ -32,16 +32,23 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 })
 export class ProjectDetailComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private route = inject(ActivatedRoute);
+
   private projectClient = inject(PROJECT);
+
   private clusterClient = inject(CLUSTER);
+
   private toastService = inject(ToastService);
 
   project = signal<Project | null>(null);
+
   namespaces = signal<ProjectNamespace[]>([]);
+
   clusters = signal<ClusterSummary[]>([]);
 
   isLoading = signal<boolean>(true);
+
   errorMessage = signal<string | null>(null);
 
   async ngOnInit() {

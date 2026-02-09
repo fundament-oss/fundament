@@ -31,13 +31,17 @@ import { tablerX } from '@ng-icons/tabler-icons';
 })
 export class ModalComponent implements OnChanges, AfterViewChecked, OnDestroy {
   @Input() show = false;
+
   @Input() title = '';
+
   @Input() maxWidth = 'max-w-md';
+
   @Output() modalClose = new EventEmitter<void>();
 
   @ViewChild('modalDialog', { read: ElementRef }) modalDialog?: ElementRef<HTMLDivElement>;
 
   private previouslyFocusedElement: HTMLElement | null = null;
+
   private shouldSetFocus = false;
 
   ngOnChanges(changes: SimpleChanges): void {

@@ -24,6 +24,7 @@ interface ProgressStep {
 })
 export class AddClusterWizardLayoutComponent implements OnDestroy {
   private router = inject(Router);
+
   protected stateService = inject(ClusterWizardStateService);
 
   steps: ProgressStep[] = [

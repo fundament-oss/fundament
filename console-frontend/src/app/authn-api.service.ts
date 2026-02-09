@@ -9,8 +9,11 @@ import { ConfigService } from './config.service';
 })
 export class AuthnApiService {
   private client = inject(AUTHN);
+
   private configService = inject(ConfigService);
+
   private currentUserSubject = new BehaviorSubject<User | undefined>(undefined);
+
   public currentUser$: Observable<User | undefined> = this.currentUserSubject.asObservable();
 
   async login(email: string, password: string): Promise<void> {

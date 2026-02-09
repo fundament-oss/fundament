@@ -1,4 +1,4 @@
-// Source: https://github.com/connectrpc/examples-es/blob/main/angular/src/connect/observable-client.ts
+// Based on: https://github.com/connectrpc/examples-es/blob/main/angular/src/connect/observable-client.ts
 
 import { makeAnyClient, CallOptions, Transport } from '@connectrpc/connect';
 import { createAsyncIterable } from '@connectrpc/connect/protocol';
@@ -21,19 +21,6 @@ export type ObservableClient<T extends DescService> = {
       : never;
 };
 
-export function createObservableClient<T extends DescService>(service: T, transport: Transport) {
-  return makeAnyClient(service, (method: DescMethodUnary | DescMethodStreaming) => {
-    switch (method.methodKind) {
-      case 'unary':
-        return createUnaryFn(transport, method);
-      case 'server_streaming':
-        return createServerStreamingFn(transport, method);
-      default:
-        return null;
-    }
-  }) as ObservableClient<T>;
-}
-
 type UnaryFn<I extends DescMessage, O extends DescMessage> = (
   request: MessageInitShape<I>,
   options?: CallOptions,
@@ -43,7 +30,7 @@ function createUnaryFn<I extends DescMessage, O extends DescMessage>(
   transport: Transport,
   method: DescMethodUnary<I, O>,
 ): UnaryFn<I, O> {
-  return function (requestMessage, options) {
+  return function unary(requestMessage, options) {
     return new Observable<MessageShape<O>>((subscriber) => {
       transport
         .unary(method, options?.signal, options?.timeoutMs, options?.headers, requestMessage)
@@ -73,7 +60,7 @@ export function createServerStreamingFn<I extends DescMessage, O extends DescMes
   transport: Transport,
   method: DescMethodServerStreaming<I, O>,
 ): ServerStreamingFn<I, O> {
-  return function (input, options) {
+  return function serverStreaming(input, options) {
     return new Observable<MessageShape<O>>((subscriber) => {
       transport
         .stream<I, O>(
@@ -86,9 +73,14 @@ export function createServerStreamingFn<I extends DescMessage, O extends DescMes
         .then(
           async (streamResponse) => {
             options?.onHeader?.(streamResponse.header);
-            for await (const response of streamResponse.message) {
-              subscriber.next(response);
-            }
+            const iterator = streamResponse.message[Symbol.asyncIterator]();
+            const drain = async (): Promise<void> => {
+              const result = await iterator.next();
+              if (result.done) return;
+              subscriber.next(result.value);
+              await drain();
+            };
+            await drain();
             options?.onTrailer?.(streamResponse.trailer);
           },
           (err) => {
@@ -100,4 +92,17 @@ export function createServerStreamingFn<I extends DescMessage, O extends DescMes
         });
     });
   };
+}
+
+export function createObservableClient<T extends DescService>(service: T, transport: Transport) {
+  return makeAnyClient(service, (method: DescMethodUnary | DescMethodStreaming) => {
+    switch (method.methodKind) {
+      case 'unary':
+        return createUnaryFn(transport, method);
+      case 'server_streaming':
+        return createServerStreamingFn(transport, method);
+      default:
+        return null;
+    }
+  }) as ObservableClient<T>;
 }

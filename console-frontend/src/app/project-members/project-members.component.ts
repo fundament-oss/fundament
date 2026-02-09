@@ -2,10 +2,10 @@ import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@ang
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerTrash, tablerPencil } from '@ng-icons/tabler-icons';
+import { TitleService } from '../title.service';
+import { ToastService } from '../toast.service';
 import { ModalComponent } from '../modal/modal.component';
 
 type ProjectMemberRole = 'viewer' | 'admin';
@@ -32,17 +32,25 @@ interface ProjectMember {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-members.component.html',
 })
-export class ProjectMembersComponent implements OnInit {
+export default class ProjectMembersComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private route = inject(ActivatedRoute);
+
   private fb = inject(FormBuilder);
+
   private toastService = inject(ToastService);
 
   projectId = signal<string>('');
+
   members = signal<ProjectMember[]>([]);
+
   availableUsers = signal<{ id: string; name: string; email: string }[]>([]);
+
   showAddMemberModal = signal<boolean>(false);
+
   isAddingMember = signal<boolean>(false);
+
   editingMember = signal<ProjectMember | null>(null);
 
   memberForm = this.fb.group({
@@ -157,7 +165,8 @@ export class ProjectMembersComponent implements OnInit {
     const member = this.members().find((m) => m.id === memberId);
     if (!member) return;
 
-    if (!confirm(`Are you sure you want to remove ${member.name} from this project?`)) {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(`Are you sure you want to remove ${member.name} from this project?`)) {
       return;
     }
 
