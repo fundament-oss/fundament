@@ -8,20 +8,15 @@
           Manage who has access to your organization
         </p>
       </div>
-      <div class="flex gap-2 sm:justify-end">
-        <button
-          type="button"
-          (click)="openModal()"
-          class="btn-primary inline-flex items-center px-3!"
-        >
-          <ng-icon name="tablerPlus" class="mr-2" />
-          Invite user
-        </button>
-      </div>
     </div>
   </div>
 
   <div class="p-6">
+    <button type="button" (click)="openModal()" class="btn-primary mb-6 inline-flex items-center">
+      <ng-icon name="tablerPlus" class="mr-2" />
+      Invite user
+    </button>
+
     <!-- Pending Invitations Section -->
     <div class="mb-8">
       <h2 class="mb-4 text-lg font-semibold dark:text-white">Pending invitations</h2>
@@ -64,7 +59,7 @@
               <div class="flex items-center gap-3">
                 <span
                   class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 capitalize dark:bg-gray-800 dark:text-gray-300"
-                  >{{ invitation.role }}</span
+                  >{{ invitation.permission }}</span
                 >
                 <button
                   (click)="cancelInvitation(invitation.id)"
@@ -164,7 +159,7 @@
               </div>
               <span
                 class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 capitalize dark:bg-gray-800 dark:text-gray-300"
-                >{{ member.role }}</span
+                >{{ member.permission }}</span
               >
             </div>
           }
@@ -209,19 +204,22 @@
     </div>
 
     <div class="mb-6">
-      <label for="role" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Role
+      <label
+        for="permission"
+        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+      >
+        Permissions
       </label>
       <select
-        id="role"
-        [ngModel]="inviteRole()"
-        (ngModelChange)="inviteRole.set($event)"
-        name="role"
+        id="permission"
+        [ngModel]="invitePermission()"
+        (ngModelChange)="invitePermission.set($event)"
+        name="permission"
         [disabled]="isSubmitting()"
         class="w-full disabled:opacity-50"
       >
-        <option value="viewer">Viewer</option>
-        <option value="admin">Admin</option>
+        <option value="viewer">Viewer – Read access to resources</option>
+        <option value="admin">Admin – Full access to resources</option>
       </select>
     </div>
 

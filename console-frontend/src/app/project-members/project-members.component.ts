@@ -8,14 +8,14 @@ import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import ModalComponent from '../modal/modal.component';
 
-type ProjectMemberRole = 'viewer' | 'admin';
+type ProjectMemberPermission = 'viewer' | 'admin';
 
 interface ProjectMember {
   id: string;
   userId: string;
   name: string;
   email: string;
-  role: ProjectMemberRole;
+  permission: ProjectMemberPermission;
   addedAt: string;
 }
 
@@ -55,7 +55,7 @@ export default class ProjectMembersComponent implements OnInit {
 
   memberForm = this.fb.group({
     userId: ['', Validators.required],
-    role: ['viewer' as ProjectMemberRole, Validators.required],
+    permission: ['viewer' as ProjectMemberPermission, Validators.required],
   });
 
   constructor() {
@@ -76,7 +76,7 @@ export default class ProjectMembersComponent implements OnInit {
         userId: 'user-1',
         name: 'Alice Johnson',
         email: 'alice.johnson@example.com',
-        role: 'admin',
+        permission: 'admin',
         addedAt: '2024-01-15T10:30:00Z',
       },
       {
@@ -84,7 +84,7 @@ export default class ProjectMembersComponent implements OnInit {
         userId: 'user-2',
         name: 'Bob Smith',
         email: 'bob.smith@example.com',
-        role: 'viewer',
+        permission: 'viewer',
         addedAt: '2024-02-20T14:45:00Z',
       },
       {
@@ -92,7 +92,7 @@ export default class ProjectMembersComponent implements OnInit {
         userId: 'user-3',
         name: 'Carol Williams',
         email: 'carol.williams@example.com',
-        role: 'viewer',
+        permission: 'viewer',
         addedAt: '2024-03-10T09:15:00Z',
       },
     ]);
@@ -107,13 +107,13 @@ export default class ProjectMembersComponent implements OnInit {
 
   openAddMemberModal() {
     this.editingMember.set(null);
-    this.memberForm.reset({ userId: '', role: 'viewer' });
+    this.memberForm.reset({ userId: '', permission: 'viewer' });
     this.showAddMemberModal.set(true);
   }
 
   openEditMemberModal(member: ProjectMember) {
     this.editingMember.set(member);
-    this.memberForm.patchValue({ userId: member.userId, role: member.role });
+    this.memberForm.patchValue({ userId: member.userId, permission: member.permission });
     this.showAddMemberModal.set(true);
   }
 
@@ -124,16 +124,16 @@ export default class ProjectMembersComponent implements OnInit {
     }
 
     this.isAddingMember.set(true);
-    const role = this.memberForm.value.role as ProjectMemberRole;
+    const permission = this.memberForm.value.permission as ProjectMemberPermission;
 
     if (this.editingMember()) {
       // Edit existing member
       const member = this.editingMember()!;
       this.members.update((members) =>
-        members.map((m) => (m.id === member.id ? { ...m, role } : m)),
+        members.map((m) => (m.id === member.id ? { ...m, permission } : m)),
       );
       this.toastService.success(
-        `${member.name}'s role updated to ${role === 'admin' ? 'Project admin' : 'Project member'}`,
+        `${member.name}'s permission updated to ${permission === 'admin' ? 'Project admin' : 'Project member'}`,
       );
     } else {
       // Add new member
@@ -146,7 +146,7 @@ export default class ProjectMembersComponent implements OnInit {
           userId: user.id,
           name: user.name,
           email: user.email,
-          role,
+          permission,
           addedAt: new Date().toISOString(),
         };
 

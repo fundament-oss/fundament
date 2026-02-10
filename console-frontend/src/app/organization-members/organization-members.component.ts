@@ -63,7 +63,7 @@ interface OrganizationMember {
   name: string;
   email?: string;
   externalId?: string;
-  role: string;
+  permission: string;
   isCurrentUser?: boolean;
   isPending: boolean;
   created?: Date;
@@ -105,7 +105,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
   inviteEmail = signal('');
 
-  inviteRole = signal('viewer');
+  invitePermission = signal('viewer');
 
   inviteError = signal<string | null>(null);
 
@@ -143,7 +143,7 @@ export default class OrganizationMembersComponent implements OnInit {
         name: member.name,
         email: member.email,
         externalId: member.externalId,
-        role: member.role,
+        permission: member.role,
         isCurrentUser: currentUser?.id === member.id,
         isPending: !member.externalId,
         created: member.created ? timestampDate(member.created) : undefined,
@@ -161,7 +161,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
   openModal() {
     this.inviteEmail.set('');
-    this.inviteRole.set('viewer');
+    this.invitePermission.set('viewer');
     this.inviteError.set(null);
     this.isModalOpen.set(true);
   }
@@ -181,7 +181,9 @@ export default class OrganizationMembersComponent implements OnInit {
     this.inviteError.set(null);
 
     try {
-      await firstValueFrom(this.memberClient.inviteMember({ email, role: this.inviteRole() }));
+      await firstValueFrom(
+        this.memberClient.inviteMember({ email, role: this.invitePermission() }),
+      );
       this.closeModal();
       await this.loadMembers();
     } catch (err: unknown) {

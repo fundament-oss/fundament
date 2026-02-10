@@ -3,7 +3,7 @@
   <div class="card-header">
     <h1 class="text-2xl font-bold dark:text-white">Project members</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-      Manage members and their roles for this project
+      Manage members and their permissions for this project
     </p>
   </div>
 
@@ -27,7 +27,7 @@
           <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
               <th width="50%" scope="col">Name</th>
-              <th width="30%" scope="col">Role</th>
+              <th width="30%" scope="col">Permissions</th>
               <th scope="col">Actions</th>
             </tr>
           </thead>
@@ -39,11 +39,11 @@
                 </td>
                 <td>
                   <span
-                    class="badge"
-                    [class.badge-purple]="member.role === 'admin'"
-                    [class.badge-blue]="member.role === 'viewer'"
+                    class="badge capitalize"
+                    [class.badge-purple]="member.permission === 'admin'"
+                    [class.badge-blue]="member.permission === 'viewer'"
                   >
-                    {{ member.role }}
+                    {{ member.permission }}
                   </span>
                 </td>
                 <td>
@@ -113,14 +113,14 @@
       </div>
     }
 
-    <!-- Role Selection -->
+    <!-- Permissions Selection -->
     <div class="mb-4">
-      <label for="role" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-        Role
+      <label for="permission" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+        Permissions
       </label>
-      <select id="role" formControlName="role" class="w-full">
-        <option value="viewer">Project member - Read access to project resources</option>
-        <option value="admin">Project admin - Full access to project resources</option>
+      <select id="permission" formControlName="permission" class="w-full">
+        <option value="viewer">Project viewer – Read access to project resources</option>
+        <option value="admin">Project admin – Full access to project resources</option>
       </select>
     </div>
 
