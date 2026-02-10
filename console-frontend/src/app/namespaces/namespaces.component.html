@@ -162,7 +162,9 @@
       <div class="mt-2">
         <p class="text-sm text-gray-500 dark:text-gray-400">
           Are you sure you want to delete namespace
-          <span class="font-semibold text-gray-900 dark:text-white">{{ pendingNamespaceName() }}</span
+          <span class="font-semibold text-gray-900 dark:text-white">{{
+            pendingNamespaceName()
+          }}</span
           >?
         </p>
         <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">This cannot be undone.</p>
@@ -171,7 +173,9 @@
   </div>
 
   <div modal-footer class="modal-footer">
-    <button type="button" (click)="showDeleteNamespaceModal.set(false)" class="btn-secondary">Cancel</button>
+    <button type="button" (click)="showDeleteNamespaceModal.set(false)" class="btn-secondary">
+      Cancel
+    </button>
     <button
       type="button"
       (click)="confirmDeleteNamespace()"
