@@ -10,8 +10,8 @@ import (
 	"connectrpc.com/connect"
 
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
-	"github.com/fundament-oss/fundament/fundament-cli/pkg/client"
-	"github.com/fundament-oss/fundament/fundament-cli/pkg/config"
+	"github.com/fundament-oss/fundament/functl/pkg/client"
+	"github.com/fundament-oss/fundament/functl/pkg/config"
 )
 
 // AuthCmd contains authentication subcommands.
@@ -77,7 +77,7 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	creds, err := config.LoadCredentials()
 	if err != nil {
 		fmt.Println("Not authenticated")
-		fmt.Println("Run 'fundament auth login' to authenticate")
+		fmt.Println("Run 'functl auth login' to authenticate")
 		return nil
 	}
 
@@ -91,7 +91,7 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	resp, err := apiClient.Authn().GetUserInfo(context.Background(), connect.NewRequest(&authnv1.GetUserInfoRequest{}))
 	if err != nil {
 		fmt.Println("Authentication failed: credentials may be invalid or expired")
-		fmt.Println("Run 'fundament auth login' to re-authenticate")
+		fmt.Println("Run 'functl auth login' to re-authenticate")
 		return nil
 	}
 
