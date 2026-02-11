@@ -14,6 +14,7 @@ type ProjectCmd struct {
 	List   ProjectListCmd   `cmd:"" help:"List all projects."`
 	Get    ProjectGetCmd    `cmd:"" help:"Get project details."`
 	Create ProjectCreateCmd `cmd:"" help:"Create a new project."`
+	Member ProjectMemberCmd `cmd:"" help:"Manage project members."`
 }
 
 // ProjectListCmd handles the project list command.
