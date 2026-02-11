@@ -93,7 +93,7 @@
           }
         </select>
         @if (availableUsers().length === 0) {
-          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No users available to add.</p>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No users available to add.</p>
         }
         @if (
           memberForm.get('userId')?.invalid &&
@@ -169,9 +169,9 @@
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
           Are you sure you want to remove
-          <span class="font-semibold text-gray-900 dark:text-white">{{ pendingMemberName() }}</span>
+          <span class="font-semibold text-gray-800 dark:text-white">{{ pendingMemberName() }}</span>
           from this project?
         </p>
       </div>
