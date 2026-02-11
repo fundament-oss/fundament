@@ -16,7 +16,8 @@ FROM tenant.clusters
 WHERE id = $1;
 
 -- name: ClusterGetByName :one
-SELECT id, organization_id, name, region, kubernetes_version, created, deleted
+SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
+       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
 FROM tenant.clusters
 WHERE name = $1 AND deleted IS NULL;
 

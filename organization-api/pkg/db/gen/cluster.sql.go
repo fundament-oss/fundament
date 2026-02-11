@@ -131,7 +131,8 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 }
 
 const clusterGetByName = `-- name: ClusterGetByName :one
-SELECT id, organization_id, name, region, kubernetes_version, created, deleted
+SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
+       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
 FROM tenant.clusters
 WHERE name = $1 AND deleted IS NULL
 `
@@ -141,13 +142,19 @@ type ClusterGetByNameParams struct {
 }
 
 type ClusterGetByNameRow struct {
-	ID                uuid.UUID
-	OrganizationID    uuid.UUID
-	Name              string
-	Region            string
-	KubernetesVersion string
-	Created           pgtype.Timestamptz
-	Deleted           pgtype.Timestamptz
+	ID                 uuid.UUID
+	OrganizationID     uuid.UUID
+	Name               string
+	Region             string
+	KubernetesVersion  string
+	Created            pgtype.Timestamptz
+	Deleted            pgtype.Timestamptz
+	Synced             pgtype.Timestamptz
+	SyncError          pgtype.Text
+	SyncAttempts       int32
+	ShootStatus        pgtype.Text
+	ShootStatusMessage pgtype.Text
+	ShootStatusUpdated pgtype.Timestamptz
 }
 
 func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (ClusterGetByNameRow, error) {
@@ -161,6 +168,12 @@ func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNamePara
 		&i.KubernetesVersion,
 		&i.Created,
 		&i.Deleted,
+		&i.Synced,
+		&i.SyncError,
+		&i.SyncAttempts,
+		&i.ShootStatus,
+		&i.ShootStatusMessage,
+		&i.ShootStatusUpdated,
 	)
 	return i, err
 }
