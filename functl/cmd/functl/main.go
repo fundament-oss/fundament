@@ -7,14 +7,14 @@ import (
 
 	"github.com/alecthomas/kong"
 
-	"github.com/fundament-oss/fundament/fundament-cli/pkg/cli"
-	"github.com/fundament-oss/fundament/fundament-cli/pkg/config"
+	"github.com/fundament-oss/fundament/functl/pkg/cli"
+	"github.com/fundament-oss/fundament/functl/pkg/config"
 )
 
 func main() {
 	var root cli.CLI
 	ctx := kong.Parse(&root,
-		kong.Name("fundament"),
+		kong.Name("functl"),
 		kong.Description("CLI for interacting with the Fundament platform."),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{

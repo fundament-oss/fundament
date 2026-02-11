@@ -89,9 +89,9 @@ funops *args:
     PASSWORD=$(kubectl --context k3d-fundament get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' | {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
     DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./funops/cmd/funops {{ args }}
 
-# Run fundament CLI
-fundament *args:
-    go run ./fundament-cli/cmd/fundament {{ args }}
+# Run functl CLI
+functl *args:
+    go run ./functl/cmd/functl {{ args }}
 
 # --- Cluster Worker ---
 

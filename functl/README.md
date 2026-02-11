@@ -1,4 +1,4 @@
-# Fundament CLI
+# functl
 
 CLI for managing Fundament platform resources using an API key.
 
@@ -7,19 +7,19 @@ CLI for managing Fundament platform resources using an API key.
 ### Build from source
 
 ```bash
-go build -o fundament ./fundament-cli/cmd/fundament
+go build -o functl ./functl/cmd/functl
 ```
 
 ### Using Just
 
 ```bash
-just fundament --help
+just functl --help
 ```
 
 Or run commands directly:
 
 ```bash
-just fundament auth status
+just functl auth status
 ```
 
 ## Configuration
@@ -55,10 +55,10 @@ Before using most commands, you need to authenticate with an API key.
 
 ```bash
 # Interactive prompt for API key
-fundament auth login
+functl auth login
 
 # Or provide the API key directly
-fundament auth login <API_KEY>
+functl auth login <API_KEY>
 ```
 
 ## Commands
@@ -78,7 +78,7 @@ fundament auth login <API_KEY>
 Human-readable tabular format:
 
 ```bash
-fundament project list
+functl project list
 ```
 
 ```
@@ -92,7 +92,7 @@ ID                                      NAME            CREATED
 Machine-readable JSON format for scripting:
 
 ```bash
-fundament project list -o json
+functl project list -o json
 ```
 
 ```json
