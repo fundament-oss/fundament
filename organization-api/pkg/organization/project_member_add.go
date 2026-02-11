@@ -33,8 +33,7 @@ func (s *Server) AddProjectMember(
 		Role:      role,
 	})
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			if pgErr.Code == pgerrcode.UniqueViolation && pgErr.ConstraintName == dbconst.ConstraintProjectMembersUqProjectUser {
 				return nil, connect.NewError(connect.CodeAlreadyExists,
 					fmt.Errorf("user is already a member of this project"))
