@@ -1,3 +1,6 @@
+_default:
+    @just --list terraform-provider
+
 # Build terraform provider
 build:
     go build -o terraform-provider-fundament .
