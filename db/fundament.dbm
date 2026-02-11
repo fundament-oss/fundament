@@ -3,7 +3,7 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="40"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="42"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
 	 last-position="-145,-28" last-zoom="0.6" scene-rect="-528,-47,3406.2,1946.52"
 	 default-owner="postgres"
@@ -1412,6 +1412,18 @@ END;]]> </definition>
 	 table="authz.outbox">
 		<function signature="authz.outbox_notify_trigger()"/>
 </trigger>
+
+<index name="namespaces_ix_cluster_name" table="tenant.namespaces"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="cluster_id"/>
+		</idxelement>
+		<idxelement use-sorting="false">
+			<column name="name"/>
+		</idxelement>
+	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
+</index>
 
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.projects">
