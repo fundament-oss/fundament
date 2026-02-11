@@ -36,8 +36,8 @@ Configuration files are stored in `~/.fundament/`:
 Create `~/.fundament/config.yaml` to override defaults:
 
 ```yaml
-api_endpoint: http://organization.127.0.0.1.nip.io:8080
-authn_url: http://authn.127.0.0.1.nip.io:8080
+api_endpoint: http://organization.fundament.localhost:8080
+authn_url: http://authn.fundament.localhost:8080
 output: table
 ```
 

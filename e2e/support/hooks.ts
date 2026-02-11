@@ -42,7 +42,7 @@ AfterAll(async function () {
 Before(async function (this: ICustomWorld) {
   this.browser = browser;
   this.context = await browser.newContext({
-    baseURL: process.env.BASE_URL || 'http://console.127.0.0.1.nip.io:8080',
+    baseURL: process.env.BASE_URL || 'http://console.fundament.localhost:8080',
     viewport: { width: 1280, height: 720 },
   });
   this.page = await this.context.newPage();
@@ -61,8 +61,8 @@ After(async function (this: ICustomWorld, { result }) {
 
 // API testing hooks for @api tagged scenarios
 Before({ tags: '@api' }, async function (this: ICustomWorld) {
-  this.organizationApiUrl = process.env.ORGANIZATION_API_URL || 'http://organization.127.0.0.1.nip.io:8080';
-  this.authnApiUrl = process.env.AUTHN_API_URL || 'http://authn.127.0.0.1.nip.io:8080';
+  this.organizationApiUrl = process.env.ORGANIZATION_API_URL || 'http://organization.fundament.localhost:8080';
+  this.authnApiUrl = process.env.AUTHN_API_URL || 'http://authn.fundament.localhost:8080';
   this.tokenService = new TokenService(this.authnApiUrl);
   this.createdApiKeys = new Map();
   this.createdApiKeysByUser = new Map();

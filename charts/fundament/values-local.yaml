@@ -3,12 +3,12 @@
 jwtSecret: "local-dev-jwt-secret"
 
 externalUrls:
-  authn: http://authn.127.0.0.1.nip.io:8080
-  organization: http://organization.127.0.0.1.nip.io:8080
-  console: http://console.127.0.0.1.nip.io:8080
-  docs: http://docs.127.0.0.1.nip.io:8080
-  cookieDomain: 127.0.0.1.nip.io
-  corsAllowedOrigins: "http://console.127.0.0.1.nip.io:8080,http://localhost:4200,http://localhost:5173"
+  authn: http://authn.fundament.localhost:8080
+  organization: http://organization.fundament.localhost:8080
+  console: http://console.fundament.localhost:8080
+  docs: http://docs.fundament.localhost:8080
+  cookieDomain: fundament.localhost
+  corsAllowedOrigins: "http://console.fundament.localhost:8080,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true
@@ -49,14 +49,13 @@ docsFrontend:
 
 dex:
   enabled: true
-  issuer: http://dex.127.0.0.1.nip.io:8080
+  issuer: http://dex.fundament.localhost:8080
   discoveryUrl: http://fundament-dex:5556
   staticClients:
     - id: fundament
       name: "Fundament Auth API"
       redirectURIs:
-        - http://fundament.127.0.0.1.nip.io:8080/callback
-        - http://authn.127.0.0.1.nip.io:8080/callback
+        - http://authn.fundament.localhost:8080/callback
       public: true
   staticPasswords:
     # All passwords are 'password' (echo 'password' | htpasswd -BinC 10 user)
@@ -112,4 +111,4 @@ openfga:
 ingress:
   enabled: true
   className: nginx
-  domain: 127.0.0.1.nip.io
+  domain: fundament.localhost
