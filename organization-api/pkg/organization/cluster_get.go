@@ -70,9 +70,21 @@ func (s *Server) GetClusterActivity(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	// Stub: return empty activities
+	limit := req.Msg.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+
+	events, err := s.queries.ClusterGetEvents(ctx, db.ClusterGetEventsParams{
+		ClusterID: clusterID,
+		Limit:     limit,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster events: %w", err))
+	}
+
 	return connect.NewResponse(&organizationv1.GetClusterActivityResponse{
-		Activities: []*organizationv1.ActivityEntry{},
+		Events: clusterEventsFromRows(events),
 	}), nil
 }
 
@@ -99,19 +111,27 @@ func (s *Server) GetKubeconfig(
 	}), nil
 }
 
-func clusterDetailsFromRow(row *db.TenantCluster) *organizationv1.ClusterDetails {
+func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
 	return &organizationv1.ClusterDetails{
 		Id:                row.ID.String(),
 		Name:              row.Name,
 		Region:            row.Region,
 		KubernetesVersion: row.KubernetesVersion,
-		Status:            clusterStatusFromDB(row.Status),
+		Status:            clusterStatusFromDB(row.Deleted, row.ShootStatus),
 		Created:           timestamppb.New(row.Created.Time),
 		ResourceUsage:     nil, // Stub
+		SyncState: syncStateFromRow(
+			row.Synced,
+			row.SyncError,
+			row.SyncAttempts,
+			row.ShootStatus,
+			row.ShootStatusMessage,
+			row.ShootStatusUpdated,
+		),
 	}
 }
 
-func buildKubeconfig(cluster *db.TenantCluster) string {
+func buildKubeconfig(cluster *db.ClusterGetByIDRow) string {
 	return fmt.Sprintf(`apiVersion: v1
 kind: Config
 clusters:

@@ -1,5 +1,6 @@
 mod terraform-provider 'terraform-provider'
 mod e2e 'e2e'
+mod cluster-worker
 
 _default:
     @just --list
@@ -91,3 +92,9 @@ functl *args:
 # Run fundament CLI
 fundament *args:
     go run ./fundament-cli/cmd/fundament {{ args }}
+
+# --- Cluster Worker ---
+
+# Set up local Gardener for testing real Gardener client
+local-gardener:
+    just -f cluster-worker/justfile local-gardener

@@ -19,6 +19,7 @@ images:
   organizationApi: organization-api:latest
   consoleFrontend: console-frontend:latest
   docsFrontend: docs-frontend:latest
+  clusterWorker: cluster-worker:latest
 
 # Database (CloudNativePG)
 db:
@@ -27,7 +28,7 @@ db:
   storageSize: 1Gi
   reset: false
   insertTestData: false
-  exposePort: 0  # Expose postgres on this port via LoadBalancer (0 = disabled)
+  exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
 
 # Authentication API
 authnApi:
@@ -41,6 +42,14 @@ organizationApi:
   replicas: 1
   logLevel: info
 
+# Cluster Worker
+clusterWorker:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  gardenerMode: mock  # mock or real
+  gardenerKubeconfigSecret: ""  # Secret name containing kubeconfig for real mode
+
 # Console Frontend
 consoleFrontend:
   enabled: false
@@ -50,6 +59,14 @@ consoleFrontend:
 docsFrontend:
   enabled: false
   replicas: 1
+
+openfga:
+  enabled: false
+  image: openfga/openfga:v1.11.3
+  cliVersion: "0.7.8"
+  replicas: 1
+  playground:
+    enabled: false
 
 # Dex (OIDC Identity Provider)
 dex:
