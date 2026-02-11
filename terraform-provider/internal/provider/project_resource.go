@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"google.golang.org/protobuf/proto"
 )
 
 // Ensure ProjectResource satisfies various resource interfaces.
@@ -233,7 +232,7 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 	// Update the project name
 	updateReq := connect.NewRequest(&organizationv1.UpdateProjectRequest{
 		ProjectId: state.ID.ValueString(),
-		Name:      proto.String(plan.Name.ValueString()),
+		Name:      new(plan.Name.ValueString()),
 	})
 
 	_, err := r.client.ProjectService.UpdateProject(ctx, updateReq)

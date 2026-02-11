@@ -128,7 +128,7 @@ func TestTokenManager_GetToken_Cached(t *testing.T) {
 	}
 
 	// Get token multiple times
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		token, err := tm.GetToken(context.Background())
 		if err != nil {
 			t.Fatalf("GetToken() error = %v", err)
@@ -279,9 +279,7 @@ func TestTokenManager_GetToken_ConcurrentAccess(t *testing.T) {
 	errChan := make(chan error, numGoroutines)
 
 	for range numGoroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			token, err := tm.GetToken(context.Background())
 			if err != nil {
 				errChan <- err
@@ -290,7 +288,7 @@ func TestTokenManager_GetToken_ConcurrentAccess(t *testing.T) {
 			if token != testToken {
 				errChan <- errors.New("unexpected token value")
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

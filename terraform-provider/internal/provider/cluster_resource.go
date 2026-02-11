@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"google.golang.org/protobuf/proto"
 )
 
 // Ensure ClusterResource satisfies various resource interfaces.
@@ -257,7 +256,7 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	// Only kubernetes_version can be updated
 	updateReq := connect.NewRequest(&organizationv1.UpdateClusterRequest{
 		ClusterId:         state.ID.ValueString(),
-		KubernetesVersion: proto.String(plan.KubernetesVersion.ValueString()),
+		KubernetesVersion: new(plan.KubernetesVersion.ValueString()),
 	})
 
 	_, err := r.client.ClusterService.UpdateCluster(ctx, updateReq)
