@@ -12,7 +12,7 @@ WHERE
         SELECT
             tenant.clusters.id
         FROM
-            tenant.clusters c
+            tenant.clusters clusters
             JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
         WHERE
             tenant.clusters.synced IS NULL
@@ -28,7 +28,7 @@ WHERE
             (tenant.clusters.deleted IS NOT NULL), -- Active clusters first (false < true)
             tenant.clusters.created
         FOR UPDATE OF
-            c SKIP LOCKED
+            clusters SKIP LOCKED
         LIMIT
             1
     )
