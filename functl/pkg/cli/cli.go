@@ -4,8 +4,8 @@ package cli
 import (
 	"log/slog"
 
-	"github.com/fundament-oss/fundament/fundament-cli/pkg/client"
-	"github.com/fundament-oss/fundament/fundament-cli/pkg/config"
+	"github.com/fundament-oss/fundament/functl/pkg/client"
+	"github.com/fundament-oss/fundament/functl/pkg/config"
 )
 
 // CLI defines the root command-line interface structure.

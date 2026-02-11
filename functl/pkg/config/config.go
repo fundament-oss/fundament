@@ -185,4 +185,4 @@ func DeleteCredentials() error {
 }
 
 // ErrNotAuthenticated is returned when no API key is configured.
-var ErrNotAuthenticated = errors.New("not authenticated: run 'fundament auth login' to authenticate")
+var ErrNotAuthenticated = errors.New("not authenticated: run 'functl auth login' to authenticate")
