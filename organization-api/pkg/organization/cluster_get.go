@@ -14,6 +14,39 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
+func (s *Server) GetClusterByName(
+	ctx context.Context,
+	req *connect.Request[organizationv1.GetClusterByNameRequest],
+) (*connect.Response[organizationv1.GetClusterResponse], error) {
+	cluster, err := s.queries.ClusterGetByName(ctx, db.ClusterGetByNameParams{
+		Name: req.Msg.Name,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+	}
+
+	return connect.NewResponse(&organizationv1.GetClusterResponse{
+		Cluster: clusterDetailsFromRow(&db.ClusterGetByIDRow{
+			ID:                 cluster.ID,
+			OrganizationID:     cluster.OrganizationID,
+			Name:               cluster.Name,
+			Region:             cluster.Region,
+			KubernetesVersion:  cluster.KubernetesVersion,
+			Created:            cluster.Created,
+			Deleted:            cluster.Deleted,
+			Synced:             cluster.Synced,
+			SyncError:          cluster.SyncError,
+			SyncAttempts:       cluster.SyncAttempts,
+			ShootStatus:        cluster.ShootStatus,
+			ShootStatusMessage: cluster.ShootStatusMessage,
+			ShootStatusUpdated: cluster.ShootStatusUpdated,
+		}),
+	}), nil
+}
+
 func (s *Server) GetCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetClusterRequest],

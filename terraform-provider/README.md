@@ -244,7 +244,7 @@ export FUNDAMENT_API_KEY="your-api-key"  # Or use FUNDAMENT_TOKEN instead
 # Optional: for project filter tests
 export FUNDAMENT_TEST_PROJECT_ID="your-project-uuid"
 # Optional: for cluster data source tests
-export FUNDAMENT_TEST_CLUSTER_ID="your-cluster-uuid"
+export FUNDAMENT_TEST_CLUSTER_NAME="your-cluster-name"
 
 just terraform-provider::test
 ```

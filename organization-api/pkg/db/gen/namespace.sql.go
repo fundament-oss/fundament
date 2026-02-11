@@ -48,6 +48,32 @@ func (q *Queries) NamespaceDelete(ctx context.Context, arg NamespaceDeleteParams
 	return result.RowsAffected(), nil
 }
 
+const namespaceGetByClusterAndName = `-- name: NamespaceGetByClusterAndName :one
+SELECT n.id, n.project_id, n.cluster_id, n.name, n.created, n.deleted
+FROM tenant.namespaces n
+JOIN tenant.clusters c ON c.id = n.cluster_id
+WHERE c.name = $1 AND n.name = $2 AND n.deleted IS NULL AND c.deleted IS NULL
+`
+
+type NamespaceGetByClusterAndNameParams struct {
+	ClusterName   string
+	NamespaceName string
+}
+
+func (q *Queries) NamespaceGetByClusterAndName(ctx context.Context, arg NamespaceGetByClusterAndNameParams) (TenantNamespace, error) {
+	row := q.db.QueryRow(ctx, namespaceGetByClusterAndName, arg.ClusterName, arg.NamespaceName)
+	var i TenantNamespace
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.ClusterID,
+		&i.Name,
+		&i.Created,
+		&i.Deleted,
+	)
+	return i, err
+}
+
 const namespaceGetByID = `-- name: NamespaceGetByID :one
 SELECT id, project_id, cluster_id, name, created, deleted
 FROM tenant.namespaces
@@ -60,6 +86,32 @@ type NamespaceGetByIDParams struct {
 
 func (q *Queries) NamespaceGetByID(ctx context.Context, arg NamespaceGetByIDParams) (TenantNamespace, error) {
 	row := q.db.QueryRow(ctx, namespaceGetByID, arg.ID)
+	var i TenantNamespace
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.ClusterID,
+		&i.Name,
+		&i.Created,
+		&i.Deleted,
+	)
+	return i, err
+}
+
+const namespaceGetByProjectAndName = `-- name: NamespaceGetByProjectAndName :one
+SELECT n.id, n.project_id, n.cluster_id, n.name, n.created, n.deleted
+FROM tenant.namespaces n
+JOIN tenant.projects p ON p.id = n.project_id
+WHERE p.name = $1 AND n.name = $2 AND n.deleted IS NULL AND p.deleted IS NULL
+`
+
+type NamespaceGetByProjectAndNameParams struct {
+	ProjectName   string
+	NamespaceName string
+}
+
+func (q *Queries) NamespaceGetByProjectAndName(ctx context.Context, arg NamespaceGetByProjectAndNameParams) (TenantNamespace, error) {
+	row := q.db.QueryRow(ctx, namespaceGetByProjectAndName, arg.ProjectName, arg.NamespaceName)
 	var i TenantNamespace
 	err := row.Scan(
 		&i.ID,

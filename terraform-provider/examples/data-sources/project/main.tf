@@ -12,14 +12,14 @@ provider "fundament" {
   # token = ""
 }
 
-# Look up an existing project by ID
+# Look up an existing project by name
 data "fundament_project" "example" {
-  id = "your-project-uuid"
+  name = "my-project"
 }
 
-output "project_name" {
-  description = "The name of the project"
-  value       = data.fundament_project.example.name
+output "project_id" {
+  description = "The unique identifier of the project"
+  value       = data.fundament_project.example.id
 }
 
 output "project_created" {

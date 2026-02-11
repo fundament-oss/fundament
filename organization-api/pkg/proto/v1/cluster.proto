@@ -27,6 +27,9 @@ service ClusterService {
   // Get detailed information about a specific cluster
   rpc GetCluster(GetClusterRequest) returns (GetClusterResponse);
 
+  // Get a cluster by name
+  rpc GetClusterByName(GetClusterByNameRequest) returns (GetClusterResponse);
+
   // Create a new cluster
   rpc CreateCluster(CreateClusterRequest) returns (CreateClusterResponse);
 
@@ -69,6 +72,12 @@ service ClusterService {
   // List namespaces for a cluster
   rpc ListClusterNamespaces(ListClusterNamespacesRequest) returns (ListClusterNamespacesResponse);
 
+  // Get a namespace by cluster name and namespace name
+  rpc GetNamespaceByClusterAndName(GetNamespaceByClusterAndNameRequest) returns (GetNamespaceByClusterAndNameResponse);
+
+  // Get a namespace by project name and namespace name
+  rpc GetNamespaceByProjectAndName(GetNamespaceByProjectAndNameRequest) returns (GetNamespaceByProjectAndNameResponse);
+
   // Create a namespace in a cluster
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse);
 
@@ -102,6 +111,14 @@ message ListClustersResponse {
 // Get cluster request
 message GetClusterRequest {
   string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// Get cluster by name request
+message GetClusterByNameRequest {
+  string name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
 }
 
 // Get cluster response
@@ -313,6 +330,7 @@ message ClusterNamespace {
   string id = 10;
   string name = 20;
   string project_id = 30;
+  string cluster_id = 35;
   google.protobuf.Timestamp created = 40;
 }
 
@@ -341,4 +359,47 @@ message CreateNamespaceResponse {
 // Delete namespace request
 message DeleteNamespaceRequest {
   string namespace_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// Get namespace by cluster and name request
+message GetNamespaceByClusterAndNameRequest {
+  string cluster_name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string namespace_name = 20 [
+    (buf.validate.field).string = {max_len: 63},
+    (buf.validate.field).cel = {
+      id: "dns1123label"
+      message: "must be a valid DNS-1123 label"
+      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+    }
+  ];
+}
+
+// Get namespace by cluster and name response
+message GetNamespaceByClusterAndNameResponse {
+  ClusterNamespace namespace = 10;
+}
+
+// Get namespace by project and name request
+message GetNamespaceByProjectAndNameRequest {
+  string project_name = 10 [(buf.validate.field).cel = {
+    id: "dns1123label"
+    message: "must be a valid DNS-1123 label"
+    expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+  }];
+  string namespace_name = 20 [
+    (buf.validate.field).string = {max_len: 63},
+    (buf.validate.field).cel = {
+      id: "dns1123label"
+      message: "must be a valid DNS-1123 label"
+      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+    }
+  ];
+}
+
+// Get namespace by project and name response
+message GetNamespaceByProjectAndNameResponse {
+  ClusterNamespace namespace = 10;
 }
