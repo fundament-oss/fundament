@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	db "github.com/fundament-oss/fundament/functl/pkg/db/gen"
+	db "github.com/fundament-oss/fundament/funops/pkg/db/gen"
 )
 
 // OrganizationCmd groups organization-related commands.

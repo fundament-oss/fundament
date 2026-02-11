@@ -1,4 +1,4 @@
-# functl
+# funops
 
 Operator CLI tool for Fundament platform administration.
 
