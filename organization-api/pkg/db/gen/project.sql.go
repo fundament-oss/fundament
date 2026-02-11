@@ -74,16 +74,15 @@ func (q *Queries) ProjectGetByID(ctx context.Context, arg ProjectGetByIDParams) 
 const projectGetByName = `-- name: ProjectGetByName :one
 SELECT id, organization_id, name, created, deleted
 FROM tenant.projects
-WHERE organization_id = $1 AND name = $2 AND deleted IS NULL
+WHERE name = $1 AND deleted IS NULL
 `
 
 type ProjectGetByNameParams struct {
-	OrganizationID uuid.UUID
-	Name           string
+	Name string
 }
 
 func (q *Queries) ProjectGetByName(ctx context.Context, arg ProjectGetByNameParams) (TenantProject, error) {
-	row := q.db.QueryRow(ctx, projectGetByName, arg.OrganizationID, arg.Name)
+	row := q.db.QueryRow(ctx, projectGetByName, arg.Name)
 	var i TenantProject
 	err := row.Scan(
 		&i.ID,
@@ -95,19 +94,15 @@ func (q *Queries) ProjectGetByName(ctx context.Context, arg ProjectGetByNamePara
 	return i, err
 }
 
-const projectListByOrganizationID = `-- name: ProjectListByOrganizationID :many
+const projectList = `-- name: ProjectList :many
 SELECT id, organization_id, name, created, deleted
 FROM tenant.projects
-WHERE organization_id = $1 AND deleted IS NULL
+WHERE deleted IS NULL
 ORDER BY created DESC
 `
 
-type ProjectListByOrganizationIDParams struct {
-	OrganizationID uuid.UUID
-}
-
-func (q *Queries) ProjectListByOrganizationID(ctx context.Context, arg ProjectListByOrganizationIDParams) ([]TenantProject, error) {
-	rows, err := q.db.Query(ctx, projectListByOrganizationID, arg.OrganizationID)
+func (q *Queries) ProjectList(ctx context.Context) ([]TenantProject, error) {
+	rows, err := q.db.Query(ctx, projectList)
 	if err != nil {
 		return nil, err
 	}

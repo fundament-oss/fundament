@@ -1,8 +1,8 @@
 
--- name: ProjectListByOrganizationID :many
+-- name: ProjectList :many
 SELECT id, organization_id, name, created, deleted
 FROM tenant.projects
-WHERE organization_id = $1 AND deleted IS NULL
+WHERE deleted IS NULL
 ORDER BY created DESC;
 
 -- name: ProjectGetByID :one
@@ -13,7 +13,7 @@ WHERE id = $1 AND deleted IS NULL;
 -- name: ProjectGetByName :one
 SELECT id, organization_id, name, created, deleted
 FROM tenant.projects
-WHERE organization_id = $1 AND name = $2 AND deleted IS NULL;
+WHERE name = $1 AND deleted IS NULL;
 
 -- name: ProjectCreate :one
 INSERT INTO tenant.projects (organization_id, name)

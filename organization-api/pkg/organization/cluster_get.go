@@ -18,14 +18,8 @@ func (s *Server) GetClusterByName(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetClusterByNameRequest],
 ) (*connect.Response[organizationv1.GetClusterResponse], error) {
-	organizationID, ok := OrganizationIDFromContext(ctx)
-	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
-
 	cluster, err := s.queries.ClusterGetByName(ctx, db.ClusterGetByNameParams{
-		OrganizationID: organizationID,
-		Name:           req.Msg.Name,
+		Name: req.Msg.Name,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

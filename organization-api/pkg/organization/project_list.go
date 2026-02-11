@@ -15,12 +15,7 @@ func (s *Server) ListProjects(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListProjectsRequest],
 ) (*connect.Response[organizationv1.ListProjectsResponse], error) {
-	organizationID, ok := OrganizationIDFromContext(ctx)
-	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
-
-	projects, err := s.queries.ProjectListByOrganizationID(ctx, db.ProjectListByOrganizationIDParams{OrganizationID: organizationID})
+	projects, err := s.queries.ProjectList(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list projects: %w", err))
 	}

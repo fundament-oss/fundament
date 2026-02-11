@@ -18,14 +18,8 @@ func (s *Server) GetProjectByName(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetProjectByNameRequest],
 ) (*connect.Response[organizationv1.GetProjectResponse], error) {
-	organizationID, ok := OrganizationIDFromContext(ctx)
-	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
-
 	project, err := s.queries.ProjectGetByName(ctx, db.ProjectGetByNameParams{
-		OrganizationID: organizationID,
-		Name:           req.Msg.Name,
+		Name: req.Msg.Name,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

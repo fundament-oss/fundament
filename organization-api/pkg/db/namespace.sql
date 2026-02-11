@@ -29,10 +29,10 @@ ORDER BY name ASC;
 SELECT n.id, n.project_id, n.cluster_id, n.name, n.created, n.deleted
 FROM tenant.namespaces n
 JOIN tenant.clusters c ON c.id = n.cluster_id
-WHERE c.organization_id = sqlc.arg('organization_id') AND c.name = sqlc.arg('cluster_name') AND n.name = sqlc.arg('namespace_name') AND n.deleted IS NULL AND c.deleted IS NULL;
+WHERE c.name = sqlc.arg('cluster_name') AND n.name = sqlc.arg('namespace_name') AND n.deleted IS NULL AND c.deleted IS NULL;
 
 -- name: NamespaceGetByProjectAndName :one
 SELECT n.id, n.project_id, n.cluster_id, n.name, n.created, n.deleted
 FROM tenant.namespaces n
 JOIN tenant.projects p ON p.id = n.project_id
-WHERE p.organization_id = sqlc.arg('organization_id') AND p.name = sqlc.arg('project_name') AND n.name = sqlc.arg('namespace_name') AND n.deleted IS NULL AND p.deleted IS NULL;
+WHERE p.name = sqlc.arg('project_name') AND n.name = sqlc.arg('namespace_name') AND n.deleted IS NULL AND p.deleted IS NULL;

@@ -14,14 +14,7 @@ func (s *Server) ListClusters(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListClustersRequest],
 ) (*connect.Response[organizationv1.ListClustersResponse], error) {
-	organizationID, ok := OrganizationIDFromContext(ctx)
-	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
-
-	clusters, err := s.queries.ClusterListByOrganizationID(ctx, db.ClusterListByOrganizationIDParams{
-		OrganizationID: organizationID,
-	})
+	clusters, err := s.queries.ClusterList(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list clusters: %w", err))
 	}

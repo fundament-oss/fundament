@@ -1,8 +1,8 @@
 
--- name: ClusterListByOrganizationID :many
+-- name: ClusterList :many
 SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
 FROM tenant.clusters
-WHERE organization_id = $1 AND deleted IS NULL
+WHERE deleted IS NULL
 ORDER BY created DESC;
 
 -- name: ClusterGetByID :one
@@ -13,7 +13,7 @@ WHERE id = $1 AND deleted IS NULL;
 -- name: ClusterGetByName :one
 SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
 FROM tenant.clusters
-WHERE organization_id = $1 AND name = $2 AND deleted IS NULL;
+WHERE name = $1 AND deleted IS NULL;
 
 -- name: ClusterCreate :one
 INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, status)

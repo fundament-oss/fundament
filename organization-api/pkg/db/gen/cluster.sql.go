@@ -87,16 +87,15 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 const clusterGetByName = `-- name: ClusterGetByName :one
 SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
 FROM tenant.clusters
-WHERE organization_id = $1 AND name = $2 AND deleted IS NULL
+WHERE name = $1 AND deleted IS NULL
 `
 
 type ClusterGetByNameParams struct {
-	OrganizationID uuid.UUID
-	Name           string
+	Name string
 }
 
 func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (TenantCluster, error) {
-	row := q.db.QueryRow(ctx, clusterGetByName, arg.OrganizationID, arg.Name)
+	row := q.db.QueryRow(ctx, clusterGetByName, arg.Name)
 	var i TenantCluster
 	err := row.Scan(
 		&i.ID,
@@ -111,19 +110,15 @@ func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNamePara
 	return i, err
 }
 
-const clusterListByOrganizationID = `-- name: ClusterListByOrganizationID :many
+const clusterList = `-- name: ClusterList :many
 SELECT id, organization_id, name, region, kubernetes_version, status, created, deleted
 FROM tenant.clusters
-WHERE organization_id = $1 AND deleted IS NULL
+WHERE deleted IS NULL
 ORDER BY created DESC
 `
 
-type ClusterListByOrganizationIDParams struct {
-	OrganizationID uuid.UUID
-}
-
-func (q *Queries) ClusterListByOrganizationID(ctx context.Context, arg ClusterListByOrganizationIDParams) ([]TenantCluster, error) {
-	rows, err := q.db.Query(ctx, clusterListByOrganizationID, arg.OrganizationID)
+func (q *Queries) ClusterList(ctx context.Context) ([]TenantCluster, error) {
+	rows, err := q.db.Query(ctx, clusterList)
 	if err != nil {
 		return nil, err
 	}
