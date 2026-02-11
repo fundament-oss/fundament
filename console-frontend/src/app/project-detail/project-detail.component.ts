@@ -14,7 +14,10 @@ import {
   Project,
   ProjectNamespace,
 } from '../../generated/v1/project_pb';
-import { ListClustersRequestSchema, ClusterSummary } from '../../generated/v1/cluster_pb';
+import {
+  ListClustersRequestSchema,
+  type ListClustersResponse_ClusterSummary as ClusterSummary,
+} from '../../generated/v1/cluster_pb';
 import { LoadingIndicatorComponent } from '../icons';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 

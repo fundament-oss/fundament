@@ -21,7 +21,7 @@ import {
   ListInstallsRequestSchema,
   AddInstallRequestSchema,
   InstallSchema,
-  type ClusterSummary,
+  type ListClustersResponse_ClusterSummary as ClusterSummary,
   type Install,
 } from '../../generated/v1/cluster_pb';
 import { ToastService } from '../toast.service';

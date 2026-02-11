@@ -18,7 +18,7 @@ import {
   ListClustersRequestSchema,
   CreateNamespaceRequestSchema,
   DeleteNamespaceRequestSchema,
-  ClusterSummary,
+  type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import ModalComponent from '../modal/modal.component';
 import { formatDate as formatDateUtil } from '../utils/date-format';

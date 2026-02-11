@@ -33,6 +33,7 @@ export function getStatusColor(status: ClusterStatus): string {
     [ClusterStatus.STOPPING]: 'badge-yellow',
     [ClusterStatus.STOPPED]: 'badge-gray',
     [ClusterStatus.UNSPECIFIED]: 'badge-gray',
+    [ClusterStatus.DELETING]: 'badge-rose',
   };
   return colors[status];
 }
@@ -47,6 +48,7 @@ export function getStatusLabel(status: ClusterStatus): string {
     [ClusterStatus.STOPPING]: 'Stopping',
     [ClusterStatus.STOPPED]: 'Stopped',
     [ClusterStatus.UNSPECIFIED]: 'Unknown status',
+    [ClusterStatus.DELETING]: 'Deleting',
   };
   return labels[status];
 }
