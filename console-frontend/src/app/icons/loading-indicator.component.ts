@@ -2,9 +2,6 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-loading-indicator',
-  host: {
-    class: 'contents',
-  },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <svg
