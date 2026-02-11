@@ -10,14 +10,14 @@ import (
 
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
-	"github.com/fundament-oss/fundament/functl/pkg/cli"
-	db "github.com/fundament-oss/fundament/functl/pkg/db/gen"
+	"github.com/fundament-oss/fundament/funops/pkg/cli"
+	db "github.com/fundament-oss/fundament/funops/pkg/db/gen"
 )
 
 func main() {
 	var root cli.CLI
 	ctx := kong.Parse(&root,
-		kong.Name("functl"),
+		kong.Name("funops"),
 		kong.Description("Operator CLI for Fundament platform administration."),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{
