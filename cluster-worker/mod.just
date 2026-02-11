@@ -13,7 +13,7 @@ KUBECONFIG_PATH := GARDENER_DIR / "example/provider-local/seed-kind/base/kubecon
 
 # List available recipes
 default:
-    @just --list
+    @just --list cluster-worker
 
 # ============================================================================
 # Local Gardener (Optional)
