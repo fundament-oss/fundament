@@ -181,9 +181,10 @@ export default class App implements OnInit {
   // Update sidebar state based on current route
   private updateSidebarStateFromRoute(url: string) {
     // Match project routes: /projects/:projectId or /projects/:projectId/...
+    // Exclude /projects/add which is the add-project page (not a project detail)
     const projectRouteMatch = url.match(/^\/projects\/([^/]+)/);
 
-    if (projectRouteMatch) {
+    if (projectRouteMatch && projectRouteMatch[1] !== 'add') {
       const projectId = projectRouteMatch[1];
       // Project route
       this.selectedProjectId.set(projectId);
