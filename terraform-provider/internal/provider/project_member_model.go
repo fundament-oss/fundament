@@ -19,25 +19,25 @@ type ProjectMemberModel struct {
 }
 
 // projectMemberRoleToProto converts a string role to the proto enum value.
-func projectMemberRoleToProto(role string) organizationv1.ProjectMemberRole {
+func projectMemberRoleToProto(role string) (organizationv1.ProjectMemberRole, error) {
 	switch role {
 	case "admin":
-		return organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN
+		return organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN, nil
 	case "viewer":
-		return organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER
+		return organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER, nil
 	default:
-		panic(fmt.Sprintf("unknown project member role: %q", role))
+		return 0, fmt.Errorf("unknown project member role: %q", role)
 	}
 }
 
 // projectMemberRoleToString converts a proto enum value to a string role.
-func projectMemberRoleToString(role organizationv1.ProjectMemberRole) string {
+func projectMemberRoleToString(role organizationv1.ProjectMemberRole) (string, error) {
 	switch role {
 	case organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN:
-		return "admin"
+		return "admin", nil
 	case organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER:
-		return "viewer"
+		return "viewer", nil
 	default:
-		panic(fmt.Sprintf("unknown project member role proto value: %d", role))
+		return "", fmt.Errorf("unknown project member role proto value: %d", role)
 	}
 }

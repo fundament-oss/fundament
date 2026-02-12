@@ -94,20 +94,21 @@ func TestProjectMemberRoleToProto(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		result := projectMemberRoleToProto(tt.input)
+		result, err := projectMemberRoleToProto(tt.input)
+		if err != nil {
+			t.Errorf("projectMemberRoleToProto(%q) returned unexpected error: %v", tt.input, err)
+		}
 		if result != tt.expected {
 			t.Errorf("projectMemberRoleToProto(%q) = %v, want %v", tt.input, result, tt.expected)
 		}
 	}
 }
 
-func TestProjectMemberRoleToProto_PanicsOnUnknown(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("expected panic for unknown role, got none")
-		}
-	}()
-	projectMemberRoleToProto("unknown")
+func TestProjectMemberRoleToProto_ErrorOnUnknown(t *testing.T) {
+	_, err := projectMemberRoleToProto("unknown")
+	if err == nil {
+		t.Error("expected error for unknown role, got nil")
+	}
 }
 
 func TestProjectMemberRoleToString(t *testing.T) {
@@ -120,18 +121,19 @@ func TestProjectMemberRoleToString(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		result := projectMemberRoleToString(tt.input)
+		result, err := projectMemberRoleToString(tt.input)
+		if err != nil {
+			t.Errorf("projectMemberRoleToString(%v) returned unexpected error: %v", tt.input, err)
+		}
 		if result != tt.expected {
 			t.Errorf("projectMemberRoleToString(%v) = %q, want %q", tt.input, result, tt.expected)
 		}
 	}
 }
 
-func TestProjectMemberRoleToString_PanicsOnUnknown(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("expected panic for unknown role proto value, got none")
-		}
-	}()
-	projectMemberRoleToString(organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED)
+func TestProjectMemberRoleToString_ErrorOnUnknown(t *testing.T) {
+	_, err := projectMemberRoleToString(organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED)
+	if err == nil {
+		t.Error("expected error for unknown role proto value, got nil")
+	}
 }
