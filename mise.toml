@@ -2,8 +2,6 @@
 JUST_ONE = true
 # Local k3d registry for Skaffold image builds
 SKAFFOLD_DEFAULT_REPO = "k3d-registry.localhost:5111"
-# Force kubectl to use local k3d cluster (prevents accidental production changes)
-KUBECONFIG = "{{config_root}}/deploy/k3d/kubeconfig.yaml"
 
 [tools]
 # Scripting & Meta
