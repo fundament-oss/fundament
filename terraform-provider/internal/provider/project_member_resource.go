@@ -40,7 +40,7 @@ func (r *ProjectMemberResource) Metadata(ctx context.Context, req resource.Metad
 // Schema defines the schema for the resource.
 func (r *ProjectMemberResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a project member in Fundament.",
+		Description: "Manages a project member in Fundament. Note: when a project is created, the authenticated user is automatically added as an admin member. This implicit member cannot be managed by this resource.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The unique identifier of the project member.",
