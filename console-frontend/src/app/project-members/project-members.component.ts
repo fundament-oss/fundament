@@ -1,33 +1,45 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerTrash, tablerPencil, tablerAlertTriangle } from '@ng-icons/tabler-icons';
+import {
+  tablerPlus,
+  tablerTrash,
+  tablerPencil,
+  tablerAlertTriangle,
+  tablerInfoCircle,
+  tablerLock,
+  tablerArrowBackUp,
+} from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
 import ModalComponent from '../modal/modal.component';
 
-type ProjectMemberRole = 'viewer' | 'admin';
+type ProjectMemberPermission = 'viewer' | 'admin';
+type PermissionSource = 'org' | 'project';
 
 interface ProjectMember {
   id: string;
   userId: string;
   name: string;
   email: string;
-  role: ProjectMemberRole;
+  permission: ProjectMemberPermission;
+  source: PermissionSource;
+  orgPermission: ProjectMemberPermission | null;
   addedAt: string;
 }
 
 @Component({
   selector: 'app-project-members',
-  imports: [CommonModule, ReactiveFormsModule, NgIcon, ModalComponent],
+  imports: [ReactiveFormsModule, NgIcon, ModalComponent, RouterLink, RouterLinkActive],
   viewProviders: [
     provideIcons({
       tablerPlus,
       tablerTrash,
       tablerPencil,
       tablerAlertTriangle,
+      tablerInfoCircle,
+      tablerLock,
+      tablerArrowBackUp,
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,8 +51,6 @@ export default class ProjectMembersComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   private fb = inject(FormBuilder);
-
-  private toastService = inject(ToastService);
 
   projectId = signal<string>('');
 
@@ -62,7 +72,7 @@ export default class ProjectMembersComponent implements OnInit {
 
   memberForm = this.fb.group({
     userId: ['', Validators.required],
-    role: ['viewer' as ProjectMemberRole, Validators.required],
+    permission: ['viewer' as ProjectMemberPermission, Validators.required],
   });
 
   constructor() {
@@ -83,7 +93,9 @@ export default class ProjectMembersComponent implements OnInit {
         userId: 'user-1',
         name: 'Alice Johnson',
         email: 'alice.johnson@example.com',
-        role: 'admin',
+        permission: 'admin',
+        source: 'org',
+        orgPermission: 'admin',
         addedAt: '2024-01-15T10:30:00Z',
       },
       {
@@ -91,7 +103,9 @@ export default class ProjectMembersComponent implements OnInit {
         userId: 'user-2',
         name: 'Bob Smith',
         email: 'bob.smith@example.com',
-        role: 'viewer',
+        permission: 'viewer',
+        source: 'org',
+        orgPermission: 'viewer',
         addedAt: '2024-02-20T14:45:00Z',
       },
       {
@@ -99,28 +113,39 @@ export default class ProjectMembersComponent implements OnInit {
         userId: 'user-3',
         name: 'Carol Williams',
         email: 'carol.williams@example.com',
-        role: 'viewer',
+        permission: 'admin',
+        source: 'project',
+        orgPermission: null,
         addedAt: '2024-03-10T09:15:00Z',
+      },
+      {
+        id: 'pm-4',
+        userId: 'user-5',
+        name: 'Eve Davis',
+        email: 'eve.davis@example.com',
+        permission: 'viewer',
+        source: 'project',
+        orgPermission: null,
+        addedAt: '2024-04-05T11:00:00Z',
       },
     ]);
 
     // Mock available users (users not yet in the project)
     this.availableUsers.set([
       { id: 'user-4', name: 'David Brown', email: 'david.brown@example.com' },
-      { id: 'user-5', name: 'Eve Davis', email: 'eve.davis@example.com' },
       { id: 'user-6', name: 'Frank Miller', email: 'frank.miller@example.com' },
     ]);
   }
 
   openAddMemberModal() {
     this.editingMember.set(null);
-    this.memberForm.reset({ userId: '', role: 'viewer' });
+    this.memberForm.reset({ userId: '', permission: 'viewer' });
     this.showAddMemberModal.set(true);
   }
 
   openEditMemberModal(member: ProjectMember) {
     this.editingMember.set(member);
-    this.memberForm.patchValue({ userId: member.userId, role: member.role });
+    this.memberForm.patchValue({ userId: member.userId, permission: member.permission });
     this.showAddMemberModal.set(true);
   }
 
@@ -131,16 +156,15 @@ export default class ProjectMembersComponent implements OnInit {
     }
 
     this.isAddingMember.set(true);
-    const role = this.memberForm.value.role as ProjectMemberRole;
+    const permission = this.memberForm.value.permission as ProjectMemberPermission;
 
     if (this.editingMember()) {
       // Edit existing member
       const member = this.editingMember()!;
+      const newSource: PermissionSource =
+        member.source === 'org' && permission !== member.permission ? 'project' : member.source;
       this.members.update((members) =>
-        members.map((m) => (m.id === member.id ? { ...m, role } : m)),
-      );
-      this.toastService.success(
-        `${member.name}'s role updated to ${role === 'admin' ? 'Project admin' : 'Project member'}`,
+        members.map((m) => (m.id === member.id ? { ...m, permission, source: newSource } : m)),
       );
     } else {
       // Add new member
@@ -153,13 +177,14 @@ export default class ProjectMembersComponent implements OnInit {
           userId: user.id,
           name: user.name,
           email: user.email,
-          role,
+          permission,
+          source: 'project',
+          orgPermission: null,
           addedAt: new Date().toISOString(),
         };
 
         this.members.update((members) => [...members, newMember]);
         this.availableUsers.update((users) => users.filter((u) => u.id !== userId));
-        this.toastService.success(`${user.name} added to project`);
       }
     }
 
@@ -192,6 +217,17 @@ export default class ProjectMembersComponent implements OnInit {
       { id: member.userId, name: member.name, email: member.email },
     ]);
     this.members.update((members) => members.filter((m) => m.id !== memberId));
-    this.toastService.info(`${member.name} removed from project`);
+  }
+
+  resetToOrgDefault(member: ProjectMember) {
+    if (!member.orgPermission) return;
+
+    this.members.update((members) =>
+      members.map((m) =>
+        m.id === member.id
+          ? { ...m, permission: member.orgPermission!, source: 'org' as PermissionSource }
+          : m,
+      ),
+    );
   }
 }

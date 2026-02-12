@@ -1,5 +1,4 @@
 import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -33,7 +32,7 @@ interface InstallWithCluster extends Install {
 
 @Component({
   selector: 'app-plugin-details',
-  imports: [CommonModule, InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
+  imports: [InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerChevronRight,

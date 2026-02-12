@@ -8,7 +8,6 @@ import {
   Input,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -29,7 +28,7 @@ export interface Plugin {
 
 @Component({
   selector: 'app-shared-plugins-form',
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-plugins-form.component.html',
 })

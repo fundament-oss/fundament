@@ -1,5 +1,4 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -12,7 +11,7 @@ import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, RouterLink, NgIcon],
+  imports: [RouterLink, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,

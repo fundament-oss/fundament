@@ -6,7 +6,6 @@ import {
   OnInit,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
@@ -30,7 +29,7 @@ import {
 
 @Component({
   selector: 'app-add-cluster-summary',
-  imports: [CommonModule, RouterLink, NgIcon],
+  imports: [RouterLink, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,

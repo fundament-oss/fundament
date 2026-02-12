@@ -1,5 +1,4 @@
 import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCheck } from '@ng-icons/tabler-icons';
 import ModalComponent from '../modal/modal.component';
@@ -12,7 +11,7 @@ interface Cluster {
 
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [CommonModule, NgIcon, ModalComponent],
+  imports: [NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerCheck,

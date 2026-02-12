@@ -325,7 +325,7 @@
               <li>
                 <a
                   [routerLink]="['/projects', selectedProjectId(), 'members']"
-                  routerLinkActive="active"
+                  [class.active]="isMembersActive()"
                   class="nav-link"
                   (click)="closeSidebar()"
                 >

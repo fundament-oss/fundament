@@ -15,7 +15,6 @@ import {
   ActivatedRouteSnapshot,
 } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { CommonModule } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerCircleCheck,
@@ -58,7 +57,6 @@ const reloadApp = () => {
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
-    CommonModule,
     SelectorModalComponent,
     FundamentLogoIconComponent,
     KubernetesIconComponent,
@@ -250,6 +248,16 @@ export default class App implements OnInit {
       this.router.url === '/' ||
       this.router.url.startsWith('/clusters/') ||
       this.router.url.startsWith('/add-cluster')
+    );
+  }
+
+  // Check if current route is project members or roles
+  isMembersActive(): boolean {
+    const projectId = this.selectedProjectId();
+    if (!projectId) return false;
+    return (
+      this.router.url.startsWith(`/projects/${projectId}/members`) ||
+      this.router.url.startsWith(`/projects/${projectId}/roles`)
     );
   }
 
