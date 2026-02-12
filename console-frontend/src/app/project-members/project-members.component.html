@@ -1,13 +1,52 @@
 <div class="card">
   <!-- Header -->
-  <div class="card-header">
+  <div class="card-header pb-0!">
     <h1 class="text-2xl font-bold dark:text-white">Project members</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
       Manage members and their permissions for this project
     </p>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <a
+        [routerLink]="['/projects', projectId(), 'members']"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Permissions
+      </a>
+      <a
+        [routerLink]="['/projects', projectId(), 'roles']"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Roles
+      </a>
+    </div>
   </div>
 
   <div class="p-6">
+    <!-- Info banner -->
+    <div
+      class="mb-6 flex items-start gap-3 rounded-md border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
+    >
+      <ng-icon
+        name="tablerInfoCircle"
+        size="1.25rem"
+        class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
+      />
+      <p class="text-sm text-indigo-700 dark:text-indigo-300">
+        Members marked with
+        <ng-icon name="tablerLock" size="0.875rem" /> inherit their permission from the organization
+        level. Change these in
+        <a
+          [routerLink]="['/organization/members']"
+          class="font-medium text-indigo-600 underline hover:text-indigo-700 hover:no-underline dark:text-indigo-400 dark:hover:text-indigo-300"
+          >Organization members</a
+        >.
+      </p>
+    </div>
+
     <button
       type="button"
       (click)="openAddMemberModal()"
@@ -26,8 +65,9 @@
         <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th width="50%" scope="col">Name</th>
-              <th width="30%" scope="col">Permissions</th>
+              <th width="40%" scope="col">Name</th>
+              <th width="20%" scope="col">Permission</th>
+              <th width="20%" scope="col">Source</th>
               <th scope="col">Actions</th>
             </tr>
           </thead>
@@ -47,21 +87,45 @@
                   </span>
                 </td>
                 <td>
-                  <button
-                    type="button"
-                    (click)="openEditMemberModal(member)"
-                    class="btn-light mr-2 inline-flex shrink-0 items-center"
-                  >
-                    <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
-                  </button>
+                  @if (member.source === 'org') {
+                    <span
+                      class="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400"
+                    >
+                      <ng-icon name="tablerLock" size="0.875rem" />
+                      Organization
+                    </span>
+                  } @else {
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Project</span>
+                  }
+                </td>
+                <td>
+                  @if (member.source === 'project') {
+                    <button
+                      type="button"
+                      (click)="openEditMemberModal(member)"
+                      class="btn-light mr-2 inline-flex shrink-0 items-center"
+                    >
+                      <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
+                    </button>
 
-                  <button
-                    type="button"
-                    (click)="openRemoveMemberModal(member.id)"
-                    class="btn-remove shrink-0"
-                  >
-                    <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
-                  </button>
+                    <button
+                      type="button"
+                      (click)="openRemoveMemberModal(member.id)"
+                      class="btn-remove shrink-0"
+                    >
+                      <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
+                    </button>
+                  } @else if (member.source === 'org' && member.permission === 'viewer') {
+                    <button
+                      type="button"
+                      (click)="openEditMemberModal(member)"
+                      class="btn-light mr-2 inline-flex shrink-0 items-center"
+                    >
+                      <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
+                    </button>
+                  } @else {
+                    <span class="text-sm text-gray-400 dark:text-gray-600">&mdash;</span>
+                  }
                 </td>
               </tr>
             }

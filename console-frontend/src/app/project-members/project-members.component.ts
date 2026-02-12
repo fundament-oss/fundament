@@ -1,14 +1,22 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerTrash, tablerPencil, tablerAlertTriangle } from '@ng-icons/tabler-icons';
+import {
+  tablerPlus,
+  tablerTrash,
+  tablerPencil,
+  tablerAlertTriangle,
+  tablerInfoCircle,
+  tablerLock,
+} from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import ModalComponent from '../modal/modal.component';
 
 type ProjectMemberPermission = 'viewer' | 'admin';
+type PermissionSource = 'org' | 'project';
 
 interface ProjectMember {
   id: string;
@@ -16,18 +24,28 @@ interface ProjectMember {
   name: string;
   email: string;
   permission: ProjectMemberPermission;
+  source: PermissionSource;
   addedAt: string;
 }
 
 @Component({
   selector: 'app-project-members',
-  imports: [CommonModule, ReactiveFormsModule, NgIcon, ModalComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    NgIcon,
+    ModalComponent,
+    RouterLink,
+    RouterLinkActive,
+  ],
   viewProviders: [
     provideIcons({
       tablerPlus,
       tablerTrash,
       tablerPencil,
       tablerAlertTriangle,
+      tablerInfoCircle,
+      tablerLock,
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -84,6 +102,7 @@ export default class ProjectMembersComponent implements OnInit {
         name: 'Alice Johnson',
         email: 'alice.johnson@example.com',
         permission: 'admin',
+        source: 'org',
         addedAt: '2024-01-15T10:30:00Z',
       },
       {
@@ -92,6 +111,7 @@ export default class ProjectMembersComponent implements OnInit {
         name: 'Bob Smith',
         email: 'bob.smith@example.com',
         permission: 'viewer',
+        source: 'org',
         addedAt: '2024-02-20T14:45:00Z',
       },
       {
@@ -99,15 +119,24 @@ export default class ProjectMembersComponent implements OnInit {
         userId: 'user-3',
         name: 'Carol Williams',
         email: 'carol.williams@example.com',
-        permission: 'viewer',
+        permission: 'admin',
+        source: 'project',
         addedAt: '2024-03-10T09:15:00Z',
+      },
+      {
+        id: 'pm-4',
+        userId: 'user-5',
+        name: 'Eve Davis',
+        email: 'eve.davis@example.com',
+        permission: 'viewer',
+        source: 'project',
+        addedAt: '2024-04-05T11:00:00Z',
       },
     ]);
 
     // Mock available users (users not yet in the project)
     this.availableUsers.set([
       { id: 'user-4', name: 'David Brown', email: 'david.brown@example.com' },
-      { id: 'user-5', name: 'Eve Davis', email: 'eve.davis@example.com' },
       { id: 'user-6', name: 'Frank Miller', email: 'frank.miller@example.com' },
     ]);
   }
@@ -154,6 +183,7 @@ export default class ProjectMembersComponent implements OnInit {
           name: user.name,
           email: user.email,
           permission,
+          source: 'project',
           addedAt: new Date().toISOString(),
         };
 

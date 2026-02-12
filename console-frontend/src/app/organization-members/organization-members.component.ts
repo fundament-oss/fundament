@@ -12,6 +12,8 @@ import {
   tablerMail,
   tablerAlertTriangle,
   tablerX,
+  tablerInfoCircle,
+  tablerPencil,
 } from '@ng-icons/tabler-icons';
 import { heroUserGroup } from '@ng-icons/heroicons/outline';
 import { TitleService } from '../title.service';
@@ -80,6 +82,8 @@ interface OrganizationMember {
       tablerClockHour4,
       tablerMail,
       tablerAlertTriangle,
+      tablerInfoCircle,
+      tablerPencil,
       heroUserGroup,
     }),
   ],
@@ -100,7 +104,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
   isSubmitting = signal(false);
 
-  // Modal state
+  // Invite modal state
   isModalOpen = signal(false);
 
   inviteEmail = signal('');
@@ -108,6 +112,20 @@ export default class OrganizationMembersComponent implements OnInit {
   invitePermission = signal('viewer');
 
   inviteError = signal<string | null>(null);
+
+  // Delete modal state
+  showDeleteModal = signal(false);
+
+  deletingMember = signal<OrganizationMember | null>(null);
+
+  // Edit modal state
+  showEditModal = signal(false);
+
+  editingMember = signal<OrganizationMember | null>(null);
+
+  editPermission = signal('viewer');
+
+  isUpdating = signal(false);
 
   // All members loaded from API (includes both active and pending)
   allMembers = signal<OrganizationMember[]>([]);
@@ -213,6 +231,68 @@ export default class OrganizationMembersComponent implements OnInit {
           ? `Failed to cancel invitation: ${err.message}`
           : 'Failed to cancel invitation',
       );
+    }
+  }
+
+  openDeleteModal(member: OrganizationMember) {
+    this.deletingMember.set(member);
+    this.showDeleteModal.set(true);
+  }
+
+  async confirmDeleteMember() {
+    const member = this.deletingMember();
+    if (!member) return;
+
+    try {
+      await firstValueFrom(this.memberClient.deleteMember({ id: member.id }));
+      this.showDeleteModal.set(false);
+      this.deletingMember.set(null);
+      await this.loadMembers();
+    } catch (err) {
+      this.error.set(
+        err instanceof Error
+          ? `Failed to remove member: ${err.message}`
+          : 'Failed to remove member',
+      );
+      this.showDeleteModal.set(false);
+    }
+  }
+
+  openEditModal(member: OrganizationMember) {
+    this.editingMember.set(member);
+    this.editPermission.set(member.permission);
+    this.showEditModal.set(true);
+  }
+
+  async confirmEditMember() {
+    const member = this.editingMember();
+    if (!member) return;
+
+    const newPermission = this.editPermission();
+    if (newPermission === member.permission) {
+      this.showEditModal.set(false);
+      return;
+    }
+
+    this.isUpdating.set(true);
+
+    try {
+      // Re-invite with the new role (delete + invite)
+      await firstValueFrom(this.memberClient.deleteMember({ id: member.id }));
+      const email = member.email || member.name;
+      await firstValueFrom(this.memberClient.inviteMember({ email, role: newPermission }));
+      this.showEditModal.set(false);
+      this.editingMember.set(null);
+      await this.loadMembers();
+    } catch (err) {
+      this.error.set(
+        err instanceof Error
+          ? `Failed to update member: ${err.message}`
+          : 'Failed to update member',
+      );
+      this.showEditModal.set(false);
+    } finally {
+      this.isUpdating.set(false);
     }
   }
 

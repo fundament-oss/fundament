@@ -237,9 +237,9 @@ select {
   @apply divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950;
 }
 
-.table tbody tr {
+/* .table tbody tr {
   @apply hover:bg-gray-50 dark:hover:bg-gray-900;
-}
+} */
 
 .table tbody td {
   @apply px-6 py-3 text-sm whitespace-nowrap dark:text-gray-300;

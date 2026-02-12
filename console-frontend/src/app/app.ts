@@ -253,6 +253,16 @@ export default class App implements OnInit {
     );
   }
 
+  // Check if current route is project members or roles
+  isMembersActive(): boolean {
+    const projectId = this.selectedProjectId();
+    if (!projectId) return false;
+    return (
+      this.router.url.startsWith(`/projects/${projectId}/members`) ||
+      this.router.url.startsWith(`/projects/${projectId}/roles`)
+    );
+  }
+
   // Initialize theme from localStorage or system preference
   private initializeTheme() {
     const savedTheme = localStorage.getItem('theme');

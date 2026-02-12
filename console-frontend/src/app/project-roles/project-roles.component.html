@@ -1,0 +1,259 @@
+<div class="card">
+  <!-- Header -->
+  <div class="card-header pb-0!">
+    <h1 class="text-2xl font-bold dark:text-white">Project members</h1>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+      Manage members and their permissions for this project
+    </p>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <a
+        [routerLink]="['/projects', projectId(), 'members']"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Permissions
+      </a>
+      <a
+        [routerLink]="['/projects', projectId(), 'roles']"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Roles
+      </a>
+    </div>
+  </div>
+
+  <div class="p-6">
+    <!-- Info banner -->
+    <div
+      class="mb-6 flex items-start gap-3 rounded-md border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
+    >
+      <ng-icon
+        name="tablerInfoCircle"
+        size="1.25rem"
+        class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
+      />
+      <p class="text-sm text-indigo-700 dark:text-indigo-300">
+        Roles provide actual access to namespace resources. Only admins (org or project level) can
+        manage roles.
+      </p>
+    </div>
+
+    <div class="mb-5 flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        (click)="openCreateModal()"
+        class="btn-primary inline-flex items-center"
+      >
+        <ng-icon name="tablerPlus" class="mr-1.5" />
+        Create role binding
+      </button>
+
+      <!-- Filters -->
+      <select
+        class="w-auto"
+        [ngModel]="namespaceFilter()"
+        (ngModelChange)="namespaceFilter.set($event)"
+      >
+        <option value="">All namespaces</option>
+        @for (ns of uniqueNamespaces(); track ns) {
+          <option [value]="ns">{{ ns }}</option>
+        }
+      </select>
+    </div>
+
+    @if (filteredBindings().length === 0) {
+      <p class="text-sm text-gray-500 dark:text-gray-400">No role bindings found.</p>
+    } @else {
+      <div class="table-container">
+        <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th width="30%" scope="col">Member</th>
+              <th width="25%" scope="col">Namespace</th>
+              <th width="30%" scope="col">Roles</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
+            @for (binding of filteredBindings(); track binding.id) {
+              <tr>
+                <td class="font-medium dark:text-white">
+                  {{ binding.memberName }}
+                </td>
+                <td>
+                  <span class="badge badge-gray">{{ binding.namespace }}</span>
+                </td>
+                <td>
+                  <div class="flex flex-wrap gap-1">
+                    @for (role of binding.roles; track role) {
+                      <span class="badge badge-blue">{{ role }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    (click)="openEditModal(binding)"
+                    class="btn-light mr-2 inline-flex shrink-0 items-center"
+                  >
+                    <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    (click)="openRemoveModal(binding.id)"
+                    class="btn-remove shrink-0"
+                  >
+                    <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Create/Edit Role Binding Modal -->
+<app-modal
+  [show]="showCreateModal()"
+  [title]="editingBinding() ? 'Edit role binding' : 'Create role binding'"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showCreateModal.set(false)"
+>
+  <form (ngSubmit)="saveBinding()" novalidate>
+    <!-- Member selection -->
+    <div class="mb-4">
+      <label for="rb-member" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+        Member
+      </label>
+      @if (editingBinding()) {
+        <p class="text-sm dark:text-white">{{ editingBinding()?.memberName }}</p>
+      } @else {
+        <select
+          id="rb-member"
+          class="w-full"
+          [ngModel]="modalMemberId()"
+          (ngModelChange)="modalMemberId.set($event)"
+          name="memberId"
+        >
+          <option value="">Select a member</option>
+          @for (member of members(); track member.id) {
+            <option [value]="member.id">{{ member.name }}</option>
+          }
+        </select>
+      }
+    </div>
+
+    <!-- Namespace selection -->
+    <div class="mb-4">
+      <label
+        for="rb-namespace"
+        class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+      >
+        Namespace
+      </label>
+      @if (editingBinding()) {
+        <p class="text-sm dark:text-white">{{ editingBinding()?.namespace }}</p>
+      } @else {
+        <select
+          id="rb-namespace"
+          class="w-full"
+          [ngModel]="modalNamespace()"
+          (ngModelChange)="modalNamespace.set($event)"
+          name="namespace"
+        >
+          <option value="">Select a namespace</option>
+          @for (ns of namespaces(); track ns) {
+            <option [value]="ns">{{ ns }}</option>
+          }
+        </select>
+      }
+    </div>
+
+    <!-- Roles checkboxes -->
+    <div class="mb-4">
+      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Roles</span>
+      <div class="space-y-2">
+        @for (role of availableRoles; track role) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm dark:text-gray-300">
+            <input
+              type="checkbox"
+              [checked]="modalRoles()[role]"
+              (change)="toggleRole(role)"
+              class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900"
+            />
+            {{ role }}
+          </label>
+        }
+      </div>
+    </div>
+
+    <div modal-footer class="modal-footer">
+      <button
+        type="button"
+        (click)="showCreateModal.set(false)"
+        class="btn-secondary"
+        [disabled]="isSubmitting()"
+      >
+        Cancel
+      </button>
+      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+        @if (isSubmitting()) {
+          Saving...
+        } @else if (editingBinding()) {
+          Save changes
+        } @else {
+          Create binding
+        }
+      </button>
+    </div>
+  </form>
+</app-modal>
+
+<!-- Remove Role Binding Modal -->
+<app-modal
+  [show]="showRemoveModal()"
+  title="Remove role binding"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showRemoveModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          Are you sure you want to remove the role binding for
+          <span class="font-semibold text-gray-800 dark:text-white">{{
+            pendingBindingDescription()
+          }}</span
+          >?
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showRemoveModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="confirmRemoveBinding()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, remove this binding
+    </button>
+  </div>
+</app-modal>
