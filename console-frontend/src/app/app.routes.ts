@@ -14,31 +14,46 @@ const routes: Routes = [
         (m) => m.default,
       ),
     data: {
-      breadcrumbs: [{ label: 'Clusters', route: '/' }, { label: 'Add cluster' }],
+      breadcrumbs: [
+        { label: 'Clusters', route: '/' },
+        { label: 'Add cluster', route: '/add-cluster' },
+      ],
     },
     children: [
       {
         path: '',
         loadComponent: () => import('./add-cluster/add-cluster.component').then((m) => m.default),
         canActivate: [clusterWizardGuard],
+        data: {
+          breadcrumbs: [{ label: 'Basics' }],
+        },
       },
       {
         path: 'nodes',
         loadComponent: () =>
           import('./add-cluster-nodes/add-cluster-nodes.component').then((m) => m.default),
         canActivate: [clusterWizardGuard],
+        data: {
+          breadcrumbs: [{ label: 'Worker nodes' }],
+        },
       },
       {
         path: 'plugins',
         loadComponent: () =>
           import('./add-cluster-plugins/add-cluster-plugins.component').then((m) => m.default),
         canActivate: [clusterWizardGuard],
+        data: {
+          breadcrumbs: [{ label: 'Plugins' }],
+        },
       },
       {
         path: 'summary',
         loadComponent: () =>
           import('./add-cluster-summary/add-cluster-summary.component').then((m) => m.default),
         canActivate: [clusterWizardGuard],
+        data: {
+          breadcrumbs: [{ label: 'Summary' }],
+        },
       },
     ],
   },
