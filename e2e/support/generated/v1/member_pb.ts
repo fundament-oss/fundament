@@ -5,8 +5,8 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import { file_v1_common } from "./common_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/member.proto.
  */
 export const file_v1_member: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiPwoTTGlzdE1lbWJlcnNSZXNwb25zZRIoCgdtZW1iZXJzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLk1lbWJlciJRChNJbnZpdGVNZW1iZXJSZXF1ZXN0EhYKBWVtYWlsGAogASgJQge6SARyAmABEiIKBHJvbGUYFCABKAlCFLpIEXIPUgZ2aWV3ZXJSBWFkbWluIj8KFEludml0ZU1lbWJlclJlc3BvbnNlEicKBm1lbWJlchgKIAEoCzIXLm9yZ2FuaXphdGlvbi52MS5NZW1iZXIiKwoTRGVsZXRlTWVtYmVyUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiFgoURGVsZXRlTWVtYmVyUmVzcG9uc2UipQEKBk1lbWJlchIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhgKC2V4dGVybmFsX2lkGB4gASgJSACIAQESEgoFZW1haWwYMiABKAlIAYgBARIMCgRyb2xlGDwgASgJEisKB2NyZWF0ZWQYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQg4KDF9leHRlcm5hbF9pZEIICgZfZW1haWwyowIKDU1lbWJlclNlcnZpY2USWAoLTGlzdE1lbWJlcnMSIy5vcmdhbml6YXRpb24udjEuTGlzdE1lbWJlcnNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RNZW1iZXJzUmVzcG9uc2USWwoMSW52aXRlTWVtYmVyEiQub3JnYW5pemF0aW9uLnYxLkludml0ZU1lbWJlclJlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuSW52aXRlTWVtYmVyUmVzcG9uc2USWwoMRGVsZXRlTWVtYmVyEiQub3JnYW5pemF0aW9uLnYxLkRlbGV0ZU1lbWJlclJlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuRGVsZXRlTWVtYmVyUmVzcG9uc2VCVVpTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjFiBnByb3RvMw", [file_buf_validate_validate, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiPwoTTGlzdE1lbWJlcnNSZXNwb25zZRIoCgdtZW1iZXJzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLk1lbWJlciJRChNJbnZpdGVNZW1iZXJSZXF1ZXN0EhYKBWVtYWlsGAogASgJQge6SARyAmABEiIKBHJvbGUYFCABKAlCFLpIEXIPUgZ2aWV3ZXJSBWFkbWluIj8KFEludml0ZU1lbWJlclJlc3BvbnNlEicKBm1lbWJlchgKIAEoCzIXLm9yZ2FuaXphdGlvbi52MS5NZW1iZXIiKwoTRGVsZXRlTWVtYmVyUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiFgoURGVsZXRlTWVtYmVyUmVzcG9uc2UiUwoXVXBkYXRlTWVtYmVyUm9sZVJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEiIKBHJvbGUYFCABKAlCFLpIEXIPUgZ2aWV3ZXJSBWFkbWluIqUBCgZNZW1iZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIYCgtleHRlcm5hbF9pZBgeIAEoCUgAiAEBEhIKBWVtYWlsGDIgASgJSAGIAQESDAoEcm9sZRg8IAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIOCgxfZXh0ZXJuYWxfaWRCCAoGX2VtYWlsMvkCCg1NZW1iZXJTZXJ2aWNlElgKC0xpc3RNZW1iZXJzEiMub3JnYW5pemF0aW9uLnYxLkxpc3RNZW1iZXJzUmVxdWVzdBokLm9yZ2FuaXphdGlvbi52MS5MaXN0TWVtYmVyc1Jlc3BvbnNlElsKDEludml0ZU1lbWJlchIkLm9yZ2FuaXphdGlvbi52MS5JbnZpdGVNZW1iZXJSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkludml0ZU1lbWJlclJlc3BvbnNlElsKDERlbGV0ZU1lbWJlchIkLm9yZ2FuaXphdGlvbi52MS5EZWxldGVNZW1iZXJSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkRlbGV0ZU1lbWJlclJlc3BvbnNlElQKEFVwZGF0ZU1lbWJlclJvbGUSKC5vcmdhbml6YXRpb24udjEuVXBkYXRlTWVtYmVyUm9sZVJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCVVpTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjFiBnByb3RvMw", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * List members request
@@ -130,6 +130,30 @@ export const DeleteMemberResponseSchema: GenMessage<DeleteMemberResponse> = /*@_
   messageDesc(file_v1_member, 5);
 
 /**
+ * Update member role request
+ *
+ * @generated from message organization.v1.UpdateMemberRoleRequest
+ */
+export type UpdateMemberRoleRequest = Message<"organization.v1.UpdateMemberRoleRequest"> & {
+  /**
+   * @generated from field: string id = 10;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string role = 20;
+   */
+  role: string;
+};
+
+/**
+ * Describes the message organization.v1.UpdateMemberRoleRequest.
+ * Use `create(UpdateMemberRoleRequestSchema)` to create a new message.
+ */
+export const UpdateMemberRoleRequestSchema: GenMessage<UpdateMemberRoleRequest> = /*@__PURE__*/
+  messageDesc(file_v1_member, 6);
+
+/**
  * Member information
  *
  * @generated from message organization.v1.Member
@@ -177,7 +201,7 @@ export type Member = Message<"organization.v1.Member"> & {
  * Use `create(MemberSchema)` to create a new message.
  */
 export const MemberSchema: GenMessage<Member> = /*@__PURE__*/
-  messageDesc(file_v1_member, 6);
+  messageDesc(file_v1_member, 7);
 
 /**
  * MemberService manages organization members
@@ -214,6 +238,16 @@ export const MemberService: GenService<{
     methodKind: "unary";
     input: typeof DeleteMemberRequestSchema;
     output: typeof DeleteMemberResponseSchema;
+  },
+  /**
+   * Update a member's role
+   *
+   * @generated from rpc organization.v1.MemberService.UpdateMemberRole
+   */
+  updateMemberRole: {
+    methodKind: "unary";
+    input: typeof UpdateMemberRoleRequestSchema;
+    output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_member, 0);

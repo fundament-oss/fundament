@@ -20,7 +20,16 @@ func (s *Server) DeleteMember(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
+	userID, ok := UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
+	}
+
 	memberID := uuid.MustParse(req.Msg.Id)
+
+	if memberID == userID {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cannot remove yourself"))
+	}
 
 	err := s.queries.MemberDelete(ctx, db.MemberDeleteParams{
 		ID:             memberID,

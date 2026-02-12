@@ -194,6 +194,7 @@ func (p *FundamentProvider) Resources(ctx context.Context) []func() resource.Res
 		NewClusterResource,
 		NewProjectResource,
 		NewNamespaceResource,
+		NewOrganizationMemberResource,
 	}
 }
 
@@ -207,6 +208,7 @@ func (p *FundamentProvider) DataSources(ctx context.Context) []func() datasource
 		NewNamespaceDataSource,
 		NewClusterNamespacesDataSource,
 		NewProjectNamespacesDataSource,
+		NewOrganizationMembersDataSource,
 	}
 }
 

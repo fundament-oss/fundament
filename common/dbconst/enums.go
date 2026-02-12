@@ -31,3 +31,11 @@ const (
 	ProjectMemberRole_Admin  ProjectMemberRole = "admin"
 	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
 )
+
+// UserRole represents valid values for tenant.users.role.
+type UserRole string
+
+const (
+	UserRole_Admin  UserRole = "admin"
+	UserRole_Viewer UserRole = "viewer"
+)

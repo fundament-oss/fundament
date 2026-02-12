@@ -95,6 +95,8 @@ const (
 	ConstraintRequireAdmin = "require_admin"
 	// ConstraintTagsUqName is defined on zappstore.tags.
 	ConstraintTagsUqName = "tags_uq_name"
+	// ConstraintUsersCkRole is defined on tenant.users.
+	ConstraintUsersCkRole = "users_ck_role"
 	// ConstraintUsersFkOrganization is defined on tenant.users.
 	ConstraintUsersFkOrganization = "users_fk_organization"
 	// ConstraintUsersUqExternalId is defined on tenant.users.

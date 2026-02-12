@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.2
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -392,7 +392,8 @@ CREATE TABLE tenant.users (
 	role text NOT NULL DEFAULT 'viewer',
 	deleted timestamptz,
 	CONSTRAINT users_pk PRIMARY KEY (id),
-	CONSTRAINT users_uq_external_id UNIQUE NULLS NOT DISTINCT (external_id,deleted)
+	CONSTRAINT users_uq_external_id UNIQUE NULLS NOT DISTINCT (external_id,deleted),
+	CONSTRAINT users_ck_role CHECK (role IN ('admin', 'viewer'))
 );
 -- ddl-end --
 ALTER TABLE tenant.users OWNER TO fun_owner;
@@ -1224,6 +1225,17 @@ CREATE OR REPLACE TRIGGER outbox_notify
 	ON authz.outbox
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.outbox_notify_trigger();
+-- ddl-end --
+
+-- object: namespaces_ix_cluster_name | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.namespaces_ix_cluster_name CASCADE;
+CREATE INDEX namespaces_ix_cluster_name ON tenant.namespaces
+USING btree
+(
+	cluster_id,
+	name
+)
+WHERE (deleted IS NULL);
 -- ddl-end --
 
 -- object: projects_fk_organization | type: CONSTRAINT --

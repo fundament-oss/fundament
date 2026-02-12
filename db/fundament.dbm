@@ -493,6 +493,9 @@ END;]]> </definition>
 	<constraint name="users_uq_external_id" type="uq-constr" nulls-not-distinct="true" table="tenant.users">
 		<columns names="external_id,deleted" ref-type="src-columns"/>
 	</constraint>
+	<constraint name="users_ck_role" type="ck-constr" table="tenant.users">
+			<expression> <![CDATA[role IN ('admin', 'viewer')]]> </expression>
+	</constraint>
 </table>
 
 <table name="api_keys" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="13" z-value="0">

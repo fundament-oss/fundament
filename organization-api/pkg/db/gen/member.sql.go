@@ -147,3 +147,23 @@ func (q *Queries) MemberListByOrganizationID(ctx context.Context, arg MemberList
 	}
 	return items, nil
 }
+
+const memberUpdateRole = `-- name: MemberUpdateRole :execrows
+UPDATE tenant.users
+SET role = $2
+WHERE id = $1 AND organization_id = $3 AND deleted IS NULL
+`
+
+type MemberUpdateRoleParams struct {
+	ID             uuid.UUID
+	Role           string
+	OrganizationID uuid.UUID
+}
+
+func (q *Queries) MemberUpdateRole(ctx context.Context, arg MemberUpdateRoleParams) (int64, error) {
+	result, err := q.db.Exec(ctx, memberUpdateRole, arg.ID, arg.Role, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}

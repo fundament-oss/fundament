@@ -12,6 +12,7 @@ import (
 type FundamentClient struct {
 	ClusterService organizationv1connect.ClusterServiceClient
 	ProjectService organizationv1connect.ProjectServiceClient
+	MemberService  organizationv1connect.MemberServiceClient
 }
 
 // TokenSource provides authentication tokens.
@@ -70,5 +71,6 @@ func newFundamentClientWithTransport(endpoint string, transport http.RoundTrippe
 	return &FundamentClient{
 		ClusterService: organizationv1connect.NewClusterServiceClient(httpClient, endpoint),
 		ProjectService: organizationv1connect.NewProjectServiceClient(httpClient, endpoint),
+		MemberService:  organizationv1connect.NewMemberServiceClient(httpClient, endpoint),
 	}
 }
