@@ -239,6 +239,8 @@ tofu import fundament_cluster.example <cluster-id>
 
 Manages a project member in Fundament. Assigns a user to a project with a specific role.
 
+> **Note:** When a project is created, the authenticated user is automatically added as an admin member. This implicit member cannot be managed by this resource. Attempting to add the project creator as a member will result in an `AlreadyExists` error.
+
 #### Example Usage
 
 ```hcl
