@@ -392,7 +392,8 @@ CREATE TABLE tenant.users (
 	role text NOT NULL DEFAULT 'viewer',
 	deleted timestamptz,
 	CONSTRAINT users_pk PRIMARY KEY (id),
-	CONSTRAINT users_uq_external_id UNIQUE NULLS NOT DISTINCT (external_id,deleted)
+	CONSTRAINT users_uq_external_id UNIQUE NULLS NOT DISTINCT (external_id,deleted),
+	CONSTRAINT users_ck_role CHECK (role IN ('admin', 'viewer'))
 );
 -- ddl-end --
 ALTER TABLE tenant.users OWNER TO fun_owner;
@@ -921,7 +922,10 @@ CREATE TABLE authz.outbox (
 	created timestamptz NOT NULL DEFAULT now(),
 	processed timestamptz,
 	retries integer NOT NULL DEFAULT 0,
+	retry_after timestamptz,
 	failed timestamptz,
+	status text NOT NULL DEFAULT 'pending',
+	status_info text,
 	CONSTRAINT outbox_pk PRIMARY KEY (id),
 	CONSTRAINT outbox_ck_single_fk CHECK (num_nonnulls(
 	user_id,
@@ -932,7 +936,8 @@ CREATE TABLE authz.outbox (
 	namespace_id,
 	api_key_id,
 	install_id
-) = 1)
+) = 1),
+	CONSTRAINT outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed'))
 );
 -- ddl-end --
 ALTER TABLE authz.outbox OWNER TO fun_owner;
@@ -961,8 +966,11 @@ CREATE OR REPLACE FUNCTION authz.users_sync_trigger ()
 	AS 
 $function$
 BEGIN
-    INSERT INTO authz.outbox (user_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (user_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -983,8 +991,11 @@ CREATE OR REPLACE FUNCTION authz.projects_sync_trigger ()
 	AS 
 $function$
 BEGIN
-    INSERT INTO authz.outbox (project_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (project_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -1005,8 +1016,11 @@ CREATE OR REPLACE FUNCTION authz.project_members_sync_trigger ()
 	AS 
 $function$
 BEGIN
-    INSERT INTO authz.outbox (project_member_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (project_member_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -1027,8 +1041,11 @@ CREATE OR REPLACE FUNCTION authz.clusters_sync_trigger ()
 	AS 
 $function$
 BEGIN
-    INSERT INTO authz.outbox (cluster_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (cluster_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -1049,8 +1066,11 @@ CREATE OR REPLACE FUNCTION authz.node_pools_sync_trigger ()
 	AS 
 $function$
 BEGIN
-    INSERT INTO authz.outbox (node_pool_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (node_pool_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -1071,8 +1091,11 @@ CREATE OR REPLACE FUNCTION authz.namespaces_sync_trigger ()
 	AS 
 $function$
 BEGIN
-    INSERT INTO authz.outbox (namespace_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (namespace_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -1093,8 +1116,11 @@ CREATE OR REPLACE FUNCTION authz.api_keys_sync_trigger ()
 	AS 
 $function$
 BEGIN
-    INSERT INTO authz.outbox (api_key_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (api_key_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -1115,8 +1141,11 @@ CREATE OR REPLACE FUNCTION authz.installs_sync_trigger ()
 	AS 
 $function$
 BEGIN
-    INSERT INTO authz.outbox (install_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (install_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;
 $function$;
@@ -1202,7 +1231,7 @@ CREATE OR REPLACE TRIGGER namespaces_outbox
 -- object: api_keys_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS api_keys_outbox ON authn.api_keys CASCADE;
 CREATE OR REPLACE TRIGGER api_keys_outbox
-	AFTER INSERT OR DELETE OR UPDATE
+	AFTER INSERT OR UPDATE
 	ON authn.api_keys
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.api_keys_sync_trigger();
@@ -1224,6 +1253,17 @@ CREATE OR REPLACE TRIGGER outbox_notify
 	ON authz.outbox
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.outbox_notify_trigger();
+-- ddl-end --
+
+-- object: namespaces_ix_cluster_name | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.namespaces_ix_cluster_name CASCADE;
+CREATE INDEX namespaces_ix_cluster_name ON tenant.namespaces
+USING btree
+(
+	cluster_id,
+	name
+)
+WHERE (deleted IS NULL);
 -- ddl-end --
 
 -- object: projects_fk_organization | type: CONSTRAINT --
@@ -1762,6 +1802,118 @@ GRANT USAGE
 GRANT INSERT
    ON TABLE authz.outbox
    TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: "grant_U_d5971f40d9" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authz
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_rw_c2f3317443 | type: PERMISSION --
+GRANT SELECT,UPDATE
+   ON TABLE authz.outbox
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: "grant_U_1d733df7c7" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA tenant
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_640291ca4e | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.users
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_c2df96d353 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.projects
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_0b51fe9a6f | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.project_members
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_bc0192a1aa | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.clusters
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_6779947a79 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.node_pools
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_9a21fdd5e2 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.namespaces
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_19219b9676 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organizations
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: "grant_U_0f749c7319" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authn
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_6927099902 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE authn.api_keys
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: "grant_U_fc43fcc5a4" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA zappstore
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_206a9460cc | type: PERMISSION --
+GRANT SELECT
+   ON TABLE zappstore.installs
+   TO fun_authz_worker;
 
 -- ddl-end --
 

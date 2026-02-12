@@ -45,11 +45,11 @@ func main() {
 }
 
 func parseModel(path string) (*Model, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) //nolint:gosec // path comes from command-line flag
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open model file: %w", err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only file
 
 	model := &Model{}
 	var currentType *Type
@@ -87,15 +87,18 @@ func parseModel(path string) (*Model, error) {
 		}
 	}
 
-	return model, scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scan model file: %w", err)
+	}
+	return model, nil
 }
 
 func generateCode(model *Model, path string) error {
-	f, err := os.Create(path)
+	f, err := os.Create(path) //nolint:gosec // path comes from command-line flag
 	if err != nil {
-		return err
+		return fmt.Errorf("create output file: %w", err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // best effort close on error path
 
 	funcs := template.FuncMap{
 		"pascal":       toPascalCase,
@@ -103,13 +106,16 @@ func generateCode(model *Model, path string) error {
 	}
 
 	tmpl := template.Must(template.New("types").Funcs(funcs).Parse(typesTemplate))
-	return tmpl.Execute(f, model)
+	if err := tmpl.Execute(f, model); err != nil {
+		return fmt.Errorf("execute template: %w", err)
+	}
+	return nil
 }
 
 func toPascalCase(s string) string {
 	parts := strings.Split(s, "_")
 	for i, part := range parts {
-		if len(part) > 0 {
+		if part != "" {
 			parts[i] = string(unicode.ToUpper(rune(part[0]))) + part[1:]
 		}
 	}
@@ -155,6 +161,11 @@ type Object struct {
 	Type       ObjectType
 	ID         string
 	Properties map[string]any
+}
+
+// String formats the object as "type:id" for use in OpenFGA tuples.
+func (o Object) String() string {
+	return string(o.Type) + ":" + o.ID
 }
 
 // Action represents the operation being performed.

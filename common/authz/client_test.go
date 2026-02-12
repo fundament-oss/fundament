@@ -47,31 +47,6 @@ func TestObjectConstructors(t *testing.T) {
 	}
 }
 
-func TestActionConstructors(t *testing.T) {
-	tests := []struct {
-		name     string
-		action   Action
-		wantName ActionName
-	}{
-		{"Member", Member(), ActionMember},
-		{"Admin", Admin(), ActionAdmin},
-		{"Viewer", Viewer(), ActionViewer},
-		{"OrganizationAction", OrganizationAction(), ActionOrganization},
-		{"CanView", CanView(), ActionCanView},
-		{"CanEdit", CanEdit(), ActionCanEdit},
-		{"CanDelete", CanDelete(), ActionCanDelete},
-		{"CanManageMembers", CanManageMembers(), ActionCanManageMembers},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.action.Name != tt.wantName {
-				t.Errorf("Name = %v, want %v", tt.action.Name, tt.wantName)
-			}
-		})
-	}
-}
-
 func TestEvaluationRequest(t *testing.T) {
 	userID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
 	projectID := uuid.MustParse("660e8400-e29b-41d4-a716-446655440000")
@@ -87,8 +62,8 @@ func TestEvaluationRequest(t *testing.T) {
 	wantObject := "project:660e8400-e29b-41d4-a716-446655440000"
 	wantRelation := "can_view"
 
-	gotUser := string(req.Subject.Type) + ":" + req.Subject.ID
-	gotObject := string(req.Resource.Type) + ":" + req.Resource.ID
+	gotUser := req.Subject.String()
+	gotObject := req.Resource.String()
 	gotRelation := string(req.Action.Name)
 
 	if gotUser != wantUser {

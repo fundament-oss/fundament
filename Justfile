@@ -11,7 +11,7 @@ watch-d2:
 
 # Format all code and text in this repo
 fmt:
-    @find . -type f \( -name "*.md" -o -name "*.adoc" -o -name "*.d2" \) -exec sed -i 's/enterprise/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
+    @find . -type f \( -name "*.md" -o -name "*.adoc" -o -name "*.d2" \) -exec {{ if os() == "macos" { "sed -i ''" } else { "sed -i" } }} 's/enterprise/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
     d2 fmt docs/assets/*.d2
     go fmt ./...
     # TODO md fmt
@@ -82,16 +82,16 @@ generate:
 lint:
     golangci-lint run --new-from-rev $(git rev-parse origin/master) ./...
 
-# Run functl against the local development instance/database
-functl *args:
+# Run funops against the local development instance/database
+funops *args:
     #!/usr/bin/env bash
     set -euo pipefail
     PASSWORD=$(kubectl --context k3d-fundament get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' | {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
-    DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./functl/cmd/functl {{ args }}
+    DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./funops/cmd/funops {{ args }}
 
-# Run fundament CLI
-fundament *args:
-    go run ./fundament-cli/cmd/fundament {{ args }}
+# Run functl CLI
+functl *args:
+    go run ./functl/cmd/functl {{ args }}
 
 # --- Cluster Worker ---
 

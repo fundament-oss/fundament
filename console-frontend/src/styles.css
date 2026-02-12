@@ -218,7 +218,7 @@ select {
 /* Table styles */
 
 .table-container {
-  @apply overflow-hidden rounded-md shadow ring-1 ring-gray-300 dark:ring-gray-700;
+  @apply overflow-x-auto rounded-md shadow ring-1 ring-gray-300 dark:ring-gray-700;
 }
 
 .table {

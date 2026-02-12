@@ -32,6 +32,20 @@ func (s *Server) CreateAPIKey(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to generate token: %w", err))
 	}
 
+	expires := pgtype.Timestamptz{Valid: false}
+
+	if req.Msg.ExpiresIn != "" {
+		expiresIn, err := time.ParseDuration(req.Msg.ExpiresIn)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse expires_in: %w", err))
+		}
+
+		expires = pgtype.Timestamptz{
+			Time:  time.Now().Add(expiresIn),
+			Valid: true,
+		}
+	}
+
 	prefix := apitoken.GetPrefix(token)
 
 	params := db.APIKeyCreateParams{
@@ -40,7 +54,7 @@ func (s *Server) CreateAPIKey(
 		Name:           req.Msg.Name,
 		TokenHash:      hash,
 		TokenPrefix:    prefix,
-		Expires:        toExpires(req.Msg.ExpiresInDays),
+		Expires:        expires,
 	}
 
 	id, err := s.queries.APIKeyCreate(ctx, params)
@@ -60,14 +74,4 @@ func (s *Server) CreateAPIKey(
 		Token:       token,
 		TokenPrefix: prefix,
 	}), nil
-}
-
-func toExpires(expiresInDays *int64) pgtype.Timestamptz {
-	if expiresInDays == nil {
-		return pgtype.Timestamptz{Valid: false}
-	}
-	return pgtype.Timestamptz{
-		Time:  time.Now().AddDate(0, 0, int(*expiresInDays)),
-		Valid: true,
-	}
 }

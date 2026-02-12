@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="42"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="68"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="-145,-28" last-zoom="0.6" scene-rect="-528,-47,3406.2,1946.52"
+	 last-position="-229,-40" last-zoom="0.6" scene-rect="-528,-67,3406.2,2346.52"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -39,6 +39,11 @@ CAUTION: Do not modify this file unless you know what you are doing.
  sql-disabled="true">
 </role>
 
+<role name="fun_authz_worker"
+ bypassrls="true"
+ sql-disabled="true">
+</role>
+
 <database name="fundament" is-template="false" allow-conns="true" sql-disabled="true">
 </database>
 
@@ -65,7 +70,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="organizations" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="220" y="680"/>
+	<position x="220" y="740"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -462,7 +467,7 @@ END;]]> </definition>
 <table name="users" layers="0" collapse-mode="1" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="240" y="440"/>
+	<position x="220" y="440"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -492,6 +497,9 @@ END;]]> </definition>
 	</constraint>
 	<constraint name="users_uq_external_id" type="uq-constr" nulls-not-distinct="true" table="tenant.users">
 		<columns names="external_id,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="users_ck_role" type="ck-constr" table="tenant.users">
+			<expression> <![CDATA[role IN ('admin', 'viewer')]]> </expression>
 	</constraint>
 </table>
 
@@ -693,7 +701,7 @@ END;]]> </definition>
 <table name="node_pools" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="1580" y="400"/>
+	<position x="1580" y="420"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -733,7 +741,7 @@ END;]]> </definition>
 <table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="400" y="1000"/>
+	<position x="100" y="1240"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -760,7 +768,7 @@ END;]]> </definition>
 <table name="plugins" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1120" y="1260"/>
+	<position x="820" y="1500"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -799,7 +807,7 @@ END;]]> </definition>
 <table name="presets" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="80" y="1720"/>
+	<position x="-220" y="1960"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -820,7 +828,7 @@ END;]]> </definition>
 <table name="preset_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="600" y="1520"/>
+	<position x="300" y="1760"/>
 	<column name="preset_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -839,7 +847,7 @@ END;]]> </definition>
 <table name="tags" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="2480" y="1700"/>
+	<position x="2180" y="1940"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -863,7 +871,7 @@ END;]]> </definition>
 <table name="plugins_tags" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1840" y="1700"/>
+	<position x="1540" y="1940"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -878,7 +886,7 @@ END;]]> </definition>
 <table name="categories" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="2540" y="1300"/>
+	<position x="2240" y="1540"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -902,7 +910,7 @@ END;]]> </definition>
 <table name="categories_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1820" y="1300"/>
+	<position x="1520" y="1540"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -917,7 +925,7 @@ END;]]> </definition>
 <table name="plugin_documentation_links" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
 	<schema name="zappstore"/>
 	<role name="fun_owner"/>
-	<position x="1840" y="980"/>
+	<position x="1540" y="1220"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -948,7 +956,7 @@ END;]]> </definition>
 <table name="project_members" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="120" y="20"/>
+	<position x="220" y="-20"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -1037,7 +1045,7 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 <table name="cluster_events" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="200" y="800"/>
+	<position x="1540" y="840"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -1133,8 +1141,17 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<column name="retries" not-null="true" default-value="0">
 		<type name="integer" length="0"/>
 	</column>
+	<column name="retry_after">
+		<type name="timestamptz" length="0"/>
+	</column>
 	<column name="failed">
 		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="status" not-null="true" default-value="'pending'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status_info">
+		<type name="text" length="0"/>
 	</column>
 	<constraint name="outbox_pk" type="pk-constr" table="authz.outbox">
 		<columns names="id" ref-type="src-columns"/>
@@ -1150,6 +1167,9 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	api_key_id,
 	install_id
 ) = 1]]> </expression>
+	</constraint>
+	<constraint name="outbox_ck_status" type="ck-constr" table="authz.outbox">
+			<expression> <![CDATA[status IN ('pending', 'completed', 'retrying', 'failed')]]> </expression>
 	</constraint>
 </table>
 
@@ -1178,8 +1198,11 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-    INSERT INTO authz.outbox (user_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (user_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1200,8 +1223,11 @@ END;]]> </definition>
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-    INSERT INTO authz.outbox (project_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (project_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1222,8 +1248,11 @@ END;]]> </definition>
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-    INSERT INTO authz.outbox (project_member_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (project_member_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1244,8 +1273,11 @@ END;]]> </definition>
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-    INSERT INTO authz.outbox (cluster_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (cluster_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1266,8 +1298,11 @@ END;]]> </definition>
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-    INSERT INTO authz.outbox (node_pool_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (node_pool_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1288,8 +1323,11 @@ END;]]> </definition>
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-    INSERT INTO authz.outbox (namespace_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (namespace_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1310,8 +1348,11 @@ END;]]> </definition>
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-    INSERT INTO authz.outbox (api_key_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (api_key_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1332,8 +1373,11 @@ END;]]> </definition>
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-    INSERT INTO authz.outbox (install_id)
-    VALUES (COALESCE(NEW.id, OLD.id));
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (install_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
     RETURN COALESCE(NEW, OLD);
 END;]]> </definition>
 </function>
@@ -1396,7 +1440,7 @@ END;]]> </definition>
 </trigger>
 
 <trigger name="api_keys_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="authn.api_keys">
 		<function signature="authz.api_keys_sync_trigger()"/>
 </trigger>
@@ -1464,12 +1508,6 @@ END;]]> </definition>
 <constraint name="clusters_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.clusters">
 	<columns names="organization_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="cluster_events_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="CASCADE" ref-table="tenant.clusters" table="tenant.cluster_events">
-	<columns names="cluster_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
@@ -1542,6 +1580,12 @@ END;]]> </definition>
 <constraint name="project_members_fk_user" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.users" table="tenant.project_members">
 	<columns names="user_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="cluster_events_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="CASCADE" ref-table="tenant.clusters" table="tenant.cluster_events">
+	<columns names="cluster_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
@@ -1920,7 +1964,7 @@ END;]]> </definition>
 <permission>
 	<object name="authn" type="schema"/>
 	<roles names="fun_authz"/>
-  <privileges usage="true"/>
+	<privileges usage="true"/>
 </permission>
 <permission>
 	<object name="authz.outbox" type="table"/>
@@ -1951,5 +1995,75 @@ END;]]> </definition>
 	<object name="authz.outbox" type="table"/>
 	<roles names="fun_cluster_worker"/>
 	<privileges insert="true"/>
+</permission>
+<permission>
+	<object name="authz" type="schema"/>
+	<roles names="fun_authz_worker"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authz.outbox" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant" type="schema"/>
+	<roles names="fun_authz_worker"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="tenant.users" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.projects" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.project_members" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.clusters" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.node_pools" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.namespaces" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.organizations" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="authn" type="schema"/>
+	<roles names="fun_authz_worker"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authn.api_keys" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="zappstore" type="schema"/>
+	<roles names="fun_authz_worker"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="zappstore.installs" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
 </permission>
 </dbmodel>

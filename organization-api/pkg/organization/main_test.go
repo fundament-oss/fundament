@@ -161,7 +161,7 @@ func newAdminPool() *pgxpool.Pool {
 
 func createRoles(pool *pgxpool.Pool) {
 	ctx := context.Background()
-	roles := []string{"fun_authn_api", "fun_fundament_api", "fun_operator", "fun_owner", "fun_authz", "fun_cluster_worker"}
+	roles := []string{"fun_authn_api", "fun_fundament_api", "fun_operator", "fun_owner", "fun_authz", "fun_cluster_worker", "fun_authz_worker"}
 	for _, role := range roles {
 		_, err := pool.Exec(ctx, fmt.Sprintf(`DO $$ BEGIN CREATE ROLE %s WITH LOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$`, role))
 		if err != nil {
