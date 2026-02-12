@@ -9,7 +9,7 @@ terraform {
 provider "fundament" {
   endpoint = "http://organization.fundament.localhost:8080"
   # Token can be set via FUNDAMENT_TOKEN environment variable
-  token = "fun_kL00uHi7yqkeSlfOmKu8NmpzUMOy1u3a3gj2"
+  # token = ""
 }
 
 # Reference an existing project
