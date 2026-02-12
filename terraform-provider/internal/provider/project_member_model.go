@@ -1,8 +1,9 @@
 package provider
 
 import (
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
 // ProjectMemberModel describes the project member data model used by both the resource and data source.
