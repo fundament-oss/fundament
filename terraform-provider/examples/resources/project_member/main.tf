@@ -20,14 +20,14 @@ resource "fundament_project" "example" {
 # Add a user as an admin member of the project
 resource "fundament_project_member" "admin" {
   project_id = fundament_project.example.id
-  user_id    = "550e8400-e29b-41d4-a716-446655440000"
+  user_id    = "<user1-id>"
   role       = "admin"
 }
 
 # Add another user as a viewer
 resource "fundament_project_member" "viewer" {
   project_id = fundament_project.example.id
-  user_id    = "550e8400-e29b-41d4-a716-446655440001"
+  user_id    = "<user2-id>"
   role       = "viewer"
 }
 
