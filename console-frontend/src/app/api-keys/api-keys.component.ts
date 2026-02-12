@@ -88,7 +88,7 @@ export default class ApiKeysComponent implements OnInit {
 
   newKeyName = signal('');
 
-  newKeyExpiresInDays = signal<number | null>(null);
+  newKeyExpiresIn = signal('');
 
   // Newly created token (only shown once)
   createdToken = signal<string | null>(null);
@@ -183,7 +183,7 @@ export default class ApiKeysComponent implements OnInit {
   startCreating() {
     this.isCreating.set(true);
     this.newKeyName.set('');
-    this.newKeyExpiresInDays.set(null);
+    this.newKeyExpiresIn.set('');
     this.error.set(null);
 
     // Focus the name input field after Angular updates the view
@@ -195,7 +195,7 @@ export default class ApiKeysComponent implements OnInit {
   cancelCreating() {
     this.isCreating.set(false);
     this.newKeyName.set('');
-    this.newKeyExpiresInDays.set(null);
+    this.newKeyExpiresIn.set('');
   }
 
   async createApiKey() {
@@ -208,10 +208,11 @@ export default class ApiKeysComponent implements OnInit {
     this.error.set(null);
 
     try {
-      const expiresInDays = this.newKeyExpiresInDays();
+      const expiresIn = this.newKeyExpiresIn();
+    console.log(expiresIn)
       const request = create(CreateAPIKeyRequestSchema, {
         name,
-        ...(expiresInDays && expiresInDays > 0 ? { expiresInDays: BigInt(expiresInDays) } : {}),
+        expiresIn,
       });
 
       const response = await firstValueFrom(this.apiKeyClient.createAPIKey(request));
@@ -223,7 +224,7 @@ export default class ApiKeysComponent implements OnInit {
       // Reset the creation form
       this.isCreating.set(false);
       this.newKeyName.set('');
-      this.newKeyExpiresInDays.set(null);
+      this.newKeyExpiresIn.set('');
 
       // Reload the list to show the new key
       await this.loadApiKeys();

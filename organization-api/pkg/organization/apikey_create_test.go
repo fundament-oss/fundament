@@ -1,0 +1,104 @@
+package organization_test
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"connectrpc.com/connect"
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func Test_APIKey_Create_Unauthenticated(t *testing.T) {
+	t.Parallel()
+
+	env := newTestAPI(t)
+
+	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
+
+	_, err := client.CreateAPIKey(context.Background(), connect.NewRequest(&organizationv1.CreateAPIKeyRequest{
+		Name:      "my-first-key",
+		ExpiresIn: "",
+	}))
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeUnauthenticated, connectErr.Code())
+}
+
+func Test_APIKey_Create(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(userID, "test-user", orgID),
+	)
+
+	token := env.createAuthnToken(t, userID)
+
+	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
+
+	twoMinutes := 2 * time.Minute
+	fiveDaysInHours := 5 * 24 * time.Hour
+
+	tests := map[string]struct {
+		CreateRequest *organizationv1.CreateAPIKeyRequest
+		WantExpires   *time.Duration
+	}{
+		"without_expiration": {
+			CreateRequest: &organizationv1.CreateAPIKeyRequest{
+				Name:      "my-first-key",
+				ExpiresIn: "",
+			},
+		},
+		"with_expiration_in_minutes": {
+			CreateRequest: &organizationv1.CreateAPIKeyRequest{
+				Name:      "another-key",
+				ExpiresIn: "2m",
+			},
+			WantExpires: &twoMinutes,
+		},
+		"with_expiration_in_hours": {
+			CreateRequest: &organizationv1.CreateAPIKeyRequest{
+				Name:      "yet-another-key",
+				ExpiresIn: "120h",
+			},
+			WantExpires: &fiveDaysInHours,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			createReq := connect.NewRequest(tc.CreateRequest)
+			createReq.Header().Set("Authorization", "Bearer "+token)
+
+			res, err := client.CreateAPIKey(context.Background(), createReq)
+			require.NoError(t, err)
+
+			getReq := connect.NewRequest(&organizationv1.GetAPIKeyRequest{
+				ApiKeyId: res.Msg.Id,
+			})
+			getReq.Header().Set("Authorization", "Bearer "+token)
+
+			getRes, err := client.GetAPIKey(context.Background(), getReq)
+			require.NoError(t, err)
+
+			if tc.WantExpires == nil {
+				assert.Nil(t, getRes.Msg.ApiKey.Expires)
+			} else {
+				require.NotNil(t, getRes.Msg.ApiKey.Expires)
+				expected := time.Now().Add(*tc.WantExpires)
+				assert.WithinDuration(t, expected, getRes.Msg.ApiKey.Expires.AsTime(), time.Minute)
+			}
+		})
+	}
+}

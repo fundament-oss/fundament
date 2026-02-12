@@ -90,30 +90,24 @@
           </div>
           <div>
             <label
-              for="expiresInDays"
+              for="expiresIn"
               class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
             >
-              Expires in (days)
+              Expires after (duration)
             </label>
             <div class="flex items-center">
               <input
-                id="expiresInDays"
+                id="expiresIn"
                 class="rounded-r-none!"
-                type="number"
-                [(ngModel)]="newKeyExpiresInDays"
-                placeholder="Leave empty for no expiration"
-                min="1"
+                type="text"
+                [(ngModel)]="newKeyExpiresIn"
+                placeholder="Leave blank if you don't want the key to expire."
                 (keyup.enter)="createApiKey()"
                 (keyup.escape)="cancelCreating()"
               />
-              <span
-                class="rounded-r-md border border-l-0 border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400"
-              >
-                days
-              </span>
             </div>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Optional. Leave empty for a key that never expires.
+              Optional. Formatted as duration, eg. 300s, 5m or 1h.
             </p>
           </div>
           <div class="flex gap-2">

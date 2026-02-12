@@ -77,8 +77,8 @@ func (c *APIKeyListCmd) Run(ctx *Context) error {
 
 // APIKeyCreateCmd handles the apikey create command.
 type APIKeyCreateCmd struct {
-	Name          string `arg:"" help:"Name for the API key."`
-	ExpiresInDays *int64 `help:"Number of days until the key expires. Omit for no expiry." short:"e"`
+	Name      string `arg:"" help:"Name for the API key."`
+	ExpiresIn string `help:"How long until the Key expires. Format is specified in string, e.g. '1h', '300s', or '5m'. Omit for no expiry." short:"e"`
 }
 
 // Run executes the apikey create command.
@@ -89,10 +89,8 @@ func (c *APIKeyCreateCmd) Run(ctx *Context) error {
 	}
 
 	req := &organizationv1.CreateAPIKeyRequest{
-		Name: c.Name,
-	}
-	if c.ExpiresInDays != nil {
-		req.ExpiresInDays = c.ExpiresInDays
+		Name:      c.Name,
+		ExpiresIn: c.ExpiresIn,
 	}
 
 	resp, err := apiClient.APIKeys().CreateAPIKey(context.Background(), connect.NewRequest(req))
