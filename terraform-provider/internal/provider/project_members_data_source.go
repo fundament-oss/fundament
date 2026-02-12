@@ -163,6 +163,17 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 		var created types.String
 		if member.Created != nil {
 			created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+		} else {
+			created = types.StringNull()
+		}
+
+		roleStr, err := projectMemberRoleToString(member.Role)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid Project Member Role",
+				fmt.Sprintf("Unable to convert role for member %q: %s", member.Id, err.Error()),
+			)
+			return
 		}
 
 		state.Members[i] = ProjectMemberModel{
@@ -170,7 +181,7 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 			ProjectID: types.StringValue(member.ProjectId),
 			UserID:    types.StringValue(member.UserId),
 			UserName:  types.StringValue(member.UserName),
-			Role:      types.StringValue(projectMemberRoleToString(member.Role)),
+			Role:      types.StringValue(roleStr),
 			Created:   created,
 		}
 	}

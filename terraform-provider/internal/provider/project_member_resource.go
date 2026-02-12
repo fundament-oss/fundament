@@ -87,9 +87,6 @@ func (r *ProjectMemberResource) Schema(ctx context.Context, req resource.SchemaR
 			"user_name": schema.StringAttribute{
 				Description: "The name of the user.",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"created": schema.StringAttribute{
 				Description: "The timestamp when the member was added.",
@@ -143,11 +140,20 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 		"role":       plan.Role.ValueString(),
 	})
 
+	protoRole, err := projectMemberRoleToProto(plan.Role.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Project Member Role",
+			fmt.Sprintf("Unable to convert role: %s", err.Error()),
+		)
+		return
+	}
+
 	// Create the project member
 	createReq := connect.NewRequest(&organizationv1.AddProjectMemberRequest{
 		ProjectId: plan.ProjectID.ValueString(),
 		UserId:    plan.UserID.ValueString(),
-		Role:      projectMemberRoleToProto(plan.Role.ValueString()),
+		Role:      protoRole,
 	})
 
 	createResp, err := r.client.ProjectService.AddProjectMember(ctx, createReq)
@@ -200,8 +206,16 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 		if member.Id != plan.ID.ValueString() {
 			continue
 		}
+		roleStr, err := projectMemberRoleToString(member.Role)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid Project Member Role",
+				fmt.Sprintf("Unable to convert role for member %q: %s", member.Id, err.Error()),
+			)
+			return
+		}
 		plan.UserName = types.StringValue(member.UserName)
-		plan.Role = types.StringValue(projectMemberRoleToString(member.Role))
+		plan.Role = types.StringValue(roleStr)
 		if member.Created != nil {
 			plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
 		} else {
@@ -280,10 +294,18 @@ func (r *ProjectMemberResource) Read(ctx context.Context, req resource.ReadReque
 		if member.Id != state.ID.ValueString() {
 			continue
 		}
+		roleStr, err := projectMemberRoleToString(member.Role)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid Project Member Role",
+				fmt.Sprintf("Unable to convert role for member %q: %s", member.Id, err.Error()),
+			)
+			return
+		}
 		state.ProjectID = types.StringValue(member.ProjectId)
 		state.UserID = types.StringValue(member.UserId)
 		state.UserName = types.StringValue(member.UserName)
-		state.Role = types.StringValue(projectMemberRoleToString(member.Role))
+		state.Role = types.StringValue(roleStr)
 		if member.Created != nil {
 			state.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
 		} else {
@@ -334,13 +356,22 @@ func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateR
 		"role_new": plan.Role.ValueString(),
 	})
 
+	protoRole, err := projectMemberRoleToProto(plan.Role.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Project Member Role",
+			fmt.Sprintf("Unable to convert role: %s", err.Error()),
+		)
+		return
+	}
+
 	// Update the member role
 	updateReq := connect.NewRequest(&organizationv1.UpdateProjectMemberRoleRequest{
 		MemberId: state.ID.ValueString(),
-		Role:     projectMemberRoleToProto(plan.Role.ValueString()),
+		Role:     protoRole,
 	})
 
-	_, err := r.client.ProjectService.UpdateProjectMemberRole(ctx, updateReq)
+	_, err = r.client.ProjectService.UpdateProjectMemberRole(ctx, updateReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeNotFound:
@@ -390,11 +421,19 @@ func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateR
 		if member.Id != state.ID.ValueString() {
 			continue
 		}
+		roleStr, err := projectMemberRoleToString(member.Role)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid Project Member Role",
+				fmt.Sprintf("Unable to convert role for member %q: %s", member.Id, err.Error()),
+			)
+			return
+		}
 		plan.ID = state.ID
 		plan.ProjectID = types.StringValue(member.ProjectId)
 		plan.UserID = types.StringValue(member.UserId)
 		plan.UserName = types.StringValue(member.UserName)
-		plan.Role = types.StringValue(projectMemberRoleToString(member.Role))
+		plan.Role = types.StringValue(roleStr)
 		if member.Created != nil {
 			plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
 		} else {
