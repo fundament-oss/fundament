@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerTrash, tablerPencil } from '@ng-icons/tabler-icons';
+import { tablerPlus, tablerTrash, tablerPencil, tablerAlertTriangle } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import ModalComponent from '../modal/modal.component';
@@ -27,6 +27,7 @@ interface ProjectMember {
       tablerPlus,
       tablerTrash,
       tablerPencil,
+      tablerAlertTriangle,
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,6 +51,12 @@ export default class ProjectMembersComponent implements OnInit {
   showAddMemberModal = signal<boolean>(false);
 
   isAddingMember = signal<boolean>(false);
+
+  showRemoveMemberModal = signal<boolean>(false);
+
+  pendingMemberId = signal<string | null>(null);
+
+  pendingMemberName = signal<string | null>(null);
 
   editingMember = signal<ProjectMember | null>(null);
 
@@ -161,14 +168,23 @@ export default class ProjectMembersComponent implements OnInit {
     this.editingMember.set(null);
   }
 
-  removeMember(memberId: string) {
+  openRemoveMemberModal(memberId: string) {
     const member = this.members().find((m) => m.id === memberId);
     if (!member) return;
 
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(`Are you sure you want to remove ${member.name} from this project?`)) {
-      return;
-    }
+    this.pendingMemberId.set(memberId);
+    this.pendingMemberName.set(member.name);
+    this.showRemoveMemberModal.set(true);
+  }
+
+  confirmRemoveMember() {
+    const memberId = this.pendingMemberId();
+    if (!memberId) return;
+
+    const member = this.members().find((m) => m.id === memberId);
+    if (!member) return;
+
+    this.showRemoveMemberModal.set(false);
 
     // Move user back to available users
     this.availableUsers.update((users) => [

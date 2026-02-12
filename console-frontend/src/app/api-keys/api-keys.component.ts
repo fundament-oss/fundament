@@ -20,7 +20,9 @@ import {
   tablerCheck,
   tablerCopy,
   tablerBan,
+  tablerAlertTriangle,
 } from '@ng-icons/tabler-icons';
+import ModalComponent from '../modal/modal.component';
 import {
   type APIKey,
   ListAPIKeysRequestSchema,
@@ -56,7 +58,7 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
 
 @Component({
   selector: 'app-api-keys',
-  imports: [CommonModule, FormsModule, NgIcon],
+  imports: [CommonModule, FormsModule, NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -65,6 +67,7 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
       tablerCheck,
       tablerCopy,
       tablerBan,
+      tablerAlertTriangle,
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -89,6 +92,15 @@ export default class ApiKeysComponent implements OnInit {
   newKeyName = signal('');
 
   newKeyExpiresInDays = signal<number | null>(null);
+
+  // Modal state
+  showRevokeModal = signal(false);
+
+  showDeleteModal = signal(false);
+
+  pendingKeyId = signal<string | null>(null);
+
+  pendingKeyName = signal<string | null>(null);
 
   // Newly created token (only shown once)
   createdToken = signal<string | null>(null);
@@ -122,14 +134,23 @@ export default class ApiKeysComponent implements OnInit {
     }
   }
 
-  async revokeApiKey(apiKeyId: string) {
-    // eslint-disable-next-line no-alert
-    if (
-      !window.confirm('Are you sure you want to revoke this API key? It will no longer be usable.')
-    ) {
-      return;
-    }
+  openRevokeModal(apiKeyId: string, apiKeyName: string) {
+    this.pendingKeyId.set(apiKeyId);
+    this.pendingKeyName.set(apiKeyName);
+    this.showRevokeModal.set(true);
+  }
 
+  openDeleteModal(apiKeyId: string, apiKeyName: string) {
+    this.pendingKeyId.set(apiKeyId);
+    this.pendingKeyName.set(apiKeyName);
+    this.showDeleteModal.set(true);
+  }
+
+  async confirmRevoke() {
+    const apiKeyId = this.pendingKeyId();
+    if (!apiKeyId) return;
+
+    this.showRevokeModal.set(false);
     this.loading.set(true);
     this.error.set(null);
 
@@ -151,14 +172,11 @@ export default class ApiKeysComponent implements OnInit {
     }
   }
 
-  async deleteApiKey(apiKeyId: string) {
-    // eslint-disable-next-line no-alert
-    if (
-      !window.confirm('Are you sure you want to delete this API key? This action cannot be undone.')
-    ) {
-      return;
-    }
+  async confirmDelete() {
+    const apiKeyId = this.pendingKeyId();
+    if (!apiKeyId) return;
 
+    this.showDeleteModal.set(false);
     this.loading.set(true);
     this.error.set(null);
 
