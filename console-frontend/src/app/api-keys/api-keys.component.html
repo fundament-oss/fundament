@@ -95,17 +95,14 @@
             >
               Expires after (duration)
             </label>
-            <div class="flex items-center">
-              <input
-                id="expiresIn"
-                class="rounded-r-none!"
-                type="text"
-                [(ngModel)]="newKeyExpiresIn"
-                placeholder="Leave blank if you don't want the key to expire."
-                (keyup.enter)="createApiKey()"
-                (keyup.escape)="cancelCreating()"
-              />
-            </div>
+            <input
+              id="expiresIn"
+              type="text"
+              [(ngModel)]="newKeyExpiresIn"
+              placeholder="Leave blank if you don't want the key to expire."
+              (keyup.enter)="createApiKey()"
+              (keyup.escape)="cancelCreating()"
+            />
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Optional. Formatted as duration, eg. 300s, 5m or 1h.
             </p>
@@ -182,7 +179,7 @@
                 </td>
                 <td class="text-sm text-gray-600 dark:text-gray-400">
                   @if (apiKey.expires) {
-                    <span [class.text-red-600]="isExpired(apiKey.expires)">
+                    <span [class.text-red-600]="isExpired(apiKey.expires)" title="{{ formatDateTime(apiKey.expires) }}">
                       {{ formatDate(apiKey.expires) }}
                     </span>
                   } @else {
@@ -193,9 +190,9 @@
                   @if (isRevoked(apiKey.revoked)) {
                     <span class="badge badge-gray">Revoked</span>
                   } @else if (isExpired(apiKey.expires)) {
-                    <span class="badge badge-red">Expired</span>
+                    <span class="badge badge-rose">Expired</span>
                   } @else {
-                    <span class="badge badge-green">Active</span>
+                    <span class="badge badge-emerald">Active</span>
                   }
                 </td>
                 <td>
