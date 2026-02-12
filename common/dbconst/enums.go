@@ -24,10 +24,28 @@ const (
 	ClusterEventSyncAction_Delete ClusterEventSyncAction = "delete"
 )
 
+// OutboxStatus represents valid values for authz.outbox.status.
+type OutboxStatus string
+
+const (
+	OutboxStatus_Pending   OutboxStatus = "pending"
+	OutboxStatus_Completed OutboxStatus = "completed"
+	OutboxStatus_Retrying  OutboxStatus = "retrying"
+	OutboxStatus_Failed    OutboxStatus = "failed"
+)
+
 // ProjectMemberRole represents valid values for tenant.project_members.role.
 type ProjectMemberRole string
 
 const (
 	ProjectMemberRole_Admin  ProjectMemberRole = "admin"
 	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
+)
+
+// UserRole represents valid values for tenant.users.role.
+type UserRole string
+
+const (
+	UserRole_Admin  UserRole = "admin"
+	UserRole_Viewer UserRole = "viewer"
 )

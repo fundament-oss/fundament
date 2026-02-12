@@ -44,10 +44,7 @@ message CreateAPIKeyRequest {
     min_len: 1
     max_len: 255
   }];
-  optional int64 expires_in_days = 20 [(buf.validate.field).int64 = {
-    gte: 1
-    lte: 365
-  }]; // Days until expiry, null = never
+  string expires_in = 20; // Time until expiry, empty = never
 }
 
 // Create API key response (only time the full token is returned)

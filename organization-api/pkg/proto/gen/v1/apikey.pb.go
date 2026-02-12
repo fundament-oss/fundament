@@ -121,7 +121,7 @@ func (x *APIKey) GetRevoked() *timestamppb.Timestamp {
 type CreateAPIKeyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,10,opt,name=name,proto3" json:"name,omitempty"`
-	ExpiresInDays *int64                 `protobuf:"varint,20,opt,name=expires_in_days,json=expiresInDays,proto3,oneof" json:"expires_in_days,omitempty"` // Days until expiry, null = never
+	ExpiresIn     string                 `protobuf:"bytes,20,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"` // Time until expiry, empty = never
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -163,11 +163,11 @@ func (x *CreateAPIKeyRequest) GetName() string {
 	return ""
 }
 
-func (x *CreateAPIKeyRequest) GetExpiresInDays() int64 {
-	if x != nil && x.ExpiresInDays != nil {
-		return *x.ExpiresInDays
+func (x *CreateAPIKeyRequest) GetExpiresIn() string {
+	if x != nil {
+		return x.ExpiresIn
 	}
-	return 0
+	return ""
 }
 
 // Create API key response (only time the full token is returned)
@@ -506,14 +506,13 @@ const file_v1_apikey_proto_rawDesc = "" +
 	"\aexpires\x18( \x01(\v2\x1a.google.protobuf.TimestampR\aexpires\x127\n" +
 	"\tlast_used\x182 \x01(\v2\x1a.google.protobuf.TimestampR\blastUsed\x124\n" +
 	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x124\n" +
-	"\arevoked\x18F \x01(\v2\x1a.google.protobuf.TimestampR\arevoked\"\x82\x01\n" +
+	"\arevoked\x18F \x01(\v2\x1a.google.protobuf.TimestampR\arevoked\"T\n" +
 	"\x13CreateAPIKeyRequest\x12\x1e\n" +
 	"\x04name\x18\n" +
 	" \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\x127\n" +
-	"\x0fexpires_in_days\x18\x14 \x01(\x03B\n" +
-	"\xbaH\a\"\x05\x18\xed\x02(\x01H\x00R\rexpiresInDays\x88\x01\x01B\x12\n" +
-	"\x10_expires_in_days\"_\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\x12\x1d\n" +
+	"\n" +
+	"expires_in\x18\x14 \x01(\tR\texpiresIn\"_\n" +
 	"\x14CreateAPIKeyResponse\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x14\n" +
@@ -601,7 +600,6 @@ func file_v1_apikey_proto_init() {
 		return
 	}
 	file_v1_common_proto_init()
-	file_v1_apikey_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
