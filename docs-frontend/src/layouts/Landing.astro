@@ -82,16 +82,12 @@ const { title = 'Fundament' } = Astro.props;
   }
 
   .hero-title {
-    @apply mb-6 bg-clip-text text-4xl font-bold sm:text-5xl lg:text-6xl;
+    @apply mb-6 bg-clip-text! text-4xl font-bold text-transparent sm:text-5xl lg:text-6xl;
     background: linear-gradient(to right, theme('colors.blue.600'), theme('colors.cyan.600'));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
   }
 
   .hero-title:where(.dark, .dark *) {
     background: linear-gradient(to right, theme('colors.blue.400'), theme('colors.cyan.400'));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
   }
 
   /* Architecture Section */
