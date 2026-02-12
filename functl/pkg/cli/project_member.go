@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -50,14 +52,13 @@ func (c *ProjectMemberListCmd) Run(ctx *Context) error {
 	}
 
 	w := NewTableWriter()
-	fmt.Fprintln(w, "ID\tUSER ID\tUSER NAME\tROLE\tCREATED")
+	fmt.Fprintln(w, "USER ID\tUSER NAME\tROLE\tCREATED")
 	for _, member := range members {
 		created := ""
 		if member.Created.IsValid() {
 			created = member.Created.AsTime().Format(TimeFormat)
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-			member.Id,
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 			member.UserId,
 			member.UserName,
 			formatMemberRole(member.Role),
@@ -126,7 +127,7 @@ func (c *ProjectMemberUpdateRoleCmd) Run(ctx *Context) error {
 
 	projectsClient := apiClient.Projects()
 
-	memberID, err := findProjectMemberID(context.Background(), projectsClient, c.ProjectID, c.UserID)
+	member, err := findProjectMember(context.Background(), projectsClient, c.ProjectID, c.UserID)
 	if err != nil {
 		return err
 	}
@@ -137,7 +138,7 @@ func (c *ProjectMemberUpdateRoleCmd) Run(ctx *Context) error {
 	}
 
 	_, err = projectsClient.UpdateProjectMemberRole(context.Background(), connect.NewRequest(&organizationv1.UpdateProjectMemberRoleRequest{
-		MemberId: memberID,
+		MemberId: member.Id,
 		Role:     role,
 	}))
 	if err != nil {
@@ -160,6 +161,7 @@ func (c *ProjectMemberUpdateRoleCmd) Run(ctx *Context) error {
 type ProjectMemberRemoveCmd struct {
 	ProjectID string `arg:"" help:"Project ID."`
 	UserID    string `help:"User ID of the member to remove." required:""`
+	Yes       bool   `help:"Skip confirmation prompt." short:"y"`
 }
 
 // Run executes the project member remove command.
@@ -171,13 +173,26 @@ func (c *ProjectMemberRemoveCmd) Run(ctx *Context) error {
 
 	projectsClient := apiClient.Projects()
 
-	memberID, err := findProjectMemberID(context.Background(), projectsClient, c.ProjectID, c.UserID)
+	member, err := findProjectMember(context.Background(), projectsClient, c.ProjectID, c.UserID)
 	if err != nil {
 		return err
 	}
 
+	if !c.Yes {
+		fmt.Printf("Remove member %q (%s) from project %s? [y/N] ", member.UserName, c.UserID, c.ProjectID)
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("failed to read input: %w", err)
+		}
+		if strings.TrimSpace(strings.ToLower(input)) != "y" {
+			fmt.Println("Aborted.")
+			return nil
+		}
+	}
+
 	_, err = projectsClient.RemoveProjectMember(context.Background(), connect.NewRequest(&organizationv1.RemoveProjectMemberRequest{
-		MemberId: memberID,
+		MemberId: member.Id,
 	}))
 	if err != nil {
 		return fmt.Errorf("failed to remove project member: %w", err)
@@ -194,22 +209,22 @@ func (c *ProjectMemberRemoveCmd) Run(ctx *Context) error {
 	return nil
 }
 
-// findProjectMemberID resolves a member ID from a project ID and user ID.
-func findProjectMemberID(ctx context.Context, client organizationv1connect.ProjectServiceClient, projectID, userID string) (string, error) {
+// findProjectMember resolves a project member from a project ID and user ID.
+func findProjectMember(ctx context.Context, client organizationv1connect.ProjectServiceClient, projectID, userID string) (*organizationv1.ProjectMember, error) {
 	resp, err := client.ListProjectMembers(ctx, connect.NewRequest(&organizationv1.ListProjectMembersRequest{
 		ProjectId: projectID,
 	}))
 	if err != nil {
-		return "", fmt.Errorf("failed to list project members: %w", err)
+		return nil, fmt.Errorf("failed to list project members: %w", err)
 	}
 
 	for _, member := range resp.Msg.Members {
 		if member.UserId == userID {
-			return member.Id, nil
+			return member, nil
 		}
 	}
 
-	return "", fmt.Errorf("user %s is not a member of project %s", userID, projectID)
+	return nil, fmt.Errorf("user %s is not a member of project %s", userID, projectID)
 }
 
 // parseMemberRole converts a CLI role string to the protobuf enum value.
