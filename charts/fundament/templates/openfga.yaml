@@ -131,39 +131,50 @@ spec:
               echo "OpenFGA is ready!"
       containers:
         - name: setup
-          image: alpine/kubectl:1.35.0
+          image: {{ $.Values.images.openfgaSetup }}
           command:
-            - sh
+            - bash
             - -c
             - |
               set -euo pipefail
 
-              # Install jq and fga CLI
-              apk add --no-cache jq
+              export FGA_API_URL="http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.apiPort | default 8080 }}"
 
-              FGA_VERSION="{{ $.Values.openfga.cliVersion }}"
-              curl -sL "https://github.com/openfga/cli/releases/download/v${FGA_VERSION}/fga_${FGA_VERSION}_linux_amd64.tar.gz" | tar xz -C /tmp fga
-              export PATH="/tmp:$PATH"
+              echo "Checking if OpenFGA store already exists..."
 
-              export FGA_API_URL=http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.apiPort | default 8080 }}
-
-              # Check if a store named "fundament" already exists
-              EXISTING_STORE_ID=$(fga store list | jq -r '.stores[] | select(.name == "fundament") | .id' | head -1)
+              # Check if store already exists
+              EXISTING_STORE_ID=$(curl -sf "$FGA_API_URL/stores" | jq -r '.stores[] | select(.name == "fundament") | .id' | head -1)
 
               if [ -n "$EXISTING_STORE_ID" ]; then
                 echo "Store 'fundament' already exists with ID: $EXISTING_STORE_ID"
                 export FGA_STORE_ID="$EXISTING_STORE_ID"
-                # Write the latest model
-                fga model write --file /model/model.fga
+
+                # Get current model ID from configmap (if exists)
+                CURRENT_MODEL_ID=$(kubectl get configmap {{ $.Release.Name }}-openfga-config -o jsonpath='{.data.authorization-model-id}' 2>/dev/null || echo "")
+
+                # Write the model and get the new model ID
+                echo "Writing authorization model..."
+                fga model write --store-id "$FGA_STORE_ID" --file /model/model.fga
+
+                NEW_MODEL_ID=$(fga model get --store-id "$FGA_STORE_ID" --field id | sed 's/^# Model ID: //')
+                echo "Authorization model ID: $NEW_MODEL_ID"
+
+                if [ "$CURRENT_MODEL_ID" = "$NEW_MODEL_ID" ]; then
+                  echo "Model unchanged, no configmap update needed"
+                  exit 0
+                fi
+
+                echo "Model changed from '$CURRENT_MODEL_ID' to '$NEW_MODEL_ID', updating configmap..."
+                MODEL_ID="$NEW_MODEL_ID"
               else
                 echo "Creating new store 'fundament' with model..."
                 RESULT=$(fga store create --name fundament --model /model/model.fga)
                 export FGA_STORE_ID=$(echo "$RESULT" | jq -r '.store.id')
                 echo "Store created with ID: $FGA_STORE_ID"
-              fi
 
-              MODEL_ID=$(fga model get --field id | sed 's/^# Model ID: //')
-              echo "Authorization model ID: $MODEL_ID"
+                MODEL_ID=$(fga model get --store-id "$FGA_STORE_ID" --field id | sed 's/^# Model ID: //')
+                echo "Authorization model ID: $MODEL_ID"
+              fi
 
               # Write store ID and model ID to a ConfigMap for the organization-api to read
               cat <<ENDOFCM | kubectl apply -f -

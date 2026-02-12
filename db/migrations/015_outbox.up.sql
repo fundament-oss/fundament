@@ -169,10 +169,17 @@ CREATE TABLE "authz"."outbox" (
 	"created" timestamp with time zone DEFAULT now() NOT NULL,
 	"processed" timestamp with time zone,
 	"retries" integer DEFAULT 0 NOT NULL,
-	"failed" timestamp with time zone
+	"retry_after" timestamp with time zone,
+	"failed" timestamp with time zone,
+	status text NOT NULL DEFAULT 'pending',
+	status_info text
 );
 
 ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_ck_single_fk" CHECK((num_nonnulls(user_id, project_id, project_member_id, cluster_id, node_pool_id, namespace_id, api_key_id, install_id) = 1));
+
+ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_ck_status" CHECK((status = ANY (ARRAY['pending'::text, 'completed'::text, 'retrying'::text, 'failed'::text]))) NOT VALID;
+
+ALTER TABLE "authz"."outbox" VALIDATE CONSTRAINT "outbox_ck_status";
 
 GRANT INSERT ON "authz"."outbox" TO "fun_authn_api";
 
@@ -182,7 +189,7 @@ ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_fk_api_key" FOREIGN KEY (api
 
 ALTER TABLE "authz"."outbox" VALIDATE CONSTRAINT "outbox_fk_api_key";
 
-CREATE TRIGGER api_keys_outbox AFTER INSERT OR DELETE OR UPDATE ON authn.api_keys FOR EACH ROW EXECUTE FUNCTION authz.api_keys_sync_trigger();
+CREATE TRIGGER api_keys_outbox AFTER INSERT OR UPDATE ON authn.api_keys FOR EACH ROW EXECUTE FUNCTION authz.api_keys_sync_trigger();
 
 CREATE UNIQUE INDEX outbox_pk ON authz.outbox USING btree (id);
 
@@ -262,3 +269,25 @@ ALTER FUNCTION authz.project_members_sync_trigger() OWNER TO fun_owner;
 ALTER FUNCTION authz.projects_sync_trigger() OWNER TO fun_owner;
 ALTER FUNCTION authz.users_sync_trigger() OWNER TO fun_owner;
 ALTER TABLE authz.outbox OWNER TO fun_owner;
+
+-- Grants for fun_authz_worker to process the outbox
+GRANT USAGE ON SCHEMA authz TO fun_authz_worker;
+GRANT USAGE ON SCHEMA tenant TO fun_authz_worker;
+GRANT USAGE ON SCHEMA authn TO fun_authz_worker;
+GRANT USAGE ON SCHEMA zappstore TO fun_authz_worker;
+
+GRANT SELECT ON public.schema_migrations TO fun_authz_worker;
+
+GRANT SELECT, UPDATE ON authz.outbox TO fun_authz_worker;
+
+GRANT SELECT ON tenant.users TO fun_authz_worker;
+GRANT SELECT ON tenant.projects TO fun_authz_worker;
+GRANT SELECT ON tenant.project_members TO fun_authz_worker;
+GRANT SELECT ON tenant.clusters TO fun_authz_worker;
+GRANT SELECT ON tenant.node_pools TO fun_authz_worker;
+GRANT SELECT ON tenant.namespaces TO fun_authz_worker;
+GRANT SELECT ON tenant.organizations TO fun_authz_worker;
+
+GRANT SELECT ON authn.api_keys TO fun_authz_worker;
+
+GRANT SELECT ON zappstore.installs TO fun_authz_worker;

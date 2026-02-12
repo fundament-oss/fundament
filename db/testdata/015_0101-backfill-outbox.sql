@@ -1,73 +1,84 @@
 -- Backfill outbox events for records that were seeded before the outbox triggers existed
+UPDATE tenant.users
+SET role='admin'
+WHERE id='019b4000-1000-7000-8000-000000000001';
+
+UPDATE tenant.users
+SET role='admin'
+WHERE id='019b4000-1000-7000-8000-000000000004';
+
+UPDATE tenant.users
+SET role='admin'
+WHERE id='019b4000-1000-7000-8000-000000000006';
 
 INSERT INTO authz.outbox (user_id)
-SELECT u.id
-FROM tenant.users u
-WHERE u.deleted IS NULL
+SELECT tenant.users.id
+FROM tenant.users
+WHERE tenant.users.deleted IS NULL
 AND NOT EXISTS (
-    SELECT 1 FROM authz.outbox o
-    WHERE o.user_id = u.id
+    SELECT 1 FROM authz.outbox
+    WHERE authz.outbox.user_id = tenant.users.id
 );
 
 INSERT INTO authz.outbox (project_id)
-SELECT p.id
-FROM tenant.projects p
-WHERE p.deleted IS NULL
+SELECT tenant.projects.id
+FROM tenant.projects
+WHERE tenant.projects.deleted IS NULL
 AND NOT EXISTS (
-    SELECT 1 FROM authz.outbox o
-    WHERE o.project_id = p.id
+    SELECT 1 FROM authz.outbox
+    WHERE authz.outbox.project_id = tenant.projects.id
 );
 
 INSERT INTO authz.outbox (project_member_id)
-SELECT pm.id
-FROM tenant.project_members pm
-WHERE pm.deleted IS NULL
+SELECT tenant.project_members.id
+FROM tenant.project_members
+WHERE tenant.project_members.deleted IS NULL
 AND NOT EXISTS (
-    SELECT 1 FROM authz.outbox o
-    WHERE o.project_member_id = pm.id
+    SELECT 1 FROM authz.outbox
+    WHERE authz.outbox.project_member_id = tenant.project_members.id
 );
 
 INSERT INTO authz.outbox (cluster_id)
-SELECT c.id
-FROM tenant.clusters c
-WHERE c.deleted IS NULL
+SELECT tenant.clusters.id
+FROM tenant.clusters
+WHERE tenant.clusters.deleted IS NULL
 AND NOT EXISTS (
-    SELECT 1 FROM authz.outbox o
-    WHERE o.cluster_id = c.id
+    SELECT 1 FROM authz.outbox
+    WHERE authz.outbox.cluster_id = tenant.clusters.id
 );
 
 INSERT INTO authz.outbox (node_pool_id)
-SELECT np.id
-FROM tenant.node_pools np
-WHERE np.deleted IS NULL
+SELECT tenant.node_pools.id
+FROM tenant.node_pools
+WHERE tenant.node_pools.deleted IS NULL
 AND NOT EXISTS (
-    SELECT 1 FROM authz.outbox o
-    WHERE o.node_pool_id = np.id
+    SELECT 1 FROM authz.outbox
+    WHERE authz.outbox.node_pool_id = tenant.node_pools.id
 );
 
 INSERT INTO authz.outbox (namespace_id)
-SELECT n.id
-FROM tenant.namespaces n
-WHERE n.deleted IS NULL
+SELECT tenant.namespaces.id
+FROM tenant.namespaces
+WHERE tenant.namespaces.deleted IS NULL
 AND NOT EXISTS (
-    SELECT 1 FROM authz.outbox o
-    WHERE o.namespace_id = n.id
+    SELECT 1 FROM authz.outbox
+    WHERE authz.outbox.namespace_id = tenant.namespaces.id
 );
 
 INSERT INTO authz.outbox (api_key_id)
-SELECT ak.id
-FROM authn.api_keys ak
-WHERE ak.deleted IS NULL
+SELECT authn.api_keys.id
+FROM authn.api_keys
+WHERE authn.api_keys.deleted IS NULL
 AND NOT EXISTS (
-    SELECT 1 FROM authz.outbox o
-    WHERE o.api_key_id = ak.id
+    SELECT 1 FROM authz.outbox
+    WHERE authz.outbox.api_key_id = authn.api_keys.id
 );
 
 INSERT INTO authz.outbox (install_id)
-SELECT i.id
-FROM zappstore.installs i
-WHERE i.deleted IS NULL
+SELECT zappstore.installs.id
+FROM zappstore.installs
+WHERE zappstore.installs.deleted IS NULL
 AND NOT EXISTS (
-    SELECT 1 FROM authz.outbox o
-    WHERE o.install_id = i.id
+    SELECT 1 FROM authz.outbox
+    WHERE authz.outbox.install_id = zappstore.installs.id
 );

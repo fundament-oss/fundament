@@ -20,6 +20,8 @@ images:
   consoleFrontend: console-frontend:latest
   docsFrontend: docs-frontend:latest
   clusterWorker: cluster-worker:latest
+  authzWorker: authz-worker:latest
+  openfgaSetup: openfga-setup:latest
 
 # Database (CloudNativePG)
 db:
@@ -47,8 +49,8 @@ clusterWorker:
   enabled: false
   replicas: 1
   logLevel: info
-  gardenerMode: mock  # mock or real
-  gardenerKubeconfigSecret: ""  # Secret name containing kubeconfig for real mode
+  gardenerMode: mock # mock or real
+  gardenerKubeconfigSecret: "" # Secret name containing kubeconfig for real mode
 
 # Console Frontend
 consoleFrontend:
@@ -60,10 +62,19 @@ docsFrontend:
   enabled: false
   replicas: 1
 
+# Authz Worker (outbox pattern for OpenFGA tuple sync)
+authzWorker:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  pollInterval: "5s"
+  batchSize: 100
+  maxRetries: 3
+
+# OpenFGA (Fine-Grained Authorization)
 openfga:
   enabled: false
   image: openfga/openfga:v1.11.3
-  cliVersion: "0.7.8"
   replicas: 1
   playground:
     enabled: false

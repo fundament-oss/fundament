@@ -1,0 +1,13 @@
+root = "/src"
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o tmp/fun-authz-worker ./authz-worker/cmd/fun-authz-worker"
+entrypoint = "tmp/fun-authz-worker"
+include_ext = ["go", "mod", "sum"]
+include_dir = ["authz-worker"]
+exclude_dir = ["tmp"]
+delay = 500
+
+[log]
+time = false

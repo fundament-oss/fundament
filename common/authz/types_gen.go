@@ -10,6 +10,11 @@ const (
 	ObjectTypeUser         ObjectType = "user"
 	ObjectTypeOrganization ObjectType = "organization"
 	ObjectTypeProject      ObjectType = "project"
+	ObjectTypeCluster      ObjectType = "cluster"
+	ObjectTypeNodePool     ObjectType = "node_pool"
+	ObjectTypeNamespace    ObjectType = "namespace"
+	ObjectTypeApiKey       ObjectType = "api_key"
+	ObjectTypeInstall      ObjectType = "install"
 )
 
 // ActionName identifies the operation being performed.
@@ -17,14 +22,18 @@ const (
 type ActionName string
 
 const (
-	ActionMember           ActionName = "member"
 	ActionAdmin            ActionName = "admin"
 	ActionViewer           ActionName = "viewer"
-	ActionOrganization     ActionName = "organization"
+	ActionOwner            ActionName = "owner"
+	ActionProjectAdmin     ActionName = "project_admin"
+	ActionProjectViewer    ActionName = "project_viewer"
 	ActionCanView          ActionName = "can_view"
 	ActionCanEdit          ActionName = "can_edit"
 	ActionCanDelete        ActionName = "can_delete"
 	ActionCanManageMembers ActionName = "can_manage_members"
+	ActionParent           ActionName = "parent"
+	ActionCreator          ActionName = "creator"
+	ActionCanUse           ActionName = "can_use"
 )
 
 // Object represents an entity in an authorization check (subject or resource).
@@ -32,6 +41,11 @@ type Object struct {
 	Type       ObjectType
 	ID         string
 	Properties map[string]any
+}
+
+// String formats the object as "type:id" for use in OpenFGA tuples.
+func (o Object) String() string {
+	return string(o.Type) + ":" + o.ID
 }
 
 // Action represents the operation being performed.
@@ -118,12 +132,47 @@ func Project(id uuid.UUID) Object {
 	}
 }
 
-// Action constructors
-
-// Member creates an Action for the member relation.
-func Member() Action {
-	return Action{Name: ActionMember}
+// Cluster creates an Object of type cluster.
+func Cluster(id uuid.UUID) Object {
+	return Object{
+		Type: ObjectTypeCluster,
+		ID:   id.String(),
+	}
 }
+
+// NodePool creates an Object of type node_pool.
+func NodePool(id uuid.UUID) Object {
+	return Object{
+		Type: ObjectTypeNodePool,
+		ID:   id.String(),
+	}
+}
+
+// Namespace creates an Object of type namespace.
+func Namespace(id uuid.UUID) Object {
+	return Object{
+		Type: ObjectTypeNamespace,
+		ID:   id.String(),
+	}
+}
+
+// ApiKey creates an Object of type api_key.
+func ApiKey(id uuid.UUID) Object {
+	return Object{
+		Type: ObjectTypeApiKey,
+		ID:   id.String(),
+	}
+}
+
+// Install creates an Object of type install.
+func Install(id uuid.UUID) Object {
+	return Object{
+		Type: ObjectTypeInstall,
+		ID:   id.String(),
+	}
+}
+
+// Action constructors
 
 // Admin creates an Action for the admin relation.
 func Admin() Action {
@@ -135,9 +184,19 @@ func Viewer() Action {
 	return Action{Name: ActionViewer}
 }
 
-// OrganizationAction creates an Action for the organization relation.
-func OrganizationAction() Action {
-	return Action{Name: ActionOrganization}
+// Owner creates an Action for the owner relation.
+func Owner() Action {
+	return Action{Name: ActionOwner}
+}
+
+// ProjectAdmin creates an Action for the project_admin relation.
+func ProjectAdmin() Action {
+	return Action{Name: ActionProjectAdmin}
+}
+
+// ProjectViewer creates an Action for the project_viewer relation.
+func ProjectViewer() Action {
+	return Action{Name: ActionProjectViewer}
 }
 
 // CanView creates an Action for the can_view relation.
@@ -158,4 +217,19 @@ func CanDelete() Action {
 // CanManageMembers creates an Action for the can_manage_members relation.
 func CanManageMembers() Action {
 	return Action{Name: ActionCanManageMembers}
+}
+
+// Parent creates an Action for the parent relation.
+func Parent() Action {
+	return Action{Name: ActionParent}
+}
+
+// Creator creates an Action for the creator relation.
+func Creator() Action {
+	return Action{Name: ActionCreator}
+}
+
+// CanUse creates an Action for the can_use relation.
+func CanUse() Action {
+	return Action{Name: ActionCanUse}
 }

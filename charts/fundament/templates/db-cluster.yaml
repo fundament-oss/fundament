@@ -48,6 +48,11 @@ spec:
       - name: fun_authz
         login: false
         bypassrls: true
+      - name: fun_authz_worker
+        login: true
+        bypassrls: true
+        passwordSecret:
+          name: {{ $.Release.Name }}-db-fun-authz-worker
 {{- if $.Values.openfga.enabled }}
       - name: fun_openfga
         login: true
