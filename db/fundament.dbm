@@ -3,7 +3,7 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="40"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="42"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
 	 last-position="-145,-28" last-zoom="0.6" scene-rect="-528,-47,3406.2,1946.52"
 	 default-owner="postgres"
@@ -17,6 +17,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 </role>
 
 <role name="fun_fundament_api"
+ sql-disabled="true">
+</role>
+
+<role name="fun_cluster_worker"
  sql-disabled="true">
 </role>
 
@@ -168,6 +172,53 @@ CAUTION: Do not modify this file unless you know what you are doing.
 		RAISE EXCEPTION 'Cannot delete cluster with undeleted namespaces';
 	END IF;
 	RETURN NEW;
+END;]]> </definition>
+</function>
+
+<function name="cluster_reset_synced"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    NEW.synced := NULL;
+    NEW.sync_claimed_at := NULL;
+    NEW.sync_attempts := 0;
+    NEW.sync_error := NULL;
+    RETURN NEW;
+END;]]> </definition>
+</function>
+
+<function name="cluster_sync_notify"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF NEW.synced IS NULL AND (TG_OP = 'INSERT' OR OLD.synced IS NOT NULL) THEN
+        PERFORM pg_notify('cluster_sync', '');
+    END IF;
+    RETURN NEW;
 END;]]> </definition>
 </function>
 
@@ -545,7 +596,7 @@ BEGIN
 END;]]> </definition>
 </function>
 
-<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
+<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="16" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
 	<position x="880" y="420"/>
@@ -564,13 +615,31 @@ END;]]> </definition>
 	<column name="kubernetes_version" not-null="true">
 		<type name="text" length="0"/>
 	</column>
-	<column name="status" not-null="true">
-		<type name="text" length="0"/>
-	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
 	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="synced">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="sync_claimed_at">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="sync_error">
+		<type name="text" length="0"/>
+	</column>
+	<column name="sync_attempts" not-null="true" default-value="0">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="shoot_status">
+		<type name="text" length="0"/>
+	</column>
+	<column name="shoot_status_message">
+		<type name="text" length="0"/>
+	</column>
+	<column name="shoot_status_updated">
 		<type name="timestamptz" length="0"/>
 	</column>
 	<constraint name="clusters_pk" type="pk-constr" table="tenant.clusters">
@@ -578,9 +647,6 @@ END;]]> </definition>
 	</constraint>
 	<constraint name="clusters_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.clusters">
 		<columns names="organization_id,name,deleted" ref-type="src-columns"/>
-	</constraint>
-	<constraint name="clusters_ck_status" type="ck-constr" table="tenant.clusters">
-			<expression> <![CDATA[status IN ('unspecified','provisioning','starting','running','upgrading','error','stopping','stopped')]]> </expression>
 	</constraint>
 </table>
 
@@ -593,6 +659,36 @@ END;]]> </definition>
 <policy name="organization_isolation" table="tenant.clusters" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 </policy>
+
+<policy name="cluster_worker_all_access" table="tenant.clusters" command="ALL" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<trigger name="cluster_reset_synced" firing-type="BEFORE" per-line="true" constraint="false"
+	 ins-event="false" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.clusters">
+	<condition> <![CDATA[OLD.name IS DISTINCT FROM NEW.name
+    OR OLD.region IS DISTINCT FROM NEW.region
+    OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
+    OR (OLD.deleted IS NULL AND NEW.deleted IS NOT NULL)]]> </condition>
+		<function signature="tenant.cluster_reset_synced()"/>
+		<columns names="name,region,kubernetes_version,deleted"/>
+</trigger>
+
+<trigger name="cluster_sync_notify" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.clusters">
+		<function signature="tenant.cluster_sync_notify()"/>
+</trigger>
+
+<index name="clusters_idx_needs_sync" table="tenant.clusters"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="created"/>
+		</idxelement>
+	<predicate> <![CDATA[synced IS NULL]]> </predicate>
+</index>
 
 <table name="node_pools" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
@@ -938,6 +1034,65 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
+<table name="cluster_events" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<position x="200" y="800"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="cluster_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="event_type" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="sync_action">
+		<type name="text" length="0"/>
+	</column>
+	<column name="message">
+		<type name="text" length="0"/>
+	</column>
+	<column name="attempt">
+		<type name="integer" length="0"/>
+	</column>
+	<constraint name="cluster_events_pk" type="pk-constr" table="tenant.cluster_events">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="cluster_events_ck_event_type" type="ck-constr" table="tenant.cluster_events">
+			<expression> <![CDATA[event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted')]]> </expression>
+	</constraint>
+	<constraint name="cluster_events_ck_sync_action" type="ck-constr" table="tenant.cluster_events">
+			<expression> <![CDATA[sync_action IN ('sync','delete')]]> </expression>
+	</constraint>
+</table>
+
+<policy name="cluster_events_worker_all_access" table="tenant.cluster_events" command="ALL" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="cluster_events_organization_isolation" table="tenant.cluster_events" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (
+    SELECT 1 FROM tenant.clusters c
+    WHERE c.id = cluster_events.cluster_id
+    AND c.organization_id = authn.current_organization_id()
+)]]> </expression>
+</policy>
+
+<index name="cluster_events_idx_cluster_created" table="tenant.cluster_events"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="true" nulls-first="false" asc-order="false">
+			<column name="cluster_id"/>
+		</idxelement>
+		<idxelement use-sorting="true" nulls-first="false" asc-order="false">
+			<column name="created"/>
+		</idxelement>
+</index>
+
 <table name="outbox" layers="0" collapse-mode="2" max-obj-count="15" z-value="0">
 	<schema name="authz"/>
 	<role name="fun_owner"/>
@@ -1258,6 +1413,18 @@ END;]]> </definition>
 		<function signature="authz.outbox_notify_trigger()"/>
 </trigger>
 
+<index name="namespaces_ix_cluster_name" table="tenant.namespaces"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="cluster_id"/>
+		</idxelement>
+		<idxelement use-sorting="false">
+			<column name="name"/>
+		</idxelement>
+	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
+</index>
+
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.projects">
 	<columns names="organization_id" ref-type="src-columns"/>
@@ -1297,6 +1464,12 @@ END;]]> </definition>
 <constraint name="clusters_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.clusters">
 	<columns names="organization_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="cluster_events_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="CASCADE" ref-table="tenant.clusters" table="tenant.cluster_events">
+	<columns names="cluster_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
@@ -1445,6 +1618,11 @@ END;]]> </definition>
 	 dst-table="tenant.organizations" reference-fk="clusters_fk_organization"
 	 src-required="false" dst-required="true"/>
 
+<relationship name="rel_cluster_events_clusters" type="relfk" layers="0"
+	 src-table="tenant.cluster_events"
+	 dst-table="tenant.clusters" reference-fk="cluster_events_fk_cluster"
+	 src-required="false" dst-required="true"/>
+
 <relationship name="rel_node_pools_clusters" type="relfk" layers="0"
 	 src-table="tenant.node_pools"
 	 dst-table="tenant.clusters" reference-fk="node_pools_fk_cluster"
@@ -1575,9 +1753,19 @@ END;]]> </definition>
 	<privileges usage="true"/>
 </permission>
 <permission>
+	<object name="tenant" type="schema"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
 	<object name="tenant.organizations" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.organizations" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="tenant.organizations" type="table"/>
@@ -1608,6 +1796,26 @@ END;]]> </definition>
 	<object name="tenant.clusters" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.clusters" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.cluster_events" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true"/>
+</permission>
+<permission>
+	<object name="tenant.cluster_events" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true" insert="true"/>
+</permission>
+<permission>
+	<object name="tenant.namespaces" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="tenant.node_pools" type="table"/>
@@ -1733,5 +1941,15 @@ END;]]> </definition>
 	<object name="authz" type="schema"/>
 	<roles names="fun_authn_api"/>
 	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authz" type="schema"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authz.outbox" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges insert="true"/>
 </permission>
 </dbmodel>

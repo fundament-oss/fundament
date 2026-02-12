@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	db "github.com/fundament-oss/fundament/functl/pkg/db/gen"
+	db "github.com/fundament-oss/fundament/funops/pkg/db/gen"
 )
 
 // UserCmd groups user-related commands.

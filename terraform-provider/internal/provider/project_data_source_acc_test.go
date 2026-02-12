@@ -23,19 +23,19 @@ func TestAccProjectDataSource(t *testing.T) {
 		t.Fatal("FUNDAMENT_TOKEN must be set for acceptance tests")
 	}
 
-	projectID := os.Getenv("FUNDAMENT_TEST_PROJECT_ID")
-	if projectID == "" {
-		t.Skip("FUNDAMENT_TEST_PROJECT_ID not set, skipping project data source test")
+	projectName := os.Getenv("FUNDAMENT_TEST_PROJECT_NAME")
+	if projectName == "" {
+		t.Skip("FUNDAMENT_TEST_PROJECT_NAME not set, skipping project data source test")
 	}
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectDataSourceConfig(projectID),
+				Config: testAccProjectDataSourceConfig(projectName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.fundament_project.test", "id", projectID),
-					resource.TestCheckResourceAttrSet("data.fundament_project.test", "name"),
+					resource.TestCheckResourceAttr("data.fundament_project.test", "name", projectName),
+					resource.TestCheckResourceAttrSet("data.fundament_project.test", "id"),
 					resource.TestCheckResourceAttrSet("data.fundament_project.test", "created"),
 				),
 			},
@@ -43,14 +43,14 @@ func TestAccProjectDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectDataSourceConfig(projectID string) string {
+func testAccProjectDataSourceConfig(projectName string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
   # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN from environment
 }
 
 data "fundament_project" "test" {
-  id = %[1]q
+  name = %[1]q
 }
-`, projectID)
+`, projectName)
 }

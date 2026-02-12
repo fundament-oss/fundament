@@ -21,6 +21,7 @@ enum ClusterStatus {
   CLUSTER_STATUS_ERROR = 5;
   CLUSTER_STATUS_STOPPING = 6;
   CLUSTER_STATUS_STOPPED = 7;
+  CLUSTER_STATUS_DELETING = 8;  // Cluster deletion in progress
 }
 
 // Node pool status

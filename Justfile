@@ -1,5 +1,6 @@
-mod terraform-provider 'terraform-provider'
-mod e2e 'e2e'
+mod terraform-provider
+mod e2e
+mod cluster-worker
 
 _default:
     @just --list
@@ -81,13 +82,19 @@ generate:
 lint:
     golangci-lint run --new-from-rev $(git rev-parse origin/master) ./...
 
-# Run functl against the local development instance/database
-functl *args:
+# Run funops against the local development instance/database
+funops *args:
     #!/usr/bin/env bash
     set -euo pipefail
     PASSWORD=$(kubectl --context k3d-fundament get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' | {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
-    DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./functl/cmd/functl {{ args }}
+    DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./funops/cmd/funops {{ args }}
 
-# Run fundament CLI
-fundament *args:
-    go run ./fundament-cli/cmd/fundament {{ args }}
+# Run functl CLI
+functl *args:
+    go run ./functl/cmd/functl {{ args }}
+
+# --- Cluster Worker ---
+
+# Set up local Gardener for testing real Gardener client
+local-gardener:
+    just -f cluster-worker/justfile local-gardener

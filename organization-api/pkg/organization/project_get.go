@@ -14,6 +14,25 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
+func (s *Server) GetProjectByName(
+	ctx context.Context,
+	req *connect.Request[organizationv1.GetProjectByNameRequest],
+) (*connect.Response[organizationv1.GetProjectResponse], error) {
+	project, err := s.queries.ProjectGetByName(ctx, db.ProjectGetByNameParams{
+		Name: req.Msg.Name,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project: %w", err))
+	}
+
+	return connect.NewResponse(&organizationv1.GetProjectResponse{
+		Project: projectFromGetRow(&project),
+	}), nil
+}
+
 func (s *Server) GetProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetProjectRequest],

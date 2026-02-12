@@ -7,7 +7,7 @@ import { tablerPlus, tablerEye } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { CLUSTER } from '../../connect/tokens';
-import { ClusterSummary } from '../../generated/v1/cluster_pb';
+import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
 
 @Component({

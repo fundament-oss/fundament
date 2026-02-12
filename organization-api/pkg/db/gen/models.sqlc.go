@@ -5,20 +5,18 @@
 package db
 
 import (
-	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type TenantCluster struct {
-	ID                uuid.UUID
-	OrganizationID    uuid.UUID
-	Name              string
-	Region            string
-	KubernetesVersion string
-	Status            dbconst.ClusterStatus
-	Created           pgtype.Timestamptz
-	Deleted           pgtype.Timestamptz
+type TenantClusterEvent struct {
+	ID         uuid.UUID
+	ClusterID  uuid.UUID
+	EventType  string
+	Created    pgtype.Timestamptz
+	SyncAction pgtype.Text
+	Message    pgtype.Text
+	Attempt    pgtype.Int4
 }
 
 type TenantNamespace struct {

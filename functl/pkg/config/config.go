@@ -25,8 +25,8 @@ type Credentials struct {
 // DefaultConfig returns the default configuration.
 func DefaultConfig() *Config {
 	return &Config{
-		APIEndpoint: "http://organization.127.0.0.1.nip.io:8080",
-		AuthnURL:    "http://authn.127.0.0.1.nip.io:8080",
+		APIEndpoint: "http://organization.fundament.localhost:8080",
+		AuthnURL:    "http://authn.fundament.localhost:8080",
 		Output:      "table",
 	}
 }
@@ -185,4 +185,4 @@ func DeleteCredentials() error {
 }
 
 // ErrNotAuthenticated is returned when no API key is configured.
-var ErrNotAuthenticated = errors.New("not authenticated: run 'fundament auth login' to authenticate")
+var ErrNotAuthenticated = errors.New("not authenticated: run 'functl auth login' to authenticate")

@@ -31,6 +31,13 @@ build:
       context: .
       docker:
         dockerfile: console-frontend/Dockerfile
+        buildArgs:
+          APP_CONFIGURATION: development
+
+    - image: cluster-worker
+      context: .
+      docker:
+        dockerfile: cluster-worker/Dockerfile
 
     - image: docs-frontend
       context: .
@@ -50,6 +57,7 @@ deploy:
           images.authnApi: "{{.IMAGE_FULLY_QUALIFIED_authn_api}}"
           images.organizationApi: "{{.IMAGE_FULLY_QUALIFIED_organization_api}}"
           images.consoleFrontend: "{{.IMAGE_FULLY_QUALIFIED_console_frontend}}"
+          images.clusterWorker: "{{.IMAGE_FULLY_QUALIFIED_cluster_worker}}"
           images.docsFrontend: "{{.IMAGE_FULLY_QUALIFIED_docs_frontend}}"
 
 profiles:
@@ -70,6 +78,15 @@ profiles:
         path: /deploy/helm/releases/0/valuesFiles
         value:
           - charts/fundament/values-production.yaml
+
+  # Local Gardener profile - use real local Gardener instead of mock
+  - name: local-gardener
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/setValues
+        value:
+          clusterWorker.gardenerMode: real
+          clusterWorker.gardenerKubeconfigSecret: gardener-kubeconfig
 
   # Hot reload profile for local development
   - name: hotreload
@@ -94,7 +111,7 @@ profiles:
         value: {}
       - op: replace
         path: /build/artifacts/4/docker/dockerfile
-        value: docs-frontend/hotreload/Dockerfile
+        value: cluster-worker/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/4/sync
         value: {}

@@ -7,28 +7,39 @@ terraform {
 }
 
 provider "fundament" {
-  endpoint = "http://organization.127.0.0.1.nip.io:8080"
+  endpoint = "http://organization.fundament.localhost:8080"
   # Token can be set via FUNDAMENT_TOKEN environment variable
   # token = ""
 }
 
-# Look up an existing namespace by ID
-data "fundament_namespace" "example" {
-  id         = "your-namespace-uuid"
-  cluster_id = "your-cluster-uuid"
+# Look up an existing namespace by cluster name and namespace name
+data "fundament_namespace" "by_cluster" {
+  cluster_name = "production"
+  name         = "my-namespace"
 }
 
-output "namespace_name" {
-  description = "The name of the namespace"
-  value       = data.fundament_namespace.example.name
+# Or look up a namespace by project name and namespace name
+data "fundament_namespace" "by_project" {
+  project_name = "my-project"
+  name         = "my-namespace"
 }
 
-output "namespace_project" {
+output "namespace_id" {
+  description = "The unique identifier of the namespace"
+  value       = data.fundament_namespace.by_cluster.id
+}
+
+output "namespace_project_id" {
   description = "The project ID that owns this namespace"
-  value       = data.fundament_namespace.example.project_id
+  value       = data.fundament_namespace.by_cluster.project_id
+}
+
+output "namespace_cluster_id" {
+  description = "The cluster ID where this namespace is deployed"
+  value       = data.fundament_namespace.by_cluster.cluster_id
 }
 
 output "namespace_created" {
   description = "When the namespace was created"
-  value       = data.fundament_namespace.example.created
+  value       = data.fundament_namespace.by_cluster.created
 }

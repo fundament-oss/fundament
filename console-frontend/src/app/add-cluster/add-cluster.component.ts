@@ -34,13 +34,10 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
   clusterForm: FormGroup;
 
   // Dropdown options based on Gardener
-  regions = [
-    { value: 'nl1', label: 'NL1' },
-    { value: 'nl2', label: 'NL2' },
-    { value: 'nl3', label: 'NL3' },
-  ];
+  // TODO: Fetch from API based on cloud profile
+  regions = [{ value: 'local', label: 'Local' }];
 
-  kubernetesVersions = ['1.34.x', '1.28.x', '1.27.x', '1.26.x', '1.25.x'];
+  kubernetesVersions = ['1.31.1', '1.32.0', '1.33.0', '1.34.0'];
 
   constructor() {
     this.titleService.setTitle('Add cluster components');
@@ -54,8 +51,8 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
           Validators.pattern(/^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$/),
         ],
       ],
-      region: ['nl1', Validators.required],
-      kubernetesVersion: ['1.34.x', Validators.required],
+      region: ['local', Validators.required],
+      kubernetesVersion: ['1.31.1', Validators.required],
     });
   }
 

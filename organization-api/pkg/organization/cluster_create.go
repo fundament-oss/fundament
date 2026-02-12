@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -25,7 +24,6 @@ func (s *Server) CreateCluster(
 		Name:              req.Msg.Name,
 		Region:            req.Msg.Region,
 		KubernetesVersion: req.Msg.KubernetesVersion,
-		Status:            dbconst.ClusterStatus_Unspecified,
 	}
 
 	clusterID, err := s.queries.ClusterCreate(ctx, params)

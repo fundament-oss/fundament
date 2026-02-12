@@ -9,6 +9,16 @@ import "v1/common.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
+// Cluster sync state from Gardener
+message SyncState {
+  optional google.protobuf.Timestamp synced_at = 10;
+  optional string sync_error = 20;
+  int32 sync_attempts = 30;
+  optional string shoot_status = 40;
+  optional string shoot_message = 50;
+  optional google.protobuf.Timestamp status_updated_at = 60;
+}
+
 // ClusterService manages Kubernetes clusters
 service ClusterService {
   // List all clusters for the current organization
@@ -16,6 +26,9 @@ service ClusterService {
 
   // Get detailed information about a specific cluster
   rpc GetCluster(GetClusterRequest) returns (GetClusterResponse);
+
+  // Get a cluster by name
+  rpc GetClusterByName(GetClusterByNameRequest) returns (GetClusterResponse);
 
   // Create a new cluster
   rpc CreateCluster(CreateClusterRequest) returns (CreateClusterResponse);
@@ -59,6 +72,12 @@ service ClusterService {
   // List namespaces for a cluster
   rpc ListClusterNamespaces(ListClusterNamespacesRequest) returns (ListClusterNamespacesResponse);
 
+  // Get a namespace by cluster name and namespace name
+  rpc GetNamespaceByClusterAndName(GetNamespaceByClusterAndNameRequest) returns (GetNamespaceByClusterAndNameResponse);
+
+  // Get a namespace by project name and namespace name
+  rpc GetNamespaceByProjectAndName(GetNamespaceByProjectAndNameRequest) returns (GetNamespaceByProjectAndNameResponse);
+
   // Create a namespace in a cluster
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse);
 
@@ -76,20 +95,30 @@ message ListClustersRequest {
 
 // List clusters response
 message ListClustersResponse {
+  // Cluster summary information
+  message ClusterSummary {
+    string id = 10;
+    string name = 20;
+    ClusterStatus status = 30;
+    string region = 40;
+    int32 project_count = 50;
+    int32 node_pool_count = 60;
+    SyncState sync_state = 70;
+  }
   repeated ClusterSummary clusters = 10;
-}
-
-// Cluster summary information
-message ClusterSummary {
-  string id = 10;
-  string name = 20;
-  ClusterStatus status = 30;
-  string region = 40;
 }
 
 // Get cluster request
 message GetClusterRequest {
   string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// Get cluster by name request
+message GetClusterByNameRequest {
+  string name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
 }
 
 // Get cluster response
@@ -106,6 +135,7 @@ message ClusterDetails {
   ClusterStatus status = 50;
   google.protobuf.Timestamp created = 60;
   ResourceUsageInfo resource_usage = 70;
+  SyncState sync_state = 80;
 }
 
 // Resource usage information for a cluster
@@ -127,22 +157,6 @@ message NodePool {
   NodePoolStatus status = 70;
   string version = 80;
 }
-
-// Cluster member information
-message ClusterMember {
-  string user_id = 10;
-  string name = 20;
-  string role = 30;
-  google.protobuf.Timestamp last_active = 40;
-}
-
-// Project associated with cluster
-message ClusterProject {
-  string project_id = 10;
-  string name = 20;
-  repeated string namespaces = 30;
-}
-
 // Create cluster request
 message CreateClusterRequest {
   string name = 10 [(buf.validate.field).string = {
@@ -180,20 +194,23 @@ message DeleteClusterRequest {
 // Get cluster activity request
 message GetClusterActivityRequest {
   string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  int32 limit = 20;  // Optional: limit number of events returned (default 50)
 }
 
 // Get cluster activity response
 message GetClusterActivityResponse {
-  repeated ActivityEntry activities = 10;
+  repeated ClusterEvent events = 10;
 }
 
-// Activity entry
-message ActivityEntry {
-  google.protobuf.Timestamp timestamp = 10;
-  string action = 20;
-  string details = 30;
+// Cluster event from cluster_events table
+message ClusterEvent {
+  string id = 10;
+  string event_type = 20;      // sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted
+  google.protobuf.Timestamp created_at = 30;
+  optional string sync_action = 40;  // sync, delete (for sync events)
+  optional string message = 50;
+  optional int32 attempt = 60;       // Sync attempt number (for sync events)
 }
-
 // Get kubeconfig request
 message GetKubeconfigRequest {
   string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
@@ -313,6 +330,7 @@ message ClusterNamespace {
   string id = 10;
   string name = 20;
   string project_id = 30;
+  string cluster_id = 35;
   google.protobuf.Timestamp created = 40;
 }
 
@@ -341,4 +359,47 @@ message CreateNamespaceResponse {
 // Delete namespace request
 message DeleteNamespaceRequest {
   string namespace_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// Get namespace by cluster and name request
+message GetNamespaceByClusterAndNameRequest {
+  string cluster_name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string namespace_name = 20 [
+    (buf.validate.field).string = {max_len: 63},
+    (buf.validate.field).cel = {
+      id: "dns1123label"
+      message: "must be a valid DNS-1123 label"
+      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+    }
+  ];
+}
+
+// Get namespace by cluster and name response
+message GetNamespaceByClusterAndNameResponse {
+  ClusterNamespace namespace = 10;
+}
+
+// Get namespace by project and name request
+message GetNamespaceByProjectAndNameRequest {
+  string project_name = 10 [(buf.validate.field).cel = {
+    id: "dns1123label"
+    message: "must be a valid DNS-1123 label"
+    expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+  }];
+  string namespace_name = 20 [
+    (buf.validate.field).string = {max_len: 63},
+    (buf.validate.field).cel = {
+      id: "dns1123label"
+      message: "must be a valid DNS-1123 label"
+      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+    }
+  ];
+}
+
+// Get namespace by project and name response
+message GetNamespaceByProjectAndNameResponse {
+  ClusterNamespace namespace = 10;
 }
