@@ -17,7 +17,6 @@ import {
   tablerAlertTriangle,
 } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
 import ModalComponent from '../modal/modal.component';
 
 interface RoleBinding {
@@ -49,8 +48,6 @@ export default class ProjectRolesComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);
-
-  private toastService = inject(ToastService);
 
   projectId = signal<string>('');
 
@@ -194,7 +191,6 @@ export default class ProjectRolesComponent implements OnInit {
       this.roleBindings.update((bindings) =>
         bindings.map((rb) => (rb.id === editId ? { ...rb, roles: selectedRoles } : rb)),
       );
-      this.toastService.success(`Role binding updated for ${member.name}`);
     } else {
       const newBinding: RoleBinding = {
         id: `rb-${Date.now()}`,
@@ -204,7 +200,6 @@ export default class ProjectRolesComponent implements OnInit {
         roles: selectedRoles,
       };
       this.roleBindings.update((bindings) => [...bindings, newBinding]);
-      this.toastService.success(`Role binding created for ${member.name} in ${namespace}`);
     }
 
     this.showCreateModal.set(false);
@@ -223,9 +218,6 @@ export default class ProjectRolesComponent implements OnInit {
     if (!binding) return;
 
     this.roleBindings.update((bindings) => bindings.filter((rb) => rb.id !== bindingId));
-    this.toastService.info(
-      `Role binding removed for ${binding.memberName} in ${binding.namespace}`,
-    );
     this.showRemoveModal.set(false);
   }
 }

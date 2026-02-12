@@ -9,9 +9,9 @@ import {
   tablerAlertTriangle,
   tablerInfoCircle,
   tablerLock,
+  tablerArrowBackUp,
 } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
 import ModalComponent from '../modal/modal.component';
 
 type ProjectMemberPermission = 'viewer' | 'admin';
@@ -24,6 +24,7 @@ interface ProjectMember {
   email: string;
   permission: ProjectMemberPermission;
   source: PermissionSource;
+  orgPermission: ProjectMemberPermission | null;
   addedAt: string;
 }
 
@@ -38,6 +39,7 @@ interface ProjectMember {
       tablerAlertTriangle,
       tablerInfoCircle,
       tablerLock,
+      tablerArrowBackUp,
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,8 +51,6 @@ export default class ProjectMembersComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   private fb = inject(FormBuilder);
-
-  private toastService = inject(ToastService);
 
   projectId = signal<string>('');
 
@@ -95,6 +95,7 @@ export default class ProjectMembersComponent implements OnInit {
         email: 'alice.johnson@example.com',
         permission: 'admin',
         source: 'org',
+        orgPermission: 'admin',
         addedAt: '2024-01-15T10:30:00Z',
       },
       {
@@ -104,6 +105,7 @@ export default class ProjectMembersComponent implements OnInit {
         email: 'bob.smith@example.com',
         permission: 'viewer',
         source: 'org',
+        orgPermission: 'viewer',
         addedAt: '2024-02-20T14:45:00Z',
       },
       {
@@ -113,6 +115,7 @@ export default class ProjectMembersComponent implements OnInit {
         email: 'carol.williams@example.com',
         permission: 'admin',
         source: 'project',
+        orgPermission: null,
         addedAt: '2024-03-10T09:15:00Z',
       },
       {
@@ -122,6 +125,7 @@ export default class ProjectMembersComponent implements OnInit {
         email: 'eve.davis@example.com',
         permission: 'viewer',
         source: 'project',
+        orgPermission: null,
         addedAt: '2024-04-05T11:00:00Z',
       },
     ]);
@@ -157,11 +161,10 @@ export default class ProjectMembersComponent implements OnInit {
     if (this.editingMember()) {
       // Edit existing member
       const member = this.editingMember()!;
+      const newSource: PermissionSource =
+        member.source === 'org' && permission !== member.permission ? 'project' : member.source;
       this.members.update((members) =>
-        members.map((m) => (m.id === member.id ? { ...m, permission } : m)),
-      );
-      this.toastService.success(
-        `${member.name}'s permission updated to ${permission === 'admin' ? 'Project admin' : 'Project member'}`,
+        members.map((m) => (m.id === member.id ? { ...m, permission, source: newSource } : m)),
       );
     } else {
       // Add new member
@@ -176,12 +179,12 @@ export default class ProjectMembersComponent implements OnInit {
           email: user.email,
           permission,
           source: 'project',
+          orgPermission: null,
           addedAt: new Date().toISOString(),
         };
 
         this.members.update((members) => [...members, newMember]);
         this.availableUsers.update((users) => users.filter((u) => u.id !== userId));
-        this.toastService.success(`${user.name} added to project`);
       }
     }
 
@@ -214,6 +217,17 @@ export default class ProjectMembersComponent implements OnInit {
       { id: member.userId, name: member.name, email: member.email },
     ]);
     this.members.update((members) => members.filter((m) => m.id !== memberId));
-    this.toastService.info(`${member.name} removed from project`);
+  }
+
+  resetToOrgDefault(member: ProjectMember) {
+    if (!member.orgPermission) return;
+
+    this.members.update((members) =>
+      members.map((m) =>
+        m.id === member.id
+          ? { ...m, permission: member.orgPermission!, source: 'org' as PermissionSource }
+          : m,
+      ),
+    );
   }
 }

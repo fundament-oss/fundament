@@ -21,10 +21,17 @@
         size="1.25rem"
         class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
       />
-      <p class="text-sm text-indigo-700 dark:text-indigo-300">
-        Organization admins can manage members across all projects. This permission overrides
-        project-level permissions.
-      </p>
+      <div class="text-sm text-indigo-700 dark:text-indigo-300">
+        <p class="mb-2">
+          Organization admins can manage members across all projects. This permission overrides
+          project-level permissions.
+        </p>
+
+        <p>
+          Permissions only give access to manage members. To control access to project resources,
+          configure <strong class="font-semibold">roles</strong> on project level.
+        </p>
+      </div>
     </div>
 
     <button type="button" (click)="openModal()" class="btn-primary mb-6 inline-flex items-center">
@@ -280,22 +287,45 @@
   </div>
 
   <div class="mb-4">
-    <label
-      for="editPermission"
-      class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-    >
-      Permission
-    </label>
-    <select
-      id="editPermission"
-      [ngModel]="editPermission()"
-      (ngModelChange)="editPermission.set($event)"
-      name="editPermission"
-      class="w-full"
-    >
-      <option value="viewer">Viewer – Read access to resources</option>
-      <option value="admin">Admin – Full access to resources</option>
-    </select>
+    <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
+    <div class="space-y-2">
+      <label
+        class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+      >
+        <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
+          <input
+            name="editPermission"
+            type="radio"
+            value="viewer"
+            [ngModel]="editPermission()"
+            (ngModelChange)="editPermission.set($event)"
+            class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+          />
+          Viewer
+        </span>
+        <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+          Read access to resources
+        </span>
+      </label>
+      <label
+        class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+      >
+        <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
+          <input
+            name="editPermission"
+            type="radio"
+            value="admin"
+            [ngModel]="editPermission()"
+            (ngModelChange)="editPermission.set($event)"
+            class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+          />
+          Admin
+        </span>
+        <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+          Full access to resources
+        </span>
+      </label>
+    </div>
   </div>
 
   <div modal-footer class="modal-footer">
@@ -357,23 +387,47 @@
     </div>
 
     <div class="mb-6">
-      <label
-        for="permission"
-        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-      >
-        Permissions
-      </label>
-      <select
-        id="permission"
-        [ngModel]="invitePermission()"
-        (ngModelChange)="invitePermission.set($event)"
-        name="permission"
-        [disabled]="isSubmitting()"
-        class="w-full disabled:opacity-50"
-      >
-        <option value="viewer">Viewer – Read access to resources</option>
-        <option value="admin">Admin – Full access to resources</option>
-      </select>
+      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
+      <div class="space-y-2">
+        <label
+          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+        >
+          <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
+            <input
+              name="permission"
+              type="radio"
+              value="viewer"
+              [ngModel]="invitePermission()"
+              (ngModelChange)="invitePermission.set($event)"
+              [disabled]="isSubmitting()"
+              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+            />
+            Viewer
+          </span>
+          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+            Read access to resources
+          </span>
+        </label>
+        <label
+          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+        >
+          <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
+            <input
+              name="permission"
+              type="radio"
+              value="admin"
+              [ngModel]="invitePermission()"
+              (ngModelChange)="invitePermission.set($event)"
+              [disabled]="isSubmitting()"
+              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+            />
+            Admin
+          </span>
+          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+            Full access to resources
+          </span>
+        </label>
+      </div>
     </div>
 
     <div modal-footer class="modal-footer">

@@ -13,7 +13,7 @@
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
       >
-        Permissions
+        Members
       </a>
       <a
         [routerLink]="['/projects', projectId(), 'roles']"
@@ -36,8 +36,8 @@
         class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
       />
       <p class="text-sm text-indigo-700 dark:text-indigo-300">
-        Roles provide actual access to namespace resources. Only admins (org or project level) can
-        manage roles.
+        Roles provide actual access to namespace resources. Only admins (on organization or project
+        level) can manage roles.
       </p>
     </div>
 
@@ -176,20 +176,23 @@
       }
     </div>
 
-    <!-- Roles checkboxes -->
+    <!-- Roles switches -->
     <div class="mb-4">
       <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Roles</span>
-      <div class="space-y-2">
+      <div class="space-y-3">
         @for (role of availableRoles; track role) {
-          <label class="flex cursor-pointer items-center gap-2 text-sm dark:text-gray-300">
-            <input
-              type="checkbox"
-              [checked]="modalRoles()[role]"
-              (change)="toggleRole(role)"
-              class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900"
-            />
-            {{ role }}
-          </label>
+          <div>
+            <label class="inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                [checked]="modalRoles()[role]"
+                (change)="toggleRole(role)"
+                class="peer sr-only"
+              />
+              <span class="switch"></span>
+              <span class="ml-3 text-sm font-medium dark:text-gray-300">{{ role }}</span>
+            </label>
+          </div>
         }
       </div>
     </div>
