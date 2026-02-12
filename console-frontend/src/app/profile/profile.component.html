@@ -29,12 +29,12 @@
           <p>{{ userInfo()?.id || 'N/A' }}</p>
         </div>
         <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Organization ID:</p>
-          <p>{{ userInfo()?.organizationId || 'N/A' }}</p>
+          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Organization IDs:</p>
+          <p>{{ userInfo()?.organizationIds?.join(', ') || 'N/A' }}</p>
         </div>
         <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">External ID:</p>
-          <p>{{ userInfo()?.externalId || 'N/A' }}</p>
+          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">External ref:</p>
+          <p>{{ userInfo()?.externalRef || 'N/A' }}</p>
         </div>
         <div class="sm:flex">
           <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Groups:</p>

@@ -89,7 +89,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*Server, error)
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization", "Connect-Protocol-Version"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "Connect-Protocol-Version", "Fun-Organization"},
 		AllowCredentials: true,
 	})
 

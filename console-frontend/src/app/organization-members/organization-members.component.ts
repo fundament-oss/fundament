@@ -62,7 +62,7 @@ interface OrganizationMember {
   id: string;
   name: string;
   email?: string;
-  externalId?: string;
+  externalRef?: string;
   role: string;
   isCurrentUser?: boolean;
   isPending: boolean;
@@ -112,12 +112,12 @@ export default class OrganizationMembersComponent implements OnInit {
   // All members loaded from API (includes both active and pending)
   allMembers = signal<OrganizationMember[]>([]);
 
-  // Computed: active members (have external_id)
+  // Computed: active members (have external_ref)
   get activeMembers(): OrganizationMember[] {
     return this.allMembers().filter((m) => !m.isPending);
   }
 
-  // Computed: pending invitations (no external_id)
+  // Computed: pending invitations (no external_ref)
   get pendingInvitations(): OrganizationMember[] {
     return this.allMembers().filter((m) => m.isPending);
   }
@@ -142,10 +142,10 @@ export default class OrganizationMembersComponent implements OnInit {
         id: member.id,
         name: member.name,
         email: member.email,
-        externalId: member.externalId,
+        externalRef: member.externalRef,
         role: member.role,
         isCurrentUser: currentUser?.id === member.id,
-        isPending: !member.externalId,
+        isPending: !member.externalRef,
         created: member.created ? timestampDate(member.created) : undefined,
       }));
 

@@ -25,45 +25,57 @@ func (s *Server) InviteMember(
 	email := req.Msg.Email
 	role := req.Msg.Role
 
-	_, err := s.queries.MemberGetByEmail(ctx, db.MemberGetByEmailParams{
-		Email:          email,
-		OrganizationID: organizationID,
-	})
+	params := db.MemberGetByEmailParams{
+		Email: email,
+	}
+
+	// Check if email is already a member of this organization
+	_, err := s.queries.MemberGetByEmail(ctx, params)
 	if err == nil {
 		return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("email is already in use"))
 	}
+
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to check email: %w", err))
 	}
 
-	member, err := s.queries.MemberInvite(ctx, db.MemberInviteParams{
+	// Create the user record
+	userRow, err := s.queries.MemberInviteUser(ctx, db.MemberInviteUserParams{
+		Email: email,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create invited user: %w", err))
+	}
+
+	// Create the organization membership
+	membershipRow, err := s.queries.MemberInviteMembership(ctx, db.MemberInviteMembershipParams{
 		OrganizationID: organizationID,
-		Name:           email,
+		UserID:         userRow.ID,
 		Role:           role,
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to invite member: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create membership: %w", err))
 	}
 
 	return connect.NewResponse(&organizationv1.InviteMemberResponse{
-		Member: memberFromInviteRow(&member),
+		Member: memberFromInviteRows(&userRow, &membershipRow),
 	}), nil
 }
 
-func memberFromInviteRow(m *db.MemberInviteRow) *organizationv1.Member {
+func memberFromInviteRows(u *db.MemberInviteUserRow, m *db.MemberInviteMembershipRow) *organizationv1.Member {
 	member := &organizationv1.Member{
-		Id:      m.ID.String(),
-		Name:    m.Name,
+		Id:      u.ID.String(),
+		Name:    u.Name,
 		Role:    m.Role,
 		Created: timestamppb.New(m.Created.Time),
 	}
 
-	if m.ExternalID.Valid {
-		member.ExternalId = &m.ExternalID.String
+	if u.ExternalRef.Valid {
+		member.ExternalRef = &u.ExternalRef.String
 	}
 
-	if m.Email.Valid {
-		member.Email = &m.Email.String
+	if u.Email.Valid {
+		member.Email = &u.Email.String
 	}
 
 	return member

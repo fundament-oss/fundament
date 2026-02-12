@@ -43,6 +43,14 @@ const (
 	ConstraintNodePoolsUqName = "node_pools_uq_name"
 	// ConstraintOrganizationsUqName is defined on tenant.organizations.
 	ConstraintOrganizationsUqName = "organizations_uq_name"
+	// ConstraintOrganizationsUsersCkRole is defined on tenant.organizations_users.
+	ConstraintOrganizationsUsersCkRole = "organizations_users_ck_role"
+	// ConstraintOrganizationsUsersFkOrganization is defined on tenant.organizations_users.
+	ConstraintOrganizationsUsersFkOrganization = "organizations_users_fk_organization"
+	// ConstraintOrganizationsUsersFkUser is defined on tenant.organizations_users.
+	ConstraintOrganizationsUsersFkUser = "organizations_users_fk_user"
+	// ConstraintOrganizationsUsersUqUser is defined on tenant.organizations_users.
+	ConstraintOrganizationsUsersUqUser = "organizations_users_uq_user"
 	// ConstraintOutboxCkSingleFk is defined on authz.outbox.
 	ConstraintOutboxCkSingleFk = "outbox_ck_single_fk"
 	// ConstraintOutboxCkStatus is defined on authz.outbox.
@@ -57,6 +65,8 @@ const (
 	ConstraintOutboxFkNamespace = "outbox_fk_namespace"
 	// ConstraintOutboxFkNodePool is defined on authz.outbox.
 	ConstraintOutboxFkNodePool = "outbox_fk_node_pool"
+	// ConstraintOutboxFkOrganizationUser is defined on authz.outbox.
+	ConstraintOutboxFkOrganizationUser = "outbox_fk_organization_user"
 	// ConstraintOutboxFkProject is defined on authz.outbox.
 	ConstraintOutboxFkProject = "outbox_fk_project"
 	// ConstraintOutboxFkProjectMember is defined on authz.outbox.
@@ -97,12 +107,8 @@ const (
 	ConstraintRequireAdmin = "require_admin"
 	// ConstraintTagsUqName is defined on zappstore.tags.
 	ConstraintTagsUqName = "tags_uq_name"
-	// ConstraintUsersCkRole is defined on tenant.users.
-	ConstraintUsersCkRole = "users_ck_role"
-	// ConstraintUsersFkOrganization is defined on tenant.users.
-	ConstraintUsersFkOrganization = "users_fk_organization"
-	// ConstraintUsersUqExternalId is defined on tenant.users.
-	ConstraintUsersUqExternalId = "users_uq_external_id"
+	// ConstraintUsersUqExternalRef is defined on tenant.users.
+	ConstraintUsersUqExternalRef = "users_uq_external_ref"
 	// ConstraintVerifyDeleted is defined on (constraint trigger).
 	ConstraintVerifyDeleted = "verify_deleted"
 )

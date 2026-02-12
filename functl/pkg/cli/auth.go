@@ -102,7 +102,7 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 			"authenticated": true,
 			"user_id":       user.Id,
 			"user_name":     user.Name,
-			"organization":  user.OrganizationId,
+			"organizations": user.OrganizationIds,
 		})
 	}
 
@@ -110,7 +110,7 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	PrintKeyValue(w, "Authenticated", "yes")
 	PrintKeyValue(w, "User ID", user.Id)
 	PrintKeyValue(w, "User Name", user.Name)
-	PrintKeyValue(w, "Organization", user.OrganizationId)
+	PrintKeyValue(w, "Organizations", user.OrganizationIds)
 	return w.Flush()
 }
 

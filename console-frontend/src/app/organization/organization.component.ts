@@ -17,10 +17,11 @@ import {
   UpdateOrganizationRequestSchema,
   Organization,
 } from '../../generated/v1/organization_pb';
-import { AUTHN, ORGANIZATION } from '../../connect/tokens';
+import { ORGANIZATION } from '../../connect/tokens';
 import { TitleService } from '../title.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { formatDate as formatDateUtil } from '../utils/date-format';
+import { OrganizationContextService } from '../organization-context.service';
 
 @Component({
   selector: 'app-organization',
@@ -38,9 +39,9 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 export default class OrganizationComponent implements OnInit {
   private titleService = inject(TitleService);
 
-  private authnClient = inject(AUTHN);
-
   private organizationClient = inject(ORGANIZATION);
+
+  private organizationContextService = inject(OrganizationContextService);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -69,14 +70,14 @@ export default class OrganizationComponent implements OnInit {
     this.error.set(null);
 
     try {
-      // Get current user to retrieve organization ID
-      const userResponse = await firstValueFrom(this.authnClient.getUserInfo({}));
-      if (!userResponse.user?.organizationId) {
+      // Get organization ID from context service
+      const organizationId = this.organizationContextService.currentOrganizationId();
+      if (!organizationId) {
         throw new Error('Organization ID not found');
       }
 
       const request = create(GetOrganizationRequestSchema, {
-        id: userResponse.user.organizationId,
+        id: organizationId,
       });
       const response = await firstValueFrom(this.organizationClient.getOrganization(request));
 

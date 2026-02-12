@@ -27,10 +27,10 @@ var _ authnhttp.ServerInterface = (*AuthnServer)(nil)
 // user represents user data for JWT generation.
 // This is an internal adapter type between sqlc row types and JWT claims.
 type user struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	Name           string
-	ExternalID     string
+	ID              uuid.UUID
+	OrganizationIDs []uuid.UUID
+	Name            string
+	ExternalRef     string
 }
 
 // Config holds the configuration for the authentication server.
@@ -80,14 +80,14 @@ func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, expiry tim
 	claims := auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "fundament-authn-api",
-			Subject:   u.ExternalID,
+			Subject:   u.ID.String(),
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
 		},
-		UserID:         u.ID,
-		OrganizationID: u.OrganizationID,
-		Name:           u.Name,
-		Groups:         groups,
+		UserID:          u.ID,
+		OrganizationIDs: u.OrganizationIDs,
+		Name:            u.Name,
+		Groups:          groups,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
