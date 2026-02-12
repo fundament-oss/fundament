@@ -1,5 +1,4 @@
 import { Component, computed, inject, Input, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerChevronRight } from '@ng-icons/tabler-icons';
@@ -12,7 +11,7 @@ export interface BreadcrumbSegment {
 
 @Component({
   selector: 'app-breadcrumb',
-  imports: [CommonModule, RouterLink, NgIcon],
+  imports: [RouterLink, NgIcon],
   viewProviders: [
     provideIcons({
       tablerChevronRight,

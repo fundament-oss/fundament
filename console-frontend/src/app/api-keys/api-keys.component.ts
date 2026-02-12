@@ -7,7 +7,6 @@ import {
   ElementRef,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
@@ -58,7 +57,7 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
 
 @Component({
   selector: 'app-api-keys',
-  imports: [CommonModule, FormsModule, NgIcon, ModalComponent],
+  imports: [FormsModule, NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,

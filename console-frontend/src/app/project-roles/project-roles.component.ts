@@ -6,7 +6,6 @@ import {
   ChangeDetectionStrategy,
   computed,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -33,7 +32,7 @@ const AVAILABLE_ROLES = ['deploy', 'view-pods', 'view-logs', 'manage-services'];
 
 @Component({
   selector: 'app-project-roles',
-  imports: [CommonModule, FormsModule, NgIcon, ModalComponent, RouterLink, RouterLinkActive],
+  imports: [FormsModule, NgIcon, ModalComponent, RouterLink, RouterLinkActive],
   viewProviders: [
     provideIcons({
       tablerPlus,

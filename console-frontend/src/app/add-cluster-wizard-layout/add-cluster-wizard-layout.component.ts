@@ -6,7 +6,6 @@ import {
   OnDestroy,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CheckmarkIconComponent } from '../icons';
 import { ClusterWizardStateService } from './cluster-wizard-state.service';
@@ -18,7 +17,7 @@ interface ProgressStep {
 
 @Component({
   selector: 'app-add-cluster-wizard-layout',
-  imports: [CommonModule, RouterOutlet, RouterLink, CheckmarkIconComponent],
+  imports: [RouterOutlet, RouterLink, CheckmarkIconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-wizard-layout.component.html',
 })

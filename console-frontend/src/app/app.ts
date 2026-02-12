@@ -15,7 +15,6 @@ import {
   ActivatedRouteSnapshot,
 } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { CommonModule } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerCircleCheck,
@@ -58,7 +57,6 @@ const reloadApp = () => {
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
-    CommonModule,
     SelectorModalComponent,
     FundamentLogoIconComponent,
     KubernetesIconComponent,
