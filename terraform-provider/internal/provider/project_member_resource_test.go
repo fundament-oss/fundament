@@ -8,27 +8,32 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
+var (
+	testMemberID  = "019b4000-1000-7000-8000-000000000001"
+	testProjectID = "019b4000-2000-7000-8000-000000000001"
+	testUserID    = "019b4000-3000-7000-8000-000000000001"
+)
+
 func TestProjectMemberModel_Resource(t *testing.T) {
-	// Test that the model can be created with expected values
 	model := ProjectMemberModel{
-		ID:        types.StringValue("test-member-id"),
-		ProjectID: types.StringValue("test-project-id"),
-		UserID:    types.StringValue("test-user-id"),
+		ID:        types.StringValue(testMemberID),
+		ProjectID: types.StringValue(testProjectID),
+		UserID:    types.StringValue(testUserID),
 		UserName:  types.StringValue("test-user"),
 		Role:      types.StringValue("admin"),
 		Created:   types.StringValue("2024-01-15T10:30:00Z"),
 	}
 
-	if model.ID.ValueString() != "test-member-id" {
-		t.Errorf("Expected ID 'test-member-id', got '%s'", model.ID.ValueString())
+	if model.ID.ValueString() != testMemberID {
+		t.Errorf("Expected ID %q, got %q", testMemberID, model.ID.ValueString())
 	}
 
-	if model.ProjectID.ValueString() != "test-project-id" {
-		t.Errorf("Expected ProjectID 'test-project-id', got '%s'", model.ProjectID.ValueString())
+	if model.ProjectID.ValueString() != testProjectID {
+		t.Errorf("Expected ProjectID %q, got %q", testProjectID, model.ProjectID.ValueString())
 	}
 
-	if model.UserID.ValueString() != "test-user-id" {
-		t.Errorf("Expected UserID 'test-user-id', got '%s'", model.UserID.ValueString())
+	if model.UserID.ValueString() != testUserID {
+		t.Errorf("Expected UserID %q, got %q", testUserID, model.UserID.ValueString())
 	}
 
 	if model.UserName.ValueString() != "test-user" {
@@ -45,11 +50,10 @@ func TestProjectMemberModel_Resource(t *testing.T) {
 }
 
 func TestProjectMemberModel_NullValues(t *testing.T) {
-	// Test that null values are handled correctly
 	model := ProjectMemberModel{
 		ID:        types.StringNull(),
-		ProjectID: types.StringValue("test-project-id"),
-		UserID:    types.StringValue("test-user-id"),
+		ProjectID: types.StringValue(testProjectID),
+		UserID:    types.StringValue(testUserID),
 		UserName:  types.StringNull(),
 		Role:      types.StringValue("viewer"),
 		Created:   types.StringNull(),
@@ -87,8 +91,6 @@ func TestProjectMemberRoleToProto(t *testing.T) {
 	}{
 		{"admin", organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN},
 		{"viewer", organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER},
-		{"", organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED},
-		{"unknown", organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED},
 	}
 
 	for _, tt := range tests {
@@ -99,6 +101,15 @@ func TestProjectMemberRoleToProto(t *testing.T) {
 	}
 }
 
+func TestProjectMemberRoleToProto_PanicsOnUnknown(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for unknown role, got none")
+		}
+	}()
+	projectMemberRoleToProto("unknown")
+}
+
 func TestProjectMemberRoleToString(t *testing.T) {
 	tests := []struct {
 		input    organizationv1.ProjectMemberRole
@@ -106,7 +117,6 @@ func TestProjectMemberRoleToString(t *testing.T) {
 	}{
 		{organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN, "admin"},
 		{organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER, "viewer"},
-		{organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED, ""},
 	}
 
 	for _, tt := range tests {
@@ -115,4 +125,13 @@ func TestProjectMemberRoleToString(t *testing.T) {
 			t.Errorf("projectMemberRoleToString(%v) = %q, want %q", tt.input, result, tt.expected)
 		}
 	}
+}
+
+func TestProjectMemberRoleToString_PanicsOnUnknown(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for unknown role proto value, got none")
+		}
+	}()
+	projectMemberRoleToString(organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED)
 }

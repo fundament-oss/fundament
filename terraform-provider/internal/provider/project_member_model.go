@@ -1,6 +1,8 @@
 package provider
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -24,7 +26,7 @@ func projectMemberRoleToProto(role string) organizationv1.ProjectMemberRole {
 	case "viewer":
 		return organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER
 	default:
-		return organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED
+		panic(fmt.Sprintf("unknown project member role: %q", role))
 	}
 }
 
@@ -36,6 +38,6 @@ func projectMemberRoleToString(role organizationv1.ProjectMemberRole) string {
 	case organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER:
 		return "viewer"
 	default:
-		return ""
+		panic(fmt.Sprintf("unknown project member role proto value: %d", role))
 	}
 }
