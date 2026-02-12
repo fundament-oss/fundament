@@ -3,20 +3,27 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
+
+// uuidRegex validates the standard UUID text representation defined in RFC 9562, Section 4.
+// See: https://www.rfc-editor.org/rfc/rfc9562#section-4
+var uuidRegex = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 // Ensure ProjectMemberResource satisfies various resource interfaces.
 var _ resource.Resource = &ProjectMemberResource{}
@@ -56,6 +63,9 @@ func (r *ProjectMemberResource) Schema(ctx context.Context, req resource.SchemaR
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(uuidRegex, "must be a valid UUID"),
+				},
 			},
 			"user_id": schema.StringAttribute{
 				Description: "The ID of the user to add as a member.",
@@ -63,10 +73,16 @@ func (r *ProjectMemberResource) Schema(ctx context.Context, req resource.SchemaR
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(uuidRegex, "must be a valid UUID"),
+				},
 			},
 			"role": schema.StringAttribute{
-				Description: "The role of the project member. Valid values are \"admin\" and \"viewer\".",
+				Description: "The role of the project member.",
 				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("admin", "viewer"),
+				},
 			},
 			"user_name": schema.StringAttribute{
 				Description: "The name of the user.",
@@ -186,7 +202,11 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 		}
 		plan.UserName = types.StringValue(member.UserName)
 		plan.Role = types.StringValue(projectMemberRoleToString(member.Role))
-		plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+		if member.Created != nil {
+			plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+		} else {
+			plan.Created = types.StringNull()
+		}
 		found = true
 		break
 	}
@@ -264,7 +284,11 @@ func (r *ProjectMemberResource) Read(ctx context.Context, req resource.ReadReque
 		state.UserID = types.StringValue(member.UserId)
 		state.UserName = types.StringValue(member.UserName)
 		state.Role = types.StringValue(projectMemberRoleToString(member.Role))
-		state.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+		if member.Created != nil {
+			state.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+		} else {
+			state.Created = types.StringNull()
+		}
 		found = true
 		break
 	}
@@ -371,7 +395,11 @@ func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateR
 		plan.UserID = types.StringValue(member.UserId)
 		plan.UserName = types.StringValue(member.UserName)
 		plan.Role = types.StringValue(projectMemberRoleToString(member.Role))
-		plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+		if member.Created != nil {
+			plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+		} else {
+			plan.Created = types.StringNull()
+		}
 		found = true
 		break
 	}

@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -149,9 +151,15 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
+	// Sort members by ID for stable ordering
+	members := rpcResp.Msg.Members
+	slices.SortFunc(members, func(a, b *organizationv1.ProjectMember) int {
+		return strings.Compare(a.Id, b.Id)
+	})
+
 	// Map response to state
-	state.Members = make([]ProjectMemberModel, len(rpcResp.Msg.Members))
-	for i, member := range rpcResp.Msg.Members {
+	state.Members = make([]ProjectMemberModel, len(members))
+	for i, member := range members {
 		var created types.String
 		if member.Created != nil {
 			created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
