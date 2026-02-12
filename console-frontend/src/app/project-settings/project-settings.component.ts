@@ -125,6 +125,7 @@ export default class ProjectSettingsComponent implements OnInit {
         ...currentProject,
         name: nameToSave.trim(),
       });
+      this.organizationDataService.updateProjectName(currentProject.id, nameToSave.trim());
       this.isEditing.set(false);
       this.editingName.set('');
     } catch (err) {

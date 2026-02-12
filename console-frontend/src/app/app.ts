@@ -3,6 +3,8 @@ import {
   signal,
   computed,
   inject,
+  effect,
+  untracked,
   OnInit,
   ChangeDetectionStrategy,
 } from '@angular/core';
@@ -132,6 +134,14 @@ export default class App implements OnInit {
 
   // Breadcrumb state
   breadcrumbSegments = signal<BreadcrumbSegment[]>([]);
+
+  constructor() {
+    // Refresh breadcrumbs when organization data changes (e.g. after renaming)
+    effect(() => {
+      this.organizationDataService.organizations();
+      untracked(() => this.updateBreadcrumbs());
+    });
+  }
 
   async ngOnInit() {
     this.initializeTheme();

@@ -19,6 +19,7 @@ import {
 } from '../../generated/v1/organization_pb';
 import { AUTHN, ORGANIZATION } from '../../connect/tokens';
 import { TitleService } from '../title.service';
+import { OrganizationDataService } from '../organization-data.service';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
@@ -40,6 +41,8 @@ export default class OrganizationComponent implements OnInit {
   private authnClient = inject(AUTHN);
 
   private organizationClient = inject(ORGANIZATION);
+
+  private organizationDataService = inject(OrganizationDataService);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
@@ -135,6 +138,10 @@ export default class OrganizationComponent implements OnInit {
         ...currentOrganization,
         name: nameToSave.trim(),
       });
+      this.organizationDataService.updateOrganizationName(
+        currentOrganization.id,
+        nameToSave.trim(),
+      );
       this.isEditing.set(false);
       this.editingName.set('');
     } catch (err) {
