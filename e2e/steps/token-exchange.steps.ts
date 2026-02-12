@@ -5,7 +5,7 @@ import { APIKeyService, type APIKey } from '../support/api/apikey-service.ts';
 import { type ExchangeTokenResponse } from '../support/api/token-service.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { currentApiKey, API_TOKEN_PREFIX } from './common.steps.ts';
+import { currentApiKey, extractOrganizationId, API_TOKEN_PREFIX } from './common.steps.ts';
 
 // Track state for token exchange tests
 let savedToken: string | undefined;
@@ -103,7 +103,8 @@ When('I get the API key details', async function (this: ICustomWorld) {
 
 When('I use the exchanged JWT to list API keys', async function (this: ICustomWorld) {
   // Create a new APIKeyService with the exchanged JWT
-  const exchangedService = new APIKeyService(this.organizationApiUrl!, exchangeResponse!.accessToken);
+  const orgId = extractOrganizationId(exchangeResponse!.accessToken);
+  const exchangedService = new APIKeyService(this.organizationApiUrl!, exchangeResponse!.accessToken, orgId);
   try {
     const response = await exchangedService.listAPIKeys();
     this.lastApiResponse = response;

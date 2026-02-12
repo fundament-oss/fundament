@@ -27,13 +27,13 @@ When('I create an API key with name {string}', async function (this: ICustomWorl
   }
 });
 
-When('I create an API key with name {string} expiring in {int} days', async function (
+When('I create an API key with name {string} expiring in {string}', async function (
   this: ICustomWorld,
   name: string,
-  days: number
+  days: string
 ) {
   try {
-    const response = await this.apiKeyService!.createAPIKey({ name, expiresInDays: days });
+    const response = await this.apiKeyService!.createAPIKey({ name, expiresIn: days });
     setCurrentApiKey(response);
     this.createdApiKeys.set(name, response);
     // Also track by user for cleanup

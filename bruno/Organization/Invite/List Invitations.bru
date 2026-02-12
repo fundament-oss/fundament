@@ -1,0 +1,27 @@
+meta {
+  name: List Invitations
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.InviteService/ListInvitations
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+script:post-response {
+  // If the response is JSON, you can also parse and extract specific fields
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setVar("invitationId", res.body.invitations[0].id);
+  }
+    
+}

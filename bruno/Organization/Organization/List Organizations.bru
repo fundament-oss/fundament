@@ -1,0 +1,19 @@
+meta {
+  name: List Organizations
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.OrganizationService/ListOrganizations
+  body: json
+  auth: inherit
+}
+
+headers {
+  ~Content-Type: application/json
+}
+
+body:json {
+  {}
+}

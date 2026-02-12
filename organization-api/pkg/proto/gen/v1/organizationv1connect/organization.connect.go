@@ -34,6 +34,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// OrganizationServiceListOrganizationsProcedure is the fully-qualified name of the
+	// OrganizationService's ListOrganizations RPC.
+	OrganizationServiceListOrganizationsProcedure = "/organization.v1.OrganizationService/ListOrganizations"
 	// OrganizationServiceGetOrganizationProcedure is the fully-qualified name of the
 	// OrganizationService's GetOrganization RPC.
 	OrganizationServiceGetOrganizationProcedure = "/organization.v1.OrganizationService/GetOrganization"
@@ -44,6 +47,8 @@ const (
 
 // OrganizationServiceClient is a client for the organization.v1.OrganizationService service.
 type OrganizationServiceClient interface {
+	// ListOrganizations lists all organizations the current user belongs to
+	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
 	// GetOrganization retrieves the user's organization by ID
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
 	// UpdateOrganization updates the user's organization
@@ -61,6 +66,12 @@ func NewOrganizationServiceClient(httpClient connect.HTTPClient, baseURL string,
 	baseURL = strings.TrimRight(baseURL, "/")
 	organizationServiceMethods := v1.File_v1_organization_proto.Services().ByName("OrganizationService").Methods()
 	return &organizationServiceClient{
+		listOrganizations: connect.NewClient[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse](
+			httpClient,
+			baseURL+OrganizationServiceListOrganizationsProcedure,
+			connect.WithSchema(organizationServiceMethods.ByName("ListOrganizations")),
+			connect.WithClientOptions(opts...),
+		),
 		getOrganization: connect.NewClient[v1.GetOrganizationRequest, v1.GetOrganizationResponse](
 			httpClient,
 			baseURL+OrganizationServiceGetOrganizationProcedure,
@@ -78,8 +89,14 @@ func NewOrganizationServiceClient(httpClient connect.HTTPClient, baseURL string,
 
 // organizationServiceClient implements OrganizationServiceClient.
 type organizationServiceClient struct {
+	listOrganizations  *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
 	getOrganization    *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
 	updateOrganization *connect.Client[v1.UpdateOrganizationRequest, emptypb.Empty]
+}
+
+// ListOrganizations calls organization.v1.OrganizationService.ListOrganizations.
+func (c *organizationServiceClient) ListOrganizations(ctx context.Context, req *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error) {
+	return c.listOrganizations.CallUnary(ctx, req)
 }
 
 // GetOrganization calls organization.v1.OrganizationService.GetOrganization.
@@ -95,6 +112,8 @@ func (c *organizationServiceClient) UpdateOrganization(ctx context.Context, req 
 // OrganizationServiceHandler is an implementation of the organization.v1.OrganizationService
 // service.
 type OrganizationServiceHandler interface {
+	// ListOrganizations lists all organizations the current user belongs to
+	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
 	// GetOrganization retrieves the user's organization by ID
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
 	// UpdateOrganization updates the user's organization
@@ -108,6 +127,12 @@ type OrganizationServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewOrganizationServiceHandler(svc OrganizationServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	organizationServiceMethods := v1.File_v1_organization_proto.Services().ByName("OrganizationService").Methods()
+	organizationServiceListOrganizationsHandler := connect.NewUnaryHandler(
+		OrganizationServiceListOrganizationsProcedure,
+		svc.ListOrganizations,
+		connect.WithSchema(organizationServiceMethods.ByName("ListOrganizations")),
+		connect.WithHandlerOptions(opts...),
+	)
 	organizationServiceGetOrganizationHandler := connect.NewUnaryHandler(
 		OrganizationServiceGetOrganizationProcedure,
 		svc.GetOrganization,
@@ -122,6 +147,8 @@ func NewOrganizationServiceHandler(svc OrganizationServiceHandler, opts ...conne
 	)
 	return "/organization.v1.OrganizationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case OrganizationServiceListOrganizationsProcedure:
+			organizationServiceListOrganizationsHandler.ServeHTTP(w, r)
 		case OrganizationServiceGetOrganizationProcedure:
 			organizationServiceGetOrganizationHandler.ServeHTTP(w, r)
 		case OrganizationServiceUpdateOrganizationProcedure:
@@ -134,6 +161,10 @@ func NewOrganizationServiceHandler(svc OrganizationServiceHandler, opts ...conne
 
 // UnimplementedOrganizationServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedOrganizationServiceHandler struct{}
+
+func (UnimplementedOrganizationServiceHandler) ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.ListOrganizations is not implemented"))
+}
 
 func (UnimplementedOrganizationServiceHandler) GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.GetOrganization is not implemented"))

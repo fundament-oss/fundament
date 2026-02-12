@@ -3,7 +3,7 @@ import { expect } from '@playwright/test';
 import { ICustomWorld } from '../support/world.ts';
 import { APIKeyService, type APIKey } from '../support/api/apikey-service.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
-import { authenticateWithPassword, currentApiKey, setCurrentApiKey } from './common.steps.ts';
+import { authenticateWithPassword, extractOrganizationId, currentApiKey, setCurrentApiKey } from './common.steps.ts';
 
 // --- Given Steps ---
 
@@ -16,8 +16,9 @@ Given('I save the API key ID', async function (this: ICustomWorld) {
 
 When('I switch to user {string}', async function (this: ICustomWorld, email: string) {
   this.authToken = await authenticateWithPassword(email);
+  this.organizationId = extractOrganizationId(this.authToken);
   this.currentUserEmail = email;
-  this.apiKeyService = new APIKeyService(this.organizationApiUrl!, this.authToken);
+  this.apiKeyService = new APIKeyService(this.organizationApiUrl!, this.authToken, this.organizationId);
   // Initialize the user's API key map if not exists
   if (!this.createdApiKeysByUser.has(email)) {
     this.createdApiKeysByUser.set(email, new Map());

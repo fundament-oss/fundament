@@ -278,9 +278,11 @@ components:
           type: string
           format: uuid
           description: User ID
-        organization_id:
-          type: string
-          format: uuid
+        organization_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
           description: Organization ID
         name:
           type: string
@@ -292,7 +294,7 @@ components:
           description: Groups the user belongs to
       required:
         - id
-        - organization_id
+        - organization_ids
         - name
         - groups
     PasswordLoginRequest:

@@ -17,3 +17,11 @@ sql:
             go_type:
               import: "github.com/google/uuid"
               type: "UUID"
+          - column: "tenant.organizations_users.role"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "OrganizationsUserRole"
+          - column: "tenant.organizations_users.status"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "OrganizationsUserStatus"

@@ -14,7 +14,8 @@ export { ConnectError, Code };
 export function createServiceClient<T extends DescService>(
   service: T,
   baseUrl: string,
-  authToken?: string
+  authToken?: string,
+  organizationId?: string
 ): Client<T> {
   const transport = createConnectTransport({
     baseUrl,
@@ -23,6 +24,9 @@ export function createServiceClient<T extends DescService>(
       ? [
           (next) => async (req) => {
             req.header.set('Authorization', `Bearer ${authToken}`);
+            if (organizationId) {
+              req.header.set('Fun-Organization', organizationId);
+            }
             return next(req);
           },
         ]

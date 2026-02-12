@@ -41,14 +41,17 @@ import {
   tablerBracketsContain,
 } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { ToastService } from './toast.service';
 import { versionMismatch$ } from './app.config';
 import SelectorModalComponent from './selector-modal/selector-modal.component';
 import { OrganizationDataService } from './organization-data.service';
+import { OrganizationContextService } from './organization-context.service';
 import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
+import { ORGANIZATION } from '../connect/tokens';
 
 const reloadApp = () => {
   window.location.reload();
@@ -108,6 +111,10 @@ export default class App implements OnInit {
 
   protected organizationDataService = inject(OrganizationDataService);
 
+  private organizationContextService = inject(OrganizationContextService);
+
+  private organizationClient = inject(ORGANIZATION);
+
   // Version mismatch state
   apiVersionMismatch = signal(false);
 
@@ -154,16 +161,8 @@ export default class App implements OnInit {
       this.currentUser.set(user);
 
       // Load organization data when user is logged in
-      if (user?.organizationId) {
-        this.organizationDataService.loadOrganizationData(user.organizationId).then(() => {
-          // Initialize selector with the organization selected
-          const orgs = this.organizationDataService.organizations();
-          if (orgs.length > 0) {
-            this.selectedOrgId.set(orgs[0].id);
-          }
-          // Re-evaluate sidebar state now that org data is available
-          this.updateSidebarStateFromRoute(this.router.url);
-        });
+      if (user) {
+        this.loadUserOrganizations();
       }
     });
 
@@ -187,6 +186,34 @@ export default class App implements OnInit {
   }
 
   reloadApp = reloadApp;
+
+  /**
+   * Load the user's organizations and select the first one.
+   * This sets the organization context for API requests.
+   */
+  private async loadUserOrganizations() {
+    try {
+      // Call ListOrganizations (user-scoped endpoint, doesn't need Fun-Organization header)
+      const response = await firstValueFrom(this.organizationClient.listOrganizations({}));
+
+      if (response.organizations.length > 0) {
+        const firstOrg = response.organizations[0];
+
+        // Set the organization context for future API requests
+        this.organizationContextService.setOrganizationId(firstOrg.id);
+        this.selectedOrgId.set(firstOrg.id);
+
+        // Load full organization data (projects, namespaces, etc.)
+        await this.organizationDataService.loadOrganizationData(firstOrg.id);
+
+        // Re-evaluate sidebar state now that org data is available
+        this.updateSidebarStateFromRoute(this.router.url);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to load organizations:', error);
+    }
+  }
 
   // Update sidebar state based on current route
   private updateSidebarStateFromRoute(url: string) {
@@ -349,6 +376,9 @@ export default class App implements OnInit {
     // Select organization and navigate to clusters page
     this.selectedOrgId.set(orgId);
     this.selectedProjectId.set(null);
+
+    // Update the organization context for API requests
+    this.organizationContextService.setOrganizationId(orgId);
 
     // Close modal and navigate
     this.selectorModalOpen.set(false);

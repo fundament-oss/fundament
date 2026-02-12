@@ -68,8 +68,8 @@ logs:
 db-shell:
     #!/usr/bin/env bash
     set -euo pipefail
-    PASSWORD=$(kubectl get secret -n fundament fundament-db-fun-fundament-api -o jsonpath='{.data.password}' |  {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
-    kubectl exec -it -n fundament fundament-db-1 -- env PGPASSWORD="$PASSWORD" psql -h localhost -U fun_fundament_api -d fundament
+    PASSWORD=$(kubectl get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' |  {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
+    kubectl exec -it -n fundament fundament-db-1 -- env PGPASSWORD="$PASSWORD" psql -h localhost -U fun_operator -d fundament
 
 generate:
     cd db && trek generate --stdout

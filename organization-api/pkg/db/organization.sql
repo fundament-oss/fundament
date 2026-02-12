@@ -9,3 +9,8 @@ UPDATE tenant.organizations
 SET name = $2
 WHERE id = $1
 RETURNING id, name, created;
+
+-- name: OrganizationList :many
+SELECT id, name, created
+FROM tenant.organizations
+ORDER BY created;

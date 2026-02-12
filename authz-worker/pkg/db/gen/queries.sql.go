@@ -16,7 +16,6 @@ import (
 const getAndLockNextOutboxRow = `-- name: GetAndLockNextOutboxRow :one
 SELECT
     id,
-    user_id,
     project_id,
     project_member_id,
     cluster_id,
@@ -24,6 +23,7 @@ SELECT
     namespace_id,
     api_key_id,
     install_id,
+    organization_user_id,
     created,
     retries
 FROM authz.outbox
@@ -35,17 +35,17 @@ FOR NO KEY UPDATE SKIP LOCKED
 `
 
 type GetAndLockNextOutboxRowRow struct {
-	ID              uuid.UUID
-	UserID          pgtype.UUID
-	ProjectID       pgtype.UUID
-	ProjectMemberID pgtype.UUID
-	ClusterID       pgtype.UUID
-	NodePoolID      pgtype.UUID
-	NamespaceID     pgtype.UUID
-	ApiKeyID        pgtype.UUID
-	InstallID       pgtype.UUID
-	Created         pgtype.Timestamptz
-	Retries         int32
+	ID                 uuid.UUID
+	ProjectID          pgtype.UUID
+	ProjectMemberID    pgtype.UUID
+	ClusterID          pgtype.UUID
+	NodePoolID         pgtype.UUID
+	NamespaceID        pgtype.UUID
+	ApiKeyID           pgtype.UUID
+	InstallID          pgtype.UUID
+	OrganizationUserID pgtype.UUID
+	Created            pgtype.Timestamptz
+	Retries            int32
 }
 
 // Fetches the next unprocessed outbox row, skipping rows scheduled for later retry
@@ -55,7 +55,6 @@ func (q *Queries) GetAndLockNextOutboxRow(ctx context.Context) (GetAndLockNextOu
 	var i GetAndLockNextOutboxRowRow
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
 		&i.ProjectID,
 		&i.ProjectMemberID,
 		&i.ClusterID,
@@ -63,6 +62,7 @@ func (q *Queries) GetAndLockNextOutboxRow(ctx context.Context) (GetAndLockNextOu
 		&i.NamespaceID,
 		&i.ApiKeyID,
 		&i.InstallID,
+		&i.OrganizationUserID,
 		&i.Created,
 		&i.Retries,
 	)
@@ -200,6 +200,39 @@ func (q *Queries) GetNodePoolByID(ctx context.Context, arg GetNodePoolByIDParams
 	return i, err
 }
 
+const getOrganizationUserByID = `-- name: GetOrganizationUserByID :one
+SELECT id, organization_id, user_id, role, status, deleted
+FROM tenant.organizations_users
+WHERE id = $1
+`
+
+type GetOrganizationUserByIDParams struct {
+	ID uuid.UUID
+}
+
+type GetOrganizationUserByIDRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	UserID         uuid.UUID
+	Role           dbconst.OrganizationsUserRole
+	Status         dbconst.OrganizationsUserStatus
+	Deleted        pgtype.Timestamptz
+}
+
+func (q *Queries) GetOrganizationUserByID(ctx context.Context, arg GetOrganizationUserByIDParams) (GetOrganizationUserByIDRow, error) {
+	row := q.db.QueryRow(ctx, getOrganizationUserByID, arg.ID)
+	var i GetOrganizationUserByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.UserID,
+		&i.Role,
+		&i.Status,
+		&i.Deleted,
+	)
+	return i, err
+}
+
 const getProjectByID = `-- name: GetProjectByID :one
 SELECT id, organization_id, deleted
 FROM tenant.projects
@@ -248,35 +281,6 @@ func (q *Queries) GetProjectMemberByID(ctx context.Context, arg GetProjectMember
 		&i.ID,
 		&i.ProjectID,
 		&i.UserID,
-		&i.Role,
-		&i.Deleted,
-	)
-	return i, err
-}
-
-const getUserByID = `-- name: GetUserByID :one
-SELECT id, organization_id, role, deleted
-FROM tenant.users
-WHERE id = $1
-`
-
-type GetUserByIDParams struct {
-	ID uuid.UUID
-}
-
-type GetUserByIDRow struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	Role           dbconst.UserRole
-	Deleted        pgtype.Timestamptz
-}
-
-func (q *Queries) GetUserByID(ctx context.Context, arg GetUserByIDParams) (GetUserByIDRow, error) {
-	row := q.db.QueryRow(ctx, getUserByID, arg.ID)
-	var i GetUserByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.OrganizationID,
 		&i.Role,
 		&i.Deleted,
 	)

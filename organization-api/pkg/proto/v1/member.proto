@@ -12,8 +12,6 @@ option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/pro
 service MemberService {
   // List all members of the current organization
   rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
-  // Invite a new member by email
-  rpc InviteMember(InviteMemberRequest) returns (InviteMemberResponse);
   // Delete a member from the organization
   rpc DeleteMember(DeleteMemberRequest) returns (DeleteMemberResponse);
 }
@@ -24,23 +22,6 @@ message ListMembersRequest {}
 // List members response
 message ListMembersResponse {
   repeated Member members = 10;
-}
-
-// Invite member request
-message InviteMemberRequest {
-  string email = 10 [(buf.validate.field).string = {email: true}];
-  // Role for the invited user: "viewer" or "admin"
-  string role = 20 [(buf.validate.field).string = {
-    in: [
-      "viewer",
-      "admin"
-    ]
-  }];
-}
-
-// Invite member response
-message InviteMemberResponse {
-  Member member = 10;
 }
 
 // Delete member request
@@ -55,11 +36,13 @@ message DeleteMemberResponse {}
 message Member {
   string id = 10;
   string name = 20;
-  // external_id is empty for pending invitations
-  optional string external_id = 30;
+  // external_ref is empty for pending invitations
+  optional string external_ref = 30;
   // email is set for invited members
   optional string email = 50;
   // role is "viewer" or "admin"
   string role = 60;
+  // status is "pending", "accepted", "declined", or "revoked"
+  string status = 70;
   google.protobuf.Timestamp created = 40;
 }

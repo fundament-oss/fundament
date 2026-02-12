@@ -56,7 +56,20 @@ func (s *AuthnServer) ExchangeToken(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))
 	}
 
-	accessToken, err := s.generateJWTWithExpiry(userFromGetByIDRow(&dbUser), []string{}, APITokenExpiry)
+	organizationIDs, err := s.getUserOrganizationIDs(ctx, dbUser.ID)
+	if err != nil {
+		s.logger.Error("failed to get user organizations for api key", "error", err, "api_key_id", apiKey.ID, "user_id", apiKey.UserID)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))
+	}
+
+	u := &user{
+		ID:              dbUser.ID,
+		OrganizationIDs: organizationIDs,
+		Name:            dbUser.Name,
+		ExternalRef:     dbUser.ExternalRef.String,
+	}
+
+	accessToken, err := s.generateJWTWithExpiry(u, []string{}, APITokenExpiry)
 	if err != nil {
 		s.logger.Error("failed to generate jwt for api token", "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))
@@ -65,7 +78,7 @@ func (s *AuthnServer) ExchangeToken(
 	s.logger.Info("api token exchanged for jwt",
 		"api_key_id", apiKey.ID,
 		"user_id", dbUser.ID,
-		"organization_id", dbUser.OrganizationID,
+		"organization_ids", u.OrganizationIDs,
 	)
 
 	return connect.NewResponse(&authnv1.ExchangeTokenResponse{

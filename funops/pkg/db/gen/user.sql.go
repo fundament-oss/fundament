@@ -8,66 +8,111 @@ package db
 import (
 	"context"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const userCreate = `-- name: UserCreate :one
 INSERT INTO tenant.users (
-  organization_id,
   name,
-  external_id
+  external_ref
+)
+VALUES ($1::text, $2::text)
+RETURNING
+  id,
+  name,
+  external_ref,
+  created
+`
+
+type UserCreateParams struct {
+	Name        string
+	ExternalRef string
+}
+
+type UserCreateRow struct {
+	ID          uuid.UUID
+	Name        string
+	ExternalRef pgtype.Text
+	Created     pgtype.Timestamptz
+}
+
+func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (UserCreateRow, error) {
+	row := q.db.QueryRow(ctx, userCreate, arg.Name, arg.ExternalRef)
+	var i UserCreateRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.ExternalRef,
+		&i.Created,
+	)
+	return i, err
+}
+
+const userCreateMembership = `-- name: UserCreateMembership :one
+INSERT INTO tenant.organizations_users (
+  organization_id,
+  user_id,
+  role,
+  status
 )
 SELECT
-  organizations.id,
-  $1::text,
-  $2::text
+    organizations.id,
+    $1,
+    $2::text,
+    'accepted'
 FROM tenant.organizations
 WHERE organizations.name = $3::text
 RETURNING
   id,
   organization_id,
-  name,
-  external_id,
+  user_id,
+  role,
+  status,
   created
 `
 
-type UserCreateParams struct {
-	Name             string
-	ExternalRef      string
+type UserCreateMembershipParams struct {
+	UserID           uuid.UUID
+	Role             string
 	OrganizationName string
 }
 
-type UserCreateRow struct {
+type UserCreateMembershipRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
-	Name           string
-	ExternalID     pgtype.Text
+	UserID         uuid.UUID
+	Role           string
+	Status         dbconst.OrganizationsUserStatus
 	Created        pgtype.Timestamptz
 }
 
-func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (UserCreateRow, error) {
-	row := q.db.QueryRow(ctx, userCreate, arg.Name, arg.ExternalRef, arg.OrganizationName)
-	var i UserCreateRow
+// Creates a membership for a user in an organization (by organization name)
+func (q *Queries) UserCreateMembership(ctx context.Context, arg UserCreateMembershipParams) (UserCreateMembershipRow, error) {
+	row := q.db.QueryRow(ctx, userCreateMembership, arg.UserID, arg.Role, arg.OrganizationName)
+	var i UserCreateMembershipRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
-		&i.Name,
-		&i.ExternalID,
+		&i.UserID,
+		&i.Role,
+		&i.Status,
 		&i.Created,
 	)
 	return i, err
 }
 
 const userDelete = `-- name: UserDelete :execrows
-UPDATE tenant.users
+UPDATE tenant.organizations_users
 SET deleted = NOW()
-FROM tenant.organizations
+FROM tenant.organizations, tenant.users
 WHERE
-  users.organization_id = organizations.id
-  AND organizations.name = $1::text
-  AND users.name = $2::text
-  AND users.deleted IS NULL
+    organizations_users.organization_id = organizations.id
+    AND organizations_users.user_id = users.id
+    AND organizations.name = $1::text
+    AND users.name = $2::text
+    AND organizations_users.deleted IS NULL
 `
 
 type UserDeleteParams struct {
@@ -85,13 +130,17 @@ func (q *Queries) UserDelete(ctx context.Context, arg UserDeleteParams) (int64, 
 
 const userList = `-- name: UserList :many
 SELECT
-  id,
-  name,
-  external_id,
-  created
+    users.id,
+    users.name,
+    users.external_ref,
+    users.created
 FROM tenant.users
-WHERE organization_id = $1 AND deleted IS NULL
-ORDER BY created DESC
+INNER JOIN tenant.organizations_users
+    ON organizations_users.user_id = users.id
+WHERE organizations_users.organization_id = $1
+    AND organizations_users.deleted IS NULL
+    AND users.deleted IS NULL
+ORDER BY users.created DESC
 `
 
 type UserListParams struct {
@@ -99,10 +148,10 @@ type UserListParams struct {
 }
 
 type UserListRow struct {
-	ID         uuid.UUID
-	Name       string
-	ExternalID pgtype.Text
-	Created    pgtype.Timestamptz
+	ID          uuid.UUID
+	Name        string
+	ExternalRef pgtype.Text
+	Created     pgtype.Timestamptz
 }
 
 func (q *Queries) UserList(ctx context.Context, arg UserListParams) ([]UserListRow, error) {
@@ -117,7 +166,7 @@ func (q *Queries) UserList(ctx context.Context, arg UserListParams) ([]UserListR
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.ExternalID,
+			&i.ExternalRef,
 			&i.Created,
 		); err != nil {
 			return nil, err

@@ -235,6 +235,89 @@ func (x *UpdateOrganizationRequest) GetName() string {
 	return ""
 }
 
+// ListOrganizations request
+type ListOrganizationsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOrganizationsRequest) Reset() {
+	*x = ListOrganizationsRequest{}
+	mi := &file_v1_organization_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOrganizationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOrganizationsRequest) ProtoMessage() {}
+
+func (x *ListOrganizationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_organization_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOrganizationsRequest.ProtoReflect.Descriptor instead.
+func (*ListOrganizationsRequest) Descriptor() ([]byte, []int) {
+	return file_v1_organization_proto_rawDescGZIP(), []int{4}
+}
+
+// ListOrganizations response
+type ListOrganizationsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// List of organizations the user belongs to
+	Organizations []*Organization `protobuf:"bytes,10,rep,name=organizations,proto3" json:"organizations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOrganizationsResponse) Reset() {
+	*x = ListOrganizationsResponse{}
+	mi := &file_v1_organization_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOrganizationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOrganizationsResponse) ProtoMessage() {}
+
+func (x *ListOrganizationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_organization_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOrganizationsResponse.ProtoReflect.Descriptor instead.
+func (*ListOrganizationsResponse) Descriptor() ([]byte, []int) {
+	return file_v1_organization_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ListOrganizationsResponse) GetOrganizations() []*Organization {
+	if x != nil {
+		return x.Organizations
+	}
+	return nil
+}
+
 var File_v1_organization_proto protoreflect.FileDescriptor
 
 const file_v1_organization_proto_rawDesc = "" +
@@ -255,8 +338,13 @@ const file_v1_organization_proto_rawDesc = "" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1e\n" +
 	"\x04name\x18\x14 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name2\xd5\x01\n" +
-	"\x13OrganizationService\x12d\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\"\x1a\n" +
+	"\x18ListOrganizationsRequest\"`\n" +
+	"\x19ListOrganizationsResponse\x12C\n" +
+	"\rorganizations\x18\n" +
+	" \x03(\v2\x1d.organization.v1.OrganizationR\rorganizations2\xc1\x02\n" +
+	"\x13OrganizationService\x12j\n" +
+	"\x11ListOrganizations\x12).organization.v1.ListOrganizationsRequest\x1a*.organization.v1.ListOrganizationsResponse\x12d\n" +
 	"\x0fGetOrganization\x12'.organization.v1.GetOrganizationRequest\x1a(.organization.v1.GetOrganizationResponse\x12X\n" +
 	"\x12UpdateOrganization\x12*.organization.v1.UpdateOrganizationRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
 
@@ -272,27 +360,32 @@ func file_v1_organization_proto_rawDescGZIP() []byte {
 	return file_v1_organization_proto_rawDescData
 }
 
-var file_v1_organization_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_v1_organization_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_v1_organization_proto_goTypes = []any{
 	(*Organization)(nil),              // 0: organization.v1.Organization
 	(*GetOrganizationRequest)(nil),    // 1: organization.v1.GetOrganizationRequest
 	(*GetOrganizationResponse)(nil),   // 2: organization.v1.GetOrganizationResponse
 	(*UpdateOrganizationRequest)(nil), // 3: organization.v1.UpdateOrganizationRequest
-	(*timestamppb.Timestamp)(nil),     // 4: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),             // 5: google.protobuf.Empty
+	(*ListOrganizationsRequest)(nil),  // 4: organization.v1.ListOrganizationsRequest
+	(*ListOrganizationsResponse)(nil), // 5: organization.v1.ListOrganizationsResponse
+	(*timestamppb.Timestamp)(nil),     // 6: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),             // 7: google.protobuf.Empty
 }
 var file_v1_organization_proto_depIdxs = []int32{
-	4, // 0: organization.v1.Organization.created:type_name -> google.protobuf.Timestamp
+	6, // 0: organization.v1.Organization.created:type_name -> google.protobuf.Timestamp
 	0, // 1: organization.v1.GetOrganizationResponse.organization:type_name -> organization.v1.Organization
-	1, // 2: organization.v1.OrganizationService.GetOrganization:input_type -> organization.v1.GetOrganizationRequest
-	3, // 3: organization.v1.OrganizationService.UpdateOrganization:input_type -> organization.v1.UpdateOrganizationRequest
-	2, // 4: organization.v1.OrganizationService.GetOrganization:output_type -> organization.v1.GetOrganizationResponse
-	5, // 5: organization.v1.OrganizationService.UpdateOrganization:output_type -> google.protobuf.Empty
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	0, // 2: organization.v1.ListOrganizationsResponse.organizations:type_name -> organization.v1.Organization
+	4, // 3: organization.v1.OrganizationService.ListOrganizations:input_type -> organization.v1.ListOrganizationsRequest
+	1, // 4: organization.v1.OrganizationService.GetOrganization:input_type -> organization.v1.GetOrganizationRequest
+	3, // 5: organization.v1.OrganizationService.UpdateOrganization:input_type -> organization.v1.UpdateOrganizationRequest
+	5, // 6: organization.v1.OrganizationService.ListOrganizations:output_type -> organization.v1.ListOrganizationsResponse
+	2, // 7: organization.v1.OrganizationService.GetOrganization:output_type -> organization.v1.GetOrganizationResponse
+	7, // 8: organization.v1.OrganizationService.UpdateOrganization:output_type -> google.protobuf.Empty
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_v1_organization_proto_init() }
@@ -306,7 +399,7 @@ func file_v1_organization_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_organization_proto_rawDesc), len(file_v1_organization_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

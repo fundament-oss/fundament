@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/member.proto.
  */
 export const file_v1_member: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiPwoTTGlzdE1lbWJlcnNSZXNwb25zZRIoCgdtZW1iZXJzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLk1lbWJlciJRChNJbnZpdGVNZW1iZXJSZXF1ZXN0EhYKBWVtYWlsGAogASgJQge6SARyAmABEiIKBHJvbGUYFCABKAlCFLpIEXIPUgZ2aWV3ZXJSBWFkbWluIj8KFEludml0ZU1lbWJlclJlc3BvbnNlEicKBm1lbWJlchgKIAEoCzIXLm9yZ2FuaXphdGlvbi52MS5NZW1iZXIiKwoTRGVsZXRlTWVtYmVyUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiFgoURGVsZXRlTWVtYmVyUmVzcG9uc2UipQEKBk1lbWJlchIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhgKC2V4dGVybmFsX2lkGB4gASgJSACIAQESEgoFZW1haWwYMiABKAlIAYgBARIMCgRyb2xlGDwgASgJEisKB2NyZWF0ZWQYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQg4KDF9leHRlcm5hbF9pZEIICgZfZW1haWwyowIKDU1lbWJlclNlcnZpY2USWAoLTGlzdE1lbWJlcnMSIy5vcmdhbml6YXRpb24udjEuTGlzdE1lbWJlcnNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RNZW1iZXJzUmVzcG9uc2USWwoMSW52aXRlTWVtYmVyEiQub3JnYW5pemF0aW9uLnYxLkludml0ZU1lbWJlclJlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuSW52aXRlTWVtYmVyUmVzcG9uc2USWwoMRGVsZXRlTWVtYmVyEiQub3JnYW5pemF0aW9uLnYxLkRlbGV0ZU1lbWJlclJlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuRGVsZXRlTWVtYmVyUmVzcG9uc2VCVVpTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjFiBnByb3RvMw", [file_buf_validate_validate, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiPwoTTGlzdE1lbWJlcnNSZXNwb25zZRIoCgdtZW1iZXJzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLk1lbWJlciIrChNEZWxldGVNZW1iZXJSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVNZW1iZXJSZXNwb25zZSK3AQoGTWVtYmVyEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSGQoMZXh0ZXJuYWxfcmVmGB4gASgJSACIAQESEgoFZW1haWwYMiABKAlIAYgBARIMCgRyb2xlGDwgASgJEg4KBnN0YXR1cxhGIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIPCg1fZXh0ZXJuYWxfcmVmQggKBl9lbWFpbDLGAQoNTWVtYmVyU2VydmljZRJYCgtMaXN0TWVtYmVycxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0TWVtYmVyc1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdE1lbWJlcnNSZXNwb25zZRJbCgxEZWxldGVNZW1iZXISJC5vcmdhbml6YXRpb24udjEuRGVsZXRlTWVtYmVyUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5EZWxldGVNZW1iZXJSZXNwb25zZUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_buf_validate_validate, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * List members request
@@ -51,51 +51,6 @@ export const ListMembersResponseSchema: GenMessage<ListMembersResponse> = /*@__P
   messageDesc(file_v1_member, 1);
 
 /**
- * Invite member request
- *
- * @generated from message organization.v1.InviteMemberRequest
- */
-export type InviteMemberRequest = Message<"organization.v1.InviteMemberRequest"> & {
-  /**
-   * @generated from field: string email = 10;
-   */
-  email: string;
-
-  /**
-   * Role for the invited user: "viewer" or "admin"
-   *
-   * @generated from field: string role = 20;
-   */
-  role: string;
-};
-
-/**
- * Describes the message organization.v1.InviteMemberRequest.
- * Use `create(InviteMemberRequestSchema)` to create a new message.
- */
-export const InviteMemberRequestSchema: GenMessage<InviteMemberRequest> = /*@__PURE__*/
-  messageDesc(file_v1_member, 2);
-
-/**
- * Invite member response
- *
- * @generated from message organization.v1.InviteMemberResponse
- */
-export type InviteMemberResponse = Message<"organization.v1.InviteMemberResponse"> & {
-  /**
-   * @generated from field: organization.v1.Member member = 10;
-   */
-  member?: Member;
-};
-
-/**
- * Describes the message organization.v1.InviteMemberResponse.
- * Use `create(InviteMemberResponseSchema)` to create a new message.
- */
-export const InviteMemberResponseSchema: GenMessage<InviteMemberResponse> = /*@__PURE__*/
-  messageDesc(file_v1_member, 3);
-
-/**
  * Delete member request
  *
  * @generated from message organization.v1.DeleteMemberRequest
@@ -112,7 +67,7 @@ export type DeleteMemberRequest = Message<"organization.v1.DeleteMemberRequest">
  * Use `create(DeleteMemberRequestSchema)` to create a new message.
  */
 export const DeleteMemberRequestSchema: GenMessage<DeleteMemberRequest> = /*@__PURE__*/
-  messageDesc(file_v1_member, 4);
+  messageDesc(file_v1_member, 2);
 
 /**
  * Delete member response
@@ -127,7 +82,7 @@ export type DeleteMemberResponse = Message<"organization.v1.DeleteMemberResponse
  * Use `create(DeleteMemberResponseSchema)` to create a new message.
  */
 export const DeleteMemberResponseSchema: GenMessage<DeleteMemberResponse> = /*@__PURE__*/
-  messageDesc(file_v1_member, 5);
+  messageDesc(file_v1_member, 3);
 
 /**
  * Member information
@@ -146,11 +101,11 @@ export type Member = Message<"organization.v1.Member"> & {
   name: string;
 
   /**
-   * external_id is empty for pending invitations
+   * external_ref is empty for pending invitations
    *
-   * @generated from field: optional string external_id = 30;
+   * @generated from field: optional string external_ref = 30;
    */
-  externalId?: string;
+  externalRef?: string;
 
   /**
    * email is set for invited members
@@ -167,6 +122,13 @@ export type Member = Message<"organization.v1.Member"> & {
   role: string;
 
   /**
+   * status is "pending", "accepted", "declined", or "revoked"
+   *
+   * @generated from field: string status = 70;
+   */
+  status: string;
+
+  /**
    * @generated from field: google.protobuf.Timestamp created = 40;
    */
   created?: Timestamp;
@@ -177,7 +139,7 @@ export type Member = Message<"organization.v1.Member"> & {
  * Use `create(MemberSchema)` to create a new message.
  */
 export const MemberSchema: GenMessage<Member> = /*@__PURE__*/
-  messageDesc(file_v1_member, 6);
+  messageDesc(file_v1_member, 4);
 
 /**
  * MemberService manages organization members
@@ -194,16 +156,6 @@ export const MemberService: GenService<{
     methodKind: "unary";
     input: typeof ListMembersRequestSchema;
     output: typeof ListMembersResponseSchema;
-  },
-  /**
-   * Invite a new member by email
-   *
-   * @generated from rpc organization.v1.MemberService.InviteMember
-   */
-  inviteMember: {
-    methodKind: "unary";
-    input: typeof InviteMemberRequestSchema;
-    output: typeof InviteMemberResponseSchema;
   },
   /**
    * Delete a member from the organization

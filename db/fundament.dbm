@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="68"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="73"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="-317,-40" last-zoom="0.6" scene-rect="-528,-67,3406.2,2346.52"
+	 last-position="0,0" last-zoom="0.5" scene-rect="-588,-87,3186.2,2626.52"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -67,10 +67,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<role name="fun_owner"/>
 </schema>
 
-<table name="organizations" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
+<table name="organizations" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="4" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="220" y="740"/>
+	<position x="260" y="1200"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -94,7 +94,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="projects" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="880" y="0"/>
+	<position x="880" y="-20"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -121,7 +121,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 <table name="namespaces" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="1520" y="0"/>
+	<position x="1520" y="-20"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -242,7 +242,7 @@ END;]]> </definition>
 	<return-type>
 	<type name="uuid" length="0"/>
 	</return-type>
-	<definition> <![CDATA[SELECT current_setting('app.current_user_id')::uuid]]> </definition>
+	<definition> <![CDATA[SELECT NULLIF(current_setting('app.current_user_id', true), '')::uuid]]> </definition>
 </function>
 
 <function name="current_organization_id"
@@ -260,7 +260,7 @@ END;]]> </definition>
 	<return-type>
 	<type name="uuid" length="0"/>
 	</return-type>
-	<definition> <![CDATA[SELECT current_setting('app.current_organization_id')::uuid]]> </definition>
+	<definition> <![CDATA[SELECT NULLIF(current_setting('app.current_organization_id', true), '')::uuid]]> </definition>
 </function>
 
 <function name="is_project_member"
@@ -365,9 +365,36 @@ END;]]> </definition>
 		<type name="uuid" length="0"/>
 	</parameter>
 	<definition> <![CDATA[SELECT EXISTS (
-    SELECT 1 FROM tenant.users
-    WHERE id = p_user_id
+    SELECT 1 FROM tenant.organizations_users
+    WHERE user_id = p_user_id
     AND organization_id = authn.current_organization_id()
+    AND deleted IS NULL
+)]]> </definition>
+</function>
+
+<function name="is_organization_member"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="STABLE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL SAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authn"/>
+	<role name="fun_authz"/>
+	<language name="sql"/>
+	<return-type>
+	<type name="boolean" length="0"/>
+	</return-type>
+	<parameter name="p_organization_id" in="true">
+		<type name="uuid" length="0"/>
+	</parameter>
+	<definition> <![CDATA[SELECT EXISTS (
+    SELECT 1 FROM tenant.organizations_users
+    WHERE organization_id = p_organization_id
+    AND user_id = authn.current_user_id()
+    AND deleted IS NULL
 )]]> </definition>
 </function>
 
@@ -464,30 +491,24 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
-<table name="users" layers="0" collapse-mode="1" max-obj-count="9" z-value="0">
+<table name="users" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="220" y="440"/>
+	<position x="300" y="460"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="organization_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
 	</column>
-	<column name="external_id">
+	<column name="external_ref">
 		<type name="text" length="0"/>
-	</column>
-	<column name="created" not-null="true" default-value="now()">
-		<type name="timestamptz" length="0"/>
 	</column>
 	<column name="email">
 		<type name="text" length="0"/>
 	</column>
-	<column name="role" not-null="true" default-value="'viewer'">
-		<type name="text" length="0"/>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
 	</column>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
@@ -495,18 +516,21 @@ END;]]> </definition>
 	<constraint name="users_pk" type="pk-constr" table="tenant.users">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="users_uq_external_id" type="uq-constr" nulls-not-distinct="true" table="tenant.users">
-		<columns names="external_id,deleted" ref-type="src-columns"/>
-	</constraint>
-	<constraint name="users_ck_role" type="ck-constr" table="tenant.users">
-			<expression> <![CDATA[role IN ('admin', 'viewer')]]> </expression>
-	</constraint>
 </table>
+
+<index name="users_uq_external_ref" table="tenant.users"
+	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="external_ref"/>
+		</idxelement>
+	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
+</index>
 
 <table name="api_keys" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="13" z-value="0">
 	<schema name="authn"/>
 	<role name="fun_owner"/>
-	<position x="-500" y="0"/>
+	<position x="-560" y="540"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -607,7 +631,7 @@ END;]]> </definition>
 <table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="16" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="880" y="420"/>
+	<position x="880" y="400"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -701,7 +725,7 @@ END;]]> </definition>
 <table name="node_pools" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="1580" y="420"/>
+	<position x="1580" y="400"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -741,7 +765,7 @@ END;]]> </definition>
 <table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
-	<position x="100" y="1240"/>
+	<position x="120" y="1640"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -768,7 +792,7 @@ END;]]> </definition>
 <table name="plugins" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
-	<position x="820" y="1500"/>
+	<position x="840" y="1900"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -807,7 +831,7 @@ END;]]> </definition>
 <table name="presets" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
-	<position x="-220" y="1960"/>
+	<position x="-200" y="2360"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -828,7 +852,7 @@ END;]]> </definition>
 <table name="preset_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
-	<position x="300" y="1760"/>
+	<position x="320" y="2160"/>
 	<column name="preset_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -847,7 +871,7 @@ END;]]> </definition>
 <table name="tags" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
-	<position x="2180" y="1940"/>
+	<position x="2200" y="2340"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -871,7 +895,7 @@ END;]]> </definition>
 <table name="plugins_tags" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
-	<position x="1540" y="1940"/>
+	<position x="1560" y="2340"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -886,7 +910,7 @@ END;]]> </definition>
 <table name="categories" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
-	<position x="2240" y="1540"/>
+	<position x="2260" y="1940"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -910,7 +934,7 @@ END;]]> </definition>
 <table name="categories_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
-	<position x="1520" y="1540"/>
+	<position x="1540" y="1940"/>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
@@ -925,7 +949,7 @@ END;]]> </definition>
 <table name="plugin_documentation_links" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
-	<position x="1540" y="1220"/>
+	<position x="1560" y="1620"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -956,7 +980,7 @@ END;]]> </definition>
 <table name="project_members" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="220" y="-20"/>
+	<position x="220" y="-40"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -1042,10 +1066,18 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
+<policy name="organizations_select_policy" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[authn.is_organization_member(id)]]> </expression>
+</policy>
+
+<policy name="organizations_authn_api_policy" table="tenant.organizations" command="ALL" permissive="true">	<roles names="fun_authn_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <table name="cluster_events" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="1540" y="840"/>
+	<position x="1540" y="1020"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -1108,9 +1140,6 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="user_id">
-		<type name="uuid" length="0"/>
-	</column>
 	<column name="project_id">
 		<type name="uuid" length="0"/>
 	</column>
@@ -1130,6 +1159,9 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="install_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="organization_user_id">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="created" not-null="true" default-value="now()">
@@ -1158,14 +1190,14 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	</constraint>
 	<constraint name="outbox_ck_single_fk" type="ck-constr" table="authz.outbox">
 			<expression> <![CDATA[num_nonnulls(
-	user_id,
 	project_id,
 	project_member_id,
 	cluster_id,
 	node_pool_id,
 	namespace_id,
 	api_key_id,
-	install_id
+	install_id,
+	organization_user_id
 ) = 1]]> </expression>
 	</constraint>
 	<constraint name="outbox_ck_status" type="ck-constr" table="authz.outbox">
@@ -1181,31 +1213,6 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 		</idxelement>
 	<predicate> <![CDATA[processed IS NULL]]> </predicate>
 </index>
-
-<function name="users_sync_trigger"
-		window-func="false"
-		returns-setof="false"
-		behavior-type="CALLED ON NULL INPUT"
-		function-type="VOLATILE"
-		security-type="SECURITY INVOKER"
-		parallel-type="PARALLEL UNSAFE"
-		execution-cost="1"
-		row-amount="0">
-	<schema name="authz"/>
-	<role name="fun_owner"/>
-	<language name="plpgsql"/>
-	<return-type>
-	<type name="trigger" length="0"/>
-	</return-type>
-	<definition> <![CDATA[BEGIN
-    -- Only insert into outbox if this is an INSERT or if data actually changed
-    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
-        INSERT INTO authz.outbox (user_id)
-        VALUES (COALESCE(NEW.id, OLD.id));
-    END IF;
-    RETURN COALESCE(NEW, OLD);
-END;]]> </definition>
-</function>
 
 <function name="projects_sync_trigger"
 		window-func="false"
@@ -1382,6 +1389,31 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="organizations_users_sync_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    -- Only insert into outbox if this is an INSERT or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (organization_user_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
 <function name="outbox_notify_trigger"
 		window-func="false"
 		returns-setof="false"
@@ -1402,12 +1434,6 @@ END;]]> </definition>
     RETURN NEW;
 END;]]> </definition>
 </function>
-
-<trigger name="users_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
-	 table="tenant.users">
-		<function signature="authz.users_sync_trigger()"/>
-</trigger>
 
 <trigger name="project_members_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
@@ -1469,6 +1495,96 @@ END;]]> </definition>
 	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
 </index>
 
+<table name="organizations_users" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<position x="240" y="680"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="organization_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="user_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="role" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="organizations_users_ck_role" type="ck-constr" table="tenant.organizations_users">
+			<expression> <![CDATA[role IN ('admin', 'viewer')]]> </expression>
+	</constraint>
+	<constraint name="organizations_users_pk" type="pk-constr" table="tenant.organizations_users">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="organizations_users_ck_status" type="ck-constr" table="tenant.organizations_users">
+			<expression> <![CDATA[status IN ('pending', 'accepted', 'declined', 'revoked')]]> </expression>
+	</constraint>
+</table>
+
+<policy name="organizations_users_select_policy" table="tenant.organizations_users" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<policy name="organizations_users_insert_policy" table="tenant.organizations_users" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<policy name="organizations_users_update_policy" table="tenant.organizations_users" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<policy name="organizations_users_user_select_policy" table="tenant.organizations_users" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[user_id = authn.current_user_id()]]> </expression>
+</policy>
+
+<policy name="organizations_users_user_update_policy" table="tenant.organizations_users" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[user_id = authn.current_user_id()]]> </expression>
+</policy>
+
+<policy name="organizations_users_authn_api_policy" table="tenant.organizations_users" command="ALL" permissive="true">	<roles names="fun_authn_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<trigger name="organizations_users_outbox" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.organizations_users">
+		<function signature="authz.organizations_users_sync_trigger()"/>
+</trigger>
+
+<policy name="users_select_policy" table="tenant.users" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="users_insert_policy" table="tenant.users" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="check-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="users_authn_api_policy" table="tenant.users" command="ALL" permissive="true">	<roles names="fun_authn_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<index name="organizations_users_uq_user" table="tenant.organizations_users"
+	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="organization_id"/>
+		</idxelement>
+		<idxelement use-sorting="false">
+			<column name="user_id"/>
+		</idxelement>
+	<predicate> <![CDATA[deleted IS NULL AND status NOT IN ('declined', 'revoked')]]> </predicate>
+</index>
+
 <constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.projects">
 	<columns names="organization_id" ref-type="src-columns"/>
@@ -1484,12 +1600,6 @@ END;]]> </definition>
 <constraint name="namespaces_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.namespaces">
 	<columns names="project_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="users_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.users">
-	<columns names="organization_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
@@ -1589,12 +1699,6 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
-<constraint name="outbox_fk_user" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.users" table="authz.outbox">
-	<columns names="user_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
 <constraint name="outbox_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="authz.outbox">
 	<columns names="project_id" ref-type="src-columns"/>
@@ -1637,6 +1741,24 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="outbox_fk_organization_user" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations_users" table="authz.outbox">
+	<columns names="organization_user_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="organizations_users_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.organizations_users">
+	<columns names="organization_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="organizations_users_fk_user" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.users" table="tenant.organizations_users">
+	<columns names="user_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <relationship name="rel_projects_organizations" type="relfk" layers="0"
 	 src-table="tenant.projects"
 	 dst-table="tenant.organizations" reference-fk="projects_fk_organization"
@@ -1650,11 +1772,6 @@ END;]]> </definition>
 <relationship name="rel_namespaces_projects" type="relfk" layers="0"
 	 src-table="tenant.namespaces"
 	 dst-table="tenant.projects" reference-fk="namespaces_fk_project"
-	 src-required="false" dst-required="true"/>
-
-<relationship name="rel_users_organizations" type="relfk" layers="0"
-	 src-table="tenant.users"
-	 dst-table="tenant.organizations" reference-fk="users_fk_organization"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_clusters_organizations" type="relfk" layers="0"
@@ -1741,11 +1858,6 @@ END;]]> </definition>
 	 dst-table="tenant.users" reference-fk="project_members_fk_user"
 	 src-required="false" dst-required="true"/>
 
-<relationship name="rel_outbox_users" type="relfk" layers="0"
-	 src-table="authz.outbox"
-	 dst-table="tenant.users" reference-fk="outbox_fk_user"
-	 src-required="false" dst-required="false"/>
-
 <relationship name="rel_outbox_projects" type="relfk" layers="0"
 	 src-table="authz.outbox"
 	 dst-table="tenant.projects" reference-fk="outbox_fk_project"
@@ -1780,6 +1892,21 @@ END;]]> </definition>
 	 src-table="authz.outbox"
 	 dst-table="appstore.installs" reference-fk="outbox_fk_install"
 	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_outbox_organizations_users" type="relfk" layers="0"
+	 src-table="authz.outbox"
+	 dst-table="tenant.organizations_users" reference-fk="outbox_fk_organization_user"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_organizations_users_organizations" type="relfk" layers="0"
+	 src-table="tenant.organizations_users"
+	 dst-table="tenant.organizations" reference-fk="organizations_users_fk_organization"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_organizations_users_users" type="relfk" layers="0"
+	 src-table="tenant.organizations_users"
+	 dst-table="tenant.users" reference-fk="organizations_users_fk_user"
+	 src-required="false" dst-required="true"/>
 
 <permission>
 	<object name="appstore" type="schema"/>
@@ -2064,6 +2191,26 @@ END;]]> </definition>
 <permission>
 	<object name="appstore.installs" type="table"/>
 	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.organizations_users" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.organizations_users" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.organizations_users" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.organizations_users" type="table"/>
+	<roles names="fun_authz"/>
 	<privileges select="true"/>
 </permission>
 </dbmodel>

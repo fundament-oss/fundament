@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package organization.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "v1/common.proto";
+import "v1/member.proto";
+
+option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
+
+// InviteService manages organization invitations
+service InviteService {
+  // Invite a new member by email (org-scoped)
+  rpc InviteMember(InviteMemberRequest) returns (InviteMemberResponse);
+  // List pending invitations for the current user (user-scoped, no org header needed)
+  rpc ListInvitations(ListInvitationsRequest) returns (ListInvitationsResponse);
+  // Accept a pending invitation (user-scoped, no org header needed)
+  rpc AcceptInvitation(AcceptInvitationRequest) returns (AcceptInvitationResponse);
+  // Decline a pending invitation (user-scoped, no org header needed)
+  rpc DeclineInvitation(DeclineInvitationRequest) returns (DeclineInvitationResponse);
+}
+
+// Invite member request
+message InviteMemberRequest {
+  string email = 10 [(buf.validate.field).string = {email: true}];
+  // Role for the invited user: "viewer" or "admin"
+  string role = 20 [(buf.validate.field).string = {
+    in: [
+      "viewer",
+      "admin"
+    ]
+  }];
+}
+
+// Invite member response
+message InviteMemberResponse {
+  Member member = 10;
+}
+
+// List invitations request
+message ListInvitationsRequest {}
+
+// List invitations response
+message ListInvitationsResponse {
+  repeated Invitation invitations = 10;
+}
+
+// Invitation represents a pending organization invitation
+message Invitation {
+  string id = 10;
+  string organization_id = 20;
+  string organization_name = 30;
+  string role = 40;
+  google.protobuf.Timestamp created = 50;
+}
+
+// Accept invitation request
+message AcceptInvitationRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// Accept invitation response
+message AcceptInvitationResponse {}
+
+// Decline invitation request
+message DeclineInvitationRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// Decline invitation response
+message DeclineInvitationResponse {}
