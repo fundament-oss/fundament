@@ -20,7 +20,7 @@ body:json {
 
 script:post-response {
   if (res.headers['content-type']?.includes('application/json')) {
-    bru.setVar("projectId", res.body.projects[1].id);
+    bru.setVar("projectId", res.body.projects[0].id);
   }
 }
 
