@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
 // Ensure ProjectMembersDataSource satisfies various datasource interfaces.
@@ -24,8 +25,8 @@ type ProjectMembersDataSource struct {
 
 // ProjectMembersDataSourceModel describes the data source data model.
 type ProjectMembersDataSourceModel struct {
-	ProjectID types.String          `tfsdk:"project_id"`
-	Members   []ProjectMemberModel  `tfsdk:"members"`
+	ProjectID types.String         `tfsdk:"project_id"`
+	Members   []ProjectMemberModel `tfsdk:"members"`
 }
 
 // NewProjectMembersDataSource creates a new ProjectMembersDataSource.

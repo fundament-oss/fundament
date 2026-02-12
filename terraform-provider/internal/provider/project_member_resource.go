@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -15,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
 // Ensure ProjectMemberResource satisfies various resource interfaces.
@@ -180,13 +181,14 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	// Find the created member in the list
 	var found bool
 	for _, member := range listResp.Msg.Members {
-		if member.Id == plan.ID.ValueString() {
-			plan.UserName = types.StringValue(member.UserName)
-			plan.Role = types.StringValue(projectMemberRoleToString(member.Role))
-			plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
-			found = true
-			break
+		if member.Id != plan.ID.ValueString() {
+			continue
 		}
+		plan.UserName = types.StringValue(member.UserName)
+		plan.Role = types.StringValue(projectMemberRoleToString(member.Role))
+		plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+		found = true
+		break
 	}
 
 	if !found {
@@ -255,15 +257,16 @@ func (r *ProjectMemberResource) Read(ctx context.Context, req resource.ReadReque
 	// Find this member in the list
 	var found bool
 	for _, member := range listResp.Msg.Members {
-		if member.Id == state.ID.ValueString() {
-			state.ProjectID = types.StringValue(member.ProjectId)
-			state.UserID = types.StringValue(member.UserId)
-			state.UserName = types.StringValue(member.UserName)
-			state.Role = types.StringValue(projectMemberRoleToString(member.Role))
-			state.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
-			found = true
-			break
+		if member.Id != state.ID.ValueString() {
+			continue
 		}
+		state.ProjectID = types.StringValue(member.ProjectId)
+		state.UserID = types.StringValue(member.UserId)
+		state.UserName = types.StringValue(member.UserName)
+		state.Role = types.StringValue(projectMemberRoleToString(member.Role))
+		state.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+		found = true
+		break
 	}
 
 	if !found {
@@ -360,16 +363,17 @@ func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateR
 	// Find this member in the list
 	var found bool
 	for _, member := range listResp.Msg.Members {
-		if member.Id == state.ID.ValueString() {
-			plan.ID = state.ID
-			plan.ProjectID = types.StringValue(member.ProjectId)
-			plan.UserID = types.StringValue(member.UserId)
-			plan.UserName = types.StringValue(member.UserName)
-			plan.Role = types.StringValue(projectMemberRoleToString(member.Role))
-			plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
-			found = true
-			break
+		if member.Id != state.ID.ValueString() {
+			continue
 		}
+		plan.ID = state.ID
+		plan.ProjectID = types.StringValue(member.ProjectId)
+		plan.UserID = types.StringValue(member.UserId)
+		plan.UserName = types.StringValue(member.UserName)
+		plan.Role = types.StringValue(projectMemberRoleToString(member.Role))
+		plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+		found = true
+		break
 	}
 
 	if !found {

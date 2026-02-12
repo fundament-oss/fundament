@@ -3,8 +3,9 @@ package provider
 import (
 	"testing"
 
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
 func TestProjectMemberModel_Resource(t *testing.T) {
