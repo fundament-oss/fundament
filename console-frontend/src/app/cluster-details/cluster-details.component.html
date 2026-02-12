@@ -461,7 +461,7 @@
                     class="badge-sm"
                     [class.badge-purple]="member.role === 'admin'"
                     [class.badge-blue]="member.role === 'edit'"
-                    [class.badge-green]="member.role === 'view'"
+                    [class.badge-emerald]="member.role === 'view'"
                   >
                     {{ member.role }}
                   </span>
@@ -500,7 +500,7 @@
                     <span
                       class="badge-sm"
                       [class]="
-                        pool.status === NodePoolStatus.HEALTHY ? 'badge-green' : 'badge-rose'
+                        pool.status === NodePoolStatus.HEALTHY ? 'badge-emerald' : 'badge-rose'
                       "
                     >
                       {{ getNodePoolStatusLabel(pool.status) }}
