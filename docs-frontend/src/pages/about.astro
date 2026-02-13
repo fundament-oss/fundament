@@ -1,0 +1,64 @@
+---
+import Layout from '../layouts/Landing.astro';
+---
+
+<Layout title="About - Fundament" heroClass="pb-12! sm:pb-16!">
+  <div class="relative z-10 mx-auto max-w-3xl text-left" slot="hero">
+    <h1 class="hero-title mb-8">About Fundament</h1>
+    <p class="mb-6 text-lg leading-relaxed text-gray-700 sm:text-xl dark:text-gray-300">
+      Fundament is software for running an Autonomous Private Cloud. It is designed to provide
+      organizations with a minimal, reliable foundation for running modern applications. Unlike
+      traditional platforms that bundle every service by default, Fundament is basic at its core
+      &mdash;delivering only the essential infrastructure and orchestration layers&mdash; while
+      allowing each tenant to extend their environment with exactly the services and tools they
+      need.
+    </p>
+    <p class="mb-0 text-lg leading-relaxed text-gray-700 sm:text-xl dark:text-gray-300">
+      On top of this foundation, Fundament serves as an internal developer platform (IDP):
+      enabling developers to build, deploy, and operate applications with speed and confidence.
+      Its API-first design, multi-tenant architecture, and focus on autonomy and scalability
+      make it suitable for organizations that want cloud capabilities on their own terms;
+      secure, reliable, and without unnecessary complexity.
+    </p>
+  </div>
+
+  <div class="bg-white py-12 sm:py-16 dark:bg-gray-900">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+      <div class="mx-auto max-w-3xl">
+        <h2 class="mt-0 mb-4 text-3xl font-bold text-indigo-600 sm:text-4xl dark:text-indigo-400">
+          Project status
+        </h2>
+        <p class="mb-2 text-lg font-semibold text-gray-800 dark:text-gray-100">
+          Concept & Development
+        </p>
+        <p class="mb-0 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
+          The focus of the project is currently on research and ideation. Some initial PoC
+          applications may be built to give shape to ideas and to provide early feedback from
+          testing users.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white py-12 sm:py-16 dark:bg-gray-900">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+      <div class="mx-auto max-w-3xl">
+        <h2 class="mt-0 mb-4 text-3xl font-bold text-indigo-600 sm:text-4xl dark:text-indigo-400">
+          Organization
+        </h2>
+        <p class="mb-0 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
+          Fundament is being developed by
+          <a
+            href="https://digilab.overheid.nl/"
+            class="font-medium text-blue-600 underline transition-colors duration-200 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            target="_blank"
+          >
+            Digilab</a
+          >. Digilab is a technical innovation team and testing environment initiated by the Dutch
+          government to facilitate secure, responsible, and standardized data sharing across public
+          sector organizations.
+        </p>
+      </div>
+    </div>
+  </div>
+</Layout>
