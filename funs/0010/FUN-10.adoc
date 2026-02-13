@@ -101,6 +101,8 @@ Use `rounded-md` as the default border radius for cards, inputs, and containers.
 
 Hover effects should produce a subtle color shift rather than a drastic change. Avoid fully inverting colors on hover, as this creates a jarring experience. An exception may be made for elements where a strong visual signal is appropriate, such as warning or danger buttons.
 
+Clickable elements such as links and buttons should use a pointer cursor (`cursor-pointer`) to clearly signal interactivity.
+
 == Transitions
 
 Use `transition-colors duration-200` as the default transition for hover and focus state changes. For buttons, a subtle `hover:-translate-y-px` lift may be added for a tactile feel.
