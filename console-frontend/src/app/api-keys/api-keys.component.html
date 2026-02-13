@@ -179,7 +179,10 @@
                 </td>
                 <td class="text-sm text-gray-600 dark:text-gray-400">
                   @if (apiKey.expires) {
-                    <span [class.text-red-600]="isExpired(apiKey.expires)" title="{{ formatDateTime(apiKey.expires) }}">
+                    <span
+                      [class.text-red-600]="isExpired(apiKey.expires)"
+                      title="{{ formatDateTime(apiKey.expires) }}"
+                    >
                       {{ formatDate(apiKey.expires) }}
                     </span>
                   } @else {
