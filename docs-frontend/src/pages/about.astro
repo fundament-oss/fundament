@@ -2,117 +2,24 @@
 import Layout from '../layouts/Landing.astro';
 ---
 
-<Layout title="About - Fundament">
-  <div class="hero pb-12! sm:pb-16!">
-    <div class="mx-auto max-w-7xl px-6 lg:px-8">
-      <div class="mb-20 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            class="h-8 w-8 text-blue-600 dark:text-blue-400"
-          >
-            <path
-              fill="currentColor"
-              d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
-            ></path>
-          </svg>
-          <a href="/" class="text-2xl font-bold text-gray-800 no-underline dark:text-gray-100"
-            >Fundament</a
-          >
-        </div>
-        <nav class="flex items-center gap-6">
-          <a
-            href="/about"
-            class="font-medium text-gray-900 no-underline transition-colors duration-200 dark:text-gray-100"
-          >
-            About
-          </a>
-          <a
-            href="/docs"
-            class="text-gray-700 no-underline transition-colors duration-200 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
-          >
-            Docs
-          </a>
-
-          <!-- Theme (dark/light mode) Switcher -->
-          <button
-            id="theme-toggle"
-            type="button"
-            role="switch"
-            aria-label="Toggle dark mode"
-            aria-checked="false"
-            class="group h-6.25 w-10.5 cursor-pointer rounded-full border border-indigo-300 bg-indigo-200 text-indigo-600 ring-indigo-500 outline-none focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:ring-offset-gray-950"
-          >
-            <span
-              class="flex h-5.25 w-5.25 translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow transition-transform group-aria-checked:translate-x-4.75 dark:bg-gray-950 dark:text-gray-300"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                id="theme-icon-moon"
-                class="hidden h-4 w-4"
-                viewBox="0 0 24 24"
-                ><path
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 3h.393a7.5 7.5 0 0 0 7.92 12.446A9 9 0 1 1 12 2.992z"></path></svg
-              >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                id="theme-icon-sun"
-                class="h-4 w-4"
-                viewBox="0 0 24 24"
-                ><path
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 12a4 4 0 1 0 8 0a4 4 0 1 0-8 0m-5 0h1m8-9v1m8 8h1m-9 8v1M5.6 5.6l.7.7m12.1-.7l-.7.7m0 11.4l.7.7m-12.1-.7l-.7.7"
-                ></path></svg
-              >
-            </span>
-          </button>
-
-          <a
-            href="https://github.com/fundament-oss/fundament"
-            class="text-gray-700 no-underline transition-colors duration-200 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
-            target="_blank"
-            rel="nofollow noopener noreferrer"
-            aria-label="GitHub repository"
-          >
-            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill-rule="evenodd"
-                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                clip-rule="evenodd"></path>
-            </svg>
-          </a>
-        </nav>
-      </div>
-
-      <div class="relative z-10 mx-auto max-w-3xl text-left">
-        <h1 class="hero-title mb-8">About Fundament</h1>
-        <p class="mb-6 text-lg leading-relaxed text-gray-700 sm:text-xl dark:text-gray-300">
-          Fundament is software for running an Autonomous Private Cloud. It is designed to provide
-          organizations with a minimal, reliable foundation for running modern applications. Unlike
-          traditional platforms that bundle every service by default, Fundament is basic at its core
-          &mdash;delivering only the essential infrastructure and orchestration layers&mdash; while
-          allowing each tenant to extend their environment with exactly the services and tools they
-          need.
-        </p>
-        <p class="mb-0 text-lg leading-relaxed text-gray-700 sm:text-xl dark:text-gray-300">
-          On top of this foundation, Fundament serves as an internal developer platform (IDP):
-          enabling developers to build, deploy, and operate applications with speed and confidence.
-          Its API-first design, multi-tenant architecture, and focus on autonomy and scalability
-          make it suitable for organizations that want cloud capabilities on their own terms;
-          secure, reliable, and without unnecessary complexity.
-        </p>
-      </div>
-    </div>
+<Layout title="About - Fundament" heroClass="pb-12! sm:pb-16!">
+  <div class="relative z-10 mx-auto max-w-3xl text-left" slot="hero">
+    <h1 class="hero-title mb-8">About Fundament</h1>
+    <p class="mb-6 text-lg leading-relaxed text-gray-700 sm:text-xl dark:text-gray-300">
+      Fundament is software for running an Autonomous Private Cloud. It is designed to provide
+      organizations with a minimal, reliable foundation for running modern applications. Unlike
+      traditional platforms that bundle every service by default, Fundament is basic at its core
+      &mdash;delivering only the essential infrastructure and orchestration layers&mdash; while
+      allowing each tenant to extend their environment with exactly the services and tools they
+      need.
+    </p>
+    <p class="mb-0 text-lg leading-relaxed text-gray-700 sm:text-xl dark:text-gray-300">
+      On top of this foundation, Fundament serves as an internal developer platform (IDP):
+      enabling developers to build, deploy, and operate applications with speed and confidence.
+      Its API-first design, multi-tenant architecture, and focus on autonomy and scalability
+      make it suitable for organizations that want cloud capabilities on their own terms;
+      secure, reliable, and without unnecessary complexity.
+    </p>
   </div>
 
   <div class="bg-white py-12 sm:py-16 dark:bg-gray-900">
@@ -154,96 +61,4 @@ import Layout from '../layouts/Landing.astro';
       </div>
     </div>
   </div>
-
-  <footer class="border-t border-gray-200 bg-gray-50 py-12 dark:border-gray-800 dark:bg-gray-900">
-    <div class="mx-auto max-w-7xl px-6 lg:px-8">
-      <div class="flex flex-col items-center justify-between gap-6 md:flex-row">
-        <div class="text-sm text-gray-600 dark:text-gray-400">Fundament</div>
-        <div class="flex flex-wrap justify-center gap-8">
-          <a
-            href="https://digilab.overheid.nl/"
-            class="text-gray-600 no-underline transition-colors duration-200 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-            style="text-decoration: none;"
-            target="_blank"
-          >
-            Digilab
-          </a>
-          <a
-            href="https://github.com/fundament-oss/fundament"
-            class="text-gray-600 no-underline transition-colors duration-200 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-            style="text-decoration: none;"
-            target="_blank"
-            rel="nofollow noopener noreferrer"
-          >
-            GitHub
-          </a>
-        </div>
-      </div>
-    </div>
-  </footer>
 </Layout>
-
-<script is:inline>
-  /* eslint-disable */
-  // Theme state
-  let isDarkMode = false;
-
-  // Get DOM elements
-  const themeToggle = document.getElementById('theme-toggle');
-  const moonIcon = document.getElementById('theme-icon-moon');
-  const sunIcon = document.getElementById('theme-icon-sun');
-
-  // Initialize theme from localStorage or system preference
-  function initializeTheme() {
-    const savedTheme = localStorage.getItem('starlight-theme');
-
-    if (savedTheme === 'dark' || savedTheme === 'light') {
-      isDarkMode = savedTheme === 'dark';
-    } else {
-      // Use system preference
-      isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-
-    applyTheme();
-  }
-
-  // Toggle theme
-  function toggleTheme() {
-    isDarkMode = !isDarkMode;
-
-    // Apply with view transition if supported. Use 80 ms delay to allow CSS transition on the switch to start
-    setTimeout(() => {
-      if (document.startViewTransition) {
-        document.startViewTransition(() => applyTheme());
-      } else {
-        applyTheme();
-      }
-    }, 80);
-  }
-
-  // Apply theme to HTML element and save to localStorage
-  function applyTheme() {
-    const htmlElement = document.documentElement;
-
-    if (isDarkMode) {
-      htmlElement.classList.add('dark');
-      themeToggle?.setAttribute('aria-checked', 'true');
-      moonIcon?.classList.remove('hidden');
-      sunIcon?.classList.add('hidden');
-    } else {
-      htmlElement.classList.remove('dark');
-      themeToggle?.setAttribute('aria-checked', 'false');
-      moonIcon?.classList.add('hidden');
-      sunIcon?.classList.remove('hidden');
-    }
-
-    localStorage.setItem('starlight-theme', isDarkMode ? 'dark' : 'light');
-    localStorage.setItem('astroErrorOverlayTheme', isDarkMode ? 'dark' : 'light');
-  }
-
-  // Add click event listener
-  themeToggle?.addEventListener('click', toggleTheme);
-
-  // Initialize theme on page load
-  initializeTheme();
-</script>
