@@ -1,6 +1,4 @@
-import { defineConfig } from '@hey-api/openapi-ts';
-
-export default defineConfig({
+export default {
   input: '../authn-api/openapi.yaml',
   output: 'src/generated/authn-api',
   plugins: [
@@ -11,4 +9,4 @@ export default defineConfig({
       bundle: false,
     },
   ],
-});
+};
