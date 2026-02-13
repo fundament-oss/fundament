@@ -57,7 +57,7 @@ export default class OrganizationComponent implements OnInit {
   error = signal<string | null>(null);
 
   constructor() {
-    this.titleService.setTitle('Organization details');
+    this.titleService.setTitle('Organization settings');
   }
 
   async ngOnInit() {
