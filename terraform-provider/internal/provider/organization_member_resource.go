@@ -220,8 +220,6 @@ func (r *OrganizationMemberResource) Read(ctx context.Context, req resource.Read
 
 	if member.Email != nil {
 		state.Email = types.StringValue(*member.Email)
-	} else {
-		state.Email = types.StringNull()
 	}
 
 	if member.Created.CheckValid() == nil {
@@ -317,8 +315,6 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 
 	if member.Email != nil {
 		plan.Email = types.StringValue(*member.Email)
-	} else {
-		plan.Email = types.StringNull()
 	}
 
 	if member.Created.CheckValid() == nil {
