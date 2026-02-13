@@ -3,6 +3,8 @@ import {
   provideBrowserGlobalErrorListeners,
   provideAppInitializer,
   inject,
+  Injector,
+  runInInjectionContext,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { createConnectTransport } from '@connectrpc/connect-web';
@@ -12,6 +14,7 @@ import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.modu
 import EXPECTED_API_VERSION from '../proto-version';
 import routes from './app.routes';
 import { ConfigService } from './config.service';
+import { OrganizationContextService } from './organization-context.service';
 
 // Global version mismatch observable
 export const versionMismatch$ = new BehaviorSubject<boolean>(false);
@@ -56,14 +59,27 @@ export const appConfig: ApplicationConfig = {
     // Provide the Organization transport
     {
       provide: ORGANIZATION_TRANSPORT,
-      useFactory: () => {
+      useFactory: (injector: Injector) => {
         const configService = inject(ConfigService);
         const config = configService.getConfig();
         return createConnectTransport({
           baseUrl: config.organizationApiUrl,
           fetch: async (input, init) => {
+            // Get the current organization ID from the context service
+            const orgId = runInInjectionContext(injector, () => {
+              const contextService = inject(OrganizationContextService);
+              return contextService.currentOrganizationId();
+            });
+
+            // Add the Fun-Organization header if we have an organization selected
+            const headers = new Headers(init?.headers);
+            if (orgId) {
+              headers.set('Fun-Organization', orgId);
+            }
+
             const response = await fetch(input, {
               ...init,
+              headers,
               credentials: 'include',
             });
 
@@ -77,6 +93,7 @@ export const appConfig: ApplicationConfig = {
           },
         });
       },
+      deps: [Injector],
     },
   ],
 };

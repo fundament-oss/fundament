@@ -13,48 +13,63 @@ import (
 )
 
 const memberDelete = `-- name: MemberDelete :exec
-UPDATE tenant.users SET deleted = NOW() WHERE id = $1 AND organization_id = $2 AND deleted IS NULL
+UPDATE tenant.organizations_users
+SET deleted = NOW()
+WHERE user_id = $1
+    AND organization_id = $2
+    AND deleted IS NULL
 `
 
 type MemberDeleteParams struct {
-	ID             uuid.UUID
+	UserID         uuid.UUID
 	OrganizationID uuid.UUID
 }
 
+// Soft-delete the organization membership (not the user - they may be in other orgs)
 func (q *Queries) MemberDelete(ctx context.Context, arg MemberDeleteParams) error {
-	_, err := q.db.Exec(ctx, memberDelete, arg.ID, arg.OrganizationID)
+	_, err := q.db.Exec(ctx, memberDelete, arg.UserID, arg.OrganizationID)
 	return err
 }
 
 const memberGetByEmail = `-- name: MemberGetByEmail :one
-SELECT id, organization_id, name, external_id, email, role, created
+SELECT
+    users.id,
+    organizations_users.organization_id,
+    users.name,
+    users.external_ref,
+    users.email,
+    organizations_users.role,
+    organizations_users.created
 FROM tenant.users
-WHERE email = $1::text AND organization_id = $2 AND deleted IS NULL
+INNER JOIN tenant.organizations_users
+    ON organizations_users.user_id = users.id
+WHERE users.email = $1::text
+    AND organizations_users.deleted IS NULL
+    AND users.deleted IS NULL
 `
 
 type MemberGetByEmailParams struct {
-	Email          string
-	OrganizationID uuid.UUID
+	Email string
 }
 
 type MemberGetByEmailRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 	Name           string
-	ExternalID     pgtype.Text
+	ExternalRef    pgtype.Text
 	Email          pgtype.Text
 	Role           string
 	Created        pgtype.Timestamptz
 }
 
 func (q *Queries) MemberGetByEmail(ctx context.Context, arg MemberGetByEmailParams) (MemberGetByEmailRow, error) {
-	row := q.db.QueryRow(ctx, memberGetByEmail, arg.Email, arg.OrganizationID)
+	row := q.db.QueryRow(ctx, memberGetByEmail, arg.Email)
 	var i MemberGetByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
 		&i.Name,
-		&i.ExternalID,
+		&i.ExternalRef,
 		&i.Email,
 		&i.Role,
 		&i.Created,
@@ -62,78 +77,113 @@ func (q *Queries) MemberGetByEmail(ctx context.Context, arg MemberGetByEmailPara
 	return i, err
 }
 
-const memberInvite = `-- name: MemberInvite :one
-INSERT INTO tenant.users (organization_id, name, email, role)
-VALUES ($1, $2, $2, $3)
-RETURNING id, organization_id, name, external_id, email, role, created
+const memberInviteMembership = `-- name: MemberInviteMembership :one
+INSERT INTO tenant.organizations_users (organization_id, user_id, role)
+VALUES ($1, $2, $3::text)
+RETURNING id, organization_id, user_id, role, created
 `
 
-type MemberInviteParams struct {
+type MemberInviteMembershipParams struct {
 	OrganizationID uuid.UUID
-	Name           string
+	UserID         uuid.UUID
 	Role           string
 }
 
-type MemberInviteRow struct {
+type MemberInviteMembershipRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
-	Name           string
-	ExternalID     pgtype.Text
-	Email          pgtype.Text
+	UserID         uuid.UUID
 	Role           string
 	Created        pgtype.Timestamptz
 }
 
-func (q *Queries) MemberInvite(ctx context.Context, arg MemberInviteParams) (MemberInviteRow, error) {
-	row := q.db.QueryRow(ctx, memberInvite, arg.OrganizationID, arg.Name, arg.Role)
-	var i MemberInviteRow
+// Creates the organization membership for an invited user
+func (q *Queries) MemberInviteMembership(ctx context.Context, arg MemberInviteMembershipParams) (MemberInviteMembershipRow, error) {
+	row := q.db.QueryRow(ctx, memberInviteMembership, arg.OrganizationID, arg.UserID, arg.Role)
+	var i MemberInviteMembershipRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
-		&i.Name,
-		&i.ExternalID,
-		&i.Email,
+		&i.UserID,
 		&i.Role,
 		&i.Created,
 	)
 	return i, err
 }
 
-const memberListByOrganizationID = `-- name: MemberListByOrganizationID :many
-SELECT id, organization_id, name, external_id, email, role, created
-FROM tenant.users
-WHERE organization_id = $1 AND deleted IS NULL
-ORDER BY created DESC
+const memberInviteUser = `-- name: MemberInviteUser :one
+INSERT INTO tenant.users (name, email)
+VALUES ($1::text, $1::text)
+RETURNING id, name, external_ref, email, created
 `
 
-type MemberListByOrganizationIDParams struct {
-	OrganizationID uuid.UUID
+type MemberInviteUserParams struct {
+	Email string
 }
 
-type MemberListByOrganizationIDRow struct {
+type MemberInviteUserRow struct {
+	ID          uuid.UUID
+	Name        string
+	ExternalRef pgtype.Text
+	Email       pgtype.Text
+	Created     pgtype.Timestamptz
+}
+
+// Creates a new user record for an invited member (no external_ref yet)
+func (q *Queries) MemberInviteUser(ctx context.Context, arg MemberInviteUserParams) (MemberInviteUserRow, error) {
+	row := q.db.QueryRow(ctx, memberInviteUser, arg.Email)
+	var i MemberInviteUserRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.ExternalRef,
+		&i.Email,
+		&i.Created,
+	)
+	return i, err
+}
+
+const memberList = `-- name: MemberList :many
+SELECT
+    users.id,
+    organizations_users.organization_id,
+    users.name,
+    users.external_ref,
+    users.email,
+    organizations_users.role,
+    organizations_users.created
+FROM tenant.users
+INNER JOIN tenant.organizations_users
+    ON organizations_users.user_id = users.id
+WHERE organizations_users.deleted IS NULL
+    AND users.deleted IS NULL
+ORDER BY organizations_users.created DESC
+`
+
+type MemberListRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 	Name           string
-	ExternalID     pgtype.Text
+	ExternalRef    pgtype.Text
 	Email          pgtype.Text
 	Role           string
 	Created        pgtype.Timestamptz
 }
 
-func (q *Queries) MemberListByOrganizationID(ctx context.Context, arg MemberListByOrganizationIDParams) ([]MemberListByOrganizationIDRow, error) {
-	rows, err := q.db.Query(ctx, memberListByOrganizationID, arg.OrganizationID)
+func (q *Queries) MemberList(ctx context.Context) ([]MemberListRow, error) {
+	rows, err := q.db.Query(ctx, memberList)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []MemberListByOrganizationIDRow
+	var items []MemberListRow
 	for rows.Next() {
-		var i MemberListByOrganizationIDRow
+		var i MemberListRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
 			&i.Name,
-			&i.ExternalID,
+			&i.ExternalRef,
 			&i.Email,
 			&i.Role,
 			&i.Created,

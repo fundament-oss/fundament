@@ -11,6 +11,7 @@ SELECT
     namespace_id,
     api_key_id,
     install_id,
+    organization_user_id,
     created,
     retries
 FROM authz.outbox
@@ -49,9 +50,9 @@ SET status = 'failed',
     status_info = @status_info
 WHERE id = @id;
 
--- name: GetUserByID :one
-SELECT id, organization_id, role, deleted
-FROM tenant.users
+-- name: GetOrganizationUserByID :one
+SELECT id, organization_id, user_id, role, deleted
+FROM tenant.organizations_users
 WHERE id = @id;
 
 -- name: GetProjectByID :one

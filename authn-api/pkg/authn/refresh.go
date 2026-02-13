@@ -15,9 +15,9 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u := &user{
-		ID:             claims.UserID,
-		OrganizationID: claims.OrganizationID,
-		Name:           claims.Name,
+		ID:              claims.UserID,
+		OrganizationIDs: claims.OrganizationIDs,
+		Name:            claims.Name,
 	}
 
 	accessToken, err := s.generateJWT(u, claims.Groups)

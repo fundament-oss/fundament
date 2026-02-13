@@ -55,8 +55,8 @@ message DeleteMemberResponse {}
 message Member {
   string id = 10;
   string name = 20;
-  // external_id is empty for pending invitations
-  optional string external_id = 30;
+  // external_ref is empty for pending invitations
+  optional string external_ref = 30;
   // email is set for invited members
   optional string email = 50;
   // role is "viewer" or "admin"

@@ -291,8 +291,8 @@ type Member struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	Name  string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	// external_id is empty for pending invitations
-	ExternalId *string `protobuf:"bytes,30,opt,name=external_id,json=externalId,proto3,oneof" json:"external_id,omitempty"`
+	// external_ref is empty for pending invitations
+	ExternalRef *string `protobuf:"bytes,30,opt,name=external_ref,json=externalRef,proto3,oneof" json:"external_ref,omitempty"`
 	// email is set for invited members
 	Email *string `protobuf:"bytes,50,opt,name=email,proto3,oneof" json:"email,omitempty"`
 	// role is "viewer" or "admin"
@@ -346,9 +346,9 @@ func (x *Member) GetName() string {
 	return ""
 }
 
-func (x *Member) GetExternalId() string {
-	if x != nil && x.ExternalId != nil {
-		return *x.ExternalId
+func (x *Member) GetExternalRef() string {
+	if x != nil && x.ExternalRef != nil {
+		return *x.ExternalRef
 	}
 	return ""
 }
@@ -393,17 +393,16 @@ const file_v1_member_proto_rawDesc = "" +
 	"\x13DeleteMemberRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x16\n" +
-	"\x14DeleteMemberResponse\"\xd1\x01\n" +
+	"\x14DeleteMemberResponse\"\xd4\x01\n" +
 	"\x06Member\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x12$\n" +
-	"\vexternal_id\x18\x1e \x01(\tH\x00R\n" +
-	"externalId\x88\x01\x01\x12\x19\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12&\n" +
+	"\fexternal_ref\x18\x1e \x01(\tH\x00R\vexternalRef\x88\x01\x01\x12\x19\n" +
 	"\x05email\x182 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x12\n" +
 	"\x04role\x18< \x01(\tR\x04role\x124\n" +
-	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreatedB\x0e\n" +
-	"\f_external_idB\b\n" +
+	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreatedB\x0f\n" +
+	"\r_external_refB\b\n" +
 	"\x06_email2\xa3\x02\n" +
 	"\rMemberService\x12X\n" +
 	"\vListMembers\x12#.organization.v1.ListMembersRequest\x1a$.organization.v1.ListMembersResponse\x12[\n" +

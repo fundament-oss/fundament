@@ -20,12 +20,16 @@ func (s *Server) DeleteMember(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	memberID := uuid.MustParse(req.Msg.Id)
+	// The request ID is the user ID (member = user in this org)
+	userID := uuid.MustParse(req.Msg.Id)
 
-	err := s.queries.MemberDelete(ctx, db.MemberDeleteParams{
-		ID:             memberID,
+	params := db.MemberDeleteParams{
+		UserID:         userID,
 		OrganizationID: organizationID,
-	})
+	}
+
+	// Soft-delete the organization membership (not the user - they may be in other orgs)
+	err := s.queries.MemberDelete(ctx, params)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete member: %w", err))
 	}

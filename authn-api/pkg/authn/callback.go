@@ -60,7 +60,7 @@ func (s *AuthnServer) HandleCallback(w http.ResponseWriter, r *http.Request, par
 
 	s.logger.Info("user logged in",
 		"user_id", user.ID,
-		"organization_id", user.OrganizationID,
+		"organization_ids", user.OrganizationIDs,
 		"name", user.Name,
 		"groups", claims.Groups,
 	)

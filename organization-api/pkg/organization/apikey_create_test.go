@@ -38,7 +38,7 @@ func Test_APIKey_Create(t *testing.T) {
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
-		WithUser(userID, "test-user", orgID),
+		WithUser(userID, "test-user", []uuid.UUID{orgID}),
 	)
 
 	token := env.createAuthnToken(t, userID)
@@ -80,6 +80,7 @@ func Test_APIKey_Create(t *testing.T) {
 
 			createReq := connect.NewRequest(tc.CreateRequest)
 			createReq.Header().Set("Authorization", "Bearer "+token)
+			createReq.Header().Set("Fun-Organization", orgID.String())
 
 			res, err := client.CreateAPIKey(context.Background(), createReq)
 			require.NoError(t, err)
@@ -88,6 +89,7 @@ func Test_APIKey_Create(t *testing.T) {
 				ApiKeyId: res.Msg.Id,
 			})
 			getReq.Header().Set("Authorization", "Bearer "+token)
+			getReq.Header().Set("Fun-Organization", orgID.String())
 
 			getRes, err := client.GetAPIKey(context.Background(), getReq)
 			require.NoError(t, err)

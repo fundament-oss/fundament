@@ -59,7 +59,7 @@ SELECT
     project_members.role,
     project_members.created,
     users.name as user_name,
-    users.external_id as user_external_id
+    users.external_ref as user_external_ref
 FROM tenant.project_members
 INNER JOIN tenant.users
   ON users.id = project_members.user_id
@@ -73,13 +73,13 @@ type ProjectMemberListParams struct {
 }
 
 type ProjectMemberListRow struct {
-	ID             uuid.UUID
-	ProjectID      uuid.UUID
-	UserID         uuid.UUID
-	Role           dbconst.ProjectMemberRole
-	Created        pgtype.Timestamptz
-	UserName       string
-	UserExternalID pgtype.Text
+	ID              uuid.UUID
+	ProjectID       uuid.UUID
+	UserID          uuid.UUID
+	Role            dbconst.ProjectMemberRole
+	Created         pgtype.Timestamptz
+	UserName        string
+	UserExternalRef pgtype.Text
 }
 
 func (q *Queries) ProjectMemberList(ctx context.Context, arg ProjectMemberListParams) ([]ProjectMemberListRow, error) {
@@ -98,7 +98,7 @@ func (q *Queries) ProjectMemberList(ctx context.Context, arg ProjectMemberListPa
 			&i.Role,
 			&i.Created,
 			&i.UserName,
-			&i.UserExternalID,
+			&i.UserExternalRef,
 		); err != nil {
 			return nil, err
 		}

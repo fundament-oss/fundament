@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
@@ -56,7 +57,26 @@ func (s *AuthnServer) ExchangeToken(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))
 	}
 
-	accessToken, err := s.generateJWTWithExpiry(userFromGetByIDRow(&dbUser), []string{}, APITokenExpiry)
+	memberships, err := s.queries.UserListOrganizations(ctx, db.UserListOrganizationsParams{UserID: dbUser.ID})
+	if err != nil {
+		s.logger.Error("failed to get user organization for api key", "error", err, "api_key_id", apiKey.ID, "user_id", apiKey.UserID)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))
+	}
+
+	organizationIDs := make([]uuid.UUID, 0, len(memberships))
+
+	for _, membership := range memberships {
+		organizationIDs = append(organizationIDs, membership.OrganizationID)
+	}
+
+	u := &user{
+		ID:              dbUser.ID,
+		OrganizationIDs: organizationIDs,
+		Name:            dbUser.Name,
+		ExternalRef:     dbUser.ExternalRef.String,
+	}
+
+	accessToken, err := s.generateJWTWithExpiry(u, []string{}, APITokenExpiry)
 	if err != nil {
 		s.logger.Error("failed to generate jwt for api token", "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))
@@ -65,7 +85,7 @@ func (s *AuthnServer) ExchangeToken(
 	s.logger.Info("api token exchanged for jwt",
 		"api_key_id", apiKey.ID,
 		"user_id", dbUser.ID,
-		"organization_id", dbUser.OrganizationID,
+		"organization_ids", u.OrganizationIDs,
 	)
 
 	return connect.NewResponse(&authnv1.ExchangeTokenResponse{
