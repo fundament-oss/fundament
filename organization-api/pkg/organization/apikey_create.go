@@ -41,7 +41,7 @@ func (s *Server) CreateAPIKey(
 		}
 
 		expires = pgtype.Timestamptz{
-			Time:  time.Now().Add(expiresIn),
+			Time:  s.clock.Now().Add(expiresIn),
 			Valid: true,
 		}
 	}
