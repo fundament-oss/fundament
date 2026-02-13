@@ -58,7 +58,7 @@
                   </div>
                   <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                     @if (cert.notAfter) {
-                      <span [class.text-red-600]="cert.status === 'Expired'">
+                      <span [class.text-rose-600]="cert.status === 'Expired'">
                         {{ formatDate(cert.notAfter) }}
                       </span>
                     } @else {
