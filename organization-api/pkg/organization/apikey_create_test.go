@@ -49,8 +49,8 @@ func Test_APIKey_Create(t *testing.T) {
 
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
-	inTwoMinutes := testClock.Now().Add(2 * time.Minute)
-	inFiveDays := testClock.Now().Add(120 * time.Hour)
+	inTwoMinutes := testClock.Now().Add(2 * time.Minute).Truncate(time.Microsecond)
+	inFiveDays := testClock.Now().Add(120 * time.Hour).Truncate(time.Microsecond)
 
 	tests := map[string]struct {
 		CreateRequest *organizationv1.CreateAPIKeyRequest
