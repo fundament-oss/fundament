@@ -8,7 +8,6 @@ import {
   tablerTrash,
   tablerAlertTriangle,
   tablerCertificate,
-  tablerArrowRight,
 } from '@ng-icons/tabler-icons';
 import ModalComponent from '../modal/modal.component';
 import { TitleService } from '../title.service';
@@ -26,7 +25,6 @@ import { type Issuer, MOCK_ISSUERS } from '../certificates/mock-data';
       tablerTrash,
       tablerAlertTriangle,
       tablerCertificate,
-      tablerArrowRight,
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,18 +32,22 @@ import { type Issuer, MOCK_ISSUERS } from '../certificates/mock-data';
 })
 export default class IssuersComponent {
   private titleService = inject(TitleService);
+
   private toastService = inject(ToastService);
 
   issuers = signal<Issuer[]>([...MOCK_ISSUERS]);
 
   showDeleteModal = signal(false);
+
   pendingIssuerId = signal<string | null>(null);
+
   pendingIssuerName = signal<string | null>(null);
 
   constructor() {
     this.titleService.setTitle('Issuers');
   }
 
+  // eslint-disable-next-line class-methods-use-this
   getKindBadgeClass(kind: string): string {
     return kind === 'ClusterIssuer' ? 'badge badge-purple' : 'badge badge-blue';
   }

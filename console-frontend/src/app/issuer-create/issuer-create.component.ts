@@ -28,20 +28,30 @@ interface SolverForm {
 })
 export default class IssuerCreateComponent {
   private router = inject(Router);
+
   private titleService = inject(TitleService);
+
   private toastService = inject(ToastService);
 
   // Basic fields
   name = signal('');
+
   kind = signal<IssuerKind>('ClusterIssuer');
+
   namespace = signal('default');
+
   issuerType = signal<IssuerType>('ACME');
 
   // ACME fields
   acmeServer = signal('https://acme-v02.api.letsencrypt.org/directory');
+
   acmeEmail = signal('');
+
   acmePrivateKeySecret = signal('');
-  solvers = signal<SolverForm[]>([{ type: 'HTTP01', ingressClass: 'nginx', provider: '', selector: '' }]);
+
+  solvers = signal<SolverForm[]>([
+    { type: 'HTTP01', ingressClass: 'nginx', provider: '', selector: '' },
+  ]);
 
   // CA fields
   caSecretName = signal('');
@@ -72,9 +82,7 @@ export default class IssuerCreateComponent {
   }
 
   updateSolverType(index: number, type: SolverType) {
-    this.solvers.update((s) =>
-      s.map((solver, i) => (i === index ? { ...solver, type } : solver)),
-    );
+    this.solvers.update((s) => s.map((solver, i) => (i === index ? { ...solver, type } : solver)));
   }
 
   updateSolverIngressClass(index: number, ingressClass: string) {

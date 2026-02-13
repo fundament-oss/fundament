@@ -199,8 +199,7 @@ const routes: Routes = [
       },
       {
         path: 'certificates',
-        loadComponent: () =>
-          import('./certificates/certificates.component').then((m) => m.default),
+        loadComponent: () => import('./certificates/certificates.component').then((m) => m.default),
         data: {
           breadcrumbs: [{ label: 'Certificates' }],
         },

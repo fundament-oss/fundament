@@ -8,7 +8,6 @@ import {
   tablerTrash,
   tablerAlertTriangle,
   tablerShieldCheck,
-  tablerArrowRight,
 } from '@ng-icons/tabler-icons';
 import ModalComponent from '../modal/modal.component';
 import { TitleService } from '../title.service';
@@ -27,7 +26,6 @@ import { type Certificate, type CertificateStatus, MOCK_CERTIFICATES } from './m
       tablerTrash,
       tablerAlertTriangle,
       tablerShieldCheck,
-      tablerArrowRight,
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,18 +33,22 @@ import { type Certificate, type CertificateStatus, MOCK_CERTIFICATES } from './m
 })
 export default class CertificatesComponent {
   private titleService = inject(TitleService);
+
   private toastService = inject(ToastService);
 
   certificates = signal<Certificate[]>([...MOCK_CERTIFICATES]);
 
   showDeleteModal = signal(false);
+
   pendingCertId = signal<string | null>(null);
+
   pendingCertName = signal<string | null>(null);
 
   constructor() {
     this.titleService.setTitle('Certificates');
   }
 
+  // eslint-disable-next-line class-methods-use-this
   getStatusBadgeClass(status: CertificateStatus): string {
     switch (status) {
       case 'Ready':
@@ -55,9 +57,14 @@ export default class CertificatesComponent {
         return 'badge badge-yellow';
       case 'Expired':
         return 'badge badge-rose';
+      default: {
+        const exhaustive: never = status;
+        throw new Error(`Unhandled status: ${exhaustive}`);
+      }
     }
   }
 
+  // eslint-disable-next-line class-methods-use-this
   getStatusLabel(status: CertificateStatus): string {
     switch (status) {
       case 'Ready':
@@ -66,9 +73,14 @@ export default class CertificatesComponent {
         return 'Not Ready';
       case 'Expired':
         return 'Expired';
+      default: {
+        const exhaustive: never = status;
+        throw new Error(`Unhandled status: ${exhaustive}`);
+      }
     }
   }
 
+  // eslint-disable-next-line class-methods-use-this
   formatDnsNames(dnsNames: string[]): string {
     return dnsNames.join(', ');
   }
@@ -92,6 +104,7 @@ export default class CertificatesComponent {
     this.toastService.success('Certificate deleted');
   }
 
+  // eslint-disable-next-line class-methods-use-this
   formatDate(value: string | undefined): string {
     return formatDate(value, '—');
   }

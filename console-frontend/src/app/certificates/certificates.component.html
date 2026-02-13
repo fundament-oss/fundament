@@ -9,18 +9,12 @@
 
   <div class="p-6">
     <!-- Actions -->
-    <div class="mb-5 flex items-center gap-4">
+    <div class="mb-5 flex items-center space-x-3">
       <a routerLink="/certificates/create" class="btn-primary inline-flex items-center">
         <ng-icon name="tablerPlus" class="mr-1.5" />
         Create new certificate
       </a>
-      <a
-        routerLink="/issuers"
-        class="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-      >
-        Issuers
-        <ng-icon name="tablerArrowRight" class="ml-1" size="1rem" />
-      </a>
+      <a routerLink="/issuers" class="btn-secondary"> View issuers </a>
     </div>
 
     <!-- Certificates Table -->
@@ -30,64 +24,75 @@
           <thead>
             <tr>
               <th scope="col">Name</th>
-              <th scope="col">Namespace</th>
               <th scope="col">DNS Names</th>
-              <th scope="col">Issuer</th>
               <th scope="col">Status</th>
-              <th scope="col">Expires</th>
               <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
             @for (cert of certificates(); track cert.id) {
               <tr>
-                <td class="font-medium dark:text-white">
-                  {{ cert.name }}
+                <td class="whitespace-normal">
+                  <a
+                    [routerLink]="['/certificates', cert.id]"
+                    class="font-medium hover:underline dark:text-white"
+                    >{{ cert.name }}</a
+                  >
+                  <div class="mt-0.5 font-mono text-xs text-gray-500 dark:text-gray-400">
+                    {{ cert.namespace }}
+                  </div>
                 </td>
-                <td class="font-mono text-sm text-gray-600 dark:text-gray-400">
-                  {{ cert.namespace }}
+                <td class="max-w-48 whitespace-normal">
+                  <div class="truncate text-sm text-gray-600 dark:text-gray-400">
+                    {{ formatDnsNames(cert.dnsNames) }}
+                  </div>
+                  <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    Issuer: {{ cert.issuerName }}
+                  </div>
                 </td>
-                <td class="max-w-48 truncate text-sm text-gray-600 dark:text-gray-400">
-                  {{ formatDnsNames(cert.dnsNames) }}
-                </td>
-                <td class="text-sm text-gray-600 dark:text-gray-400">
-                  {{ cert.issuerName }}
-                </td>
-                <td>
-                  <span [class]="getStatusBadgeClass(cert.status)">
-                    {{ getStatusLabel(cert.status) }}
-                  </span>
-                </td>
-                <td class="text-sm text-gray-600 dark:text-gray-400">
-                  @if (cert.notAfter) {
-                    <span [class.text-red-600]="cert.status === 'Expired'">
-                      {{ formatDate(cert.notAfter) }}
+                <td class="whitespace-normal">
+                  <div>
+                    <span [class]="getStatusBadgeClass(cert.status)">
+                      {{ getStatusLabel(cert.status) }}
                     </span>
-                  } @else {
-                    <span class="text-gray-400">—</span>
-                  }
+                  </div>
+                  <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    @if (cert.notAfter) {
+                      <span [class.text-red-600]="cert.status === 'Expired'">
+                        {{ formatDate(cert.notAfter) }}
+                      </span>
+                    } @else {
+                      <span>—</span>
+                    }
+                  </div>
                 </td>
                 <td>
-                  <div class="flex gap-2">
+                  <div class="flex gap-1">
                     <a
                       [routerLink]="['/certificates', cert.id]"
-                      class="btn-light inline-flex shrink-0 items-center"
+                      class="btn-light inline-flex shrink-0 items-center px-2!"
+                      aria-label="View certificate"
+                      title="View"
                     >
-                      <ng-icon name="tablerEye" class="mr-1.5" /> View
+                      <ng-icon name="tablerEye" />
                     </a>
                     <button
                       type="button"
                       (click)="editCertificate()"
-                      class="btn-light inline-flex shrink-0 items-center"
+                      class="btn-light inline-flex shrink-0 items-center px-2!"
+                      aria-label="Edit certificate"
+                      title="Edit"
                     >
-                      <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
+                      <ng-icon name="tablerPencil" />
                     </button>
                     <button
                       type="button"
                       (click)="openDeleteModal(cert.id, cert.name)"
-                      class="btn-remove inline-flex shrink-0 items-center"
+                      class="btn-remove inline-flex shrink-0 items-center px-2!"
+                      aria-label="Delete certificate"
+                      title="Delete"
                     >
-                      <ng-icon name="tablerTrash" class="mr-1.5" /> Delete
+                      <ng-icon name="tablerTrash" />
                     </button>
                   </div>
                 </td>

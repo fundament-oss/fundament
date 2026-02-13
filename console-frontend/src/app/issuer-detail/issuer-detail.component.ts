@@ -31,11 +31,15 @@ import { type Issuer, MOCK_ISSUERS, MOCK_CERTIFICATES } from '../certificates/mo
 })
 export default class IssuerDetailComponent {
   private route = inject(ActivatedRoute);
+
   private router = inject(Router);
+
   private titleService = inject(TitleService);
+
   private toastService = inject(ToastService);
 
   issuer = signal<Issuer | null>(null);
+
   showDeleteModal = signal(false);
 
   // Certificates using this issuer
@@ -73,10 +77,12 @@ export default class IssuerDetailComponent {
     this.router.navigate(['/issuers']);
   }
 
+  // eslint-disable-next-line class-methods-use-this
   formatDate(value: string | undefined): string {
     return formatDate(value, '—');
   }
 
+  // eslint-disable-next-line class-methods-use-this
   formatDateTime(value: string | undefined): string {
     return formatDateTime(value, '—');
   }

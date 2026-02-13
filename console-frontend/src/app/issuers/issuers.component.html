@@ -9,18 +9,12 @@
 
   <div class="p-6">
     <!-- Actions -->
-    <div class="mb-5 flex items-center gap-4">
+    <div class="mb-5 flex items-center space-x-3">
       <a routerLink="/issuers/create" class="btn-primary inline-flex items-center">
         <ng-icon name="tablerPlus" class="mr-1.5" />
         Create new issuer
       </a>
-      <a
-        routerLink="/certificates"
-        class="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-      >
-        Certificates
-        <ng-icon name="tablerArrowRight" class="ml-1" size="1rem" />
-      </a>
+      <a routerLink="/certificates" class="btn-secondary"> View certificates </a>
     </div>
 
     <!-- Issuers Table -->
@@ -31,8 +25,6 @@
             <tr>
               <th scope="col">Name</th>
               <th scope="col">Kind</th>
-              <th scope="col">Type</th>
-              <th scope="col">Namespace</th>
               <th scope="col">Status</th>
               <th scope="col">Actions</th>
             </tr>
@@ -40,23 +32,29 @@
           <tbody>
             @for (issuer of issuers(); track issuer.id) {
               <tr>
-                <td class="font-medium dark:text-white">
-                  {{ issuer.name }}
+                <td class="whitespace-normal">
+                  <a
+                    [routerLink]="['/issuers', issuer.id]"
+                    class="font-medium hover:underline dark:text-white"
+                    >{{ issuer.name }}</a
+                  >
+                  <div class="mt-0.5 font-mono text-xs text-gray-500 dark:text-gray-400">
+                    @if (issuer.namespace) {
+                      {{ issuer.namespace }}
+                    } @else {
+                      <span class="italic">cluster-scoped</span>
+                    }
+                  </div>
                 </td>
-                <td>
-                  <span [class]="getKindBadgeClass(issuer.kind)">
-                    {{ issuer.kind }}
-                  </span>
-                </td>
-                <td class="text-sm text-gray-600 dark:text-gray-400">
-                  {{ issuer.type }}
-                </td>
-                <td class="font-mono text-sm text-gray-600 dark:text-gray-400">
-                  @if (issuer.namespace) {
-                    {{ issuer.namespace }}
-                  } @else {
-                    <span class="text-gray-400 italic">cluster-scoped</span>
-                  }
+                <td class="whitespace-normal">
+                  <div>
+                    <span [class]="getKindBadgeClass(issuer.kind)">
+                      {{ issuer.kind }}
+                    </span>
+                  </div>
+                  <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ issuer.type }}
+                  </div>
                 </td>
                 <td>
                   @if (issuer.status === 'Ready') {
@@ -66,26 +64,32 @@
                   }
                 </td>
                 <td>
-                  <div class="flex gap-2">
+                  <div class="flex gap-1">
                     <a
                       [routerLink]="['/issuers', issuer.id]"
-                      class="btn-light inline-flex shrink-0 items-center"
+                      class="btn-light inline-flex shrink-0 items-center px-2!"
+                      aria-label="View issuer"
+                      title="View"
                     >
-                      <ng-icon name="tablerEye" class="mr-1.5" /> View
+                      <ng-icon name="tablerEye" />
                     </a>
                     <button
                       type="button"
                       (click)="editIssuer()"
-                      class="btn-light inline-flex shrink-0 items-center"
+                      class="btn-light inline-flex shrink-0 items-center px-2!"
+                      aria-label="Edit issuer"
+                      title="Edit"
                     >
-                      <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
+                      <ng-icon name="tablerPencil" />
                     </button>
                     <button
                       type="button"
                       (click)="openDeleteModal(issuer.id, issuer.name)"
-                      class="btn-remove inline-flex shrink-0 items-center"
+                      class="btn-remove inline-flex shrink-0 items-center px-2!"
+                      aria-label="Delete issuer"
+                      title="Delete"
                     >
-                      <ng-icon name="tablerTrash" class="mr-1.5" /> Delete
+                      <ng-icon name="tablerTrash" />
                     </button>
                   </div>
                 </td>

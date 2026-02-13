@@ -11,7 +11,11 @@ import ModalComponent from '../modal/modal.component';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { formatDate, formatDateTime } from '../utils/date-format';
-import { type Certificate, type CertificateEvent, MOCK_CERTIFICATES } from '../certificates/mock-data';
+import {
+  type Certificate,
+  type CertificateEvent,
+  MOCK_CERTIFICATES,
+} from '../certificates/mock-data';
 
 @Component({
   selector: 'app-certificate-detail',
@@ -29,11 +33,15 @@ import { type Certificate, type CertificateEvent, MOCK_CERTIFICATES } from '../c
 })
 export default class CertificateDetailComponent {
   private route = inject(ActivatedRoute);
+
   private router = inject(Router);
+
   private titleService = inject(TitleService);
+
   private toastService = inject(ToastService);
 
   certificate = signal<Certificate | null>(null);
+
   showDeleteModal = signal(false);
 
   constructor() {
@@ -57,6 +65,7 @@ export default class CertificateDetailComponent {
     this.router.navigate(['/certificates']);
   }
 
+  // eslint-disable-next-line class-methods-use-this
   getEventDotColor(type: CertificateEvent['type']): string {
     switch (type) {
       case 'Issued':
@@ -69,13 +78,19 @@ export default class CertificateDetailComponent {
         return 'bg-indigo-500';
       case 'Failed':
         return 'bg-rose-500';
+      default: {
+        const exhaustive: never = type;
+        throw new Error(`Unhandled event type: ${exhaustive}`);
+      }
     }
   }
 
+  // eslint-disable-next-line class-methods-use-this
   formatDate(value: string | undefined): string {
     return formatDate(value, '—');
   }
 
+  // eslint-disable-next-line class-methods-use-this
   formatDateTime(value: string | undefined): string {
     return formatDateTime(value, '—');
   }

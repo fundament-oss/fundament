@@ -16,13 +16,7 @@
           <label for="name" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Certificate name *
           </label>
-          <input
-            id="name"
-            type="text"
-            [(ngModel)]="name"
-            placeholder="E.g. my-tls-cert"
-            required
-          />
+          <input id="name" type="text" [(ngModel)]="name" placeholder="E.g. my-tls-cert" required />
         </div>
         <div>
           <label
@@ -97,11 +91,15 @@
       <div class="space-y-4">
         <!-- DNS Names -->
         <div>
-          <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            for="dnsNameInput"
+            class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             DNS Names *
           </label>
           <div class="flex gap-2">
             <input
+              id="dnsNameInput"
               type="text"
               [(ngModel)]="dnsNameInput"
               placeholder="E.g. example.com"
@@ -134,11 +132,15 @@
 
         <!-- IP Addresses -->
         <div>
-          <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            for="ipAddressInput"
+            class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             IP Addresses
           </label>
           <div class="flex gap-2">
             <input
+              id="ipAddressInput"
               type="text"
               [(ngModel)]="ipAddressInput"
               placeholder="E.g. 10.0.0.1"
@@ -198,12 +200,7 @@
           >
             Renew before
           </label>
-          <input
-            id="renewBefore"
-            type="text"
-            [(ngModel)]="renewBefore"
-            placeholder="E.g. 720h"
-          />
+          <input id="renewBefore" type="text" [(ngModel)]="renewBefore" placeholder="E.g. 720h" />
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
             E.g. 720h (30 days). Default: 720h
           </p>

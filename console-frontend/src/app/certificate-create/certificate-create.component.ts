@@ -21,28 +21,42 @@ import { MOCK_ISSUERS } from '../certificates/mock-data';
 })
 export default class CertificateCreateComponent {
   private router = inject(Router);
+
   private titleService = inject(TitleService);
+
   private toastService = inject(ToastService);
 
   // Form fields
   name = signal('');
+
   namespace = signal('default');
+
   secretName = signal('');
+
   issuerKind = signal<'ClusterIssuer' | 'Issuer'>('ClusterIssuer');
+
   issuerName = signal('');
+
   duration = signal('2160h');
+
   renewBefore = signal('720h');
+
   algorithm = signal('RSA');
+
   keySize = signal('2048');
+
   encoding = signal('PKCS1');
+
   rotationPolicy = signal('Never');
 
   // DNS names
   dnsNameInput = signal('');
+
   dnsNames = signal<string[]>([]);
 
   // IP addresses
   ipAddressInput = signal('');
+
   ipAddresses = signal<string[]>([]);
 
   // Available issuers filtered by kind

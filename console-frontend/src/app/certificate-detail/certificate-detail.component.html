@@ -242,7 +242,10 @@
                 class="relative flex items-start space-x-3 after:absolute after:top-6 after:bottom-0 after:left-1 after:w-px after:bg-gray-300 after:content-[''] last:after:hidden dark:after:bg-gray-600"
               >
                 <div class="flex-0">
-                  <div class="mt-2 h-2.5 w-2.5 rounded-full" [class]="getEventDotColor(event.type)"></div>
+                  <div
+                    class="mt-2 h-2.5 w-2.5 rounded-full"
+                    [class]="getEventDotColor(event.type)"
+                  ></div>
                 </div>
                 <div class="min-w-0 flex-1">
                   <p class="text-sm font-medium dark:text-white">{{ event.type }}</p>
@@ -294,9 +297,7 @@
       <div class="mt-2">
         <p class="text-sm text-gray-600 dark:text-gray-400">
           Are you sure you want to delete certificate
-          <span class="font-semibold text-gray-800 dark:text-white">{{
-            certificate()?.name
-          }}</span
+          <span class="font-semibold text-gray-800 dark:text-white">{{ certificate()?.name }}</span
           >? The associated TLS secret will also be removed.
         </p>
       </div>
