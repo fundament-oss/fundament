@@ -1,0 +1,150 @@
+<div class="card">
+  <!-- Header -->
+  <div class="card-header">
+    <h1 class="text-2xl font-bold dark:text-white">Issuers</h1>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+      Manage certificate issuers and cluster issuers for cert-manager
+    </p>
+  </div>
+
+  <div class="p-6">
+    <!-- Actions -->
+    <div class="mb-5 flex items-center gap-4">
+      <a routerLink="/issuers/create" class="btn-primary inline-flex items-center">
+        <ng-icon name="tablerPlus" class="mr-1.5" />
+        Create new issuer
+      </a>
+      <a
+        routerLink="/certificates"
+        class="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+      >
+        Certificates
+        <ng-icon name="tablerArrowRight" class="ml-1" size="1rem" />
+      </a>
+    </div>
+
+    <!-- Issuers Table -->
+    @if (issuers().length > 0) {
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Kind</th>
+              <th scope="col">Type</th>
+              <th scope="col">Namespace</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (issuer of issuers(); track issuer.id) {
+              <tr>
+                <td class="font-medium dark:text-white">
+                  {{ issuer.name }}
+                </td>
+                <td>
+                  <span [class]="getKindBadgeClass(issuer.kind)">
+                    {{ issuer.kind }}
+                  </span>
+                </td>
+                <td class="text-sm text-gray-600 dark:text-gray-400">
+                  {{ issuer.type }}
+                </td>
+                <td class="font-mono text-sm text-gray-600 dark:text-gray-400">
+                  @if (issuer.namespace) {
+                    {{ issuer.namespace }}
+                  } @else {
+                    <span class="text-gray-400 italic">cluster-scoped</span>
+                  }
+                </td>
+                <td>
+                  @if (issuer.status === 'Ready') {
+                    <span class="badge badge-emerald">Ready</span>
+                  } @else {
+                    <span class="badge badge-yellow">Not Ready</span>
+                  }
+                </td>
+                <td>
+                  <div class="flex gap-2">
+                    <a
+                      [routerLink]="['/issuers', issuer.id]"
+                      class="btn-light inline-flex shrink-0 items-center"
+                    >
+                      <ng-icon name="tablerEye" class="mr-1.5" /> View
+                    </a>
+                    <button
+                      type="button"
+                      (click)="editIssuer()"
+                      class="btn-light inline-flex shrink-0 items-center"
+                    >
+                      <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      (click)="openDeleteModal(issuer.id, issuer.name)"
+                      class="btn-remove inline-flex shrink-0 items-center"
+                    >
+                      <ng-icon name="tablerTrash" class="mr-1.5" /> Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Empty State -->
+    @if (issuers().length === 0) {
+      <div class="py-8 text-center">
+        <ng-icon name="tablerCertificate" size="3rem" class="mx-auto mb-3 text-gray-400!" />
+        <p class="text-gray-600 dark:text-gray-300">No issuers found</p>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          Create your first issuer to start issuing certificates
+        </p>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Delete Issuer Modal -->
+<app-modal
+  [show]="showDeleteModal()"
+  title="Delete issuer"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showDeleteModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          Are you sure you want to delete issuer
+          <span class="font-semibold text-gray-800 dark:text-white">{{ pendingIssuerName() }}</span
+          >? Certificates referencing this issuer will no longer be able to renew.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="confirmDelete()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, delete this issuer
+    </button>
+  </div>
+</app-modal>

@@ -1,0 +1,286 @@
+<div class="card">
+  <!-- Header -->
+  <div class="card-header">
+    <h1 class="text-2xl font-bold dark:text-white">Create new issuer</h1>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+      Configure a certificate issuer for cert-manager
+    </p>
+  </div>
+
+  <div class="card-body-lg space-y-6">
+    <!-- Basic Information -->
+    <div class="card card-body bg-gray-50! dark:bg-gray-900!">
+      <h3 class="-mt-2 mb-4 text-lg font-semibold dark:text-white">Basic Information</h3>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label for="name" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Issuer name *
+          </label>
+          <input
+            id="name"
+            type="text"
+            [(ngModel)]="name"
+            placeholder="E.g. letsencrypt-prod"
+            required
+          />
+        </div>
+        <div>
+          <label for="kind" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Kind *
+          </label>
+          <div class="mt-2 space-y-2">
+            <label class="flex items-center">
+              <input
+                type="radio"
+                name="kind"
+                value="ClusterIssuer"
+                [checked]="kind() === 'ClusterIssuer'"
+                (change)="kind.set('ClusterIssuer')"
+                class="mr-2 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span class="text-sm dark:text-white">ClusterIssuer</span>
+              <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">(cluster-wide)</span>
+            </label>
+            <label class="flex items-center">
+              <input
+                type="radio"
+                name="kind"
+                value="Issuer"
+                [checked]="kind() === 'Issuer'"
+                (change)="kind.set('Issuer')"
+                class="mr-2 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span class="text-sm dark:text-white">Issuer</span>
+              <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">(namespace-scoped)</span>
+            </label>
+          </div>
+        </div>
+        @if (kind() === 'Issuer') {
+          <div>
+            <label
+              for="namespace"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Namespace *
+            </label>
+            <select id="namespace" [(ngModel)]="namespace">
+              @for (ns of namespaces; track ns) {
+                <option [value]="ns">{{ ns }}</option>
+              }
+            </select>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Issuer Type -->
+    <div class="card card-body bg-gray-50! dark:bg-gray-900!">
+      <h3 class="-mt-2 mb-4 text-lg font-semibold dark:text-white">Issuer Type</h3>
+      <div class="mb-4">
+        <label
+          for="issuerType"
+          class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Type *
+        </label>
+        <select id="issuerType" [(ngModel)]="issuerType">
+          <option value="ACME">ACME (Let's Encrypt)</option>
+          <option value="CA">CA (Certificate Authority)</option>
+          <option value="SelfSigned">Self-Signed</option>
+          <option value="Vault">Vault</option>
+        </select>
+      </div>
+
+      <!-- ACME Settings -->
+      @if (issuerType() === 'ACME') {
+        <div class="space-y-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">ACME Settings</h4>
+          <div>
+            <label
+              for="acmeServer"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              ACME Server *
+            </label>
+            <select id="acmeServer" [(ngModel)]="acmeServer">
+              @for (server of acmeServers; track server.value) {
+                <option [value]="server.value">{{ server.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                for="acmeEmail"
+                class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Email *
+              </label>
+              <input
+                id="acmeEmail"
+                type="email"
+                [(ngModel)]="acmeEmail"
+                placeholder="admin@example.com"
+                required
+              />
+            </div>
+            <div>
+              <label
+                for="acmePrivateKeySecret"
+                class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Private key secret name *
+              </label>
+              <input
+                id="acmePrivateKeySecret"
+                type="text"
+                [(ngModel)]="acmePrivateKeySecret"
+                placeholder="E.g. letsencrypt-account-key"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- Solvers -->
+          <div class="border-t border-gray-200 pt-4 dark:border-gray-700">
+            <div class="mb-3 flex items-center justify-between">
+              <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Solvers</h4>
+              <button
+                type="button"
+                (click)="addSolver()"
+                class="btn-light inline-flex items-center text-sm!"
+              >
+                <ng-icon name="tablerPlus" class="mr-1" /> Add solver
+              </button>
+            </div>
+            <div class="space-y-3">
+              @for (solver of solvers(); track $index) {
+                <div class="card card-body-sm">
+                  <div class="mb-2 flex items-center justify-between">
+                    <span class="text-sm font-medium dark:text-white">Solver #{{ $index + 1 }}</span>
+                    @if (solvers().length > 1) {
+                      <button
+                        type="button"
+                        (click)="removeSolver($index)"
+                        class="cursor-pointer text-rose-500 hover:text-rose-700 dark:hover:text-rose-300"
+                      >
+                        <ng-icon name="tablerTrash" size="1rem" />
+                      </button>
+                    }
+                  </div>
+                  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
+                        Type
+                      </label>
+                      <select
+                        [ngModel]="solver.type"
+                        (ngModelChange)="updateSolverType($index, $event)"
+                      >
+                        <option value="HTTP01">HTTP01</option>
+                        <option value="DNS01">DNS01</option>
+                      </select>
+                    </div>
+                    @if (solver.type === 'HTTP01') {
+                      <div>
+                        <label
+                          class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400"
+                        >
+                          Ingress class
+                        </label>
+                        <input
+                          type="text"
+                          [ngModel]="solver.ingressClass"
+                          (ngModelChange)="updateSolverIngressClass($index, $event)"
+                          placeholder="E.g. nginx"
+                        />
+                      </div>
+                    }
+                    @if (solver.type === 'DNS01') {
+                      <div>
+                        <label
+                          class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400"
+                        >
+                          Provider
+                        </label>
+                        <input
+                          type="text"
+                          [ngModel]="solver.provider"
+                          (ngModelChange)="updateSolverProvider($index, $event)"
+                          placeholder="E.g. cloudflare"
+                        />
+                      </div>
+                      <div class="sm:col-span-2">
+                        <label
+                          class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400"
+                        >
+                          Selector (optional)
+                        </label>
+                        <input
+                          type="text"
+                          [ngModel]="solver.selector"
+                          (ngModelChange)="updateSolverSelector($index, $event)"
+                          placeholder="E.g. *.example.com"
+                        />
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- CA Settings -->
+      @if (issuerType() === 'CA') {
+        <div class="space-y-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">CA Settings</h4>
+          <div>
+            <label
+              for="caSecretName"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              CA Secret name *
+            </label>
+            <input
+              id="caSecretName"
+              type="text"
+              [(ngModel)]="caSecretName"
+              placeholder="E.g. ca-key-pair"
+              required
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Kubernetes Secret containing the CA certificate and private key (tls.crt and tls.key)
+            </p>
+          </div>
+        </div>
+      }
+
+      <!-- SelfSigned info -->
+      @if (issuerType() === 'SelfSigned') {
+        <div class="border-t border-gray-200 pt-4 dark:border-gray-700">
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            No additional configuration required. Self-signed issuers will generate self-signed
+            certificates directly.
+          </p>
+        </div>
+      }
+
+      <!-- Vault info -->
+      @if (issuerType() === 'Vault') {
+        <div class="border-t border-gray-200 pt-4 dark:border-gray-700">
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            Vault issuer configuration is not yet supported in this interface.
+          </p>
+        </div>
+      }
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-2">
+      <button type="button" (click)="create()" class="btn-primary">Create issuer</button>
+      <a routerLink="/issuers" class="btn-secondary">Cancel</a>
+    </div>
+  </div>
+</div>

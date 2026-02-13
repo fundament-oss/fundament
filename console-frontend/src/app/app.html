@@ -266,6 +266,28 @@
               </li>
               <li>
                 <a
+                  routerLink="/certificates"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <ng-icon name="tablerShieldCheck" class="mr-3" size="1.25rem" />
+                  Certificates
+                </a>
+              </li>
+              <li>
+                <a
+                  routerLink="/issuers"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <ng-icon name="tablerCertificate" class="mr-3" size="1.25rem" />
+                  Issuers
+                </a>
+              </li>
+              <li>
+                <a
                   routerLink="/organization/members"
                   routerLinkActive="active"
                   class="nav-link"

@@ -198,6 +198,59 @@ const routes: Routes = [
         },
       },
       {
+        path: 'certificates',
+        loadComponent: () =>
+          import('./certificates/certificates.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: 'Certificates' }],
+        },
+      },
+      {
+        path: 'certificates/create',
+        loadComponent: () =>
+          import('./certificate-create/certificate-create.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [
+            { label: 'Certificates', route: '/certificates' },
+            { label: 'Create certificate' },
+          ],
+        },
+      },
+      {
+        path: 'certificates/:id',
+        loadComponent: () =>
+          import('./certificate-detail/certificate-detail.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [
+            { label: 'Certificates', route: '/certificates' },
+            { label: 'Certificate details' },
+          ],
+        },
+      },
+      {
+        path: 'issuers',
+        loadComponent: () => import('./issuers/issuers.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: 'Issuers' }],
+        },
+      },
+      {
+        path: 'issuers/create',
+        loadComponent: () =>
+          import('./issuer-create/issuer-create.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: 'Issuers', route: '/issuers' }, { label: 'Create issuer' }],
+        },
+      },
+      {
+        path: 'issuers/:id',
+        loadComponent: () =>
+          import('./issuer-detail/issuer-detail.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: 'Issuers', route: '/issuers' }, { label: 'Issuer details' }],
+        },
+      },
+      {
         path: '',
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),
         data: {
