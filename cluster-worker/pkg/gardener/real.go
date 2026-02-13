@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -118,7 +117,7 @@ func (r *RealClient) EnsureProject(ctx context.Context, projectName string, orgI
 			},
 		},
 		Spec: gardencorev1beta1.ProjectSpec{
-			Description: ptr.To("Fundament managed clusters"),
+			Description: new("Fundament managed clusters"),
 		},
 	}
 
@@ -508,7 +507,7 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 							Type: machineType,
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    machineImageName,
-								Version: ptr.To(machineImageVer),
+								Version: new(machineImageVer),
 							},
 						},
 						Minimum:        minWorkers,
@@ -519,15 +518,15 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 				},
 			},
 			Networking: &gardencorev1beta1.Networking{
-				Type:  ptr.To("calico"), // Default CNI
-				Nodes: ptr.To("10.0.0.0/16"),
+				Type:  new("calico"), // Default CNI
+				Nodes: new("10.0.0.0/16"),
 			},
 		},
 	}
 
 	// Set CredentialsBindingName (required for all providers, including local)
 	if r.provider.CredentialsBindingName != "" {
-		shoot.Spec.CredentialsBindingName = ptr.To(r.provider.CredentialsBindingName)
+		shoot.Spec.CredentialsBindingName = new(r.provider.CredentialsBindingName)
 	}
 
 	// Only set zones if configured (local provider doesn't support zones)
