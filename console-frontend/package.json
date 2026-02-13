@@ -39,6 +39,7 @@
     "@bufbuild/protovalidate": "^1.1.1",
     "@connectrpc/connect": "^2.1.1",
     "@connectrpc/connect-web": "^2.1.1",
+    "@hey-api/client-fetch": "^0.13.1",
     "@ng-icons/core": "^33.0.0",
     "@ng-icons/heroicons": "^33.0.0",
     "@ng-icons/tabler-icons": "^33.0.0",
