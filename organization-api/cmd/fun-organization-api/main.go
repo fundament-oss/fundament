@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
+	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/http2"
@@ -143,6 +144,7 @@ func run() error {
 	server, err := organization.New(logger, &organization.Config{
 		JWTSecret:          []byte(cfg.JWTSecret),
 		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
+		Clock:              clock.New(),
 	}, db)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)

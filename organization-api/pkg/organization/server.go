@@ -11,6 +11,7 @@ import (
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
+	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/rs/cors"
@@ -20,6 +21,7 @@ import (
 type Config struct {
 	JWTSecret          []byte
 	CORSAllowedOrigins []string
+	Clock              clock.Clock
 }
 
 type Server struct {
@@ -28,16 +30,23 @@ type Server struct {
 	queries       *db.Queries
 	logger        *slog.Logger
 	authValidator *auth.Validator
+	clock         clock.Clock
 	handler       http.Handler
 }
 
 func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*Server, error) {
+	clk := cfg.Clock
+	if clk == nil {
+		clk = clock.New()
+	}
+
 	s := &Server{
 		logger:        logger,
 		config:        cfg,
 		db:            database,
 		queries:       db.New(database.Pool),
 		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
+		clock:         clk,
 	}
 
 	mux := http.NewServeMux()
