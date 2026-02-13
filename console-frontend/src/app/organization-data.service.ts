@@ -144,4 +144,25 @@ export class OrganizationDataService {
   getOrganizationById(organizationId: string) {
     return this.organizations().find((org) => org.id === organizationId);
   }
+
+  /**
+   * Update the cached organization name without a full reload
+   */
+  updateOrganizationName(organizationId: string, name: string) {
+    this.organizations.update((orgs) =>
+      orgs.map((org) => (org.id === organizationId ? { ...org, name } : org)),
+    );
+  }
+
+  /**
+   * Update the cached project name without a full reload
+   */
+  updateProjectName(projectId: string, name: string) {
+    this.organizations.update((orgs) =>
+      orgs.map((org) => ({
+        ...org,
+        projects: org.projects.map((p) => (p.id === projectId ? { ...p, name } : p)),
+      })),
+    );
+  }
 }

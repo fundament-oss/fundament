@@ -8,6 +8,7 @@ import {
   tablerTerminal,
   tablerDownload,
   tablerArrowUp,
+  tablerCaretRight,
   tablerPencil,
   tablerPlus,
   tablerTrash,
@@ -128,6 +129,7 @@ const getEventDetails = (event: ClusterEvent): string => {
       tablerTerminal,
       tablerDownload,
       tablerArrowUp,
+      tablerCaretRight,
       tablerPencil,
       tablerPlus,
       tablerTrash,
@@ -353,7 +355,7 @@ export default class ClusterDetailsComponent implements OnInit {
       await firstValueFrom(this.client.deleteCluster(request));
 
       this.showDeleteModal.set(false);
-      this.toastService.info(`The cluster '${this.clusterData.basics.name}' has been deleted`);
+      this.toastService.info(`The cluster '${this.clusterData.basics.name}' is being deleted`);
       this.router.navigate(['/']);
     } catch (error) {
       this.showDeleteModal.set(false);
