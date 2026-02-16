@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/google/uuid"
@@ -33,44 +34,48 @@ func Test_APIKey_Create_Unauthenticated(t *testing.T) {
 func Test_APIKey_Create(t *testing.T) {
 	t.Parallel()
 
+	testClock := clock.NewTest(time.Now().UTC())
+
 	orgID := uuid.New()
 	userID := uuid.New()
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
 		WithUser(userID, "test-user", orgID),
+		WithClock(testClock),
 	)
 
 	token := env.createAuthnToken(t, userID)
 
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
-	twoMinutes := 2 * time.Minute
-	fiveDaysInHours := 5 * 24 * time.Hour
+	inTwoMinutes := testClock.Now().Add(2 * time.Minute).Truncate(time.Microsecond)
+	inFiveDays := testClock.Now().Add(120 * time.Hour).Truncate(time.Microsecond)
 
 	tests := map[string]struct {
 		CreateRequest *organizationv1.CreateAPIKeyRequest
-		WantExpires   *time.Duration
+		WantExpiresAt *time.Time
 	}{
 		"without_expiration": {
 			CreateRequest: &organizationv1.CreateAPIKeyRequest{
 				Name:      "my-first-key",
 				ExpiresIn: "",
 			},
+			WantExpiresAt: nil,
 		},
 		"with_expiration_in_minutes": {
 			CreateRequest: &organizationv1.CreateAPIKeyRequest{
 				Name:      "another-key",
 				ExpiresIn: "2m",
 			},
-			WantExpires: &twoMinutes,
+			WantExpiresAt: &inTwoMinutes,
 		},
 		"with_expiration_in_hours": {
 			CreateRequest: &organizationv1.CreateAPIKeyRequest{
 				Name:      "yet-another-key",
 				ExpiresIn: "120h",
 			},
-			WantExpires: &fiveDaysInHours,
+			WantExpiresAt: &inFiveDays,
 		},
 	}
 
@@ -92,12 +97,11 @@ func Test_APIKey_Create(t *testing.T) {
 			getRes, err := client.GetAPIKey(context.Background(), getReq)
 			require.NoError(t, err)
 
-			if tc.WantExpires == nil {
+			if tc.WantExpiresAt == nil {
 				assert.Nil(t, getRes.Msg.ApiKey.Expires)
 			} else {
 				require.NotNil(t, getRes.Msg.ApiKey.Expires)
-				expected := time.Now().Add(*tc.WantExpires)
-				assert.WithinDuration(t, expected, getRes.Msg.ApiKey.Expires.AsTime(), time.Minute)
+				assert.Equal(t, *tc.WantExpiresAt, getRes.Msg.ApiKey.Expires.AsTime())
 			}
 		})
 	}

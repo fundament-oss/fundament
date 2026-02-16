@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
+	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
 )
 
@@ -36,6 +37,7 @@ type testUser struct {
 type APIOptions struct {
 	Organizations map[uuid.UUID]string
 	Users         map[uuid.UUID]testUser
+	Clock         clock.Clock
 }
 
 type APIOption func(*APIOptions)
@@ -49,6 +51,12 @@ func WithOrganization(id uuid.UUID, name string) APIOption {
 func WithUser(id uuid.UUID, name string, orgID uuid.UUID) APIOption {
 	return func(o *APIOptions) {
 		o.Users[id] = testUser{Name: name, OrgID: orgID}
+	}
+}
+
+func WithClock(c clock.Clock) APIOption {
+	return func(o *APIOptions) {
+		o.Clock = c
 	}
 }
 
@@ -72,6 +80,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	organizationCfg := &organization.Config{
 		JWTSecret:          jwtSecret,
 		CORSAllowedOrigins: []string{"*"},
+		Clock:              opts.Clock,
 	}
 
 	organizationServer, err := organization.New(testLogger, organizationCfg, testDb)
