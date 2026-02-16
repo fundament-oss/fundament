@@ -1,3 +1,4 @@
+--
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
 -- ** pgModeler version: 2.0.0-alpha
 -- ** PostgreSQL version: 18.0
@@ -91,24 +92,24 @@ ALTER TABLE tenant.namespaces ENABLE ROW LEVEL SECURITY;
 -- object: tenant.clusters_tr_verify_deleted | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.clusters_tr_verify_deleted() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_deleted ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
-	IF EXISTS (
-		SELECT 1
-		FROM tenant.namespaces
-		WHERE
-			cluster_id = NEW.id
-			AND deleted IS NULL
-	) THEN
-		RAISE EXCEPTION 'Cannot delete cluster with undeleted namespaces';
+        IF EXISTS (
+                SELECT 1
+                FROM tenant.namespaces
+                WHERE
+                        cluster_id = NEW.id
+                        AND deleted IS NULL
+        ) THEN
+                RAISE EXCEPTION 'Cannot delete cluster with undeleted namespaces';
 END IF;
 RETURN NEW;
 END;
@@ -120,14 +121,14 @@ ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO postgres;
 -- object: tenant.cluster_reset_synced | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.cluster_reset_synced() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.cluster_reset_synced ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     NEW.synced := NULL;
@@ -144,14 +145,14 @@ ALTER FUNCTION tenant.cluster_reset_synced() OWNER TO fun_owner;
 -- object: tenant.cluster_sync_notify | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.cluster_sync_notify() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.cluster_sync_notify ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     IF NEW.synced IS NULL AND (TG_OP = 'INSERT' OR OLD.synced IS NOT NULL) THEN
@@ -167,14 +168,14 @@ ALTER FUNCTION tenant.cluster_sync_notify() OWNER TO fun_owner;
 -- object: authn.current_user_id | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authn.current_user_id() CASCADE;
 CREATE OR REPLACE FUNCTION authn.current_user_id ()
-	RETURNS uuid
-	LANGUAGE sql
-	STABLE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL SAFE
-	COST 1
-	AS
+        RETURNS uuid
+        LANGUAGE sql
+        STABLE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL SAFE
+        COST 1
+        AS
 $function$
 SELECT current_setting('app.current_user_id')::uuid
 $function$;
@@ -185,14 +186,14 @@ ALTER FUNCTION authn.current_user_id() OWNER TO fun_fundament_api;
 -- object: authn.current_organization_id | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authn.current_organization_id() CASCADE;
 CREATE OR REPLACE FUNCTION authn.current_organization_id ()
-	RETURNS uuid
-	LANGUAGE sql
-	STABLE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL SAFE
-	COST 1
-	AS
+        RETURNS uuid
+        LANGUAGE sql
+        STABLE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL SAFE
+        COST 1
+        AS
 $function$
 SELECT current_setting('app.current_organization_id')::uuid
 $function$;
@@ -203,14 +204,14 @@ ALTER FUNCTION authn.current_organization_id() OWNER TO fun_fundament_api;
 -- object: authn.is_project_member | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authn.is_project_member(uuid,uuid,text) CASCADE;
 CREATE OR REPLACE FUNCTION authn.is_project_member (IN p_project_id uuid, IN p_user_id uuid, IN p_role text)
-	RETURNS boolean
-	LANGUAGE sql
-	STABLE
-	CALLED ON NULL INPUT
-	SECURITY DEFINER
-	PARALLEL SAFE
-	COST 1
-	AS
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        CALLED ON NULL INPUT
+        SECURITY DEFINER
+        PARALLEL SAFE
+        COST 1
+        AS
 $function$
 SELECT EXISTS (
   SELECT 1 FROM tenant.project_members
@@ -227,14 +228,14 @@ ALTER FUNCTION authn.is_project_member(uuid,uuid,text) OWNER TO fun_authz;
 -- object: authn.is_project_in_organization | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authn.is_project_in_organization(uuid) CASCADE;
 CREATE OR REPLACE FUNCTION authn.is_project_in_organization (IN p_project_id uuid)
-	RETURNS boolean
-	LANGUAGE sql
-	STABLE
-	CALLED ON NULL INPUT
-	SECURITY DEFINER
-	PARALLEL SAFE
-	COST 1
-	AS
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        CALLED ON NULL INPUT
+        SECURITY DEFINER
+        PARALLEL SAFE
+        COST 1
+        AS
 $function$
 SELECT EXISTS (
   SELECT 1 FROM tenant.projects
@@ -249,14 +250,14 @@ ALTER FUNCTION authn.is_project_in_organization(uuid) OWNER TO fun_authz;
 -- object: authn.is_cluster_in_organization | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authn.is_cluster_in_organization(uuid) CASCADE;
 CREATE OR REPLACE FUNCTION authn.is_cluster_in_organization (IN p_cluster_id uuid)
-	RETURNS boolean
-	LANGUAGE sql
-	STABLE
-	CALLED ON NULL INPUT
-	SECURITY DEFINER
-	PARALLEL SAFE
-	COST 1
-	AS
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        CALLED ON NULL INPUT
+        SECURITY DEFINER
+        PARALLEL SAFE
+        COST 1
+        AS
 $function$
 SELECT EXISTS (
   SELECT 1 FROM tenant.clusters
@@ -271,14 +272,14 @@ ALTER FUNCTION authn.is_cluster_in_organization(uuid) OWNER TO fun_authz;
 -- object: authn.is_user_in_organization | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authn.is_user_in_organization(uuid) CASCADE;
 CREATE OR REPLACE FUNCTION authn.is_user_in_organization (IN p_user_id uuid)
-	RETURNS boolean
-	LANGUAGE sql
-	STABLE
-	CALLED ON NULL INPUT
-	SECURITY DEFINER
-	PARALLEL SAFE
-	COST 1
-	AS
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        CALLED ON NULL INPUT
+        SECURITY DEFINER
+        PARALLEL SAFE
+        COST 1
+        AS
 $function$
 SELECT EXISTS (
   SELECT 1 FROM tenant.users
@@ -293,14 +294,14 @@ ALTER FUNCTION authn.is_user_in_organization(uuid) OWNER TO fun_authz;
 -- object: tenant.project_has_members | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.project_has_members(uuid) CASCADE;
 CREATE OR REPLACE FUNCTION tenant.project_has_members (IN p_project_id uuid)
-	RETURNS boolean
-	LANGUAGE sql
-	STABLE
-	CALLED ON NULL INPUT
-	SECURITY DEFINER
-	PARALLEL SAFE
-	COST 1
-	AS
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        CALLED ON NULL INPUT
+        SECURITY DEFINER
+        PARALLEL SAFE
+        COST 1
+        AS
 $function$
 SELECT EXISTS (
   SELECT 1 FROM tenant.project_members
@@ -315,14 +316,14 @@ ALTER FUNCTION tenant.project_has_members(uuid) OWNER TO fun_authz;
 -- object: tenant.project_members_tr_protect_last_admin | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.project_members_tr_protect_last_admin() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.project_members_tr_protect_last_admin ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 DECLARE
 admin_count integer;
@@ -355,14 +356,14 @@ ALTER FUNCTION tenant.project_members_tr_protect_last_admin() OWNER TO postgres;
 -- object: tenant.projects_tr_require_admin | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.projects_tr_require_admin() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.projects_tr_require_admin ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     IF NOT EXISTS (
@@ -426,44 +427,44 @@ ALTER TABLE authn.api_keys ENABLE ROW LEVEL SECURITY;
 -- object: api_keys_organization_policy | type: POLICY --
 -- DROP POLICY IF EXISTS api_keys_organization_policy ON authn.api_keys CASCADE;
 CREATE POLICY api_keys_organization_policy ON authn.api_keys
-	AS PERMISSIVE
-	FOR ALL
-	TO fun_fundament_api
-	USING (organization_id = current_setting('app.current_organization_id')::uuid AND user_id = current_setting('app.current_user_id')::uuid);
+        AS PERMISSIVE
+        FOR ALL
+        TO fun_fundament_api
+        USING (organization_id = current_setting('app.current_organization_id')::uuid AND user_id = current_setting('app.current_user_id')::uuid);
 -- ddl-end --
 
 -- object: authn.api_key_get_by_hash | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authn.api_key_get_by_hash(bytea) CASCADE;
 CREATE OR REPLACE FUNCTION authn.api_key_get_by_hash (IN p_token_hash bytea)
-	RETURNS authn.api_keys
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY DEFINER
-	PARALLEL UNSAFE
-	COST 10
-	AS
+        RETURNS authn.api_keys
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY DEFINER
+        PARALLEL UNSAFE
+        COST 10
+        AS
 $function$
 DECLARE
 result authn.api_keys;
-	key_record authn.api_keys;
+        key_record authn.api_keys;
 BEGIN
 SELECT * INTO key_record FROM authn.api_keys WHERE token_hash = p_token_hash;
 
 IF NOT FOUND THEN
-		RETURN NULL;
+                RETURN NULL;
 END IF;
 
-	IF key_record.deleted IS NOT NULL THEN
-		RAISE EXCEPTION 'API key has been deleted' USING HINT = 'api_key_deleted';
+        IF key_record.deleted IS NOT NULL THEN
+                RAISE EXCEPTION 'API key has been deleted' USING HINT = 'api_key_deleted';
 END IF;
 
-	IF key_record.revoked IS NOT NULL THEN
-		RAISE EXCEPTION 'API key has been revoked' USING HINT = 'api_key_revoked';
+        IF key_record.revoked IS NOT NULL THEN
+                RAISE EXCEPTION 'API key has been revoked' USING HINT = 'api_key_revoked';
 END IF;
 
-	IF key_record.expires IS NOT NULL AND key_record.expires <= NOW() THEN
-		RAISE EXCEPTION 'API key has expired' USING HINT = 'api_key_expired';
+        IF key_record.expires IS NOT NULL AND key_record.expires <= NOW() THEN
+                RAISE EXCEPTION 'API key has expired' USING HINT = 'api_key_expired';
 END IF;
 
 UPDATE authn.api_keys
@@ -507,51 +508,51 @@ ALTER TABLE tenant.clusters ENABLE ROW LEVEL SECURITY;
 -- object: verify_deleted | type: TRIGGER --
 -- verify_deleted ON tenant.clusters CASCADE;
 CREATE CONSTRAINT TRIGGER verify_deleted
-	AFTER INSERT OR UPDATE
-                           ON tenant.clusters
-                           NOT DEFERRABLE
-                           FOR EACH ROW
-                           EXECUTE PROCEDURE tenant.clusters_tr_verify_deleted();
+        AFTER INSERT OR UPDATE
+                                 ON tenant.clusters
+                                 NOT DEFERRABLE
+                                 FOR EACH ROW
+                                 EXECUTE PROCEDURE tenant.clusters_tr_verify_deleted();
 -- ddl-end --
 
 -- object: organization_isolation | type: POLICY --
 -- DROP POLICY IF EXISTS organization_isolation ON tenant.clusters CASCADE;
 CREATE POLICY organization_isolation ON tenant.clusters
-	AS PERMISSIVE
-	FOR ALL
-	TO fun_fundament_api
-	USING (organization_id = authn.current_organization_id());
+        AS PERMISSIVE
+        FOR ALL
+        TO fun_fundament_api
+        USING (organization_id = authn.current_organization_id());
 -- ddl-end --
 
 -- object: cluster_worker_all_access | type: POLICY --
 -- DROP POLICY IF EXISTS cluster_worker_all_access ON tenant.clusters CASCADE;
 CREATE POLICY cluster_worker_all_access ON tenant.clusters
-	AS PERMISSIVE
-	FOR ALL
-	TO fun_cluster_worker
-	USING (true);
+        AS PERMISSIVE
+        FOR ALL
+        TO fun_cluster_worker
+        USING (true);
 -- ddl-end --
 
 -- object: cluster_reset_synced | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS cluster_reset_synced ON tenant.clusters CASCADE;
 CREATE OR REPLACE TRIGGER cluster_reset_synced
-	BEFORE UPDATE OF name,region,kubernetes_version,deleted
-         ON tenant.clusters
-           FOR EACH ROW
-           WHEN (OLD.name IS DISTINCT FROM NEW.name
-           OR OLD.region IS DISTINCT FROM NEW.region
-           OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
-           OR (OLD.deleted IS NULL AND NEW.deleted IS NOT NULL))
-           EXECUTE PROCEDURE tenant.cluster_reset_synced();
+        BEFORE UPDATE OF name,region,kubernetes_version,deleted
+               ON tenant.clusters
+                 FOR EACH ROW
+                 WHEN (OLD.name IS DISTINCT FROM NEW.name
+                 OR OLD.region IS DISTINCT FROM NEW.region
+                 OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
+                 OR (OLD.deleted IS NULL AND NEW.deleted IS NOT NULL))
+                 EXECUTE PROCEDURE tenant.cluster_reset_synced();
 -- ddl-end --
 
 -- object: cluster_sync_notify | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS cluster_sync_notify ON tenant.clusters CASCADE;
 CREATE OR REPLACE TRIGGER cluster_sync_notify
-	AFTER INSERT OR UPDATE
-                           ON tenant.clusters
-                           FOR EACH ROW
-                           EXECUTE PROCEDURE tenant.cluster_sync_notify();
+        AFTER INSERT OR UPDATE
+                                 ON tenant.clusters
+                                 FOR EACH ROW
+                                 EXECUTE PROCEDURE tenant.cluster_sync_notify();
 -- ddl-end --
 
 -- object: clusters_idx_needs_sync | type: INDEX --
@@ -587,10 +588,10 @@ ALTER TABLE tenant.node_pools ENABLE ROW LEVEL SECURITY;
 -- object: node_pools_organization_policy | type: POLICY --
 -- DROP POLICY IF EXISTS node_pools_organization_policy ON tenant.node_pools CASCADE;
 CREATE POLICY node_pools_organization_policy ON tenant.node_pools
-	AS PERMISSIVE
-	FOR ALL
-	TO fun_fundament_api
-	USING (authn.is_cluster_in_organization(cluster_id));
+        AS PERMISSIVE
+        FOR ALL
+        TO fun_fundament_api
+        USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
 -- object: appstore.installs | type: TABLE --
@@ -656,10 +657,10 @@ ALTER TABLE appstore.preset_plugins OWNER TO fun_owner;
 -- object: install_organization_policy | type: POLICY --
 -- DROP POLICY IF EXISTS install_organization_policy ON appstore.installs CASCADE;
 CREATE POLICY install_organization_policy ON appstore.installs
-	AS PERMISSIVE
-	FOR ALL
-	TO fun_fundament_api
-	USING (authn.is_cluster_in_organization(cluster_id));
+        AS PERMISSIVE
+        FOR ALL
+        TO fun_fundament_api
+        USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
 -- object: appstore.tags | type: TABLE --
@@ -729,11 +730,11 @@ ALTER TABLE appstore.plugin_documentation_links OWNER TO fun_owner;
 -- object: require_admin | type: TRIGGER --
 -- require_admin ON tenant.projects CASCADE;
 CREATE CONSTRAINT TRIGGER require_admin
-	AFTER INSERT
-	ON tenant.projects
-	DEFERRABLE INITIALLY DEFERRED
-	FOR EACH ROW
-	EXECUTE PROCEDURE tenant.projects_tr_require_admin();
+        AFTER INSERT
+        ON tenant.projects
+        DEFERRABLE INITIALLY DEFERRED
+        FOR EACH ROW
+        EXECUTE PROCEDURE tenant.projects_tr_require_admin();
 -- ddl-end --
 
 -- object: tenant.project_members | type: TABLE --
@@ -767,30 +768,30 @@ CREATE INDEX project_members_idx_project_id ON tenant.project_members
 -- object: protect_last_admin | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS protect_last_admin ON tenant.project_members CASCADE;
 CREATE OR REPLACE TRIGGER protect_last_admin
-	BEFORE UPDATE
-                  ON tenant.project_members
-                  FOR EACH ROW
-                  EXECUTE PROCEDURE tenant.project_members_tr_protect_last_admin();
+        BEFORE UPDATE
+                        ON tenant.project_members
+                        FOR EACH ROW
+                        EXECUTE PROCEDURE tenant.project_members_tr_protect_last_admin();
 -- ddl-end --
 
 -- object: project_members_select_policy | type: POLICY --
 -- DROP POLICY IF EXISTS project_members_select_policy ON tenant.project_members CASCADE;
 CREATE POLICY project_members_select_policy ON tenant.project_members
-	AS PERMISSIVE
-	FOR SELECT
-               TO fun_fundament_api
-               USING (authn.is_project_in_organization(project_id)
-               AND (authn.is_project_member(project_id, authn.current_user_id(), NULL)
-               OR user_id = authn.current_user_id()));
+        AS PERMISSIVE
+        FOR SELECT
+                     TO fun_fundament_api
+                     USING (authn.is_project_in_organization(project_id)
+                     AND (authn.is_project_member(project_id, authn.current_user_id(), NULL)
+                     OR user_id = authn.current_user_id()));
 -- ddl-end --
 
 -- object: project_members_insert_policy | type: POLICY --
 -- DROP POLICY IF EXISTS project_members_insert_policy ON tenant.project_members CASCADE;
 CREATE POLICY project_members_insert_policy ON tenant.project_members
-	AS PERMISSIVE
-	FOR INSERT
-	TO fun_fundament_api
-	WITH CHECK (authn.is_project_in_organization(project_id)
+        AS PERMISSIVE
+        FOR INSERT
+        TO fun_fundament_api
+        WITH CHECK (authn.is_project_in_organization(project_id)
 AND (deleted IS NOT NULL OR authn.is_user_in_organization(user_id))
 AND (
     authn.is_project_member(project_id, authn.current_user_id(), 'admin')
@@ -801,58 +802,58 @@ AND (
 -- object: project_members_update_policy | type: POLICY --
 -- DROP POLICY IF EXISTS project_members_update_policy ON tenant.project_members CASCADE;
 CREATE POLICY project_members_update_policy ON tenant.project_members
-	AS PERMISSIVE
-	FOR UPDATE
-                      TO fun_fundament_api
-                      USING (authn.is_project_in_organization(project_id)
-                      AND authn.is_project_member(project_id, authn.current_user_id(), 'admin'));
+        AS PERMISSIVE
+        FOR UPDATE
+                            TO fun_fundament_api
+                            USING (authn.is_project_in_organization(project_id)
+                            AND authn.is_project_member(project_id, authn.current_user_id(), 'admin'));
 -- ddl-end --
 
 -- object: projects_select_policy | type: POLICY --
 -- DROP POLICY IF EXISTS projects_select_policy ON tenant.projects CASCADE;
 CREATE POLICY projects_select_policy ON tenant.projects
-	AS PERMISSIVE
-	FOR SELECT
-               TO fun_fundament_api
-               USING (organization_id = authn.current_organization_id());
+        AS PERMISSIVE
+        FOR SELECT
+                     TO fun_fundament_api
+                     USING (organization_id = authn.current_organization_id());
 -- ddl-end --
 
 -- object: projects_insert_policy | type: POLICY --
 -- DROP POLICY IF EXISTS projects_insert_policy ON tenant.projects CASCADE;
 CREATE POLICY projects_insert_policy ON tenant.projects
-	AS PERMISSIVE
-	FOR INSERT
-	TO fun_fundament_api
-	WITH CHECK (organization_id = authn.current_organization_id());
+        AS PERMISSIVE
+        FOR INSERT
+        TO fun_fundament_api
+        WITH CHECK (organization_id = authn.current_organization_id());
 -- ddl-end --
 
 -- object: projects_update_policy | type: POLICY --
 -- DROP POLICY IF EXISTS projects_update_policy ON tenant.projects CASCADE;
 CREATE POLICY projects_update_policy ON tenant.projects
-	AS PERMISSIVE
-	FOR UPDATE
-                      TO fun_fundament_api
-                      USING (organization_id = authn.current_organization_id()
-                      AND authn.is_project_member(id, authn.current_user_id(), 'admin'));
+        AS PERMISSIVE
+        FOR UPDATE
+                            TO fun_fundament_api
+                            USING (organization_id = authn.current_organization_id()
+                            AND authn.is_project_member(id, authn.current_user_id(), 'admin'));
 -- ddl-end --
 
 -- object: projects_delete_policy | type: POLICY --
 -- DROP POLICY IF EXISTS projects_delete_policy ON tenant.projects CASCADE;
 CREATE POLICY projects_delete_policy ON tenant.projects
-	AS PERMISSIVE
-	FOR DELETE
+        AS PERMISSIVE
+        FOR DELETE
 TO fun_fundament_api
-	USING (organization_id = authn.current_organization_id()
+        USING (organization_id = authn.current_organization_id()
 AND authn.is_project_member(id, authn.current_user_id(), 'admin'));
 -- ddl-end --
 
 -- object: namespaces_organization_policy | type: POLICY --
 -- DROP POLICY IF EXISTS namespaces_organization_policy ON tenant.namespaces CASCADE;
 CREATE POLICY namespaces_organization_policy ON tenant.namespaces
-	AS PERMISSIVE
-	FOR ALL
-	TO fun_fundament_api
-	USING (authn.is_cluster_in_organization(cluster_id));
+        AS PERMISSIVE
+        FOR ALL
+        TO fun_fundament_api
+        USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
 -- object: tenant.cluster_events | type: TABLE --
@@ -878,19 +879,19 @@ ALTER TABLE tenant.cluster_events ENABLE ROW LEVEL SECURITY;
 -- object: cluster_events_worker_all_access | type: POLICY --
 -- DROP POLICY IF EXISTS cluster_events_worker_all_access ON tenant.cluster_events CASCADE;
 CREATE POLICY cluster_events_worker_all_access ON tenant.cluster_events
-	AS PERMISSIVE
-	FOR ALL
-	TO fun_cluster_worker
-	USING (true);
+        AS PERMISSIVE
+        FOR ALL
+        TO fun_cluster_worker
+        USING (true);
 -- ddl-end --
 
 -- object: cluster_events_organization_isolation | type: POLICY --
 -- DROP POLICY IF EXISTS cluster_events_organization_isolation ON tenant.cluster_events CASCADE;
 CREATE POLICY cluster_events_organization_isolation ON tenant.cluster_events
-	AS PERMISSIVE
-	FOR ALL
-	TO fun_fundament_api
-	USING (EXISTS (
+        AS PERMISSIVE
+        FOR ALL
+        TO fun_fundament_api
+        USING (EXISTS (
     SELECT 1 FROM tenant.clusters c
     WHERE c.id = cluster_events.cluster_id
     AND c.organization_id = authn.current_organization_id()
@@ -956,14 +957,14 @@ CREATE INDEX outbox_idx_unprocessed ON authz.outbox
 -- object: authz.users_sync_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authz.users_sync_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION authz.users_sync_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -981,14 +982,14 @@ ALTER FUNCTION authz.users_sync_trigger() OWNER TO fun_owner;
 -- object: authz.projects_sync_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authz.projects_sync_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION authz.projects_sync_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1006,14 +1007,14 @@ ALTER FUNCTION authz.projects_sync_trigger() OWNER TO fun_owner;
 -- object: authz.project_members_sync_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authz.project_members_sync_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION authz.project_members_sync_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1031,14 +1032,14 @@ ALTER FUNCTION authz.project_members_sync_trigger() OWNER TO fun_owner;
 -- object: authz.clusters_sync_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authz.clusters_sync_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION authz.clusters_sync_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1056,14 +1057,14 @@ ALTER FUNCTION authz.clusters_sync_trigger() OWNER TO fun_owner;
 -- object: authz.node_pools_sync_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authz.node_pools_sync_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION authz.node_pools_sync_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1081,14 +1082,14 @@ ALTER FUNCTION authz.node_pools_sync_trigger() OWNER TO fun_owner;
 -- object: authz.namespaces_sync_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authz.namespaces_sync_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION authz.namespaces_sync_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1106,14 +1107,14 @@ ALTER FUNCTION authz.namespaces_sync_trigger() OWNER TO fun_owner;
 -- object: authz.api_keys_sync_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authz.api_keys_sync_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION authz.api_keys_sync_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
@@ -1131,14 +1132,14 @@ ALTER FUNCTION authz.api_keys_sync_trigger() OWNER TO fun_owner;
 -- object: authz.installs_sync_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authz.installs_sync_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION authz.installs_sync_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1156,14 +1157,14 @@ ALTER FUNCTION authz.installs_sync_trigger() OWNER TO fun_owner;
 -- object: authz.outbox_notify_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authz.outbox_notify_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION authz.outbox_notify_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
+        RETURNS trigger
+        LANGUAGE plpgsql
+        VOLATILE
+        CALLED ON NULL INPUT
+        SECURITY INVOKER
+        PARALLEL UNSAFE
+        COST 1
+        AS
 $function$
 BEGIN
     PERFORM pg_notify('authz_outbox', '');
@@ -1177,82 +1178,82 @@ ALTER FUNCTION authz.outbox_notify_trigger() OWNER TO fun_owner;
 -- object: users_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS users_outbox ON tenant.users CASCADE;
 CREATE OR REPLACE TRIGGER users_outbox
-	AFTER INSERT OR UPDATE
-                           ON tenant.users
-                           FOR EACH ROW
-                           EXECUTE PROCEDURE authz.users_sync_trigger();
+        AFTER INSERT OR UPDATE
+                                 ON tenant.users
+                                 FOR EACH ROW
+                                 EXECUTE PROCEDURE authz.users_sync_trigger();
 -- ddl-end --
 
 -- object: project_members_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS project_members_outbox ON tenant.project_members CASCADE;
 CREATE OR REPLACE TRIGGER project_members_outbox
-	AFTER INSERT OR UPDATE
-                           ON tenant.project_members
-                           FOR EACH ROW
-                           EXECUTE PROCEDURE authz.project_members_sync_trigger();
+        AFTER INSERT OR UPDATE
+                                 ON tenant.project_members
+                                 FOR EACH ROW
+                                 EXECUTE PROCEDURE authz.project_members_sync_trigger();
 -- ddl-end --
 
 -- object: projects_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS projects_outbox ON tenant.projects CASCADE;
 CREATE OR REPLACE TRIGGER projects_outbox
-	AFTER INSERT OR UPDATE
-                           ON tenant.projects
-                           FOR EACH ROW
-                           EXECUTE PROCEDURE authz.projects_sync_trigger();
+        AFTER INSERT OR UPDATE
+                                 ON tenant.projects
+                                 FOR EACH ROW
+                                 EXECUTE PROCEDURE authz.projects_sync_trigger();
 -- ddl-end --
 
 -- object: clusters_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS clusters_outbox ON tenant.clusters CASCADE;
 CREATE OR REPLACE TRIGGER clusters_outbox
-	AFTER INSERT OR UPDATE
-                           ON tenant.clusters
-                           FOR EACH ROW
-                           EXECUTE PROCEDURE authz.clusters_sync_trigger();
+        AFTER INSERT OR UPDATE
+                                 ON tenant.clusters
+                                 FOR EACH ROW
+                                 EXECUTE PROCEDURE authz.clusters_sync_trigger();
 -- ddl-end --
 
 -- object: node_pools_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS node_pools_outbox ON tenant.node_pools CASCADE;
 CREATE OR REPLACE TRIGGER node_pools_outbox
-	AFTER INSERT OR UPDATE
-                           ON tenant.node_pools
-                           FOR EACH ROW
-                           EXECUTE PROCEDURE authz.node_pools_sync_trigger();
+        AFTER INSERT OR UPDATE
+                                 ON tenant.node_pools
+                                 FOR EACH ROW
+                                 EXECUTE PROCEDURE authz.node_pools_sync_trigger();
 -- ddl-end --
 
 -- object: namespaces_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS namespaces_outbox ON tenant.namespaces CASCADE;
 CREATE OR REPLACE TRIGGER namespaces_outbox
-	AFTER INSERT OR UPDATE
-                           ON tenant.namespaces
-                           FOR EACH ROW
-                           EXECUTE PROCEDURE authz.namespaces_sync_trigger();
+        AFTER INSERT OR UPDATE
+                                 ON tenant.namespaces
+                                 FOR EACH ROW
+                                 EXECUTE PROCEDURE authz.namespaces_sync_trigger();
 -- ddl-end --
 
 -- object: api_keys_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS api_keys_outbox ON authn.api_keys CASCADE;
 CREATE OR REPLACE TRIGGER api_keys_outbox
-	AFTER INSERT OR UPDATE
-                           ON authn.api_keys
-                           FOR EACH ROW
-                           EXECUTE PROCEDURE authz.api_keys_sync_trigger();
+        AFTER INSERT OR UPDATE
+                                 ON authn.api_keys
+                                 FOR EACH ROW
+                                 EXECUTE PROCEDURE authz.api_keys_sync_trigger();
 -- ddl-end --
 
 -- object: installs_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS installs_outbox ON appstore.installs CASCADE;
 CREATE OR REPLACE TRIGGER installs_outbox
-	AFTER INSERT OR UPDATE
-                           ON appstore.installs
-                           FOR EACH ROW
-                           EXECUTE PROCEDURE authz.installs_sync_trigger();
+        AFTER INSERT OR UPDATE
+                                 ON appstore.installs
+                                 FOR EACH ROW
+                                 EXECUTE PROCEDURE authz.installs_sync_trigger();
 -- ddl-end --
 
 -- object: outbox_notify | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS outbox_notify ON authz.outbox CASCADE;
 CREATE OR REPLACE TRIGGER outbox_notify
-	AFTER INSERT
-	ON authz.outbox
-	FOR EACH ROW
-	EXECUTE PROCEDURE authz.outbox_notify_trigger();
+        AFTER INSERT
+        ON authz.outbox
+        FOR EACH ROW
+        EXECUTE PROCEDURE authz.outbox_notify_trigger();
 -- ddl-end --
 
 -- object: namespaces_ix_cluster_name | type: INDEX --
@@ -1916,6 +1917,3 @@ GRANT SELECT
   TO fun_authz_worker;
 
 -- ddl-end --
-
-
-

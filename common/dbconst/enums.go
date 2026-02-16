@@ -6,21 +6,21 @@ package dbconst
 type ClusterEventEventType string
 
 const (
-	ClusterEventEventType_SyncRequested     ClusterEventEventType = "sync_requested"
-	ClusterEventEventType_SyncClaimed       ClusterEventEventType = "sync_claimed"
-	ClusterEventEventType_SyncSucceeded     ClusterEventEventType = "sync_succeeded"
-	ClusterEventEventType_SyncFailed        ClusterEventEventType = "sync_failed"
+	ClusterEventEventType_SyncRequested ClusterEventEventType = "sync_requested"
+	ClusterEventEventType_SyncClaimed ClusterEventEventType = "sync_claimed"
+	ClusterEventEventType_SyncSucceeded ClusterEventEventType = "sync_succeeded"
+	ClusterEventEventType_SyncFailed ClusterEventEventType = "sync_failed"
 	ClusterEventEventType_StatusProgressing ClusterEventEventType = "status_progressing"
-	ClusterEventEventType_StatusReady       ClusterEventEventType = "status_ready"
-	ClusterEventEventType_StatusError       ClusterEventEventType = "status_error"
-	ClusterEventEventType_StatusDeleted     ClusterEventEventType = "status_deleted"
+	ClusterEventEventType_StatusReady ClusterEventEventType = "status_ready"
+	ClusterEventEventType_StatusError ClusterEventEventType = "status_error"
+	ClusterEventEventType_StatusDeleted ClusterEventEventType = "status_deleted"
 )
 
 // ClusterEventSyncAction represents valid values for tenant.cluster_events.sync_action.
 type ClusterEventSyncAction string
 
 const (
-	ClusterEventSyncAction_Sync   ClusterEventSyncAction = "sync"
+	ClusterEventSyncAction_Sync ClusterEventSyncAction = "sync"
 	ClusterEventSyncAction_Delete ClusterEventSyncAction = "delete"
 )
 
@@ -28,17 +28,17 @@ const (
 type OutboxStatus string
 
 const (
-	OutboxStatus_Pending   OutboxStatus = "pending"
+	OutboxStatus_Pending OutboxStatus = "pending"
 	OutboxStatus_Completed OutboxStatus = "completed"
-	OutboxStatus_Retrying  OutboxStatus = "retrying"
-	OutboxStatus_Failed    OutboxStatus = "failed"
+	OutboxStatus_Retrying OutboxStatus = "retrying"
+	OutboxStatus_Failed OutboxStatus = "failed"
 )
 
 // ProjectMemberRole represents valid values for tenant.project_members.role.
 type ProjectMemberRole string
 
 const (
-	ProjectMemberRole_Admin  ProjectMemberRole = "admin"
+	ProjectMemberRole_Admin ProjectMemberRole = "admin"
 	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
 )
 
@@ -46,6 +46,6 @@ const (
 type UserRole string
 
 const (
-	UserRole_Admin  UserRole = "admin"
+	UserRole_Admin UserRole = "admin"
 	UserRole_Viewer UserRole = "viewer"
 )
