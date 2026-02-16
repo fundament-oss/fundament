@@ -12,15 +12,15 @@ This FUN defines the design and styling guidelines for the Fundament Console fro
 
 == Styling approach
 
-=== TailwindCSS
+=== Tailwind CSS
 
-Use TailwindCSS utility classes for styling elements. This keeps styles co-located with markup and avoids maintaining separate stylesheet files for individual components.
+Use Tailwind CSS utility classes for styling elements. This keeps styles co-located with markup and avoids maintaining separate stylesheet files for individual components.
 
 === Global classes
 
 For elements that appear frequently throughout the application, define reusable global classes in `styles.css` rather than repeating the same set of utility classes. This reduces duplication and provides a single place to update shared styles.
 
-For global styles, use the TailwindCSS `@apply` directive and keep custom CSS to a minimum.
+For global styles, use the Tailwind CSS `@apply` directive and keep custom CSS to a minimum.
 
 == Accessibility
 
@@ -101,7 +101,7 @@ Use `rounded-md` as the default border radius for cards, inputs, and containers.
 
 Hover effects should produce a subtle color shift rather than a drastic change. Avoid fully inverting colors on hover, as this creates a jarring experience. An exception may be made for elements where a strong visual signal is appropriate, such as warning or danger buttons.
 
-Clickable elements such as links and buttons should use a pointer cursor (TailwindCSS utility class `cursor-pointer`) to clearly signal interactivity.
+Clickable elements such as links and buttons should use a pointer cursor (Tailwind CSS utility class `cursor-pointer`) to clearly signal interactivity.
 
 == Transitions
 
