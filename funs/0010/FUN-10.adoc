@@ -101,7 +101,7 @@ Use `rounded-md` as the default border radius for cards, inputs, and containers.
 
 Hover effects should produce a subtle color shift rather than a drastic change. Avoid fully inverting colors on hover, as this creates a jarring experience. An exception may be made for elements where a strong visual signal is appropriate, such as warning or danger buttons.
 
-Clickable elements such as links and buttons should use a pointer cursor (`cursor-pointer`) to clearly signal interactivity.
+Clickable elements such as links and buttons should use a pointer cursor (TailwindCSS utility class `cursor-pointer`) to clearly signal interactivity.
 
 == Transitions
 
