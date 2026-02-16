@@ -10,7 +10,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleCheck } from '@ng-icons/tabler-icons';
+import { tablerCircleCheck, tablerArrowBackUp } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -59,6 +59,7 @@ interface ProgressItem {
     provideIcons({
       tablerCircleXFill,
       tablerCircleCheck,
+      tablerArrowBackUp,
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
