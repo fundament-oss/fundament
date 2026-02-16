@@ -1,0 +1,112 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: prediscussion
+
+= FUN-10 Console frontend styling
+
+== Introduction
+
+This FUN defines the design and styling guidelines for the Fundament Console frontend. These rules ensure visual consistency, accessibility, and maintainability across the application.
+
+== Styling approach
+
+=== Tailwind CSS
+
+Use Tailwind CSS utility classes for styling elements. This keeps styles co-located with markup and avoids maintaining separate stylesheet files for individual components.
+
+=== Global classes
+
+For elements that appear frequently throughout the application, define reusable global classes in `styles.css` rather than repeating the same set of utility classes. This reduces duplication and provides a single place to update shared styles.
+
+For global styles, use the Tailwind CSS `@apply` directive and keep custom CSS to a minimum.
+
+== Accessibility
+
+The Console frontend must conform to the Web Content Accessibility Guidelines (WCAG, preferably level AA). All interactive elements, color choices, and layouts should meet accessibility standards, including sufficient color contrast ratios and proper semantic markup.
+
+== Color system
+
+=== Dark and light mode balance
+
+As a rule of thumb, dark mode and light mode color values should add up to 1000 on the Tailwind shade scale. For example, if an element uses `gray-300` in light mode, it should use `gray-700` in dark mode. This is not a strict requirement though, since a common practice is to use shades that are further apart in dark mode. The darkest shade used should be `gray-950` rather than pure black, to maintain visual softness.
+
+=== Accent color
+
+The primary accent color is `indigo`. It is used for primary buttons, active navigation states, focus rings, and loading indicators. All interactive emphasis should use indigo rather than introducing other accent colors.
+
+=== Semantic colors
+
+Use `rose` instead of `red` and `emerald` instead of `green` from the Tailwind color palette. These provide a more refined appearance while still clearly communicating intent.
+
+=== Text color hierarchy
+
+Text colors follow a consistent hierarchy for visual weight:
+
+* Primary content (headings, important values): `text-gray-800` / `dark:text-white`
+* Secondary content (descriptions, supporting text): `text-gray-600` / `dark:text-gray-400`
+* Tertiary content (labels, metadata): `text-gray-500`
+
+=== Background hierarchy
+
+Backgrounds use a two-level depth system:
+
+* Page-level and cards: `bg-white` / `dark:bg-gray-950`
+* Nested containers within cards (e.g. grouped form sections, code blocks): `bg-gray-50` / `dark:bg-gray-900`
+
+This creates a subtle depth distinction without relying on shadows.
+
+=== Border color
+
+The standard border color is `border-gray-200` / `dark:border-gray-800`. Always define both light and dark variants.
+
+=== Input fields
+
+Input fields should use `bg-gray-900` in dark mode to provide a subtle contrast against the page background. This styling is already applied by the default global styles.
+
+== Typography
+
+The default body text size is `text-sm`. Use `text-2xl font-bold` for page titles, `text-lg` for section headings, and `text-xs` for badges and helper text. Use `font-mono` for technical identifiers such as UUIDs and tokens.
+
+== Headers
+
+Preferably, do not capitalize every word in titles, headers, and buttons. Capitalize only the first word of a sentence or label (sentence case). Example: use `Cluster name` instead of `Cluster Name`.
+
+== Icons
+
+=== Icon set
+
+The primary icon set is https://tabler.io/icons[Tabler Icons]. If this icon set does not offer a suitable icon for a particular use case, another icon set may be used, provided the chosen icon matches the same visual style and stroke width as Tabler icons.
+
+=== Icon style
+
+Prefer outline icons over filled variants. Outline icons provide a lighter, more consistent appearance across the interface.
+
+== Components
+
+=== Button placement
+
+In dialogs and forms with multiple actions, place the cancel button on the left and the primary action button on the right. This creates a consistent and predictable layout for users.
+
+== Spacing
+
+Prefer `margin-bottom` over `margin-top` for vertical spacing between elements. This establishes a top-down flow where each element is responsible for the space below it, resulting in more predictable and composable layouts.
+
+== Border radius
+
+Use `rounded-md` as the default border radius for cards, inputs, and containers. Use `rounded-full` for badges, pills, and avatar-like elements.
+
+== Hover states
+
+Hover effects should produce a subtle color shift rather than a drastic change. Avoid fully inverting colors on hover, as this creates a jarring experience. An exception may be made for elements where a strong visual signal is appropriate, such as warning or danger buttons.
+
+Clickable elements such as links and buttons should use a pointer cursor (Tailwind CSS utility class `cursor-pointer`) to clearly signal interactivity.
+
+== Transitions
+
+Use `transition-colors duration-200` as the default transition for hover and focus state changes. For buttons, a subtle `hover:-translate-y-px` lift may be added for a tactile feel.
+
+== Responsive design
+
+Follow a mobile-first approach. Define base styles for the smallest viewport, then add overrides at `sm:`, `lg:`, and `xl:` breakpoints. The `md:` breakpoint is generally skipped to keep the responsive layer simple.
