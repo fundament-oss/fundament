@@ -6,8 +6,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"testing"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
@@ -35,13 +37,40 @@ func TestMain(m *testing.M) {
 	dataDir := filepath.Join(cacheDir, "data")
 	pgBin := filepath.Join(cacheDir, "bin")
 
+	var stopPostgres func()
+
 	if dirExists(dataDir) && dirExists(pgBin) {
 		log.Printf("existing embedded-postgres detected at %q", cacheDir)
 		startExistingEmbeddedPostgres(pgBin, dataDir)
+
+		stopPostgres = func() {
+			pgCtl := filepath.Join(pgBin, "pg_ctl")
+			cmd := exec.Command(pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				log.Printf("failed to stop postgres: %v", err)
+			}
+		}
 	} else {
 		log.Printf("setting up new embedded-postgres installation %q", cacheDir)
-		createAndStartNewEmbeddedPostgres(cacheDir, dataDir)
+		epDB := createAndStartNewEmbeddedPostgres(cacheDir, dataDir)
+
+		stopPostgres = func() {
+			if err := epDB.Stop(); err != nil {
+				log.Printf("failed to stop postgres: %v", err)
+			}
+		}
 	}
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sig
+		log.Println("received signal, stopping postgres...")
+		stopPostgres()
+		os.Exit(1)
+	}()
 
 	adminPool := newAdminPool()
 	defer adminPool.Close()
@@ -55,15 +84,7 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	// stop the postgres process
-	pgCtl := filepath.Join(pgBin, "pg_ctl")
-	cmd := exec.Command(pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Printf("failed to stop postgres: %v", err)
-	}
-
+	stopPostgres()
 	os.Exit(code)
 }
 
@@ -85,10 +106,10 @@ func startExistingEmbeddedPostgres(pgBin, dataDir string) {
 	}
 }
 
-func createAndStartNewEmbeddedPostgres(runtimePath, dataDir string) {
+func createAndStartNewEmbeddedPostgres(runtimePath, dataDir string) *embeddedpostgres.EmbeddedPostgres {
 	err := os.RemoveAll(dataDir)
 	if err != nil {
-		log.Fatalf("failed to determine user cache directory: %v", err)
+		log.Fatalf("failed to remove old data directory: %v", err)
 	}
 
 	epDB := embeddedpostgres.NewDatabase(
@@ -107,6 +128,8 @@ func createAndStartNewEmbeddedPostgres(runtimePath, dataDir string) {
 	if err := epDB.Start(); err != nil {
 		log.Fatalf("failed to start embedded postgres: %v", err)
 	}
+
+	return epDB
 }
 
 func setupTemplateDatabaseWithMigrations(pool *pgxpool.Pool) error {
