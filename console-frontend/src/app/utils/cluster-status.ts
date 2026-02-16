@@ -27,7 +27,7 @@ export function getStatusColor(status: ClusterStatus): string {
   const colors: Record<ClusterStatus, string> = {
     [ClusterStatus.PROVISIONING]: 'badge-yellow',
     [ClusterStatus.STARTING]: 'badge-blue',
-    [ClusterStatus.RUNNING]: 'badge-green',
+    [ClusterStatus.RUNNING]: 'badge-emerald',
     [ClusterStatus.UPGRADING]: 'badge-purple',
     [ClusterStatus.ERROR]: 'badge-rose',
     [ClusterStatus.STOPPING]: 'badge-yellow',

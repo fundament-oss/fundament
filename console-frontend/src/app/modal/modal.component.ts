@@ -24,6 +24,7 @@ import { tablerX } from '@ng-icons/tabler-icons';
   ],
   host: {
     '(document:keydown)': 'handleKeydown($event)',
+    '[attr.title]': 'null',
   },
   templateUrl: './modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

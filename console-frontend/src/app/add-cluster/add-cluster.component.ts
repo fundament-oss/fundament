@@ -39,7 +39,7 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
   kubernetesVersions = ['1.31.1', '1.32.0', '1.33.0', '1.34.0'];
 
   constructor() {
-    this.titleService.setTitle('Add cluster components');
+    this.titleService.setTitle('Add a cluster');
 
     this.clusterForm = this.fb.group({
       clusterName: [

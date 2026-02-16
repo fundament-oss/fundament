@@ -226,7 +226,6 @@ export default class ApiKeysComponent implements OnInit {
 
     try {
       const expiresIn = this.newKeyExpiresIn();
-    console.log(expiresIn)
       const request = create(CreateAPIKeyRequestSchema, {
         name,
         expiresIn,

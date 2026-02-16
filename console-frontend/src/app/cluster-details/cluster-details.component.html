@@ -101,7 +101,7 @@
 
       <!-- Gardener Sync State Block -->
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-        <h3 class="mb-4 text-lg font-medium dark:text-white">Provisioning Status</h3>
+        <h3 class="mb-4 text-lg font-medium dark:text-white">Provisioning status</h3>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <dl>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Gardener status</dt>
@@ -148,16 +148,19 @@
 
         <!-- Collapsible Sync History -->
         @if (clusterData.syncState) {
-          <details class="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
-            <summary
-              class="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-            >
-              Sync Details
+          <details class="group mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
+            <summary class="inline-flex cursor-pointer items-center text-sm font-medium">
+              <ng-icon
+                name="tablerCaretRight"
+                class="mr-1 text-indigo-500! transition-transform group-open:rotate-90"
+              />
+              Sync details
             </summary>
+
             <div class="mt-3 overflow-x-auto">
               <table class="min-w-full text-sm">
                 <thead>
-                  <tr class="border-b border-gray-200 dark:border-gray-700">
+                  <tr class="border-b border-gray-200 dark:border-gray-800">
                     <th class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
                       Property
                     </th>
@@ -168,19 +171,19 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                   <tr>
-                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Shoot Status</td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Shoot status</td>
                     <td class="px-3 py-2 dark:text-white">
                       {{ clusterData.syncState.shootStatus || 'N/A' }}
                     </td>
                   </tr>
                   <tr>
-                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Status Message</td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Status message</td>
                     <td class="px-3 py-2 dark:text-white">
                       {{ clusterData.syncState.shootMessage || 'N/A' }}
                     </td>
                   </tr>
                   <tr>
-                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Status Updated</td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Status updated</td>
                     <td class="px-3 py-2 dark:text-white">
                       {{
                         clusterData.syncState.statusUpdatedAt
@@ -190,13 +193,13 @@
                     </td>
                   </tr>
                   <tr>
-                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Sync Attempts</td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Sync attempts</td>
                     <td class="px-3 py-2 dark:text-white">
                       {{ clusterData.syncState.syncAttempts }}
                     </td>
                   </tr>
                   <tr>
-                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Last Synced</td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Last synced</td>
                     <td class="px-3 py-2 dark:text-white">
                       {{
                         clusterData.syncState.syncedAt
@@ -207,7 +210,7 @@
                   </tr>
                   @if (clusterData.syncState.syncError) {
                     <tr>
-                      <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Sync Error</td>
+                      <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Sync error</td>
                       <td class="px-3 py-2 text-red-600 dark:text-red-400">
                         {{ clusterData.syncState.syncError }}
                       </td>
@@ -458,7 +461,7 @@
                     class="badge-sm"
                     [class.badge-purple]="member.role === 'admin'"
                     [class.badge-blue]="member.role === 'edit'"
-                    [class.badge-green]="member.role === 'view'"
+                    [class.badge-emerald]="member.role === 'view'"
                   >
                     {{ member.role }}
                   </span>
@@ -497,7 +500,7 @@
                     <span
                       class="badge-sm"
                       [class]="
-                        pool.status === NodePoolStatus.HEALTHY ? 'badge-green' : 'badge-rose'
+                        pool.status === NodePoolStatus.HEALTHY ? 'badge-emerald' : 'badge-rose'
                       "
                     >
                       {{ getNodePoolStatusLabel(pool.status) }}
