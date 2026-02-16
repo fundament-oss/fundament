@@ -3,6 +3,8 @@ import {
   signal,
   computed,
   inject,
+  effect,
+  untracked,
   OnInit,
   ChangeDetectionStrategy,
 } from '@angular/core';
@@ -133,6 +135,14 @@ export default class App implements OnInit {
   // Breadcrumb state
   breadcrumbSegments = signal<BreadcrumbSegment[]>([]);
 
+  constructor() {
+    // Refresh breadcrumbs when organization data changes (e.g. after renaming)
+    effect(() => {
+      this.organizationDataService.organizations();
+      untracked(() => this.updateBreadcrumbs());
+    });
+  }
+
   async ngOnInit() {
     this.initializeTheme();
 
@@ -181,9 +191,10 @@ export default class App implements OnInit {
   // Update sidebar state based on current route
   private updateSidebarStateFromRoute(url: string) {
     // Match project routes: /projects/:projectId or /projects/:projectId/...
+    // Exclude /projects/add which is the add-project page (not a project detail)
     const projectRouteMatch = url.match(/^\/projects\/([^/]+)/);
 
-    if (projectRouteMatch) {
+    if (projectRouteMatch && projectRouteMatch[1] !== 'add') {
       const projectId = projectRouteMatch[1];
       // Project route
       this.selectedProjectId.set(projectId);

@@ -62,7 +62,7 @@ export default class AddProjectComponent implements AfterViewInit {
   });
 
   constructor() {
-    this.titleService.setTitle('Add project');
+    this.titleService.setTitle('Add a project');
   }
 
   ngAfterViewInit() {

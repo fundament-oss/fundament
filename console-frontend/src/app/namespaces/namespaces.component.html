@@ -81,17 +81,16 @@
           ></div>
           <span class="text-sm text-gray-500 dark:text-gray-400">Loading clusters...</span>
         </div>
+      } @else if (clusters().length === 0) {
+        <p class="mt-2 text-sm text-rose-500 dark:text-rose-400">
+          No clusters available. Create a cluster first.
+        </p>
       } @else {
         <select id="clusterId" formControlName="clusterId" class="w-full">
           @for (cluster of clusters(); track cluster.id) {
             <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
           }
         </select>
-        @if (clusters().length === 0) {
-          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            No clusters available. Create a cluster first.
-          </p>
-        }
       }
       @if (namespaceForm.get('clusterId')?.invalid && namespaceForm.get('clusterId')?.dirty) {
         <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a cluster.</p>
