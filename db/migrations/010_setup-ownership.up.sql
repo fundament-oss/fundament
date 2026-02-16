@@ -1,28 +1,28 @@
 -- Statements generated automatically, please review:
 ALTER SCHEMA tenant OWNER TO fun_owner;
-ALTER SCHEMA zappstore OWNER TO fun_owner;
+ALTER SCHEMA appstore OWNER TO fun_owner;
 ALTER TABLE tenant.clusters OWNER TO fun_owner;
 ALTER TABLE tenant.namespaces OWNER TO fun_owner;
 ALTER TABLE tenant.node_pools OWNER TO fun_owner;
 ALTER TABLE tenant.organizations OWNER TO fun_owner;
 ALTER TABLE tenant.projects OWNER TO fun_owner;
 ALTER TABLE tenant.users OWNER TO fun_owner;
-ALTER TABLE zappstore.categories OWNER TO fun_owner;
-ALTER TABLE zappstore.categories_plugins OWNER TO fun_owner;
-ALTER TABLE zappstore.installs OWNER TO fun_owner;
-ALTER TABLE zappstore.plugin_documentation_links OWNER TO fun_owner;
-ALTER TABLE zappstore.plugins OWNER TO fun_owner;
-ALTER TABLE zappstore.plugins_tags OWNER TO fun_owner;
-ALTER TABLE zappstore.preset_plugins OWNER TO fun_owner;
-ALTER TABLE zappstore.presets OWNER TO fun_owner;
-ALTER TABLE zappstore.tags OWNER TO fun_owner;
+ALTER TABLE appstore.categories OWNER TO fun_owner;
+ALTER TABLE appstore.categories_plugins OWNER TO fun_owner;
+ALTER TABLE appstore.installs OWNER TO fun_owner;
+ALTER TABLE appstore.plugin_documentation_links OWNER TO fun_owner;
+ALTER TABLE appstore.plugins OWNER TO fun_owner;
+ALTER TABLE appstore.plugins_tags OWNER TO fun_owner;
+ALTER TABLE appstore.preset_plugins OWNER TO fun_owner;
+ALTER TABLE appstore.presets OWNER TO fun_owner;
+ALTER TABLE appstore.tags OWNER TO fun_owner;
 
 GRANT USAGE
    ON SCHEMA tenant
    TO fun_fundament_api;
 
 GRANT USAGE
-   ON SCHEMA zappstore
+   ON SCHEMA appstore
    TO fun_fundament_api;
 
 GRANT USAGE
@@ -153,134 +153,134 @@ GRANT UPDATE ON "tenant"."users" TO "fun_fundament_api";
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT INSERT ON "zappstore"."categories" TO "fun_fundament_api";
+GRANT INSERT ON "appstore"."categories" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT SELECT ON "zappstore"."categories" TO "fun_fundament_api";
+GRANT SELECT ON "appstore"."categories" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT UPDATE ON "zappstore"."categories" TO "fun_fundament_api";
+GRANT UPDATE ON "appstore"."categories" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT INSERT ON "zappstore"."categories_plugins" TO "fun_fundament_api";
+GRANT INSERT ON "appstore"."categories_plugins" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT SELECT ON "zappstore"."categories_plugins" TO "fun_fundament_api";
+GRANT SELECT ON "appstore"."categories_plugins" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT UPDATE ON "zappstore"."categories_plugins" TO "fun_fundament_api";
+GRANT UPDATE ON "appstore"."categories_plugins" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT INSERT ON "zappstore"."installs" TO "fun_fundament_api";
+GRANT INSERT ON "appstore"."installs" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT SELECT ON "zappstore"."installs" TO "fun_fundament_api";
+GRANT SELECT ON "appstore"."installs" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT UPDATE ON "zappstore"."installs" TO "fun_fundament_api";
+GRANT UPDATE ON "appstore"."installs" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT INSERT ON "zappstore"."plugin_documentation_links" TO "fun_fundament_api";
+GRANT INSERT ON "appstore"."plugin_documentation_links" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT SELECT ON "zappstore"."plugin_documentation_links" TO "fun_fundament_api";
+GRANT SELECT ON "appstore"."plugin_documentation_links" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT UPDATE ON "zappstore"."plugin_documentation_links" TO "fun_fundament_api";
+GRANT UPDATE ON "appstore"."plugin_documentation_links" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT INSERT ON "zappstore"."plugins" TO "fun_fundament_api";
+GRANT INSERT ON "appstore"."plugins" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT SELECT ON "zappstore"."plugins" TO "fun_fundament_api";
+GRANT SELECT ON "appstore"."plugins" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT UPDATE ON "zappstore"."plugins" TO "fun_fundament_api";
+GRANT UPDATE ON "appstore"."plugins" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT INSERT ON "zappstore"."plugins_tags" TO "fun_fundament_api";
+GRANT INSERT ON "appstore"."plugins_tags" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT SELECT ON "zappstore"."plugins_tags" TO "fun_fundament_api";
+GRANT SELECT ON "appstore"."plugins_tags" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT UPDATE ON "zappstore"."plugins_tags" TO "fun_fundament_api";
+GRANT UPDATE ON "appstore"."plugins_tags" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT INSERT ON "zappstore"."preset_plugins" TO "fun_fundament_api";
+GRANT INSERT ON "appstore"."preset_plugins" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT SELECT ON "zappstore"."preset_plugins" TO "fun_fundament_api";
+GRANT SELECT ON "appstore"."preset_plugins" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT UPDATE ON "zappstore"."preset_plugins" TO "fun_fundament_api";
+GRANT UPDATE ON "appstore"."preset_plugins" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT INSERT ON "zappstore"."presets" TO "fun_fundament_api";
+GRANT INSERT ON "appstore"."presets" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT SELECT ON "zappstore"."presets" TO "fun_fundament_api";
+GRANT SELECT ON "appstore"."presets" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT UPDATE ON "zappstore"."presets" TO "fun_fundament_api";
+GRANT UPDATE ON "appstore"."presets" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT INSERT ON "zappstore"."tags" TO "fun_fundament_api";
+GRANT INSERT ON "appstore"."tags" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT SELECT ON "zappstore"."tags" TO "fun_fundament_api";
+GRANT SELECT ON "appstore"."tags" TO "fun_fundament_api";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT UPDATE ON "zappstore"."tags" TO "fun_fundament_api";
+GRANT UPDATE ON "appstore"."tags" TO "fun_fundament_api";

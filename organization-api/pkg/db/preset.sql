@@ -1,8 +1,8 @@
 -- name: PresetList :many
 SELECT id, name, description
-FROM zappstore.presets
+FROM appstore.presets
 ORDER BY name;
 
 -- name: PresetPluginsList :many
 SELECT preset_id, plugin_id
-FROM zappstore.preset_plugins;
+FROM appstore.preset_plugins;

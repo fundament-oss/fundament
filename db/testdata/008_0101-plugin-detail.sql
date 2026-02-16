@@ -2,91 +2,91 @@
 
 -- Update plugins with author and repository information
 -- Alloy
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'Grafana Labs',
     author_url = 'https://grafana.com',
     repository_url = 'https://github.com/grafana/alloy'
 WHERE id = '019b4000-3000-7000-8000-000000000001';
 
 -- Cert-manager
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'cert-manager maintainers',
     author_url = 'https://cert-manager.io',
     repository_url = 'https://github.com/cert-manager/cert-manager'
 WHERE id = '019b4000-3000-7000-8000-000000000002';
 
 -- Cloudnative-pg
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'CloudNativePG Contributors',
     author_url = 'https://cloudnative-pg.io',
     repository_url = 'https://github.com/cloudnative-pg/cloudnative-pg'
 WHERE id = '019b4000-3000-7000-8000-000000000003';
 
 -- ECK-operator
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'Elastic',
     author_url = 'https://www.elastic.co',
     repository_url = 'https://github.com/elastic/cloud-on-k8s'
 WHERE id = '019b4000-3000-7000-8000-000000000004';
 
 -- Grafana
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'Grafana Labs',
     author_url = 'https://grafana.com',
     repository_url = 'https://github.com/grafana/grafana'
 WHERE id = '019b4000-3000-7000-8000-000000000005';
 
 -- Istio-gateway
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'Istio Authors',
     author_url = 'https://istio.io',
     repository_url = 'https://github.com/istio/istio'
 WHERE id = '019b4000-3000-7000-8000-000000000006';
 
 -- Istio
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'Istio Authors',
     author_url = 'https://istio.io',
     repository_url = 'https://github.com/istio/istio'
 WHERE id = '019b4000-3000-7000-8000-000000000007';
 
 -- Keycloak
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'Red Hat',
     author_url = 'https://www.keycloak.org',
     repository_url = 'https://github.com/keycloak/keycloak'
 WHERE id = '019b4000-3000-7000-8000-000000000008';
 
 -- Loki
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'Grafana Labs',
     author_url = 'https://grafana.com',
     repository_url = 'https://github.com/grafana/loki'
 WHERE id = '019b4000-3000-7000-8000-000000000009';
 
 -- Mimir
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'Grafana Labs',
     author_url = 'https://grafana.com',
     repository_url = 'https://github.com/grafana/mimir'
 WHERE id = '019b4000-3000-7000-8000-00000000000a';
 
 -- Pinniped
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'VMware',
     author_url = 'https://pinniped.dev',
     repository_url = 'https://github.com/vmware-tanzu/pinniped'
 WHERE id = '019b4000-3000-7000-8000-00000000000b';
 
 -- Sealed-secrets
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'Bitnami',
     author_url = 'https://bitnami.com',
     repository_url = 'https://github.com/bitnami-labs/sealed-secrets'
 WHERE id = '019b4000-3000-7000-8000-00000000000c';
 
 -- Tempo
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     author_name = 'Grafana Labs',
     author_url = 'https://grafana.com',
     repository_url = 'https://github.com/grafana/tempo'
@@ -94,7 +94,7 @@ WHERE id = '019b4000-3000-7000-8000-00000000000d';
 
 
 -- Documentation links (using 019b4000-6000-7000-8000-* prefix for doc link IDs)
-INSERT INTO zappstore.plugin_documentation_links (id, plugin_id, title, url_name, url) VALUES
+INSERT INTO appstore.plugin_documentation_links (id, plugin_id, title, url_name, url) VALUES
     -- Alloy documentation
     ('019b4000-6000-7000-8000-000000000001', '019b4000-3000-7000-8000-000000000001', 'Documentation', 'Official documentation', 'https://grafana.com/docs/alloy/latest/'),
     ('019b4000-6000-7000-8000-000000000002', '019b4000-3000-7000-8000-000000000001', 'Getting Started', 'Get started guide', 'https://grafana.com/docs/alloy/latest/get-started/'),

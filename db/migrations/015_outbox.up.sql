@@ -244,9 +244,9 @@ ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_fk_user" FOREIGN KEY (user_i
 
 ALTER TABLE "authz"."outbox" VALIDATE CONSTRAINT "outbox_fk_user";
 
-CREATE TRIGGER installs_outbox AFTER INSERT OR UPDATE ON zappstore.installs FOR EACH ROW EXECUTE FUNCTION authz.installs_sync_trigger();
+CREATE TRIGGER installs_outbox AFTER INSERT OR UPDATE ON appstore.installs FOR EACH ROW EXECUTE FUNCTION authz.installs_sync_trigger();
 
-ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_fk_install" FOREIGN KEY (install_id) REFERENCES zappstore.installs(id) NOT VALID;
+ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_fk_install" FOREIGN KEY (install_id) REFERENCES appstore.installs(id) NOT VALID;
 
 ALTER TABLE "authz"."outbox" VALIDATE CONSTRAINT "outbox_fk_install";
 
@@ -274,7 +274,7 @@ ALTER TABLE authz.outbox OWNER TO fun_owner;
 GRANT USAGE ON SCHEMA authz TO fun_authz_worker;
 GRANT USAGE ON SCHEMA tenant TO fun_authz_worker;
 GRANT USAGE ON SCHEMA authn TO fun_authz_worker;
-GRANT USAGE ON SCHEMA zappstore TO fun_authz_worker;
+GRANT USAGE ON SCHEMA appstore TO fun_authz_worker;
 
 GRANT SELECT ON public.schema_migrations TO fun_authz_worker;
 
@@ -290,4 +290,4 @@ GRANT SELECT ON tenant.organizations TO fun_authz_worker;
 
 GRANT SELECT ON authn.api_keys TO fun_authz_worker;
 
-GRANT SELECT ON zappstore.installs TO fun_authz_worker;
+GRANT SELECT ON appstore.installs TO fun_authz_worker;

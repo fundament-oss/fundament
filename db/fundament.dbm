@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="68"
+<dbmodel pgmodeler-ver="2.0.0-alpha" use-changelog="false" max-obj-count="68"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="-229,-40" last-zoom="0.6" scene-rect="-528,-67,3406.2,2346.52"
+	 last-position="-317,-40" last-zoom="0.6" scene-rect="-528,-67,3406.2,2346.52"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -55,7 +55,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<role name="fun_owner"/>
 </schema>
 
-<schema name="zappstore" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
+<schema name="appstore" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
 	<role name="fun_owner"/>
 </schema>
 
@@ -739,7 +739,7 @@ END;]]> </definition>
 </policy>
 
 <table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
-	<schema name="zappstore"/>
+	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="100" y="1240"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
@@ -757,16 +757,16 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<constraint name="installs_pk" type="pk-constr" table="zappstore.installs">
+	<constraint name="installs_pk" type="pk-constr" table="appstore.installs">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="installs_uq" type="uq-constr" nulls-not-distinct="true" table="zappstore.installs">
+	<constraint name="installs_uq" type="uq-constr" nulls-not-distinct="true" table="appstore.installs">
 		<columns names="cluster_id,plugin_id,deleted" ref-type="src-columns"/>
 	</constraint>
 </table>
 
 <table name="plugins" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
-	<schema name="zappstore"/>
+	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="820" y="1500"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
@@ -796,16 +796,16 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<constraint name="plugins_uq_name" type="uq-constr" nulls-not-distinct="true" table="zappstore.plugins">
+	<constraint name="plugins_uq_name" type="uq-constr" nulls-not-distinct="true" table="appstore.plugins">
 		<columns names="name,deleted" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="plugins_pk" type="pk-constr" table="zappstore.plugins">
+	<constraint name="plugins_pk" type="pk-constr" table="appstore.plugins">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 </table>
 
 <table name="presets" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
-	<schema name="zappstore"/>
+	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="-220" y="1960"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
@@ -817,16 +817,16 @@ END;]]> </definition>
 	<column name="description">
 		<type name="text" length="0"/>
 	</column>
-	<constraint name="presets_pk" type="pk-constr" table="zappstore.presets">
+	<constraint name="presets_pk" type="pk-constr" table="appstore.presets">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="presets_uq_name" type="uq-constr" table="zappstore.presets">
+	<constraint name="presets_uq_name" type="uq-constr" table="appstore.presets">
 		<columns names="name" ref-type="src-columns"/>
 	</constraint>
 </table>
 
 <table name="preset_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
-	<schema name="zappstore"/>
+	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="300" y="1760"/>
 	<column name="preset_id" not-null="true">
@@ -835,17 +835,17 @@ END;]]> </definition>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
-	<constraint name="preset_plugins_pk" type="pk-constr" table="zappstore.preset_plugins">
+	<constraint name="preset_plugins_pk" type="pk-constr" table="appstore.preset_plugins">
 		<columns names="preset_id,plugin_id" ref-type="src-columns"/>
 	</constraint>
 </table>
 
-<policy name="install_organization_policy" table="zappstore.installs" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+<policy name="install_organization_policy" table="appstore.installs" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
 <table name="tags" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
-	<schema name="zappstore"/>
+	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="2180" y="1940"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
@@ -860,16 +860,16 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<constraint name="tags_uq_name" type="uq-constr" nulls-not-distinct="true" table="zappstore.tags">
+	<constraint name="tags_uq_name" type="uq-constr" nulls-not-distinct="true" table="appstore.tags">
 		<columns names="name,deleted" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="tags_pk" type="pk-constr" table="zappstore.tags">
+	<constraint name="tags_pk" type="pk-constr" table="appstore.tags">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 </table>
 
 <table name="plugins_tags" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
-	<schema name="zappstore"/>
+	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="1540" y="1940"/>
 	<column name="plugin_id" not-null="true">
@@ -878,13 +878,13 @@ END;]]> </definition>
 	<column name="tag_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
-	<constraint name="plugins_tags_pk" type="pk-constr" table="zappstore.plugins_tags">
+	<constraint name="plugins_tags_pk" type="pk-constr" table="appstore.plugins_tags">
 		<columns names="plugin_id,tag_id" ref-type="src-columns"/>
 	</constraint>
 </table>
 
 <table name="categories" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
-	<schema name="zappstore"/>
+	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="2240" y="1540"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
@@ -899,16 +899,16 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<constraint name="categories_uq_name" type="uq-constr" nulls-not-distinct="true" table="zappstore.categories">
+	<constraint name="categories_uq_name" type="uq-constr" nulls-not-distinct="true" table="appstore.categories">
 		<columns names="name,deleted" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="categories_pk" type="pk-constr" table="zappstore.categories">
+	<constraint name="categories_pk" type="pk-constr" table="appstore.categories">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 </table>
 
 <table name="categories_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
-	<schema name="zappstore"/>
+	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="1520" y="1540"/>
 	<column name="plugin_id" not-null="true">
@@ -917,13 +917,13 @@ END;]]> </definition>
 	<column name="category_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
-	<constraint name="categories_plugins_pk" type="pk-constr" table="zappstore.categories_plugins">
+	<constraint name="categories_plugins_pk" type="pk-constr" table="appstore.categories_plugins">
 		<columns names="plugin_id,category_id" ref-type="src-columns"/>
 	</constraint>
 </table>
 
 <table name="plugin_documentation_links" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
-	<schema name="zappstore"/>
+	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="1540" y="1220"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
@@ -941,7 +941,7 @@ END;]]> </definition>
 	<column name="url" not-null="true">
 		<type name="text" length="0"/>
 	</column>
-	<constraint name="plugin_documentation_links_pk" type="pk-constr" table="zappstore.plugin_documentation_links">
+	<constraint name="plugin_documentation_links_pk" type="pk-constr" table="appstore.plugin_documentation_links">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 </table>
@@ -1101,7 +1101,7 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 		</idxelement>
 </index>
 
-<table name="outbox" layers="0" collapse-mode="2" max-obj-count="15" z-value="0">
+<table name="outbox" layers="0" collapse-mode="2" max-obj-count="19" z-value="0">
 	<schema name="authz"/>
 	<role name="fun_owner"/>
 	<position x="2200" y="0"/>
@@ -1447,7 +1447,7 @@ END;]]> </definition>
 
 <trigger name="installs_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
-	 table="zappstore.installs">
+	 table="appstore.installs">
 		<function signature="authz.installs_sync_trigger()"/>
 </trigger>
 
@@ -1518,55 +1518,55 @@ END;]]> </definition>
 </constraint>
 
 <constraint name="installs_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="zappstore.installs">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="appstore.installs">
 	<columns names="cluster_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="installs_fk_plugin" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.plugins" table="zappstore.installs">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.installs">
 	<columns names="plugin_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="plugins_presets_plugin_id" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.plugins" table="zappstore.preset_plugins">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.preset_plugins">
 	<columns names="plugin_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="plugins_presets_preset_id" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.presets" table="zappstore.preset_plugins">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.presets" table="appstore.preset_plugins">
 	<columns names="preset_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="plugins_tags_tag_id" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.tags" table="zappstore.plugins_tags">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.tags" table="appstore.plugins_tags">
 	<columns names="tag_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="plugins_tags_plugin_id" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.plugins" table="zappstore.plugins_tags">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.plugins_tags">
 	<columns names="plugin_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="plugins_categories_plugin_id" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.plugins" table="zappstore.categories_plugins">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.categories_plugins">
 	<columns names="plugin_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="plugins_categories_category_id" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.categories" table="zappstore.categories_plugins">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.categories" table="appstore.categories_plugins">
 	<columns names="category_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
 <constraint name="plugin_documentation_links_fk_plugin" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.plugins" table="zappstore.plugin_documentation_links">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.plugin_documentation_links">
 	<columns names="plugin_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
@@ -1632,7 +1632,7 @@ END;]]> </definition>
 </constraint>
 
 <constraint name="outbox_fk_install" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="zappstore.installs" table="authz.outbox">
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.installs" table="authz.outbox">
 	<columns names="install_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
@@ -1673,43 +1673,43 @@ END;]]> </definition>
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_installs_clusters" type="relfk" layers="0"
-	 src-table="zappstore.installs"
+	 src-table="appstore.installs"
 	 dst-table="tenant.clusters" reference-fk="installs_fk_cluster"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_installs_plugins" type="relfk" layers="0"
-	 src-table="zappstore.installs"
-	 dst-table="zappstore.plugins" reference-fk="installs_fk_plugin"
+	 src-table="appstore.installs"
+	 dst-table="appstore.plugins" reference-fk="installs_fk_plugin"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_plugins_tags_tags" type="relfk" layers="0"
-	 src-table="zappstore.plugins_tags"
-	 dst-table="zappstore.tags" reference-fk="plugins_tags_tag_id"
+	 src-table="appstore.plugins_tags"
+	 dst-table="appstore.tags" reference-fk="plugins_tags_tag_id"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_categories_plugins_plugins" type="relfk" layers="0"
-	 src-table="zappstore.categories_plugins"
-	 dst-table="zappstore.plugins" reference-fk="plugins_categories_plugin_id"
+	 src-table="appstore.categories_plugins"
+	 dst-table="appstore.plugins" reference-fk="plugins_categories_plugin_id"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_categories_plugins_categories" type="relfk" layers="0"
-	 src-table="zappstore.categories_plugins"
-	 dst-table="zappstore.categories" reference-fk="plugins_categories_category_id"
+	 src-table="appstore.categories_plugins"
+	 dst-table="appstore.categories" reference-fk="plugins_categories_category_id"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_plugins_tags_plugins" type="relfk" layers="0"
-	 src-table="zappstore.plugins_tags"
-	 dst-table="zappstore.plugins" reference-fk="plugins_tags_plugin_id"
+	 src-table="appstore.plugins_tags"
+	 dst-table="appstore.plugins" reference-fk="plugins_tags_plugin_id"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_preset_plugins_plugins" type="relfk" layers="0"
-	 src-table="zappstore.preset_plugins"
-	 dst-table="zappstore.plugins" reference-fk="plugins_presets_plugin_id"
+	 src-table="appstore.preset_plugins"
+	 dst-table="appstore.plugins" reference-fk="plugins_presets_plugin_id"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_preset_plugins_presets" type="relfk" layers="0"
-	 src-table="zappstore.preset_plugins"
-	 dst-table="zappstore.presets" reference-fk="plugins_presets_preset_id"
+	 src-table="appstore.preset_plugins"
+	 dst-table="appstore.presets" reference-fk="plugins_presets_preset_id"
 	 src-required="false" dst-required="true">
 	<label ref-type="name-label">
 		<position x="-1.21832" y="-18.853"/>
@@ -1717,8 +1717,8 @@ END;]]> </definition>
 </relationship>
 
 <relationship name="rel_plugin_documentation_links_plugins" type="relfk" layers="0"
-	 src-table="zappstore.plugin_documentation_links"
-	 dst-table="zappstore.plugins" reference-fk="plugin_documentation_links_fk_plugin"
+	 src-table="appstore.plugin_documentation_links"
+	 dst-table="appstore.plugins" reference-fk="plugin_documentation_links_fk_plugin"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_api_keys_organizations" type="relfk" layers="0"
@@ -1778,11 +1778,11 @@ END;]]> </definition>
 
 <relationship name="rel_outbox_installs" type="relfk" layers="0"
 	 src-table="authz.outbox"
-	 dst-table="zappstore.installs" reference-fk="outbox_fk_install"
+	 dst-table="appstore.installs" reference-fk="outbox_fk_install"
 	 src-required="false" dst-required="false"/>
 
 <permission>
-	<object name="zappstore" type="schema"/>
+	<object name="appstore" type="schema"/>
 	<roles names="fun_fundament_api"/>
 	<privileges usage="true"/>
 </permission>
@@ -1867,47 +1867,47 @@ END;]]> </definition>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
-	<object name="zappstore.installs" type="table"/>
+	<object name="appstore.installs" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
-	<object name="zappstore.plugin_documentation_links" type="table"/>
+	<object name="appstore.plugin_documentation_links" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
-	<object name="zappstore.plugins" type="table"/>
+	<object name="appstore.plugins" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
-	<object name="zappstore.categories_plugins" type="table"/>
+	<object name="appstore.categories_plugins" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
-	<object name="zappstore.categories" type="table"/>
+	<object name="appstore.categories" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
-	<object name="zappstore.preset_plugins" type="table"/>
+	<object name="appstore.preset_plugins" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
-	<object name="zappstore.presets" type="table"/>
+	<object name="appstore.presets" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
-	<object name="zappstore.plugins_tags" type="table"/>
+	<object name="appstore.plugins_tags" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
-	<object name="zappstore.tags" type="table"/>
+	<object name="appstore.tags" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
@@ -2057,12 +2057,12 @@ END;]]> </definition>
 	<privileges select="true"/>
 </permission>
 <permission>
-	<object name="zappstore" type="schema"/>
+	<object name="appstore" type="schema"/>
 	<roles names="fun_authz_worker"/>
 	<privileges usage="true"/>
 </permission>
 <permission>
-	<object name="zappstore.installs" type="table"/>
+	<object name="appstore.installs" type="table"/>
 	<roles names="fun_authz_worker"/>
 	<privileges select="true"/>
 </permission>

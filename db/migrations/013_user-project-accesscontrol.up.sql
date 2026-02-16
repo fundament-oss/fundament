@@ -239,7 +239,7 @@ ALTER TABLE "tenant"."project_members" VALIDATE CONSTRAINT "project_members_fk_u
 /* Hazards:
  - AUTHZ_UPDATE: Altering a policy could cause queries to fail if not correctly configured or allow unauthorized access to data.
 */
-ALTER POLICY "install_organization_policy" ON "zappstore"."installs"
+ALTER POLICY "install_organization_policy" ON "appstore"."installs"
 	USING (authn.is_cluster_in_organization(cluster_id));
 
 

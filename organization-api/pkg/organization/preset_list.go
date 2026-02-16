@@ -37,7 +37,7 @@ func (s *Server) ListPresets(
 	}), nil
 }
 
-func buildPluginsByPreset(presetPlugins []db.ZappstorePresetPlugin) map[uuid.UUID][]string {
+func buildPluginsByPreset(presetPlugins []db.AppstorePresetPlugin) map[uuid.UUID][]string {
 	pluginsByPreset := make(map[uuid.UUID][]string)
 	for _, pp := range presetPlugins {
 		pluginsByPreset[pp.PresetID] = append(pluginsByPreset[pp.PresetID], pp.PluginID.String())
@@ -45,7 +45,7 @@ func buildPluginsByPreset(presetPlugins []db.ZappstorePresetPlugin) map[uuid.UUI
 	return pluginsByPreset
 }
 
-func presetFromRow(row *db.ZappstorePreset, pluginsByPreset map[uuid.UUID][]string) *organizationv1.Preset {
+func presetFromRow(row *db.AppstorePreset, pluginsByPreset map[uuid.UUID][]string) *organizationv1.Preset {
 	description := ""
 	if row.Description.Valid {
 		description = row.Description.String

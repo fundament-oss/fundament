@@ -11,19 +11,19 @@ import (
 
 const presetList = `-- name: PresetList :many
 SELECT id, name, description
-FROM zappstore.presets
+FROM appstore.presets
 ORDER BY name
 `
 
-func (q *Queries) PresetList(ctx context.Context) ([]ZappstorePreset, error) {
+func (q *Queries) PresetList(ctx context.Context) ([]AppstorePreset, error) {
 	rows, err := q.db.Query(ctx, presetList)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ZappstorePreset
+	var items []AppstorePreset
 	for rows.Next() {
-		var i ZappstorePreset
+		var i AppstorePreset
 		if err := rows.Scan(&i.ID, &i.Name, &i.Description); err != nil {
 			return nil, err
 		}
@@ -37,18 +37,18 @@ func (q *Queries) PresetList(ctx context.Context) ([]ZappstorePreset, error) {
 
 const presetPluginsList = `-- name: PresetPluginsList :many
 SELECT preset_id, plugin_id
-FROM zappstore.preset_plugins
+FROM appstore.preset_plugins
 `
 
-func (q *Queries) PresetPluginsList(ctx context.Context) ([]ZappstorePresetPlugin, error) {
+func (q *Queries) PresetPluginsList(ctx context.Context) ([]AppstorePresetPlugin, error) {
 	rows, err := q.db.Query(ctx, presetPluginsList)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ZappstorePresetPlugin
+	var items []AppstorePresetPlugin
 	for rows.Next() {
-		var i ZappstorePresetPlugin
+		var i AppstorePresetPlugin
 		if err := rows.Scan(&i.PresetID, &i.PluginID); err != nil {
 			return nil, err
 		}

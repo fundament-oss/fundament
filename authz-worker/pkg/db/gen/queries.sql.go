@@ -127,7 +127,7 @@ func (q *Queries) GetClusterByID(ctx context.Context, arg GetClusterByIDParams) 
 
 const getInstallByID = `-- name: GetInstallByID :one
 SELECT id, cluster_id, deleted
-FROM zappstore.installs
+FROM appstore.installs
 WHERE id = $1
 `
 

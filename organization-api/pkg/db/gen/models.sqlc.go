@@ -9,6 +9,33 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AppstoreInstall struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	PluginID  uuid.UUID
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
+}
+
+type AppstorePluginDocumentationLink struct {
+	ID       uuid.UUID
+	PluginID uuid.UUID
+	Title    string
+	UrlName  string
+	Url      string
+}
+
+type AppstorePreset struct {
+	ID          uuid.UUID
+	Name        string
+	Description pgtype.Text
+}
+
+type AppstorePresetPlugin struct {
+	PresetID uuid.UUID
+	PluginID uuid.UUID
+}
+
 type TenantClusterEvent struct {
 	ID         uuid.UUID
 	ClusterID  uuid.UUID
@@ -45,31 +72,4 @@ type TenantProject struct {
 	Name           string
 	Created        pgtype.Timestamptz
 	Deleted        pgtype.Timestamptz
-}
-
-type ZappstoreInstall struct {
-	ID        uuid.UUID
-	ClusterID uuid.UUID
-	PluginID  uuid.UUID
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-}
-
-type ZappstorePluginDocumentationLink struct {
-	ID       uuid.UUID
-	PluginID uuid.UUID
-	Title    string
-	UrlName  string
-	Url      string
-}
-
-type ZappstorePreset struct {
-	ID          uuid.UUID
-	Name        string
-	Description pgtype.Text
-}
-
-type ZappstorePresetPlugin struct {
-	PresetID uuid.UUID
-	PluginID uuid.UUID
 }
