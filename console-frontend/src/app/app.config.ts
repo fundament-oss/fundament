@@ -14,7 +14,7 @@ import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.modu
 import EXPECTED_API_VERSION from '../proto-version';
 import routes from './app.routes';
 import { ConfigService } from './config.service';
-import { OrganizationContextService } from './organization-context.service';
+import OrganizationContextService from './organization-context.service';
 
 // Global version mismatch observable
 export const versionMismatch$ = new BehaviorSubject<boolean>(false);

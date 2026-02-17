@@ -42,12 +42,14 @@
             <span class="truncate">{{ org.name }}</span>
           </button>
 
-          <!-- Projects (always visible) -->
+          <!-- Projects (only shown for the selected organization) -->
           <div class="ml-5 space-y-1">
             @if (org.projects.length === 0) {
-              <div class="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">
-                No projects yet
-              </div>
+              @if (isOrganizationSelected(org.id)) {
+                <div class="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">
+                  No projects yet
+                </div>
+              }
             } @else {
               @for (project of org.projects; track project.id) {
                 <div>

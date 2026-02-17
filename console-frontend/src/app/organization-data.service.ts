@@ -2,7 +2,10 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { ORGANIZATION, PROJECT } from '../connect/tokens';
-import { GetOrganizationRequestSchema } from '../generated/v1/organization_pb';
+import {
+  GetOrganizationRequestSchema,
+  type Organization,
+} from '../generated/v1/organization_pb';
 import {
   ListProjectsRequestSchema,
   ListProjectNamespacesRequestSchema,
@@ -33,6 +36,10 @@ export class OrganizationDataService {
 
   private projectClient = inject(PROJECT);
 
+  /** All organizations the user belongs to (lightweight, from ListOrganizations). */
+  userOrganizations = signal<Organization[]>([]);
+
+  /** Full data (with projects and namespaces) for the currently selected organization. */
   organizations = signal<OrganizationData[]>([]);
 
   loading = signal(false);
@@ -164,5 +171,20 @@ export class OrganizationDataService {
         projects: org.projects.map((p) => (p.id === projectId ? { ...p, name } : p)),
       })),
     );
+  }
+
+  /**
+   * Set the lightweight list of all organizations the user belongs to.
+   */
+  setUserOrganizations(orgs: Organization[]) {
+    this.userOrganizations.set(orgs);
+  }
+
+  /**
+   * Clear all organization data (used on logout).
+   */
+  clearAll() {
+    this.organizations.set([]);
+    this.userOrganizations.set([]);
   }
 }

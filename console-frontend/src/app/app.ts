@@ -47,8 +47,9 @@ import type { User } from '../generated/authn/v1/authn_pb';
 import { ToastService } from './toast.service';
 import { versionMismatch$ } from './app.config';
 import SelectorModalComponent from './selector-modal/selector-modal.component';
+import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
-import { OrganizationContextService } from './organization-context.service';
+import OrganizationContextService from './organization-context.service';
 import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { ORGANIZATION } from '../connect/tokens';
@@ -65,6 +66,7 @@ const reloadApp = () => {
     RouterLinkActive,
     CommonModule,
     SelectorModalComponent,
+    OrgPickerComponent,
     FundamentLogoIconComponent,
     KubernetesIconComponent,
     BreadcrumbComponent,
@@ -124,6 +126,9 @@ export default class App implements OnInit {
   sidebarOpen = signal(false);
 
   selectorModalOpen = signal(false);
+
+  // Multi-org picker state (shown after login for multi-org users)
+  showOrgPicker = signal(false);
 
   // Theme state
   isDarkMode = signal(false);
@@ -188,16 +193,37 @@ export default class App implements OnInit {
   reloadApp = reloadApp;
 
   /**
-   * Load the user's organizations and select the first one.
-   * This sets the organization context for API requests.
+   * Load the user's organizations and determine which one to select.
+   * - If a valid org is stored in sessionStorage, restore it.
+   * - If the user belongs to only one org, auto-select it.
+   * - If the user belongs to multiple orgs, show the org picker.
    */
   private async loadUserOrganizations() {
     try {
       // Call ListOrganizations (user-scoped endpoint, doesn't need Fun-Organization header)
       const response = await firstValueFrom(this.organizationClient.listOrganizations({}));
+      const orgs = response.organizations;
 
-      if (response.organizations.length <= 0) {
+      if (orgs.length === 0) {
+        // eslint-disable-next-line no-console
+        console.error('User does not belong to any organization');
         return;
+      }
+
+      // Store the full list for the picker and sidebar selector
+      this.organizationDataService.setUserOrganizations(orgs);
+
+      // Try to restore previously selected org from sessionStorage
+      const storedOrgId = OrganizationContextService.getStoredOrganizationId();
+      const storedOrgValid = storedOrgId && orgs.some((o) => o.id === storedOrgId);
+
+      if (storedOrgValid) {
+        await this.selectAndLoadOrganization(storedOrgId);
+      } else if (orgs.length === 1) {
+        await this.selectAndLoadOrganization(orgs[0].id);
+      } else {
+        // Multiple orgs, no valid stored selection: show picker
+        this.showOrgPicker.set(true);
       }
 
       const firstOrg = response.organizations[0];
@@ -215,6 +241,26 @@ export default class App implements OnInit {
       // eslint-disable-next-line no-console
       console.error('Failed to load organizations:', error);
     }
+  }
+
+  /**
+   * Select an organization and load its full data (projects, namespaces).
+   */
+  private async selectAndLoadOrganization(orgId: string) {
+    this.organizationContextService.setOrganizationId(orgId);
+    this.selectedOrgId.set(orgId);
+    this.showOrgPicker.set(false);
+
+    await this.organizationDataService.loadOrganizationData(orgId);
+    this.updateSidebarStateFromRoute(this.router.url);
+  }
+
+  /**
+   * Handle org selection from the post-login org picker.
+   */
+  async handleOrgPickerSelection(orgId: string) {
+    await this.selectAndLoadOrganization(orgId);
+    this.router.navigate(['/']);
   }
 
   // Update sidebar state based on current route
@@ -238,10 +284,10 @@ export default class App implements OnInit {
       return;
     }
 
-    // We're on an organization (or other non-project) route, so select the organization
-    const orgs = this.organizationDataService.organizations();
-    if (orgs.length > 0) {
-      this.selectedOrgId.set(orgs[0].id);
+    // We're on an organization (or other non-project) route, so select the current org
+    const currentOrgId = this.organizationContextService.currentOrganizationId();
+    if (currentOrgId) {
+      this.selectedOrgId.set(currentOrgId);
       this.selectedProjectId.set(null);
     }
   }
@@ -358,6 +404,11 @@ export default class App implements OnInit {
   async handleLogout() {
     try {
       await this.apiService.logout();
+      this.organizationContextService.clearOrganizationId();
+      this.organizationDataService.clearAll();
+      this.showOrgPicker.set(false);
+      this.selectedOrgId.set(null);
+      this.selectedProjectId.set(null);
       this.router.navigate(['/login']);
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -374,17 +425,32 @@ export default class App implements OnInit {
   }
 
   // Nested selector methods
-  selectOrganization(orgId: string) {
-    // Select organization and navigate to clusters page
-    this.selectedOrgId.set(orgId);
+  async selectOrganization(orgId: string) {
+    // Temporarily clear selection to destroy the router outlet, so that
+    // child components are recreated (and re-fetch data) after the switch.
+    this.selectedOrgId.set(null);
     this.selectedProjectId.set(null);
+
+    // Refresh the JWT so the token includes up-to-date organization memberships
+    await this.apiService.refreshToken();
 
     // Update the organization context for API requests
     this.organizationContextService.setOrganizationId(orgId);
 
-    // Close modal and navigate
+    // Load the new org's data (projects, namespaces)
+    await this.organizationDataService.loadOrganizationData(orgId);
+
+    // Restore selection — recreates the router outlet, triggering ngOnInit in child components
+    this.selectedOrgId.set(orgId);
+
+    // Close modal
     this.selectorModalOpen.set(false);
-    this.router.navigate(['/']);
+
+    // Stay on org-level pages, navigate to dashboard for project routes
+    const url = this.router.url;
+    if (url.match(/^\/projects\/[^/]+/)) {
+      this.router.navigate(['/']);
+    }
   }
 
   selectProjectItem(projectId: string) {
@@ -396,6 +462,20 @@ export default class App implements OnInit {
     this.selectorModalOpen.set(false);
     this.router.navigate(['/projects', projectId]);
   }
+
+  /**
+   * Merged list of all user orgs for the sidebar selector.
+   * Includes projects only for the currently loaded org.
+   */
+  selectorOrganizations = computed(() => {
+    const allOrgs = this.organizationDataService.userOrganizations();
+    const detailedOrgs = this.organizationDataService.organizations();
+
+    return allOrgs.map((org) => {
+      const detailed = detailedOrgs.find((d) => d.id === org.id);
+      return detailed ?? { id: org.id, name: org.name, projects: [] };
+    });
+  });
 
   selectedType = computed<'organization' | 'project' | null>(() => {
     if (this.selectedProjectId()) return 'project';

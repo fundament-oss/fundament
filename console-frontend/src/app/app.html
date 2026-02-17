@@ -156,6 +156,13 @@
     </div>
   </header>
 
+  @if (showOrgPicker() && !isLoginPage()) {
+    <!-- Organization Picker (shown after login for multi-org users) -->
+    <app-org-picker
+      [organizations]="organizationDataService.userOrganizations()"
+      (selectOrganization)="handleOrgPickerSelection($event)"
+    />
+  } @else {
   <div class="flex">
     <!-- Sidebar -->
     @if (!isLoginPage()) {
@@ -361,23 +368,26 @@
       </aside>
     }
 
-    <!-- Main Content -->
+    <!-- Main Content (deferred until an organization is selected, to avoid API calls without Fun-Organization header) -->
     <main class="mx-auto max-w-7xl min-w-0 flex-1 px-4 py-6 sm:px-6">
-      @if (!isLoginPage()) {
-        <app-breadcrumb [segments]="breadcrumbSegments()" />
+      @if (isLoginPage() || selectedOrgId() || selectedProjectId()) {
+        @if (!isLoginPage()) {
+          <app-breadcrumb [segments]="breadcrumbSegments()" />
+        }
+        <router-outlet />
       }
-      <router-outlet />
     </main>
   </div>
 
   <!-- Selector Modal -->
   <app-selector-modal
     [show]="selectorModalOpen()"
-    [organizations]="organizationDataService.organizations()"
+    [organizations]="selectorOrganizations()"
     [selectedOrgId]="selectedOrgId()"
     [selectedProjectId]="selectedProjectId()"
     (closeModal)="closeSelectorModal()"
     (selectOrganization)="selectOrganization($event)"
     (selectProject)="selectProjectItem($event)"
   />
+  }
 </div>
