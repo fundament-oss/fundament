@@ -33,7 +33,7 @@ func (s *Server) ListInstalls(
 	}), nil
 }
 
-func installFromRow(row *db.ZappstoreInstall) *organizationv1.Install {
+func installFromRow(row *db.AppstoreInstall) *organizationv1.Install {
 	return &organizationv1.Install{
 		Id:       row.ID.String(),
 		PluginId: row.PluginID.String(),

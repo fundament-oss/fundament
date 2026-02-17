@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.2
+-- ** pgModeler version: 2.0.0-alpha
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -14,11 +14,11 @@ CREATE SCHEMA tenant;
 ALTER SCHEMA tenant OWNER TO fun_owner;
 -- ddl-end --
 
--- object: zappstore | type: SCHEMA --
--- DROP SCHEMA IF EXISTS zappstore CASCADE;
-CREATE SCHEMA zappstore;
+-- object: appstore | type: SCHEMA --
+-- DROP SCHEMA IF EXISTS appstore CASCADE;
+CREATE SCHEMA appstore;
 -- ddl-end --
-ALTER SCHEMA zappstore OWNER TO fun_owner;
+ALTER SCHEMA appstore OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: authn | type: SCHEMA --
@@ -35,7 +35,7 @@ CREATE SCHEMA authz;
 ALTER SCHEMA authz OWNER TO fun_owner;
 -- ddl-end --
 
-SET search_path TO pg_catalog,public,tenant,zappstore,authn,authz;
+SET search_path TO pg_catalog,public,tenant,appstore,authn,authz;
 -- ddl-end --
 
 -- object: tenant.organizations | type: TABLE --
@@ -593,9 +593,9 @@ CREATE POLICY node_pools_organization_policy ON tenant.node_pools
 	USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
--- object: zappstore.installs | type: TABLE --
--- DROP TABLE IF EXISTS zappstore.installs CASCADE;
-CREATE TABLE zappstore.installs (
+-- object: appstore.installs | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.installs CASCADE;
+CREATE TABLE appstore.installs (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	cluster_id uuid NOT NULL,
 	plugin_id uuid NOT NULL,
@@ -605,14 +605,14 @@ CREATE TABLE zappstore.installs (
 	CONSTRAINT installs_uq UNIQUE NULLS NOT DISTINCT (cluster_id,plugin_id,deleted)
 );
 -- ddl-end --
-ALTER TABLE zappstore.installs OWNER TO fun_owner;
+ALTER TABLE appstore.installs OWNER TO fun_owner;
 -- ddl-end --
-ALTER TABLE zappstore.installs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appstore.installs ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
 
--- object: zappstore.plugins | type: TABLE --
--- DROP TABLE IF EXISTS zappstore.plugins CASCADE;
-CREATE TABLE zappstore.plugins (
+-- object: appstore.plugins | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.plugins CASCADE;
+CREATE TABLE appstore.plugins (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	name text NOT NULL,
 	description_short text NOT NULL DEFAULT '',
@@ -626,12 +626,12 @@ CREATE TABLE zappstore.plugins (
 	CONSTRAINT plugins_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.plugins OWNER TO fun_owner;
+ALTER TABLE appstore.plugins OWNER TO fun_owner;
 -- ddl-end --
 
--- object: zappstore.presets | type: TABLE --
--- DROP TABLE IF EXISTS zappstore.presets CASCADE;
-CREATE TABLE zappstore.presets (
+-- object: appstore.presets | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.presets CASCADE;
+CREATE TABLE appstore.presets (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	name text NOT NULL,
 	description text,
@@ -639,32 +639,32 @@ CREATE TABLE zappstore.presets (
 	CONSTRAINT presets_uq_name UNIQUE (name)
 );
 -- ddl-end --
-ALTER TABLE zappstore.presets OWNER TO fun_owner;
+ALTER TABLE appstore.presets OWNER TO fun_owner;
 -- ddl-end --
 
--- object: zappstore.preset_plugins | type: TABLE --
--- DROP TABLE IF EXISTS zappstore.preset_plugins CASCADE;
-CREATE TABLE zappstore.preset_plugins (
+-- object: appstore.preset_plugins | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.preset_plugins CASCADE;
+CREATE TABLE appstore.preset_plugins (
 	preset_id uuid NOT NULL,
 	plugin_id uuid NOT NULL,
 	CONSTRAINT preset_plugins_pk PRIMARY KEY (preset_id,plugin_id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.preset_plugins OWNER TO fun_owner;
+ALTER TABLE appstore.preset_plugins OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: install_organization_policy | type: POLICY --
--- DROP POLICY IF EXISTS install_organization_policy ON zappstore.installs CASCADE;
-CREATE POLICY install_organization_policy ON zappstore.installs
+-- DROP POLICY IF EXISTS install_organization_policy ON appstore.installs CASCADE;
+CREATE POLICY install_organization_policy ON appstore.installs
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_fundament_api
 	USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
--- object: zappstore.tags | type: TABLE --
--- DROP TABLE IF EXISTS zappstore.tags CASCADE;
-CREATE TABLE zappstore.tags (
+-- object: appstore.tags | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.tags CASCADE;
+CREATE TABLE appstore.tags (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	name text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
@@ -673,23 +673,23 @@ CREATE TABLE zappstore.tags (
 	CONSTRAINT tags_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.tags OWNER TO fun_owner;
+ALTER TABLE appstore.tags OWNER TO fun_owner;
 -- ddl-end --
 
--- object: zappstore.plugins_tags | type: TABLE --
--- DROP TABLE IF EXISTS zappstore.plugins_tags CASCADE;
-CREATE TABLE zappstore.plugins_tags (
+-- object: appstore.plugins_tags | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.plugins_tags CASCADE;
+CREATE TABLE appstore.plugins_tags (
 	plugin_id uuid NOT NULL,
 	tag_id uuid NOT NULL,
 	CONSTRAINT plugins_tags_pk PRIMARY KEY (plugin_id,tag_id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.plugins_tags OWNER TO fun_owner;
+ALTER TABLE appstore.plugins_tags OWNER TO fun_owner;
 -- ddl-end --
 
--- object: zappstore.categories | type: TABLE --
--- DROP TABLE IF EXISTS zappstore.categories CASCADE;
-CREATE TABLE zappstore.categories (
+-- object: appstore.categories | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.categories CASCADE;
+CREATE TABLE appstore.categories (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	name text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
@@ -698,23 +698,23 @@ CREATE TABLE zappstore.categories (
 	CONSTRAINT categories_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.categories OWNER TO fun_owner;
+ALTER TABLE appstore.categories OWNER TO fun_owner;
 -- ddl-end --
 
--- object: zappstore.categories_plugins | type: TABLE --
--- DROP TABLE IF EXISTS zappstore.categories_plugins CASCADE;
-CREATE TABLE zappstore.categories_plugins (
+-- object: appstore.categories_plugins | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.categories_plugins CASCADE;
+CREATE TABLE appstore.categories_plugins (
 	plugin_id uuid NOT NULL,
 	category_id uuid NOT NULL,
 	CONSTRAINT categories_plugins_pk PRIMARY KEY (plugin_id,category_id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.categories_plugins OWNER TO fun_owner;
+ALTER TABLE appstore.categories_plugins OWNER TO fun_owner;
 -- ddl-end --
 
--- object: zappstore.plugin_documentation_links | type: TABLE --
--- DROP TABLE IF EXISTS zappstore.plugin_documentation_links CASCADE;
-CREATE TABLE zappstore.plugin_documentation_links (
+-- object: appstore.plugin_documentation_links | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.plugin_documentation_links CASCADE;
+CREATE TABLE appstore.plugin_documentation_links (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	plugin_id uuid NOT NULL,
 	title text NOT NULL,
@@ -723,7 +723,7 @@ CREATE TABLE zappstore.plugin_documentation_links (
 	CONSTRAINT plugin_documentation_links_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-ALTER TABLE zappstore.plugin_documentation_links OWNER TO fun_owner;
+ALTER TABLE appstore.plugin_documentation_links OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: require_admin | type: TRIGGER --
@@ -1238,10 +1238,10 @@ CREATE OR REPLACE TRIGGER api_keys_outbox
 -- ddl-end --
 
 -- object: installs_outbox | type: TRIGGER --
--- DROP TRIGGER IF EXISTS installs_outbox ON zappstore.installs CASCADE;
+-- DROP TRIGGER IF EXISTS installs_outbox ON appstore.installs CASCADE;
 CREATE OR REPLACE TRIGGER installs_outbox
 	AFTER INSERT OR UPDATE
-	ON zappstore.installs
+	ON appstore.installs
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.installs_sync_trigger();
 -- ddl-end --
@@ -1323,65 +1323,65 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: installs_fk_cluster | type: CONSTRAINT --
--- ALTER TABLE zappstore.installs DROP CONSTRAINT IF EXISTS installs_fk_cluster CASCADE;
-ALTER TABLE zappstore.installs ADD CONSTRAINT installs_fk_cluster FOREIGN KEY (cluster_id)
+-- ALTER TABLE appstore.installs DROP CONSTRAINT IF EXISTS installs_fk_cluster CASCADE;
+ALTER TABLE appstore.installs ADD CONSTRAINT installs_fk_cluster FOREIGN KEY (cluster_id)
 REFERENCES tenant.clusters (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: installs_fk_plugin | type: CONSTRAINT --
--- ALTER TABLE zappstore.installs DROP CONSTRAINT IF EXISTS installs_fk_plugin CASCADE;
-ALTER TABLE zappstore.installs ADD CONSTRAINT installs_fk_plugin FOREIGN KEY (plugin_id)
-REFERENCES zappstore.plugins (id) MATCH SIMPLE
+-- ALTER TABLE appstore.installs DROP CONSTRAINT IF EXISTS installs_fk_plugin CASCADE;
+ALTER TABLE appstore.installs ADD CONSTRAINT installs_fk_plugin FOREIGN KEY (plugin_id)
+REFERENCES appstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: plugins_presets_plugin_id | type: CONSTRAINT --
--- ALTER TABLE zappstore.preset_plugins DROP CONSTRAINT IF EXISTS plugins_presets_plugin_id CASCADE;
-ALTER TABLE zappstore.preset_plugins ADD CONSTRAINT plugins_presets_plugin_id FOREIGN KEY (plugin_id)
-REFERENCES zappstore.plugins (id) MATCH SIMPLE
+-- ALTER TABLE appstore.preset_plugins DROP CONSTRAINT IF EXISTS plugins_presets_plugin_id CASCADE;
+ALTER TABLE appstore.preset_plugins ADD CONSTRAINT plugins_presets_plugin_id FOREIGN KEY (plugin_id)
+REFERENCES appstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: plugins_presets_preset_id | type: CONSTRAINT --
--- ALTER TABLE zappstore.preset_plugins DROP CONSTRAINT IF EXISTS plugins_presets_preset_id CASCADE;
-ALTER TABLE zappstore.preset_plugins ADD CONSTRAINT plugins_presets_preset_id FOREIGN KEY (preset_id)
-REFERENCES zappstore.presets (id) MATCH SIMPLE
+-- ALTER TABLE appstore.preset_plugins DROP CONSTRAINT IF EXISTS plugins_presets_preset_id CASCADE;
+ALTER TABLE appstore.preset_plugins ADD CONSTRAINT plugins_presets_preset_id FOREIGN KEY (preset_id)
+REFERENCES appstore.presets (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: plugins_tags_tag_id | type: CONSTRAINT --
--- ALTER TABLE zappstore.plugins_tags DROP CONSTRAINT IF EXISTS plugins_tags_tag_id CASCADE;
-ALTER TABLE zappstore.plugins_tags ADD CONSTRAINT plugins_tags_tag_id FOREIGN KEY (tag_id)
-REFERENCES zappstore.tags (id) MATCH SIMPLE
+-- ALTER TABLE appstore.plugins_tags DROP CONSTRAINT IF EXISTS plugins_tags_tag_id CASCADE;
+ALTER TABLE appstore.plugins_tags ADD CONSTRAINT plugins_tags_tag_id FOREIGN KEY (tag_id)
+REFERENCES appstore.tags (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: plugins_tags_plugin_id | type: CONSTRAINT --
--- ALTER TABLE zappstore.plugins_tags DROP CONSTRAINT IF EXISTS plugins_tags_plugin_id CASCADE;
-ALTER TABLE zappstore.plugins_tags ADD CONSTRAINT plugins_tags_plugin_id FOREIGN KEY (plugin_id)
-REFERENCES zappstore.plugins (id) MATCH SIMPLE
+-- ALTER TABLE appstore.plugins_tags DROP CONSTRAINT IF EXISTS plugins_tags_plugin_id CASCADE;
+ALTER TABLE appstore.plugins_tags ADD CONSTRAINT plugins_tags_plugin_id FOREIGN KEY (plugin_id)
+REFERENCES appstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: plugins_categories_plugin_id | type: CONSTRAINT --
--- ALTER TABLE zappstore.categories_plugins DROP CONSTRAINT IF EXISTS plugins_categories_plugin_id CASCADE;
-ALTER TABLE zappstore.categories_plugins ADD CONSTRAINT plugins_categories_plugin_id FOREIGN KEY (plugin_id)
-REFERENCES zappstore.plugins (id) MATCH SIMPLE
+-- ALTER TABLE appstore.categories_plugins DROP CONSTRAINT IF EXISTS plugins_categories_plugin_id CASCADE;
+ALTER TABLE appstore.categories_plugins ADD CONSTRAINT plugins_categories_plugin_id FOREIGN KEY (plugin_id)
+REFERENCES appstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: plugins_categories_category_id | type: CONSTRAINT --
--- ALTER TABLE zappstore.categories_plugins DROP CONSTRAINT IF EXISTS plugins_categories_category_id CASCADE;
-ALTER TABLE zappstore.categories_plugins ADD CONSTRAINT plugins_categories_category_id FOREIGN KEY (category_id)
-REFERENCES zappstore.categories (id) MATCH SIMPLE
+-- ALTER TABLE appstore.categories_plugins DROP CONSTRAINT IF EXISTS plugins_categories_category_id CASCADE;
+ALTER TABLE appstore.categories_plugins ADD CONSTRAINT plugins_categories_category_id FOREIGN KEY (category_id)
+REFERENCES appstore.categories (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: plugin_documentation_links_fk_plugin | type: CONSTRAINT --
--- ALTER TABLE zappstore.plugin_documentation_links DROP CONSTRAINT IF EXISTS plugin_documentation_links_fk_plugin CASCADE;
-ALTER TABLE zappstore.plugin_documentation_links ADD CONSTRAINT plugin_documentation_links_fk_plugin FOREIGN KEY (plugin_id)
-REFERENCES zappstore.plugins (id) MATCH SIMPLE
+-- ALTER TABLE appstore.plugin_documentation_links DROP CONSTRAINT IF EXISTS plugin_documentation_links_fk_plugin CASCADE;
+ALTER TABLE appstore.plugin_documentation_links ADD CONSTRAINT plugin_documentation_links_fk_plugin FOREIGN KEY (plugin_id)
+REFERENCES appstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -1458,13 +1458,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- object: outbox_fk_install | type: CONSTRAINT --
 -- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_install CASCADE;
 ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_install FOREIGN KEY (install_id)
-REFERENCES zappstore.installs (id) MATCH SIMPLE
+REFERENCES appstore.installs (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
--- object: "grant_U_ad521dc726" | type: PERMISSION --
+-- object: "grant_U_83c2dafa93" | type: PERMISSION --
 GRANT USAGE
-   ON SCHEMA zappstore
+   ON SCHEMA appstore
    TO fun_fundament_api;
 
 -- ddl-end --
@@ -1598,73 +1598,73 @@ GRANT SELECT,INSERT,UPDATE
 -- ddl-end --
 
 
--- object: grant_raw_2ca2d3950e | type: PERMISSION --
+-- object: grant_raw_873c22dd3c | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.installs
+   ON TABLE appstore.installs
    TO fun_fundament_api;
 
 -- ddl-end --
 
 
--- object: grant_raw_b0f3fc5bb2 | type: PERMISSION --
+-- object: grant_raw_623adbcd2c | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.plugin_documentation_links
+   ON TABLE appstore.plugin_documentation_links
    TO fun_fundament_api;
 
 -- ddl-end --
 
 
--- object: grant_raw_c7ef1230f0 | type: PERMISSION --
+-- object: grant_raw_036b663d7a | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.plugins
+   ON TABLE appstore.plugins
    TO fun_fundament_api;
 
 -- ddl-end --
 
 
--- object: grant_raw_bf1c10ddf6 | type: PERMISSION --
+-- object: grant_raw_1f44dfe7c9 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.categories_plugins
+   ON TABLE appstore.categories_plugins
    TO fun_fundament_api;
 
 -- ddl-end --
 
 
--- object: grant_raw_66c5b174fe | type: PERMISSION --
+-- object: grant_raw_354a50cc4d | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.categories
+   ON TABLE appstore.categories
    TO fun_fundament_api;
 
 -- ddl-end --
 
 
--- object: grant_raw_638a3173d7 | type: PERMISSION --
+-- object: grant_raw_8cf445787c | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.preset_plugins
+   ON TABLE appstore.preset_plugins
    TO fun_fundament_api;
 
 -- ddl-end --
 
 
--- object: grant_raw_00ef9ca13c | type: PERMISSION --
+-- object: grant_raw_5f81380eb9 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.presets
+   ON TABLE appstore.presets
    TO fun_fundament_api;
 
 -- ddl-end --
 
 
--- object: grant_raw_71b6d05387 | type: PERMISSION --
+-- object: grant_raw_1e68f394fd | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.plugins_tags
+   ON TABLE appstore.plugins_tags
    TO fun_fundament_api;
 
 -- ddl-end --
 
 
--- object: grant_raw_1585801963 | type: PERMISSION --
+-- object: grant_raw_dcd856a3b0 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
-   ON TABLE zappstore.tags
+   ON TABLE appstore.tags
    TO fun_fundament_api;
 
 -- ddl-end --
@@ -1902,17 +1902,17 @@ GRANT SELECT
 -- ddl-end --
 
 
--- object: "grant_U_fc43fcc5a4" | type: PERMISSION --
+-- object: "grant_U_19fbeed564" | type: PERMISSION --
 GRANT USAGE
-   ON SCHEMA zappstore
+   ON SCHEMA appstore
    TO fun_authz_worker;
 
 -- ddl-end --
 
 
--- object: grant_r_206a9460cc | type: PERMISSION --
+-- object: grant_r_4ffd4633b5 | type: PERMISSION --
 GRANT SELECT
-   ON TABLE zappstore.installs
+   ON TABLE appstore.installs
    TO fun_authz_worker;
 
 -- ddl-end --

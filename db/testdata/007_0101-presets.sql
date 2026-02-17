@@ -1,10 +1,10 @@
 -- Test data for presets
-INSERT INTO zappstore.presets (id, name, description) VALUES
+INSERT INTO appstore.presets (id, name, description) VALUES
     ('019b4000-4000-7000-8000-000000000001', 'Haven+', 'Full Haven+ stack with all plugins enabled'),
     ('019b4000-4000-7000-8000-000000000002', 'Observability', 'Monitoring and logging stack');
 
 -- Haven+ preset: all plugins
-INSERT INTO zappstore.preset_plugins (preset_id, plugin_id) VALUES
+INSERT INTO appstore.preset_plugins (preset_id, plugin_id) VALUES
     ('019b4000-4000-7000-8000-000000000001', '019b4000-3000-7000-8000-000000000001'), -- Grafana Alloy
     ('019b4000-4000-7000-8000-000000000001', '019b4000-3000-7000-8000-000000000002'), -- cert-manager
     ('019b4000-4000-7000-8000-000000000001', '019b4000-3000-7000-8000-000000000003'), -- CloudNativePG
@@ -20,7 +20,7 @@ INSERT INTO zappstore.preset_plugins (preset_id, plugin_id) VALUES
     ('019b4000-4000-7000-8000-000000000001', '019b4000-3000-7000-8000-00000000000d'); -- Grafana Tempo
 
 -- Observability preset: Grafana, Grafana Loki, Grafana Mimir, Grafana Tempo, Grafana Alloy
-INSERT INTO zappstore.preset_plugins (preset_id, plugin_id) VALUES
+INSERT INTO appstore.preset_plugins (preset_id, plugin_id) VALUES
     ('019b4000-4000-7000-8000-000000000002', '019b4000-3000-7000-8000-000000000001'), -- Grafana Alloy
     ('019b4000-4000-7000-8000-000000000002', '019b4000-3000-7000-8000-000000000005'), -- Grafana
     ('019b4000-4000-7000-8000-000000000002', '019b4000-3000-7000-8000-000000000009'), -- Grafana Loki

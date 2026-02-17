@@ -86,5 +86,5 @@ WHERE id = @id;
 
 -- name: GetInstallByID :one
 SELECT id, cluster_id, deleted
-FROM zappstore.installs
+FROM appstore.installs
 WHERE id = @id;
