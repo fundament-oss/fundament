@@ -325,7 +325,7 @@
               <li>
                 <a
                   [routerLink]="['/projects', selectedProjectId(), 'members']"
-                  [class.active]="isMembersActive()"
+                  routerLinkActive="active"
                   class="nav-link"
                   (click)="closeSidebar()"
                 >
@@ -340,7 +340,7 @@
                   class="nav-link"
                   (click)="closeSidebar()"
                 >
-                  <ng-icon name="tablerShieldCheck" class="mr-3" size="1.25rem" />
+                  <ng-icon name="tablerUserCog" class="mr-3" size="1.25rem" />
                   Roles
                 </a>
               </li>

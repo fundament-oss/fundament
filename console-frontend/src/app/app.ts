@@ -38,7 +38,7 @@ import {
   tablerChevronRight,
   tablerBuilding,
   tablerBracketsContain,
-  tablerShieldCheck,
+  tablerUserCog,
 } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import AuthnApiService from './authn-api.service';
@@ -88,7 +88,7 @@ const reloadApp = () => {
       tablerChevronRight,
       tablerBuilding,
       tablerBracketsContain,
-      tablerShieldCheck,
+      tablerUserCog,
     }),
   ],
   host: {
