@@ -6,7 +6,7 @@ import {
   ChangeDetectionStrategy,
   computed,
 } from '@angular/core';
-import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -31,7 +31,7 @@ const AVAILABLE_ROLES = ['deploy', 'view-pods', 'view-logs', 'manage-services'];
 
 @Component({
   selector: 'app-project-roles',
-  imports: [FormsModule, NgIcon, ModalComponent, RouterLink, RouterLinkActive],
+  imports: [FormsModule, NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -78,7 +78,11 @@ export default class ProjectRolesComponent implements OnInit {
   // Modal form fields
   modalMemberId = signal<string>('');
 
+  namespaceMode = signal<'all' | 'specific' | 'custom'>('all');
+
   modalNamespace = signal<string>('');
+
+  modalCustomNamespace = signal<string>('');
 
   modalRoles = signal<Record<string, boolean>>({});
 
@@ -90,7 +94,7 @@ export default class ProjectRolesComponent implements OnInit {
     { id: 'user-5', name: 'Eve Davis' },
   ]);
 
-  namespaces = signal(['production', 'staging', 'development']);
+  namespaces = signal(['namespace-1', 'namespace-2', 'namespace-3']);
 
   uniqueNamespaces = computed(() => {
     const ns = new Set(this.roleBindings().map((rb) => rb.namespace));
@@ -121,28 +125,28 @@ export default class ProjectRolesComponent implements OnInit {
         id: 'rb-1',
         userId: 'user-2',
         memberName: 'Bob Smith',
-        namespace: 'production',
+        namespace: 'namespace-1',
         roles: ['deploy', 'view-pods'],
       },
       {
         id: 'rb-2',
         userId: 'user-2',
         memberName: 'Bob Smith',
-        namespace: 'staging',
+        namespace: 'namespace-2',
         roles: ['deploy', 'view-pods', 'view-logs'],
       },
       {
         id: 'rb-3',
         userId: 'user-5',
         memberName: 'Eve Davis',
-        namespace: 'staging',
+        namespace: 'namespace-2',
         roles: ['view-pods'],
       },
       {
         id: 'rb-4',
         userId: 'user-5',
         memberName: 'Eve Davis',
-        namespace: 'development',
+        namespace: 'namespace-3',
         roles: ['deploy', 'view-pods', 'view-logs'],
       },
     ]);
@@ -151,7 +155,9 @@ export default class ProjectRolesComponent implements OnInit {
   openCreateModal() {
     this.editingBinding.set(null);
     this.modalMemberId.set('');
+    this.namespaceMode.set('all');
     this.modalNamespace.set('');
+    this.modalCustomNamespace.set('');
     this.modalRoles.set(Object.fromEntries(AVAILABLE_ROLES.map((r) => [r, false])));
     this.showCreateModal.set(true);
   }
@@ -170,9 +176,33 @@ export default class ProjectRolesComponent implements OnInit {
     this.modalRoles.update((roles) => ({ ...roles, [role]: !roles[role] }));
   }
 
+  onNamespaceModeChange(mode: 'all' | 'specific' | 'custom') {
+    this.namespaceMode.set(mode);
+    if (mode === 'specific') {
+      setTimeout(() => document.getElementById('rb-namespace')?.focus());
+    } else if (mode === 'custom') {
+      setTimeout(() => document.getElementById('rb-custom-namespace')?.focus());
+    }
+  }
+
+  resolveNamespace(): string {
+    switch (this.namespaceMode()) {
+      case 'all':
+        return '*';
+      case 'specific':
+        return this.modalNamespace();
+      case 'custom':
+        return this.modalCustomNamespace().trim();
+      default:
+        throw new Error(`unexpected namespace mode: ${this.namespaceMode()}`);
+    }
+  }
+
   saveBinding() {
     const memberId = this.modalMemberId();
-    const namespace = this.modalNamespace();
+    const namespace = this.editingBinding()
+      ? this.editingBinding()!.namespace
+      : this.resolveNamespace();
     const selectedRoles = Object.entries(this.modalRoles())
       .filter(([, selected]) => selected)
       .map(([role]) => role);

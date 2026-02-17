@@ -1,9 +1,9 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-bold dark:text-white">Project members</h1>
+    <h1 class="text-2xl font-bold dark:text-white">Project roles</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-      Manage members and their permissions for this project
+      Manage roles for members of this project
     </p>
   </div>
 
@@ -54,7 +54,7 @@
           <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
               <th width="30%" scope="col">Member</th>
-              <th width="25%" scope="col">Namespace</th>
+              <th width="25%" scope="col">Namespace(s)</th>
               <th width="30%" scope="col">Roles</th>
               <th scope="col">Actions</th>
             </tr>
@@ -66,7 +66,7 @@
                   {{ binding.memberName }}
                 </td>
                 <td>
-                  <span class="badge badge-gray">{{ binding.namespace }}</span>
+                  <span class="badge badge-gray font-mono">{{ binding.namespace }}</span>
                 </td>
                 <td>
                   <div class="flex flex-wrap gap-1">
@@ -134,27 +134,96 @@
 
     <!-- Namespace selection -->
     <div class="mb-4">
-      <label
-        for="rb-namespace"
-        class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-      >
-        Namespace
-      </label>
+      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Namespace</span>
       @if (editingBinding()) {
         <p class="text-sm dark:text-white">{{ editingBinding()?.namespace }}</p>
       } @else {
-        <select
-          id="rb-namespace"
-          class="w-full"
-          [ngModel]="modalNamespace()"
-          (ngModelChange)="modalNamespace.set($event)"
-          name="namespace"
-        >
-          <option value="">Select a namespace</option>
-          @for (ns of namespaces(); track ns) {
-            <option [value]="ns">{{ ns }}</option>
-          }
-        </select>
+        <div class="space-y-2">
+          <!-- All namespaces -->
+          <label
+            class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+          >
+            <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
+              <input
+                name="namespaceMode"
+                type="radio"
+                value="all"
+                [ngModel]="namespaceMode()"
+                (ngModelChange)="onNamespaceModeChange($event)"
+                class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+              />
+              All namespaces
+            </span>
+            <span class="mt-1 ml-6 block text-sm text-gray-600 dark:text-gray-300">
+              All current and future namespaces in this project
+            </span>
+          </label>
+
+          <!-- Specific namespace -->
+          <label
+            class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+          >
+            <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
+              <input
+                name="namespaceMode"
+                type="radio"
+                value="specific"
+                [ngModel]="namespaceMode()"
+                (ngModelChange)="onNamespaceModeChange($event)"
+                class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+              />
+              Specific namespace
+            </span>
+            @if (namespaceMode() === 'specific') {
+              <div class="mt-2 ml-6">
+                <select
+                  id="rb-namespace"
+                  class="w-full"
+                  [ngModel]="modalNamespace()"
+                  (ngModelChange)="modalNamespace.set($event)"
+                  name="namespace"
+                >
+                  <option value="">Select a namespace</option>
+                  @for (ns of namespaces(); track ns) {
+                    <option [value]="ns">{{ ns }}</option>
+                  }
+                </select>
+              </div>
+            }
+          </label>
+
+          <!-- Custom namespace -->
+          <label
+            class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+          >
+            <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
+              <input
+                name="namespaceMode"
+                type="radio"
+                value="custom"
+                [ngModel]="namespaceMode()"
+                (ngModelChange)="onNamespaceModeChange($event)"
+                class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+              />
+              Custom pattern
+            </span>
+            <span class="mt-1 ml-6 block text-sm text-gray-600 dark:text-gray-300">
+              Type a namespace name, wildcard (<code class="text-xs">*</code>) allowed
+            </span>
+            @if (namespaceMode() === 'custom') {
+              <div class="mt-2 ml-6">
+                <input
+                  id="rb-custom-namespace"
+                  type="text"
+                  placeholder="E.g. staging-* or my-namespace"
+                  [ngModel]="modalCustomNamespace()"
+                  (ngModelChange)="modalCustomNamespace.set($event)"
+                  name="customNamespace"
+                />
+              </div>
+            }
+          </label>
+        </div>
       }
     </div>
 

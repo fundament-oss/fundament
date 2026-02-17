@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -30,7 +30,7 @@ interface ProjectMember {
 
 @Component({
   selector: 'app-project-members',
-  imports: [ReactiveFormsModule, NgIcon, ModalComponent, RouterLink, RouterLinkActive],
+  imports: [ReactiveFormsModule, NgIcon, ModalComponent, RouterLink],
   viewProviders: [
     provideIcons({
       tablerPlus,

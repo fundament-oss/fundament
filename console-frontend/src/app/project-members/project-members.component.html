@@ -83,15 +83,15 @@
                 <td>
                   @if (member.source === 'org' && member.permission === 'admin') {
                     <span
-                      class="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400"
+                      class="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400"
                     >
                       <ng-icon name="tablerLock" size="0.875rem" />
                       Organization
                     </span>
                   } @else if (member.source === 'org') {
-                    <span class="text-sm text-gray-500 dark:text-gray-400">Organization</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Organization</span>
                   } @else {
-                    <span class="text-sm text-gray-500 dark:text-gray-400">Project</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Project</span>
                   }
                 </td>
                 <td>
@@ -197,7 +197,7 @@
         <label
           class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
         >
-          <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
+          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
             <input
               name="permission"
               type="radio"
@@ -214,7 +214,7 @@
         <label
           class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
         >
-          <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
+          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
             <input
               name="permission"
               type="radio"
