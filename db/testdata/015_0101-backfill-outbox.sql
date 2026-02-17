@@ -75,10 +75,10 @@ AND NOT EXISTS (
 );
 
 INSERT INTO authz.outbox (install_id)
-SELECT zappstore.installs.id
-FROM zappstore.installs
-WHERE zappstore.installs.deleted IS NULL
+SELECT appstore.installs.id
+FROM appstore.installs
+WHERE appstore.installs.deleted IS NULL
 AND NOT EXISTS (
     SELECT 1 FROM authz.outbox
-    WHERE authz.outbox.install_id = zappstore.installs.id
+    WHERE authz.outbox.install_id = appstore.installs.id
 );

@@ -34,7 +34,7 @@ func (s *Server) GetPluginDetail(
 	var (
 		tags       []db.PluginTagsListByPluginIDRow
 		categories []db.PluginCategoriesListByPluginIDRow
-		docLinks   []db.ZappstorePluginDocumentationLink
+		docLinks   []db.AppstorePluginDocumentationLink
 	)
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -79,7 +79,7 @@ func pluginDetailFromRow(
 	plugin *db.PluginGetByIDRow,
 	tags []db.PluginTagsListByPluginIDRow,
 	categories []db.PluginCategoriesListByPluginIDRow,
-	docLinks []db.ZappstorePluginDocumentationLink,
+	docLinks []db.AppstorePluginDocumentationLink,
 ) *organizationv1.PluginDetail {
 	protoTags := make([]*organizationv1.Tag, 0, len(tags))
 	for _, t := range tags {

@@ -1,7 +1,7 @@
 -- Test data for plugin short descriptions and extended descriptions
 
 -- Grafana Alloy
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'OpenTelemetry Collector distribution',
     description = '## Overview
 
@@ -22,7 +22,7 @@ Grafana Alloy is a flexible, high-performance OpenTelemetry Collector distributi
 WHERE id = '019b4000-3000-7000-8000-000000000001';
 
 -- cert-manager
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'Automatic TLS certificate management',
     description = '## Overview
 
@@ -43,7 +43,7 @@ cert-manager adds certificates and certificate issuers as resource types in Kube
 WHERE id = '019b4000-3000-7000-8000-000000000002';
 
 -- CloudNativePG
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'PostgreSQL operator for Kubernetes',
     description = '## Overview
 
@@ -64,7 +64,7 @@ CloudNativePG is an open source operator designed to manage PostgreSQL workloads
 WHERE id = '019b4000-3000-7000-8000-000000000003';
 
 -- ECK operator
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'Elasticsearch and Kibana on Kubernetes',
     description = '## Overview
 
@@ -85,7 +85,7 @@ Elastic Cloud on Kubernetes (ECK) automates the deployment, provisioning, manage
 WHERE id = '019b4000-3000-7000-8000-000000000004';
 
 -- Grafana
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'Metrics visualization and alerting',
     description = '## Overview
 
@@ -107,7 +107,7 @@ Grafana is the open source analytics and monitoring solution for every database.
 WHERE id = '019b4000-3000-7000-8000-000000000005';
 
 -- Istio Gateway
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'Ingress gateway for service mesh',
     description = '## Overview
 
@@ -128,7 +128,7 @@ Istio Gateway provides a dedicated ingress gateway for managing inbound traffic 
 WHERE id = '019b4000-3000-7000-8000-000000000006';
 
 -- Istio
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'Service mesh for Kubernetes',
     description = '## Overview
 
@@ -150,7 +150,7 @@ Istio extends Kubernetes to establish a programmable, application-aware network.
 WHERE id = '019b4000-3000-7000-8000-000000000007';
 
 -- Keycloak
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'Identity and access management',
     description = '## Overview
 
@@ -171,7 +171,7 @@ Keycloak is an open source Identity and Access Management solution aimed at mode
 WHERE id = '019b4000-3000-7000-8000-000000000008';
 
 -- Grafana Loki
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'Log aggregation system',
     description = '## Overview
 
@@ -193,7 +193,7 @@ Loki is a horizontally scalable, highly available, multi-tenant log aggregation 
 WHERE id = '019b4000-3000-7000-8000-000000000009';
 
 -- Grafana Mimir
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'Long-term Prometheus storage',
     description = '## Overview
 
@@ -215,7 +215,7 @@ Grafana Mimir is an open source, horizontally scalable, highly available, multi-
 WHERE id = '019b4000-3000-7000-8000-00000000000a';
 
 -- Pinniped
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'Kubernetes cluster authentication',
     description = '## Overview
 
@@ -236,7 +236,7 @@ Pinniped provides identity services for Kubernetes clusters, enabling users to a
 WHERE id = '019b4000-3000-7000-8000-00000000000b';
 
 -- Sealed Secrets
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'Encrypted secrets for Git',
     description = '## Overview
 
@@ -257,7 +257,7 @@ Sealed Secrets allows you to encrypt your Kubernetes secrets so they can be safe
 WHERE id = '019b4000-3000-7000-8000-00000000000c';
 
 -- Grafana Tempo
-UPDATE zappstore.plugins SET
+UPDATE appstore.plugins SET
     description_short = 'Distributed tracing backend',
     description = '## Overview
 

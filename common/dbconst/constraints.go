@@ -11,7 +11,7 @@ const (
 	ConstraintApiKeysUqName = "api_keys_uq_name"
 	// ConstraintApiKeysUqTokenHash is defined on authn.api_keys.
 	ConstraintApiKeysUqTokenHash = "api_keys_uq_token_hash"
-	// ConstraintCategoriesUqName is defined on zappstore.categories.
+	// ConstraintCategoriesUqName is defined on appstore.categories.
 	ConstraintCategoriesUqName = "categories_uq_name"
 	// ConstraintClusterEventsCkEventType is defined on tenant.cluster_events.
 	ConstraintClusterEventsCkEventType = "cluster_events_ck_event_type"
@@ -23,11 +23,11 @@ const (
 	ConstraintClustersFkOrganization = "clusters_fk_organization"
 	// ConstraintClustersUqName is defined on tenant.clusters.
 	ConstraintClustersUqName = "clusters_uq_name"
-	// ConstraintInstallsFkCluster is defined on zappstore.installs.
+	// ConstraintInstallsFkCluster is defined on appstore.installs.
 	ConstraintInstallsFkCluster = "installs_fk_cluster"
-	// ConstraintInstallsFkPlugin is defined on zappstore.installs.
+	// ConstraintInstallsFkPlugin is defined on appstore.installs.
 	ConstraintInstallsFkPlugin = "installs_fk_plugin"
-	// ConstraintInstallsUq is defined on zappstore.installs.
+	// ConstraintInstallsUq is defined on appstore.installs.
 	ConstraintInstallsUq = "installs_uq"
 	// ConstraintNamespacesCkName is defined on tenant.namespaces.
 	ConstraintNamespacesCkName = "namespaces_ck_name"
@@ -63,23 +63,23 @@ const (
 	ConstraintOutboxFkProjectMember = "outbox_fk_project_member"
 	// ConstraintOutboxFkUser is defined on authz.outbox.
 	ConstraintOutboxFkUser = "outbox_fk_user"
-	// ConstraintPluginDocumentationLinksFkPlugin is defined on zappstore.plugin_documentation_links.
+	// ConstraintPluginDocumentationLinksFkPlugin is defined on appstore.plugin_documentation_links.
 	ConstraintPluginDocumentationLinksFkPlugin = "plugin_documentation_links_fk_plugin"
-	// ConstraintPluginsCategoriesCategoryId is defined on zappstore.categories_plugins.
+	// ConstraintPluginsCategoriesCategoryId is defined on appstore.categories_plugins.
 	ConstraintPluginsCategoriesCategoryId = "plugins_categories_category_id"
-	// ConstraintPluginsCategoriesPluginId is defined on zappstore.categories_plugins.
+	// ConstraintPluginsCategoriesPluginId is defined on appstore.categories_plugins.
 	ConstraintPluginsCategoriesPluginId = "plugins_categories_plugin_id"
-	// ConstraintPluginsPresetsPluginId is defined on zappstore.preset_plugins.
+	// ConstraintPluginsPresetsPluginId is defined on appstore.preset_plugins.
 	ConstraintPluginsPresetsPluginId = "plugins_presets_plugin_id"
-	// ConstraintPluginsPresetsPresetId is defined on zappstore.preset_plugins.
+	// ConstraintPluginsPresetsPresetId is defined on appstore.preset_plugins.
 	ConstraintPluginsPresetsPresetId = "plugins_presets_preset_id"
-	// ConstraintPluginsTagsPluginId is defined on zappstore.plugins_tags.
+	// ConstraintPluginsTagsPluginId is defined on appstore.plugins_tags.
 	ConstraintPluginsTagsPluginId = "plugins_tags_plugin_id"
-	// ConstraintPluginsTagsTagId is defined on zappstore.plugins_tags.
+	// ConstraintPluginsTagsTagId is defined on appstore.plugins_tags.
 	ConstraintPluginsTagsTagId = "plugins_tags_tag_id"
-	// ConstraintPluginsUqName is defined on zappstore.plugins.
+	// ConstraintPluginsUqName is defined on appstore.plugins.
 	ConstraintPluginsUqName = "plugins_uq_name"
-	// ConstraintPresetsUqName is defined on zappstore.presets.
+	// ConstraintPresetsUqName is defined on appstore.presets.
 	ConstraintPresetsUqName = "presets_uq_name"
 	// ConstraintProjectMembersCkRole is defined on tenant.project_members.
 	ConstraintProjectMembersCkRole = "project_members_ck_role"
@@ -95,7 +95,7 @@ const (
 	ConstraintProjectsUqOrganizationName = "projects_uq_organization_name"
 	// ConstraintRequireAdmin is defined on (constraint trigger).
 	ConstraintRequireAdmin = "require_admin"
-	// ConstraintTagsUqName is defined on zappstore.tags.
+	// ConstraintTagsUqName is defined on appstore.tags.
 	ConstraintTagsUqName = "tags_uq_name"
 	// ConstraintUsersCkRole is defined on tenant.users.
 	ConstraintUsersCkRole = "users_ck_role"
