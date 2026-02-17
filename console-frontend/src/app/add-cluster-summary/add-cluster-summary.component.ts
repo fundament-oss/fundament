@@ -188,29 +188,29 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     ];
 
     if (wizardState.nodePools) {
-      for (const pool of wizardState.nodePools) {
-        items.push({
+      items.push(
+        ...wizardState.nodePools.map((pool) => ({
           key: `nodepool-${pool.name}`,
-          type: 'nodepool',
+          type: 'nodepool' as const,
           name: pool.name,
-          requestStatus: 'pending',
-          syncStatus: 'none',
+          requestStatus: 'pending' as const,
+          syncStatus: 'none' as const,
           nodePoolConfig: pool,
-        });
-      }
+        })),
+      );
     }
 
     if (wizardState.plugins) {
-      for (const pluginId of wizardState.plugins) {
-        items.push({
+      items.push(
+        ...wizardState.plugins.map((pluginId) => ({
           key: `plugin-${pluginId}`,
-          type: 'plugin',
+          type: 'plugin' as const,
           name: this.getPluginName(pluginId),
-          requestStatus: 'pending',
-          syncStatus: 'none',
+          requestStatus: 'pending' as const,
+          syncStatus: 'none' as const,
           pluginId,
-        });
-      }
+        })),
+      );
     }
 
     this.progressItems.set(items);
@@ -371,29 +371,33 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     }
 
     // Poll node pool sync status
-    for (const item of this.progressItems()) {
-      if (item.type === 'nodepool' && item.syncStatus === 'syncing' && item.createdId) {
-        try {
-          const response = await firstValueFrom(
-            this.client.getNodePool(
-              create(GetNodePoolRequestSchema, { nodePoolId: item.createdId }),
-            ),
-          );
-          const status = response.nodePool?.status;
+    await Promise.all(
+      this.progressItems()
+        .filter(
+          (item) => item.type === 'nodepool' && item.syncStatus === 'syncing' && item.createdId,
+        )
+        .map(async (item) => {
+          try {
+            const response = await firstValueFrom(
+              this.client.getNodePool(
+                create(GetNodePoolRequestSchema, { nodePoolId: item.createdId! }),
+              ),
+            );
+            const status = response.nodePool?.status;
 
-          if (status === NodePoolStatus.HEALTHY) {
-            this.updateItem(item.key, { syncStatus: 'synced' });
-          } else if (status === NodePoolStatus.UNHEALTHY) {
-            this.updateItem(item.key, {
-              syncStatus: 'failed',
-              error: 'Node pool is unhealthy',
-            });
+            if (status === NodePoolStatus.HEALTHY) {
+              this.updateItem(item.key, { syncStatus: 'synced' });
+            } else if (status === NodePoolStatus.UNHEALTHY) {
+              this.updateItem(item.key, {
+                syncStatus: 'failed',
+                error: 'Node pool is unhealthy',
+              });
+            }
+          } catch {
+            // Ignore polling errors
           }
-        } catch {
-          // Ignore polling errors
-        }
-      }
-    }
+        }),
+    );
 
     // Stop polling when all syncing items are done
     const hasSyncing = this.progressItems().some((item) => item.syncStatus === 'syncing');

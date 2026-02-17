@@ -210,13 +210,10 @@
   </div>
 
   <div modal-footer class="mt-6">
-    <button
-      type="button"
-      (click)="navigateToCluster()"
-      class="btn-primary"
-      [disabled]="!clusterId()"
-    >
-      Go to cluster
-    </button>
+    @if (clusterId()) {
+      <button type="button" (click)="navigateToCluster()" class="btn-primary">Go to cluster</button>
+    } @else if (!isCreating()) {
+      <button type="button" (click)="onModalClose()" class="btn-secondary">Cancel</button>
+    }
   </div>
 </app-modal>
