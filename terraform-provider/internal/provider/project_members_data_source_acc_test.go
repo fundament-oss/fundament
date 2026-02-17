@@ -56,7 +56,7 @@ resource "fundament_project" "test" {
 resource "fundament_project_member" "test" {
   project_id = fundament_project.test.id
   user_id    = %[1]q
-  role       = "viewer"
+  permission = "viewer"
 }
 
 data "fundament_project_members" "test" {

@@ -8,27 +8,25 @@ terraform {
 
 provider "fundament" {
   endpoint = "http://organization.fundament.localhost:8080"
-  # Token can be set via FUNDAMENT_TOKEN environment variable
-  # token = ""
+  # API key can be set via FUNDAMENT_API_KEY environment variable
+  # api_key = ""
 }
 
-# Create a project
+# This example assumes you are authenticated as David Brown (admin) at the Globex organization.
+# Globex seed users:
+#   David Brown  019b4000-1000-7000-8000-000000000004  (admin)
+#   Eve Davis    019b4000-1000-7000-8000-000000000005  (viewer)
+
+# Create a project (David becomes implicit admin member)
 resource "fundament_project" "example" {
   name = "my-project"
 }
 
-# Add a user as an admin member of the project
+# Add Eve Davis as an admin member of the project
 resource "fundament_project_member" "admin" {
   project_id = fundament_project.example.id
-  user_id    = "<user1-id>"
-  role       = "admin"
-}
-
-# Add another user as a viewer
-resource "fundament_project_member" "viewer" {
-  project_id = fundament_project.example.id
-  user_id    = "<user2-id>"
-  role       = "viewer"
+  user_id    = "019b4000-1000-7000-8000-000000000005" # Eve Davis
+  permission = "admin"
 }
 
 output "admin_member_id" {

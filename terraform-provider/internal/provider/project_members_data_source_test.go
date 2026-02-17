@@ -12,20 +12,20 @@ func TestProjectMembersDataSourceModel(t *testing.T) {
 		ProjectID: types.StringValue("test-project-id"),
 		Members: []ProjectMemberModel{
 			{
-				ID:        types.StringValue("member-1"),
-				ProjectID: types.StringValue("test-project-id"),
-				UserID:    types.StringValue("user-1"),
-				UserName:  types.StringValue("User One"),
-				Role:      types.StringValue("admin"),
-				Created:   types.StringValue("2024-01-15T10:30:00Z"),
+				ID:         types.StringValue("member-1"),
+				ProjectID:  types.StringValue("test-project-id"),
+				UserID:     types.StringValue("user-1"),
+				UserName:   types.StringValue("User One"),
+				Permission: types.StringValue("admin"),
+				Created:    types.StringValue("2024-01-15T10:30:00Z"),
 			},
 			{
-				ID:        types.StringValue("member-2"),
-				ProjectID: types.StringValue("test-project-id"),
-				UserID:    types.StringValue("user-2"),
-				UserName:  types.StringValue("User Two"),
-				Role:      types.StringValue("viewer"),
-				Created:   types.StringValue("2024-01-16T11:45:00Z"),
+				ID:         types.StringValue("member-2"),
+				ProjectID:  types.StringValue("test-project-id"),
+				UserID:     types.StringValue("user-2"),
+				UserName:   types.StringValue("User Two"),
+				Permission: types.StringValue("viewer"),
+				Created:    types.StringValue("2024-01-16T11:45:00Z"),
 			},
 		},
 	}
@@ -42,15 +42,15 @@ func TestProjectMembersDataSourceModel(t *testing.T) {
 		t.Errorf("Expected first member ID 'member-1', got '%s'", model.Members[0].ID.ValueString())
 	}
 
-	if model.Members[0].Role.ValueString() != "admin" {
-		t.Errorf("Expected first member role 'admin', got '%s'", model.Members[0].Role.ValueString())
+	if model.Members[0].Permission.ValueString() != "admin" {
+		t.Errorf("Expected first member permission 'admin', got '%s'", model.Members[0].Permission.ValueString())
 	}
 
 	if model.Members[1].ID.ValueString() != "member-2" {
 		t.Errorf("Expected second member ID 'member-2', got '%s'", model.Members[1].ID.ValueString())
 	}
 
-	if model.Members[1].Role.ValueString() != "viewer" {
-		t.Errorf("Expected second member role 'viewer', got '%s'", model.Members[1].Role.ValueString())
+	if model.Members[1].Permission.ValueString() != "viewer" {
+		t.Errorf("Expected second member permission 'viewer', got '%s'", model.Members[1].Permission.ValueString())
 	}
 }

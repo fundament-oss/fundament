@@ -3,12 +3,13 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -21,9 +22,30 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-// uuidRegex validates the standard UUID text representation defined in RFC 9562, Section 4.
-// See: https://www.rfc-editor.org/rfc/rfc9562#section-4
-var uuidRegex = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+// uuidValidator validates that a string is a valid UUID using the google/uuid library.
+type uuidValidator struct{}
+
+func (v uuidValidator) Description(_ context.Context) string {
+	return "value must be a valid UUID"
+}
+
+func (v uuidValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v uuidValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	if _, err := uuid.Parse(req.ConfigValue.ValueString()); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid UUID",
+			fmt.Sprintf("Value %q is not a valid UUID: %s", req.ConfigValue.ValueString(), err),
+		)
+	}
+}
 
 // Ensure ProjectMemberResource satisfies various resource interfaces.
 var _ resource.Resource = &ProjectMemberResource{}
@@ -64,7 +86,7 @@ func (r *ProjectMemberResource) Schema(ctx context.Context, req resource.SchemaR
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.RegexMatches(uuidRegex, "must be a valid UUID"),
+					uuidValidator{},
 				},
 			},
 			"user_id": schema.StringAttribute{
@@ -74,11 +96,11 @@ func (r *ProjectMemberResource) Schema(ctx context.Context, req resource.SchemaR
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.RegexMatches(uuidRegex, "must be a valid UUID"),
+					uuidValidator{},
 				},
 			},
-			"role": schema.StringAttribute{
-				Description: "The role of the project member.",
+			"permission": schema.StringAttribute{
+				Description: "The permission of the project member.",
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("admin", "viewer"),
@@ -137,14 +159,14 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	tflog.Debug(ctx, "Creating project member", map[string]any{
 		"project_id": plan.ProjectID.ValueString(),
 		"user_id":    plan.UserID.ValueString(),
-		"role":       plan.Role.ValueString(),
+		"permission": plan.Permission.ValueString(),
 	})
 
-	protoRole, err := projectMemberRoleToProto(plan.Role.ValueString())
+	protoRole, err := projectMemberPermissionToProto(plan.Permission.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Invalid Project Member Role",
-			fmt.Sprintf("Unable to convert role: %s", err.Error()),
+			"Invalid Project Member Permission",
+			fmt.Sprintf("Unable to convert permission: %s", err.Error()),
 		)
 		return
 	}
@@ -186,49 +208,16 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	// Set the ID from the response
 	plan.ID = types.StringValue(createResp.Msg.MemberId)
 
-	// Read back via ListProjectMembers to get computed fields
-	listReq := connect.NewRequest(&organizationv1.ListProjectMembersRequest{
-		ProjectId: plan.ProjectID.ValueString(),
-	})
-
-	listResp, err := r.client.ProjectService.ListProjectMembers(ctx, listReq)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Created Project Member",
-			fmt.Sprintf("Project member was created but unable to read its details: %s", err.Error()),
-		)
+	// Read back the created member to get computed fields
+	found, diags := readProjectMemberIntoModel(ctx, r.client, &plan)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
 		return
 	}
-
-	// Find the created member in the list
-	var found bool
-	for _, member := range listResp.Msg.Members {
-		if member.Id != plan.ID.ValueString() {
-			continue
-		}
-		roleStr, err := projectMemberRoleToString(member.Role)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Invalid Project Member Role",
-				fmt.Sprintf("Unable to convert role for member %q: %s", member.Id, err.Error()),
-			)
-			return
-		}
-		plan.UserName = types.StringValue(member.UserName)
-		plan.Role = types.StringValue(roleStr)
-		if member.Created != nil {
-			plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
-		} else {
-			plan.Created = types.StringNull()
-		}
-		found = true
-		break
-	}
-
 	if !found {
 		resp.Diagnostics.AddError(
 			"Unable to Find Created Project Member",
-			fmt.Sprintf("Project member was created with ID %q but could not be found in the project.", plan.ID.ValueString()),
+			fmt.Sprintf("Project member was created with ID %q but could not be found.", plan.ID.ValueString()),
 		)
 		return
 	}
@@ -264,57 +253,11 @@ func (r *ProjectMemberResource) Read(ctx context.Context, req resource.ReadReque
 		"project_id": state.ProjectID.ValueString(),
 	})
 
-	// List project members and find this one
-	listReq := connect.NewRequest(&organizationv1.ListProjectMembersRequest{
-		ProjectId: state.ProjectID.ValueString(),
-	})
-
-	listResp, err := r.client.ProjectService.ListProjectMembers(ctx, listReq)
-	if err != nil {
-		switch connect.CodeOf(err) {
-		case connect.CodeNotFound:
-			tflog.Info(ctx, "Project not found, removing member from state", map[string]any{
-				"id":         state.ID.ValueString(),
-				"project_id": state.ProjectID.ValueString(),
-			})
-			resp.State.RemoveResource(ctx)
-			return
-		default:
-			resp.Diagnostics.AddError(
-				"Unable to Read Project Member",
-				fmt.Sprintf("Unable to list project members: %s", err.Error()),
-			)
-			return
-		}
+	found, diags := readProjectMemberIntoModel(ctx, r.client, &state)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
 	}
-
-	// Find this member in the list
-	var found bool
-	for _, member := range listResp.Msg.Members {
-		if member.Id != state.ID.ValueString() {
-			continue
-		}
-		roleStr, err := projectMemberRoleToString(member.Role)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Invalid Project Member Role",
-				fmt.Sprintf("Unable to convert role for member %q: %s", member.Id, err.Error()),
-			)
-			return
-		}
-		state.ProjectID = types.StringValue(member.ProjectId)
-		state.UserID = types.StringValue(member.UserId)
-		state.UserName = types.StringValue(member.UserName)
-		state.Role = types.StringValue(roleStr)
-		if member.Created != nil {
-			state.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
-		} else {
-			state.Created = types.StringNull()
-		}
-		found = true
-		break
-	}
-
 	if !found {
 		tflog.Info(ctx, "Project member not found, removing from state", map[string]any{
 			"id": state.ID.ValueString(),
@@ -324,8 +267,8 @@ func (r *ProjectMemberResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	tflog.Debug(ctx, "Read project member successfully", map[string]any{
-		"id":   state.ID.ValueString(),
-		"role": state.Role.ValueString(),
+		"id":         state.ID.ValueString(),
+		"permission": state.Permission.ValueString(),
 	})
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -350,17 +293,17 @@ func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	tflog.Debug(ctx, "Updating project member role", map[string]any{
-		"id":       state.ID.ValueString(),
-		"role_old": state.Role.ValueString(),
-		"role_new": plan.Role.ValueString(),
+	tflog.Debug(ctx, "Updating project member permission", map[string]any{
+		"id":             state.ID.ValueString(),
+		"permission_old": state.Permission.ValueString(),
+		"permission_new": plan.Permission.ValueString(),
 	})
 
-	protoRole, err := projectMemberRoleToProto(plan.Role.ValueString())
+	protoRole, err := projectMemberPermissionToProto(plan.Permission.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Invalid Project Member Role",
-			fmt.Sprintf("Unable to convert role: %s", err.Error()),
+			"Invalid Project Member Permission",
+			fmt.Sprintf("Unable to convert permission: %s", err.Error()),
 		)
 		return
 	}
@@ -402,47 +345,12 @@ func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	// Read the member to get the updated state
-	listReq := connect.NewRequest(&organizationv1.ListProjectMembersRequest{
-		ProjectId: state.ProjectID.ValueString(),
-	})
-
-	listResp, err := r.client.ProjectService.ListProjectMembers(ctx, listReq)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Updated Project Member",
-			fmt.Sprintf("Unable to read updated project member: %s", err.Error()),
-		)
+	plan.ID = state.ID
+	found, diags := readProjectMemberIntoModel(ctx, r.client, &plan)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
 		return
 	}
-
-	// Find this member in the list
-	var found bool
-	for _, member := range listResp.Msg.Members {
-		if member.Id != state.ID.ValueString() {
-			continue
-		}
-		roleStr, err := projectMemberRoleToString(member.Role)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Invalid Project Member Role",
-				fmt.Sprintf("Unable to convert role for member %q: %s", member.Id, err.Error()),
-			)
-			return
-		}
-		plan.ID = state.ID
-		plan.ProjectID = types.StringValue(member.ProjectId)
-		plan.UserID = types.StringValue(member.UserId)
-		plan.UserName = types.StringValue(member.UserName)
-		plan.Role = types.StringValue(roleStr)
-		if member.Created != nil {
-			plan.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
-		} else {
-			plan.Created = types.StringNull()
-		}
-		found = true
-		break
-	}
-
 	if !found {
 		resp.Diagnostics.AddError(
 			"Project Member Not Found After Update",
@@ -452,8 +360,8 @@ func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	tflog.Info(ctx, "Updated project member", map[string]any{
-		"id":   plan.ID.ValueString(),
-		"role": plan.Role.ValueString(),
+		"id":         plan.ID.ValueString(),
+		"permission": plan.Permission.ValueString(),
 	})
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -547,4 +455,48 @@ func (r *ProjectMemberResource) ImportState(ctx context.Context, req resource.Im
 	// Set the project_id and id in state
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), memberID)...)
+}
+
+// readProjectMemberIntoModel fetches a project member by ID and populates the model.
+// Returns (true, nil) if found, (false, nil) if not found, or (false, diags) on error.
+func readProjectMemberIntoModel(ctx context.Context, client *FundamentClient, model *ProjectMemberModel) (bool, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	getReq := connect.NewRequest(&organizationv1.GetProjectMemberRequest{
+		MemberId: model.ID.ValueString(),
+	})
+
+	getResp, err := client.ProjectService.GetProjectMember(ctx, getReq)
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return false, diags
+		}
+		diags.AddError(
+			"Unable to Read Project Member",
+			fmt.Sprintf("Unable to read project member: %s", err.Error()),
+		)
+		return false, diags
+	}
+
+	member := getResp.Msg.Member
+	permissionStr, err := projectMemberPermissionFromProto(member.Role)
+	if err != nil {
+		diags.AddError(
+			"Invalid Project Member Permission",
+			fmt.Sprintf("Unable to convert permission for member %q: %s", member.Id, err.Error()),
+		)
+		return false, diags
+	}
+
+	model.ProjectID = types.StringValue(member.ProjectId)
+	model.UserID = types.StringValue(member.UserId)
+	model.UserName = types.StringValue(member.UserName)
+	model.Permission = types.StringValue(permissionStr)
+	if member.Created != nil {
+		model.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+	} else {
+		model.Created = types.StringNull()
+	}
+
+	return true, diags
 }

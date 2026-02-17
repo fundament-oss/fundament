@@ -41,7 +41,7 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "project_id"),
 					resource.TestCheckResourceAttr(resourceName, "user_id", userID),
-					resource.TestCheckResourceAttr(resourceName, "role", "viewer"),
+					resource.TestCheckResourceAttr(resourceName, "permission", "viewer"),
 					resource.TestCheckResourceAttrSet(resourceName, "user_name"),
 					resource.TestCheckResourceAttrSet(resourceName, "created"),
 				),
@@ -61,12 +61,12 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 					return fmt.Sprintf("%s:%s", projectID, memberID), nil
 				},
 			},
-			// Update role
+			// Update permission
 			{
 				Config: testAccProjectMemberResourceConfig(userID, "admin"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "role", "admin"),
+					resource.TestCheckResourceAttr(resourceName, "permission", "admin"),
 				),
 			},
 			// Delete testing automatically occurs in TestCase
@@ -74,7 +74,7 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 	})
 }
 
-func testAccProjectMemberResourceConfig(userID, role string) string {
+func testAccProjectMemberResourceConfig(userID, permission string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
   # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN or FUNDAMENT_API_KEY from environment
@@ -87,7 +87,7 @@ resource "fundament_project" "test" {
 resource "fundament_project_member" "test" {
   project_id = fundament_project.test.id
   user_id    = %[1]q
-  role       = %[2]q
+  permission = %[2]q
 }
-`, userID, role)
+`, userID, permission)
 }

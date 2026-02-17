@@ -187,7 +187,7 @@ output "members" {
 | `members.project_id` | The ID of the project. |
 | `members.user_id` | The ID of the user. |
 | `members.user_name` | The name of the user. |
-| `members.role` | The role of the project member (`admin`, `viewer`). |
+| `members.permission` | The permission of the project member (`admin`, `viewer`). |
 | `members.created` | The timestamp when the member was added. |
 
 ## Resources
@@ -251,13 +251,13 @@ resource "fundament_project" "example" {
 resource "fundament_project_member" "admin" {
   project_id = fundament_project.example.id
   user_id    = "550e8400-e29b-41d4-a716-446655440000"
-  role       = "admin"
+  permission = "admin"
 }
 
 resource "fundament_project_member" "viewer" {
   project_id = fundament_project.example.id
   user_id    = "550e8400-e29b-41d4-a716-446655440001"
-  role       = "viewer"
+  permission = "viewer"
 }
 ```
 
@@ -267,7 +267,7 @@ resource "fundament_project_member" "viewer" {
 |------|-------------|----------|-------------------|
 | `project_id` | The ID of the project. | Yes | Yes |
 | `user_id` | The ID of the user to add as a member. | Yes | Yes |
-| `role` | The role of the project member. Valid values: `"admin"`, `"viewer"`. | Yes | No |
+| `permission` | The permission of the project member. Valid values: `"admin"`, `"viewer"`. | Yes | No |
 
 #### Attribute Reference
 

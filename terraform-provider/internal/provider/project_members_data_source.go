@@ -3,13 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
-	"slices"
-	"strings"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -49,6 +48,9 @@ func (d *ProjectMembersDataSource) Schema(ctx context.Context, req datasource.Sc
 			"project_id": schema.StringAttribute{
 				Description: "The ID of the project to list members for.",
 				Required:    true,
+				Validators: []validator.String{
+					uuidValidator{},
+				},
 			},
 			"members": schema.ListNestedAttribute{
 				Description: "List of project members.",
@@ -71,8 +73,8 @@ func (d *ProjectMembersDataSource) Schema(ctx context.Context, req datasource.Sc
 							Description: "The name of the user.",
 							Computed:    true,
 						},
-						"role": schema.StringAttribute{
-							Description: "The role of the project member.",
+						"permission": schema.StringAttribute{
+							Description: "The permission of the project member.",
 							Computed:    true,
 						},
 						"created": schema.StringAttribute{
@@ -151,13 +153,8 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	// Sort members by ID for stable ordering
-	members := rpcResp.Msg.Members
-	slices.SortFunc(members, func(a, b *organizationv1.ProjectMember) int {
-		return strings.Compare(a.Id, b.Id)
-	})
-
 	// Map response to state
+	members := rpcResp.Msg.Members
 	state.Members = make([]ProjectMemberModel, len(members))
 	for i, member := range members {
 		var created types.String
@@ -167,22 +164,22 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 			created = types.StringNull()
 		}
 
-		roleStr, err := projectMemberRoleToString(member.Role)
+		permissionStr, err := projectMemberPermissionFromProto(member.Role)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Invalid Project Member Role",
-				fmt.Sprintf("Unable to convert role for member %q: %s", member.Id, err.Error()),
+				"Invalid Project Member Permission",
+				fmt.Sprintf("Unable to convert permission for member %q: %s", member.Id, err.Error()),
 			)
 			return
 		}
 
 		state.Members[i] = ProjectMemberModel{
-			ID:        types.StringValue(member.Id),
-			ProjectID: types.StringValue(member.ProjectId),
-			UserID:    types.StringValue(member.UserId),
-			UserName:  types.StringValue(member.UserName),
-			Role:      types.StringValue(roleStr),
-			Created:   created,
+			ID:         types.StringValue(member.Id),
+			ProjectID:  types.StringValue(member.ProjectId),
+			UserID:     types.StringValue(member.UserId),
+			UserName:   types.StringValue(member.UserName),
+			Permission: types.StringValue(permissionStr),
+			Created:    created,
 		}
 	}
 
