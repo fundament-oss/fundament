@@ -1,28 +1,10 @@
 <div class="card">
   <!-- Header -->
-  <div class="card-header pb-0!">
+  <div class="card-header">
     <h1 class="text-2xl font-bold dark:text-white">Project members</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
       Manage members and their permissions for this project
     </p>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <a
-        [routerLink]="['/projects', projectId(), 'members']"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-      >
-        Members
-      </a>
-      <a
-        [routerLink]="['/projects', projectId(), 'roles']"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-      >
-        Roles
-      </a>
-    </div>
   </div>
 
   <div class="p-6">

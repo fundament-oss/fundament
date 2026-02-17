@@ -335,6 +335,17 @@
               </li>
               <li>
                 <a
+                  [routerLink]="['/projects', selectedProjectId(), 'roles']"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <ng-icon name="tablerShieldCheck" class="mr-3" size="1.25rem" />
+                  Roles
+                </a>
+              </li>
+              <li>
+                <a
                   [routerLink]="['/projects', selectedProjectId(), 'usage']"
                   routerLinkActive="active"
                   class="nav-link"
