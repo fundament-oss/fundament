@@ -75,7 +75,6 @@ generate:
     cd db && trek generate --stdout
     go generate -x ./...
     cd console-frontend && buf generate
-    cd console-frontend && bun run strip-validate-imports.ts
     cd console-frontend && openapi-ts
     cd e2e && buf generate
     just fmt
