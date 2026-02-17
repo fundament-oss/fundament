@@ -2,10 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { ORGANIZATION, PROJECT } from '../connect/tokens';
-import {
-  GetOrganizationRequestSchema,
-  type Organization,
-} from '../generated/v1/organization_pb';
+import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
 import {
   ListProjectsRequestSchema,
   ListProjectNamespacesRequestSchema,
