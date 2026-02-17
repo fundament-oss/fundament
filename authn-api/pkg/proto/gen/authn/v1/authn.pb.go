@@ -106,7 +106,7 @@ type User struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// User ID
 	Id string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	// Organization ID
+	// Organization IDs
 	OrganizationIds []string `protobuf:"bytes,20,rep,name=organization_ids,json=organizationIds,proto3" json:"organization_ids,omitempty"`
 	// User name
 	Name string `protobuf:"bytes,30,opt,name=name,proto3" json:"name,omitempty"`

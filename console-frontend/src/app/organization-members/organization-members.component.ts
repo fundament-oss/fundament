@@ -111,16 +111,17 @@ export default class OrganizationMembersComponent implements OnInit {
 
   inviteError = signal<string | null>(null);
 
-  // All members loaded from API (includes both active and pending)
+  // All members loaded from API (includes pending, active, rejected and revoked)
   allMembers = signal<OrganizationMember[]>([]);
 
-  // Computed: active members (have external_ref)
+  // Computed: active members (have status accepted)
   get activeMembers(): OrganizationMember[] {
     return this.allMembers().filter((m) => m.status === 'accepted');
   }
 
-  // Computed: pending invitations (no external_ref)
+  // Computed: pending invitations (have status pending)
   get pendingInvitations(): OrganizationMember[] {
+    console.log(this.allMembers());
     return this.allMembers().filter((m) => m.status === 'pending');
   }
 

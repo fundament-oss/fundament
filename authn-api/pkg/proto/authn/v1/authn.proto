@@ -27,7 +27,7 @@ message GetUserInfoResponse {
 message User {
   // User ID
   string id = 10;
-  // Organization ID
+  // Organization IDs
   repeated string organization_ids = 20;
   // User name
   string name = 30;

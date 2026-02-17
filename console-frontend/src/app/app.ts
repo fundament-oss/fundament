@@ -196,19 +196,21 @@ export default class App implements OnInit {
       // Call ListOrganizations (user-scoped endpoint, doesn't need Fun-Organization header)
       const response = await firstValueFrom(this.organizationClient.listOrganizations({}));
 
-      if (response.organizations.length > 0) {
-        const firstOrg = response.organizations[0];
-
-        // Set the organization context for future API requests
-        this.organizationContextService.setOrganizationId(firstOrg.id);
-        this.selectedOrgId.set(firstOrg.id);
-
-        // Load full organization data (projects, namespaces, etc.)
-        await this.organizationDataService.loadOrganizationData(firstOrg.id);
-
-        // Re-evaluate sidebar state now that org data is available
-        this.updateSidebarStateFromRoute(this.router.url);
+      if (response.organizations.length <= 0) {
+        return;
       }
+
+      const firstOrg = response.organizations[0];
+
+      // Set the organization context for future API requests
+      this.organizationContextService.setOrganizationId(firstOrg.id);
+      this.selectedOrgId.set(firstOrg.id);
+
+      // Load full organization data (projects, namespaces, etc.)
+      await this.organizationDataService.loadOrganizationData(firstOrg.id);
+
+      // Re-evaluate sidebar state now that org data is available
+      this.updateSidebarStateFromRoute(this.router.url);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load organizations:', error);

@@ -73,7 +73,7 @@ func (c *UserCreateCmd) Run(ctx *Context) error {
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("organization '%s' not found", org)
+			return fmt.Errorf("organization %q not found", org)
 		}
 		return fmt.Errorf("failed to create membership: %w", err)
 	}

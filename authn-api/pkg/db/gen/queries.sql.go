@@ -97,7 +97,7 @@ func (q *Queries) OrganizationUserAccept(ctx context.Context, arg OrganizationUs
 
 const organizationUserCreate = `-- name: OrganizationUserCreate :one
 INSERT INTO tenant.organizations_users (organization_id, user_id, role, status)
-VALUES ($1, $2, $3, 'accepted')
+VALUES ($1, $2, $3, $4)
 RETURNING id, organization_id, user_id, role, status, created
 `
 
@@ -105,6 +105,7 @@ type OrganizationUserCreateParams struct {
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
 	Role           dbconst.OrganizationsUserRole
+	Status         dbconst.OrganizationsUserStatus
 }
 
 type OrganizationUserCreateRow struct {
@@ -118,7 +119,12 @@ type OrganizationUserCreateRow struct {
 
 // Creates a membership for a user in an organization
 func (q *Queries) OrganizationUserCreate(ctx context.Context, arg OrganizationUserCreateParams) (OrganizationUserCreateRow, error) {
-	row := q.db.QueryRow(ctx, organizationUserCreate, arg.OrganizationID, arg.UserID, arg.Role)
+	row := q.db.QueryRow(ctx, organizationUserCreate,
+		arg.OrganizationID,
+		arg.UserID,
+		arg.Role,
+		arg.Status,
+	)
 	var i OrganizationUserCreateRow
 	err := row.Scan(
 		&i.ID,

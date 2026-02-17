@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 )
 
@@ -117,18 +118,30 @@ func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims
 
 // handleInvitedUser handles login for users who were invited by email.
 func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims, invitedUser *db.UserGetByEmailRow, loginMethod string) (*user, string, error) {
-	err := s.queries.UserSetExternalRef(ctx, db.UserSetExternalRefParams{
+
+	tx, err := s.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, "", connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction"))
+	}
+
+	defer rollback.Rollback(ctx, tx, s.logger)
+
+	qtx := s.queries.WithTx(tx)
+
+	params := db.UserSetExternalRefParams{
 		ID:          invitedUser.ID,
 		ExternalRef: pgtype.Text{String: claims.Sub, Valid: true},
 		Name:        claims.Name,
-	})
+	}
+
+	err = qtx.UserSetExternalRef(ctx, params)
 	if err != nil {
 		s.logger.Error("failed to set external_ref for invited user", "error", err)
 		return nil, "", fmt.Errorf("claiming invited user: %w", err)
 	}
 
 	// Transition pending invitations to accepted
-	err = s.queries.OrganizationUserAccept(ctx, db.OrganizationUserAcceptParams{UserID: invitedUser.ID})
+	err = qtx.OrganizationUserAccept(ctx, db.OrganizationUserAcceptParams{UserID: invitedUser.ID})
 	if err != nil {
 		s.logger.Error("failed to accept organization memberships", "error", err)
 		return nil, "", fmt.Errorf("accepting memberships: %w", err)
@@ -138,6 +151,10 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 	if err != nil {
 		s.logger.Error("failed to get user organizations", "error", err)
 		return nil, "", fmt.Errorf("getting user organizations: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, "", connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
 	}
 
 	u := &user{
@@ -173,7 +190,7 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 
 	tx, err := s.db.Pool.Begin(ctx)
 	if err != nil {
-		return nil, "", connect.NewError(connect.CodeInternal, fmt.Errorf("failed to tbegin transaction"))
+		return nil, "", connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction"))
 	}
 
 	defer rollback.Rollback(ctx, tx, s.logger)
@@ -203,7 +220,8 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 	_, err = qtx.OrganizationUserCreate(ctx, db.OrganizationUserCreateParams{
 		OrganizationID: organization.ID,
 		UserID:         row.ID,
-		Role:           "admin",
+		Role:           dbconst.OrganizationsUserRole_Admin,
+		Status:         dbconst.OrganizationsUserStatus_Accepted,
 	})
 	if err != nil {
 		s.logger.Error("failed to create organization membership", "error", err)

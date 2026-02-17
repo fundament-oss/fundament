@@ -44,7 +44,7 @@ RETURNING id, name, created;
 -- name: OrganizationUserCreate :one
 -- Creates a membership for a user in an organization
 INSERT INTO tenant.organizations_users (organization_id, user_id, role, status)
-VALUES ($1, $2, $3, 'accepted')
+VALUES ($1, $2, $3, $4)
 RETURNING id, organization_id, user_id, role, status, created;
 
 -- name: UserListOrganizations :many

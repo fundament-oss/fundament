@@ -99,10 +99,10 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]any{
-			"authenticated": true,
-			"user_id":       user.Id,
-			"user_name":     user.Name,
-			"organizations": user.OrganizationIds,
+			"authenticated":    true,
+			"user_id":          user.Id,
+			"user_name":        user.Name,
+			"organization_ids": user.OrganizationIds,
 		})
 	}
 
@@ -110,7 +110,7 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	PrintKeyValue(w, "Authenticated", "yes")
 	PrintKeyValue(w, "User ID", user.Id)
 	PrintKeyValue(w, "User Name", user.Name)
-	PrintKeyValue(w, "Organizations", user.OrganizationIds)
+	PrintKeyValue(w, "Organization IDs", user.OrganizationIds)
 	return w.Flush()
 }
 
