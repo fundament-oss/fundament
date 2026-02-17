@@ -107,7 +107,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 
 		for _, orgID := range user.OrgIDs {
 			_, err = testDb.Pool.Exec(t.Context(),
-				"INSERT INTO tenant.organizations_users (organization_id, user_id, role, status) VALUES ($1, $2, 'admin', 'accepted')",
+				"INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status) VALUES ($1, $2, 'admin', 'accepted')",
 				orgID, id,
 			)
 			require.NoError(t, err)

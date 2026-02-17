@@ -32,11 +32,11 @@ func (s *Server) ListMembers(
 
 func memberFromListRow(m *db.MemberListRow) *organizationv1.Member {
 	member := &organizationv1.Member{
-		Id:      m.ID.String(),
-		Name:    m.Name,
-		Role:    string(m.Role),
-		Status:  string(m.Status),
-		Created: timestamppb.New(m.Created.Time),
+		Id:         m.ID.String(),
+		Name:       m.Name,
+		Permission: string(m.Permission),
+		Status:     string(m.Status),
+		Created:    timestamppb.New(m.Created.Time),
 	}
 
 	if m.ExternalRef.Valid {

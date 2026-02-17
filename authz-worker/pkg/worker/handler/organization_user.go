@@ -48,13 +48,13 @@ func (h *Handler) OrganizationUser(ctx context.Context, qtx *db.Queries, organiz
 
 	var action authz.ActionName
 
-	switch orgUser.Role {
-	case dbconst.OrganizationsUserRole_Admin:
+	switch orgUser.Permission {
+	case dbconst.OrganizationsUserPermission_Admin:
 		action = authz.ActionAdmin
-	case dbconst.OrganizationsUserRole_Viewer:
+	case dbconst.OrganizationsUserPermission_Viewer:
 		action = authz.ActionViewer
 	default:
-		panic(fmt.Sprintf("unknown organization user role: %s", orgUser.Role))
+		panic(fmt.Sprintf("unknown organization user permission: %s", orgUser.Permission))
 	}
 
 	return h.writeTuples(ctx, tuple(user, action, org))

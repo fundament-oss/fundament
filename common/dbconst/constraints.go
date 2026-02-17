@@ -43,8 +43,8 @@ const (
 	ConstraintNodePoolsUqName = "node_pools_uq_name"
 	// ConstraintOrganizationsUqName is defined on tenant.organizations.
 	ConstraintOrganizationsUqName = "organizations_uq_name"
-	// ConstraintOrganizationsUsersCkRole is defined on tenant.organizations_users.
-	ConstraintOrganizationsUsersCkRole = "organizations_users_ck_role"
+	// ConstraintOrganizationsUsersCkPermission is defined on tenant.organizations_users.
+	ConstraintOrganizationsUsersCkPermission = "organizations_users_ck_permission"
 	// ConstraintOrganizationsUsersCkStatus is defined on tenant.organizations_users.
 	ConstraintOrganizationsUsersCkStatus = "organizations_users_ck_status"
 	// ConstraintOrganizationsUsersFkOrganization is defined on tenant.organizations_users.

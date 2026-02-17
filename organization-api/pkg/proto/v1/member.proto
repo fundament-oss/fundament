@@ -40,8 +40,8 @@ message Member {
   optional string external_ref = 30;
   // email is set for invited members
   optional string email = 50;
-  // role is "viewer" or "admin"
-  string role = 60;
+  // permission is "viewer" or "admin"
+  string permission = 60;
   // status is "pending", "accepted", "declined", or "revoked"
   string status = 70;
   google.protobuf.Timestamp created = 40;

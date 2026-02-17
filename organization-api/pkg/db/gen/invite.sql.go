@@ -35,35 +35,35 @@ func (q *Queries) InviteAccept(ctx context.Context, arg InviteAcceptParams) (int
 }
 
 const inviteCreateMembership = `-- name: InviteCreateMembership :one
-INSERT INTO tenant.organizations_users (organization_id, user_id, role, status)
+INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status)
 VALUES ($1, $2, $3::text, 'pending')
-RETURNING id, organization_id, user_id, role, status, created
+RETURNING id, organization_id, user_id, permission, status, created
 `
 
 type InviteCreateMembershipParams struct {
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
-	Role           string
+	Permission     string
 }
 
 type InviteCreateMembershipRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
-	Role           dbconst.OrganizationsUserRole
+	Permission     dbconst.OrganizationsUserPermission
 	Status         dbconst.OrganizationsUserStatus
 	Created        pgtype.Timestamptz
 }
 
 // Creates the organization membership for an invited user
 func (q *Queries) InviteCreateMembership(ctx context.Context, arg InviteCreateMembershipParams) (InviteCreateMembershipRow, error) {
-	row := q.db.QueryRow(ctx, inviteCreateMembership, arg.OrganizationID, arg.UserID, arg.Role)
+	row := q.db.QueryRow(ctx, inviteCreateMembership, arg.OrganizationID, arg.UserID, arg.Permission)
 	var i InviteCreateMembershipRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
 		&i.UserID,
-		&i.Role,
+		&i.Permission,
 		&i.Status,
 		&i.Created,
 	)
@@ -96,7 +96,7 @@ SELECT
     organizations_users.id,
     organizations_users.organization_id,
     organizations.name,
-    organizations_users.role,
+    organizations_users.permission,
     organizations_users.status,
     organizations_users.created
 FROM tenant.organizations_users
@@ -117,7 +117,7 @@ type InviteListRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 	Name           string
-	Role           dbconst.OrganizationsUserRole
+	Permission     dbconst.OrganizationsUserPermission
 	Status         dbconst.OrganizationsUserStatus
 	Created        pgtype.Timestamptz
 }
@@ -136,7 +136,7 @@ func (q *Queries) InviteList(ctx context.Context, arg InviteListParams) ([]Invit
 			&i.ID,
 			&i.OrganizationID,
 			&i.Name,
-			&i.Role,
+			&i.Permission,
 			&i.Status,
 			&i.Created,
 		); err != nil {

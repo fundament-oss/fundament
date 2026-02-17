@@ -201,7 +201,7 @@ func (q *Queries) GetNodePoolByID(ctx context.Context, arg GetNodePoolByIDParams
 }
 
 const getOrganizationUserByID = `-- name: GetOrganizationUserByID :one
-SELECT id, organization_id, user_id, role, status, deleted
+SELECT id, organization_id, user_id, permission, status, deleted
 FROM tenant.organizations_users
 WHERE id = $1
 `
@@ -214,7 +214,7 @@ type GetOrganizationUserByIDRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
-	Role           dbconst.OrganizationsUserRole
+	Permission     dbconst.OrganizationsUserPermission
 	Status         dbconst.OrganizationsUserStatus
 	Deleted        pgtype.Timestamptz
 }
@@ -226,7 +226,7 @@ func (q *Queries) GetOrganizationUserByID(ctx context.Context, arg GetOrganizati
 		&i.ID,
 		&i.OrganizationID,
 		&i.UserID,
-		&i.Role,
+		&i.Permission,
 		&i.Status,
 		&i.Deleted,
 	)

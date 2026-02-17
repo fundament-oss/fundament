@@ -24,8 +24,8 @@ service InviteService {
 // Invite member request
 message InviteMemberRequest {
   string email = 10 [(buf.validate.field).string = {email: true}];
-  // Role for the invited user: "viewer" or "admin"
-  string role = 20 [(buf.validate.field).string = {
+  // Permission for the invited user: "viewer" or "admin"
+  string permission = 20 [(buf.validate.field).string = {
     in: [
       "viewer",
       "admin"
@@ -51,7 +51,7 @@ message Invitation {
   string id = 10;
   string organization_id = 20;
   string organization_name = 30;
-  string role = 40;
+  string permission = 40;
   google.protobuf.Timestamp created = 50;
 }
 

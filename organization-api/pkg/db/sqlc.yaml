@@ -25,10 +25,10 @@ sql:
             go_type:
               import: "github.com/fundament-oss/fundament/common/dbconst"
               type: "OrganizationsUserStatus"
-          - column: "tenant.organizations_users.role"
+          - column: "tenant.organizations_users.permission"
             go_type:
               import: "github.com/fundament-oss/fundament/common/dbconst"
-              type: "OrganizationsUserRole"
+              type: "OrganizationsUserPermission"
           - column: "tenant.project_members.role"
             go_type:
               import: "github.com/fundament-oss/fundament/common/dbconst"

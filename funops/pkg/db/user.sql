@@ -15,21 +15,21 @@ RETURNING
 INSERT INTO tenant.organizations_users (
   organization_id,
   user_id,
-  role,
+  permission,
   status
 )
 SELECT
     organizations.id,
     @user_id,
-    @role::text,
-    'accepted'
+    @permission,
+    @status
 FROM tenant.organizations
 WHERE organizations.name = @organization_name::text
 RETURNING
   id,
   organization_id,
   user_id,
-  role,
+  permission,
   status,
   created;
 

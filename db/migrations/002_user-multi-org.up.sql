@@ -8,13 +8,13 @@ CREATE TABLE "tenant"."organizations_users" (
 	"id" uuid DEFAULT uuidv7() NOT NULL,
 	"organization_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
-	"role" text COLLATE "pg_catalog"."default" NOT NULL,
+	"permission" text COLLATE "pg_catalog"."default" NOT NULL,
   "status" text COLLATE "pg_catalog"."default" NOT NULL,
 	"created" timestamp with time zone DEFAULT now() NOT NULL,
 	"deleted" timestamp with time zone
 );
 
-ALTER TABLE "tenant"."organizations_users" ADD CONSTRAINT "organizations_users_ck_role" CHECK((role = ANY (ARRAY['admin'::text, 'viewer'::text])));
+ALTER TABLE "tenant"."organizations_users" ADD CONSTRAINT "organizations_users_ck_permission" CHECK((permission = ANY (ARRAY['admin'::text, 'viewer'::text])));
 
 ALTER TABLE "tenant"."organizations_users" ADD CONSTRAINT "organizations_users_ck_status" CHECK((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text, 'revoked'::text]))) NOT VALID;
 
@@ -85,7 +85,7 @@ ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_fk_organization_user" FOREIG
 
 ALTER TABLE "authz"."outbox" VALIDATE CONSTRAINT "outbox_fk_organization_user";
 
-INSERT INTO "tenant"."organizations_users" (organization_id, user_id, role, status)
+INSERT INTO "tenant"."organizations_users" (organization_id, user_id, permission, status)
 SELECT organization_id, id, role, 'accepted' FROM "tenant"."users";
 
 /* Hazards:

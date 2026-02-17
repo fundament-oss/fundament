@@ -43,15 +43,15 @@ RETURNING id, name, created;
 
 -- name: OrganizationUserCreate :one
 -- Creates a membership for a user in an organization
-INSERT INTO tenant.organizations_users (organization_id, user_id, role, status)
+INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status)
 VALUES ($1, $2, $3, $4)
-RETURNING id, organization_id, user_id, role, status, created;
+RETURNING id, organization_id, user_id, permission, status, created;
 
 -- name: UserListOrganizations :many
 -- Get the organizations a user belongs to (only accepted memberships)
 SELECT
     organizations_users.organization_id,
-    organizations_users.role,
+    organizations_users.permission,
     organizations_users.status
 FROM tenant.organizations_users
 WHERE organizations_users.user_id = $1

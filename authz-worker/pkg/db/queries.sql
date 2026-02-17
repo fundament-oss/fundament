@@ -50,7 +50,7 @@ SET status = 'failed',
 WHERE id = @id;
 
 -- name: GetOrganizationUserByID :one
-SELECT id, organization_id, user_id, role, status, deleted
+SELECT id, organization_id, user_id, permission, status, deleted
 FROM tenant.organizations_users
 WHERE id = @id;
 

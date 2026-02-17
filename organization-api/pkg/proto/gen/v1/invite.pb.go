@@ -27,8 +27,8 @@ const (
 type InviteMemberRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Email string                 `protobuf:"bytes,10,opt,name=email,proto3" json:"email,omitempty"`
-	// Role for the invited user: "viewer" or "admin"
-	Role          string `protobuf:"bytes,20,opt,name=role,proto3" json:"role,omitempty"`
+	// Permission for the invited user: "viewer" or "admin"
+	Permission    string `protobuf:"bytes,20,opt,name=permission,proto3" json:"permission,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -70,9 +70,9 @@ func (x *InviteMemberRequest) GetEmail() string {
 	return ""
 }
 
-func (x *InviteMemberRequest) GetRole() string {
+func (x *InviteMemberRequest) GetPermission() string {
 	if x != nil {
-		return x.Role
+		return x.Permission
 	}
 	return ""
 }
@@ -210,7 +210,7 @@ type Invitation struct {
 	Id               string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	OrganizationId   string                 `protobuf:"bytes,20,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	OrganizationName string                 `protobuf:"bytes,30,opt,name=organization_name,json=organizationName,proto3" json:"organization_name,omitempty"`
-	Role             string                 `protobuf:"bytes,40,opt,name=role,proto3" json:"role,omitempty"`
+	Permission       string                 `protobuf:"bytes,40,opt,name=permission,proto3" json:"permission,omitempty"`
 	Created          *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=created,proto3" json:"created,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -267,9 +267,9 @@ func (x *Invitation) GetOrganizationName() string {
 	return ""
 }
 
-func (x *Invitation) GetRole() string {
+func (x *Invitation) GetPermission() string {
 	if x != nil {
-		return x.Role
+		return x.Permission
 	}
 	return ""
 }
@@ -449,25 +449,29 @@ var File_v1_invite_proto protoreflect.FileDescriptor
 
 const file_v1_invite_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/invite.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\x1a\x0fv1/member.proto\"^\n" +
+	"\x0fv1/invite.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\x1a\x0fv1/member.proto\"j\n" +
 	"\x13InviteMemberRequest\x12\x1d\n" +
 	"\x05email\x18\n" +
-	" \x01(\tB\a\xbaH\x04r\x02`\x01R\x05email\x12(\n" +
-	"\x04role\x18\x14 \x01(\tB\x14\xbaH\x11r\x0fR\x06viewerR\x05adminR\x04role\"G\n" +
+	" \x01(\tB\a\xbaH\x04r\x02`\x01R\x05email\x124\n" +
+	"\n" +
+	"permission\x18\x14 \x01(\tB\x14\xbaH\x11r\x0fR\x06viewerR\x05adminR\n" +
+	"permission\"G\n" +
 	"\x14InviteMemberResponse\x12/\n" +
 	"\x06member\x18\n" +
 	" \x01(\v2\x17.organization.v1.MemberR\x06member\"\x18\n" +
 	"\x16ListInvitationsRequest\"X\n" +
 	"\x17ListInvitationsResponse\x12=\n" +
 	"\vinvitations\x18\n" +
-	" \x03(\v2\x1b.organization.v1.InvitationR\vinvitations\"\xbc\x01\n" +
+	" \x03(\v2\x1b.organization.v1.InvitationR\vinvitations\"\xc8\x01\n" +
 	"\n" +
 	"Invitation\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x14 \x01(\tR\x0eorganizationId\x12+\n" +
-	"\x11organization_name\x18\x1e \x01(\tR\x10organizationName\x12\x12\n" +
-	"\x04role\x18( \x01(\tR\x04role\x124\n" +
+	"\x11organization_name\x18\x1e \x01(\tR\x10organizationName\x12\x1e\n" +
+	"\n" +
+	"permission\x18( \x01(\tR\n" +
+	"permission\x124\n" +
 	"\acreated\x182 \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"3\n" +
 	"\x17AcceptInvitationRequest\x12\x18\n" +
 	"\x02id\x18\n" +

@@ -24,12 +24,12 @@ const (
 	ClusterEventSyncAction_Delete ClusterEventSyncAction = "delete"
 )
 
-// OrganizationsUserRole represents valid values for tenant.organizations_users.role.
-type OrganizationsUserRole string
+// OrganizationsUserPermission represents valid values for tenant.organizations_users.permission.
+type OrganizationsUserPermission string
 
 const (
-	OrganizationsUserRole_Admin  OrganizationsUserRole = "admin"
-	OrganizationsUserRole_Viewer OrganizationsUserRole = "viewer"
+	OrganizationsUserPermission_Admin  OrganizationsUserPermission = "admin"
+	OrganizationsUserPermission_Viewer OrganizationsUserPermission = "viewer"
 )
 
 // OrganizationsUserStatus represents valid values for tenant.organizations_users.status.

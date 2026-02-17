@@ -36,7 +36,7 @@ SELECT
     users.name,
     users.external_ref,
     users.email,
-    organizations_users.role,
+    organizations_users.permission,
     organizations_users.status,
     organizations_users.created
 FROM tenant.users
@@ -53,7 +53,7 @@ type MemberListRow struct {
 	Name           string
 	ExternalRef    pgtype.Text
 	Email          pgtype.Text
-	Role           dbconst.OrganizationsUserRole
+	Permission     dbconst.OrganizationsUserPermission
 	Status         dbconst.OrganizationsUserStatus
 	Created        pgtype.Timestamptz
 }
@@ -73,7 +73,7 @@ func (q *Queries) MemberList(ctx context.Context) ([]MemberListRow, error) {
 			&i.Name,
 			&i.ExternalRef,
 			&i.Email,
-			&i.Role,
+			&i.Permission,
 			&i.Status,
 			&i.Created,
 		); err != nil {

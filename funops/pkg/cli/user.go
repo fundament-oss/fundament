@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/funops/pkg/db/gen"
 )
 
@@ -68,7 +69,8 @@ func (c *UserCreateCmd) Run(ctx *Context) error {
 
 	_, err = ctx.Queries.UserCreateMembership(context.Background(), db.UserCreateMembershipParams{
 		UserID:           u.ID,
-		Role:             "viewer",
+		Permission:       dbconst.OrganizationsUserPermission_Viewer,
+		Status:           dbconst.OrganizationsUserStatus_Accepted,
 		OrganizationName: org,
 	})
 	if err != nil {

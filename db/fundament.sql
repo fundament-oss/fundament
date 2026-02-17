@@ -1315,11 +1315,11 @@ CREATE TABLE tenant.organizations_users (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	organization_id uuid NOT NULL,
 	user_id uuid NOT NULL,
-	role text NOT NULL,
+	permission text NOT NULL,
 	status text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
-	CONSTRAINT organizations_users_ck_role CHECK (role IN ('admin', 'viewer')),
+	CONSTRAINT organizations_users_ck_permission CHECK (permission IN ('admin', 'viewer')),
 	CONSTRAINT organizations_users_pk PRIMARY KEY (id),
 	CONSTRAINT organizations_users_ck_status CHECK (status IN ('pending', 'accepted', 'declined', 'revoked'))
 );

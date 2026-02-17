@@ -1508,7 +1508,7 @@ END;]]> </definition>
 	<column name="user_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="role" not-null="true">
+	<column name="permission" not-null="true">
 		<type name="text" length="0"/>
 	</column>
 	<column name="status" not-null="true">
@@ -1520,8 +1520,8 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<constraint name="organizations_users_ck_role" type="ck-constr" table="tenant.organizations_users">
-			<expression> <![CDATA[role IN ('admin', 'viewer')]]> </expression>
+	<constraint name="organizations_users_ck_permission" type="ck-constr" table="tenant.organizations_users">
+			<expression> <![CDATA[permission IN ('admin', 'viewer')]]> </expression>
 	</constraint>
 	<constraint name="organizations_users_pk" type="pk-constr" table="tenant.organizations_users">
 		<columns names="id" ref-type="src-columns"/>

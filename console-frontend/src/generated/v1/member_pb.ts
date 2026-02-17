@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/member.proto.
  */
 export const file_v1_member: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiPwoTTGlzdE1lbWJlcnNSZXNwb25zZRIoCgdtZW1iZXJzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLk1lbWJlciIrChNEZWxldGVNZW1iZXJSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVNZW1iZXJSZXNwb25zZSK3AQoGTWVtYmVyEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSGQoMZXh0ZXJuYWxfcmVmGB4gASgJSACIAQESEgoFZW1haWwYMiABKAlIAYgBARIMCgRyb2xlGDwgASgJEg4KBnN0YXR1cxhGIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIPCg1fZXh0ZXJuYWxfcmVmQggKBl9lbWFpbDLGAQoNTWVtYmVyU2VydmljZRJYCgtMaXN0TWVtYmVycxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0TWVtYmVyc1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdE1lbWJlcnNSZXNwb25zZRJbCgxEZWxldGVNZW1iZXISJC5vcmdhbml6YXRpb24udjEuRGVsZXRlTWVtYmVyUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5EZWxldGVNZW1iZXJSZXNwb25zZUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_buf_validate_validate, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiPwoTTGlzdE1lbWJlcnNSZXNwb25zZRIoCgdtZW1iZXJzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLk1lbWJlciIrChNEZWxldGVNZW1iZXJSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVNZW1iZXJSZXNwb25zZSK9AQoGTWVtYmVyEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSGQoMZXh0ZXJuYWxfcmVmGB4gASgJSACIAQESEgoFZW1haWwYMiABKAlIAYgBARISCgpwZXJtaXNzaW9uGDwgASgJEg4KBnN0YXR1cxhGIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIPCg1fZXh0ZXJuYWxfcmVmQggKBl9lbWFpbDLGAQoNTWVtYmVyU2VydmljZRJYCgtMaXN0TWVtYmVycxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0TWVtYmVyc1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdE1lbWJlcnNSZXNwb25zZRJbCgxEZWxldGVNZW1iZXISJC5vcmdhbml6YXRpb24udjEuRGVsZXRlTWVtYmVyUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5EZWxldGVNZW1iZXJSZXNwb25zZUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_buf_validate_validate, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * List members request
@@ -115,11 +115,11 @@ export type Member = Message<"organization.v1.Member"> & {
   email?: string;
 
   /**
-   * role is "viewer" or "admin"
+   * permission is "viewer" or "admin"
    *
-   * @generated from field: string role = 60;
+   * @generated from field: string permission = 60;
    */
-  role: string;
+  permission: string;
 
   /**
    * status is "pending", "accepted", "declined", or "revoked"

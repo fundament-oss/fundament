@@ -6,7 +6,7 @@ SELECT
     users.name,
     users.external_ref,
     users.email,
-    organizations_users.role,
+    organizations_users.permission,
     organizations_users.status,
     organizations_users.created
 FROM tenant.users

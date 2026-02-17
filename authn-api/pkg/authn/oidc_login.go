@@ -118,7 +118,6 @@ func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims
 
 // handleInvitedUser handles login for users who were invited by email.
 func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims, invitedUser *db.UserGetByEmailRow, loginMethod string) (*user, string, error) {
-
 	tx, err := s.db.Pool.Begin(ctx)
 	if err != nil {
 		return nil, "", connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction"))
@@ -220,7 +219,7 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 	_, err = qtx.OrganizationUserCreate(ctx, db.OrganizationUserCreateParams{
 		OrganizationID: organization.ID,
 		UserID:         row.ID,
-		Role:           dbconst.OrganizationsUserRole_Admin,
+		Permission:     dbconst.OrganizationsUserPermission_Admin,
 		Status:         dbconst.OrganizationsUserStatus_Accepted,
 	})
 	if err != nil {

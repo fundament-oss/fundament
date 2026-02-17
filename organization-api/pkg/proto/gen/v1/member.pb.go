@@ -196,8 +196,8 @@ type Member struct {
 	ExternalRef *string `protobuf:"bytes,30,opt,name=external_ref,json=externalRef,proto3,oneof" json:"external_ref,omitempty"`
 	// email is set for invited members
 	Email *string `protobuf:"bytes,50,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	// role is "viewer" or "admin"
-	Role string `protobuf:"bytes,60,opt,name=role,proto3" json:"role,omitempty"`
+	// permission is "viewer" or "admin"
+	Permission string `protobuf:"bytes,60,opt,name=permission,proto3" json:"permission,omitempty"`
 	// status is "pending", "accepted", "declined", or "revoked"
 	Status        string                 `protobuf:"bytes,70,opt,name=status,proto3" json:"status,omitempty"`
 	Created       *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created,proto3" json:"created,omitempty"`
@@ -263,9 +263,9 @@ func (x *Member) GetEmail() string {
 	return ""
 }
 
-func (x *Member) GetRole() string {
+func (x *Member) GetPermission() string {
 	if x != nil {
-		return x.Role
+		return x.Permission
 	}
 	return ""
 }
@@ -296,14 +296,16 @@ const file_v1_member_proto_rawDesc = "" +
 	"\x13DeleteMemberRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x16\n" +
-	"\x14DeleteMemberResponse\"\xec\x01\n" +
+	"\x14DeleteMemberResponse\"\xf8\x01\n" +
 	"\x06Member\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12&\n" +
 	"\fexternal_ref\x18\x1e \x01(\tH\x00R\vexternalRef\x88\x01\x01\x12\x19\n" +
-	"\x05email\x182 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x12\n" +
-	"\x04role\x18< \x01(\tR\x04role\x12\x16\n" +
+	"\x05email\x182 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x1e\n" +
+	"\n" +
+	"permission\x18< \x01(\tR\n" +
+	"permission\x12\x16\n" +
 	"\x06status\x18F \x01(\tR\x06status\x124\n" +
 	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreatedB\x0f\n" +
 	"\r_external_refB\b\n" +

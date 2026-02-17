@@ -33,7 +33,7 @@ func (s *Server) ListInvitations(
 			Id:               rows[i].ID.String(),
 			OrganizationId:   rows[i].OrganizationID.String(),
 			OrganizationName: rows[i].Name,
-			Role:             string(rows[i].Role),
+			Permission:       string(rows[i].Permission),
 			Created:          timestamppb.New(rows[i].Created.Time),
 		})
 	}

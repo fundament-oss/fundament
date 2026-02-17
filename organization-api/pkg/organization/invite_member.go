@@ -26,7 +26,7 @@ func (s *Server) InviteMember(
 	}
 
 	email := req.Msg.Email
-	role := req.Msg.Role
+	permission := req.Msg.Permission
 
 	// Find existing user by email, or create a new one
 	var userID uuid.UUID
@@ -51,7 +51,7 @@ func (s *Server) InviteMember(
 	membershipRow, err := s.queries.InviteCreateMembership(ctx, db.InviteCreateMembershipParams{
 		OrganizationID: organizationID,
 		UserID:         userID,
-		Role:           role,
+		Permission:     permission,
 	})
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -68,11 +68,11 @@ func (s *Server) InviteMember(
 
 func memberFromInviteRow(email string, m *db.InviteCreateMembershipRow) *organizationv1.Member {
 	return &organizationv1.Member{
-		Id:      m.UserID.String(),
-		Name:    email,
-		Email:   &email,
-		Role:    string(m.Role),
-		Status:  string(m.Status),
-		Created: timestamppb.New(m.Created.Time),
+		Id:         m.UserID.String(),
+		Name:       email,
+		Email:      &email,
+		Permission: string(m.Permission),
+		Status:     string(m.Status),
+		Created:    timestamppb.New(m.Created.Time),
 	}
 }

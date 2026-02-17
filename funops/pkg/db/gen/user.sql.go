@@ -54,28 +54,29 @@ const userCreateMembership = `-- name: UserCreateMembership :one
 INSERT INTO tenant.organizations_users (
   organization_id,
   user_id,
-  role,
+  permission,
   status
 )
 SELECT
     organizations.id,
     $1,
-    $2::text,
-    'accepted'
+    $2,
+    $3
 FROM tenant.organizations
-WHERE organizations.name = $3::text
+WHERE organizations.name = $4::text
 RETURNING
   id,
   organization_id,
   user_id,
-  role,
+  permission,
   status,
   created
 `
 
 type UserCreateMembershipParams struct {
 	UserID           uuid.UUID
-	Role             string
+	Permission       dbconst.OrganizationsUserPermission
+	Status           dbconst.OrganizationsUserStatus
 	OrganizationName string
 }
 
@@ -83,20 +84,25 @@ type UserCreateMembershipRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
-	Role           string
+	Permission     dbconst.OrganizationsUserPermission
 	Status         dbconst.OrganizationsUserStatus
 	Created        pgtype.Timestamptz
 }
 
 // Creates a membership for a user in an organization (by organization name)
 func (q *Queries) UserCreateMembership(ctx context.Context, arg UserCreateMembershipParams) (UserCreateMembershipRow, error) {
-	row := q.db.QueryRow(ctx, userCreateMembership, arg.UserID, arg.Role, arg.OrganizationName)
+	row := q.db.QueryRow(ctx, userCreateMembership,
+		arg.UserID,
+		arg.Permission,
+		arg.Status,
+		arg.OrganizationName,
+	)
 	var i UserCreateMembershipRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
 		&i.UserID,
-		&i.Role,
+		&i.Permission,
 		&i.Status,
 		&i.Created,
 	)

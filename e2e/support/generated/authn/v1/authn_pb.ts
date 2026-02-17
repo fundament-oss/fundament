@@ -56,7 +56,7 @@ export type User = Message<"authn.v1.User"> & {
   id: string;
 
   /**
-   * Organization ID
+   * Organization IDs
    *
    * @generated from field: repeated string organization_ids = 20;
    */

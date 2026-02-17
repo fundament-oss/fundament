@@ -96,15 +96,15 @@ func (q *Queries) OrganizationUserAccept(ctx context.Context, arg OrganizationUs
 }
 
 const organizationUserCreate = `-- name: OrganizationUserCreate :one
-INSERT INTO tenant.organizations_users (organization_id, user_id, role, status)
+INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status)
 VALUES ($1, $2, $3, $4)
-RETURNING id, organization_id, user_id, role, status, created
+RETURNING id, organization_id, user_id, permission, status, created
 `
 
 type OrganizationUserCreateParams struct {
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
-	Role           dbconst.OrganizationsUserRole
+	Permission     dbconst.OrganizationsUserPermission
 	Status         dbconst.OrganizationsUserStatus
 }
 
@@ -112,7 +112,7 @@ type OrganizationUserCreateRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
-	Role           dbconst.OrganizationsUserRole
+	Permission     dbconst.OrganizationsUserPermission
 	Status         dbconst.OrganizationsUserStatus
 	Created        pgtype.Timestamptz
 }
@@ -122,7 +122,7 @@ func (q *Queries) OrganizationUserCreate(ctx context.Context, arg OrganizationUs
 	row := q.db.QueryRow(ctx, organizationUserCreate,
 		arg.OrganizationID,
 		arg.UserID,
-		arg.Role,
+		arg.Permission,
 		arg.Status,
 	)
 	var i OrganizationUserCreateRow
@@ -130,7 +130,7 @@ func (q *Queries) OrganizationUserCreate(ctx context.Context, arg OrganizationUs
 		&i.ID,
 		&i.OrganizationID,
 		&i.UserID,
-		&i.Role,
+		&i.Permission,
 		&i.Status,
 		&i.Created,
 	)
@@ -268,7 +268,7 @@ func (q *Queries) UserGetByID(ctx context.Context, arg UserGetByIDParams) (UserG
 const userListOrganizations = `-- name: UserListOrganizations :many
 SELECT
     organizations_users.organization_id,
-    organizations_users.role,
+    organizations_users.permission,
     organizations_users.status
 FROM tenant.organizations_users
 WHERE organizations_users.user_id = $1
@@ -283,7 +283,7 @@ type UserListOrganizationsParams struct {
 
 type UserListOrganizationsRow struct {
 	OrganizationID uuid.UUID
-	Role           dbconst.OrganizationsUserRole
+	Permission     dbconst.OrganizationsUserPermission
 	Status         dbconst.OrganizationsUserStatus
 }
 
@@ -297,7 +297,7 @@ func (q *Queries) UserListOrganizations(ctx context.Context, arg UserListOrganiz
 	var items []UserListOrganizationsRow
 	for rows.Next() {
 		var i UserListOrganizationsRow
-		if err := rows.Scan(&i.OrganizationID, &i.Role, &i.Status); err != nil {
+		if err := rows.Scan(&i.OrganizationID, &i.Permission, &i.Status); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
