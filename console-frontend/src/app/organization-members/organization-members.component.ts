@@ -13,8 +13,8 @@ import {
   tablerX,
   tablerInfoCircle,
   tablerPencil,
+  tablerUsersGroup,
 } from '@ng-icons/tabler-icons';
-import { heroUserGroup } from '@ng-icons/heroicons/outline';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER } from '../../connect/tokens';
@@ -83,7 +83,7 @@ interface OrganizationMember {
       tablerAlertTriangle,
       tablerInfoCircle,
       tablerPencil,
-      heroUserGroup,
+      tablerUsersGroup,
     }),
   ],
   templateUrl: './organization-members.component.html',
