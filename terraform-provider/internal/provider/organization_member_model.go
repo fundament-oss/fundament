@@ -10,6 +10,6 @@ type OrganizationMemberModel struct {
 	Email      types.String `tfsdk:"email"`
 	Name       types.String `tfsdk:"name"`
 	ExternalID types.String `tfsdk:"external_id"`
-	Role       types.String `tfsdk:"role"`
+	Permission types.String `tfsdk:"permission"`
 	Created    types.String `tfsdk:"created"`
 }

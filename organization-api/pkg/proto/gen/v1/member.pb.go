@@ -188,29 +188,29 @@ func (*DeleteMemberResponse) Descriptor() ([]byte, []int) {
 	return file_v1_member_proto_rawDescGZIP(), []int{3}
 }
 
-// Update member role request
-type UpdateMemberRoleRequest struct {
+// Update member permission request
+type UpdateMemberPermissionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Role          string                 `protobuf:"bytes,20,opt,name=role,proto3" json:"role,omitempty"`
+	Permission    string                 `protobuf:"bytes,20,opt,name=permission,proto3" json:"permission,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UpdateMemberRoleRequest) Reset() {
-	*x = UpdateMemberRoleRequest{}
+func (x *UpdateMemberPermissionRequest) Reset() {
+	*x = UpdateMemberPermissionRequest{}
 	mi := &file_v1_member_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateMemberRoleRequest) String() string {
+func (x *UpdateMemberPermissionRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateMemberRoleRequest) ProtoMessage() {}
+func (*UpdateMemberPermissionRequest) ProtoMessage() {}
 
-func (x *UpdateMemberRoleRequest) ProtoReflect() protoreflect.Message {
+func (x *UpdateMemberPermissionRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_v1_member_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -222,21 +222,21 @@ func (x *UpdateMemberRoleRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateMemberRoleRequest.ProtoReflect.Descriptor instead.
-func (*UpdateMemberRoleRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateMemberPermissionRequest.ProtoReflect.Descriptor instead.
+func (*UpdateMemberPermissionRequest) Descriptor() ([]byte, []int) {
 	return file_v1_member_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *UpdateMemberRoleRequest) GetId() string {
+func (x *UpdateMemberPermissionRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *UpdateMemberRoleRequest) GetRole() string {
+func (x *UpdateMemberPermissionRequest) GetPermission() string {
 	if x != nil {
-		return x.Role
+		return x.Permission
 	}
 	return ""
 }
@@ -350,11 +350,13 @@ const file_v1_member_proto_rawDesc = "" +
 	"\x13DeleteMemberRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x16\n" +
-	"\x14DeleteMemberResponse\"]\n" +
-	"\x17UpdateMemberRoleRequest\x12\x18\n" +
+	"\x14DeleteMemberResponse\"o\n" +
+	"\x1dUpdateMemberPermissionRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12(\n" +
-	"\x04role\x18\x14 \x01(\tB\x14\xbaH\x11r\x0fR\x06viewerR\x05adminR\x04role\"\xf8\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x124\n" +
+	"\n" +
+	"permission\x18\x14 \x01(\tB\x14\xbaH\x11r\x0fR\x06viewerR\x05adminR\n" +
+	"permission\"\xf8\x01\n" +
 	"\x06Member\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -367,11 +369,11 @@ const file_v1_member_proto_rawDesc = "" +
 	"\x06status\x18F \x01(\tR\x06status\x124\n" +
 	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreatedB\x0f\n" +
 	"\r_external_refB\b\n" +
-	"\x06_email2\x9c\x02\n" +
+	"\x06_email2\xa8\x02\n" +
 	"\rMemberService\x12X\n" +
 	"\vListMembers\x12#.organization.v1.ListMembersRequest\x1a$.organization.v1.ListMembersResponse\x12[\n" +
-	"\fDeleteMember\x12$.organization.v1.DeleteMemberRequest\x1a%.organization.v1.DeleteMemberResponse\x12T\n" +
-	"\x10UpdateMemberRole\x12(.organization.v1.UpdateMemberRoleRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
+	"\fDeleteMember\x12$.organization.v1.DeleteMemberRequest\x1a%.organization.v1.DeleteMemberResponse\x12`\n" +
+	"\x16UpdateMemberPermission\x12..organization.v1.UpdateMemberPermissionRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
 
 var (
 	file_v1_member_proto_rawDescOnce sync.Once
@@ -387,24 +389,24 @@ func file_v1_member_proto_rawDescGZIP() []byte {
 
 var file_v1_member_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_v1_member_proto_goTypes = []any{
-	(*ListMembersRequest)(nil),      // 0: organization.v1.ListMembersRequest
-	(*ListMembersResponse)(nil),     // 1: organization.v1.ListMembersResponse
-	(*DeleteMemberRequest)(nil),     // 2: organization.v1.DeleteMemberRequest
-	(*DeleteMemberResponse)(nil),    // 3: organization.v1.DeleteMemberResponse
-	(*UpdateMemberRoleRequest)(nil), // 4: organization.v1.UpdateMemberRoleRequest
-	(*Member)(nil),                  // 5: organization.v1.Member
-	(*timestamppb.Timestamp)(nil),   // 6: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),           // 7: google.protobuf.Empty
+	(*ListMembersRequest)(nil),            // 0: organization.v1.ListMembersRequest
+	(*ListMembersResponse)(nil),           // 1: organization.v1.ListMembersResponse
+	(*DeleteMemberRequest)(nil),           // 2: organization.v1.DeleteMemberRequest
+	(*DeleteMemberResponse)(nil),          // 3: organization.v1.DeleteMemberResponse
+	(*UpdateMemberPermissionRequest)(nil), // 4: organization.v1.UpdateMemberPermissionRequest
+	(*Member)(nil),                        // 5: organization.v1.Member
+	(*timestamppb.Timestamp)(nil),         // 6: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                 // 7: google.protobuf.Empty
 }
 var file_v1_member_proto_depIdxs = []int32{
 	5, // 0: organization.v1.ListMembersResponse.members:type_name -> organization.v1.Member
 	6, // 1: organization.v1.Member.created:type_name -> google.protobuf.Timestamp
 	0, // 2: organization.v1.MemberService.ListMembers:input_type -> organization.v1.ListMembersRequest
 	2, // 3: organization.v1.MemberService.DeleteMember:input_type -> organization.v1.DeleteMemberRequest
-	4, // 4: organization.v1.MemberService.UpdateMemberRole:input_type -> organization.v1.UpdateMemberRoleRequest
+	4, // 4: organization.v1.MemberService.UpdateMemberPermission:input_type -> organization.v1.UpdateMemberPermissionRequest
 	1, // 5: organization.v1.MemberService.ListMembers:output_type -> organization.v1.ListMembersResponse
 	3, // 6: organization.v1.MemberService.DeleteMember:output_type -> organization.v1.DeleteMemberResponse
-	7, // 7: organization.v1.MemberService.UpdateMemberRole:output_type -> google.protobuf.Empty
+	7, // 7: organization.v1.MemberService.UpdateMemberPermission:output_type -> google.protobuf.Empty
 	5, // [5:8] is the sub-list for method output_type
 	2, // [2:5] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name

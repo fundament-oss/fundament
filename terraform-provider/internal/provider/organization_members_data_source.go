@@ -62,8 +62,8 @@ func (d *OrganizationMembersDataSource) Schema(ctx context.Context, req datasour
 							Description: "The external identity provider ID.",
 							Computed:    true,
 						},
-						"role": schema.StringAttribute{
-							Description: "The role of the member.",
+						"permission": schema.StringAttribute{
+							Description: "The permission of the member.",
 							Computed:    true,
 						},
 						"created": schema.StringAttribute{
@@ -134,9 +134,9 @@ func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource
 	state.Members = make([]OrganizationMemberModel, len(rpcResp.Msg.Members))
 	for i, member := range rpcResp.Msg.Members {
 		m := OrganizationMemberModel{
-			ID:   types.StringValue(member.Id),
-			Name: types.StringValue(member.Name),
-			Role: types.StringValue(member.Permission),
+			ID:         types.StringValue(member.Id),
+			Name:       types.StringValue(member.Name),
+			Permission: types.StringValue(member.Permission),
 		}
 
 		if member.Email != nil {

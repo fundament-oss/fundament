@@ -18,7 +18,7 @@ provider "fundament" {
 # Invite Alice (an Acme user) to join Globex as a viewer
 resource "fundament_organization_member" "alice" {
   email = "alice@acme.corp"
-  role  = "viewer"
+  permission = "viewer"
 }
 
 output "alice_member" {

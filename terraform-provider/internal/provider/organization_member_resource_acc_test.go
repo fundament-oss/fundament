@@ -30,12 +30,12 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create with viewer role
+			// Create with viewer permission
 			{
 				Config: testAccOrganizationMemberResourceConfig(testEmail, "viewer"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "email", testEmail),
-					resource.TestCheckResourceAttr(resourceName, "role", "viewer"),
+					resource.TestCheckResourceAttr(resourceName, "permission", "viewer"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "name"),
 					resource.TestCheckResourceAttrSet(resourceName, "created"),
@@ -47,12 +47,12 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
-			// Update role to admin (in-place)
+			// Update permission to admin (in-place)
 			{
 				Config: testAccOrganizationMemberResourceConfig(testEmail, "admin"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "email", testEmail),
-					resource.TestCheckResourceAttr(resourceName, "role", "admin"),
+					resource.TestCheckResourceAttr(resourceName, "permission", "admin"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
@@ -61,15 +61,15 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 	})
 }
 
-func testAccOrganizationMemberResourceConfig(email, role string) string {
+func testAccOrganizationMemberResourceConfig(email, permission string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
   # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN from environment
 }
 
 resource "fundament_organization_member" "test" {
-  email = %[1]q
-  role  = %[2]q
+  email      = %[1]q
+  permission = %[2]q
 }
-`, email, role)
+`, email, permission)
 }

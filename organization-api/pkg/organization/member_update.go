@@ -13,9 +13,9 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-func (s *Server) UpdateMemberRole(
+func (s *Server) UpdateMemberPermission(
 	ctx context.Context,
-	req *connect.Request[organizationv1.UpdateMemberRoleRequest],
+	req *connect.Request[organizationv1.UpdateMemberPermissionRequest],
 ) (*connect.Response[emptypb.Empty], error) {
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
@@ -30,12 +30,12 @@ func (s *Server) UpdateMemberRole(
 	memberID := uuid.MustParse(req.Msg.Id)
 
 	if memberID == userID {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cannot modify your own role"))
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cannot modify your own permission"))
 	}
 
-	rowsAffected, err := s.queries.MemberUpdateRole(ctx, db.MemberUpdateRoleParams{
+	rowsAffected, err := s.queries.MemberUpdatePermission(ctx, db.MemberUpdatePermissionParams{
 		ID:             memberID,
-		Permission:     dbconst.OrganizationsUserPermission(req.Msg.Role),
+		Permission:     dbconst.OrganizationsUserPermission(req.Msg.Permission),
 		OrganizationID: organizationID,
 	})
 	if err != nil {
@@ -46,9 +46,9 @@ func (s *Server) UpdateMemberRole(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("member not found"))
 	}
 
-	s.logger.InfoContext(ctx, "organization member role updated",
+	s.logger.InfoContext(ctx, "organization member permission updated",
 		"member_id", memberID,
-		"role", req.Msg.Role,
+		"permission", req.Msg.Permission,
 	)
 
 	return connect.NewResponse(&emptypb.Empty{}), nil

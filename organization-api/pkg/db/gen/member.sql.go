@@ -87,20 +87,20 @@ func (q *Queries) MemberList(ctx context.Context) ([]MemberListRow, error) {
 	return items, nil
 }
 
-const memberUpdateRole = `-- name: MemberUpdateRole :execrows
+const memberUpdatePermission = `-- name: MemberUpdatePermission :execrows
 UPDATE tenant.organizations_users
 SET permission = $2
 WHERE id = $1 AND organization_id = $3 AND deleted IS NULL
 `
 
-type MemberUpdateRoleParams struct {
+type MemberUpdatePermissionParams struct {
 	ID             uuid.UUID
 	Permission     dbconst.OrganizationsUserPermission
 	OrganizationID uuid.UUID
 }
 
-func (q *Queries) MemberUpdateRole(ctx context.Context, arg MemberUpdateRoleParams) (int64, error) {
-	result, err := q.db.Exec(ctx, memberUpdateRole, arg.ID, arg.Permission, arg.OrganizationID)
+func (q *Queries) MemberUpdatePermission(ctx context.Context, arg MemberUpdatePermissionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, memberUpdatePermission, arg.ID, arg.Permission, arg.OrganizationID)
 	if err != nil {
 		return 0, err
 	}

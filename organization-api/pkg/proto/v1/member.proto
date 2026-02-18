@@ -15,8 +15,8 @@ service MemberService {
   rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
   // Delete a member from the organization
   rpc DeleteMember(DeleteMemberRequest) returns (DeleteMemberResponse);
-  // Update a member's role
-  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (google.protobuf.Empty);
+  // Update a member's permission
+  rpc UpdateMemberPermission(UpdateMemberPermissionRequest) returns (google.protobuf.Empty);
 }
 
 // List members request
@@ -35,10 +35,10 @@ message DeleteMemberRequest {
 // Delete member response
 message DeleteMemberResponse {}
 
-// Update member role request
-message UpdateMemberRoleRequest {
+// Update member permission request
+message UpdateMemberPermissionRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
-  string role = 20 [(buf.validate.field).string = {
+  string permission = 20 [(buf.validate.field).string = {
     in: [
       "viewer",
       "admin"

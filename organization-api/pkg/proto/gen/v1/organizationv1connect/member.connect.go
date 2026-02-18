@@ -40,9 +40,9 @@ const (
 	// MemberServiceDeleteMemberProcedure is the fully-qualified name of the MemberService's
 	// DeleteMember RPC.
 	MemberServiceDeleteMemberProcedure = "/organization.v1.MemberService/DeleteMember"
-	// MemberServiceUpdateMemberRoleProcedure is the fully-qualified name of the MemberService's
-	// UpdateMemberRole RPC.
-	MemberServiceUpdateMemberRoleProcedure = "/organization.v1.MemberService/UpdateMemberRole"
+	// MemberServiceUpdateMemberPermissionProcedure is the fully-qualified name of the MemberService's
+	// UpdateMemberPermission RPC.
+	MemberServiceUpdateMemberPermissionProcedure = "/organization.v1.MemberService/UpdateMemberPermission"
 )
 
 // MemberServiceClient is a client for the organization.v1.MemberService service.
@@ -51,8 +51,8 @@ type MemberServiceClient interface {
 	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
 	// Delete a member from the organization
 	DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error)
-	// Update a member's role
-	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[emptypb.Empty], error)
+	// Update a member's permission
+	UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewMemberServiceClient constructs a client for the organization.v1.MemberService service. By
@@ -78,10 +78,10 @@ func NewMemberServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(memberServiceMethods.ByName("DeleteMember")),
 			connect.WithClientOptions(opts...),
 		),
-		updateMemberRole: connect.NewClient[v1.UpdateMemberRoleRequest, emptypb.Empty](
+		updateMemberPermission: connect.NewClient[v1.UpdateMemberPermissionRequest, emptypb.Empty](
 			httpClient,
-			baseURL+MemberServiceUpdateMemberRoleProcedure,
-			connect.WithSchema(memberServiceMethods.ByName("UpdateMemberRole")),
+			baseURL+MemberServiceUpdateMemberPermissionProcedure,
+			connect.WithSchema(memberServiceMethods.ByName("UpdateMemberPermission")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -89,9 +89,9 @@ func NewMemberServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // memberServiceClient implements MemberServiceClient.
 type memberServiceClient struct {
-	listMembers      *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
-	deleteMember     *connect.Client[v1.DeleteMemberRequest, v1.DeleteMemberResponse]
-	updateMemberRole *connect.Client[v1.UpdateMemberRoleRequest, emptypb.Empty]
+	listMembers            *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
+	deleteMember           *connect.Client[v1.DeleteMemberRequest, v1.DeleteMemberResponse]
+	updateMemberPermission *connect.Client[v1.UpdateMemberPermissionRequest, emptypb.Empty]
 }
 
 // ListMembers calls organization.v1.MemberService.ListMembers.
@@ -104,9 +104,9 @@ func (c *memberServiceClient) DeleteMember(ctx context.Context, req *connect.Req
 	return c.deleteMember.CallUnary(ctx, req)
 }
 
-// UpdateMemberRole calls organization.v1.MemberService.UpdateMemberRole.
-func (c *memberServiceClient) UpdateMemberRole(ctx context.Context, req *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.updateMemberRole.CallUnary(ctx, req)
+// UpdateMemberPermission calls organization.v1.MemberService.UpdateMemberPermission.
+func (c *memberServiceClient) UpdateMemberPermission(ctx context.Context, req *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.updateMemberPermission.CallUnary(ctx, req)
 }
 
 // MemberServiceHandler is an implementation of the organization.v1.MemberService service.
@@ -115,8 +115,8 @@ type MemberServiceHandler interface {
 	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
 	// Delete a member from the organization
 	DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error)
-	// Update a member's role
-	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[emptypb.Empty], error)
+	// Update a member's permission
+	UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewMemberServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -138,10 +138,10 @@ func NewMemberServiceHandler(svc MemberServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(memberServiceMethods.ByName("DeleteMember")),
 		connect.WithHandlerOptions(opts...),
 	)
-	memberServiceUpdateMemberRoleHandler := connect.NewUnaryHandler(
-		MemberServiceUpdateMemberRoleProcedure,
-		svc.UpdateMemberRole,
-		connect.WithSchema(memberServiceMethods.ByName("UpdateMemberRole")),
+	memberServiceUpdateMemberPermissionHandler := connect.NewUnaryHandler(
+		MemberServiceUpdateMemberPermissionProcedure,
+		svc.UpdateMemberPermission,
+		connect.WithSchema(memberServiceMethods.ByName("UpdateMemberPermission")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/organization.v1.MemberService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -150,8 +150,8 @@ func NewMemberServiceHandler(svc MemberServiceHandler, opts ...connect.HandlerOp
 			memberServiceListMembersHandler.ServeHTTP(w, r)
 		case MemberServiceDeleteMemberProcedure:
 			memberServiceDeleteMemberHandler.ServeHTTP(w, r)
-		case MemberServiceUpdateMemberRoleProcedure:
-			memberServiceUpdateMemberRoleHandler.ServeHTTP(w, r)
+		case MemberServiceUpdateMemberPermissionProcedure:
+			memberServiceUpdateMemberPermissionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -169,6 +169,6 @@ func (UnimplementedMemberServiceHandler) DeleteMember(context.Context, *connect.
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MemberService.DeleteMember is not implemented"))
 }
 
-func (UnimplementedMemberServiceHandler) UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[emptypb.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MemberService.UpdateMemberRole is not implemented"))
+func (UnimplementedMemberServiceHandler) UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MemberService.UpdateMemberPermission is not implemented"))
 }

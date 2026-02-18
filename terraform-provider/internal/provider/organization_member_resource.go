@@ -36,7 +36,7 @@ func (r *OrganizationMemberResource) Metadata(ctx context.Context, req resource.
 
 func (r *OrganizationMemberResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages an organization member in Fundament. Invites a user by email and manages their role.",
+		Description: "Manages an organization member in Fundament. Invites a user by email and manages their permission.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The unique identifier of the member.",
@@ -52,8 +52,8 @@ func (r *OrganizationMemberResource) Schema(ctx context.Context, req resource.Sc
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"role": schema.StringAttribute{
-				Description: `The role of the member. Valid values are "admin" and "viewer".`,
+			"permission": schema.StringAttribute{
+				Description: `The permission of the member. Valid values are "admin" and "viewer".`,
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("admin", "viewer"),
@@ -112,13 +112,13 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	tflog.Debug(ctx, "Inviting organization member", map[string]any{
-		"email": plan.Email.ValueString(),
-		"role":  plan.Role.ValueString(),
+		"email":      plan.Email.ValueString(),
+		"permission": plan.Permission.ValueString(),
 	})
 
 	inviteReq := connect.NewRequest(&organizationv1.InviteMemberRequest{
 		Email:      plan.Email.ValueString(),
-		Permission: plan.Role.ValueString(),
+		Permission: plan.Permission.ValueString(),
 	})
 
 	inviteResp, err := r.client.InviteService.InviteMember(ctx, inviteReq)
@@ -157,7 +157,7 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		plan.Email = types.StringValue(*member.Email)
 	}
 
-	plan.Role = types.StringValue(member.Permission)
+	plan.Permission = types.StringValue(member.Permission)
 
 	if member.Created.CheckValid() == nil {
 		plan.Created = types.StringValue(member.Created.String())
@@ -210,7 +210,7 @@ func (r *OrganizationMemberResource) Read(ctx context.Context, req resource.Read
 
 	state.ID = types.StringValue(member.Id)
 	state.Name = types.StringValue(member.Name)
-	state.Role = types.StringValue(member.Permission)
+	state.Permission = types.StringValue(member.Permission)
 
 	if member.ExternalRef != nil {
 		state.ExternalID = types.StringValue(*member.ExternalRef)
@@ -247,18 +247,18 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	tflog.Debug(ctx, "Updating organization member role", map[string]any{
-		"id":       state.ID.ValueString(),
-		"role_old": state.Role.ValueString(),
-		"role_new": plan.Role.ValueString(),
+	tflog.Debug(ctx, "Updating organization member permission", map[string]any{
+		"id":             state.ID.ValueString(),
+		"permission_old": state.Permission.ValueString(),
+		"permission_new": plan.Permission.ValueString(),
 	})
 
-	updateReq := connect.NewRequest(&organizationv1.UpdateMemberRoleRequest{
-		Id:   state.ID.ValueString(),
-		Role: plan.Role.ValueString(),
+	updateReq := connect.NewRequest(&organizationv1.UpdateMemberPermissionRequest{
+		Id:         state.ID.ValueString(),
+		Permission: plan.Permission.ValueString(),
 	})
 
-	_, err := r.client.MemberService.UpdateMemberRole(ctx, updateReq)
+	_, err := r.client.MemberService.UpdateMemberPermission(ctx, updateReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeNotFound:
@@ -268,18 +268,18 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 			)
 		case connect.CodeFailedPrecondition:
 			resp.Diagnostics.AddError(
-				"Role Update Not Allowed",
-				fmt.Sprintf("Cannot update member role: %s", err.Error()),
+				"Permission Update Not Allowed",
+				fmt.Sprintf("Cannot update member permission: %s", err.Error()),
 			)
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to update member roles in this organization.",
+				"You do not have permission to update member permissions in this organization.",
 			)
 		default:
 			resp.Diagnostics.AddError(
-				"Unable to Update Member Role",
-				fmt.Sprintf("Unable to update organization member role: %s", err.Error()),
+				"Unable to Update Member Permission",
+				fmt.Sprintf("Unable to update organization member permission: %s", err.Error()),
 			)
 		}
 		return
@@ -305,7 +305,7 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 
 	plan.ID = types.StringValue(member.Id)
 	plan.Name = types.StringValue(member.Name)
-	plan.Role = types.StringValue(member.Permission)
+	plan.Permission = types.StringValue(member.Permission)
 
 	if member.ExternalRef != nil {
 		plan.ExternalID = types.StringValue(*member.ExternalRef)
@@ -321,9 +321,9 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 		plan.Created = types.StringValue(member.Created.String())
 	}
 
-	tflog.Info(ctx, "Updated organization member role", map[string]any{
-		"id":   plan.ID.ValueString(),
-		"role": plan.Role.ValueString(),
+	tflog.Info(ctx, "Updated organization member permission", map[string]any{
+		"id":         plan.ID.ValueString(),
+		"permission": plan.Permission.ValueString(),
 	})
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
