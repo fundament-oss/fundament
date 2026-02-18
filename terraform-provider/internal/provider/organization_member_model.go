@@ -12,4 +12,5 @@ type OrganizationMemberModel struct {
 	ExternalID types.String `tfsdk:"external_id"`
 	Permission types.String `tfsdk:"permission"`
 	Created    types.String `tfsdk:"created"`
+	Role       types.String `tfsdk:"role"`
 }

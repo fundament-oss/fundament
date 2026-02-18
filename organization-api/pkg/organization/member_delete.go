@@ -22,6 +22,10 @@ func (s *Server) DeleteMember(
 
 	id := uuid.MustParse(req.Msg.Id)
 
+	if id == userID {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cannot remove yourself"))
+	}
+
 	member, err := s.queries.MemberGetByID(ctx, db.MemberGetByIDParams{ID: id})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("member not found"))
