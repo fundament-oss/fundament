@@ -10,6 +10,7 @@ import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -187,6 +188,59 @@ func (*DeleteMemberResponse) Descriptor() ([]byte, []int) {
 	return file_v1_member_proto_rawDescGZIP(), []int{3}
 }
 
+// Update member role request
+type UpdateMemberRoleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	Role          string                 `protobuf:"bytes,20,opt,name=role,proto3" json:"role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMemberRoleRequest) Reset() {
+	*x = UpdateMemberRoleRequest{}
+	mi := &file_v1_member_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMemberRoleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMemberRoleRequest) ProtoMessage() {}
+
+func (x *UpdateMemberRoleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_member_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMemberRoleRequest.ProtoReflect.Descriptor instead.
+func (*UpdateMemberRoleRequest) Descriptor() ([]byte, []int) {
+	return file_v1_member_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *UpdateMemberRoleRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateMemberRoleRequest) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
 // Member information
 type Member struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -207,7 +261,7 @@ type Member struct {
 
 func (x *Member) Reset() {
 	*x = Member{}
-	mi := &file_v1_member_proto_msgTypes[4]
+	mi := &file_v1_member_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -219,7 +273,7 @@ func (x *Member) String() string {
 func (*Member) ProtoMessage() {}
 
 func (x *Member) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_member_proto_msgTypes[4]
+	mi := &file_v1_member_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -232,7 +286,7 @@ func (x *Member) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Member.ProtoReflect.Descriptor instead.
 func (*Member) Descriptor() ([]byte, []int) {
-	return file_v1_member_proto_rawDescGZIP(), []int{4}
+	return file_v1_member_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Member) GetId() string {
@@ -288,7 +342,7 @@ var File_v1_member_proto protoreflect.FileDescriptor
 
 const file_v1_member_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/member.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x14\n" +
+	"\x0fv1/member.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x14\n" +
 	"\x12ListMembersRequest\"H\n" +
 	"\x13ListMembersResponse\x121\n" +
 	"\amembers\x18\n" +
@@ -296,7 +350,11 @@ const file_v1_member_proto_rawDesc = "" +
 	"\x13DeleteMemberRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x16\n" +
-	"\x14DeleteMemberResponse\"\xf8\x01\n" +
+	"\x14DeleteMemberResponse\"]\n" +
+	"\x17UpdateMemberRoleRequest\x12\x18\n" +
+	"\x02id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12(\n" +
+	"\x04role\x18\x14 \x01(\tB\x14\xbaH\x11r\x0fR\x06viewerR\x05adminR\x04role\"\xf8\x01\n" +
 	"\x06Member\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -309,10 +367,11 @@ const file_v1_member_proto_rawDesc = "" +
 	"\x06status\x18F \x01(\tR\x06status\x124\n" +
 	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreatedB\x0f\n" +
 	"\r_external_refB\b\n" +
-	"\x06_email2\xc6\x01\n" +
+	"\x06_email2\x9c\x02\n" +
 	"\rMemberService\x12X\n" +
 	"\vListMembers\x12#.organization.v1.ListMembersRequest\x1a$.organization.v1.ListMembersResponse\x12[\n" +
-	"\fDeleteMember\x12$.organization.v1.DeleteMemberRequest\x1a%.organization.v1.DeleteMemberResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
+	"\fDeleteMember\x12$.organization.v1.DeleteMemberRequest\x1a%.organization.v1.DeleteMemberResponse\x12T\n" +
+	"\x10UpdateMemberRole\x12(.organization.v1.UpdateMemberRoleRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
 
 var (
 	file_v1_member_proto_rawDescOnce sync.Once
@@ -326,24 +385,28 @@ func file_v1_member_proto_rawDescGZIP() []byte {
 	return file_v1_member_proto_rawDescData
 }
 
-var file_v1_member_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_v1_member_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_v1_member_proto_goTypes = []any{
-	(*ListMembersRequest)(nil),    // 0: organization.v1.ListMembersRequest
-	(*ListMembersResponse)(nil),   // 1: organization.v1.ListMembersResponse
-	(*DeleteMemberRequest)(nil),   // 2: organization.v1.DeleteMemberRequest
-	(*DeleteMemberResponse)(nil),  // 3: organization.v1.DeleteMemberResponse
-	(*Member)(nil),                // 4: organization.v1.Member
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*ListMembersRequest)(nil),      // 0: organization.v1.ListMembersRequest
+	(*ListMembersResponse)(nil),     // 1: organization.v1.ListMembersResponse
+	(*DeleteMemberRequest)(nil),     // 2: organization.v1.DeleteMemberRequest
+	(*DeleteMemberResponse)(nil),    // 3: organization.v1.DeleteMemberResponse
+	(*UpdateMemberRoleRequest)(nil), // 4: organization.v1.UpdateMemberRoleRequest
+	(*Member)(nil),                  // 5: organization.v1.Member
+	(*timestamppb.Timestamp)(nil),   // 6: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),           // 7: google.protobuf.Empty
 }
 var file_v1_member_proto_depIdxs = []int32{
-	4, // 0: organization.v1.ListMembersResponse.members:type_name -> organization.v1.Member
-	5, // 1: organization.v1.Member.created:type_name -> google.protobuf.Timestamp
+	5, // 0: organization.v1.ListMembersResponse.members:type_name -> organization.v1.Member
+	6, // 1: organization.v1.Member.created:type_name -> google.protobuf.Timestamp
 	0, // 2: organization.v1.MemberService.ListMembers:input_type -> organization.v1.ListMembersRequest
 	2, // 3: organization.v1.MemberService.DeleteMember:input_type -> organization.v1.DeleteMemberRequest
-	1, // 4: organization.v1.MemberService.ListMembers:output_type -> organization.v1.ListMembersResponse
-	3, // 5: organization.v1.MemberService.DeleteMember:output_type -> organization.v1.DeleteMemberResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
+	4, // 4: organization.v1.MemberService.UpdateMemberRole:input_type -> organization.v1.UpdateMemberRoleRequest
+	1, // 5: organization.v1.MemberService.ListMembers:output_type -> organization.v1.ListMembersResponse
+	3, // 6: organization.v1.MemberService.DeleteMember:output_type -> organization.v1.DeleteMemberResponse
+	7, // 7: organization.v1.MemberService.UpdateMemberRole:output_type -> google.protobuf.Empty
+	5, // [5:8] is the sub-list for method output_type
+	2, // [2:5] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name
@@ -355,14 +418,14 @@ func file_v1_member_proto_init() {
 		return
 	}
 	file_v1_common_proto_init()
-	file_v1_member_proto_msgTypes[4].OneofWrappers = []any{}
+	file_v1_member_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_member_proto_rawDesc), len(file_v1_member_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

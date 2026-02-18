@@ -3,6 +3,7 @@ syntax = "proto3";
 package organization.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
 
@@ -14,6 +15,8 @@ service MemberService {
   rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
   // Delete a member from the organization
   rpc DeleteMember(DeleteMemberRequest) returns (DeleteMemberResponse);
+  // Update a member's role
+  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (google.protobuf.Empty);
 }
 
 // List members request
@@ -31,6 +34,17 @@ message DeleteMemberRequest {
 
 // Delete member response
 message DeleteMemberResponse {}
+
+// Update member role request
+message UpdateMemberRoleRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+  string role = 20 [(buf.validate.field).string = {
+    in: [
+      "viewer",
+      "admin"
+    ]
+  }];
+}
 
 // Member information
 message Member {
