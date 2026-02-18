@@ -52,7 +52,7 @@ func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request
 
 	s.logger.Info("user logged in via password",
 		"user_id", user.ID,
-		"organization_id", user.OrganizationID,
+		"organization_ids", user.OrganizationIDs,
 		"name", user.Name,
 		"groups", claims.Groups,
 	)
@@ -71,9 +71,9 @@ func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request
 // httpUserFromUser converts user and groups to an authnhttp.User.
 func httpUserFromUser(u *user, groups []string) authnhttp.User {
 	return authnhttp.User{
-		Id:             u.ID,
-		OrganizationId: u.OrganizationID,
-		Name:           u.Name,
-		Groups:         groups,
+		Id:              u.ID,
+		OrganizationIds: u.OrganizationIDs,
+		Name:            u.Name,
+		Groups:          groups,
 	}
 }

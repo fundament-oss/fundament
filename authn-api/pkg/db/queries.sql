@@ -1,44 +1,71 @@
--- name: UserGetByExternalID :one
-SELECT id, organization_id, name, external_id, email, created
+-- name: UserGetByExternalRef :one
+SELECT id, name, external_ref, email, created
 FROM tenant.users
-WHERE external_id = $1 AND deleted IS NULL;
+WHERE external_ref = $1 AND deleted IS NULL;
 
 -- name: UserCreate :one
-INSERT INTO tenant.users (organization_id, name, external_id, email)
-VALUES ($1, $2, $3, $4)
-RETURNING id, organization_id, name, external_id, email, created;
+INSERT INTO tenant.users (name, external_ref, email)
+VALUES ($1, $2, $3)
+RETURNING id, name, external_ref, email, created;
 
 -- name: UserUpdate :one
 UPDATE tenant.users
 SET name = $2
-WHERE external_id = $1
-RETURNING id, organization_id, name, external_id, email, created;
+WHERE external_ref = $1
+RETURNING id, name, external_ref, email, created;
 
 -- name: UserUpsert :one
-INSERT INTO tenant.users (organization_id, name, external_id, email)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (external_id, deleted)
+INSERT INTO tenant.users (name, external_ref, email)
+VALUES ($1, $2, $3)
+ON CONFLICT (external_ref) WHERE deleted IS NULL
 DO UPDATE SET name = EXCLUDED.name, email = EXCLUDED.email
-RETURNING id, organization_id, name, external_id, email, created;
+RETURNING id, name, external_ref, email, created;
 
 -- name: UserGetByID :one
-SELECT id, organization_id, name, external_id, email, role, created
+SELECT id, name, external_ref, email, created
 FROM tenant.users
 WHERE id = $1 AND deleted IS NULL;
 
 -- name: UserGetByEmail :one
-SELECT id, organization_id, name, external_id, email, created
+-- Get a user by email who has no external_ref (pending invitation)
+SELECT id, name, external_ref, email, created
 FROM tenant.users
-WHERE email = $1 AND external_id IS NULL AND deleted IS NULL
+WHERE email = $1 AND external_ref IS NULL AND deleted IS NULL
 LIMIT 1;
 
--- name: UserSetExternalID :exec
-UPDATE tenant.users SET external_id = $2, name = $3 WHERE id = $1;
+-- name: UserSetExternalRef :exec
+UPDATE tenant.users SET external_ref = $2, name = $3 WHERE id = $1;
 
 -- name: OrganizationCreate :one
 INSERT INTO tenant.organizations (name)
 VALUES ($1)
 RETURNING id, name, created;
+
+-- name: OrganizationUserCreate :one
+-- Creates a membership for a user in an organization
+INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status)
+VALUES ($1, $2, $3, $4)
+RETURNING id, organization_id, user_id, permission, status, created;
+
+-- name: UserListOrganizations :many
+-- Get the organizations a user belongs to (only accepted memberships)
+SELECT
+    organizations_users.organization_id,
+    organizations_users.permission,
+    organizations_users.status
+FROM tenant.organizations_users
+WHERE organizations_users.user_id = $1
+    AND organizations_users.status = 'accepted'
+    AND organizations_users.deleted IS NULL
+ORDER BY organizations_users.created ASC;
+
+-- name: OrganizationUserAccept :exec
+-- Transitions a pending invitation to accepted when an invited user logs in
+UPDATE tenant.organizations_users
+SET status = 'accepted'
+WHERE user_id = $1
+    AND status = 'pending'
+    AND deleted IS NULL;
 
 -- name: APIKeyGetByHash :one
 -- Uses SECURITY DEFINER function to bypass RLS (we don't know org_id before lookup)

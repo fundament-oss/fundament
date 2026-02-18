@@ -15,6 +15,7 @@ export interface ICustomWorld extends World {
   apiKeyService?: APIKeyService;
   tokenService?: TokenService;
   authToken?: string;
+  organizationId?: string;
   currentUserEmail?: string;
   // Track created API keys for cleanup (user email -> (name -> response))
   createdApiKeys: Map<string, CreateAPIKeyResponse>;
@@ -37,6 +38,7 @@ export class CustomWorld extends World implements ICustomWorld {
   apiKeyService?: APIKeyService;
   tokenService?: TokenService;
   authToken?: string;
+  organizationId?: string;
   currentUserEmail?: string;
   createdApiKeys: Map<string, CreateAPIKeyResponse> = new Map();
   createdApiKeysByUser: Map<string, Map<string, CreateAPIKeyResponse>> = new Map();

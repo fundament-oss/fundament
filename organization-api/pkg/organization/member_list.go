@@ -15,12 +15,7 @@ func (s *Server) ListMembers(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListMembersRequest],
 ) (*connect.Response[organizationv1.ListMembersResponse], error) {
-	organizationID, ok := OrganizationIDFromContext(ctx)
-	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
-
-	members, err := s.queries.MemberListByOrganizationID(ctx, db.MemberListByOrganizationIDParams{OrganizationID: organizationID})
+	members, err := s.queries.MemberList(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list members: %w", err))
 	}
@@ -35,16 +30,17 @@ func (s *Server) ListMembers(
 	}), nil
 }
 
-func memberFromListRow(m *db.MemberListByOrganizationIDRow) *organizationv1.Member {
+func memberFromListRow(m *db.MemberListRow) *organizationv1.Member {
 	member := &organizationv1.Member{
-		Id:      m.ID.String(),
-		Name:    m.Name,
-		Role:    m.Role,
-		Created: timestamppb.New(m.Created.Time),
+		Id:         m.ID.String(),
+		Name:       m.Name,
+		Permission: string(m.Permission),
+		Status:     string(m.Status),
+		Created:    timestamppb.New(m.Created.Time),
 	}
 
-	if m.ExternalID.Valid {
-		member.ExternalId = &m.ExternalID.String
+	if m.ExternalRef.Valid {
+		member.ExternalRef = &m.ExternalRef.String
 	}
 
 	if m.Email.Valid {

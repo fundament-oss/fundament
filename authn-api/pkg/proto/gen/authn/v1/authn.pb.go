@@ -106,12 +106,12 @@ type User struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// User ID
 	Id string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	// Organization ID
-	OrganizationId string `protobuf:"bytes,20,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	// Organization IDs
+	OrganizationIds []string `protobuf:"bytes,20,rep,name=organization_ids,json=organizationIds,proto3" json:"organization_ids,omitempty"`
 	// User name
 	Name string `protobuf:"bytes,30,opt,name=name,proto3" json:"name,omitempty"`
 	// External ID from OIDC provider
-	ExternalId string `protobuf:"bytes,40,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	ExternalRef string `protobuf:"bytes,40,opt,name=external_ref,json=externalRef,proto3" json:"external_ref,omitempty"`
 	// Groups the user belongs to
 	Groups        []string `protobuf:"bytes,50,rep,name=groups,proto3" json:"groups,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -155,11 +155,11 @@ func (x *User) GetId() string {
 	return ""
 }
 
-func (x *User) GetOrganizationId() string {
+func (x *User) GetOrganizationIds() []string {
 	if x != nil {
-		return x.OrganizationId
+		return x.OrganizationIds
 	}
-	return ""
+	return nil
 }
 
 func (x *User) GetName() string {
@@ -169,9 +169,9 @@ func (x *User) GetName() string {
 	return ""
 }
 
-func (x *User) GetExternalId() string {
+func (x *User) GetExternalRef() string {
 	if x != nil {
-		return x.ExternalId
+		return x.ExternalRef
 	}
 	return ""
 }
@@ -292,14 +292,13 @@ const file_authn_v1_authn_proto_rawDesc = "" +
 	"\x12GetUserInfoRequest\"9\n" +
 	"\x13GetUserInfoResponse\x12\"\n" +
 	"\x04user\x18\n" +
-	" \x01(\v2\x0e.authn.v1.UserR\x04user\"\x8c\x01\n" +
+	" \x01(\v2\x0e.authn.v1.UserR\x04user\"\x90\x01\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\n" +
-	" \x01(\tR\x02id\x12'\n" +
-	"\x0forganization_id\x18\x14 \x01(\tR\x0eorganizationId\x12\x12\n" +
-	"\x04name\x18\x1e \x01(\tR\x04name\x12\x1f\n" +
-	"\vexternal_id\x18( \x01(\tR\n" +
-	"externalId\x12\x16\n" +
+	" \x01(\tR\x02id\x12)\n" +
+	"\x10organization_ids\x18\x14 \x03(\tR\x0forganizationIds\x12\x12\n" +
+	"\x04name\x18\x1e \x01(\tR\x04name\x12!\n" +
+	"\fexternal_ref\x18( \x01(\tR\vexternalRef\x12\x16\n" +
 	"\x06groups\x182 \x03(\tR\x06groups\"\x16\n" +
 	"\x14ExchangeTokenRequest\"x\n" +
 	"\x15ExchangeTokenResponse\x12!\n" +

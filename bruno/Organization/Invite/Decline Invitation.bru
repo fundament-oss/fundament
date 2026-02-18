@@ -1,0 +1,21 @@
+meta {
+  name: Decline Invitation
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.InviteService/DeclineInvitation
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "id": "{{invitationId}}"
+  }
+}

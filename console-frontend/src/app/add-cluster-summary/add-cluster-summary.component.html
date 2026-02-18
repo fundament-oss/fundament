@@ -115,12 +115,105 @@
     <a
       routerLink="/add-cluster/plugins"
       class="btn-secondary"
-      [class.pointer-events-none]="isCreating()"
-      [class.opacity-50]="isCreating()"
+      [class.pointer-events-none]="isCreating() || showModal()"
+      [class.opacity-50]="isCreating() || showModal()"
       >Previous step</a
     >
-    <button type="button" (click)="onCreateCluster()" class="btn-primary" [disabled]="isCreating()">
+    <button
+      type="button"
+      (click)="onCreateCluster()"
+      class="btn-primary"
+      [disabled]="isCreating() || showModal()"
+    >
       {{ isCreating() ? 'Creating...' : 'Create cluster' }}
     </button>
   </div>
 </div>
+
+<!-- Creation Progress Modal -->
+<app-modal
+  [show]="showModal()"
+  title="Creating cluster"
+  (modalClose)="onModalClose()"
+  maxWidth="max-w-lg"
+>
+  <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+    Your cluster is being provisioned. You can track the progress of each step below.
+  </p>
+  <div class="max-h-[60vh] divide-y divide-gray-200 overflow-y-auto dark:divide-gray-800">
+    @for (item of progressItems(); track item.key) {
+      <div class="flex items-center justify-between gap-1 py-3">
+        <div class="flex items-center space-x-3">
+          <!-- Status icon -->
+          @if (item.requestStatus === 'pending') {
+            <div
+              class="h-5 w-5 shrink-0 rounded-full border-2 border-gray-300 dark:border-gray-600"
+            ></div>
+          } @else if (
+            item.requestStatus === 'in_progress' ||
+            (item.requestStatus === 'succeeded' && item.syncStatus === 'syncing')
+          ) {
+            <app-loading-indicator
+              class="h-5 w-5 shrink-0 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+            />
+          } @else if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
+            <ng-icon name="tablerCircleXFill" class="shrink-0 text-rose-500!" size="1.25rem" />
+          } @else {
+            <ng-icon name="tablerCircleCheck" class="shrink-0 text-green-500!" size="1.25rem" />
+          }
+
+          <div>
+            <p class="text-sm font-medium dark:text-white">
+              @if (item.type === 'nodepool') {
+                <span class="text-gray-500 dark:text-gray-400">Node pool:</span>
+              } @else if (item.type === 'plugin') {
+                <span class="text-gray-500 dark:text-gray-400">Plugin:</span>
+              }
+              {{ item.name }}
+            </p>
+            @if (item.requestStatus === 'pending') {
+              <p class="text-xs text-gray-500 dark:text-gray-400">Waiting...</p>
+            } @else if (item.requestStatus === 'in_progress') {
+              <p class="text-xs text-indigo-600 dark:text-indigo-400">
+                {{ item.type === 'plugin' ? 'Installing...' : 'Creating...' }}
+              </p>
+            } @else if (item.requestStatus === 'failed') {
+              <p class="text-xs text-rose-600 dark:text-rose-400">{{ item.error }}</p>
+            } @else if (item.syncStatus === 'syncing') {
+              <p class="text-xs text-indigo-600 dark:text-indigo-400">
+                Syncing{{ item.shootStatus ? ' (' + item.shootStatus + ')' : '' }}...
+              </p>
+            } @else if (item.syncStatus === 'failed') {
+              <p class="text-xs text-rose-600 dark:text-rose-400">{{ item.error }}</p>
+            } @else if (item.syncStatus === 'synced') {
+              <p class="text-xs text-green-600 dark:text-green-400">Ready</p>
+            } @else {
+              <p class="text-xs text-green-600 dark:text-green-400">
+                {{ item.type === 'plugin' ? 'Installed' : 'Done' }}
+              </p>
+            }
+          </div>
+        </div>
+
+        @if (item.requestStatus === 'failed') {
+          <button
+            type="button"
+            (click)="retryItem(item.key)"
+            class="btn-light flex items-center gap-1 px-2! py-1! text-xs!"
+          >
+            <ng-icon name="tablerArrowBackUp" size="1rem" />
+            Retry
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <div modal-footer class="mt-6">
+    @if (clusterId()) {
+      <button type="button" (click)="navigateToCluster()" class="btn-primary">Go to cluster</button>
+    } @else if (!isCreating()) {
+      <button type="button" (click)="onModalClose()" class="btn-secondary">Cancel</button>
+    }
+  </div>
+</app-modal>

@@ -51,6 +51,48 @@ func (q *Queries) ProjectMemberDelete(ctx context.Context, arg ProjectMemberDele
 	return result.RowsAffected(), nil
 }
 
+const projectMemberGetByID = `-- name: ProjectMemberGetByID :one
+SELECT
+    project_members.id,
+    project_members.project_id,
+    project_members.user_id,
+    project_members.role,
+    project_members.created,
+    users.name as user_name
+FROM tenant.project_members
+INNER JOIN tenant.users
+  ON users.id = project_members.user_id
+WHERE project_members.id = $1
+  AND project_members.deleted IS NULL
+`
+
+type ProjectMemberGetByIDParams struct {
+	ID uuid.UUID
+}
+
+type ProjectMemberGetByIDRow struct {
+	ID        uuid.UUID
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	Role      dbconst.ProjectMemberRole
+	Created   pgtype.Timestamptz
+	UserName  string
+}
+
+func (q *Queries) ProjectMemberGetByID(ctx context.Context, arg ProjectMemberGetByIDParams) (ProjectMemberGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, projectMemberGetByID, arg.ID)
+	var i ProjectMemberGetByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UserID,
+		&i.Role,
+		&i.Created,
+		&i.UserName,
+	)
+	return i, err
+}
+
 const projectMemberList = `-- name: ProjectMemberList :many
 SELECT
     project_members.id,
@@ -59,7 +101,7 @@ SELECT
     project_members.role,
     project_members.created,
     users.name as user_name,
-    users.external_id as user_external_id
+    users.external_ref as user_external_ref
 FROM tenant.project_members
 INNER JOIN tenant.users
   ON users.id = project_members.user_id
@@ -73,13 +115,13 @@ type ProjectMemberListParams struct {
 }
 
 type ProjectMemberListRow struct {
-	ID             uuid.UUID
-	ProjectID      uuid.UUID
-	UserID         uuid.UUID
-	Role           dbconst.ProjectMemberRole
-	Created        pgtype.Timestamptz
-	UserName       string
-	UserExternalID pgtype.Text
+	ID              uuid.UUID
+	ProjectID       uuid.UUID
+	UserID          uuid.UUID
+	Role            dbconst.ProjectMemberRole
+	Created         pgtype.Timestamptz
+	UserName        string
+	UserExternalRef pgtype.Text
 }
 
 func (q *Queries) ProjectMemberList(ctx context.Context, arg ProjectMemberListParams) ([]ProjectMemberListRow, error) {
@@ -98,7 +140,7 @@ func (q *Queries) ProjectMemberList(ctx context.Context, arg ProjectMemberListPa
 			&i.Role,
 			&i.Created,
 			&i.UserName,
-			&i.UserExternalID,
+			&i.UserExternalRef,
 		); err != nil {
 			return nil, err
 		}

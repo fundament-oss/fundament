@@ -36,9 +36,6 @@ const (
 	// MemberServiceListMembersProcedure is the fully-qualified name of the MemberService's ListMembers
 	// RPC.
 	MemberServiceListMembersProcedure = "/organization.v1.MemberService/ListMembers"
-	// MemberServiceInviteMemberProcedure is the fully-qualified name of the MemberService's
-	// InviteMember RPC.
-	MemberServiceInviteMemberProcedure = "/organization.v1.MemberService/InviteMember"
 	// MemberServiceDeleteMemberProcedure is the fully-qualified name of the MemberService's
 	// DeleteMember RPC.
 	MemberServiceDeleteMemberProcedure = "/organization.v1.MemberService/DeleteMember"
@@ -48,8 +45,6 @@ const (
 type MemberServiceClient interface {
 	// List all members of the current organization
 	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
-	// Invite a new member by email
-	InviteMember(context.Context, *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error)
 	// Delete a member from the organization
 	DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error)
 }
@@ -71,12 +66,6 @@ func NewMemberServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(memberServiceMethods.ByName("ListMembers")),
 			connect.WithClientOptions(opts...),
 		),
-		inviteMember: connect.NewClient[v1.InviteMemberRequest, v1.InviteMemberResponse](
-			httpClient,
-			baseURL+MemberServiceInviteMemberProcedure,
-			connect.WithSchema(memberServiceMethods.ByName("InviteMember")),
-			connect.WithClientOptions(opts...),
-		),
 		deleteMember: connect.NewClient[v1.DeleteMemberRequest, v1.DeleteMemberResponse](
 			httpClient,
 			baseURL+MemberServiceDeleteMemberProcedure,
@@ -89,18 +78,12 @@ func NewMemberServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 // memberServiceClient implements MemberServiceClient.
 type memberServiceClient struct {
 	listMembers  *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
-	inviteMember *connect.Client[v1.InviteMemberRequest, v1.InviteMemberResponse]
 	deleteMember *connect.Client[v1.DeleteMemberRequest, v1.DeleteMemberResponse]
 }
 
 // ListMembers calls organization.v1.MemberService.ListMembers.
 func (c *memberServiceClient) ListMembers(ctx context.Context, req *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error) {
 	return c.listMembers.CallUnary(ctx, req)
-}
-
-// InviteMember calls organization.v1.MemberService.InviteMember.
-func (c *memberServiceClient) InviteMember(ctx context.Context, req *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error) {
-	return c.inviteMember.CallUnary(ctx, req)
 }
 
 // DeleteMember calls organization.v1.MemberService.DeleteMember.
@@ -112,8 +95,6 @@ func (c *memberServiceClient) DeleteMember(ctx context.Context, req *connect.Req
 type MemberServiceHandler interface {
 	// List all members of the current organization
 	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
-	// Invite a new member by email
-	InviteMember(context.Context, *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error)
 	// Delete a member from the organization
 	DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error)
 }
@@ -131,12 +112,6 @@ func NewMemberServiceHandler(svc MemberServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(memberServiceMethods.ByName("ListMembers")),
 		connect.WithHandlerOptions(opts...),
 	)
-	memberServiceInviteMemberHandler := connect.NewUnaryHandler(
-		MemberServiceInviteMemberProcedure,
-		svc.InviteMember,
-		connect.WithSchema(memberServiceMethods.ByName("InviteMember")),
-		connect.WithHandlerOptions(opts...),
-	)
 	memberServiceDeleteMemberHandler := connect.NewUnaryHandler(
 		MemberServiceDeleteMemberProcedure,
 		svc.DeleteMember,
@@ -147,8 +122,6 @@ func NewMemberServiceHandler(svc MemberServiceHandler, opts ...connect.HandlerOp
 		switch r.URL.Path {
 		case MemberServiceListMembersProcedure:
 			memberServiceListMembersHandler.ServeHTTP(w, r)
-		case MemberServiceInviteMemberProcedure:
-			memberServiceInviteMemberHandler.ServeHTTP(w, r)
 		case MemberServiceDeleteMemberProcedure:
 			memberServiceDeleteMemberHandler.ServeHTTP(w, r)
 		default:
@@ -162,10 +135,6 @@ type UnimplementedMemberServiceHandler struct{}
 
 func (UnimplementedMemberServiceHandler) ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MemberService.ListMembers is not implemented"))
-}
-
-func (UnimplementedMemberServiceHandler) InviteMember(context.Context, *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MemberService.InviteMember is not implemented"))
 }
 
 func (UnimplementedMemberServiceHandler) DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error) {

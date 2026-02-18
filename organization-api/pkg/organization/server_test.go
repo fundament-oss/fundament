@@ -30,8 +30,8 @@ type testEnv struct {
 }
 
 type testUser struct {
-	Name  string
-	OrgID uuid.UUID
+	Name   string
+	OrgIDs []uuid.UUID
 }
 
 type APIOptions struct {
@@ -48,9 +48,9 @@ func WithOrganization(id uuid.UUID, name string) APIOption {
 	}
 }
 
-func WithUser(id uuid.UUID, name string, orgID uuid.UUID) APIOption {
+func WithUser(id uuid.UUID, name string, orgIDs []uuid.UUID) APIOption {
 	return func(o *APIOptions) {
-		o.Users[id] = testUser{Name: name, OrgID: orgID}
+		o.Users[id] = testUser{Name: name, OrgIDs: orgIDs}
 	}
 }
 
@@ -98,12 +98,21 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	}
 
 	for id, user := range opts.Users {
-		externalID := "external_id_" + uuid.New().String()
+		externalRef := "external_ref_" + uuid.New().String()
 		_, err = testDb.Pool.Exec(t.Context(),
-			"INSERT INTO tenant.users (id, organization_id, name, external_id) VALUES ($1, $2, $3, $4)",
-			id, user.OrgID, user.Name, externalID,
+			"INSERT INTO tenant.users (id, name, external_ref) VALUES ($1, $2, $3)",
+			id, user.Name, externalRef,
 		)
 		require.NoError(t, err)
+
+		for _, orgID := range user.OrgIDs {
+			_, err = testDb.Pool.Exec(t.Context(),
+				"INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status) VALUES ($1, $2, 'admin', 'accepted')",
+				orgID, id,
+			)
+			require.NoError(t, err)
+		}
+
 	}
 
 	return &testEnv{
@@ -180,9 +189,9 @@ func (e *testEnv) createAuthnToken(t *testing.T, userID uuid.UUID) string {
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
 		},
-		UserID:         userID,
-		OrganizationID: user.OrgID,
-		Name:           user.Name,
+		UserID:          userID,
+		OrganizationIDs: user.OrgIDs,
+		Name:            user.Name,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

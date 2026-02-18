@@ -35,6 +35,9 @@ service ProjectService {
   // List all members of a project
   rpc ListProjectMembers(ListProjectMembersRequest) returns (ListProjectMembersResponse);
 
+  // Get a single project member by ID
+  rpc GetProjectMember(GetProjectMemberRequest) returns (GetProjectMemberResponse);
+
   // Add a member to a project (requires admin role)
   rpc AddProjectMember(AddProjectMemberRequest) returns (AddProjectMemberResponse);
 
@@ -150,6 +153,16 @@ message ListProjectMembersRequest {
 // List project members response
 message ListProjectMembersResponse {
   repeated ProjectMember members = 10;
+}
+
+// Get project member request
+message GetProjectMemberRequest {
+  string member_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// Get project member response
+message GetProjectMemberResponse {
+  ProjectMember member = 10;
 }
 
 // Add project member request

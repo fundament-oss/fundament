@@ -231,8 +231,8 @@ func (w *Worker) handleProcessingError(ctx context.Context, qtx *db.Queries, ite
 
 func (w *Worker) dispatchItem(ctx context.Context, qtx *db.Queries, item *db.GetAndLockNextOutboxRowRow) error {
 	switch {
-	case item.UserID.Valid:
-		return w.handler.User(ctx, qtx, item.UserID.Bytes)
+	case item.OrganizationUserID.Valid:
+		return w.handler.OrganizationUser(ctx, qtx, item.OrganizationUserID.Bytes)
 	case item.ProjectID.Valid:
 		return w.handler.Project(ctx, qtx, item.ProjectID.Bytes)
 	case item.ProjectMemberID.Valid:

@@ -18,15 +18,15 @@ export type { APIKey, CreateAPIKeyResponse, ListAPIKeysResponse, GetAPIKeyRespon
 export class APIKeyService {
   private client: Client<typeof APIKeyServiceDesc>;
 
-  constructor(baseUrl: string, authToken: string) {
-    this.client = createServiceClient(APIKeyServiceDesc, baseUrl, authToken);
+  constructor(baseUrl: string, authToken: string, organizationId?: string) {
+    this.client = createServiceClient(APIKeyServiceDesc, baseUrl, authToken, organizationId);
   }
 
-  async createAPIKey(request: { name: string; expiresInDays?: number }): Promise<CreateAPIKeyResponse> {
+  async createAPIKey(request: { name: string; expiresIn?: string }): Promise<CreateAPIKeyResponse> {
     try {
       return await this.client.createAPIKey({
         name: request.name,
-        expiresInDays: request.expiresInDays ? BigInt(request.expiresInDays) : undefined,
+        expiresIn: request.expiresIn ? request.expiresIn : undefined,
       });
     } catch (err) {
       if (err instanceof ConnectError) {

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/funops/pkg/db/gen"
 )
 
@@ -54,19 +55,29 @@ func (c *UserCreateCmd) Run(ctx *Context) error {
 
 	ctx.Logger.Debug("creating user", "organization", org, "user", user, "external_ref", c.ExternalRef)
 
+	// Create the user record
 	u, err := ctx.Queries.UserCreate(context.Background(), db.UserCreateParams{
-		OrganizationName: org,
-		Name:             user,
-		ExternalRef:      c.ExternalRef,
+		Name:        user,
+		ExternalRef: c.ExternalRef,
 	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("organization '%s' not found", org)
-		}
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			return fmt.Errorf("user '%s' already exists", c.Identifier)
 		}
 		return fmt.Errorf("failed to create user: %w", err)
+	}
+
+	_, err = ctx.Queries.UserCreateMembership(context.Background(), db.UserCreateMembershipParams{
+		UserID:           u.ID,
+		Permission:       dbconst.OrganizationsUserPermission_Viewer,
+		Status:           dbconst.OrganizationsUserStatus_Accepted,
+		OrganizationName: org,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("organization %q not found", org)
+		}
+		return fmt.Errorf("failed to create membership: %w", err)
 	}
 
 	ctx.Logger.Debug("user created", "id", u.ID.String())
@@ -85,9 +96,7 @@ func (c *UserListCmd) Run(ctx *Context) error {
 		return fmt.Errorf("organization '%s' not found", c.Organization)
 	}
 
-	users, err := ctx.Queries.UserList(context.Background(), db.UserListParams{
-		OrganizationID: orgID,
-	})
+	users, err := ctx.Queries.UserList(context.Background(), db.UserListParams{OrganizationID: orgID})
 	if err != nil {
 		return fmt.Errorf("failed to list users: %w", err)
 	}
@@ -157,7 +166,7 @@ func outputUserList(format OutputFormat, organization string, users []db.UserLis
 			output[i] = userOutput{
 				ID:          u.ID.String(),
 				Identifier:  organization + "/" + u.Name,
-				ExternalRef: u.ExternalID.String,
+				ExternalRef: u.ExternalRef.String,
 				Created:     u.Created.Time.Format(TimeFormat),
 			}
 		}
@@ -170,7 +179,7 @@ func outputUserList(format OutputFormat, organization string, users []db.UserLis
 				u.ID.String(),
 				organization,
 				u.Name,
-				u.ExternalID.String,
+				u.ExternalRef.String,
 				u.Created.Time.Format(TimeFormat),
 			)
 		}

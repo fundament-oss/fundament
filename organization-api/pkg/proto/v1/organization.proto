@@ -10,6 +10,9 @@ option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/pro
 
 // OrganizationService manages organizations
 service OrganizationService {
+  // ListOrganizations lists all organizations the current user belongs to
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse);
+
   // GetOrganization retrieves the user's organization by ID
   rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse);
 
@@ -48,4 +51,13 @@ message UpdateOrganizationRequest {
     min_len: 1
     max_len: 255
   }];
+}
+
+// ListOrganizations request
+message ListOrganizationsRequest {}
+
+// ListOrganizations response
+message ListOrganizationsResponse {
+  // List of organizations the user belongs to
+  repeated Organization organizations = 10;
 }

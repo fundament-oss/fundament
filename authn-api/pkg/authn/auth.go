@@ -27,10 +27,10 @@ var _ authnhttp.ServerInterface = (*AuthnServer)(nil)
 // user represents user data for JWT generation.
 // This is an internal adapter type between sqlc row types and JWT claims.
 type user struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	Name           string
-	ExternalID     string
+	ID              uuid.UUID
+	OrganizationIDs []uuid.UUID
+	Name            string
+	ExternalRef     string
 }
 
 // Config holds the configuration for the authentication server.
@@ -47,6 +47,7 @@ type AuthnServer struct {
 	config        *Config
 	oauth2Config  *oauth2.Config
 	oidcVerifier  *oidc.IDTokenVerifier
+	db            *psqldb.DB
 	queries       *db.Queries
 	sessionStore  *SessionStore
 	logger        *slog.Logger
@@ -61,11 +62,27 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		logger:        logger,
 		oauth2Config:  oauth2Config,
 		oidcVerifier:  verifier,
+		db:            database,
 		queries:       db.New(database.Pool),
 		sessionStore:  sessionStore,
 		validator:     auth.NewValidator(cfg.JWTSecret, logger),
 		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure),
 	}, nil
+}
+
+// getUserOrganizationIDs fetches the accepted organization IDs for a user.
+func (s *AuthnServer) getUserOrganizationIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error) {
+	memberships, err := s.queries.UserListOrganizations(ctx, db.UserListOrganizationsParams{UserID: userID})
+	if err != nil {
+		return nil, fmt.Errorf("listing user organizations: %w", err)
+	}
+
+	organizationIDs := make([]uuid.UUID, 0, len(memberships))
+	for _, membership := range memberships {
+		organizationIDs = append(organizationIDs, membership.OrganizationID)
+	}
+
+	return organizationIDs, nil
 }
 
 // generateJWT generates a JWT for the given user with the default expiry.
@@ -80,14 +97,14 @@ func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, expiry tim
 	claims := auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "fundament-authn-api",
-			Subject:   u.ExternalID,
+			Subject:   u.ID.String(),
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
 		},
-		UserID:         u.ID,
-		OrganizationID: u.OrganizationID,
-		Name:           u.Name,
-		Groups:         groups,
+		UserID:          u.ID,
+		OrganizationIDs: u.OrganizationIDs,
+		Name:            u.Name,
+		Groups:          groups,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

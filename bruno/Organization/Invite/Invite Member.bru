@@ -1,0 +1,22 @@
+meta {
+  name: Invite Member
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.InviteService/InviteMember
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{user2}}",
+    "role": "viewer"
+  }
+}

@@ -21,6 +21,14 @@ sql:
             go_type:
               import: "github.com/fundament-oss/fundament/common/dbconst"
               type: "ClusterStatus"
+          - column: "tenant.organizations_users.status"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "OrganizationsUserStatus"
+          - column: "tenant.organizations_users.permission"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "OrganizationsUserPermission"
           - column: "tenant.project_members.role"
             go_type:
               import: "github.com/fundament-oss/fundament/common/dbconst"
