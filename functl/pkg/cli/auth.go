@@ -51,7 +51,7 @@ func (c *AuthLoginCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	testClient := client.New(apiKey, cfg.APIEndpoint, cfg.AuthnURL)
+	testClient := client.New(apiKey, cfg.APIEndpoint, cfg.AuthnURL, "")
 	resp, err := testClient.Authn().GetUserInfo(context.Background(), connect.NewRequest(&authnv1.GetUserInfoRequest{}))
 	if err != nil {
 		return fmt.Errorf("invalid API key: %w", err)
@@ -87,7 +87,7 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	apiClient := client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL)
+	apiClient := client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL, "")
 	resp, err := apiClient.Authn().GetUserInfo(context.Background(), connect.NewRequest(&authnv1.GetUserInfoRequest{}))
 	if err != nil {
 		fmt.Println("Authentication failed: credentials may be invalid or expired")

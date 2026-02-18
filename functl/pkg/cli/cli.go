@@ -15,6 +15,7 @@ type CLI struct {
 
 	Auth      AuthCmd      `cmd:"" help:"Authentication commands."`
 	Cluster   ClusterCmd   `cmd:"" help:"Manage clusters."`
+	Org       OrgCmd       `cmd:"" help:"Manage organization."`
 	Project   ProjectCmd   `cmd:"" help:"Manage projects."`
 	Namespace NamespaceCmd `cmd:"" help:"Manage namespaces."`
 	APIKey    APIKeyCmd    `cmd:"" name:"apikey" help:"Manage API keys."`
@@ -42,5 +43,20 @@ func NewClientFromConfig() (*client.Client, error) {
 		return nil, err
 	}
 
-	return client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL), nil
+	return client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL, ""), nil
+}
+
+// NewClientWithOrg creates a new API client with an organization ID set.
+func NewClientWithOrg(organizationID string) (*client.Client, error) {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	creds, err := config.LoadCredentials()
+	if err != nil {
+		return nil, err
+	}
+
+	return client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL, organizationID), nil
 }
