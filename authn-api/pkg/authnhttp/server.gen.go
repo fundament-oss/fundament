@@ -76,8 +76,8 @@ type User struct {
 	// Name User's display name
 	Name string `json:"name"`
 
-	// OrganizationId Organization ID
-	OrganizationId openapi_types.UUID `json:"organization_id"`
+	// OrganizationIds Organization ID
+	OrganizationIds []openapi_types.UUID `json:"organization_ids"`
 }
 
 // BadRequest defines model for BadRequest.

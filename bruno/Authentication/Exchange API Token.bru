@@ -26,6 +26,12 @@ script:post-response {
   // Store the JWT for use in subsequent requests
   if (res.headers['content-type']?.includes('application/json') && res.body.accessToken) {
     bru.setVar("jwtToken", res.body.accessToken);
+
+    // Extract the first organization ID from the JWT claims
+    var payload = JSON.parse(atob(res.body.accessToken.split('.')[1]));
+    if (payload.organization_ids && payload.organization_ids.length > 0) {
+      bru.setVar("organizationId", payload.organization_ids[0]);
+    }
   }
 }
 

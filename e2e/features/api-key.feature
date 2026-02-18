@@ -16,7 +16,7 @@ Feature: API Key Management
 
   @api @apikey
   Scenario: Create API key with expiration
-    When I create an API key with name "expiring-key" expiring in 30 days
+    When I create an API key with name "expiring-key" expiring in "720h"
     Then the API key should have an expiration date
     And the API key should be active
 

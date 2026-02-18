@@ -16,7 +16,7 @@ import {
 } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
-import { MEMBER } from '../../connect/tokens';
+import { MEMBER, INVITE } from '../../connect/tokens';
 import ModalComponent from '../modal/modal.component';
 
 const formatTimeAgo = (date: Date | undefined): string => {
@@ -62,10 +62,10 @@ interface OrganizationMember {
   id: string;
   name: string;
   email?: string;
-  externalId?: string;
-  role: string;
+  externalRef?: string;
+  permission: string;
+  status: string;
   isCurrentUser?: boolean;
-  isPending: boolean;
   created?: Date;
 }
 
@@ -91,6 +91,8 @@ export default class OrganizationMembersComponent implements OnInit {
 
   private memberClient = inject(MEMBER);
 
+  private inviteClient = inject(INVITE);
+
   private authnService = inject(AuthnApiService);
 
   // Loading and error state
@@ -105,21 +107,22 @@ export default class OrganizationMembersComponent implements OnInit {
 
   inviteEmail = signal('');
 
-  inviteRole = signal('viewer');
+  invitePermission = signal('viewer');
 
   inviteError = signal<string | null>(null);
 
-  // All members loaded from API (includes both active and pending)
+  // All members loaded from API (includes pending, active, rejected and revoked)
   allMembers = signal<OrganizationMember[]>([]);
 
-  // Computed: active members (have external_id)
+  // Computed: active members (have status accepted)
   get activeMembers(): OrganizationMember[] {
-    return this.allMembers().filter((m) => !m.isPending);
+    return this.allMembers().filter((m) => m.status === 'accepted');
   }
 
-  // Computed: pending invitations (no external_id)
+  // Computed: pending invitations (have status pending)
   get pendingInvitations(): OrganizationMember[] {
-    return this.allMembers().filter((m) => m.isPending);
+    console.log(this.allMembers());
+    return this.allMembers().filter((m) => m.status === 'pending');
   }
 
   constructor() {
@@ -142,10 +145,10 @@ export default class OrganizationMembersComponent implements OnInit {
         id: member.id,
         name: member.name,
         email: member.email,
-        externalId: member.externalId,
-        role: member.role,
+        externalRef: member.externalRef,
+        permission: member.permission,
+        status: member.status,
         isCurrentUser: currentUser?.id === member.id,
-        isPending: !member.externalId,
         created: member.created ? timestampDate(member.created) : undefined,
       }));
 
@@ -161,7 +164,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
   openModal() {
     this.inviteEmail.set('');
-    this.inviteRole.set('viewer');
+    this.invitePermission.set('viewer');
     this.inviteError.set(null);
     this.isModalOpen.set(true);
   }
@@ -181,7 +184,7 @@ export default class OrganizationMembersComponent implements OnInit {
     this.inviteError.set(null);
 
     try {
-      await firstValueFrom(this.memberClient.inviteMember({ email, role: this.inviteRole() }));
+      await firstValueFrom(this.inviteClient.inviteMember({ email, permission: this.invitePermission() }));
       this.closeModal();
       await this.loadMembers();
     } catch (err: unknown) {

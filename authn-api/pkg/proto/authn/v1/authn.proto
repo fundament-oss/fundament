@@ -27,12 +27,12 @@ message GetUserInfoResponse {
 message User {
   // User ID
   string id = 10;
-  // Organization ID
-  string organization_id = 20;
+  // Organization IDs
+  repeated string organization_ids = 20;
   // User name
   string name = 30;
   // External ID from OIDC provider
-  string external_id = 40;
+  string external_ref = 40;
   // Groups the user belongs to
   repeated string groups = 50;
 }

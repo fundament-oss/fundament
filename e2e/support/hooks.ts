@@ -67,6 +67,7 @@ Before({ tags: '@api' }, async function (this: ICustomWorld) {
   this.createdApiKeys = new Map();
   this.createdApiKeysByUser = new Map();
   this.savedApiKeyId = undefined;
+  this.organizationId = undefined;
   this.currentUserEmail = undefined;
   this.lastApiResponse = undefined;
   this.lastApiError = undefined;
@@ -78,8 +79,8 @@ After({ tags: '@api' }, async function (this: ICustomWorld) {
     if (apiKeys.size > 0) {
       try {
         // Authenticate as the user who created the keys
-        const authToken = await authenticateForCleanup(this.authnApiUrl!, userEmail);
-        const service = new APIKeyService(this.organizationApiUrl!, authToken);
+        const { token, organizationId } = await authenticateForCleanup(this.authnApiUrl!, userEmail);
+        const service = new APIKeyService(this.organizationApiUrl!, token, organizationId);
         for (const [, apiKey] of apiKeys) {
           try {
             await service.deleteAPIKey(apiKey.id);
@@ -107,8 +108,9 @@ After({ tags: '@api' }, async function (this: ICustomWorld) {
 
 /**
  * Authenticate for cleanup purposes (separate from test flow).
+ * Returns the auth token and the first organization ID from the JWT.
  */
-async function authenticateForCleanup(authnApiUrl: string, email: string): Promise<string> {
+async function authenticateForCleanup(authnApiUrl: string, email: string): Promise<{ token: string; organizationId: string }> {
   const password = 'password';
   const response = await fetch(`${authnApiUrl}/login/password`, {
     method: 'POST',
@@ -119,5 +121,8 @@ async function authenticateForCleanup(authnApiUrl: string, email: string): Promi
     throw new Error(`Cleanup auth failed for ${email}`);
   }
   const data = (await response.json()) as { access_token: string };
-  return data.access_token;
+  const token = data.access_token;
+  const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+  const orgIds: string[] = payload.organization_ids ?? [];
+  return { token, organizationId: orgIds[0] };
 }

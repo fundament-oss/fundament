@@ -14,10 +14,17 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	organizationIDs, err := s.getUserOrganizationIDs(r.Context(), claims.UserID)
+	if err != nil {
+		s.logger.Error("failed to get user organizations", "error", err)
+		s.writeErrorJSON(w, http.StatusInternalServerError, "Failed to get user organizations")
+		return
+	}
+
 	u := &user{
-		ID:             claims.UserID,
-		OrganizationID: claims.OrganizationID,
-		Name:           claims.Name,
+		ID:              claims.UserID,
+		OrganizationIDs: organizationIDs,
+		Name:            claims.Name,
 	}
 
 	accessToken, err := s.generateJWT(u, claims.Groups)

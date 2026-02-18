@@ -26,10 +26,16 @@ func (s *AuthnServer) GetUserInfo(
 
 // protoUserFromClaims converts JWT claims to a proto User.
 func protoUserFromClaims(claims *auth.Claims) *authnv1.User {
+	organizationIds := make([]string, 0, len(claims.OrganizationIDs))
+
+	for _, organizationID := range claims.OrganizationIDs {
+		organizationIds = append(organizationIds, organizationID.String())
+	}
+
 	return &authnv1.User{
-		Id:             claims.UserID.String(),
-		OrganizationId: claims.OrganizationID.String(),
-		Name:           claims.Name,
-		Groups:         claims.Groups,
+		Id:              claims.UserID.String(),
+		OrganizationIds: organizationIds,
+		Name:            claims.Name,
+		Groups:          claims.Groups,
 	}
 }

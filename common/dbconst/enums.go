@@ -24,6 +24,24 @@ const (
 	ClusterEventSyncAction_Delete ClusterEventSyncAction = "delete"
 )
 
+// OrganizationsUserPermission represents valid values for tenant.organizations_users.permission.
+type OrganizationsUserPermission string
+
+const (
+	OrganizationsUserPermission_Admin  OrganizationsUserPermission = "admin"
+	OrganizationsUserPermission_Viewer OrganizationsUserPermission = "viewer"
+)
+
+// OrganizationsUserStatus represents valid values for tenant.organizations_users.status.
+type OrganizationsUserStatus string
+
+const (
+	OrganizationsUserStatus_Pending  OrganizationsUserStatus = "pending"
+	OrganizationsUserStatus_Accepted OrganizationsUserStatus = "accepted"
+	OrganizationsUserStatus_Declined OrganizationsUserStatus = "declined"
+	OrganizationsUserStatus_Revoked  OrganizationsUserStatus = "revoked"
+)
+
 // OutboxStatus represents valid values for authz.outbox.status.
 type OutboxStatus string
 
@@ -40,12 +58,4 @@ type ProjectMemberRole string
 const (
 	ProjectMemberRole_Admin  ProjectMemberRole = "admin"
 	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
-)
-
-// UserRole represents valid values for tenant.users.role.
-type UserRole string
-
-const (
-	UserRole_Admin  UserRole = "admin"
-	UserRole_Viewer UserRole = "viewer"
 )

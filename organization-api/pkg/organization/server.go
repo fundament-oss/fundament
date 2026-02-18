@@ -79,6 +79,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*Server, error)
 		"organization.v1.ClusterService",
 		"organization.v1.PluginService",
 		"organization.v1.MemberService",
+		"organization.v1.InviteService",
 		"organization.v1.APIKeyService",
 	)
 	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
@@ -92,13 +93,16 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*Server, error)
 	memberPath, memberHandler := organizationv1connect.NewMemberServiceHandler(s, interceptors)
 	mux.Handle(memberPath, memberHandler)
 
+	invitePath, inviteHandler := organizationv1connect.NewInviteServiceHandler(s, interceptors)
+	mux.Handle(invitePath, inviteHandler)
+
 	apiKeyPath, apiKeyHandler := organizationv1connect.NewAPIKeyServiceHandler(s, interceptors)
 	mux.Handle(apiKeyPath, apiKeyHandler)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization", "Connect-Protocol-Version"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "Connect-Protocol-Version", "Fun-Organization"},
 		AllowCredentials: true,
 	})
 

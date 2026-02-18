@@ -37,7 +37,7 @@ export type User = {
     /**
      * Organization ID
      */
-    organization_id: string;
+    organization_ids: Array<string>;
     /**
      * User's display name
      */

@@ -34,7 +34,7 @@ func Test_Cluster_List(t *testing.T) {
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
-		WithUser(userID, "test-user", orgID),
+		WithUser(userID, "test-user", []uuid.UUID{orgID}),
 	)
 
 	token := env.createAuthnToken(t, userID)
@@ -47,12 +47,14 @@ func Test_Cluster_List(t *testing.T) {
 		KubernetesVersion: "1.28",
 	})
 	createReq.Header().Set("Authorization", "Bearer "+token)
+	createReq.Header().Set("Fun-Organization", orgID.String())
 
 	_, err := client.CreateCluster(context.Background(), createReq)
 	require.NoError(t, err)
 
 	listReq := connect.NewRequest(&organizationv1.ListClustersRequest{})
 	listReq.Header().Set("Authorization", "Bearer "+token)
+	listReq.Header().Set("Fun-Organization", orgID.String())
 
 	res, err := client.ListClusters(context.Background(), listReq)
 	require.NoError(t, err)
