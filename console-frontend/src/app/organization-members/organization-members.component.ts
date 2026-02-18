@@ -183,7 +183,9 @@ export default class OrganizationMembersComponent implements OnInit {
     this.inviteError.set(null);
 
     try {
-      await firstValueFrom(this.inviteClient.inviteMember({ email, permission: this.invitePermission() }));
+      await firstValueFrom(
+        this.inviteClient.inviteMember({ email, permission: this.invitePermission() }),
+      );
       this.closeModal();
       await this.loadMembers();
     } catch (err: unknown) {

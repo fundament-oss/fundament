@@ -127,8 +127,8 @@ export default class ProjectMembersComponent implements OnInit {
       // Build a map of org member id → org role string
       const orgRoleByUserId = new Map<string, string>();
       orgResponse.members
-        .filter((m) => m.externalId)
-        .forEach((m) => orgRoleByUserId.set(m.id, m.role));
+        .filter((m) => m.externalRef)
+        .forEach((m) => orgRoleByUserId.set(m.id, m.permission));
 
       // Enrich project members with source info
       const views: ProjectMemberView[] = projectResponse.members.map((member) => {
@@ -150,7 +150,7 @@ export default class ProjectMembersComponent implements OnInit {
       const projectUserIds = new Set(projectResponse.members.map((m) => m.userId));
       this.availableUsers.set(
         orgResponse.members
-          .filter((m) => m.externalId && !projectUserIds.has(m.id))
+          .filter((m) => m.externalRef && !projectUserIds.has(m.id))
           .map((m) => ({ id: m.id, name: m.name })),
       );
     } catch (err) {
