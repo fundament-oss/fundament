@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/member.proto.
  */
 export const file_v1_member: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiPwoTTGlzdE1lbWJlcnNSZXNwb25zZRIoCgdtZW1iZXJzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLk1lbWJlciIrChNEZWxldGVNZW1iZXJSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVNZW1iZXJSZXNwb25zZSJTChdVcGRhdGVNZW1iZXJSb2xlUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESIgoEcm9sZRgUIAEoCUIUukgRcg9SBnZpZXdlclIFYWRtaW4ivQEKBk1lbWJlchIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhkKDGV4dGVybmFsX3JlZhgeIAEoCUgAiAEBEhIKBWVtYWlsGDIgASgJSAGIAQESEgoKcGVybWlzc2lvbhg8IAEoCRIOCgZzdGF0dXMYRiABKAkSKwoHY3JlYXRlZBgoIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCDwoNX2V4dGVybmFsX3JlZkIICgZfZW1haWwynAIKDU1lbWJlclNlcnZpY2USWAoLTGlzdE1lbWJlcnMSIy5vcmdhbml6YXRpb24udjEuTGlzdE1lbWJlcnNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RNZW1iZXJzUmVzcG9uc2USWwoMRGVsZXRlTWVtYmVyEiQub3JnYW5pemF0aW9uLnYxLkRlbGV0ZU1lbWJlclJlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuRGVsZXRlTWVtYmVyUmVzcG9uc2USVAoQVXBkYXRlTWVtYmVyUm9sZRIoLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVNZW1iZXJSb2xlUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiPwoTTGlzdE1lbWJlcnNSZXNwb25zZRIoCgdtZW1iZXJzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLk1lbWJlciIrChNEZWxldGVNZW1iZXJSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVNZW1iZXJSZXNwb25zZSJfCh1VcGRhdGVNZW1iZXJQZXJtaXNzaW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESKAoKcGVybWlzc2lvbhgUIAEoCUIUukgRcg9SBnZpZXdlclIFYWRtaW4ivQEKBk1lbWJlchIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhkKDGV4dGVybmFsX3JlZhgeIAEoCUgAiAEBEhIKBWVtYWlsGDIgASgJSAGIAQESEgoKcGVybWlzc2lvbhg8IAEoCRIOCgZzdGF0dXMYRiABKAkSKwoHY3JlYXRlZBgoIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCDwoNX2V4dGVybmFsX3JlZkIICgZfZW1haWwyqAIKDU1lbWJlclNlcnZpY2USWAoLTGlzdE1lbWJlcnMSIy5vcmdhbml6YXRpb24udjEuTGlzdE1lbWJlcnNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RNZW1iZXJzUmVzcG9uc2USWwoMRGVsZXRlTWVtYmVyEiQub3JnYW5pemF0aW9uLnYxLkRlbGV0ZU1lbWJlclJlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuRGVsZXRlTWVtYmVyUmVzcG9uc2USYAoWVXBkYXRlTWVtYmVyUGVybWlzc2lvbhIuLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVNZW1iZXJQZXJtaXNzaW9uUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * List members request
@@ -85,27 +85,27 @@ export const DeleteMemberResponseSchema: GenMessage<DeleteMemberResponse> = /*@_
   messageDesc(file_v1_member, 3);
 
 /**
- * Update member role request
+ * Update member permission request
  *
- * @generated from message organization.v1.UpdateMemberRoleRequest
+ * @generated from message organization.v1.UpdateMemberPermissionRequest
  */
-export type UpdateMemberRoleRequest = Message<"organization.v1.UpdateMemberRoleRequest"> & {
+export type UpdateMemberPermissionRequest = Message<"organization.v1.UpdateMemberPermissionRequest"> & {
   /**
    * @generated from field: string id = 10;
    */
   id: string;
 
   /**
-   * @generated from field: string role = 20;
+   * @generated from field: string permission = 20;
    */
-  role: string;
+  permission: string;
 };
 
 /**
- * Describes the message organization.v1.UpdateMemberRoleRequest.
- * Use `create(UpdateMemberRoleRequestSchema)` to create a new message.
+ * Describes the message organization.v1.UpdateMemberPermissionRequest.
+ * Use `create(UpdateMemberPermissionRequestSchema)` to create a new message.
  */
-export const UpdateMemberRoleRequestSchema: GenMessage<UpdateMemberRoleRequest> = /*@__PURE__*/
+export const UpdateMemberPermissionRequestSchema: GenMessage<UpdateMemberPermissionRequest> = /*@__PURE__*/
   messageDesc(file_v1_member, 4);
 
 /**
@@ -192,13 +192,13 @@ export const MemberService: GenService<{
     output: typeof DeleteMemberResponseSchema;
   },
   /**
-   * Update a member's role
+   * Update a member's permission
    *
-   * @generated from rpc organization.v1.MemberService.UpdateMemberRole
+   * @generated from rpc organization.v1.MemberService.UpdateMemberPermission
    */
-  updateMemberRole: {
+  updateMemberPermission: {
     methodKind: "unary";
-    input: typeof UpdateMemberRoleRequestSchema;
+    input: typeof UpdateMemberPermissionRequestSchema;
     output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/

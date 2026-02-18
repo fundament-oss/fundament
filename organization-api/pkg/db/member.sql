@@ -61,7 +61,7 @@ WHERE
     AND organization_id = $3
     AND deleted IS NULL;
 
--- name: MemberUpdateRole :execrows
+-- name: MemberUpdatePermission :execrows
 UPDATE tenant.organizations_users
 SET permission = $2
 WHERE id = $1 AND organization_id = $3 AND deleted IS NULL;
