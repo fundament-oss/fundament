@@ -6,30 +6,22 @@ terraform {
   }
 }
 
+# David Brown is a Globex admin and owns the API key.
+# This provider instance operates on the Globex organization.
 provider "fundament" {
-  endpoint = "http://organization.fundament.localhost:8080"
+  endpoint        = "http://organization.fundament.localhost:8080"  
   # Token can be set via FUNDAMENT_TOKEN environment variable
   # token = ""
+  organization_id = "019b4000-0000-7000-8000-000000000002" # Globex
 }
 
-# Invite a member as admin
-resource "fundament_organization_member" "admin" {
-  email = "admin@example.com"
-  role  = "admin"
-}
-
-# Invite a member as viewer
-resource "fundament_organization_member" "viewer" {
-  email = "viewer@example.com"
+# Invite Alice (an Acme user) to join Globex as a viewer
+resource "fundament_organization_member" "alice" {
+  email = "alice@acme.corp"
   role  = "viewer"
 }
 
-output "admin_member_id" {
-  description = "The ID of the admin member"
-  value       = fundament_organization_member.admin.id
-}
-
-output "viewer_member_id" {
-  description = "The ID of the viewer member"
-  value       = fundament_organization_member.viewer.id
+output "alice_member" {
+  description = "The invited member"
+  value       = fundament_organization_member.alice
 }
