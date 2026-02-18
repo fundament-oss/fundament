@@ -153,6 +153,8 @@ func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource
 
 		if member.Created.CheckValid() == nil {
 			m.Created = types.StringValue(member.Created.String())
+		} else {
+			m.Created = types.StringNull()
 		}
 
 		state.Members[i] = m

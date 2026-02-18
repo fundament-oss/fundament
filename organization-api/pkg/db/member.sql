@@ -3,6 +3,7 @@
 SELECT
     organizations_users.id,
     organizations_users.organization_id,
+    organizations_users.user_id,
     users.name,
     users.external_ref,
     users.email,
@@ -15,6 +16,12 @@ INNER JOIN tenant.organizations_users
 WHERE organizations_users.deleted IS NULL
     AND users.deleted IS NULL
 ORDER BY organizations_users.created DESC;
+
+-- name: MemberGetUserID :one
+SELECT user_id
+FROM tenant.organizations_users
+WHERE id = @id
+    AND deleted IS NULL;
 
 -- name: MemberUpdatePermission :execrows
 UPDATE tenant.organizations_users

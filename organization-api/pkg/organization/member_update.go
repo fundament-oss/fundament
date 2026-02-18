@@ -29,7 +29,12 @@ func (s *Server) UpdateMemberPermission(
 
 	memberID := uuid.MustParse(req.Msg.Id)
 
-	if memberID == userID {
+	memberUserID, err := s.queries.MemberGetUserID(ctx, db.MemberGetUserIDParams{ID: memberID})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("member not found"))
+	}
+
+	if memberUserID == userID {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cannot modify your own permission"))
 	}
 
@@ -39,7 +44,7 @@ func (s *Server) UpdateMemberPermission(
 		OrganizationID: organizationID,
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update member role: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update member permission: %w", err))
 	}
 
 	if rowsAffected != 1 {

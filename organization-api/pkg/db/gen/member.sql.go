@@ -29,10 +29,29 @@ func (q *Queries) MemberDelete(ctx context.Context, arg MemberDeleteParams) erro
 	return err
 }
 
+const memberGetUserID = `-- name: MemberGetUserID :one
+SELECT user_id
+FROM tenant.organizations_users
+WHERE id = $1
+    AND deleted IS NULL
+`
+
+type MemberGetUserIDParams struct {
+	ID uuid.UUID
+}
+
+func (q *Queries) MemberGetUserID(ctx context.Context, arg MemberGetUserIDParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, memberGetUserID, arg.ID)
+	var user_id uuid.UUID
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
 const memberList = `-- name: MemberList :many
 SELECT
     organizations_users.id,
     organizations_users.organization_id,
+    organizations_users.user_id,
     users.name,
     users.external_ref,
     users.email,
@@ -50,6 +69,7 @@ ORDER BY organizations_users.created DESC
 type MemberListRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
+	UserID         uuid.UUID
 	Name           string
 	ExternalRef    pgtype.Text
 	Email          pgtype.Text
@@ -70,6 +90,7 @@ func (q *Queries) MemberList(ctx context.Context) ([]MemberListRow, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
+			&i.UserID,
 			&i.Name,
 			&i.ExternalRef,
 			&i.Email,

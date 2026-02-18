@@ -93,7 +93,7 @@ func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaReque
 			},
 			"organization_id": schema.StringAttribute{
 				Description: "The ID of the organization to operate on. Can also be set via the FUNDAMENT_ORGANIZATION_ID environment variable.",
-				Required:    true,
+				Optional:    true,
 				Validators: []validator.String{
 					uuidValidator{},
 				},
