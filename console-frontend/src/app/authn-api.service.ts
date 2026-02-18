@@ -92,9 +92,10 @@ export default class AuthnApiService {
       throw new Error(error.error || 'Logout failed');
     }
 
-    // Clear user state and hint
+    // Clear user state, hint, and organization selection
     this.currentUserSubject.next(undefined);
     localStorage.removeItem('auth_hint');
+    localStorage.removeItem('selected_organization_id');
   }
 
   isAuthenticated(): boolean {
