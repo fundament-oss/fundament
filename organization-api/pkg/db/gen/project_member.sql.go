@@ -58,8 +58,7 @@ SELECT
     project_members.user_id,
     project_members.role,
     project_members.created,
-    users.name as user_name,
-    users.external_id as user_external_id
+    users.name as user_name
 FROM tenant.project_members
 INNER JOIN tenant.users
   ON users.id = project_members.user_id
@@ -72,13 +71,12 @@ type ProjectMemberGetByIDParams struct {
 }
 
 type ProjectMemberGetByIDRow struct {
-	ID             uuid.UUID
-	ProjectID      uuid.UUID
-	UserID         uuid.UUID
-	Role           dbconst.ProjectMemberRole
-	Created        pgtype.Timestamptz
-	UserName       string
-	UserExternalID pgtype.Text
+	ID        uuid.UUID
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	Role      dbconst.ProjectMemberRole
+	Created   pgtype.Timestamptz
+	UserName  string
 }
 
 func (q *Queries) ProjectMemberGetByID(ctx context.Context, arg ProjectMemberGetByIDParams) (ProjectMemberGetByIDRow, error) {
@@ -91,7 +89,6 @@ func (q *Queries) ProjectMemberGetByID(ctx context.Context, arg ProjectMemberGet
 		&i.Role,
 		&i.Created,
 		&i.UserName,
-		&i.UserExternalID,
 	)
 	return i, err
 }
