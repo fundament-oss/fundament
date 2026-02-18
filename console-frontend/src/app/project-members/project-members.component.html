@@ -49,26 +49,34 @@
       Add a member
     </button>
 
+    @if (error()) {
+      <div
+        class="mb-5 flex items-start gap-3 rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
+      >
+        <ng-icon
+          name="tablerAlertTriangle"
+          size="1.25rem"
+          class="mt-0.5 shrink-0 text-rose-400!"
+        />
+        <div class="flex-1">
+          <p class="text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
+        </div>
+        <button
+          type="button"
+          (click)="error.set(null)"
+          class="shrink-0 cursor-pointer text-sm text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
+        >
+          Dismiss
+        </button>
+      </div>
+    }
+
     @if (isLoading()) {
       <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
         <div
           class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"
         ></div>
         <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading members...</p>
-      </div>
-    } @else if (error()) {
-      <div
-        class="rounded-md border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-800 dark:bg-rose-950"
-      >
-        <ng-icon name="tablerAlertTriangle" size="3rem" class="mx-auto text-rose-400!" />
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
-        <button
-          type="button"
-          (click)="loadMembers()"
-          class="mt-4 inline-flex cursor-pointer items-center rounded-md border border-transparent bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700"
-        >
-          Try again
-        </button>
       </div>
     } @else if (memberViews().length === 0) {
       <p class="text-sm text-gray-500 dark:text-gray-400">

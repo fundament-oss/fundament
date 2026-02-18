@@ -147,10 +147,11 @@ export default class ProjectMembersComponent implements OnInit {
       this.memberViews.set(views);
 
       // Available users for "add member" dropdown: org members not yet in project
-      const projectUserIds = new Set(projectResponse.members.map((m) => m.userId));
+      // Match by userName since Member.id (organizations_users.id) differs from ProjectMember.userId (users.id)
+      const projectUserNames = new Set(projectResponse.members.map((m) => m.userName));
       this.availableUsers.set(
         orgResponse.members
-          .filter((m) => m.externalRef && !projectUserIds.has(m.id))
+          .filter((m) => m.externalRef && !projectUserNames.has(m.name))
           .map((m) => ({ id: m.id, name: m.name })),
       );
     } catch (err) {
@@ -209,6 +210,8 @@ export default class ProjectMembersComponent implements OnInit {
       this.editingMemberView.set(null);
       await this.loadMembers();
     } catch (err) {
+      this.showAddMemberModal.set(false);
+      this.editingMemberView.set(null);
       this.error.set(
         err instanceof Error ? `Failed to save member: ${err.message}` : 'Failed to save member',
       );
