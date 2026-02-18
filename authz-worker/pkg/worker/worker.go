@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -39,11 +40,14 @@ type Worker struct {
 func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, logger *slog.Logger, cfg Config) *Worker {
 	cfg = applyDefaults(cfg)
 
+	hostname, _ := os.Hostname()
+	workerID := fmt.Sprintf("%s-%d", hostname, os.Getpid())
+
 	return &Worker{
 		pool:    pool,
 		queries: db.New(pool),
 		handler: handler.New(fgaClient, logger),
-		logger:  logger,
+		logger:  logger.With("worker_id", workerID),
 		cfg:     cfg,
 	}
 }
@@ -97,6 +101,8 @@ func (w *Worker) setupListener(ctx context.Context) (*pgxpool.Conn, error) {
 		return nil, fmt.Errorf("LISTEN: %w", err)
 	}
 
+	w.logger.Info("listening for authz_outbox notifications")
+
 	return conn, nil
 }
 
@@ -110,14 +116,23 @@ func (w *Worker) runLoop(ctx context.Context, conn *pgx.Conn) error {
 		}
 
 		waitCtx, cancel := context.WithTimeout(ctx, w.cfg.PollInterval)
-		_, err := conn.WaitForNotification(waitCtx)
+		notification, err := conn.WaitForNotification(waitCtx)
 		cancel()
 
-		if err != nil && waitCtx.Err() == nil {
-			return fmt.Errorf("wait for notification: %w", err)
+		switch {
+		case err == nil:
+			w.logger.Debug("received notification", "payload", notification.Payload)
+		case errors.Is(err, context.DeadlineExceeded):
+			w.logger.Debug("poll interval elapsed, checking for pending items")
+		case errors.Is(err, context.Canceled):
+			w.logger.Info("shutting down authz worker")
+			return nil
+		default:
+			w.logger.Warn("unexpected error waiting for notification", "error", err)
 		}
 
 		w.processBatch(ctx)
+		w.logger.Debug("done processing pending items")
 	}
 }
 
