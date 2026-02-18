@@ -19,24 +19,7 @@ import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER } from '../../connect/tokens';
 import ModalComponent from '../modal/modal.component';
-
-const formatTimeAgo = (date: Date | undefined): string => {
-  if (!date) {
-    return '';
-  }
-
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    return 'today';
-  }
-  if (diffDays === 1) {
-    return 'yesterday';
-  }
-  return `${diffDays} days ago`;
-};
+import { formatTimeAgo } from '../utils/date-format';
 
 const getInitials = (name: string): string =>
   name
