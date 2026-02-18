@@ -49,7 +49,28 @@
       Add a member
     </button>
 
-    @if (members().length === 0) {
+    @if (isLoading()) {
+      <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
+        <div
+          class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"
+        ></div>
+        <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading members...</p>
+      </div>
+    } @else if (error()) {
+      <div
+        class="rounded-md border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-800 dark:bg-rose-950"
+      >
+        <ng-icon name="tablerAlertTriangle" size="3rem" class="mx-auto text-rose-400!" />
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
+        <button
+          type="button"
+          (click)="loadMembers()"
+          class="mt-4 inline-flex cursor-pointer items-center rounded-md border border-transparent bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700"
+        >
+          Try again
+        </button>
+      </div>
+    } @else if (memberViews().length === 0) {
       <p class="text-sm text-gray-500 dark:text-gray-400">
         No members have been added to this project yet.
       </p>
@@ -65,79 +86,66 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
-            @for (member of members(); track member.id) {
+            @for (view of memberViews(); track view.member.id) {
               <tr>
                 <td>
-                  <div class="font-medium dark:text-white">{{ member.name }}</div>
-                  <div class="text-xs text-gray-500 dark:text-gray-400">{{ member.email }}</div>
+                  <div class="font-medium dark:text-white">{{ view.member.userName }}</div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                    Added to project {{ formatMemberDate(view.member) }}
+                  </div>
                 </td>
                 <td>
                   <span
                     class="badge capitalize"
-                    [class.badge-purple]="member.permission === 'admin'"
-                    [class.badge-blue]="member.permission === 'viewer'"
+                    [class.badge-purple]="view.member.role === ProjectMemberRole.ADMIN"
+                    [class.badge-blue]="view.member.role === ProjectMemberRole.VIEWER"
                   >
-                    {{ member.permission }}
+                    {{ roleToString(view.member.role) }}
                   </span>
                 </td>
                 <td>
-                  @if (member.source === 'org' && member.permission === 'admin') {
+                  @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
                     <span
                       class="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400"
                     >
                       <ng-icon name="tablerLock" size="0.875rem" />
                       Organization
                     </span>
-                  } @else if (member.source === 'org') {
+                  } @else if (view.source === 'org') {
                     <span class="text-sm text-gray-600 dark:text-gray-400">Organization</span>
                   } @else {
                     <span class="text-sm text-gray-600 dark:text-gray-400">Project</span>
                   }
                 </td>
                 <td>
-                  @if (member.source === 'project' && member.orgPermission !== null) {
-                    <!-- Promoted org member: allow edit + reset to org default -->
-                    <button
-                      type="button"
-                      (click)="openEditMemberModal(member)"
-                      class="btn-light mr-2 inline-flex shrink-0 items-center"
-                    >
-                      <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
-                    </button>
-                    <button
-                      type="button"
-                      (click)="resetToOrgDefault(member)"
-                      class="btn-remove shrink-0"
-                    >
-                      <ng-icon name="tablerArrowBackUp" class="mr-1.5" /> Reset
-                    </button>
-                  } @else if (member.source === 'project') {
-                    <!-- Project-only member: allow edit + remove -->
-                    <button
-                      type="button"
-                      (click)="openEditMemberModal(member)"
-                      class="btn-light mr-2 inline-flex shrink-0 items-center"
-                    >
-                      <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
-                    </button>
-                    <button
-                      type="button"
-                      (click)="openRemoveMemberModal(member.id)"
-                      class="btn-remove shrink-0"
-                    >
-                      <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
-                    </button>
-                  } @else if (member.source === 'org' && member.permission === 'viewer') {
-                    <!-- Org viewer: can be upgraded -->
-                    <button
-                      type="button"
-                      (click)="openEditMemberModal(member)"
-                      class="btn-light mr-2 inline-flex shrink-0 items-center"
-                    >
-                      <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
-                    </button>
-                  } @else {
+                  @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
+                    <!-- Org admin: locked, no actions -->
                     <span class="text-sm text-gray-400 dark:text-gray-600">&mdash;</span>
+                  } @else {
+                    <button
+                      type="button"
+                      (click)="openEditMemberModal(view)"
+                      class="btn-light mr-2 inline-flex shrink-0 items-center"
+                    >
+                      <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
+                    </button>
+                    @if (view.source === 'project' && view.orgPermission !== null) {
+                      <button
+                        type="button"
+                        (click)="resetToOrgDefault(view)"
+                        class="btn-remove shrink-0"
+                      >
+                        <ng-icon name="tablerArrowBackUp" class="mr-1.5" /> Reset
+                      </button>
+                    } @else if (view.source === 'project') {
+                      <button
+                        type="button"
+                        (click)="openRemoveMemberModal(view)"
+                        class="btn-remove shrink-0"
+                      >
+                        <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
+                      </button>
+                    }
                   }
                 </td>
               </tr>
@@ -152,13 +160,13 @@
 <!-- Add/Edit Member Modal -->
 <app-modal
   [show]="showAddMemberModal()"
-  [title]="editingMember() ? 'Edit member' : 'Add member to project'"
+  [title]="editingMemberView() ? 'Edit member' : 'Add member to project'"
   [maxWidth]="'max-w-lg'"
   (modalClose)="showAddMemberModal.set(false)"
 >
   <form [formGroup]="memberForm" (ngSubmit)="saveMember()">
     <!-- User Selection (only show when adding) -->
-    @if (!editingMember()) {
+    @if (!editingMemberView()) {
       <div class="mb-4">
         <label for="userId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
           User
@@ -166,7 +174,7 @@
         <select id="userId" formControlName="userId" class="w-full">
           <option value="">Select a user</option>
           @for (user of availableUsers(); track user.id) {
-            <option [value]="user.id">{{ user.name }} ({{ user.email }})</option>
+            <option [value]="user.id">{{ user.name }}</option>
           }
         </select>
         @if (availableUsers().length === 0) {
@@ -182,11 +190,10 @@
     }
 
     <!-- Member name (only show when editing) -->
-    @if (editingMember()) {
+    @if (editingMemberView()) {
       <div class="mb-4">
         <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"> Member </span>
-        <p class="text-sm dark:text-white">{{ editingMember()?.name }}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400">{{ editingMember()?.email }}</p>
+        <p class="text-sm dark:text-white">{{ editingMemberView()?.member?.userName }}</p>
       </div>
     }
 
@@ -243,11 +250,11 @@
       <button
         type="submit"
         class="btn-primary"
-        [disabled]="isAddingMember() || (!editingMember() && !memberForm.valid)"
+        [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
       >
         @if (isAddingMember()) {
           Saving...
-        } @else if (editingMember()) {
+        } @else if (editingMemberView()) {
           Save changes
         } @else {
           Add member
@@ -278,7 +285,9 @@
       <div class="mt-2">
         <p class="text-sm text-gray-600 dark:text-gray-400">
           Are you sure you want to remove
-          <span class="font-semibold text-gray-800 dark:text-white">{{ pendingMemberName() }}</span>
+          <span class="font-semibold text-gray-800 dark:text-white">{{
+            pendingRemoveView()?.member?.userName
+          }}</span>
           from this project?
         </p>
       </div>

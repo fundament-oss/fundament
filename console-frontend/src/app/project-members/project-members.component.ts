@@ -1,6 +1,8 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerPlus,
@@ -12,21 +14,40 @@ import {
   tablerArrowBackUp,
 } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
+import { PROJECT, MEMBER } from '../../connect/tokens';
 import ModalComponent from '../modal/modal.component';
+import { formatTimeAgo } from '../utils/date-format';
+import type { ProjectMember } from '../../generated/v1/project_pb';
+import { ProjectMemberRole } from '../../generated/v1/project_pb';
 
-type ProjectMemberPermission = 'viewer' | 'admin';
-type PermissionSource = 'org' | 'project';
-
-interface ProjectMember {
-  id: string;
-  userId: string;
-  name: string;
-  email: string;
-  permission: ProjectMemberPermission;
-  source: PermissionSource;
-  orgPermission: ProjectMemberPermission | null;
-  addedAt: string;
+interface ProjectMemberView {
+  member: ProjectMember;
+  source: 'org' | 'project';
+  orgPermission: ProjectMemberRole | null;
 }
+
+const roleToString = (role: ProjectMemberRole): string => {
+  switch (role) {
+    case ProjectMemberRole.ADMIN:
+      return 'admin';
+    case ProjectMemberRole.VIEWER:
+      return 'viewer';
+    default:
+      return 'viewer';
+  }
+};
+
+const stringToRole = (s: string): ProjectMemberRole => {
+  switch (s) {
+    case 'admin':
+      return ProjectMemberRole.ADMIN;
+    default:
+      return ProjectMemberRole.VIEWER;
+  }
+};
+
+const formatMemberDate = (member: ProjectMember): string =>
+  formatTimeAgo(member.created ? timestampDate(member.created) : undefined);
 
 @Component({
   selector: 'app-project-members',
@@ -52,11 +73,19 @@ export default class ProjectMembersComponent implements OnInit {
 
   private fb = inject(FormBuilder);
 
+  private projectClient = inject(PROJECT);
+
+  private memberClient = inject(MEMBER);
+
   projectId = signal<string>('');
 
-  members = signal<ProjectMember[]>([]);
+  memberViews = signal<ProjectMemberView[]>([]);
 
-  availableUsers = signal<{ id: string; name: string; email: string }[]>([]);
+  availableUsers = signal<{ id: string; name: string }[]>([]);
+
+  isLoading = signal(true);
+
+  error = signal<string | null>(null);
 
   showAddMemberModal = signal<boolean>(false);
 
@@ -64,16 +93,16 @@ export default class ProjectMembersComponent implements OnInit {
 
   showRemoveMemberModal = signal<boolean>(false);
 
-  pendingMemberId = signal<string | null>(null);
+  pendingRemoveView = signal<ProjectMemberView | null>(null);
 
-  pendingMemberName = signal<string | null>(null);
-
-  editingMember = signal<ProjectMember | null>(null);
+  editingMemberView = signal<ProjectMemberView | null>(null);
 
   memberForm = this.fb.group({
     userId: ['', Validators.required],
-    permission: ['viewer' as ProjectMemberPermission, Validators.required],
+    permission: ['viewer', Validators.required],
   });
+
+  ProjectMemberRole = ProjectMemberRole;
 
   constructor() {
     this.titleService.setTitle('Project members');
@@ -85,149 +114,153 @@ export default class ProjectMembersComponent implements OnInit {
     this.loadMembers();
   }
 
-  loadMembers() {
-    // Mock data for project members
-    this.members.set([
-      {
-        id: 'pm-1',
-        userId: 'user-1',
-        name: 'Alice Johnson',
-        email: 'alice.johnson@example.com',
-        permission: 'admin',
-        source: 'org',
-        orgPermission: 'admin',
-        addedAt: '2024-01-15T10:30:00Z',
-      },
-      {
-        id: 'pm-2',
-        userId: 'user-2',
-        name: 'Bob Smith',
-        email: 'bob.smith@example.com',
-        permission: 'viewer',
-        source: 'org',
-        orgPermission: 'viewer',
-        addedAt: '2024-02-20T14:45:00Z',
-      },
-      {
-        id: 'pm-3',
-        userId: 'user-3',
-        name: 'Carol Williams',
-        email: 'carol.williams@example.com',
-        permission: 'admin',
-        source: 'project',
-        orgPermission: null,
-        addedAt: '2024-03-10T09:15:00Z',
-      },
-      {
-        id: 'pm-4',
-        userId: 'user-5',
-        name: 'Eve Davis',
-        email: 'eve.davis@example.com',
-        permission: 'viewer',
-        source: 'project',
-        orgPermission: null,
-        addedAt: '2024-04-05T11:00:00Z',
-      },
-    ]);
+  async loadMembers() {
+    this.isLoading.set(true);
+    this.error.set(null);
 
-    // Mock available users (users not yet in the project)
-    this.availableUsers.set([
-      { id: 'user-4', name: 'David Brown', email: 'david.brown@example.com' },
-      { id: 'user-6', name: 'Frank Miller', email: 'frank.miller@example.com' },
-    ]);
+    try {
+      const [projectResponse, orgResponse] = await Promise.all([
+        firstValueFrom(this.projectClient.listProjectMembers({ projectId: this.projectId() })),
+        firstValueFrom(this.memberClient.listMembers({})),
+      ]);
+
+      // Build a map of org member id → org role string
+      const orgRoleByUserId = new Map<string, string>();
+      orgResponse.members
+        .filter((m) => m.externalId)
+        .forEach((m) => orgRoleByUserId.set(m.id, m.role));
+
+      // Enrich project members with source info
+      const views: ProjectMemberView[] = projectResponse.members.map((member) => {
+        const orgRole = orgRoleByUserId.get(member.userId);
+        if (orgRole !== undefined) {
+          const orgRoleEnum = stringToRole(orgRole);
+          const sameRole = member.role === orgRoleEnum;
+          return {
+            member,
+            source: sameRole ? 'org' : 'project',
+            orgPermission: orgRoleEnum,
+          };
+        }
+        return { member, source: 'project', orgPermission: null };
+      });
+      this.memberViews.set(views);
+
+      // Available users for "add member" dropdown: org members not yet in project
+      const projectUserIds = new Set(projectResponse.members.map((m) => m.userId));
+      this.availableUsers.set(
+        orgResponse.members
+          .filter((m) => m.externalId && !projectUserIds.has(m.id))
+          .map((m) => ({ id: m.id, name: m.name })),
+      );
+    } catch (err) {
+      this.error.set(
+        err instanceof Error ? `Failed to load members: ${err.message}` : 'Failed to load members',
+      );
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   openAddMemberModal() {
-    this.editingMember.set(null);
+    this.editingMemberView.set(null);
     this.memberForm.reset({ userId: '', permission: 'viewer' });
     this.showAddMemberModal.set(true);
   }
 
-  openEditMemberModal(member: ProjectMember) {
-    this.editingMember.set(member);
-    this.memberForm.patchValue({ userId: member.userId, permission: member.permission });
+  openEditMemberModal(view: ProjectMemberView) {
+    this.editingMemberView.set(view);
+    this.memberForm.patchValue({
+      userId: view.member.userId,
+      permission: roleToString(view.member.role),
+    });
     this.showAddMemberModal.set(true);
   }
 
-  saveMember() {
+  async saveMember() {
     if (this.memberForm.invalid) {
       this.memberForm.markAllAsTouched();
       return;
     }
 
     this.isAddingMember.set(true);
-    const permission = this.memberForm.value.permission as ProjectMemberPermission;
+    const role = stringToRole(this.memberForm.value.permission!);
 
-    if (this.editingMember()) {
-      // Edit existing member
-      const member = this.editingMember()!;
-      const newSource: PermissionSource =
-        member.source === 'org' && permission !== member.permission ? 'project' : member.source;
-      this.members.update((members) =>
-        members.map((m) => (m.id === member.id ? { ...m, permission, source: newSource } : m)),
-      );
-    } else {
-      // Add new member
-      const userId = this.memberForm.value.userId!;
-      const user = this.availableUsers().find((u) => u.id === userId);
-
-      if (user) {
-        const newMember: ProjectMember = {
-          id: `pm-${Date.now()}`,
-          userId: user.id,
-          name: user.name,
-          email: user.email,
-          permission,
-          source: 'project',
-          orgPermission: null,
-          addedAt: new Date().toISOString(),
-        };
-
-        this.members.update((members) => [...members, newMember]);
-        this.availableUsers.update((users) => users.filter((u) => u.id !== userId));
+    try {
+      if (this.editingMemberView()) {
+        await firstValueFrom(
+          this.projectClient.updateProjectMemberRole({
+            memberId: this.editingMemberView()!.member.id,
+            role,
+          }),
+        );
+      } else {
+        const userId = this.memberForm.value.userId!;
+        await firstValueFrom(
+          this.projectClient.addProjectMember({
+            projectId: this.projectId(),
+            userId,
+            role,
+          }),
+        );
       }
-    }
 
-    this.showAddMemberModal.set(false);
-    this.isAddingMember.set(false);
-    this.editingMember.set(null);
+      this.showAddMemberModal.set(false);
+      this.editingMemberView.set(null);
+      await this.loadMembers();
+    } catch (err) {
+      this.error.set(
+        err instanceof Error ? `Failed to save member: ${err.message}` : 'Failed to save member',
+      );
+    } finally {
+      this.isAddingMember.set(false);
+    }
   }
 
-  openRemoveMemberModal(memberId: string) {
-    const member = this.members().find((m) => m.id === memberId);
-    if (!member) return;
-
-    this.pendingMemberId.set(memberId);
-    this.pendingMemberName.set(member.name);
+  openRemoveMemberModal(view: ProjectMemberView) {
+    this.pendingRemoveView.set(view);
     this.showRemoveMemberModal.set(true);
   }
 
-  confirmRemoveMember() {
-    const memberId = this.pendingMemberId();
-    if (!memberId) return;
+  async confirmRemoveMember() {
+    const view = this.pendingRemoveView();
+    if (!view) return;
 
-    const member = this.members().find((m) => m.id === memberId);
-    if (!member) return;
-
-    this.showRemoveMemberModal.set(false);
-
-    // Move user back to available users
-    this.availableUsers.update((users) => [
-      ...users,
-      { id: member.userId, name: member.name, email: member.email },
-    ]);
-    this.members.update((members) => members.filter((m) => m.id !== memberId));
+    try {
+      await firstValueFrom(this.projectClient.removeProjectMember({ memberId: view.member.id }));
+      this.showRemoveMemberModal.set(false);
+      await this.loadMembers();
+    } catch (err) {
+      this.error.set(
+        err instanceof Error
+          ? `Failed to remove member: ${err.message}`
+          : 'Failed to remove member',
+      );
+      this.showRemoveMemberModal.set(false);
+    }
   }
 
-  resetToOrgDefault(member: ProjectMember) {
-    if (!member.orgPermission) return;
+  async resetToOrgDefault(view: ProjectMemberView) {
+    if (view.orgPermission === null) return;
 
-    this.members.update((members) =>
-      members.map((m) =>
-        m.id === member.id
-          ? { ...m, permission: member.orgPermission!, source: 'org' as PermissionSource }
-          : m,
-      ),
-    );
+    try {
+      await firstValueFrom(
+        this.projectClient.updateProjectMemberRole({
+          memberId: view.member.id,
+          role: view.orgPermission,
+        }),
+      );
+      await this.loadMembers();
+    } catch (err) {
+      this.error.set(
+        err instanceof Error
+          ? `Failed to reset permission: ${err.message}`
+          : 'Failed to reset permission',
+      );
+    }
   }
+
+  roleToString = roleToString;
+
+  formatMemberDate = formatMemberDate;
 }
