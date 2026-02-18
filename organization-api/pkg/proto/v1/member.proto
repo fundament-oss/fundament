@@ -35,6 +35,8 @@ message DeleteMemberResponse {}
 // Member information
 message Member {
   string id = 10;
+  // user_id is the actual user ID (users.id), as opposed to id which is the membership record ID (organizations_users.id)
+  string user_id = 15;
   string name = 20;
   // external_ref is empty for pending invitations
   optional string external_ref = 30;

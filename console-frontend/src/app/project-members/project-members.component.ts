@@ -147,12 +147,11 @@ export default class ProjectMembersComponent implements OnInit {
       this.memberViews.set(views);
 
       // Available users for "add member" dropdown: org members not yet in project
-      // Match by userName since Member.id (organizations_users.id) differs from ProjectMember.userId (users.id)
-      const projectUserNames = new Set(projectResponse.members.map((m) => m.userName));
+      const projectUserIds = new Set(projectResponse.members.map((m) => m.userId));
       this.availableUsers.set(
         orgResponse.members
-          .filter((m) => m.externalRef && !projectUserNames.has(m.name))
-          .map((m) => ({ id: m.id, name: m.name })),
+          .filter((m) => m.externalRef && !projectUserIds.has(m.userId))
+          .map((m) => ({ id: m.userId, name: m.name })),
       );
     } catch (err) {
       this.error.set(

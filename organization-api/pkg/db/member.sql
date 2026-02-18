@@ -2,6 +2,7 @@
 -- name: MemberList :many
 SELECT
     organizations_users.id,
+    organizations_users.user_id,
     organizations_users.organization_id,
     users.name,
     users.external_ref,

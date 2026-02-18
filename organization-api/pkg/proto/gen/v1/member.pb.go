@@ -191,7 +191,9 @@ func (*DeleteMemberResponse) Descriptor() ([]byte, []int) {
 type Member struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Name  string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
+	// user_id is the actual user ID (users.id), as opposed to id which is the membership record ID (organizations_users.id)
+	UserId string `protobuf:"bytes,15,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Name   string `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	// external_ref is empty for pending invitations
 	ExternalRef *string `protobuf:"bytes,30,opt,name=external_ref,json=externalRef,proto3,oneof" json:"external_ref,omitempty"`
 	// email is set for invited members
@@ -238,6 +240,13 @@ func (*Member) Descriptor() ([]byte, []int) {
 func (x *Member) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+func (x *Member) GetUserId() string {
+	if x != nil {
+		return x.UserId
 	}
 	return ""
 }
@@ -296,10 +305,11 @@ const file_v1_member_proto_rawDesc = "" +
 	"\x13DeleteMemberRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x16\n" +
-	"\x14DeleteMemberResponse\"\xf8\x01\n" +
+	"\x14DeleteMemberResponse\"\x91\x02\n" +
 	"\x06Member\x12\x0e\n" +
 	"\x02id\x18\n" +
-	" \x01(\tR\x02id\x12\x12\n" +
+	" \x01(\tR\x02id\x12\x17\n" +
+	"\auser_id\x18\x0f \x01(\tR\x06userId\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12&\n" +
 	"\fexternal_ref\x18\x1e \x01(\tH\x00R\vexternalRef\x88\x01\x01\x12\x19\n" +
 	"\x05email\x182 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x1e\n" +

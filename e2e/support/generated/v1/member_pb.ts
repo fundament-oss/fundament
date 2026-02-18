@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/member.proto.
  */
 export const file_v1_member: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiPwoTTGlzdE1lbWJlcnNSZXNwb25zZRIoCgdtZW1iZXJzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLk1lbWJlciIrChNEZWxldGVNZW1iZXJSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVNZW1iZXJSZXNwb25zZSK9AQoGTWVtYmVyEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSGQoMZXh0ZXJuYWxfcmVmGB4gASgJSACIAQESEgoFZW1haWwYMiABKAlIAYgBARISCgpwZXJtaXNzaW9uGDwgASgJEg4KBnN0YXR1cxhGIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIPCg1fZXh0ZXJuYWxfcmVmQggKBl9lbWFpbDLGAQoNTWVtYmVyU2VydmljZRJYCgtMaXN0TWVtYmVycxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0TWVtYmVyc1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdE1lbWJlcnNSZXNwb25zZRJbCgxEZWxldGVNZW1iZXISJC5vcmdhbml6YXRpb24udjEuRGVsZXRlTWVtYmVyUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5EZWxldGVNZW1iZXJSZXNwb25zZUJVWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MWIGcHJvdG8z", [file_buf_validate_validate, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiPwoTTGlzdE1lbWJlcnNSZXNwb25zZRIoCgdtZW1iZXJzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLk1lbWJlciIrChNEZWxldGVNZW1iZXJSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVNZW1iZXJSZXNwb25zZSLOAQoGTWVtYmVyEgoKAmlkGAogASgJEg8KB3VzZXJfaWQYDyABKAkSDAoEbmFtZRgUIAEoCRIZCgxleHRlcm5hbF9yZWYYHiABKAlIAIgBARISCgVlbWFpbBgyIAEoCUgBiAEBEhIKCnBlcm1pc3Npb24YPCABKAkSDgoGc3RhdHVzGEYgASgJEisKB2NyZWF0ZWQYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQg8KDV9leHRlcm5hbF9yZWZCCAoGX2VtYWlsMsYBCg1NZW1iZXJTZXJ2aWNlElgKC0xpc3RNZW1iZXJzEiMub3JnYW5pemF0aW9uLnYxLkxpc3RNZW1iZXJzUmVxdWVzdBokLm9yZ2FuaXphdGlvbi52MS5MaXN0TWVtYmVyc1Jlc3BvbnNlElsKDERlbGV0ZU1lbWJlchIkLm9yZ2FuaXphdGlvbi52MS5EZWxldGVNZW1iZXJSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkRlbGV0ZU1lbWJlclJlc3BvbnNlQlVaU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxYgZwcm90bzM", [file_buf_validate_validate, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * List members request
@@ -94,6 +94,13 @@ export type Member = Message<"organization.v1.Member"> & {
    * @generated from field: string id = 10;
    */
   id: string;
+
+  /**
+   * user_id is the actual user ID (users.id), as opposed to id which is the membership record ID (organizations_users.id)
+   *
+   * @generated from field: string user_id = 15;
+   */
+  userId: string;
 
   /**
    * @generated from field: string name = 20;
