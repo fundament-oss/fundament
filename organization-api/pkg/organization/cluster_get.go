@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -26,6 +27,13 @@ func (s *Server) GetClusterByName(
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+	}
+
+	// Auth is done after the DB call because we dont know the cluster ID yet.
+	// This does leave us open for enumerate attackes because attackers can distinguise between not found and permission denied.
+	// We could always return cluster not found instead of permission errors.
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(cluster.ID)); err != nil {
+		return nil, err
 	}
 
 	return connect.NewResponse(&organizationv1.GetClusterResponse{
@@ -53,6 +61,10 @@ func (s *Server) GetCluster(
 ) (*connect.Response[organizationv1.GetClusterResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
+
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,
 	})
@@ -73,6 +85,10 @@ func (s *Server) GetClusterActivity(
 	req *connect.Request[organizationv1.GetClusterActivityRequest],
 ) (*connect.Response[organizationv1.GetClusterActivityResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
+
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
 
 	_, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,
@@ -107,6 +123,10 @@ func (s *Server) GetKubeconfig(
 	req *connect.Request[organizationv1.GetKubeconfigRequest],
 ) (*connect.Response[organizationv1.GetKubeconfigResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
+
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
 
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,

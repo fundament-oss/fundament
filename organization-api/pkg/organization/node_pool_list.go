@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -18,6 +19,10 @@ func (s *Server) ListNodePools(
 	req *connect.Request[organizationv1.ListNodePoolsRequest],
 ) (*connect.Response[organizationv1.ListNodePoolsResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
+
+	if err := s.checkPermission(ctx, authz.CanListNodePools(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
 
 	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

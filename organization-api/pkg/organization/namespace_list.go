@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -16,11 +17,11 @@ func (s *Server) ListClusterNamespaces(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListClusterNamespacesRequest],
 ) (*connect.Response[organizationv1.ListClusterNamespacesResponse], error) {
-	if _, ok := OrganizationIDFromContext(ctx); !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
-
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
+
+	if err := s.checkPermission(ctx, authz.CanListNamespaces(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
 
 	namespaces, err := s.queries.NamespaceListByClusterID(ctx, db.NamespaceListByClusterIDParams{ClusterID: clusterID})
 	if err != nil {
@@ -41,11 +42,11 @@ func (s *Server) ListProjectNamespaces(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListProjectNamespacesRequest],
 ) (*connect.Response[organizationv1.ListProjectNamespacesResponse], error) {
-	if _, ok := OrganizationIDFromContext(ctx); !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
-
 	projectID := uuid.MustParse(req.Msg.ProjectId)
+
+	if err := s.checkPermission(ctx, authz.CanListNamespaces(), authz.Project(projectID)); err != nil {
+		return nil, err
+	}
 
 	namespaces, err := s.queries.NamespaceListByProjectID(ctx, db.NamespaceListByProjectIDParams{ProjectID: projectID})
 	if err != nil {

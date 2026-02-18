@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -17,6 +18,10 @@ func (s *Server) ListInstalls(
 	req *connect.Request[organizationv1.ListInstallsRequest],
 ) (*connect.Response[organizationv1.ListInstallsResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
+
+	if err := s.checkPermission(ctx, authz.CanListInstalls(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
 
 	installs, err := s.queries.InstallListByClusterID(ctx, db.InstallListByClusterIDParams{ClusterID: clusterID})
 	if err != nil {
