@@ -89,7 +89,7 @@ const outboxMarkRetry = `-- name: OutboxMarkRetry :one
 UPDATE tenant.cluster_outbox
 SET retries = retries + 1,
     retry_after = now() + LEAST(
-        $1::interval * (1 << retries),
+        $1::interval * (1 << (retries + 1)),
         $2::interval
     ),
     status = 'retrying',
@@ -106,7 +106,9 @@ type OutboxMarkRetryParams struct {
 }
 
 // Marks a row for retry with exponential backoff.
-// The backoff is calculated as: base_interval * 2^retries, capped at max_backoff.
+// The backoff is calculated as: base_interval * 2^(retries+1), capped at max_backoff.
+// retries+1 is used because PostgreSQL evaluates expressions using the old row value,
+// but we want the delay to reflect the new retry count (incremented in the same UPDATE).
 func (q *Queries) OutboxMarkRetry(ctx context.Context, arg OutboxMarkRetryParams) (int32, error) {
 	row := q.db.QueryRow(ctx, outboxMarkRetry,
 		arg.BaseInterval,
@@ -190,6 +192,9 @@ WHERE tenant.projects.deleted IS NOT NULL
   )
 `
 
+// Only reconciles deleted projects. Active project state is managed via
+// project_members; deletion cleanup (e.g. revoking Gardener access) is the
+// only project-level operation the cluster worker needs to perform.
 func (q *Queries) OutboxReconcileProjects(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, outboxReconcileProjects)
 	return err

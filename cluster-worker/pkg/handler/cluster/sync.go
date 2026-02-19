@@ -2,12 +2,10 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
@@ -35,10 +33,6 @@ func New(queries *db.Queries, gardenerClient gardener.Client, logger *slog.Logge
 func (h *Handler) Sync(ctx context.Context, clusterID uuid.UUID) error {
 	cluster, err := h.queries.ClusterGetForSync(ctx, db.ClusterGetForSyncParams{ClusterID: clusterID})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			h.logger.Info("cluster not found for sync, skipping", "cluster_id", clusterID)
-			return nil
-		}
 		return fmt.Errorf("get cluster for sync: %w", err)
 	}
 
@@ -130,7 +124,7 @@ func (h *Handler) markSyncFailed(ctx context.Context, clusterID uuid.UUID, errMs
 		ClusterID:  clusterID,
 		SyncAction: pgtype.Text{String: string(syncAction), Valid: true},
 		Message:    pgtype.Text{String: errMsg, Valid: true},
-		Attempt:    pgtype.Int4{Int32: 1, Valid: true},
+		Attempt:    pgtype.Int4{},
 	}); err != nil {
 		h.logger.Warn("failed to create sync_failed event", "error", err)
 	}

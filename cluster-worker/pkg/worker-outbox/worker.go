@@ -23,12 +23,12 @@ import (
 
 // Config holds configuration for the outbox worker.
 type Config struct {
-	PollInterval        time.Duration `env:"POLL_INTERVAL" envDefault:"5s"`
-	ReconcileInterval   time.Duration `env:"RECONCILE_INTERVAL" envDefault:"5m"`
-	BaseBackoff         time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
-	MaxBackoff          time.Duration `env:"MAX_BACKOFF" envDefault:"1m"`
-	MaxRetries          int32         `env:"MAX_RETRIES" envDefault:"10"`
-	BackoffDelay        time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
+	PollInterval      time.Duration `env:"POLL_INTERVAL" envDefault:"5s"`
+	ReconcileInterval time.Duration `env:"RECONCILE_INTERVAL" envDefault:"5m"`
+	BaseBackoff       time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
+	MaxBackoff        time.Duration `env:"MAX_BACKOFF" envDefault:"1m"`
+	MaxRetries        int32         `env:"MAX_RETRIES" envDefault:"10"`
+	BackoffDelay      time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
 }
 
 // OutboxWorker processes the cluster outbox table and dispatches to handlers.
@@ -69,7 +69,11 @@ func (w *OutboxWorker) Run(ctx context.Context) error {
 		}
 		w.logger.Error("connection lost, reconnecting", "error", err, "delay", w.cfg.BackoffDelay)
 		w.ready.Store(false)
-		time.Sleep(w.cfg.BackoffDelay)
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("worker stopped: %w", ctx.Err())
+		case <-time.After(w.cfg.BackoffDelay):
+		}
 	}
 }
 
@@ -86,7 +90,8 @@ func (w *OutboxWorker) runWithConnection(ctx context.Context) error {
 	w.logger.Info("listening for cluster_outbox notifications")
 	w.ready.Store(true)
 
-	// Process any pending work on startup
+	// Reconcile and process any pending work on startup
+	w.reconcile(ctx)
 	w.processAll(ctx)
 	lastReconcile := time.Now()
 

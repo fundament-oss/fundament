@@ -1169,6 +1169,10 @@ AND (
 AND authn.is_project_member(project_id, authn.current_user_id(), 'admin')]]> </expression>
 </policy>
 
+<policy name="project_members_cluster_worker_policy" table="tenant.project_members" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <policy name="projects_select_policy" table="tenant.projects" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 </policy>
@@ -1187,6 +1191,10 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expression>
 </policy>
 
+<policy name="projects_cluster_worker_policy" table="tenant.projects" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <policy name="namespaces_organization_policy" table="tenant.namespaces" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
@@ -1196,6 +1204,10 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 </policy>
 
 <policy name="organizations_authn_api_policy" table="tenant.organizations" command="ALL" permissive="true">	<roles names="fun_authn_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="organizations_cluster_worker_policy" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
@@ -2373,6 +2385,21 @@ END;]]> </definition>
 	<object name="tenant.cluster_outbox" type="table"/>
 	<roles names="fun_cluster_worker"/>
 	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.cluster_outbox" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
+	<object name="tenant.project_members" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.projects" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="authz.outbox" type="table"/>

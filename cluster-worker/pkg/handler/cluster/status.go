@@ -93,6 +93,9 @@ func (h *Handler) checkActiveClusters(ctx context.Context) {
 				eventType = dbconst.ClusterEventEventType_StatusError
 			case gardener.StatusPending, gardener.StatusDeleting, gardener.StatusDeleted:
 				// No event for transient states
+			default:
+				h.logger.Error("unhandled shoot status", "cluster_id", cluster.ID, "status", shootStatus.Status)
+				continue
 			}
 
 			if eventType != "" {

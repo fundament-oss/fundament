@@ -963,6 +963,15 @@ CREATE POLICY project_members_update_policy ON tenant.project_members
 AND authn.is_project_member(project_id, authn.current_user_id(), 'admin'));
 -- ddl-end --
 
+-- object: project_members_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS project_members_cluster_worker_policy ON tenant.project_members CASCADE;
+CREATE POLICY project_members_cluster_worker_policy ON tenant.project_members
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
 -- object: projects_select_policy | type: POLICY --
 -- DROP POLICY IF EXISTS projects_select_policy ON tenant.projects CASCADE;
 CREATE POLICY projects_select_policy ON tenant.projects
@@ -1001,6 +1010,15 @@ CREATE POLICY projects_delete_policy ON tenant.projects
 AND authn.is_project_member(id, authn.current_user_id(), 'admin'));
 -- ddl-end --
 
+-- object: projects_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS projects_cluster_worker_policy ON tenant.projects CASCADE;
+CREATE POLICY projects_cluster_worker_policy ON tenant.projects
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
 -- object: namespaces_organization_policy | type: POLICY --
 -- DROP POLICY IF EXISTS namespaces_organization_policy ON tenant.namespaces CASCADE;
 CREATE POLICY namespaces_organization_policy ON tenant.namespaces
@@ -1025,6 +1043,15 @@ CREATE POLICY organizations_authn_api_policy ON tenant.organizations
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_authn_api
+	USING (true);
+-- ddl-end --
+
+-- object: organizations_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_cluster_worker_policy ON tenant.organizations CASCADE;
+CREATE POLICY organizations_cluster_worker_policy ON tenant.organizations
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
 	USING (true);
 -- ddl-end --
 
@@ -2164,6 +2191,30 @@ GRANT USAGE
 -- object: grant_raw_5b30964106 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.cluster_outbox
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_a_aa475c9278 | type: PERMISSION --
+GRANT INSERT
+   ON TABLE tenant.cluster_outbox
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_0223382d53 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.project_members
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_526fae1c28 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.projects
    TO fun_cluster_worker;
 
 -- ddl-end --

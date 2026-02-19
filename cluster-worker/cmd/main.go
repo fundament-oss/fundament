@@ -40,8 +40,8 @@ type config struct {
 	Status worker_status.Config `envPrefix:"STATUS_"`
 
 	// Provider configuration for real Gardener mode.
-	ProviderType                  string `env:"GARDENER_PROVIDER_TYPE"`
-	ProviderCloudProfile          string `env:"GARDENER_CLOUD_PROFILE"`
+	ProviderType                   string `env:"GARDENER_PROVIDER_TYPE"`
+	ProviderCloudProfile           string `env:"GARDENER_CLOUD_PROFILE"`
 	ProviderCredentialsBindingName string `env:"GARDENER_CREDENTIALS_BINDING_NAME"`
 }
 

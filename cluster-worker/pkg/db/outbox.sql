@@ -16,11 +16,13 @@ WHERE id = @id;
 
 -- name: OutboxMarkRetry :one
 -- Marks a row for retry with exponential backoff.
--- The backoff is calculated as: base_interval * 2^retries, capped at max_backoff.
+-- The backoff is calculated as: base_interval * 2^(retries+1), capped at max_backoff.
+-- retries+1 is used because PostgreSQL evaluates expressions using the old row value,
+-- but we want the delay to reflect the new retry count (incremented in the same UPDATE).
 UPDATE tenant.cluster_outbox
 SET retries = retries + 1,
     retry_after = now() + LEAST(
-        sqlc.arg('base_interval')::interval * (1 << retries),
+        sqlc.arg('base_interval')::interval * (1 << (retries + 1)),
         @max_backoff::interval
     ),
     status = 'retrying',
@@ -75,6 +77,9 @@ LEFT JOIN tenant.cluster_outbox ON tenant.cluster_outbox.project_member_id = ten
 WHERE tenant.cluster_outbox.id IS NULL;
 
 -- name: OutboxReconcileProjects :exec
+-- Only reconciles deleted projects. Active project state is managed via
+-- project_members; deletion cleanup (e.g. revoking Gardener access) is the
+-- only project-level operation the cluster worker needs to perform.
 INSERT INTO tenant.cluster_outbox (project_id, event, source)
 SELECT tenant.projects.id, 'reconcile', 'reconcile'
 FROM tenant.projects
