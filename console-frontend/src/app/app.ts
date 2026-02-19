@@ -16,7 +16,7 @@ import {
   NavigationEnd,
   ActivatedRouteSnapshot,
 } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { filter, skip } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -166,11 +166,16 @@ export default class App implements OnInit {
     // Initialize authentication state
     await this.apiService.initializeAuth();
 
-    // Subscribe to user state changes and load organization data when user is available
-    this.apiService.currentUser$.subscribe((user) => {
-      this.currentUser.set(user);
+    // Set initial user and load organization data before child routes initialize
+    const initialUser = await firstValueFrom(this.apiService.currentUser$);
+    this.currentUser.set(initialUser);
+    if (initialUser) {
+      await this.loadUserOrganizations();
+    }
 
-      // Load organization data when user is logged in
+    // Subscribe to future user state changes (login/logout)
+    this.apiService.currentUser$.pipe(skip(1)).subscribe((user) => {
+      this.currentUser.set(user);
       if (user) {
         this.loadUserOrganizations();
       }
@@ -230,18 +235,6 @@ export default class App implements OnInit {
         // Multiple orgs, no valid stored selection: show picker
         this.showOrgPicker.set(true);
       }
-
-      const firstOrg = response.organizations[0];
-
-      // Set the organization context for future API requests
-      this.organizationContextService.setOrganizationId(firstOrg.id);
-      this.selectedOrgId.set(firstOrg.id);
-
-      // Load full organization data (projects, namespaces, etc.)
-      await this.organizationDataService.loadOrganizationData(firstOrg.id);
-
-      // Re-evaluate sidebar state now that org data is available
-      this.updateSidebarStateFromRoute(this.router.url);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load organizations:', error);
