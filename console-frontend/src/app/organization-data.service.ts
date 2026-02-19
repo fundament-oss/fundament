@@ -33,7 +33,7 @@ export class OrganizationDataService {
 
   private projectClient = inject(PROJECT);
 
-  /** All organizations the user belongs to (lightweight, from ListOrganizations). */
+  /** All organizations the user belongs to. Lightweight, without nested projects and namespaces. */
   userOrganizations = signal<Organization[]>([]);
 
   /** Full data (with projects and namespaces) for the currently selected organization. */
@@ -171,7 +171,7 @@ export class OrganizationDataService {
   }
 
   /**
-   * Set the lightweight list of all organizations the user belongs to.
+   * Set the list of all organizations the user belongs to, without nested projects and namespaces.
    */
   setUserOrganizations(orgs: Organization[]) {
     this.userOrganizations.set(orgs);
