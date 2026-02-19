@@ -52,9 +52,6 @@ const (
 	// ProjectServiceDeleteProjectProcedure is the fully-qualified name of the ProjectService's
 	// DeleteProject RPC.
 	ProjectServiceDeleteProjectProcedure = "/organization.v1.ProjectService/DeleteProject"
-	// ProjectServiceListProjectNamespacesProcedure is the fully-qualified name of the ProjectService's
-	// ListProjectNamespaces RPC.
-	ProjectServiceListProjectNamespacesProcedure = "/organization.v1.ProjectService/ListProjectNamespaces"
 	// ProjectServiceListProjectMembersProcedure is the fully-qualified name of the ProjectService's
 	// ListProjectMembers RPC.
 	ProjectServiceListProjectMembersProcedure = "/organization.v1.ProjectService/ListProjectMembers"
@@ -86,8 +83,6 @@ type ProjectServiceClient interface {
 	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[emptypb.Empty], error)
 	// Delete a project
 	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error)
-	// List all namespaces belonging to a project
-	ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error)
 	// List all members of a project
 	ListProjectMembers(context.Context, *connect.Request[v1.ListProjectMembersRequest]) (*connect.Response[v1.ListProjectMembersResponse], error)
 	// Get a single project member by ID
@@ -147,12 +142,6 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(projectServiceMethods.ByName("DeleteProject")),
 			connect.WithClientOptions(opts...),
 		),
-		listProjectNamespaces: connect.NewClient[v1.ListProjectNamespacesRequest, v1.ListProjectNamespacesResponse](
-			httpClient,
-			baseURL+ProjectServiceListProjectNamespacesProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("ListProjectNamespaces")),
-			connect.WithClientOptions(opts...),
-		),
 		listProjectMembers: connect.NewClient[v1.ListProjectMembersRequest, v1.ListProjectMembersResponse](
 			httpClient,
 			baseURL+ProjectServiceListProjectMembersProcedure,
@@ -194,7 +183,6 @@ type projectServiceClient struct {
 	createProject           *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
 	updateProject           *connect.Client[v1.UpdateProjectRequest, emptypb.Empty]
 	deleteProject           *connect.Client[v1.DeleteProjectRequest, emptypb.Empty]
-	listProjectNamespaces   *connect.Client[v1.ListProjectNamespacesRequest, v1.ListProjectNamespacesResponse]
 	listProjectMembers      *connect.Client[v1.ListProjectMembersRequest, v1.ListProjectMembersResponse]
 	getProjectMember        *connect.Client[v1.GetProjectMemberRequest, v1.GetProjectMemberResponse]
 	addProjectMember        *connect.Client[v1.AddProjectMemberRequest, v1.AddProjectMemberResponse]
@@ -230,11 +218,6 @@ func (c *projectServiceClient) UpdateProject(ctx context.Context, req *connect.R
 // DeleteProject calls organization.v1.ProjectService.DeleteProject.
 func (c *projectServiceClient) DeleteProject(ctx context.Context, req *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteProject.CallUnary(ctx, req)
-}
-
-// ListProjectNamespaces calls organization.v1.ProjectService.ListProjectNamespaces.
-func (c *projectServiceClient) ListProjectNamespaces(ctx context.Context, req *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error) {
-	return c.listProjectNamespaces.CallUnary(ctx, req)
 }
 
 // ListProjectMembers calls organization.v1.ProjectService.ListProjectMembers.
@@ -276,8 +259,6 @@ type ProjectServiceHandler interface {
 	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[emptypb.Empty], error)
 	// Delete a project
 	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error)
-	// List all namespaces belonging to a project
-	ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error)
 	// List all members of a project
 	ListProjectMembers(context.Context, *connect.Request[v1.ListProjectMembersRequest]) (*connect.Response[v1.ListProjectMembersResponse], error)
 	// Get a single project member by ID
@@ -333,12 +314,6 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 		connect.WithSchema(projectServiceMethods.ByName("DeleteProject")),
 		connect.WithHandlerOptions(opts...),
 	)
-	projectServiceListProjectNamespacesHandler := connect.NewUnaryHandler(
-		ProjectServiceListProjectNamespacesProcedure,
-		svc.ListProjectNamespaces,
-		connect.WithSchema(projectServiceMethods.ByName("ListProjectNamespaces")),
-		connect.WithHandlerOptions(opts...),
-	)
 	projectServiceListProjectMembersHandler := connect.NewUnaryHandler(
 		ProjectServiceListProjectMembersProcedure,
 		svc.ListProjectMembers,
@@ -383,8 +358,6 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 			projectServiceUpdateProjectHandler.ServeHTTP(w, r)
 		case ProjectServiceDeleteProjectProcedure:
 			projectServiceDeleteProjectHandler.ServeHTTP(w, r)
-		case ProjectServiceListProjectNamespacesProcedure:
-			projectServiceListProjectNamespacesHandler.ServeHTTP(w, r)
 		case ProjectServiceListProjectMembersProcedure:
 			projectServiceListProjectMembersHandler.ServeHTTP(w, r)
 		case ProjectServiceGetProjectMemberProcedure:
@@ -426,10 +399,6 @@ func (UnimplementedProjectServiceHandler) UpdateProject(context.Context, *connec
 
 func (UnimplementedProjectServiceHandler) DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.DeleteProject is not implemented"))
-}
-
-func (UnimplementedProjectServiceHandler) ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.ListProjectNamespaces is not implemented"))
 }
 
 func (UnimplementedProjectServiceHandler) ListProjectMembers(context.Context, *connect.Request[v1.ListProjectMembersRequest]) (*connect.Response[v1.ListProjectMembersResponse], error) {

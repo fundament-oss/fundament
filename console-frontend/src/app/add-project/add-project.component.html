@@ -22,6 +22,36 @@
   <!-- Form -->
   <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" class="space-y-6 px-6 py-6">
     <div>
+      <label for="clusterId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+        Cluster
+      </label>
+      @if (isLoadingClusters()) {
+        <div class="flex items-center py-2">
+          <div
+            class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
+          ></div>
+          <span class="text-sm text-gray-500 dark:text-gray-400">Loading clusters...</span>
+        </div>
+      } @else if (clusters().length === 0) {
+        <p class="mt-2 text-sm text-rose-500 dark:text-rose-400">
+          No clusters available. Create a cluster first.
+        </p>
+      } @else {
+        <select id="clusterId" formControlName="clusterId" class="w-full">
+          @for (cluster of clusters(); track cluster.id) {
+            <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
+          }
+        </select>
+      }
+      @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getClusterError() }}</p>
+      }
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        Select the cluster this project will belong to.
+      </p>
+    </div>
+
+    <div>
       <label for="name" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
         Project name
       </label>

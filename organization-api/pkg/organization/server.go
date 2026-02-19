@@ -84,6 +84,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		"organization.v1.MemberService",
 		"organization.v1.InviteService",
 		"organization.v1.APIKeyService",
+		"organization.v1.NamespaceService",
 	)
 	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
 	mux.Handle(reflectPath, reflectHandler)
@@ -92,6 +93,9 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 
 	projectPath, projectHandler := organizationv1connect.NewProjectServiceHandler(s, interceptors)
 	mux.Handle(projectPath, projectHandler)
+
+	namespacePath, namespaceHandler := organizationv1connect.NewNamespaceServiceHandler(s, interceptors)
+	mux.Handle(namespacePath, namespaceHandler)
 
 	memberPath, memberHandler := organizationv1connect.NewMemberServiceHandler(s, interceptors)
 	mux.Handle(memberPath, memberHandler)

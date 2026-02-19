@@ -122,6 +122,15 @@ func (c *Client) Projects() organizationv1connect.ProjectServiceClient {
 	)
 }
 
+// Namespaces returns the namespace service client.
+func (c *Client) Namespaces() organizationv1connect.NamespaceServiceClient {
+	return organizationv1connect.NewNamespaceServiceClient(
+		c.httpClient,
+		c.apiEndpoint,
+		connect.WithInterceptors(c.authInterceptor()),
+	)
+}
+
 // APIKeys returns the API key service client.
 func (c *Client) APIKeys() organizationv1connect.APIKeyServiceClient {
 	return organizationv1connect.NewAPIKeyServiceClient(

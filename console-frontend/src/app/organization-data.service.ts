@@ -1,12 +1,10 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
-import { ORGANIZATION, PROJECT } from '../connect/tokens';
+import { ORGANIZATION, NAMESPACE, PROJECT } from '../connect/tokens';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
-import {
-  ListProjectsRequestSchema,
-  ListProjectNamespacesRequestSchema,
-} from '../generated/v1/project_pb';
+import { ListProjectsRequestSchema } from '../generated/v1/project_pb';
+import { ListProjectNamespacesRequestSchema } from '../generated/v1/namespace_pb';
 
 export interface NamespaceData {
   id: string;
@@ -32,6 +30,8 @@ export class OrganizationDataService {
   private organizationClient = inject(ORGANIZATION);
 
   private projectClient = inject(PROJECT);
+
+  private namespaceClient = inject(NAMESPACE);
 
   /** All organizations the user belongs to. Lightweight, without nested projects and namespaces. */
   userOrganizations = signal<Organization[]>([]);
@@ -98,7 +98,7 @@ export class OrganizationDataService {
             projectId: project.id,
           });
           const namespacesResponse = await firstValueFrom(
-            this.projectClient.listProjectNamespaces(namespacesRequest),
+            this.namespaceClient.listProjectNamespaces(namespacesRequest),
           );
 
           return {

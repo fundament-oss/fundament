@@ -28,9 +28,9 @@ func (s *Server) ListClusterNamespaces(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list namespaces: %w", err))
 	}
 
-	result := make([]*organizationv1.ClusterNamespace, 0, len(namespaces))
+	result := make([]*organizationv1.Namespace, 0, len(namespaces))
 	for i := range namespaces {
-		result = append(result, clusterNamespaceFromRow(&namespaces[i]))
+		result = append(result, namespaceFromRow(namespaces[i]))
 	}
 
 	return connect.NewResponse(&organizationv1.ListClusterNamespacesResponse{
@@ -53,9 +53,9 @@ func (s *Server) ListProjectNamespaces(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list namespaces: %w", err))
 	}
 
-	result := make([]*organizationv1.ProjectNamespace, 0, len(namespaces))
+	result := make([]*organizationv1.Namespace, 0, len(namespaces))
 	for i := range namespaces {
-		result = append(result, projectNamespaceFromRow(&namespaces[i]))
+		result = append(result, namespaceFromRow((db.NamespaceListByClusterIDRow)(namespaces[i])))
 	}
 
 	return connect.NewResponse(&organizationv1.ListProjectNamespacesResponse{
@@ -63,20 +63,11 @@ func (s *Server) ListProjectNamespaces(
 	}), nil
 }
 
-func clusterNamespaceFromRow(row *db.TenantNamespace) *organizationv1.ClusterNamespace {
-	return &organizationv1.ClusterNamespace{
+func namespaceFromRow(row db.NamespaceListByClusterIDRow) *organizationv1.Namespace {
+	return &organizationv1.Namespace{
 		Id:        row.ID.String(),
 		Name:      row.Name,
 		ProjectId: row.ProjectID.String(),
-		ClusterId: row.ClusterID.String(),
-		Created:   timestamppb.New(row.Created.Time),
-	}
-}
-
-func projectNamespaceFromRow(row *db.TenantNamespace) *organizationv1.ProjectNamespace {
-	return &organizationv1.ProjectNamespace{
-		Id:        row.ID.String(),
-		Name:      row.Name,
 		ClusterId: row.ClusterID.String(),
 		Created:   timestamppb.New(row.Created.Time),
 	}

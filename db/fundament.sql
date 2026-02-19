@@ -58,12 +58,12 @@ ALTER TABLE tenant.organizations ENABLE ROW LEVEL SECURITY;
 -- DROP TABLE IF EXISTS tenant.projects CASCADE;
 CREATE TABLE tenant.projects (
 	id uuid NOT NULL DEFAULT uuidv7(),
-	organization_id uuid NOT NULL,
+	cluster_id uuid NOT NULL,
 	name text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT projects_pk PRIMARY KEY (id),
-	CONSTRAINT projects_uq_organization_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
+	CONSTRAINT projects_uq_cluster_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted)
 );
 -- ddl-end --
 ALTER TABLE tenant.projects OWNER TO fun_owner;
@@ -76,7 +76,6 @@ ALTER TABLE tenant.projects ENABLE ROW LEVEL SECURITY;
 CREATE TABLE tenant.namespaces (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	project_id uuid NOT NULL,
-	cluster_id uuid NOT NULL,
 	name text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
@@ -105,12 +104,12 @@ $function$
 BEGIN
 	IF EXISTS (
 		SELECT 1
-		FROM tenant.namespaces
+		FROM tenant.projects
 		WHERE
 			cluster_id = NEW.id
 			AND deleted IS NULL
 	) THEN
-		RAISE EXCEPTION 'Cannot delete cluster with undeleted namespaces';
+		RAISE EXCEPTION 'Cannot delete cluster with undeleted projects';
 	END IF;
 	RETURN NEW;
 END;
@@ -240,8 +239,9 @@ CREATE OR REPLACE FUNCTION authn.is_project_in_organization (IN p_project_id uui
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.projects
-    WHERE id = p_project_id
-    AND organization_id = authn.current_organization_id()
+    JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+    WHERE tenant.projects.id = p_project_id
+    AND tenant.clusters.organization_id = authn.current_organization_id()
 )
 $function$;
 -- ddl-end --
@@ -314,6 +314,35 @@ SELECT EXISTS (
 $function$;
 -- ddl-end --
 ALTER FUNCTION authn.is_organization_member(uuid) OWNER TO fun_authz;
+-- ddl-end --
+
+-- object: tenant.projects_tr_verify_deleted | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.projects_tr_verify_deleted() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.projects_tr_verify_deleted ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+	IF EXISTS (
+		SELECT 1
+		FROM tenant.namespaces
+		WHERE
+			project_id = NEW.id
+			AND deleted IS NULL
+	) THEN
+		RAISE EXCEPTION 'Cannot delete project with undeleted namespaces';
+	END IF;
+	RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.projects_tr_verify_deleted() OWNER TO postgres;
 -- ddl-end --
 
 -- object: tenant.project_has_members | type: FUNCTION --
@@ -770,6 +799,16 @@ CREATE CONSTRAINT TRIGGER require_admin
 	EXECUTE PROCEDURE tenant.projects_tr_require_admin();
 -- ddl-end --
 
+-- object: verify_deleted | type: TRIGGER --
+-- verify_deleted ON tenant.projects CASCADE;
+CREATE CONSTRAINT TRIGGER verify_deleted
+	AFTER UPDATE
+	ON tenant.projects
+	NOT DEFERRABLE
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.projects_tr_verify_deleted();
+-- ddl-end --
+
 -- object: tenant.project_members | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.project_members CASCADE;
 CREATE TABLE tenant.project_members (
@@ -848,7 +887,7 @@ CREATE POLICY projects_select_policy ON tenant.projects
 	AS PERMISSIVE
 	FOR SELECT
 	TO fun_fundament_api
-	USING (organization_id = authn.current_organization_id());
+	USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
 -- object: projects_insert_policy | type: POLICY --
@@ -857,7 +896,7 @@ CREATE POLICY projects_insert_policy ON tenant.projects
 	AS PERMISSIVE
 	FOR INSERT
 	TO fun_fundament_api
-	WITH CHECK (organization_id = authn.current_organization_id());
+	WITH CHECK (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
 -- object: projects_update_policy | type: POLICY --
@@ -866,7 +905,7 @@ CREATE POLICY projects_update_policy ON tenant.projects
 	AS PERMISSIVE
 	FOR UPDATE
 	TO fun_fundament_api
-	USING (organization_id = authn.current_organization_id()
+	USING (authn.is_cluster_in_organization(cluster_id)
 AND authn.is_project_member(id, authn.current_user_id(), 'admin'));
 -- ddl-end --
 
@@ -876,7 +915,7 @@ CREATE POLICY projects_delete_policy ON tenant.projects
 	AS PERMISSIVE
 	FOR DELETE
 	TO fun_fundament_api
-	USING (organization_id = authn.current_organization_id()
+	USING (authn.is_cluster_in_organization(cluster_id)
 AND authn.is_project_member(id, authn.current_user_id(), 'admin'));
 -- ddl-end --
 
@@ -886,7 +925,7 @@ CREATE POLICY namespaces_organization_policy ON tenant.namespaces
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_fundament_api
-	USING (authn.is_cluster_in_organization(cluster_id));
+	USING (authn.is_project_in_organization(project_id));
 -- ddl-end --
 
 -- object: organizations_select_policy | type: POLICY --
@@ -1262,6 +1301,16 @@ CREATE OR REPLACE TRIGGER node_pools_outbox
 	EXECUTE PROCEDURE authz.node_pools_sync_trigger();
 -- ddl-end --
 
+-- object: namespaces_idx_project_id | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.namespaces_idx_project_id CASCADE;
+CREATE INDEX namespaces_idx_project_id ON tenant.namespaces
+USING btree
+(
+	project_id
+)
+WHERE (deleted IS NULL);
+-- ddl-end --
+
 -- object: namespaces_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS namespaces_outbox ON tenant.namespaces CASCADE;
 CREATE OR REPLACE TRIGGER namespaces_outbox
@@ -1296,17 +1345,6 @@ CREATE OR REPLACE TRIGGER outbox_notify
 	ON authz.outbox
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.outbox_notify_trigger();
--- ddl-end --
-
--- object: namespaces_ix_cluster_name | type: INDEX --
--- DROP INDEX IF EXISTS tenant.namespaces_ix_cluster_name CASCADE;
-CREATE INDEX namespaces_ix_cluster_name ON tenant.namespaces
-USING btree
-(
-	cluster_id,
-	name
-)
-WHERE (deleted IS NULL);
 -- ddl-end --
 
 -- object: tenant.organizations_users | type: TABLE --
@@ -1430,16 +1468,9 @@ USING btree
 WHERE (deleted IS NULL AND status NOT IN ('declined', 'revoked'));
 -- ddl-end --
 
--- object: projects_fk_organization | type: CONSTRAINT --
--- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_organization CASCADE;
-ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_organization FOREIGN KEY (organization_id)
-REFERENCES tenant.organizations (id) MATCH SIMPLE
-ON DELETE NO ACTION ON UPDATE NO ACTION;
--- ddl-end --
-
--- object: namespaces_fk_cluster | type: CONSTRAINT --
--- ALTER TABLE tenant.namespaces DROP CONSTRAINT IF EXISTS namespaces_fk_cluster CASCADE;
-ALTER TABLE tenant.namespaces ADD CONSTRAINT namespaces_fk_cluster FOREIGN KEY (cluster_id)
+-- object: projects_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_cluster CASCADE;
+ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_cluster FOREIGN KEY (cluster_id)
 REFERENCES tenant.clusters (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --

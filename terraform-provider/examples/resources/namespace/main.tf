@@ -8,16 +8,16 @@ terraform {
 
 provider "fundament" {
   endpoint        = "http://organization.fundament.localhost:8080"
-  organization_id = "019b4000-0000-7000-8000-000000000002" # Globex
+  organization_id = "019b4000-0000-7000-8000-000000000001" # Globex
   # Token can be set via FUNDAMENT_TOKEN environment variable
   # token = ""
 }
 
 # Create a namespace in a cluster
 resource "fundament_namespace" "example" {
-  name       = "my-application"
-  project_id = "your-project-uuid"
-  cluster_id = "your-cluster-uuid"
+  name       = "my-application-1"
+  project_name = "abcdef"
+  cluster_name = "abc"
 }
 
 output "namespace_id" {

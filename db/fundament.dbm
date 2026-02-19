@@ -98,7 +98,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="organization_id" not-null="true">
+	<column name="cluster_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="name" not-null="true">
@@ -113,12 +113,12 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<constraint name="projects_pk" type="pk-constr" table="tenant.projects">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="projects_uq_organization_name" type="uq-constr" nulls-not-distinct="true" table="tenant.projects">
-		<columns names="organization_id,name,deleted" ref-type="src-columns"/>
+	<constraint name="projects_uq_cluster_name" type="uq-constr" nulls-not-distinct="true" table="tenant.projects">
+		<columns names="cluster_id,name,deleted" ref-type="src-columns"/>
 	</constraint>
 </table>
 
-<table name="namespaces" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
+<table name="namespaces" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
 	<position x="1520" y="-20"/>
@@ -126,9 +126,6 @@ CAUTION: Do not modify this file unless you know what you are doing.
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="project_id" not-null="true">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="cluster_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="name" not-null="true">
@@ -169,12 +166,12 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<definition> <![CDATA[BEGIN
 	IF EXISTS (
 		SELECT 1
-		FROM tenant.namespaces
+		FROM tenant.projects
 		WHERE
 			cluster_id = NEW.id
 			AND deleted IS NULL
 	) THEN
-		RAISE EXCEPTION 'Cannot delete cluster with undeleted namespaces';
+		RAISE EXCEPTION 'Cannot delete cluster with undeleted projects';
 	END IF;
 	RETURN NEW;
 END;]]> </definition>
@@ -316,8 +313,9 @@ END;]]> </definition>
 	</parameter>
 	<definition> <![CDATA[SELECT EXISTS (
     SELECT 1 FROM tenant.projects
-    WHERE id = p_project_id
-    AND organization_id = authn.current_organization_id()
+    JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+    WHERE tenant.projects.id = p_project_id
+    AND tenant.clusters.organization_id = authn.current_organization_id()
 )]]> </definition>
 </function>
 
@@ -396,6 +394,35 @@ END;]]> </definition>
     AND user_id = authn.current_user_id()
     AND deleted IS NULL
 )]]> </definition>
+</function>
+
+<function name="projects_tr_verify_deleted"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="postgres"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+	IF EXISTS (
+		SELECT 1
+		FROM tenant.namespaces
+		WHERE
+			project_id = NEW.id
+			AND deleted IS NULL
+	) THEN
+		RAISE EXCEPTION 'Cannot delete project with undeleted namespaces';
+	END IF;
+	RETURN NEW;
+END;]]> </definition>
 </function>
 
 <function name="project_has_members"
@@ -977,6 +1004,12 @@ END;]]> </definition>
 		<function signature="tenant.projects_tr_require_admin()"/>
 </trigger>
 
+<trigger name="verify_deleted" firing-type="AFTER" per-line="true" constraint="true"
+	 ins-event="false" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.projects">
+		<function signature="tenant.projects_tr_verify_deleted()"/>
+</trigger>
+
 <table name="project_members" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
@@ -1045,25 +1078,25 @@ AND authn.is_project_member(project_id, authn.current_user_id(), 'admin')]]> </e
 </policy>
 
 <policy name="projects_select_policy" table="tenant.projects" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
 <policy name="projects_insert_policy" table="tenant.projects" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+	<expression type="check-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
 <policy name="projects_update_policy" table="tenant.projects" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()
+	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)
 AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expression>
 </policy>
 
 <policy name="projects_delete_policy" table="tenant.projects" command="DELETE" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()
+	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)
 AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expression>
 </policy>
 
 <policy name="namespaces_organization_policy" table="tenant.namespaces" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
+	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)]]> </expression>
 </policy>
 
 <policy name="organizations_select_policy" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
@@ -1459,6 +1492,15 @@ END;]]> </definition>
 		<function signature="authz.node_pools_sync_trigger()"/>
 </trigger>
 
+<index name="namespaces_idx_project_id" table="tenant.namespaces"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="project_id"/>
+		</idxelement>
+	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
+</index>
+
 <trigger name="namespaces_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.namespaces">
@@ -1483,17 +1525,6 @@ END;]]> </definition>
 		<function signature="authz.outbox_notify_trigger()"/>
 </trigger>
 
-<index name="namespaces_ix_cluster_name" table="tenant.namespaces"
-	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
-	 index-type="btree" factor="0">
-		<idxelement use-sorting="false">
-			<column name="cluster_id"/>
-		</idxelement>
-		<idxelement use-sorting="false">
-			<column name="name"/>
-		</idxelement>
-	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
-</index>
 
 <table name="organizations_users" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
@@ -1585,14 +1616,8 @@ END;]]> </definition>
 	<predicate> <![CDATA[deleted IS NULL AND status NOT IN ('declined', 'revoked')]]> </predicate>
 </index>
 
-<constraint name="projects_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.projects">
-	<columns names="organization_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="namespaces_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.namespaces">
+<constraint name="projects_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.projects">
 	<columns names="cluster_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
@@ -1759,14 +1784,9 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
-<relationship name="rel_projects_organizations" type="relfk" layers="0"
+<relationship name="rel_projects_clusters" type="relfk" layers="0"
 	 src-table="tenant.projects"
-	 dst-table="tenant.organizations" reference-fk="projects_fk_organization"
-	 src-required="false" dst-required="true"/>
-
-<relationship name="rel_namespaces_clusters" type="relfk" layers="0"
-	 src-table="tenant.namespaces"
-	 dst-table="tenant.clusters" reference-fk="namespaces_fk_cluster"
+	 dst-table="tenant.clusters" reference-fk="projects_fk_cluster"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_namespaces_projects" type="relfk" layers="0"

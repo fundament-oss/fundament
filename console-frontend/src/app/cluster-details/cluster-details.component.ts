@@ -14,19 +14,21 @@ import {
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { CLUSTER, PROJECT, PLUGIN } from '../../connect/tokens';
+import { CLUSTER, NAMESPACE, PROJECT, PLUGIN } from '../../connect/tokens';
 import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
   DeleteClusterRequestSchema,
-  ListClusterNamespacesRequestSchema,
   ListInstallsRequestSchema,
   GetClusterActivityRequestSchema,
   NodePool,
-  ClusterNamespace,
   type ClusterEvent,
   type SyncState,
 } from '../../generated/v1/cluster_pb';
+import {
+  ListClusterNamespacesRequestSchema,
+  Namespace,
+} from '../../generated/v1/namespace_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
@@ -140,6 +142,8 @@ export default class ClusterDetailsComponent implements OnInit {
 
   private client = inject(CLUSTER);
 
+  private namespaceClient = inject(NAMESPACE);
+
   private projectClient = inject(PROJECT);
 
   private pluginClient = inject(PLUGIN);
@@ -161,7 +165,7 @@ export default class ClusterDetailsComponent implements OnInit {
   showDeleteModal = signal<boolean>(false);
 
   // Namespace management
-  namespaces = signal<ClusterNamespace[]>([]);
+  namespaces = signal<Namespace[]>([]);
 
   projects = signal<Project[]>([]);
 
@@ -334,7 +338,7 @@ export default class ClusterDetailsComponent implements OnInit {
   async loadNamespaces(clusterId: string): Promise<void> {
     try {
       const request = create(ListClusterNamespacesRequestSchema, { clusterId });
-      const response = await firstValueFrom(this.client.listClusterNamespaces(request));
+      const response = await firstValueFrom(this.namespaceClient.listClusterNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
       this.toastService.error(
@@ -347,7 +351,7 @@ export default class ClusterDetailsComponent implements OnInit {
 
   async loadProjects(): Promise<void> {
     try {
-      const request = create(ListProjectsRequestSchema, {});
+      const request = create(ListProjectsRequestSchema, { clusterId: this.clusterData.basics.id });
       const response = await firstValueFrom(this.projectClient.listProjects(request));
       this.projects.set(response.projects);
     } catch (error) {

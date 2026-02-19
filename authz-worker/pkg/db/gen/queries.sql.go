@@ -149,7 +149,7 @@ func (q *Queries) GetInstallByID(ctx context.Context, arg GetInstallByIDParams) 
 }
 
 const getNamespaceByID = `-- name: GetNamespaceByID :one
-SELECT id, project_id, cluster_id, deleted
+SELECT id, project_id, deleted
 FROM tenant.namespaces
 WHERE id = $1
 `
@@ -161,19 +161,13 @@ type GetNamespaceByIDParams struct {
 type GetNamespaceByIDRow struct {
 	ID        uuid.UUID
 	ProjectID uuid.UUID
-	ClusterID uuid.UUID
 	Deleted   pgtype.Timestamptz
 }
 
 func (q *Queries) GetNamespaceByID(ctx context.Context, arg GetNamespaceByIDParams) (GetNamespaceByIDRow, error) {
 	row := q.db.QueryRow(ctx, getNamespaceByID, arg.ID)
 	var i GetNamespaceByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.ProjectID,
-		&i.ClusterID,
-		&i.Deleted,
-	)
+	err := row.Scan(&i.ID, &i.ProjectID, &i.Deleted)
 	return i, err
 }
 
@@ -234,7 +228,7 @@ func (q *Queries) GetOrganizationUserByID(ctx context.Context, arg GetOrganizati
 }
 
 const getProjectByID = `-- name: GetProjectByID :one
-SELECT id, organization_id, deleted
+SELECT id, cluster_id, deleted
 FROM tenant.projects
 WHERE id = $1
 `
@@ -244,15 +238,15 @@ type GetProjectByIDParams struct {
 }
 
 type GetProjectByIDRow struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	Deleted        pgtype.Timestamptz
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	Deleted   pgtype.Timestamptz
 }
 
 func (q *Queries) GetProjectByID(ctx context.Context, arg GetProjectByIDParams) (GetProjectByIDRow, error) {
 	row := q.db.QueryRow(ctx, getProjectByID, arg.ID)
 	var i GetProjectByIDRow
-	err := row.Scan(&i.ID, &i.OrganizationID, &i.Deleted)
+	err := row.Scan(&i.ID, &i.ClusterID, &i.Deleted)
 	return i, err
 }
 

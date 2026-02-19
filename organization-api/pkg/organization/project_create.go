@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -17,12 +18,8 @@ func (s *Server) CreateProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.CreateProjectRequest],
 ) (*connect.Response[organizationv1.CreateProjectResponse], error) {
-	organizationID, ok := OrganizationIDFromContext(ctx)
-	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
-
-	if err := s.checkPermission(ctx, authz.CanCreateProject(), authz.Organization(organizationID)); err != nil {
+	clusterID := uuid.MustParse(req.Msg.ClusterId)
+	if err := s.checkPermission(ctx, authz.CanCreateProject(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
 	}
 
@@ -32,7 +29,7 @@ func (s *Server) CreateProject(
 	}
 
 	s.logger.DebugContext(ctx, "creating project with member",
-		"organization_id", organizationID,
+		"cluster_id", clusterID,
 		"user_id", userID,
 		"name", req.Msg.Name,
 	)
@@ -46,8 +43,8 @@ func (s *Server) CreateProject(
 	qtx := s.queries.WithTx(tx)
 
 	projectID, err := qtx.ProjectCreate(ctx, db.ProjectCreateParams{
-		OrganizationID: organizationID,
-		Name:           req.Msg.Name,
+		ClusterID: clusterID,
+		Name:      req.Msg.Name,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create project: %w", err))
@@ -68,7 +65,7 @@ func (s *Server) CreateProject(
 
 	s.logger.DebugContext(ctx, "project created",
 		"project_id", projectID,
-		"organization_id", organizationID,
+		"cluster_id", clusterID,
 		"user_id", userID,
 		"name", req.Msg.Name,
 	)

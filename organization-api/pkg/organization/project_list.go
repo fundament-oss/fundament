@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -25,7 +26,9 @@ func (s *Server) ListProjects(
 		return nil, err
 	}
 
-	projects, err := s.queries.ProjectList(ctx)
+	clusterID := uuid.MustParse(req.Msg.ClusterId)
+
+	projects, err := s.queries.ProjectListByClusterID(ctx, db.ProjectListByClusterIDParams{ClusterID: clusterID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list projects: %w", err))
 	}
@@ -42,8 +45,9 @@ func (s *Server) ListProjects(
 
 func projectFromListRow(row *db.TenantProject) *organizationv1.Project {
 	return &organizationv1.Project{
-		Id:      row.ID.String(),
-		Name:    row.Name,
-		Created: timestamppb.New(row.Created.Time),
+		Id:        row.ID.String(),
+		ClusterId: row.ClusterID.String(),
+		Name:      row.Name,
+		Created:   timestamppb.New(row.Created.Time),
 	}
 }

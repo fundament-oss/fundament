@@ -7,13 +7,12 @@ import { tablerPencil } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { PROJECT, CLUSTER } from '../../connect/tokens';
+import { PROJECT, NAMESPACE, CLUSTER } from '../../connect/tokens';
+import { GetProjectRequestSchema, Project } from '../../generated/v1/project_pb';
 import {
-  GetProjectRequestSchema,
   ListProjectNamespacesRequestSchema,
-  Project,
-  ProjectNamespace,
-} from '../../generated/v1/project_pb';
+  Namespace,
+} from '../../generated/v1/namespace_pb';
 import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
@@ -40,13 +39,15 @@ export default class ProjectDetailComponent implements OnInit {
 
   private projectClient = inject(PROJECT);
 
+  private namespaceClient = inject(NAMESPACE);
+
   private clusterClient = inject(CLUSTER);
 
   private toastService = inject(ToastService);
 
   project = signal<Project | null>(null);
 
-  namespaces = signal<ProjectNamespace[]>([]);
+  namespaces = signal<Namespace[]>([]);
 
   clusters = signal<ClusterSummary[]>([]);
 
@@ -90,7 +91,7 @@ export default class ProjectDetailComponent implements OnInit {
   async loadNamespaces(projectId: string) {
     try {
       const request = create(ListProjectNamespacesRequestSchema, { projectId });
-      const response = await firstValueFrom(this.projectClient.listProjectNamespaces(request));
+      const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
       this.toastService.error(

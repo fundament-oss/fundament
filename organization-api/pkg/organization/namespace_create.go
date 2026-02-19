@@ -17,7 +17,6 @@ func (s *Server) CreateNamespace(
 	req *connect.Request[organizationv1.CreateNamespaceRequest],
 ) (*connect.Response[organizationv1.CreateNamespaceResponse], error) {
 	projectID := uuid.MustParse(req.Msg.ProjectId)
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	if err := s.checkPermission(ctx, authz.CanCreateNamespace(), authz.Project(projectID)); err != nil {
 		return nil, err
@@ -25,7 +24,6 @@ func (s *Server) CreateNamespace(
 
 	params := db.NamespaceCreateParams{
 		ProjectID: projectID,
-		ClusterID: clusterID,
 		Name:      req.Msg.Name,
 	}
 
@@ -37,7 +35,6 @@ func (s *Server) CreateNamespace(
 	s.logger.InfoContext(ctx, "namespace created",
 		"namespace_id", namespaceID,
 		"project_id", projectID,
-		"cluster_id", clusterID,
 		"name", req.Msg.Name,
 	)
 

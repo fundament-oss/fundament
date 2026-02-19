@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package organization.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
+
+// NamespaceService manages namespaces within clusters and projects
+service NamespaceService {
+  // List namespaces for a cluster
+  rpc ListClusterNamespaces(ListClusterNamespacesRequest) returns (ListClusterNamespacesResponse);
+
+  // List all namespaces belonging to a project
+  rpc ListProjectNamespaces(ListProjectNamespacesRequest) returns (ListProjectNamespacesResponse);
+
+  // Get a namespace by ID
+  rpc GetNamespace(GetNamespaceRequest) returns (GetNamespaceResponse);
+
+  // Get a namespace by project name and namespace name
+  rpc GetNamespaceByProjectAndName(GetNamespaceByProjectAndNameRequest) returns (GetNamespaceByProjectAndNameResponse);
+
+  // Create a namespace in a project
+  rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse);
+
+  // Delete a namespace
+  rpc DeleteNamespace(DeleteNamespaceRequest) returns (google.protobuf.Empty);
+}
+
+// List cluster namespaces request
+message ListClusterNamespacesRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// List cluster namespaces response
+message ListClusterNamespacesResponse {
+  repeated Namespace namespaces = 10;
+}
+
+// Namespace information
+message Namespace {
+  string id = 10;
+  string name = 20;
+  string project_id = 30;
+  string cluster_id = 35;
+  google.protobuf.Timestamp created = 40;
+}
+
+// Get namespace by ID request
+message GetNamespaceRequest {
+  string namespace_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// Get namespace by ID response
+message GetNamespaceResponse {
+  Namespace namespace = 10;
+}
+
+// Create namespace request
+message CreateNamespaceRequest {
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string name = 30 [
+    (buf.validate.field).string = {max_len: 63},
+    (buf.validate.field).cel = {
+      // TODO: This expression is duplicated in at least one other place.
+      // We should use a predefined rule once we've moved to edition 2023.
+      // https://protovalidate.com/schemas/predefined-rules/
+      id: "dns1123label"
+      message: "must be a valid DNS-1123 label"
+      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+    }
+  ];
+}
+
+// Create namespace response
+message CreateNamespaceResponse {
+  string namespace_id = 10;
+}
+
+// Delete namespace request
+message DeleteNamespaceRequest {
+  string namespace_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// Get namespace by project and name request
+message GetNamespaceByProjectAndNameRequest {
+  string cluster_name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string project_name = 20 [(buf.validate.field).cel = {
+    id: "dns1123label"
+    message: "must be a valid DNS-1123 label"
+    expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+  }];
+  string namespace_name = 30 [
+    (buf.validate.field).string = {max_len: 63},
+    (buf.validate.field).cel = {
+      id: "dns1123label"
+      message: "must be a valid DNS-1123 label"
+      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+    }
+  ];
+}
+
+// Get namespace by project and name response
+message GetNamespaceByProjectAndNameResponse {
+  Namespace namespace = 10;
+}
+
+// List project namespaces request
+message ListProjectNamespacesRequest {
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// List project namespaces response
+message ListProjectNamespacesResponse {
+  repeated Namespace namespaces = 10;
+}
