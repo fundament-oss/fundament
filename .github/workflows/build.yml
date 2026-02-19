@@ -135,3 +135,28 @@ jobs:
           file: cluster-worker/Dockerfile
           push: ${{ github.event_name == 'push' }}
           tags: ${{ env.IMAGE_PREFIX }}/cluster-worker:latest,${{ env.IMAGE_PREFIX }}/cluster-worker:${{ github.sha }}
+
+  build-authz-worker:
+    name: Build authz-worker
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: authz-worker/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ env.IMAGE_PREFIX }}/authz-worker:latest,${{ env.IMAGE_PREFIX }}/authz-worker:${{ github.sha }}
