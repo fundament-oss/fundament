@@ -15,9 +15,15 @@ import (
 	"github.com/caarlos0/env/v11"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
+	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	clusterhandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/cluster"
+	namespacehandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/namespace"
+	projecthandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/project"
+	projectmemberhandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/projectmember"
+	worker_outbox "github.com/fundament-oss/fundament/cluster-worker/pkg/worker-outbox"
 	worker_status "github.com/fundament-oss/fundament/cluster-worker/pkg/worker-status"
-	worker_sync "github.com/fundament-oss/fundament/cluster-worker/pkg/worker-sync"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )
 
@@ -30,23 +36,12 @@ type config struct {
 	ShutdownTimeout    time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 
 	// Worker configs (env tags defined in worker package)
-	Sync   worker_sync.Config   `envPrefix:"SYNC_"`
+	Outbox worker_outbox.Config `envPrefix:"OUTBOX_"`
 	Status worker_status.Config `envPrefix:"STATUS_"`
 
 	// Provider configuration for real Gardener mode.
-	// These configure how Shoots are created in Gardener and depend on the target infrastructure.
-
-	// ProviderType is the infrastructure provider (e.g., "local", "metal", "aws", "gcp", "azure").
-	// Determines which Gardener extension is used to provision the cluster infrastructure.
-	ProviderType string `env:"GARDENER_PROVIDER_TYPE"`
-
-	// ProviderCloudProfile references a Gardener CloudProfile that defines available machine types,
-	// images, and regions for the provider. Must exist in Gardener before creating Shoots.
-	ProviderCloudProfile string `env:"GARDENER_CLOUD_PROFILE"`
-
-	// ProviderCredentialsBindingName references a Gardener CredentialsBinding that contains
-	// cloud provider credentials (e.g., AWS access keys, GCP service account).
-	// Not needed for local provider. Required for real cloud providers.
+	ProviderType                  string `env:"GARDENER_PROVIDER_TYPE"`
+	ProviderCloudProfile          string `env:"GARDENER_CLOUD_PROFILE"`
 	ProviderCredentialsBindingName string `env:"GARDENER_CREDENTIALS_BINDING_NAME"`
 }
 
@@ -72,11 +67,11 @@ func run() error {
 	defer cancel()
 
 	// Database
-	db, err := psqldb.New(ctx, logger, psqldb.Config{URL: cfg.DatabaseURL})
+	database, err := psqldb.New(ctx, logger, psqldb.Config{URL: cfg.DatabaseURL})
 	if err != nil {
 		return fmt.Errorf("connect db: %w", err)
 	}
-	defer db.Close()
+	defer database.Close()
 
 	// Gardener client (mock or real)
 	gardenerClient, err := createGardenerClient(&cfg, logger)
@@ -84,27 +79,38 @@ func run() error {
 		return err
 	}
 
-	// SyncWorker (syncs manifests to Gardener)
-	syncWorker := worker_sync.New(db.Pool, gardenerClient, logger, cfg.Sync)
+	queries := db.New(database.Pool)
 
-	// StatusWorker (monitors Gardener reconciliation)
-	statusWorker := worker_status.New(db.Pool, gardenerClient, logger, cfg.Status)
+	// Build handler registry
+	registry := handler.NewRegistry()
+
+	clusterHandler := clusterhandler.New(queries, gardenerClient, logger)
+	registry.RegisterSync(handler.EntityCluster, clusterHandler)
+	registry.RegisterStatus(clusterHandler)
+
+	registry.RegisterSync(handler.EntityNamespace, namespacehandler.New(logger))
+	registry.RegisterSync(handler.EntityProjectMember, projectmemberhandler.New(logger))
+	registry.RegisterSync(handler.EntityProject, projecthandler.New(logger))
+
+	// Workers
+	outboxWorker := worker_outbox.New(database.Pool, registry, logger, cfg.Outbox)
+	statusWorker := worker_status.New(registry, logger, cfg.Status)
 
 	// Health check server
-	healthServer := startHealthServer(&cfg, syncWorker, logger)
+	healthServer := startHealthServer(&cfg, outboxWorker, logger)
 
 	logger.Info("cluster-worker starting",
-		"poll_interval", cfg.Sync.PollInterval,
-		"reconcile_interval", cfg.Sync.ReconcileInterval,
+		"poll_interval", cfg.Outbox.PollInterval,
+		"reconcile_interval", cfg.Outbox.ReconcileInterval,
 		"status_poll_interval", cfg.Status.PollInterval,
-		"max_attempts", cfg.Sync.MaxAttempts,
+		"max_retries", cfg.Outbox.MaxRetries,
 		"gardener_mode", cfg.GardenerMode)
 
-	// Run both worker and status poller concurrently
+	// Run both workers concurrently
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		return syncWorker.Run(ctx)
+		return outboxWorker.Run(ctx)
 	})
 
 	g.Go(func() error {
@@ -137,7 +143,6 @@ func createGardenerClient(cfg *config, logger *slog.Logger) (gardener.Client, er
 		if cfg.GardenerKubeconfig == "" {
 			return nil, fmt.Errorf("GARDENER_KUBECONFIG required for real mode")
 		}
-		// Start with defaults for local provider, override with env values
 		providerCfg := gardener.NewProviderConfig()
 		if cfg.ProviderType != "" {
 			providerCfg.Type = cfg.ProviderType
@@ -164,7 +169,7 @@ func createGardenerClient(cfg *config, logger *slog.Logger) (gardener.Client, er
 	}
 }
 
-func startHealthServer(cfg *config, w *worker_sync.SyncWorker, logger *slog.Logger) *http.Server {
+func startHealthServer(cfg *config, w *worker_outbox.OutboxWorker, logger *slog.Logger) *http.Server {
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/healthz", func(resp http.ResponseWriter, _ *http.Request) {
 		resp.WriteHeader(http.StatusOK)

@@ -139,6 +139,22 @@ VALUES
 RETURNING
     id;
 
+-- name: ClusterGetForSync :one
+-- Get a single cluster by ID with all data needed for sync.
+SELECT
+    tenant.clusters.id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.deleted,
+    tenant.clusters.organization_id,
+    tenant.organizations.name AS organization_name
+FROM
+    tenant.clusters
+    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+WHERE
+    tenant.clusters.id = @cluster_id;
+
 -- name: ClusterListActive :many
 -- Used by periodic reconciliation to compare with Gardener state.
 SELECT

@@ -2,38 +2,30 @@ package worker_status
 
 import (
 	"context"
-	"os"
 	"testing"
 	"testing/synctest"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/common"
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 )
 
 func TestStatusWorker_Creation(t *testing.T) {
 	logger := common.TestLogger()
-	mock := gardener.NewMock(logger)
 
-	// StatusPoller can be created without a DB connection for basic tests
-	// Real functionality requires DB
+	registry := handler.NewRegistry()
 	cfg := Config{
 		PollInterval: 30 * time.Second,
-		BatchSize:    50,
 	}
 
-	sp := New(nil, mock, logger, cfg)
+	sp := New(registry, logger, cfg)
 	if sp == nil {
 		t.Fatal("status poller should not be nil")
 		return
 	}
 	if sp.cfg.PollInterval != 30*time.Second {
 		t.Errorf("expected poll interval 30s, got %v", sp.cfg.PollInterval)
-	}
-	if sp.cfg.BatchSize != 50 {
-		t.Errorf("expected batch size 50, got %d", sp.cfg.BatchSize)
 	}
 }
 
@@ -44,13 +36,11 @@ func TestStatusWorker_MockGardenerInteraction(t *testing.T) {
 	ctx := context.Background()
 	cluster := common.TestCluster("test-cluster", "test-tenant")
 
-	// Create shoot (ShootName is pre-set from common.TestCluster)
 	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
-	// After shoot exists - instant mock returns "ready"
 	shootStatus, err := mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
@@ -59,13 +49,10 @@ func TestStatusWorker_MockGardenerInteraction(t *testing.T) {
 		t.Errorf("expected 'ready' status for existing shoot, got %q", shootStatus.Status)
 	}
 
-	// Delete shoot
 	if err := mock.DeleteShootByClusterID(ctx, cluster.ID); err != nil {
 		t.Fatalf("DeleteShootByClusterID failed: %v", err)
 	}
 
-	// After shoot deleted - instant mock returns "pending" with "not found"
-	// (Gardener returns not found for deleted shoots, status worker interprets this as deleted)
 	shootStatus, err = mock.GetShootStatus(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("GetShootStatus failed: %v", err)
@@ -82,13 +69,11 @@ func TestStatusWorker_ProgressingStatus(t *testing.T) {
 	ctx := context.Background()
 	cluster := common.TestCluster("test-cluster", "test-tenant")
 
-	// Create shoot (ShootName is pre-set from common.TestCluster)
 	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
-	// Override status to simulate progressing state
 	mock.SetStatusOverride(cluster.ID, gardener.StatusProgressing, "Creating control plane")
 
 	shootStatus, err := mock.GetShootStatus(ctx, &cluster)
@@ -110,13 +95,11 @@ func TestStatusWorker_ErrorStatus(t *testing.T) {
 	ctx := context.Background()
 	cluster := common.TestCluster("test-cluster", "test-tenant")
 
-	// Create shoot (ShootName is pre-set from common.TestCluster)
 	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
-	// Override status to simulate error
 	mock.SetStatusOverride(cluster.ID, gardener.StatusError, "Failed to create infrastructure: quota exceeded")
 
 	shootStatus, err := mock.GetShootStatus(ctx, &cluster)
@@ -138,15 +121,13 @@ func TestStatusWorker_DeletingStatus(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 	cluster := common.TestCluster("test-cluster", "test-tenant")
-	cluster.Deleted = &now // Mark as deleted in DB
+	cluster.Deleted = &now
 
-	// Create shoot (simulating a shoot that's being deleted, ShootName is pre-set)
 	err := mock.ApplyShoot(ctx, &cluster)
 	if err != nil {
 		t.Fatalf("ApplyShoot failed: %v", err)
 	}
 
-	// Override status to simulate deleting state
 	mock.SetStatusOverride(cluster.ID, gardener.StatusDeleting, "Deleting control plane")
 
 	shootStatus, err := mock.GetShootStatus(ctx, &cluster)
@@ -161,42 +142,11 @@ func TestStatusWorker_DeletingStatus(t *testing.T) {
 	}
 }
 
-func TestStatusWorker_Integration(t *testing.T) {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		t.Skip("DATABASE_URL not set, skipping integration tests")
-	}
-
-	ctx := context.Background()
-
-	pool, err := pgxpool.New(ctx, dsn)
-	if err != nil {
-		t.Fatalf("failed to connect to database: %v", err)
-	}
-	defer pool.Close()
-
-	logger := common.TestLogger()
-	mock := gardener.NewMock(logger)
-
-	sp := New(pool, mock, logger, Config{
-		PollInterval: 30 * time.Second,
-		BatchSize:    50,
-	})
-
-	if sp == nil {
-		t.Fatal("status poller should not be nil")
-	}
-}
-
 func TestStatusWorker_RunLoop(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		logger := common.TestLogger()
-		mock := gardener.NewMock(logger)
-
 		pollInterval := 100 * time.Millisecond
 		pollCount := 0
 
-		// Simulate the Run loop's ticker behavior
 		ticker := time.NewTicker(pollInterval)
 		defer ticker.Stop()
 
@@ -215,21 +165,14 @@ func TestStatusWorker_RunLoop(t *testing.T) {
 			}
 		}()
 
-		// Advance time to trigger multiple polls
 		time.Sleep(350 * time.Millisecond)
 		synctest.Wait()
 
 		cancel()
 		<-done
 
-		// Should have polled at least 3 times (100ms, 200ms, 300ms)
 		if pollCount < 3 {
 			t.Errorf("expected at least 3 polls, got %d", pollCount)
-		}
-
-		// Verify mock wasn't used (we're testing ticker behavior, not actual polling)
-		if mock.ListCallCount != 0 {
-			t.Error("mock ListShoots should not have been called in this test")
 		}
 	})
 }
@@ -240,7 +183,6 @@ func TestStatusWorker_MultipleStatusOverrides(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Create multiple clusters with different status overrides
 	clusters := []struct {
 		cluster gardener.ClusterToSync
 		status  gardener.ShootStatusType
@@ -271,7 +213,6 @@ func TestStatusWorker_MultipleStatusOverrides(t *testing.T) {
 		mock.SetStatusOverride(clusters[i].cluster.ID, clusters[i].status, clusters[i].message)
 	}
 
-	// Verify each cluster returns its correct status
 	for _, tc := range clusters {
 		shootStatus, err := mock.GetShootStatus(ctx, &tc.cluster)
 		if err != nil {
