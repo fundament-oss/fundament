@@ -187,18 +187,17 @@ func (c *OrgMemberRemoveCmd) Run(ctx *Context) error {
 	return nil
 }
 
-// findOrgMember resolves an org member from a user ID by listing all members.
+// findOrgMember resolves an org member from a user ID.
 func findOrgMember(apiClient *client.Client, userID string) (*organizationv1.Member, error) {
-	resp, err := apiClient.Members().ListMembers(context.Background(), connect.NewRequest(&organizationv1.ListMembersRequest{}))
+	resp, err := apiClient.Members().GetMember(context.Background(), connect.NewRequest(&organizationv1.GetMemberRequest{
+		Lookup: &organizationv1.GetMemberRequest_UserId{UserId: userID},
+	}))
 	if err != nil {
-		return nil, fmt.Errorf("failed to list members: %w", err)
-	}
-
-	for _, member := range resp.Msg.Members {
-		if member.UserId == userID {
-			return member, nil
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return nil, fmt.Errorf("user %s is not a member of this organization", userID)
 		}
+		return nil, fmt.Errorf("failed to get member: %w", err)
 	}
 
-	return nil, fmt.Errorf("user %s is not a member of this organization", userID)
+	return resp.Msg.Member, nil
 }
