@@ -121,7 +121,6 @@ export default class OrganizationMembersComponent implements OnInit {
 
   // Computed: pending invitations (have status pending)
   get pendingInvitations(): OrganizationMember[] {
-    console.log(this.allMembers());
     return this.allMembers().filter((m) => m.status === 'pending');
   }
 
@@ -184,7 +183,9 @@ export default class OrganizationMembersComponent implements OnInit {
     this.inviteError.set(null);
 
     try {
-      await firstValueFrom(this.inviteClient.inviteMember({ email, permission: this.invitePermission() }));
+      await firstValueFrom(
+        this.inviteClient.inviteMember({ email, permission: this.invitePermission() }),
+      );
       this.closeModal();
       await this.loadMembers();
     } catch (err: unknown) {

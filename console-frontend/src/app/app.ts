@@ -50,9 +50,10 @@ import SelectorModalComponent from './selector-modal/selector-modal.component';
 import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
+import type { Invitation } from '../generated/v1/invite_pb';
 import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
-import { CLUSTER, ORGANIZATION } from '../connect/tokens';
+import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
 
 const reloadApp = () => {
@@ -120,6 +121,8 @@ export default class App implements OnInit {
 
   private clusterClient = inject(CLUSTER);
 
+  private inviteClient = inject(INVITE);
+
   private clusterNameCache = new Map<string, string>();
 
   // Version mismatch state
@@ -134,6 +137,9 @@ export default class App implements OnInit {
 
   // Multi-org picker state (shown after login for multi-org users)
   showOrgPicker = signal(false);
+
+  // Pending invitations for the current user
+  pendingInvitations = signal<Invitation[]>([]);
 
   // Theme state
   isDarkMode = signal(false);
@@ -210,9 +216,15 @@ export default class App implements OnInit {
    */
   private async loadUserOrganizations() {
     try {
-      // Call ListOrganizations (user-scoped endpoint, doesn't need Fun-Organization header)
-      const response = await firstValueFrom(this.organizationClient.listOrganizations({}));
-      const orgs = response.organizations;
+      // Fetch organizations and pending invitations in parallel
+      const [orgResponse, inviteResponse] = await Promise.all([
+        firstValueFrom(this.organizationClient.listOrganizations({})),
+        firstValueFrom(this.inviteClient.listInvitations({})),
+      ]);
+
+      const orgs = orgResponse.organizations;
+      const invitations = inviteResponse.invitations;
+      this.pendingInvitations.set(invitations);
 
       if (orgs.length === 0) {
         // eslint-disable-next-line no-console
@@ -223,16 +235,20 @@ export default class App implements OnInit {
       // Store the full list for the picker and sidebar selector
       this.organizationDataService.setUserOrganizations(orgs);
 
-      // Try to restore previously selected org from sessionStorage
+      // Determine which orgs are accepted (not pending invitation)
+      const pendingOrgIds = new Set(invitations.map((i) => i.organizationId));
+      const acceptedOrgs = orgs.filter((o) => !pendingOrgIds.has(o.id));
+
+      // Try to restore previously selected org from localStorage
       const storedOrgId = OrganizationContextService.getStoredOrganizationId();
-      const storedOrgValid = storedOrgId && orgs.some((o) => o.id === storedOrgId);
+      const storedOrgValid = storedOrgId && acceptedOrgs.some((o) => o.id === storedOrgId);
 
       if (storedOrgValid) {
         await this.selectAndLoadOrganization(storedOrgId);
-      } else if (orgs.length === 1) {
-        await this.selectAndLoadOrganization(orgs[0].id);
+      } else if (acceptedOrgs.length === 1 && invitations.length === 0) {
+        await this.selectAndLoadOrganization(acceptedOrgs[0].id);
       } else {
-        // Multiple orgs, no valid stored selection: show picker
+        // Multiple orgs or pending invitations: show picker
         this.showOrgPicker.set(true);
       }
     } catch (error) {
@@ -259,6 +275,39 @@ export default class App implements OnInit {
   async handleOrgPickerSelection(orgId: string) {
     await this.selectAndLoadOrganization(orgId);
     this.router.navigate(['/']);
+  }
+
+  /**
+   * Handle accepting a pending invitation from the org picker.
+   */
+  async handleAcceptInvitation(invitation: Invitation) {
+    try {
+      await firstValueFrom(this.inviteClient.acceptInvitation({ id: invitation.id }));
+      this.pendingInvitations.update((invs) => invs.filter((i) => i.id !== invitation.id));
+      // Refresh the JWT so the token includes the newly accepted membership
+      await this.apiService.refreshToken();
+      await this.selectAndLoadOrganization(invitation.organizationId);
+      this.router.navigate(['/']);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to accept invitation:', error);
+    }
+  }
+
+  /**
+   * Handle declining a pending invitation from the org picker.
+   */
+  async handleDeclineInvitation(invitation: Invitation) {
+    try {
+      await firstValueFrom(this.inviteClient.declineInvitation({ id: invitation.id }));
+      this.pendingInvitations.update((invs) => invs.filter((i) => i.id !== invitation.id));
+      this.organizationDataService.userOrganizations.update((orgs) =>
+        orgs.filter((o) => o.id !== invitation.organizationId),
+      );
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to decline invitation:', error);
+    }
   }
 
   // Update sidebar state based on current route
@@ -491,11 +540,14 @@ export default class App implements OnInit {
   selectorOrganizations = computed(() => {
     const allOrgs = this.organizationDataService.userOrganizations();
     const detailedOrgs = this.organizationDataService.organizations();
+    const pendingOrgIds = new Set(this.pendingInvitations().map((i) => i.organizationId));
 
-    return allOrgs.map((org) => {
-      const detailed = detailedOrgs.find((d) => d.id === org.id);
-      return detailed ?? { id: org.id, name: org.name, projects: [] };
-    });
+    return allOrgs
+      .filter((org) => !pendingOrgIds.has(org.id))
+      .map((org) => {
+        const detailed = detailedOrgs.find((d) => d.id === org.id);
+        return detailed ?? { id: org.id, name: org.name, projects: [] };
+      });
   });
 
   selectedType = computed<'organization' | 'project' | null>(() => {
