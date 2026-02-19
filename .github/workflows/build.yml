@@ -6,48 +6,182 @@ on:
   pull_request:
     branches: [master]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/fundament
+
 jobs:
   build-authn-api:
     name: Build authn-api
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker build -f authn-api/Dockerfile .
+      - name: Log in to Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: authn-api/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ env.IMAGE_PREFIX }}/authn-api:latest,${{ env.IMAGE_PREFIX }}/authn-api:${{ github.sha }}
 
   build-organization-api:
     name: Build organization-api
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker build -f organization-api/Dockerfile .
+      - name: Log in to Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: organization-api/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ env.IMAGE_PREFIX }}/organization-api:latest,${{ env.IMAGE_PREFIX }}/organization-api:${{ github.sha }}
 
   build-db-migrations:
     name: Build db-migrations
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker build -f db/Dockerfile db
+      - name: Log in to Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: db
+          file: db/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ env.IMAGE_PREFIX }}/db-migrations:latest,${{ env.IMAGE_PREFIX }}/db-migrations:${{ github.sha }}
 
   build-console-frontend:
     name: Build console-frontend
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker build -f console-frontend/Dockerfile .
+      - name: Log in to Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: console-frontend/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ env.IMAGE_PREFIX }}/console-frontend:latest,${{ env.IMAGE_PREFIX }}/console-frontend:${{ github.sha }}
 
   build-cluster-worker:
     name: Build cluster-worker
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker build -f cluster-worker/Dockerfile .
+      - name: Log in to Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: cluster-worker/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ env.IMAGE_PREFIX }}/cluster-worker:latest,${{ env.IMAGE_PREFIX }}/cluster-worker:${{ github.sha }}
+
+  build-authz-worker:
+    name: Build authz-worker
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: authz-worker/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ env.IMAGE_PREFIX }}/authz-worker:latest,${{ env.IMAGE_PREFIX }}/authz-worker:${{ github.sha }}
+
+  build-docs-frontend:
+    name: Build docs-frontend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docs-frontend/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ env.IMAGE_PREFIX }}/docs-frontend:latest,${{ env.IMAGE_PREFIX }}/docs-frontend:${{ github.sha }}
