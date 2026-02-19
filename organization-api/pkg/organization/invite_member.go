@@ -75,10 +75,8 @@ func memberFromInviteRow(email string, m *db.InviteCreateMembershipRow) *organiz
 	return &organizationv1.Member{
 		Id:         m.ID.String(),
 		UserId:     m.UserID.String(),
-		Name:       email,
 		Email:      &email,
 		Permission: string(m.Permission),
-		Status:     string(m.Status),
 		Created:    timestamppb.New(m.Created.Time),
 	}
 }
