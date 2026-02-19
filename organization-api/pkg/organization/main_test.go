@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
 	"syscall"
 	"testing"
 
@@ -92,6 +94,8 @@ func startExistingEmbeddedPostgres(pgBin, dataDir string) {
 	// We run `pg_ctl` directly, since the `Start` method of embedded-postgres deletes
 	// the postgres binaries every time. There is no workaround currently.
 	// See https://github.com/fergusstrange/embedded-postgres/issues/154
+	removeStalePostmasterPID(pgBin, dataDir)
+
 	pgCtl := filepath.Join(pgBin, "pg_ctl")
 	cmd := exec.Command(pgCtl,
 		"-D", dataDir,
@@ -103,6 +107,54 @@ func startExistingEmbeddedPostgres(pgBin, dataDir string) {
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("failed to start postgres from cache: %v", err)
+	}
+}
+
+// removeStalePostmasterPID handles a leftover postmaster.pid from a previous
+// crashed test run. If the referenced process is no longer running it removes
+// the file so pg_ctl can start fresh. If the process is still alive it stops
+// it gracefully via pg_ctl stop -w before returning.
+func removeStalePostmasterPID(pgBin, dataDir string) {
+	pidFile := filepath.Join(dataDir, "postmaster.pid")
+
+	data, err := os.ReadFile(pidFile)
+	if err != nil {
+		return // no pid file, nothing to clean up
+	}
+
+	// The first line of postmaster.pid contains the PID.
+	lines := strings.SplitN(string(data), "\n", 2)
+	if len(lines) == 0 {
+		return
+	}
+
+	pid, err := strconv.Atoi(strings.TrimSpace(lines[0]))
+	if err != nil {
+		return
+	}
+
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		log.Printf("removing stale postmaster.pid (pid %d)", pid)
+		os.Remove(pidFile)
+		return
+	}
+
+	// On Unix, FindProcess always succeeds. Send signal 0 to check if alive.
+	if err := process.Signal(syscall.Signal(0)); err != nil {
+		log.Printf("removing stale postmaster.pid (pid %d no longer running)", pid)
+		os.Remove(pidFile)
+		return
+	}
+
+	// Process is still running — stop it gracefully before we start a fresh instance.
+	log.Printf("stopping already-running postgres (pid %d) before restart", pid)
+	pgCtl := filepath.Join(pgBin, "pg_ctl")
+	cmd := exec.Command(pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Fatalf("failed to stop existing postgres (pid %d): %v", pid, err)
 	}
 }
 

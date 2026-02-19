@@ -32,8 +32,7 @@ spec:
                 secretKeyRef:
                   name: {{ $.Release.Name }}-db-fun-authn-api
                   key: uri
-            - name: JWT_SECRET
-              value: {{ include "fundament.jwtSecret" . }}
+            {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
             - name: OIDC_ISSUER
               value: {{ .Values.dex.issuer }}
             - name: OIDC_DISCOVERY_URL
