@@ -61,3 +61,41 @@ func Test_InviteMember_NewUser(t *testing.T) {
 	assert.Equal(t, "", res.Msg.Member.Name)
 	assert.Equal(t, "", res.Msg.Member.Status)
 }
+
+func Test_InviteMember_ExistingUser(t *testing.T) {
+	t.Parallel()
+
+	orgAID := uuid.New()
+	orgBID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgAID, "test-org-a"),
+		WithOrganization(orgBID, "test-org-b"),
+		WithUser(userID, "test-user", "", []uuid.UUID{orgAID}),
+		WithUser(userID, "second-user", "foo@bar.baz", []uuid.UUID{orgBID}),
+	)
+
+	token := env.createAuthnToken(t, userID)
+
+	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
+
+	req := connect.NewRequest(&organizationv1.InviteMemberRequest{
+		Email:      "foo@bar.baz",
+		Permission: "viewer",
+	})
+	req.Header().Set("Authorization", "Bearer "+token)
+	req.Header().Set("Fun-Organization", orgAID.String())
+
+	res, err := client.InviteMember(context.Background(), req)
+	require.NoError(t, err)
+
+	// I expect userB to be added, instead the test fails with
+	// 'permission_denied: user is not a member of organization 7fdf4b0a-113a-49dc-bacf-4a740081a320' (=orgA)
+	require.NotNil(t, res.Msg.Member)
+	assert.Equal(t, "viewer", res.Msg.Member.Permission)
+	assert.Equal(t, "foo@bar.baz", *res.Msg.Member.Email)
+	assert.Nil(t, res.Msg.Member.ExternalRef)
+	assert.Equal(t, "", res.Msg.Member.Name)
+	assert.Equal(t, "", res.Msg.Member.Status)
+}
