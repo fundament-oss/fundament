@@ -1,31 +1,29 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { create } from '@bufbuild/protobuf';
-import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerTrash, tablerAlertTriangle } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { PROJECT, CLUSTER } from '../../connect/tokens';
+import { CLUSTER, PROJECT } from '../../connect/tokens';
 import {
-  ListProjectNamespacesRequestSchema,
-  ProjectNamespace,
-} from '../../generated/v1/project_pb';
-import {
-  ListClustersRequestSchema,
+  ListClusterNamespacesRequestSchema,
   CreateNamespaceRequestSchema,
   DeleteNamespaceRequestSchema,
-  type ListClustersResponse_ClusterSummary as ClusterSummary,
+  ClusterNamespace,
 } from '../../generated/v1/cluster_pb';
+import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
+import { fetchClusterName } from '../utils/cluster-status';
 import ModalComponent from '../modal/modal.component';
-import { formatDate as formatDateUtil } from '../utils/date-format';
+import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 @Component({
-  selector: 'app-namespaces',
-  imports: [ReactiveFormsModule, RouterLink, NgIcon, ModalComponent],
+  selector: 'app-cluster-namespaces',
+  imports: [ReactiveFormsModule, NgIcon, ModalComponent, RouterLink],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -34,35 +32,39 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
       tablerAlertTriangle,
     }),
   ],
-  templateUrl: './namespaces.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './cluster-namespaces.component.html',
 })
-export default class NamespacesComponent implements OnInit {
+export default class ClusterNamespacesComponent implements OnInit {
   private titleService = inject(TitleService);
+
+  private router = inject(Router);
 
   private route = inject(ActivatedRoute);
 
-  private fb = inject(FormBuilder);
+  private client = inject(CLUSTER);
 
   private projectClient = inject(PROJECT);
-
-  private clusterClient = inject(CLUSTER);
 
   private toastService = inject(ToastService);
 
   private organizationDataService = inject(OrganizationDataService);
 
-  projectId = signal<string>('');
+  private fb = inject(FormBuilder);
 
-  namespaces = signal<ProjectNamespace[]>([]);
-
-  clusters = signal<ClusterSummary[]>([]);
+  private clusterId = '';
 
   errorMessage = signal<string | null>(null);
 
-  showCreateNamespaceModal = signal<boolean>(false);
+  isLoading = signal(true);
 
-  isLoadingClusters = signal<boolean>(false);
+  namespaces = signal<ClusterNamespace[]>([]);
+
+  projects = signal<Project[]>([]);
+
+  showAddNamespaceModal = signal<boolean>(false);
+
+  isLoadingProjects = signal<boolean>(false);
 
   isCreatingNamespace = signal<boolean>(false);
 
@@ -72,8 +74,10 @@ export default class NamespacesComponent implements OnInit {
 
   pendingNamespaceName = signal<string | null>(null);
 
+  clusterName = signal<string | null>(null);
+
   namespaceForm = this.fb.group({
-    clusterId: ['', Validators.required],
+    projectId: ['', Validators.required],
     name: [
       '',
       [
@@ -86,19 +90,25 @@ export default class NamespacesComponent implements OnInit {
   });
 
   constructor() {
-    this.titleService.setTitle('Namespaces');
+    this.titleService.setTitle('Cluster namespaces');
+    this.clusterId = this.route.snapshot.paramMap.get('id') || '';
   }
 
   async ngOnInit() {
-    const projectId = this.route.snapshot.params['id'];
-    this.projectId.set(projectId);
-    await Promise.all([this.loadNamespaces(projectId), this.loadClusters()]);
+    await Promise.all([
+      fetchClusterName(this.client, this.clusterId).then((name) => this.clusterName.set(name)),
+      this.loadNamespaces(),
+      this.loadProjects(),
+    ]);
+    this.isLoading.set(false);
   }
 
-  async loadNamespaces(projectId: string) {
+  readonly formatDate = formatDateTimeUtil;
+
+  async loadNamespaces(): Promise<void> {
     try {
-      const request = create(ListProjectNamespacesRequestSchema, { projectId });
-      const response = await firstValueFrom(this.projectClient.listProjectNamespaces(request));
+      const request = create(ListClusterNamespacesRequestSchema, { clusterId: this.clusterId });
+      const response = await firstValueFrom(this.client.listClusterNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
       this.toastService.error(
@@ -109,38 +119,38 @@ export default class NamespacesComponent implements OnInit {
     }
   }
 
-  async loadClusters() {
+  async loadProjects(): Promise<void> {
     try {
-      this.isLoadingClusters.set(true);
-      const request = create(ListClustersRequestSchema, {});
-      const response = await firstValueFrom(this.clusterClient.listClusters(request));
-      this.clusters.set(response.clusters);
-      if (response.clusters.length > 0) {
-        this.namespaceForm.patchValue({ clusterId: response.clusters[0].id });
+      this.isLoadingProjects.set(true);
+      const request = create(ListProjectsRequestSchema, {});
+      const response = await firstValueFrom(this.projectClient.listProjects(request));
+      this.projects.set(response.projects);
+      if (response.projects.length > 0) {
+        this.namespaceForm.patchValue({ projectId: response.projects[0].id });
       }
     } catch (error) {
       this.toastService.error(
         error instanceof Error
-          ? `Failed to load clusters: ${error.message}`
-          : 'Failed to load clusters',
+          ? `Failed to load projects: ${error.message}`
+          : 'Failed to load projects',
       );
     } finally {
-      this.isLoadingClusters.set(false);
+      this.isLoadingProjects.set(false);
     }
   }
 
-  getClusterName(clusterId: string): string {
-    const cluster = this.clusters().find((c) => c.id === clusterId);
-    return cluster?.name || clusterId;
+  getProjectName(projectId: string): string {
+    const project = this.projects().find((p) => p.id === projectId);
+    return project?.name || projectId;
   }
 
-  openCreateNamespaceModal() {
+  openAddNamespaceModal(): void {
     this.namespaceForm.reset();
-    this.showCreateNamespaceModal.set(true);
-    this.loadClusters();
+    this.showAddNamespaceModal.set(true);
+    this.loadProjects();
   }
 
-  async createNamespace() {
+  async createNamespace(): Promise<void> {
     if (this.namespaceForm.invalid) {
       this.namespaceForm.markAllAsTouched();
       return;
@@ -150,19 +160,19 @@ export default class NamespacesComponent implements OnInit {
       this.isCreatingNamespace.set(true);
 
       const request = create(CreateNamespaceRequestSchema, {
-        projectId: this.projectId(),
-        clusterId: this.namespaceForm.value.clusterId!,
+        projectId: this.namespaceForm.value.projectId!,
+        clusterId: this.clusterId,
         name: this.namespaceForm.value.name!,
       });
 
-      await firstValueFrom(this.clusterClient.createNamespace(request));
+      await firstValueFrom(this.client.createNamespace(request));
 
-      this.showCreateNamespaceModal.set(false);
+      this.showAddNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
 
-      // Reload organization data to update the selector modal
+      // Reload namespaces and organization data
       await Promise.all([
-        this.loadNamespaces(this.projectId()),
+        this.loadNamespaces(),
         this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
@@ -176,13 +186,13 @@ export default class NamespacesComponent implements OnInit {
     }
   }
 
-  openDeleteNamespaceModal(namespaceId: string, namespaceName: string) {
+  openDeleteNamespaceModal(namespaceId: string, namespaceName: string): void {
     this.pendingNamespaceId.set(namespaceId);
     this.pendingNamespaceName.set(namespaceName);
     this.showDeleteNamespaceModal.set(true);
   }
 
-  async confirmDeleteNamespace() {
+  async confirmDeleteNamespace(): Promise<void> {
     const namespaceId = this.pendingNamespaceId();
     const namespaceName = this.pendingNamespaceName();
     if (!namespaceId) return;
@@ -191,13 +201,13 @@ export default class NamespacesComponent implements OnInit {
 
     try {
       const request = create(DeleteNamespaceRequestSchema, { namespaceId });
-      await firstValueFrom(this.clusterClient.deleteNamespace(request));
+      await firstValueFrom(this.client.deleteNamespace(request));
 
       this.toastService.info(`Namespace '${namespaceName}' deleted`);
 
-      // Reload organization data to update the selector modal
+      // Reload namespaces and organization data
       await Promise.all([
-        this.loadNamespaces(this.projectId()),
+        this.loadNamespaces(),
         this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
@@ -209,9 +219,7 @@ export default class NamespacesComponent implements OnInit {
     }
   }
 
-  readonly formatDate = formatDateUtil;
-
-  getNameError(): string {
+  getNamespaceNameError(): string {
     const nameControl = this.namespaceForm.get('name');
     if (nameControl?.hasError('required')) {
       return 'Namespace name is required.';
@@ -223,5 +231,9 @@ export default class NamespacesComponent implements OnInit {
       return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
     }
     return '';
+  }
+
+  onCancel() {
+    this.router.navigate(['/clusters', this.clusterId]);
   }
 }

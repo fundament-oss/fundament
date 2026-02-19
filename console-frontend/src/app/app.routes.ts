@@ -87,6 +87,18 @@ const routes: Routes = [
         },
       },
       {
+        path: 'clusters/:id/namespaces',
+        loadComponent: () =>
+          import('./cluster-namespaces/cluster-namespaces.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [
+            { label: 'Clusters', route: '/' },
+            { label: 'Cluster details', route: '/clusters/:id' },
+            { label: 'Namespaces' },
+          ],
+        },
+      },
+      {
         path: 'projects',
         loadComponent: () => import('./projects/projects.component').then((m) => m.default),
         data: {
