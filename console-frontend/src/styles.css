@@ -21,6 +21,7 @@
   @apply -z-10 animate-none;
   animation-fill-mode: both;
 }
+
 .dark::view-transition-new(root) {
   animation-name: reveal-dark;
   animation-fill-mode: both;
@@ -143,6 +144,10 @@ input[type='email'],
 input[type='password'],
 textarea {
   @apply w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 ring-indigo-500 focus:border-indigo-500 focus:ring-1 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:placeholder-gray-600 dark:ring-offset-gray-950 dark:autofill:scheme-dark;
+}
+
+input[type='radio'] {
+  @apply mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600;
 }
 
 select {

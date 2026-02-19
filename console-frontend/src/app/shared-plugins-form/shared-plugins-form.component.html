@@ -22,7 +22,6 @@
                 [value]="preset.id"
                 [(ngModel)]="selectedPreset"
                 (change)="onPresetChange()"
-                class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
               />
               {{ preset.name }}
             </span>
@@ -42,7 +41,6 @@
               value="custom"
               [(ngModel)]="selectedPreset"
               (change)="onPresetChange()"
-              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
             />
             Custom plugin selection
           </span>
