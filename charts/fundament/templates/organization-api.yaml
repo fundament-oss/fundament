@@ -28,8 +28,7 @@ spec:
                 secretKeyRef:
                   name: {{ $.Release.Name }}-db-fun-fundament-api
                   key: uri
-            - name: JWT_SECRET
-              value: {{ include "fundament.jwtSecret" . }}
+            {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
             - name: LOG_LEVEL
               value: {{ .Values.organizationApi.logLevel }}
             {{- if $.Values.externalUrls.corsAllowedOrigins }}
