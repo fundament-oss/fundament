@@ -69,7 +69,7 @@ const routes: Routes = [
         data: {
           breadcrumbs: [
             { label: 'Clusters', route: '/' },
-            { label: 'Cluster details' },
+            { label: ':clusterName', route: '/clusters/:id' },
             { label: 'Nodes' },
           ],
         },
@@ -81,7 +81,7 @@ const routes: Routes = [
         data: {
           breadcrumbs: [
             { label: 'Clusters', route: '/' },
-            { label: 'Cluster details' },
+            { label: ':clusterName', route: '/clusters/:id' },
             { label: 'Plugins' },
           ],
         },
@@ -93,7 +93,7 @@ const routes: Routes = [
         data: {
           breadcrumbs: [
             { label: 'Clusters', route: '/' },
-            { label: 'Cluster details', route: '/clusters/:id' },
+            { label: ':clusterName', route: '/clusters/:id' },
             { label: 'Namespaces' },
           ],
         },
@@ -125,7 +125,7 @@ const routes: Routes = [
         loadComponent: () =>
           import('./cluster-details/cluster-details.component').then((m) => m.default),
         data: {
-          breadcrumbs: [{ label: 'Clusters', route: '/' }, { label: 'Cluster details' }],
+          breadcrumbs: [{ label: 'Clusters', route: '/' }, { label: ':clusterName' }],
         },
       },
       {

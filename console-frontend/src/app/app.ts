@@ -52,7 +52,8 @@ import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
-import { ORGANIZATION } from '../connect/tokens';
+import { CLUSTER, ORGANIZATION } from '../connect/tokens';
+import { fetchClusterName } from './utils/cluster-status';
 
 const reloadApp = () => {
   window.location.reload();
@@ -116,6 +117,10 @@ export default class App implements OnInit {
   private organizationContextService = inject(OrganizationContextService);
 
   private organizationClient = inject(ORGANIZATION);
+
+  private clusterClient = inject(CLUSTER);
+
+  private clusterNameCache = new Map<string, string>();
 
   // Version mismatch state
   apiVersionMismatch = signal(false);
@@ -293,7 +298,7 @@ export default class App implements OnInit {
   }
 
   // Update breadcrumbs based on current route data
-  private updateBreadcrumbs() {
+  private async updateBreadcrumbs() {
     const configs: BreadcrumbSegment[] = [];
     let allParams: Record<string, string> = {};
     let route: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
@@ -305,19 +310,42 @@ export default class App implements OnInit {
       route = route.firstChild ?? null;
     }
 
-    this.breadcrumbSegments.set(configs.map((seg) => this.resolveBreadcrumb(seg, allParams)));
+    const resolved = await Promise.all(
+      configs.map((seg) => this.resolveBreadcrumb(seg, allParams)),
+    );
+    this.breadcrumbSegments.set(resolved);
   }
 
-  private resolveBreadcrumb(
+  private async resolveBreadcrumb(
     segment: BreadcrumbSegment,
     params: Record<string, string>,
-  ): BreadcrumbSegment {
+  ): Promise<BreadcrumbSegment> {
     let label = segment.label;
     let route = segment.route;
 
     if (label === ':projectName') {
       const projectData = this.organizationDataService.getProjectById(params['id']);
       label = projectData?.project.name || 'Project';
+    }
+
+    if (label === ':clusterName') {
+      const clusterId = params['id'];
+      if (clusterId) {
+        const cached = this.clusterNameCache.get(clusterId);
+        if (cached) {
+          label = cached;
+        } else {
+          const name = await fetchClusterName(this.clusterClient, clusterId);
+          if (name) {
+            this.clusterNameCache.set(clusterId, name);
+            label = name;
+          } else {
+            label = 'Cluster';
+          }
+        }
+      } else {
+        label = 'Cluster';
+      }
     }
 
     if (route) {
