@@ -5,6 +5,7 @@ import { AUTHN } from '../connect/tokens';
 import { ConfigService } from './config.service';
 import { client as authnRestClient } from '../generated/authn-api/client.gen';
 import { handlePasswordLogin, handleRefresh, handleLogout } from '../generated/authn-api';
+import OrganizationContextService from './organization-context.service';
 
 @Injectable({
   providedIn: 'root',
@@ -15,6 +16,8 @@ export default class AuthnApiService {
   private restClient = authnRestClient;
 
   private configService = inject(ConfigService);
+
+  private organizationContext = inject(OrganizationContextService);
 
   private currentUserSubject = new BehaviorSubject<User | undefined>(undefined);
 
@@ -95,7 +98,7 @@ export default class AuthnApiService {
     // Clear user state, hint, and organization selection
     this.currentUserSubject.next(undefined);
     localStorage.removeItem('auth_hint');
-    localStorage.removeItem('selected_organization_id');
+    this.organizationContext.clearOrganizationId();
   }
 
   isAuthenticated(): boolean {

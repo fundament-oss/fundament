@@ -160,7 +160,10 @@
     <!-- Organization Picker (shown after login for multi-org users) -->
     <app-org-picker
       [organizations]="organizationDataService.userOrganizations()"
+      [invitations]="pendingInvitations()"
       (selectOrganization)="handleOrgPickerSelection($event)"
+      (acceptInvitation)="handleAcceptInvitation($event)"
+      (declineInvitation)="handleDeclineInvitation($event)"
     />
   } @else {
     <div class="flex">
