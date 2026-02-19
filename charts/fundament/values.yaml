@@ -16,14 +16,14 @@ externalUrls:
 
 # Container images
 images:
-  dbMigrations: db-migrations:latest
-  authnApi: authn-api:latest
-  organizationApi: organization-api:latest
-  consoleFrontend: console-frontend:latest
-  docsFrontend: docs-frontend:latest
-  clusterWorker: cluster-worker:latest
-  authzWorker: authz-worker:latest
-  openfgaSetup: openfga-setup:latest
+  dbMigrations: ghcr.io/fundament-oss/fundament/db-migrations:latest
+  authnApi: ghcr.io/fundament-oss/fundament/authn-api:latest
+  organizationApi: ghcr.io/fundament-oss/fundament/organization-api:latest
+  consoleFrontend: ghcr.io/fundament-oss/fundament/console-frontend:latest
+  docsFrontend: ghcr.io/fundament-oss/fundament/docs-frontend:latest
+  clusterWorker: ghcr.io/fundament-oss/fundament/cluster-worker:latest
+  authzWorker: ghcr.io/fundament-oss/fundament/authz-worker:latest
+  openfgaSetup: ghcr.io/fundament-oss/fundament/openfga-setup:latest
 
 # Database (CloudNativePG)
 db:
