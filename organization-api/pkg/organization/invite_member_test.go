@@ -37,7 +37,7 @@ func Test_InviteMember_NewUser(t *testing.T) {
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
-		WithUser(userID, "test-user", []uuid.UUID{orgID}),
+		WithUser(userID, "test-user", "", []uuid.UUID{orgID}),
 	)
 
 	token := env.createAuthnToken(t, userID)

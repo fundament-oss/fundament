@@ -41,7 +41,7 @@ func Test_APIKey_Create(t *testing.T) {
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
-		WithUser(userID, "test-user", []uuid.UUID{orgID}),
+		WithUser(userID, "test-user", "", []uuid.UUID{orgID}),
 		WithClock(testClock),
 	)
 
