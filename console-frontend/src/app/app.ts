@@ -243,7 +243,7 @@ export default class App implements OnInit {
       const storedOrgId = OrganizationContextService.getStoredOrganizationId();
       const storedOrgValid = storedOrgId && acceptedOrgs.some((o) => o.id === storedOrgId);
 
-      if (storedOrgValid) {
+      if (storedOrgValid && invitations.length === 0) {
         await this.selectAndLoadOrganization(storedOrgId);
       } else if (acceptedOrgs.length === 1 && invitations.length === 0) {
         await this.selectAndLoadOrganization(acceptedOrgs[0].id);
