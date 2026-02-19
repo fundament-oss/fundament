@@ -29,22 +29,108 @@ func (q *Queries) MemberDelete(ctx context.Context, arg MemberDeleteParams) erro
 	return err
 }
 
-const memberGetUserID = `-- name: MemberGetUserID :one
-SELECT user_id
-FROM tenant.organizations_users
-WHERE id = $1
-    AND deleted IS NULL
+const memberGetByID = `-- name: MemberGetByID :one
+SELECT
+    organizations_users.id,
+    organizations_users.organization_id,
+    organizations_users.user_id,
+    users.name,
+    users.external_ref,
+    users.email,
+    organizations_users.permission,
+    organizations_users.status,
+    organizations_users.created
+FROM tenant.users
+INNER JOIN tenant.organizations_users
+    ON organizations_users.user_id = users.id
+WHERE organizations_users.id = $1
+    AND organizations_users.deleted IS NULL
+    AND users.deleted IS NULL
 `
 
-type MemberGetUserIDParams struct {
+type MemberGetByIDParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) MemberGetUserID(ctx context.Context, arg MemberGetUserIDParams) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, memberGetUserID, arg.ID)
-	var user_id uuid.UUID
-	err := row.Scan(&user_id)
-	return user_id, err
+type MemberGetByIDRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	UserID         uuid.UUID
+	Name           string
+	ExternalRef    pgtype.Text
+	Email          pgtype.Text
+	Permission     dbconst.OrganizationsUserPermission
+	Status         dbconst.OrganizationsUserStatus
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) MemberGetByID(ctx context.Context, arg MemberGetByIDParams) (MemberGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, memberGetByID, arg.ID)
+	var i MemberGetByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.UserID,
+		&i.Name,
+		&i.ExternalRef,
+		&i.Email,
+		&i.Permission,
+		&i.Status,
+		&i.Created,
+	)
+	return i, err
+}
+
+const memberGetByUserID = `-- name: MemberGetByUserID :one
+SELECT
+    organizations_users.id,
+    organizations_users.organization_id,
+    organizations_users.user_id,
+    users.name,
+    users.external_ref,
+    users.email,
+    organizations_users.permission,
+    organizations_users.status,
+    organizations_users.created
+FROM tenant.users
+INNER JOIN tenant.organizations_users
+    ON organizations_users.user_id = users.id
+WHERE organizations_users.user_id = $1
+    AND organizations_users.deleted IS NULL
+    AND users.deleted IS NULL
+`
+
+type MemberGetByUserIDParams struct {
+	UserID uuid.UUID
+}
+
+type MemberGetByUserIDRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	UserID         uuid.UUID
+	Name           string
+	ExternalRef    pgtype.Text
+	Email          pgtype.Text
+	Permission     dbconst.OrganizationsUserPermission
+	Status         dbconst.OrganizationsUserStatus
+	Created        pgtype.Timestamptz
+}
+
+func (q *Queries) MemberGetByUserID(ctx context.Context, arg MemberGetByUserIDParams) (MemberGetByUserIDRow, error) {
+	row := q.db.QueryRow(ctx, memberGetByUserID, arg.UserID)
+	var i MemberGetByUserIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.UserID,
+		&i.Name,
+		&i.ExternalRef,
+		&i.Email,
+		&i.Permission,
+		&i.Status,
+		&i.Created,
+	)
+	return i, err
 }
 
 const memberList = `-- name: MemberList :many

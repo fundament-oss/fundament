@@ -29,12 +29,12 @@ func (s *Server) UpdateMemberPermission(
 
 	memberID := uuid.MustParse(req.Msg.Id)
 
-	memberUserID, err := s.queries.MemberGetUserID(ctx, db.MemberGetUserIDParams{ID: memberID})
+	member, err := s.queries.MemberGetByID(ctx, db.MemberGetByIDParams{ID: memberID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("member not found"))
 	}
 
-	if memberUserID == userID {
+	if member.UserID == userID {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cannot modify your own permission"))
 	}
 

@@ -33,6 +33,7 @@ func (s *Server) ListMembers(
 func memberFromListRow(m *db.MemberListRow) *organizationv1.Member {
 	member := &organizationv1.Member{
 		Id:         m.ID.String(),
+		UserId:     m.UserID.String(),
 		Name:       m.Name,
 		Permission: string(m.Permission),
 		Status:     string(m.Status),
