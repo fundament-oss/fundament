@@ -59,14 +59,6 @@ WHERE organizations_users.user_id = $1
     AND organizations_users.deleted IS NULL
 ORDER BY organizations_users.created ASC;
 
--- name: OrganizationUserAccept :exec
--- Transitions a pending invitation to accepted when an invited user logs in
-UPDATE tenant.organizations_users
-SET status = 'accepted'
-WHERE user_id = $1
-    AND status = 'pending'
-    AND deleted IS NULL;
-
 -- name: APIKeyGetByHash :one
 -- Uses SECURITY DEFINER function to bypass RLS (we don't know org_id before lookup)
 SELECT id, organization_id, user_id, name, token_prefix, expires, revoked, last_used, created, deleted

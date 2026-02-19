@@ -77,24 +77,6 @@ func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreate
 	return i, err
 }
 
-const organizationUserAccept = `-- name: OrganizationUserAccept :exec
-UPDATE tenant.organizations_users
-SET status = 'accepted'
-WHERE user_id = $1
-    AND status = 'pending'
-    AND deleted IS NULL
-`
-
-type OrganizationUserAcceptParams struct {
-	UserID uuid.UUID
-}
-
-// Transitions a pending invitation to accepted when an invited user logs in
-func (q *Queries) OrganizationUserAccept(ctx context.Context, arg OrganizationUserAcceptParams) error {
-	_, err := q.db.Exec(ctx, organizationUserAccept, arg.UserID)
-	return err
-}
-
 const organizationUserCreate = `-- name: OrganizationUserCreate :one
 INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status)
 VALUES ($1, $2, $3, $4)
