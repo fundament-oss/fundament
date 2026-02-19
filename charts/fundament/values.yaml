@@ -1,8 +1,10 @@
 # Fundament Helm Chart - Default Values
 
 # JWT Secret - required for token signing/validation across services
-# Must be set in production (no default for security)
 jwtSecret: ""
+jwtSecretRef:
+  name: "" # Name of the Kubernetes Secret
+  key: "" # Key within the Secret containing the JWT secret
 
 # External URLs - must be set for your environment
 externalUrls:
