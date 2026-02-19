@@ -139,13 +139,6 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 		return nil, "", fmt.Errorf("claiming invited user: %w", err)
 	}
 
-	// Transition pending invitations to accepted
-	err = qtx.OrganizationUserAccept(ctx, db.OrganizationUserAcceptParams{UserID: invitedUser.ID})
-	if err != nil {
-		s.logger.Error("failed to accept organization memberships", "error", err)
-		return nil, "", fmt.Errorf("accepting memberships: %w", err)
-	}
-
 	organizationIDs, err := s.getUserOrganizationIDs(ctx, invitedUser.ID)
 	if err != nil {
 		s.logger.Error("failed to get user organizations", "error", err)

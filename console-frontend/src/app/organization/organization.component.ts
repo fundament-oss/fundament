@@ -21,7 +21,7 @@ import { ORGANIZATION } from '../../connect/tokens';
 import { TitleService } from '../title.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { formatDate as formatDateUtil } from '../utils/date-format';
-import { OrganizationContextService } from '../organization-context.service';
+import OrganizationContextService from '../organization-context.service';
 
 @Component({
   selector: 'app-organization',

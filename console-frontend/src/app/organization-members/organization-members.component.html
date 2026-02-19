@@ -26,7 +26,7 @@
     <div class="mb-8">
       <h2 class="mb-4 text-lg font-semibold dark:text-white">Pending invitations</h2>
       <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        Users who have been invited but haven't signed in yet
+        Users who have been invited but haven't accepted yet
       </p>
 
       @if (isLoading()) {
@@ -209,7 +209,10 @@
     </div>
 
     <div class="mb-6">
-      <label for="permission" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label
+        for="permission"
+        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+      >
         Permission
       </label>
       <select
