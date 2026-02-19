@@ -198,8 +198,8 @@ func (r *OrganizationMemberResource) Read(ctx context.Context, req resource.Read
 	member, err := r.findMemberByID(ctx, state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to List Members",
-			fmt.Sprintf("Unable to list organization members: %s", err.Error()),
+			"Unable to Read Member",
+			fmt.Sprintf("Unable to read organization member: %s", err.Error()),
 		)
 		return
 	}
@@ -297,8 +297,8 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 	member, err := r.findMemberByID(ctx, state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to List Members",
-			fmt.Sprintf("Unable to list organization members: %s", err.Error()),
+			"Unable to Read Member",
+			fmt.Sprintf("Unable to read organization member: %s", err.Error()),
 		)
 		return
 	}
@@ -397,21 +397,20 @@ func (r *OrganizationMemberResource) ImportState(ctx context.Context, req resour
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-// findMemberByID lists all members and finds the one with the given ID.
+// findMemberByID fetches a single member by membership ID.
 // Returns the member if found, nil if not found, or an error on API failure.
 func (r *OrganizationMemberResource) findMemberByID(ctx context.Context, id string) (*organizationv1.Member, error) {
-	listReq := connect.NewRequest(&organizationv1.ListMembersRequest{})
+	getReq := connect.NewRequest(&organizationv1.GetMemberRequest{
+		Lookup: &organizationv1.GetMemberRequest_Id{Id: id},
+	})
 
-	listResp, err := r.client.MemberService.ListMembers(ctx, listReq)
+	getResp, err := r.client.MemberService.GetMember(ctx, getReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list members: %w", err)
-	}
-
-	for _, member := range listResp.Msg.Members {
-		if member.Id == id {
-			return member, nil
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return nil, nil
 		}
+		return nil, fmt.Errorf("failed to get member: %w", err)
 	}
 
-	return nil, nil
+	return getResp.Msg.Member, nil
 }
