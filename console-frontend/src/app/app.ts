@@ -400,13 +400,9 @@ export default class App implements OnInit {
     return { label, route };
   }
 
-  // Check if current route is clusters or add-cluster
+  // Check if current route is clusters or clusters/add
   isClustersActive(): boolean {
-    return (
-      this.router.url === '/' ||
-      this.router.url.startsWith('/clusters/') ||
-      this.router.url.startsWith('/add-cluster')
-    );
+    return this.router.url === '/' || this.router.url.startsWith('/clusters/');
   }
 
   // Initialize theme from localStorage or system preference

@@ -38,6 +38,6 @@ export default class AddClusterPluginsComponent {
     this.stateService.markStepCompleted(2);
 
     // Navigate to the next step
-    this.router.navigate(['/add-cluster/summary']);
+    this.router.navigate(['/clusters/add/summary']);
   }
 }

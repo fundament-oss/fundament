@@ -108,7 +108,7 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
     this.stateService.markStepCompleted(0);
 
     // Navigate to the next step
-    this.router.navigate(['/add-cluster/nodes']);
+    this.router.navigate(['/clusters/add/nodes']);
   }
 
   private static scrollToFirstError() {

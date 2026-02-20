@@ -3,7 +3,7 @@
   <h1 class="text-2xl font-bold dark:text-white">Add cluster plugins</h1>
   <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
     Configure your cluster plugins or presets with the settings below.
-    <a routerLink="/add-cluster/summary" class="link inline-flex items-center"
+    <a routerLink="/clusters/add/summary" class="link inline-flex items-center"
       >Skip this step <ng-icon name="tablerArrowRight" class="ml-0.5"
     /></a>
   </p>
@@ -13,7 +13,7 @@
 <div class="card-body-lg">
   <app-shared-plugins-form (formSubmit)="onFormSubmit($event)">
     <div class="flex space-x-3">
-      <a routerLink="/add-cluster/nodes" class="btn-secondary"> Previous step </a>
+      <a routerLink="/clusters/add/nodes" class="btn-secondary"> Previous step </a>
       <button type="submit" class="btn-primary">Next step</button>
     </div>
   </app-shared-plugins-form>
