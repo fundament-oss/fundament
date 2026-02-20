@@ -1,0 +1,94 @@
+jwtSecretRef:
+  name: fundament-jwt
+  key: secret
+
+db:
+  enabled: true
+  instances: 1
+  reset: false
+  storageSize: 5Gi
+  insertTestData: true
+
+authnApi:
+  enabled: true
+  replicas: 1
+
+organizationApi:
+  enabled: true
+  replicas: 1
+
+consoleFrontend:
+  enabled: true
+  replicas: 1
+
+docsFrontend:
+  enabled: true
+  replicas: 1
+
+dex:
+  enabled: true
+  issuer: https://dex.apps.digilab.network
+  discoveryUrl: http://fundament-dex:5556
+  staticClients:
+    - id: fundament
+      name: Fundament
+      redirectURIs:
+        - https://fundament.apps.digilab.network/callback
+      public: true
+  staticPasswords:
+    # acme-corp users
+    - email: alice@acme-corp.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Alice Johnson
+      userID: "019b4000-1000-7000-8000-000000000001"
+    - email: bob@acme-corp.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Bob Smith
+      userID: "019b4000-1000-7000-8000-000000000002"
+    - email: carol@acme-corp.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Carol White
+      userID: "019b4000-1000-7000-8000-000000000003"
+    # globex users
+    - email: david@globex.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: David Brown
+      userID: "019b4000-1000-7000-8000-000000000004"
+    - email: eve@globex.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Eve Davis
+      userID: "019b4000-1000-7000-8000-000000000005"
+    # initech users
+    - email: frank@initech.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Frank Miller
+      userID: "019b4000-1000-7000-8000-000000000006"
+    - email: grace@initech.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Grace Lee
+      userID: "019b4000-1000-7000-8000-000000000007"
+
+authzWorker:
+  enabled: true
+  replicas: 1
+  logLevel: debug
+  pollInterval: "2s"
+  batchSize: 100
+
+openfga:
+  enabled: true
+  # Use a non-standard API port since 8080 is used by ingress.
+  # The playground auto-detects the API port from the URL it's served from.
+  apiPort: 18080
+  playground:
+    # To use the playground, you must port-forward both the API and playground ports to localhost:
+    #   kubectl port-forward svc/fundament-openfga 18080:18080 3000:3000
+    # Then access the playground at http://localhost:3000/playground
+    # This is due to CSP restrictions in the embedded play.fga.dev iframe.
+    # See: https://github.com/openfga/openfga/issues/1174
+    enabled: true
+
+ingress:
+  enabled: true
+  className: nginx
+  domain: fundament.apps.digilab.network
