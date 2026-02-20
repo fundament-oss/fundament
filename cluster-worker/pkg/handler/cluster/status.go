@@ -216,7 +216,9 @@ func (h *Handler) checkDeletedClusters(ctx context.Context, cache namespaceCache
 			continue
 		}
 
-		if shootStatus.Status == gardener.StatusPending && shootStatus.Message == gardener.MsgShootNotFound {
+		shootGone := (shootStatus.Status == gardener.StatusPending && shootStatus.Message == gardener.MsgShootNotFound) ||
+			shootStatus.Status == gardener.StatusDeleted
+		if shootGone {
 			if err := h.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
 				ClusterID: cluster.ID,
 				Status:    pgtype.Text{String: string(gardener.StatusDeleted), Valid: true},
