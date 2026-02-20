@@ -348,11 +348,12 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 			Status:    string(status.Status),
 			Message:   status.Message,
 		})
+		oldStatus := shoot.LastStatus
 		shoot.LastStatus = status.Status
 		m.logger.Debug("MOCK: status changed",
 			"cluster_id", cluster.ID,
 			"shoot", shootName,
-			"old_status", shoot.LastStatus,
+			"old_status", oldStatus,
 			"new_status", status.Status)
 	}
 
