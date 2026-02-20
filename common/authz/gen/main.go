@@ -60,8 +60,8 @@ func parseModel(path string) (*Model, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		if strings.HasPrefix(line, "type ") {
-			name := strings.TrimPrefix(line, "type ")
+		if after, ok := strings.CutPrefix(line, "type "); ok {
+			name := after
 			name = strings.TrimSpace(name)
 			currentType = &Type{Name: name}
 			model.Types = append(model.Types, *currentType)

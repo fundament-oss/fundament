@@ -92,8 +92,18 @@ metadata:
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
     app.kubernetes.io/component: dex
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
+  {{- end }}
 spec:
   ingressClassName: {{ $.Values.ingress.className }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  tls:
+    - hosts:
+        - dex.{{ $.Values.ingress.domain }}
+      secretName: {{ $.Release.Name }}-dex-tls
+  {{- end }}
   rules:
     - host: dex.{{ $.Values.ingress.domain }}
       http:

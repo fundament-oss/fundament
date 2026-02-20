@@ -25,7 +25,7 @@ kind = "0.27.0"
 "go:connectrpc.com/connect/cmd/protoc-gen-connect-go" = "1.19.1"
 
 # Go
-go = "1.25.5"
+go = "1.26.0"
 golangci-lint = "2.7.2"
 "aqua:sqlc-dev/sqlc" = "1.30.0"
 "go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen" = "2.4.1"
@@ -39,6 +39,7 @@ opentofu = "1.11.3"
 act = "latest"
 
 "npm:@usebruno/cli" = "3.0.3"
+flux2 = "2.7.5"
 
 [hooks]
 postinstall = "just e2e::install"

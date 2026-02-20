@@ -115,8 +115,7 @@ func (s *AuthnServer) handleAPIKeyError(err error) error {
 		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid token"))
 	}
 
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		switch pgErr.Hint {
 		case dbconst.HintApiKeyDeleted:
 			s.logger.Debug("api token deleted")

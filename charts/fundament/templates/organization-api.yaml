@@ -62,8 +62,17 @@ metadata:
     app.kubernetes.io/component: organization-api
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    {{- if $.Values.ingress.tls.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
+    {{- end }}
 spec:
   ingressClassName: {{ $.Values.ingress.className }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  tls:
+    - hosts:
+        - organization.{{ $.Values.ingress.domain }}
+      secretName: {{ $.Release.Name }}-organization-api-tls
+  {{- end }}
   rules:
     - host: organization.{{ $.Values.ingress.domain }}
       http:

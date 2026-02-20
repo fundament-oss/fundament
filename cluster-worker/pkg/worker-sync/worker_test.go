@@ -80,7 +80,7 @@ func TestMockClient_ListShoots(t *testing.T) {
 	ctx := context.Background()
 
 	// Create multiple shoots
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		cluster := common.TestCluster("cluster-"+string(rune('a'+i)), "tenant")
 		err := mock.ApplyShoot(ctx, &cluster)
 		if err != nil {
@@ -419,7 +419,7 @@ func TestBackoffTiming(t *testing.T) {
 
 func pow2(n int) float64 {
 	result := 1.0
-	for i := 0; i < n; i++ {
+	for range n {
 		result *= 2
 	}
 	return result
@@ -440,7 +440,7 @@ func TestStatusPoller_Timing(t *testing.T) {
 		done := make(chan struct{})
 
 		go func() {
-			for i := 0; i < 3; i++ {
+			for range 3 {
 				<-ticker.C
 				pollCount++
 			}
