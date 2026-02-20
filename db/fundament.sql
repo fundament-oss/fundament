@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.2
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -894,6 +894,15 @@ CREATE POLICY namespaces_organization_policy ON tenant.namespaces
 CREATE POLICY organizations_select_policy ON tenant.organizations
 	AS PERMISSIVE
 	FOR SELECT
+	TO fun_fundament_api
+	USING (authn.is_organization_member(id));
+-- ddl-end --
+
+-- object: organizations_update_policy | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_update_policy ON tenant.organizations CASCADE;
+CREATE POLICY organizations_update_policy ON tenant.organizations
+	AS PERMISSIVE
+	FOR UPDATE
 	TO fun_fundament_api
 	USING (authn.is_organization_member(id));
 -- ddl-end --

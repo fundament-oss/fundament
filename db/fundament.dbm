@@ -1070,6 +1070,10 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<expression type="using-exp"> <![CDATA[authn.is_organization_member(id)]]> </expression>
 </policy>
 
+<policy name="organizations_update_policy" table="tenant.organizations" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[authn.is_organization_member(id)]]> </expression>
+</policy>
+
 <policy name="organizations_authn_api_policy" table="tenant.organizations" command="ALL" permissive="true">	<roles names="fun_authn_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
