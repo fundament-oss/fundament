@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
@@ -37,7 +37,7 @@ import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_p
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { LoadingIndicatorComponent } from '../icons';
-import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
+import { getStatusColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
 import ModalComponent from '../modal/modal.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
@@ -139,7 +139,7 @@ const getEventDetails = (event: ClusterEvent): string => {
   templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class ClusterDetailsComponent implements OnInit {
+export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);
@@ -157,6 +157,8 @@ export default class ClusterDetailsComponent implements OnInit {
   private organizationDataService = inject(OrganizationDataService);
 
   private fb = inject(FormBuilder);
+
+  private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
   // Expose enum for use in template
   NodePoolStatus = NodePoolStatus;
@@ -275,6 +277,10 @@ export default class ClusterDetailsComponent implements OnInit {
     },
   };
 
+  ngOnDestroy() {
+    this.stopPolling();
+  }
+
   async ngOnInit() {
     const clusterId = this.route.snapshot.params['id'];
 
@@ -315,6 +321,8 @@ export default class ClusterDetailsComponent implements OnInit {
         this.loadInstalledPlugins(clusterId),
         this.loadClusterEvents(clusterId),
       ]);
+
+      this.updatePolling();
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error
@@ -323,6 +331,47 @@ export default class ClusterDetailsComponent implements OnInit {
       );
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  private async pollClusterStatus() {
+    const clusterId = this.clusterData.basics.id;
+    try {
+      const request = create(GetClusterRequestSchema, { clusterId });
+      const response = await firstValueFrom(this.client.getCluster(request));
+
+      if (!response.cluster) {
+        // Cluster has been deleted
+        this.stopPolling();
+        this.toastService.info(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+        this.router.navigate(['/']);
+        return;
+      }
+
+      this.clusterData.status = response.cluster.status;
+      this.clusterData.syncState = response.cluster.syncState ?? null;
+      this.updatePolling();
+    } catch {
+      // If the request fails with a not-found-like error, the cluster was deleted
+      this.stopPolling();
+      this.toastService.info(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+      this.router.navigate(['/']);
+    }
+  }
+
+  private updatePolling() {
+    const needsPolling = isTransitionalStatus(this.clusterData.status);
+    if (needsPolling && !this.pollingTimer) {
+      this.pollingTimer = setInterval(() => this.pollClusterStatus(), 5000);
+    } else if (!needsPolling && this.pollingTimer) {
+      this.stopPolling();
+    }
+  }
+
+  private stopPolling() {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+      this.pollingTimer = null;
     }
   }
 
