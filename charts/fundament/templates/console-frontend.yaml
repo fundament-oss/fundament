@@ -72,8 +72,18 @@ metadata:
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
     app.kubernetes.io/component: console-frontend
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
+  {{- end }}
 spec:
   ingressClassName: {{ $.Values.ingress.className }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  tls:
+    - hosts:
+        - console.{{ $.Values.ingress.domain }}
+      secretName: {{ $.Release.Name }}-console-frontend-tls
+  {{- end }}
   rules:
     - host: console.{{ $.Values.ingress.domain }}
       http:
