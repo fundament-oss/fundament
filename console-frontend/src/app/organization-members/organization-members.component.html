@@ -196,7 +196,6 @@
         name="email"
         placeholder="user@example.com"
         [disabled]="isSubmitting()"
-        class="disabled:opacity-50"
         [class]="
           inviteError() || (emailModel.invalid && emailModel.touched)
             ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
@@ -221,7 +220,7 @@
         (ngModelChange)="invitePermission.set($event)"
         name="permission"
         [disabled]="isSubmitting()"
-        class="w-full disabled:opacity-50"
+        class="w-full"
       >
         <option value="viewer">Viewer</option>
         <option value="admin">Admin</option>

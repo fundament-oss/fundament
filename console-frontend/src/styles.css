@@ -136,6 +136,12 @@ input.validate-on-touch.ng-invalid.ng-touched {
   @apply inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-4 py-2 text-sm font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white;
 }
 
+input:disabled,
+select:disabled,
+button:disabled {
+  @apply cursor-not-allowed opacity-50;
+}
+
 input[type='text'],
 input[type='search'],
 input[type='number'],
