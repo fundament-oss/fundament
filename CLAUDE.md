@@ -10,4 +10,5 @@
 - Always read @funs to find our architecture decision records
 - when using pgmodeler to generate fundament.sql always use the --pgsql-ver 18.0 flag
 - Panic in switch default when all enum cases should be exhaustively handled.
-- We always use soft deletes, records will never be thrown away- In the Terraform provider, always set fields to `types.StringNull()` (or the appropriate null type) in the `else` branch when a value may be nil or invalid. Never leave a field unset.
+- We always use soft deletes, records will never be thrown away
+- In the Terraform provider, always set fields to `types.StringNull()` (or the appropriate null type) in the `else` branch when a value may be nil or invalid. Never leave a field unset.
