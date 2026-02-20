@@ -21,6 +21,7 @@ import { CommonModule } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerCircleCheck,
+  tablerCircleX,
   tablerAlertTriangle,
   tablerInfoCircle,
   tablerX,
@@ -40,7 +41,6 @@ import {
   tablerBuilding,
   tablerBracketsContain,
 } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
@@ -77,7 +77,7 @@ const reloadApp = () => {
   viewProviders: [
     provideIcons({
       tablerCircleCheck,
-      tablerCircleXFill,
+      tablerCircleX,
       tablerAlertTriangle,
       tablerInfoCircle,
       tablerX,
