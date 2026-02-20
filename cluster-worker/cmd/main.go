@@ -87,6 +87,7 @@ func run() error {
 	clusterHandler := clusterhandler.New(queries, gardenerClient, logger)
 	registry.RegisterSync(handler.EntityCluster, clusterHandler)
 	registry.RegisterStatus(clusterHandler)
+	registry.RegisterReconcile(clusterHandler)
 
 	registry.RegisterSync(handler.EntityNamespace, namespacehandler.New(logger))
 	registry.RegisterSync(handler.EntityProjectMember, projectmemberhandler.New(logger))

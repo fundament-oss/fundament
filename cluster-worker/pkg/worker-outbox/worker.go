@@ -282,6 +282,12 @@ func (w *OutboxWorker) reconcile(ctx context.Context) {
 		w.logger.Error("reconcile projects failed", "error", err)
 	}
 
+	for _, h := range w.registry.ReconcileHandlers() {
+		if err := h.ReconcileOrphans(ctx); err != nil {
+			w.logger.Error("reconcile handler failed", "error", err)
+		}
+	}
+
 	w.logger.Info("outbox reconciliation complete")
 }
 

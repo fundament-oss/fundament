@@ -33,11 +33,18 @@ type StatusHandler interface {
 	CheckStatus(ctx context.Context) error
 }
 
+// ReconcileHandler performs cross-system reconciliation (e.g. orphan detection).
+// Called periodically by the outbox worker's reconcile loop.
+type ReconcileHandler interface {
+	ReconcileOrphans(ctx context.Context) error
+}
+
 // Registry holds all registered handlers. The outbox worker and status worker
 // use this to discover which handlers exist and route work to them.
 type Registry struct {
-	syncHandlers   map[EntityType]SyncHandler
-	statusHandlers []StatusHandler
+	syncHandlers      map[EntityType]SyncHandler
+	statusHandlers    []StatusHandler
+	reconcileHandlers []ReconcileHandler
 }
 
 func NewRegistry() *Registry {
@@ -69,7 +76,17 @@ func (r *Registry) SyncHandlerFor(entityType EntityType) (SyncHandler, error) {
 	return h, nil
 }
 
+// RegisterReconcile registers a ReconcileHandler to be called during reconciliation.
+func (r *Registry) RegisterReconcile(h ReconcileHandler) {
+	r.reconcileHandlers = append(r.reconcileHandlers, h)
+}
+
 // StatusHandlers returns all registered status handlers.
 func (r *Registry) StatusHandlers() []StatusHandler {
 	return r.statusHandlers
+}
+
+// ReconcileHandlers returns all registered reconcile handlers.
+func (r *Registry) ReconcileHandlers() []ReconcileHandler {
+	return r.reconcileHandlers
 }

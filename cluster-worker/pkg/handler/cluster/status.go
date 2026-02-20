@@ -17,17 +17,22 @@ import (
 // CheckStatus call to avoid redundant EnsureProject API calls.
 type namespaceCache map[uuid.UUID]string
 
-// StatusConfig holds configuration for the status checker.
-type StatusConfig struct {
-	BatchSize int32
-}
-
 // CheckStatus polls Shoot reconciliation status from Gardener for clusters
 // that have been synced but haven't reached a terminal state.
+// Returns an error if all clusters in a batch fail (indicates systemic issue).
 func (h *Handler) CheckStatus(ctx context.Context) error {
 	cache := make(namespaceCache)
-	h.checkActiveClusters(ctx, cache)
-	h.checkDeletedClusters(ctx, cache)
+
+	activeTotal, activeErrors := h.checkActiveClusters(ctx, cache)
+	deletedTotal, deletedErrors := h.checkDeletedClusters(ctx, cache)
+
+	total := activeTotal + deletedTotal
+	errors := activeErrors + deletedErrors
+
+	if total > 0 && errors == total {
+		return fmt.Errorf("all %d status checks failed", total)
+	}
+
 	return nil
 }
 
@@ -46,14 +51,16 @@ func (h *Handler) resolveNamespace(ctx context.Context, cache namespaceCache, or
 	return ns, nil
 }
 
-func (h *Handler) checkActiveClusters(ctx context.Context, cache namespaceCache) {
+func (h *Handler) checkActiveClusters(ctx context.Context, cache namespaceCache) (total, errors int) {
 	clusters, err := h.queries.ClusterListNeedingStatusCheck(ctx, db.ClusterListNeedingStatusCheckParams{
 		LimitCount: 50,
 	})
 	if err != nil {
 		h.logger.Error("failed to list clusters for status check", "error", err)
-		return
+		return 0, 0
 	}
+
+	total = len(clusters)
 
 	for i := range clusters {
 		cluster := &clusters[i]
@@ -63,9 +70,12 @@ func (h *Handler) checkActiveClusters(ctx context.Context, cache namespaceCache)
 			h.logger.Error("failed to get project namespace",
 				"cluster_id", cluster.ID,
 				"error", err)
+			errors++
 			continue
 		}
 		if namespace == "" {
+			h.logger.Debug("skipping cluster, project namespace not ready", "cluster_id", cluster.ID)
+			total-- // Not an error, just not ready yet
 			continue
 		}
 
@@ -84,6 +94,7 @@ func (h *Handler) checkActiveClusters(ctx context.Context, cache namespaceCache)
 			h.logger.Error("failed to get shoot status",
 				"cluster_id", cluster.ID,
 				"error", err)
+			errors++
 			continue
 		}
 
@@ -100,6 +111,7 @@ func (h *Handler) checkActiveClusters(ctx context.Context, cache namespaceCache)
 			h.logger.Error("failed to update shoot status",
 				"cluster_id", cluster.ID,
 				"error", err)
+			errors++
 			continue
 		}
 
@@ -145,16 +157,20 @@ func (h *Handler) checkActiveClusters(ctx context.Context, cache namespaceCache)
 				"message", shootStatus.Message)
 		}
 	}
+
+	return total, errors
 }
 
-func (h *Handler) checkDeletedClusters(ctx context.Context, cache namespaceCache) {
+func (h *Handler) checkDeletedClusters(ctx context.Context, cache namespaceCache) (total, errors int) {
 	clusters, err := h.queries.ClusterListDeletedNeedingVerification(ctx, db.ClusterListDeletedNeedingVerificationParams{
 		LimitCount: 50,
 	})
 	if err != nil {
 		h.logger.Error("failed to list deleted clusters for verification", "error", err)
-		return
+		return 0, 0
 	}
+
+	total = len(clusters)
 
 	for i := range clusters {
 		cluster := &clusters[i]
@@ -168,9 +184,12 @@ func (h *Handler) checkDeletedClusters(ctx context.Context, cache namespaceCache
 			h.logger.Error("failed to get project namespace",
 				"cluster_id", cluster.ID,
 				"error", err)
+			errors++
 			continue
 		}
 		if namespace == "" {
+			h.logger.Debug("skipping cluster, project namespace not ready", "cluster_id", cluster.ID)
+			total-- // Not an error, just not ready yet
 			continue
 		}
 
@@ -190,6 +209,7 @@ func (h *Handler) checkDeletedClusters(ctx context.Context, cache namespaceCache
 			h.logger.Error("failed to check deleted shoot status",
 				"cluster_id", cluster.ID,
 				"error", err)
+			errors++
 			continue
 		}
 
@@ -202,6 +222,7 @@ func (h *Handler) checkDeletedClusters(ctx context.Context, cache namespaceCache
 				h.logger.Error("failed to update deleted status",
 					"cluster_id", cluster.ID,
 					"error", err)
+				errors++
 				continue
 			}
 
@@ -227,10 +248,13 @@ func (h *Handler) checkDeletedClusters(ctx context.Context, cache namespaceCache
 				h.logger.Error("failed to update deleting status",
 					"cluster_id", cluster.ID,
 					"error", err)
+				errors++
 			}
 			h.logger.Debug("shoot still being deleted",
 				"cluster_id", cluster.ID,
 				"status", shootStatus.Status)
 		}
 	}
+
+	return total, errors
 }

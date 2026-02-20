@@ -119,6 +119,36 @@ func (q *Queries) ClusterGetForSync(ctx context.Context, arg ClusterGetForSyncPa
 	return i, err
 }
 
+const clusterListActiveIDs = `-- name: ClusterListActiveIDs :many
+SELECT
+    tenant.clusters.id
+FROM
+    tenant.clusters
+WHERE
+    tenant.clusters.deleted IS NULL
+`
+
+// List IDs of all non-deleted clusters (for orphan detection).
+func (q *Queries) ClusterListActiveIDs(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, clusterListActiveIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const clusterMarkSynced = `-- name: ClusterMarkSynced :exec
 UPDATE tenant.clusters
 SET

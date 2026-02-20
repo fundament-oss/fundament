@@ -39,6 +39,15 @@ VALUES
 RETURNING
     id;
 
+-- name: ClusterListActiveIDs :many
+-- List IDs of all non-deleted clusters (for orphan detection).
+SELECT
+    tenant.clusters.id
+FROM
+    tenant.clusters
+WHERE
+    tenant.clusters.deleted IS NULL;
+
 -- name: ClusterGetForSync :one
 -- Get a single cluster by ID with all data needed for sync.
 SELECT
