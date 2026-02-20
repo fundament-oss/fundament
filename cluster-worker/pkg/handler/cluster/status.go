@@ -2,14 +2,20 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/common/dbconst"
 )
+
+// namespaceCache caches organization ID → Gardener namespace within a single
+// CheckStatus call to avoid redundant EnsureProject API calls.
+type namespaceCache map[uuid.UUID]string
 
 // StatusConfig holds configuration for the status checker.
 type StatusConfig struct {
@@ -19,12 +25,28 @@ type StatusConfig struct {
 // CheckStatus polls Shoot reconciliation status from Gardener for clusters
 // that have been synced but haven't reached a terminal state.
 func (h *Handler) CheckStatus(ctx context.Context) error {
-	h.checkActiveClusters(ctx)
-	h.checkDeletedClusters(ctx)
+	cache := make(namespaceCache)
+	h.checkActiveClusters(ctx, cache)
+	h.checkDeletedClusters(ctx, cache)
 	return nil
 }
 
-func (h *Handler) checkActiveClusters(ctx context.Context) {
+func (h *Handler) resolveNamespace(ctx context.Context, cache namespaceCache, orgName string, orgID uuid.UUID) (string, error) {
+	if ns, ok := cache[orgID]; ok {
+		return ns, nil
+	}
+	projectName := gardener.ProjectName(orgName)
+	ns, err := h.gardener.EnsureProject(ctx, projectName, orgID)
+	if err != nil {
+		return "", fmt.Errorf("ensure project: %w", err)
+	}
+	if ns != "" {
+		cache[orgID] = ns
+	}
+	return ns, nil
+}
+
+func (h *Handler) checkActiveClusters(ctx context.Context, cache namespaceCache) {
 	clusters, err := h.queries.ClusterListNeedingStatusCheck(ctx, db.ClusterListNeedingStatusCheckParams{
 		LimitCount: 50,
 	})
@@ -36,8 +58,7 @@ func (h *Handler) checkActiveClusters(ctx context.Context) {
 	for i := range clusters {
 		cluster := &clusters[i]
 
-		projectName := gardener.ProjectName(cluster.OrganizationName)
-		namespace, err := h.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
+		namespace, err := h.resolveNamespace(ctx, cache, cluster.OrganizationName, cluster.OrganizationID)
 		if err != nil {
 			h.logger.Error("failed to get project namespace",
 				"cluster_id", cluster.ID,
@@ -126,7 +147,7 @@ func (h *Handler) checkActiveClusters(ctx context.Context) {
 	}
 }
 
-func (h *Handler) checkDeletedClusters(ctx context.Context) {
+func (h *Handler) checkDeletedClusters(ctx context.Context, cache namespaceCache) {
 	clusters, err := h.queries.ClusterListDeletedNeedingVerification(ctx, db.ClusterListDeletedNeedingVerificationParams{
 		LimitCount: 50,
 	})
@@ -142,8 +163,7 @@ func (h *Handler) checkDeletedClusters(ctx context.Context) {
 			deleted = &cluster.Deleted.Time
 		}
 
-		projectName := gardener.ProjectName(cluster.OrganizationName)
-		namespace, err := h.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
+		namespace, err := h.resolveNamespace(ctx, cache, cluster.OrganizationName, cluster.OrganizationID)
 		if err != nil {
 			h.logger.Error("failed to get project namespace",
 				"cluster_id", cluster.ID,

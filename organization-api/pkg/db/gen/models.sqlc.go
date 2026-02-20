@@ -36,6 +36,20 @@ type AppstorePresetPlugin struct {
 	PluginID uuid.UUID
 }
 
+type TenantCluster struct {
+	ID                 uuid.UUID
+	OrganizationID     uuid.UUID
+	Name               string
+	Region             string
+	KubernetesVersion  string
+	Created            pgtype.Timestamptz
+	Deleted            pgtype.Timestamptz
+	Synced             pgtype.Timestamptz
+	ShootStatus        pgtype.Text
+	ShootStatusMessage pgtype.Text
+	ShootStatusUpdated pgtype.Timestamptz
+}
+
 type TenantClusterEvent struct {
 	ID         uuid.UUID
 	ClusterID  uuid.UUID

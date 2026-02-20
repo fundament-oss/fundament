@@ -34,8 +34,6 @@ func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text) or
 
 func syncStateFromRow(
 	synced pgtype.Timestamptz,
-	syncError pgtype.Text,
-	syncAttempts int32,
 	shootStatus pgtype.Text,
 	shootStatusMessage pgtype.Text,
 	shootStatusUpdated pgtype.Timestamptz,
@@ -45,10 +43,6 @@ func syncStateFromRow(
 	if synced.Valid {
 		state.SyncedAt = timestamppb.New(synced.Time)
 	}
-	if syncError.Valid {
-		state.SyncError = &syncError.String
-	}
-	state.SyncAttempts = syncAttempts
 	if shootStatus.Valid {
 		state.ShootStatus = &shootStatus.String
 	}

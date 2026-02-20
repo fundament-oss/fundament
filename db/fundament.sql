@@ -119,30 +119,6 @@ $function$;
 ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO postgres;
 -- ddl-end --
 
--- object: tenant.cluster_reset_synced | type: FUNCTION --
--- DROP FUNCTION IF EXISTS tenant.cluster_reset_synced() CASCADE;
-CREATE OR REPLACE FUNCTION tenant.cluster_reset_synced ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE 
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS 
-$function$
-BEGIN
-    NEW.synced := NULL;
-    NEW.sync_claimed_at := NULL;
-    NEW.sync_attempts := 0;
-    NEW.sync_error := NULL;
-    RETURN NEW;
-END;
-$function$;
--- ddl-end --
-ALTER FUNCTION tenant.cluster_reset_synced() OWNER TO fun_owner;
--- ddl-end --
-
 -- object: tenant.cluster_outbox_cluster_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.cluster_outbox_cluster_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_cluster_trigger ()
@@ -653,9 +629,6 @@ CREATE TABLE tenant.clusters (
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	synced timestamptz,
-	sync_claimed_at timestamptz,
-	sync_error text,
-	sync_attempts integer NOT NULL DEFAULT 0,
 	shoot_status text,
 	shoot_status_message text,
 	shoot_status_updated timestamptz,
@@ -694,29 +667,6 @@ CREATE POLICY cluster_worker_all_access ON tenant.clusters
 	FOR ALL
 	TO fun_cluster_worker
 	USING (true);
--- ddl-end --
-
--- object: cluster_reset_synced | type: TRIGGER --
--- DROP TRIGGER IF EXISTS cluster_reset_synced ON tenant.clusters CASCADE;
-CREATE OR REPLACE TRIGGER cluster_reset_synced
-	BEFORE UPDATE OF name,region,kubernetes_version,deleted
-	ON tenant.clusters
-	FOR EACH ROW
-	WHEN (OLD.name IS DISTINCT FROM NEW.name
-    OR OLD.region IS DISTINCT FROM NEW.region
-    OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
-    OR (OLD.deleted IS NULL AND NEW.deleted IS NOT NULL))
-	EXECUTE PROCEDURE tenant.cluster_reset_synced();
--- ddl-end --
-
--- object: clusters_idx_needs_sync | type: INDEX --
--- DROP INDEX IF EXISTS tenant.clusters_idx_needs_sync CASCADE;
-CREATE INDEX clusters_idx_needs_sync ON tenant.clusters
-USING btree
-(
-	created
-)
-WHERE (synced IS NULL);
 -- ddl-end --
 
 -- object: tenant.node_pools | type: TABLE --

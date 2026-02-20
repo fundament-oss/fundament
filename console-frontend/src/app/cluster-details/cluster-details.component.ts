@@ -75,7 +75,6 @@ const getSyncStatusLabel = (syncState: SyncState | null): string => {
   if (!syncState) return 'Unknown';
   if (syncState.shootStatus) return syncState.shootStatus;
   if (syncState.syncedAt) return 'Synced';
-  if (syncState.syncError) return 'Error';
   return 'Pending';
 };
 

@@ -14,6 +14,9 @@ import (
 )
 
 // Handler implements both SyncHandler and StatusHandler for cluster (Shoot) lifecycle.
+// The cluster worker role (fun_cluster_worker) has unrestricted SELECT on organizations,
+// projects, and project_members because it needs to resolve organization names and
+// project membership across all tenants when syncing clusters to Gardener.
 type Handler struct {
 	queries  *db.Queries
 	gardener gardener.Client
@@ -87,7 +90,7 @@ func (h *Handler) Sync(ctx context.Context, clusterID uuid.UUID) error {
 
 	if syncErr != nil {
 		h.markSyncFailed(ctx, clusterID, syncErr.Error(), syncAction)
-		return syncErr
+		return fmt.Errorf("gardener sync: %w", syncErr)
 	}
 
 	if err := h.queries.ClusterMarkSynced(ctx, db.ClusterMarkSyncedParams{
@@ -112,19 +115,13 @@ func (h *Handler) Sync(ctx context.Context, clusterID uuid.UUID) error {
 	return nil
 }
 
+// markSyncFailed records a sync_failed event for audit history.
+// Retry tracking is handled by the outbox table, not the clusters table.
 func (h *Handler) markSyncFailed(ctx context.Context, clusterID uuid.UUID, errMsg string, syncAction dbconst.ClusterEventSyncAction) {
-	if err := h.queries.ClusterMarkSyncFailed(ctx, db.ClusterMarkSyncFailedParams{
-		ClusterID: clusterID,
-		Error:     pgtype.Text{String: errMsg, Valid: true},
-	}); err != nil {
-		h.logger.Error("failed to mark sync failed", "error", err)
-	}
-
 	if _, err := h.queries.ClusterCreateSyncFailedEvent(ctx, db.ClusterCreateSyncFailedEventParams{
 		ClusterID:  clusterID,
 		SyncAction: pgtype.Text{String: string(syncAction), Valid: true},
 		Message:    pgtype.Text{String: errMsg, Valid: true},
-		Attempt:    pgtype.Int4{},
 	}); err != nil {
 		h.logger.Warn("failed to create sync_failed event", "error", err)
 	}

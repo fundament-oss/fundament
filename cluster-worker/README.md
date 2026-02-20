@@ -9,15 +9,16 @@ A background worker service that synchronizes cluster state from PostgreSQL to G
 | **Gardener** | Kubernetes cluster management platform that provisions and manages clusters across cloud providers |
 | **Shoot** | Gardener's term for a managed Kubernetes cluster (the workload cluster where applications run) |
 | **Reconciliation** | Gardener's process of making the actual cluster state match the desired Shoot manifest |
-| **Sync** | Pushing local database state (cluster definition) to Gardener as a Shoot manifest |
+| **Outbox** | A transactional outbox table (`tenant.cluster_outbox`) that decouples API writes from Gardener sync |
 
 ## What
 
-The cluster-worker watches for changes to the `tenant.clusters` table and ensures that each cluster has a corresponding Shoot manifest in Gardener. It handles:
+The cluster-worker processes the `tenant.cluster_outbox` table and ensures that each entity change is synced to Gardener. It handles:
 
-- **Creation**: When a new cluster is added to the database, create a Shoot in Gardener
-- **Updates**: When cluster configuration changes, update the Shoot (future scope)
-- **Deletion**: When a cluster is soft-deleted, delete the Shoot from Gardener
+- **Clusters**: Create, update, or delete Shoots in Gardener
+- **Namespaces**: Sync namespace state (stub, future scope)
+- **Project members**: Sync project membership (stub, future scope)
+- **Projects**: Cleanup on project deletion (stub, future scope)
 
 The worker also monitors Gardener to track the reconciliation status of each Shoot (pending, progressing, ready, error) and stores this in the `shoot_status` column.
 
@@ -32,31 +33,30 @@ Synchronous API calls to Gardener would make the user-facing API slow and fragil
 - Multiple workers can process clusters in parallel
 - The system is resilient to Gardener downtime
 
+### Why a transactional outbox?
+
+Database triggers insert rows into `tenant.cluster_outbox` whenever relevant tables change. The worker picks up these rows and processes them. This pattern guarantees:
+
+1. **No lost events** - Outbox inserts are part of the same transaction as the data change
+2. **Exactly-once delivery** - `FOR NO KEY UPDATE SKIP LOCKED` ensures concurrent workers don't conflict
+3. **Automatic retries** - Failed rows get exponential backoff via `retry_after`
+4. **Periodic reconciliation** - Catches any drift between DB state and Gardener
+
 ### Why PostgreSQL LISTEN/NOTIFY?
 
-We use PostgreSQL's built-in pub/sub mechanism instead of a separate message queue (Redis, RabbitMQ, Kafka) because:
+We use PostgreSQL's built-in pub/sub mechanism instead of polling because:
 
 1. **No additional infrastructure** - PostgreSQL is already required
-2. **Transactional guarantees** - Notifications are sent only when transactions commit
-3. **Proven at scale** - This pattern handles hundreds of thousands of syncs per day at production systems like Printeers
-4. **Simplicity** - One less system to operate, monitor, and secure
+2. **Low latency** - Worker wakes up immediately when new outbox rows are inserted
+3. **Simplicity** - One less system to operate, monitor, and secure
 
-### Why SKIP LOCKED + Visibility Timeout?
-
-The `SELECT ... FOR UPDATE SKIP LOCKED` pattern combined with a visibility timeout enables multiple workers to process clusters concurrently without conflicts:
-
-- Workers grab available work without blocking each other
-- Natural load distribution across workers
-- No coordinator needed
-- **Crash recovery**: If a worker dies mid-sync, the visibility timeout (10 min) allows another worker to reclaim the work
-- **Exponential backoff**: Failed syncs wait 30s × 2^(attempts-1) before retry, capped at 15 minutes
-- Each claim is tracked with `sync_claimed_at` and `sync_claimed_by` for debugging
+The worker falls back to polling (`PollInterval`, default 5s) if notifications are missed.
 
 ### Why a separate status poller?
 
 Gardener Shoot reconciliation is asynchronous - applying a manifest returns immediately, but the actual cluster creation takes minutes. A separate goroutine polls Gardener for status updates because:
 
-- The main sync loop stays fast (just applies manifests)
+- The outbox processing loop stays fast (just applies manifests)
 - Users can see `shoot_status` to know if their cluster is actually ready
 - We can detect and alert on failed reconciliations
 - Deletion verification confirms Shoots are actually gone
@@ -77,15 +77,13 @@ sequenceDiagram
     User->>Frontend: Create/Update/Delete cluster
     Frontend->>API: POST/PUT/DELETE /clusters
     API->>DB: INSERT/UPDATE tenant.clusters
-    API->>DB: INSERT cluster_events (sync_requested)
 
     Note over DB: Trigger fires
-    DB->>DB: SET synced = NULL on clusters row
-    DB-->>Worker: NOTIFY cluster_sync
+    DB->>DB: INSERT into cluster_outbox
+    DB-->>Worker: NOTIFY cluster_outbox
 
-    Worker->>DB: Claim with visibility timeout
-    DB-->>Worker: Claimed cluster row
-    Worker->>DB: INSERT cluster_events (sync_claimed)
+    Worker->>DB: SELECT ... FOR NO KEY UPDATE SKIP LOCKED
+    DB-->>Worker: Outbox row (cluster_id, event, ...)
 
     alt Cluster created/updated
         Worker->>Gardener: ApplyShoot(manifest)
@@ -96,10 +94,10 @@ sequenceDiagram
     end
 
     alt Success
-        Worker->>DB: synced = now(), clear claim
+        Worker->>DB: outbox status = completed, synced = now()
         Worker->>DB: INSERT cluster_events (sync_succeeded)
     else Error
-        Worker->>DB: sync_error = msg, sync_attempts++
+        Worker->>DB: outbox retries++, retry_after = backoff
         Worker->>DB: INSERT cluster_events (sync_failed)
     end
 
@@ -116,7 +114,7 @@ sequenceDiagram
 
     User->>Frontend: View cluster status
     Frontend->>API: GET /clusters/{id}
-    API->>DB: SELECT cluster + sync status
+    API->>DB: SELECT cluster + shoot_status
     DB-->>API: Cluster with shoot_status
     API-->>Frontend: Cluster response
     Frontend-->>User: Show status (provisioning/running/error)
@@ -126,27 +124,26 @@ sequenceDiagram
 
 The cluster-worker has two goroutines managing related but distinct state machines:
 
-- **Sync Worker**: Pushes local database changes to Gardener (create/update/delete shoots)
+- **Outbox Worker**: Processes outbox rows and syncs entity state to Gardener
 - **Status Poller**: Observes Gardener and writes shoot status back to the database
 
 ```mermaid
 stateDiagram-v2
     direction TB
 
-    state "Sync Worker → clusters table" as db {
-        [*] --> Pending: User creates cluster
-        Synced --> Pending: User modifies/deletes cluster
+    state "Outbox Worker → cluster_outbox table" as outbox {
+        [*] --> Pending: Trigger inserts row
+        Pending --> Processing: Worker locks row
+        Processing --> Completed: sync succeeded
+        Processing --> Retrying: sync failed (retries < max)
+        Processing --> Failed: sync failed (retries >= max)
+        Retrying --> Pending: retry_after elapsed
 
-        Pending --> Claimed: Worker claims
-        Claimed --> Synced: sync succeeded
-        Claimed --> Failed: sync failed
-        Failed --> Pending: backoff elapsed
-        Claimed --> Pending: visibility timeout (worker died)
-
-        Pending: synced = NULL, unclaimed
-        Claimed: synced = NULL, sync_claimed_at set
-        Failed: synced = NULL, sync_error set
-        Synced: synced = timestamp
+        Pending: status = pending
+        Processing: locked via SKIP LOCKED
+        Retrying: status = retrying, retry_after set
+        Completed: status = completed
+        Failed: status = failed
     }
 
     state "Status Poller → shoot_status column" as poller {
@@ -183,11 +180,9 @@ All sync and status changes are recorded in the `cluster_events` table for debug
 
 | Event Type | Description |
 |------------|-------------|
-| `sync_requested` | Cluster created/updated/deleted via API, needs sync |
-| `sync_claimed` | Worker claimed the cluster for processing |
 | `sync_succeeded` | Gardener accepted the Shoot manifest |
+| `sync_failed` | Sync failed (with error message) |
 | `status_progressing` | Shoot reconciliation in progress |
-| `sync_failed` | Sync failed (with error message and attempt count) |
 | `status_ready` | Shoot reconciliation completed successfully |
 | `status_error` | Shoot reconciliation failed |
 | `status_deleted` | Shoot confirmed deleted from Gardener |

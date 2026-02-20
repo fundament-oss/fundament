@@ -180,30 +180,6 @@ CAUTION: Do not modify this file unless you know what you are doing.
 END;]]> </definition>
 </function>
 
-<function name="cluster_reset_synced"
-		window-func="false"
-		returns-setof="false"
-		behavior-type="CALLED ON NULL INPUT"
-		function-type="VOLATILE"
-		security-type="SECURITY INVOKER"
-		parallel-type="PARALLEL UNSAFE"
-		execution-cost="1"
-		row-amount="0">
-	<schema name="tenant"/>
-	<role name="fun_owner"/>
-	<language name="plpgsql"/>
-	<return-type>
-	<type name="trigger" length="0"/>
-	</return-type>
-	<definition> <![CDATA[BEGIN
-    NEW.synced := NULL;
-    NEW.sync_claimed_at := NULL;
-    NEW.sync_attempts := 0;
-    NEW.sync_error := NULL;
-    RETURN NEW;
-END;]]> </definition>
-</function>
-
 <function name="cluster_outbox_cluster_trigger"
 		window-func="false"
 		returns-setof="false"
@@ -786,15 +762,6 @@ END;]]> </definition>
 	<column name="synced">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<column name="sync_claimed_at">
-		<type name="timestamptz" length="0"/>
-	</column>
-	<column name="sync_error">
-		<type name="text" length="0"/>
-	</column>
-	<column name="sync_attempts" not-null="true" default-value="0">
-		<type name="integer" length="0"/>
-	</column>
 	<column name="shoot_status">
 		<type name="text" length="0"/>
 	</column>
@@ -826,26 +793,6 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
-<trigger name="cluster_reset_synced" firing-type="BEFORE" per-line="true" constraint="false"
-	 ins-event="false" del-event="false" upd-event="true" trunc-event="false"
-	 table="tenant.clusters">
-	<condition> <![CDATA[OLD.name IS DISTINCT FROM NEW.name
-    OR OLD.region IS DISTINCT FROM NEW.region
-    OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
-    OR (OLD.deleted IS NULL AND NEW.deleted IS NOT NULL)]]> </condition>
-		<function signature="tenant.cluster_reset_synced()"/>
-		<columns names="name,region,kubernetes_version,deleted"/>
-</trigger>
-
-
-<index name="clusters_idx_needs_sync" table="tenant.clusters"
-	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
-	 index-type="btree" factor="0">
-		<idxelement use-sorting="false">
-			<column name="created"/>
-		</idxelement>
-	<predicate> <![CDATA[synced IS NULL]]> </predicate>
-</index>
 
 <table name="node_pools" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>

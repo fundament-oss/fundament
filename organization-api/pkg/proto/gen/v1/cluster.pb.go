@@ -28,8 +28,6 @@ const (
 type SyncState struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	SyncedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=synced_at,json=syncedAt,proto3,oneof" json:"synced_at,omitempty"`
-	SyncError       *string                `protobuf:"bytes,20,opt,name=sync_error,json=syncError,proto3,oneof" json:"sync_error,omitempty"`
-	SyncAttempts    int32                  `protobuf:"varint,30,opt,name=sync_attempts,json=syncAttempts,proto3" json:"sync_attempts,omitempty"`
 	ShootStatus     *string                `protobuf:"bytes,40,opt,name=shoot_status,json=shootStatus,proto3,oneof" json:"shoot_status,omitempty"`
 	ShootMessage    *string                `protobuf:"bytes,50,opt,name=shoot_message,json=shootMessage,proto3,oneof" json:"shoot_message,omitempty"`
 	StatusUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=status_updated_at,json=statusUpdatedAt,proto3,oneof" json:"status_updated_at,omitempty"`
@@ -72,20 +70,6 @@ func (x *SyncState) GetSyncedAt() *timestamppb.Timestamp {
 		return x.SyncedAt
 	}
 	return nil
-}
-
-func (x *SyncState) GetSyncError() string {
-	if x != nil && x.SyncError != nil {
-		return *x.SyncError
-	}
-	return ""
-}
-
-func (x *SyncState) GetSyncAttempts() int32 {
-	if x != nil {
-		return x.SyncAttempts
-	}
-	return 0
 }
 
 func (x *SyncState) GetShootStatus() string {
@@ -2464,19 +2448,15 @@ var File_v1_cluster_proto protoreflect.FileDescriptor
 
 const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x87\x03\n" +
+	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xaf\x02\n" +
 	"\tSyncState\x12<\n" +
 	"\tsynced_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampH\x00R\bsyncedAt\x88\x01\x01\x12\"\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampH\x00R\bsyncedAt\x88\x01\x01\x12&\n" +
+	"\fshoot_status\x18( \x01(\tH\x01R\vshootStatus\x88\x01\x01\x12(\n" +
+	"\rshoot_message\x182 \x01(\tH\x02R\fshootMessage\x88\x01\x01\x12K\n" +
+	"\x11status_updated_at\x18< \x01(\v2\x1a.google.protobuf.TimestampH\x03R\x0fstatusUpdatedAt\x88\x01\x01B\f\n" +
 	"\n" +
-	"sync_error\x18\x14 \x01(\tH\x01R\tsyncError\x88\x01\x01\x12#\n" +
-	"\rsync_attempts\x18\x1e \x01(\x05R\fsyncAttempts\x12&\n" +
-	"\fshoot_status\x18( \x01(\tH\x02R\vshootStatus\x88\x01\x01\x12(\n" +
-	"\rshoot_message\x182 \x01(\tH\x03R\fshootMessage\x88\x01\x01\x12K\n" +
-	"\x11status_updated_at\x18< \x01(\v2\x1a.google.protobuf.TimestampH\x04R\x0fstatusUpdatedAt\x88\x01\x01B\f\n" +
-	"\n" +
-	"_synced_atB\r\n" +
-	"\v_sync_errorB\x0f\n" +
+	"_synced_atB\x0f\n" +
 	"\r_shoot_statusB\x10\n" +
 	"\x0e_shoot_messageB\x14\n" +
 	"\x12_status_updated_at\"A\n" +

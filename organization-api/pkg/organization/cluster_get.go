@@ -38,8 +38,6 @@ func (s *Server) GetClusterByName(
 			Created:            cluster.Created,
 			Deleted:            cluster.Deleted,
 			Synced:             cluster.Synced,
-			SyncError:          cluster.SyncError,
-			SyncAttempts:       cluster.SyncAttempts,
 			ShootStatus:        cluster.ShootStatus,
 			ShootStatusMessage: cluster.ShootStatusMessage,
 			ShootStatusUpdated: cluster.ShootStatusUpdated,
@@ -136,8 +134,6 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 		ResourceUsage:     nil, // Stub
 		SyncState: syncStateFromRow(
 			row.Synced,
-			row.SyncError,
-			row.SyncAttempts,
 			row.ShootStatus,
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,

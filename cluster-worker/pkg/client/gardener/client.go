@@ -68,7 +68,6 @@ type ClusterToSync struct {
 	Region            string
 	KubernetesVersion string
 	Deleted           *time.Time
-	SyncAttempts      int
 }
 
 // ShootInfo contains information about a Shoot retrieved from Gardener.

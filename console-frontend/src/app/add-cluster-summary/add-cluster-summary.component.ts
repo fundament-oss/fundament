@@ -354,11 +354,11 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
 
         if (syncState?.shootStatus === 'Ready' || syncState?.shootStatus === 'ready') {
           this.updateItem('cluster', { syncStatus: 'synced', shootStatus: 'Ready' });
-        } else if (syncState?.syncError) {
+        } else if (syncState?.shootStatus === 'error') {
           this.updateItem('cluster', {
             syncStatus: 'failed',
-            error: syncState.syncError,
-            shootStatus: syncState.shootStatus || undefined,
+            error: syncState.shootMessage || 'Sync failed',
+            shootStatus: syncState.shootStatus,
           });
         } else {
           this.updateItem('cluster', {

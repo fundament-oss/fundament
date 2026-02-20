@@ -39,8 +39,6 @@ func clusterSummaryFromListRow(row *db.ClusterListRow) *organizationv1.ListClust
 		NodePoolCount: 0, // Stub
 		SyncState: syncStateFromRow(
 			row.Synced,
-			row.SyncError,
-			row.SyncAttempts,
 			row.ShootStatus,
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,

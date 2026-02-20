@@ -18,15 +18,12 @@ LIMIT
     @limit_count;
 
 -- name: ClusterGetByID :one
--- Get a single cluster by ID with sync state (for testing).
+-- Get a single cluster by ID with sync and status state (for testing).
 SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
     tenant.clusters.synced,
-    tenant.clusters.sync_error,
-    tenant.clusters.sync_attempts,
-    tenant.clusters.sync_claimed_at,
     tenant.clusters.shoot_status,
     tenant.clusters.shoot_status_message,
     tenant.clusters.shoot_status_updated,

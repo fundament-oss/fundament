@@ -122,26 +122,12 @@
               </dd>
             </dl>
           }
-          @if (clusterData.syncState?.syncError) {
-            <dl class="sm:col-span-2">
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Sync error</dt>
-              <dd class="mt-1 text-sm text-red-600 dark:text-red-400">
-                {{ clusterData.syncState?.syncError }}
-              </dd>
-            </dl>
-          }
           @if (clusterData.syncState?.syncedAt) {
             <dl>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last synced</dt>
               <dd class="mt-1 text-sm dark:text-white">
                 {{ formatDate(clusterData.syncState!.syncedAt) }}
               </dd>
-            </dl>
-          }
-          @if (clusterData.syncState && clusterData.syncState.syncAttempts > 0) {
-            <dl>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Sync attempts</dt>
-              <dd class="mt-1 text-sm dark:text-white">{{ clusterData.syncState.syncAttempts }}</dd>
             </dl>
           }
         </div>
@@ -193,12 +179,6 @@
                     </td>
                   </tr>
                   <tr>
-                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Sync attempts</td>
-                    <td class="px-3 py-2 dark:text-white">
-                      {{ clusterData.syncState.syncAttempts }}
-                    </td>
-                  </tr>
-                  <tr>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Last synced</td>
                     <td class="px-3 py-2 dark:text-white">
                       {{
@@ -208,14 +188,6 @@
                       }}
                     </td>
                   </tr>
-                  @if (clusterData.syncState.syncError) {
-                    <tr>
-                      <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Sync error</td>
-                      <td class="px-3 py-2 text-red-600 dark:text-red-400">
-                        {{ clusterData.syncState.syncError }}
-                      </td>
-                    </tr>
-                  }
                 </tbody>
               </table>
             </div>

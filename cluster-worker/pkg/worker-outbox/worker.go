@@ -140,7 +140,10 @@ func (w *OutboxWorker) processAll(ctx context.Context) {
 		found, err := w.processOne(ctx)
 		if err != nil {
 			w.logger.Error("failed to process outbox item", "error", err)
-			time.Sleep(w.cfg.BackoffDelay)
+			select {
+			case <-ctx.Done():
+			case <-time.After(w.cfg.BackoffDelay):
+			}
 			return
 		}
 		if !found {
@@ -181,7 +184,20 @@ func (w *OutboxWorker) processOne(ctx context.Context) (found bool, err error) {
 
 	h, err := w.registry.SyncHandlerFor(entityType)
 	if err != nil {
-		return true, fmt.Errorf("no handler for %s: %w", entityType, err)
+		w.logger.Error("no handler registered, marking as failed",
+			"outbox_id", row.ID,
+			"entity_type", entityType,
+			"error", err)
+		if markErr := qtx.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
+			ID:         row.ID,
+			StatusInfo: pgtype.Text{String: err.Error(), Valid: true},
+		}); markErr != nil {
+			return true, fmt.Errorf("mark failed for unhandled entity: %w", markErr)
+		}
+		if commitErr := tx.Commit(ctx); commitErr != nil {
+			return true, fmt.Errorf("commit after marking unhandled entity failed: %w", commitErr)
+		}
+		return true, nil
 	}
 
 	if syncErr := h.Sync(ctx, entityID); syncErr != nil {

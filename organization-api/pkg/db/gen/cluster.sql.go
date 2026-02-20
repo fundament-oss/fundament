@@ -83,7 +83,7 @@ func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) (i
 
 const clusterGetByID = `-- name: ClusterGetByID :one
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
+       synced, shoot_status, shoot_status_message, shoot_status_updated
 FROM tenant.clusters
 WHERE id = $1
 `
@@ -92,26 +92,10 @@ type ClusterGetByIDParams struct {
 	ID uuid.UUID
 }
 
-type ClusterGetByIDRow struct {
-	ID                 uuid.UUID
-	OrganizationID     uuid.UUID
-	Name               string
-	Region             string
-	KubernetesVersion  string
-	Created            pgtype.Timestamptz
-	Deleted            pgtype.Timestamptz
-	Synced             pgtype.Timestamptz
-	SyncError          pgtype.Text
-	SyncAttempts       int32
-	ShootStatus        pgtype.Text
-	ShootStatusMessage pgtype.Text
-	ShootStatusUpdated pgtype.Timestamptz
-}
-
 // Get cluster by ID, including deleted clusters for direct access.
-func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) (ClusterGetByIDRow, error) {
+func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) (TenantCluster, error) {
 	row := q.db.QueryRow(ctx, clusterGetByID, arg.ID)
-	var i ClusterGetByIDRow
+	var i TenantCluster
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
@@ -121,8 +105,6 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.Created,
 		&i.Deleted,
 		&i.Synced,
-		&i.SyncError,
-		&i.SyncAttempts,
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
@@ -132,7 +114,7 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 
 const clusterGetByName = `-- name: ClusterGetByName :one
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
+       synced, shoot_status, shoot_status_message, shoot_status_updated
 FROM tenant.clusters
 WHERE name = $1 AND deleted IS NULL
 `
@@ -141,25 +123,9 @@ type ClusterGetByNameParams struct {
 	Name string
 }
 
-type ClusterGetByNameRow struct {
-	ID                 uuid.UUID
-	OrganizationID     uuid.UUID
-	Name               string
-	Region             string
-	KubernetesVersion  string
-	Created            pgtype.Timestamptz
-	Deleted            pgtype.Timestamptz
-	Synced             pgtype.Timestamptz
-	SyncError          pgtype.Text
-	SyncAttempts       int32
-	ShootStatus        pgtype.Text
-	ShootStatusMessage pgtype.Text
-	ShootStatusUpdated pgtype.Timestamptz
-}
-
-func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (ClusterGetByNameRow, error) {
+func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (TenantCluster, error) {
 	row := q.db.QueryRow(ctx, clusterGetByName, arg.Name)
-	var i ClusterGetByNameRow
+	var i TenantCluster
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
@@ -169,8 +135,6 @@ func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNamePara
 		&i.Created,
 		&i.Deleted,
 		&i.Synced,
-		&i.SyncError,
-		&i.SyncAttempts,
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
@@ -222,39 +186,23 @@ func (q *Queries) ClusterGetEvents(ctx context.Context, arg ClusterGetEventsPara
 
 const clusterList = `-- name: ClusterList :many
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
+       synced, shoot_status, shoot_status_message, shoot_status_updated
 FROM tenant.clusters
 WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 ORDER BY created DESC
 `
 
-type ClusterListRow struct {
-	ID                 uuid.UUID
-	OrganizationID     uuid.UUID
-	Name               string
-	Region             string
-	KubernetesVersion  string
-	Created            pgtype.Timestamptz
-	Deleted            pgtype.Timestamptz
-	Synced             pgtype.Timestamptz
-	SyncError          pgtype.Text
-	SyncAttempts       int32
-	ShootStatus        pgtype.Text
-	ShootStatusMessage pgtype.Text
-	ShootStatusUpdated pgtype.Timestamptz
-}
-
 // List active clusters and clusters being deleted (not yet confirmed deleted in Gardener).
 // Excludes clusters where Gardener has confirmed deletion (shoot_status = 'deleted').
-func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
+func (q *Queries) ClusterList(ctx context.Context) ([]TenantCluster, error) {
 	rows, err := q.db.Query(ctx, clusterList)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ClusterListRow
+	var items []TenantCluster
 	for rows.Next() {
-		var i ClusterListRow
+		var i TenantCluster
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
@@ -264,8 +212,6 @@ func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
 			&i.Created,
 			&i.Deleted,
 			&i.Synced,
-			&i.SyncError,
-			&i.SyncAttempts,
 			&i.ShootStatus,
 			&i.ShootStatusMessage,
 			&i.ShootStatusUpdated,
