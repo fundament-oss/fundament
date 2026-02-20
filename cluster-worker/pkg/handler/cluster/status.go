@@ -127,7 +127,10 @@ func (h *Handler) checkActiveClusters(ctx context.Context, cache namespaceCache)
 			case gardener.StatusPending, gardener.StatusDeleting, gardener.StatusDeleted:
 				// No event for transient states
 			default:
+				// Not panicking: ShootStatusType values come from Gardener (external system)
+				// and may include statuses we don't yet handle.
 				h.logger.Error("unhandled shoot status", "cluster_id", cluster.ID, "status", shootStatus.Status)
+				errors++
 				continue
 			}
 

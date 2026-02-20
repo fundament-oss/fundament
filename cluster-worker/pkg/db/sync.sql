@@ -39,14 +39,13 @@ VALUES
 RETURNING
     id;
 
--- name: ClusterListActiveIDs :many
--- List IDs of all non-deleted clusters (for orphan detection).
+-- name: ClusterListAllIDs :many
+-- List IDs of all clusters, active and soft-deleted (for orphan detection).
+-- Orphans are shoots in Gardener whose cluster ID doesn't exist in the DB at all.
 SELECT
     tenant.clusters.id
 FROM
-    tenant.clusters
-WHERE
-    tenant.clusters.deleted IS NULL;
+    tenant.clusters;
 
 -- name: ClusterGetForSync :one
 -- Get a single cluster by ID with all data needed for sync.

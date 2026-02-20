@@ -8,8 +8,10 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 )
 
-// ReconcileOrphans compares shoots in Gardener against active clusters in the DB.
-// Shoots whose cluster ID doesn't exist or is soft-deleted are cleaned up.
+// ReconcileOrphans compares shoots in Gardener against all known clusters in the DB.
+// Shoots whose cluster ID doesn't exist in the DB at all are deleted.
+// Soft-deleted clusters are NOT treated as orphans — their shoots are being cleaned
+// up by the normal outbox delete flow and the status worker.
 func (h *Handler) ReconcileOrphans(ctx context.Context) error {
 	shoots, err := h.gardener.ListShoots(ctx)
 	if err != nil {
@@ -19,14 +21,14 @@ func (h *Handler) ReconcileOrphans(ctx context.Context) error {
 		return nil
 	}
 
-	activeIDs, err := h.queries.ClusterListActiveIDs(ctx)
+	allIDs, err := h.queries.ClusterListAllIDs(ctx)
 	if err != nil {
 		return err
 	}
 
-	active := make(map[uuid.UUID]struct{}, len(activeIDs))
-	for _, id := range activeIDs {
-		active[id] = struct{}{}
+	known := make(map[uuid.UUID]struct{}, len(allIDs))
+	for _, id := range allIDs {
+		known[id] = struct{}{}
 	}
 
 	for _, shoot := range shoots {
@@ -43,7 +45,7 @@ func (h *Handler) ReconcileOrphans(ctx context.Context) error {
 			continue
 		}
 
-		if _, ok := active[clusterID]; ok {
+		if _, ok := known[clusterID]; ok {
 			continue
 		}
 

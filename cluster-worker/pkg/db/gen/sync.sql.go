@@ -119,18 +119,17 @@ func (q *Queries) ClusterGetForSync(ctx context.Context, arg ClusterGetForSyncPa
 	return i, err
 }
 
-const clusterListActiveIDs = `-- name: ClusterListActiveIDs :many
+const clusterListAllIDs = `-- name: ClusterListAllIDs :many
 SELECT
     tenant.clusters.id
 FROM
     tenant.clusters
-WHERE
-    tenant.clusters.deleted IS NULL
 `
 
-// List IDs of all non-deleted clusters (for orphan detection).
-func (q *Queries) ClusterListActiveIDs(ctx context.Context) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, clusterListActiveIDs)
+// List IDs of all clusters, active and soft-deleted (for orphan detection).
+// Orphans are shoots in Gardener whose cluster ID doesn't exist in the DB at all.
+func (q *Queries) ClusterListAllIDs(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, clusterListAllIDs)
 	if err != nil {
 		return nil, err
 	}
