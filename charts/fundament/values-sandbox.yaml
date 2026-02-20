@@ -2,6 +2,14 @@ jwtSecretRef:
   name: fundament-jwt
   key: secret
 
+externalUrls:
+  authn: https://authn.fundament.apps.digilab.network
+  organization: https://organization.fundament.apps.digilab.network
+  console: https://console.fundament.apps.digilab.network
+  docs: https://docs.fundament.apps.digilab.network
+  cookieDomain: fundament.apps.digilab.network
+  corsAllowedOrigins: "https://console.fundament.apps.digilab.network"
+
 db:
   enabled: true
   instances: 1

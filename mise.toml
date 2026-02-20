@@ -39,6 +39,7 @@ opentofu = "1.11.3"
 act = "latest"
 
 "npm:@usebruno/cli" = "3.0.3"
+flux2 = "2.7.5"
 
 [hooks]
 postinstall = "just e2e::install"
