@@ -68,12 +68,13 @@ func Test_InviteMember_ExistingUser(t *testing.T) {
 	orgAID := uuid.New()
 	orgBID := uuid.New()
 	userID := uuid.New()
+	userID2 := uuid.New()
 
 	env := newTestAPI(t,
 		WithOrganization(orgAID, "test-org-a"),
 		WithOrganization(orgBID, "test-org-b"),
 		WithUser(userID, "test-user", "", []uuid.UUID{orgAID}),
-		WithUser(userID, "second-user", "foo@bar.baz", []uuid.UUID{orgBID}),
+		WithUser(userID2, "second-user", "foo@bar.baz", []uuid.UUID{orgBID}),
 	)
 
 	token := env.createAuthnToken(t, userID)
