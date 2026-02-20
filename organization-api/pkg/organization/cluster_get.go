@@ -29,19 +29,7 @@ func (s *Server) GetClusterByName(
 	}
 
 	return connect.NewResponse(&organizationv1.GetClusterResponse{
-		Cluster: clusterDetailsFromRow(&db.TenantCluster{
-			ID:                 cluster.ID,
-			OrganizationID:     cluster.OrganizationID,
-			Name:               cluster.Name,
-			Region:             cluster.Region,
-			KubernetesVersion:  cluster.KubernetesVersion,
-			Created:            cluster.Created,
-			Deleted:            cluster.Deleted,
-			Synced:             cluster.Synced,
-			ShootStatus:        cluster.ShootStatus,
-			ShootStatusMessage: cluster.ShootStatusMessage,
-			ShootStatusUpdated: cluster.ShootStatusUpdated,
-		}),
+		Cluster: clusterDetailsFromRow(&cluster),
 	}), nil
 }
 
