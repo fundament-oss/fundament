@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -21,31 +20,6 @@ import (
 
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
-
-// uuidValidator validates that a string is a valid UUID using the google/uuid library.
-type uuidValidator struct{}
-
-func (v uuidValidator) Description(_ context.Context) string {
-	return "value must be a valid UUID"
-}
-
-func (v uuidValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v uuidValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-
-	if _, err := uuid.Parse(req.ConfigValue.ValueString()); err != nil {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Invalid UUID",
-			fmt.Sprintf("Value %q is not a valid UUID: %s", req.ConfigValue.ValueString(), err),
-		)
-	}
-}
 
 // Ensure ProjectMemberResource satisfies various resource interfaces.
 var _ resource.Resource = &ProjectMemberResource{}
