@@ -254,6 +254,7 @@ func (h *Handler) checkDeletedClusters(ctx context.Context, cache namespaceCache
 					"cluster_id", cluster.ID,
 					"error", err)
 				errors++
+				continue
 			}
 			h.logger.Debug("shoot still being deleted",
 				"cluster_id", cluster.ID,

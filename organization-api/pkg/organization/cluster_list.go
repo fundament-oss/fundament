@@ -29,7 +29,7 @@ func (s *Server) ListClusters(
 	}), nil
 }
 
-func clusterSummaryFromListRow(row *db.ClusterListRow) *organizationv1.ListClustersResponse_ClusterSummary {
+func clusterSummaryFromListRow(row *db.TenantCluster) *organizationv1.ListClustersResponse_ClusterSummary {
 	return &organizationv1.ListClustersResponse_ClusterSummary{
 		Id:            row.ID.String(),
 		Name:          row.Name,

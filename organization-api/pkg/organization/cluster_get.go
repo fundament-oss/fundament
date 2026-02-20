@@ -29,7 +29,7 @@ func (s *Server) GetClusterByName(
 	}
 
 	return connect.NewResponse(&organizationv1.GetClusterResponse{
-		Cluster: clusterDetailsFromRow(&db.ClusterGetByIDRow{
+		Cluster: clusterDetailsFromRow(&db.TenantCluster{
 			ID:                 cluster.ID,
 			OrganizationID:     cluster.OrganizationID,
 			Name:               cluster.Name,
@@ -123,7 +123,7 @@ func (s *Server) GetKubeconfig(
 	}), nil
 }
 
-func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
+func clusterDetailsFromRow(row *db.TenantCluster) *organizationv1.ClusterDetails {
 	return &organizationv1.ClusterDetails{
 		Id:                row.ID.String(),
 		Name:              row.Name,
@@ -141,7 +141,7 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 	}
 }
 
-func buildKubeconfig(cluster *db.ClusterGetByIDRow) string {
+func buildKubeconfig(cluster *db.TenantCluster) string {
 	return fmt.Sprintf(`apiVersion: v1
 kind: Config
 clusters:

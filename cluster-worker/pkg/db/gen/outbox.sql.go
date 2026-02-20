@@ -132,10 +132,15 @@ LEFT JOIN tenant.cluster_outbox ON tenant.cluster_outbox.cluster_id = tenant.clu
       COALESCE(tenant.clusters.deleted, '1970-01-01')
   )
 WHERE tenant.cluster_outbox.id IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+  )
 `
 
 // Insert outbox rows for clusters that have no completed outbox entry
-// after their last modification.
+// after their last modification, and no pending/retrying entry already in-flight.
 func (q *Queries) OutboxReconcileClusters(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, outboxReconcileClusters)
 	return err
@@ -152,10 +157,15 @@ LEFT JOIN tenant.cluster_outbox ON tenant.cluster_outbox.namespace_id = tenant.n
       COALESCE(tenant.namespaces.deleted, '1970-01-01')
   )
 WHERE tenant.cluster_outbox.id IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.namespace_id = tenant.namespaces.id
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+  )
 `
 
 // Insert outbox rows for namespaces that have no completed outbox entry
-// after their last modification.
+// after their last modification, and no pending/retrying entry already in-flight.
 func (q *Queries) OutboxReconcileNamespaces(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, outboxReconcileNamespaces)
 	return err
@@ -172,8 +182,15 @@ LEFT JOIN tenant.cluster_outbox ON tenant.cluster_outbox.project_member_id = ten
       COALESCE(tenant.project_members.deleted, '1970-01-01')
   )
 WHERE tenant.cluster_outbox.id IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.project_member_id = tenant.project_members.id
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+  )
 `
 
+// Insert outbox rows for project members that have no completed outbox entry
+// after their last modification, and no pending/retrying entry already in-flight.
 func (q *Queries) OutboxReconcileProjectMembers(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, outboxReconcileProjectMembers)
 	return err
@@ -189,6 +206,11 @@ WHERE tenant.projects.deleted IS NOT NULL
     WHERE tenant.cluster_outbox.project_id = tenant.projects.id
       AND tenant.cluster_outbox.status = 'completed'
       AND tenant.cluster_outbox.processed >= tenant.projects.deleted
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.project_id = tenant.projects.id
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
   )
 `
 

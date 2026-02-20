@@ -121,6 +121,9 @@ func (w *OutboxWorker) waitForTrigger(ctx context.Context, conn *pgxpool.Conn) (
 		return true, nil
 
 	case errors.Is(err, context.DeadlineExceeded):
+		if ctx.Err() != nil {
+			return false, fmt.Errorf("shutdown requested: %w", ctx.Err())
+		}
 		return false, nil
 
 	case errors.Is(err, context.Canceled):
@@ -229,6 +232,24 @@ func (w *OutboxWorker) processOne(ctx context.Context) (found bool, err error) {
 func (w *OutboxWorker) handleProcessingError(ctx context.Context, qtx *db.Queries, row *db.OutboxGetAndLockRow, processErr error) error {
 	statusInfo := pgtype.Text{String: processErr.Error(), Valid: true}
 
+	// Check if we've exceeded max retries. row.Retries is the current count
+	// before this failure, so +1 is the count after this attempt.
+	if row.Retries+1 >= w.cfg.MaxRetries {
+		w.logger.Error("outbox item exceeded max retries, marking as failed",
+			"outbox_id", row.ID,
+			"retries", row.Retries+1,
+			"max_retries", w.cfg.MaxRetries,
+			"error", processErr)
+
+		if err := qtx.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
+			ID:         row.ID,
+			StatusInfo: statusInfo,
+		}); err != nil {
+			return fmt.Errorf("mark outbox failed: %w", err)
+		}
+		return nil
+	}
+
 	retries, err := qtx.OutboxMarkRetry(ctx, db.OutboxMarkRetryParams{
 		ID:           row.ID,
 		BaseInterval: durationToInterval(w.cfg.BaseBackoff),
@@ -239,25 +260,10 @@ func (w *OutboxWorker) handleProcessingError(ctx context.Context, qtx *db.Querie
 		return fmt.Errorf("mark outbox retry: %w", err)
 	}
 
-	if retries >= w.cfg.MaxRetries {
-		w.logger.Error("outbox item exceeded max retries, marking as failed",
-			"outbox_id", row.ID,
-			"retries", retries,
-			"max_retries", w.cfg.MaxRetries,
-			"error", processErr)
-
-		if err := qtx.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
-			ID:         row.ID,
-			StatusInfo: statusInfo,
-		}); err != nil {
-			return fmt.Errorf("mark outbox failed: %w", err)
-		}
-	} else {
-		w.logger.Warn("failed to process outbox item, will retry",
-			"outbox_id", row.ID,
-			"retries", retries,
-			"error", processErr)
-	}
+	w.logger.Warn("failed to process outbox item, will retry",
+		"outbox_id", row.ID,
+		"retries", retries,
+		"error", processErr)
 
 	return nil
 }

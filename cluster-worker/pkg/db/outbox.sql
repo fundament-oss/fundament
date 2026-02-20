@@ -38,7 +38,7 @@ WHERE id = @id;
 
 -- name: OutboxReconcileClusters :exec
 -- Insert outbox rows for clusters that have no completed outbox entry
--- after their last modification.
+-- after their last modification, and no pending/retrying entry already in-flight.
 INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
 SELECT tenant.clusters.id, 'reconcile', 'reconcile'
 FROM tenant.clusters
@@ -48,11 +48,16 @@ LEFT JOIN tenant.cluster_outbox ON tenant.cluster_outbox.cluster_id = tenant.clu
       tenant.clusters.created,
       COALESCE(tenant.clusters.deleted, '1970-01-01')
   )
-WHERE tenant.cluster_outbox.id IS NULL;
+WHERE tenant.cluster_outbox.id IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+  );
 
 -- name: OutboxReconcileNamespaces :exec
 -- Insert outbox rows for namespaces that have no completed outbox entry
--- after their last modification.
+-- after their last modification, and no pending/retrying entry already in-flight.
 INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
 SELECT tenant.namespaces.id, 'reconcile', 'reconcile'
 FROM tenant.namespaces
@@ -62,9 +67,16 @@ LEFT JOIN tenant.cluster_outbox ON tenant.cluster_outbox.namespace_id = tenant.n
       tenant.namespaces.created,
       COALESCE(tenant.namespaces.deleted, '1970-01-01')
   )
-WHERE tenant.cluster_outbox.id IS NULL;
+WHERE tenant.cluster_outbox.id IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.namespace_id = tenant.namespaces.id
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+  );
 
 -- name: OutboxReconcileProjectMembers :exec
+-- Insert outbox rows for project members that have no completed outbox entry
+-- after their last modification, and no pending/retrying entry already in-flight.
 INSERT INTO tenant.cluster_outbox (project_member_id, event, source)
 SELECT tenant.project_members.id, 'reconcile', 'reconcile'
 FROM tenant.project_members
@@ -74,7 +86,12 @@ LEFT JOIN tenant.cluster_outbox ON tenant.cluster_outbox.project_member_id = ten
       tenant.project_members.created,
       COALESCE(tenant.project_members.deleted, '1970-01-01')
   )
-WHERE tenant.cluster_outbox.id IS NULL;
+WHERE tenant.cluster_outbox.id IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.project_member_id = tenant.project_members.id
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+  );
 
 -- name: OutboxReconcileProjects :exec
 -- Only reconciles deleted projects. Active project state is managed via
@@ -89,4 +106,9 @@ WHERE tenant.projects.deleted IS NOT NULL
     WHERE tenant.cluster_outbox.project_id = tenant.projects.id
       AND tenant.cluster_outbox.status = 'completed'
       AND tenant.cluster_outbox.processed >= tenant.projects.deleted
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.project_id = tenant.projects.id
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
   );

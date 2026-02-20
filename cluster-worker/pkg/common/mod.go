@@ -9,7 +9,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 )
 
-// TestCluster creates a logger for tests.
+// TestLogger creates a logger for tests.
 func TestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
