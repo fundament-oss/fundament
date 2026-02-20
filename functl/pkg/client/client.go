@@ -87,6 +87,15 @@ func (c *Client) authInterceptor() connect.UnaryInterceptorFunc {
 				return nil, err
 			}
 			req.Header().Set("Authorization", "Bearer "+token)
+			return next(ctx, req)
+		}
+	}
+}
+
+// orgInterceptor returns a connect interceptor that adds the organization header.
+func (c *Client) orgInterceptor() connect.UnaryInterceptorFunc {
+	return func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			if c.organizationID != "" {
 				req.Header().Set(OrganizationHeader, c.organizationID)
 			}
@@ -100,7 +109,7 @@ func (c *Client) Clusters() organizationv1connect.ClusterServiceClient {
 	return organizationv1connect.NewClusterServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor()),
+		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -109,7 +118,7 @@ func (c *Client) Projects() organizationv1connect.ProjectServiceClient {
 	return organizationv1connect.NewProjectServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor()),
+		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -118,7 +127,7 @@ func (c *Client) APIKeys() organizationv1connect.APIKeyServiceClient {
 	return organizationv1connect.NewAPIKeyServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor()),
+		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -127,7 +136,7 @@ func (c *Client) Members() organizationv1connect.MemberServiceClient {
 	return organizationv1connect.NewMemberServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor()),
+		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -136,7 +145,7 @@ func (c *Client) Invites() organizationv1connect.InviteServiceClient {
 	return organizationv1connect.NewInviteServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor()),
+		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 

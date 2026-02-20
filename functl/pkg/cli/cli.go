@@ -30,24 +30,28 @@ type Context struct {
 	Client *client.Client
 }
 
-// NewClientFromConfig creates a new API client from configuration.
-// Returns an error if not authenticated.
-func NewClientFromConfig() (*client.Client, error) {
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		return nil, err
-	}
+// ClientOpt configures a client created by NewClientFromConfig.
+type ClientOpt func(*clientOpts)
 
-	creds, err := config.LoadCredentials()
-	if err != nil {
-		return nil, err
-	}
-
-	return client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL, ""), nil
+type clientOpts struct {
+	organizationID string
 }
 
-// NewClientWithOrg creates a new API client with an organization ID set.
-func NewClientWithOrg(organizationID string) (*client.Client, error) {
+// WithOrg sets the organization ID on the client.
+func WithOrg(id string) ClientOpt {
+	return func(o *clientOpts) {
+		o.organizationID = id
+	}
+}
+
+// NewClientFromConfig creates a new API client from configuration.
+// Returns an error if not authenticated.
+func NewClientFromConfig(opts ...ClientOpt) (*client.Client, error) {
+	var o clientOpts
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		return nil, err
@@ -58,5 +62,5 @@ func NewClientWithOrg(organizationID string) (*client.Client, error) {
 		return nil, err
 	}
 
-	return client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL, organizationID), nil
+	return client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL, o.organizationID), nil
 }

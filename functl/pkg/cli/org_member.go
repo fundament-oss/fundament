@@ -28,7 +28,7 @@ type OrgMemberListCmd struct {
 
 // Run executes the org member list command.
 func (c *OrgMemberListCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientWithOrg(c.OrgID)
+	apiClient, err := NewClientFromConfig(WithOrg(c.OrgID))
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ type OrgMemberInviteCmd struct {
 
 // Run executes the org member invite command.
 func (c *OrgMemberInviteCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientWithOrg(c.OrgID)
+	apiClient, err := NewClientFromConfig(WithOrg(c.OrgID))
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ type OrgMemberUpdatePermissionCmd struct {
 
 // Run executes the org member update-permission command.
 func (c *OrgMemberUpdatePermissionCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientWithOrg(c.OrgID)
+	apiClient, err := NewClientFromConfig(WithOrg(c.OrgID))
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ type OrgMemberRemoveCmd struct {
 
 // Run executes the org member remove command.
 func (c *OrgMemberRemoveCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientWithOrg(c.OrgID)
+	apiClient, err := NewClientFromConfig(WithOrg(c.OrgID))
 	if err != nil {
 		return err
 	}
