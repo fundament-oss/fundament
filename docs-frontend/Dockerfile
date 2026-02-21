@@ -14,9 +14,9 @@ COPY docs-frontend/ .
 # Copy FUNs from the main repo
 COPY funs/ ./src/content/docs/funs/
 
-# Copy docs from the main repo and create a docs subdirectory
-RUN mkdir -p ./src/content/docs/docs
-COPY docs/ ./src/content/docs/docs/
+# Copy diagram SVGs from docs/assets to public/img for static serving
+COPY docs/assets/infrastructure-stack.drawio.svg ./public/img/infrastructure-stack.drawio.svg
+COPY docs/assets/resource-model.drawio.svg ./public/img/resource-model.drawio.svg
 
 # Build the application
 RUN bun run build
