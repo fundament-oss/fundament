@@ -16,6 +16,17 @@ fmt:
     go fmt ./...
     # TODO md fmt
 
+# Prepare and start the docs-frontend for local development
+docs-dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd docs-frontend
+    mkdir -p src/content/docs/docs
+    cp -r ../docs/* src/content/docs/docs/
+    mv src/content/docs/docs/assets/*.drawio.svg public/img/ 2>/dev/null || true
+    find src/content/docs/docs -name '*.md' -exec {{ if os() == "macos" { "sed -i ''" } else { "sed -i" } }} 's|(assets/\(.*\.drawio\.svg\))|(/img/\1)|g' {} +
+    bun dev
+
 # --- Cluster commands ---
 
 # Create a local k3d cluster for development with local registry
