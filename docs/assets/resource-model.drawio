@@ -1,0 +1,101 @@
+<mxfile host="app.diagrams.net" agent="fundament-docs" version="26.0.0">
+  <diagram id="resource-model" name="Resource Model">
+    <mxGraphModel dx="900" dy="720" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="720" pageHeight="480" math="0" shadow="0" background="none">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Acme Corp Organization -->
+        <mxCell id="org-acme" value="&lt;b&gt;Acme Corp&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#6366f1&quot;&gt;&lt;i&gt;Organization&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef2ff;strokeColor=#6366f1;fontColor=#1e1b4b;fontSize=14;arcSize=5;verticalAlign=top;spacingTop=8;align=center;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="434" height="432" as="geometry" />
+        </mxCell>
+
+        <!-- Acme: prod cluster -->
+        <mxCell id="cluster-acme-prod" value="&lt;b&gt;prod-01&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#0ea5e9&quot;&gt;&lt;i&gt;Cluster&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f9ff;strokeColor=#0ea5e9;fontColor=#082f49;fontSize=13;arcSize=7;verticalAlign=top;spacingTop=6;align=center;" vertex="1" parent="1">
+          <mxGeometry x="36" y="74" width="194" height="364" as="geometry" />
+        </mxCell>
+
+        <!-- webshop-prod (3 ns) -->
+        <mxCell id="proj-webshop-prod" value="&lt;b&gt;webshop-prod&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#8b5cf6&quot;&gt;&lt;i&gt;Project&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;fontSize=12;arcSize=7;verticalAlign=top;spacingTop=5;align=center;" vertex="1" parent="1">
+          <mxGeometry x="50" y="120" width="166" height="168" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-wp-app" value="app&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="166" width="146" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-wp-db" value="db&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="206" width="146" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-wp-cache" value="cache&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="246" width="146" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- billing-prod (2 ns) -->
+        <mxCell id="proj-billing-prod" value="&lt;b&gt;billing-prod&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#8b5cf6&quot;&gt;&lt;i&gt;Project&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;fontSize=12;arcSize=7;verticalAlign=top;spacingTop=5;align=center;" vertex="1" parent="1">
+          <mxGeometry x="50" y="298" width="166" height="128" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-bp-api" value="api&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="344" width="146" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-bp-worker" value="worker&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="384" width="146" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- Acme: test cluster -->
+        <mxCell id="cluster-acme-test" value="&lt;b&gt;test-01&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#0ea5e9&quot;&gt;&lt;i&gt;Cluster&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f9ff;strokeColor=#0ea5e9;fontColor=#082f49;fontSize=13;arcSize=7;verticalAlign=top;spacingTop=6;align=center;" vertex="1" parent="1">
+          <mxGeometry x="244" y="74" width="194" height="284" as="geometry" />
+        </mxCell>
+
+        <!-- webshop-test (2 ns) -->
+        <mxCell id="proj-webshop-test" value="&lt;b&gt;webshop-test&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#8b5cf6&quot;&gt;&lt;i&gt;Project&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;fontSize=12;arcSize=7;verticalAlign=top;spacingTop=5;align=center;" vertex="1" parent="1">
+          <mxGeometry x="258" y="120" width="166" height="128" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-wt-app" value="app&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="268" y="166" width="146" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-wt-db" value="db&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="268" y="206" width="146" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- billing-test (1 ns) -->
+        <mxCell id="proj-billing-test" value="&lt;b&gt;billing-test&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#8b5cf6&quot;&gt;&lt;i&gt;Project&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;fontSize=12;arcSize=7;verticalAlign=top;spacingTop=5;align=center;" vertex="1" parent="1">
+          <mxGeometry x="258" y="258" width="166" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-bt-api" value="api&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="268" y="304" width="146" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- Globex Inc Organization -->
+        <mxCell id="org-globex" value="&lt;b&gt;Globex Inc&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#6366f1&quot;&gt;&lt;i&gt;Organization&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef2ff;strokeColor=#6366f1;fontColor=#1e1b4b;fontSize=14;arcSize=10;verticalAlign=top;spacingTop=8;align=center;" vertex="1" parent="1">
+          <mxGeometry x="474" y="20" width="226" height="432" as="geometry" />
+        </mxCell>
+
+        <!-- Globex: prod cluster -->
+        <mxCell id="cluster-globex-prod" value="&lt;b&gt;prod-01&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#0ea5e9&quot;&gt;&lt;i&gt;Cluster&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f9ff;strokeColor=#0ea5e9;fontColor=#082f49;fontSize=13;arcSize=7;verticalAlign=top;spacingTop=6;align=center;" vertex="1" parent="1">
+          <mxGeometry x="490" y="74" width="194" height="324" as="geometry" />
+        </mxCell>
+
+        <!-- analytics-prod (2 ns) -->
+        <mxCell id="proj-analytics" value="&lt;b&gt;analytics-prod&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#8b5cf6&quot;&gt;&lt;i&gt;Project&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;fontSize=12;arcSize=7;verticalAlign=top;spacingTop=5;align=center;" vertex="1" parent="1">
+          <mxGeometry x="504" y="120" width="166" height="128" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-an-ingest" value="ingest&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="514" y="166" width="146" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-an-dash" value="dashboard&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="514" y="206" width="146" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- portal-prod (2 ns) -->
+        <mxCell id="proj-portal" value="&lt;b&gt;portal-prod&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#8b5cf6&quot;&gt;&lt;i&gt;Project&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;fontSize=12;arcSize=7;verticalAlign=top;spacingTop=5;align=center;" vertex="1" parent="1">
+          <mxGeometry x="504" y="258" width="166" height="128" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-po-web" value="web&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="514" y="304" width="146" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-po-api" value="api&lt;br&gt;&lt;font style=&quot;font-size: 9px&quot; color=&quot;#6b7280&quot;&gt;&lt;i&gt;Namespace&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#6b7280;fontColor=#111827;fontSize=11;arcSize=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="514" y="344" width="146" height="34" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

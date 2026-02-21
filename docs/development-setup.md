@@ -1,5 +1,7 @@
 ---
 title: Development setup
+sidebar:
+  order: 10
 ---
 
 ## Prerequisites

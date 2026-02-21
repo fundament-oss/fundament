@@ -1,17 +1,19 @@
 ---
 title: Overview
+sidebar:
+  order: 1
 ---
 
 ## Functional Goals
 
 - Developer-friendly platform for deploying and operating applications.
-- Multi-tenant by design, enabling organizational growth and flexible tenant management.
+- Multi-tenant by design, enabling organizational growth and flexible management.
 - Managed infrastructure that abstracts compute, storage, and networking for ease of use and consistency.
 - Managed orchestration layer to simplify workload scheduling, scaling, and lifecycle management.
 - Built-in platform services for common needs such as application delivery, compute, and data persistence.
-- Extensible through pluggable services, allowing tenants to autonomously evolve and customize their technology stack.
-- Horizontally scalable foundation capable of supporting thousands of tenants and large-scale infrastructure footprints.
-- Strict tenant isolation with a shared-nothing architecture for compute and storage, ensuring reliability and predictable performance.
+- Extensible through pluggable services, allowing organizations to autonomously evolve and customize their technology stack.
+- Horizontally scalable foundation capable of supporting thousands of organizations and large-scale infrastructure footprints.
+- Strict isolation with a shared-nothing architecture for compute and storage, ensuring reliability and predictable performance.
 
 And fundamentally:
 
@@ -29,7 +31,7 @@ Fundament integrates [metal-stack](https://metal-stack.io/) for automated bare-m
 
 On top of this IaaS layer, Fundament provides Platform-as-a-Service (PaaS) capabilities through a developer-friendly, multi-tenant platform that abstracts infrastructure and orchestration into a simple, scalable service. Core capabilities -such as compute, storage, and networking- are managed out of the box, while higher-level features are delivered as [Tools](./tools.md). These Tools may wrap proven open-source projects to provide cloud services such as load balancing, databases, or object storage.
 
-The result is an autonomous, extensible, and self-hosted platform: secure by default, highly available under load, fast in operation, and designed to scale from a handful of tenants to thousands.
+The result is an autonomous, extensible, and self-hosted platform: secure by default, highly available under load, fast in operation, and designed to scale from a handful of organizations to thousands.
 
 ## Open Source Mindset
 
