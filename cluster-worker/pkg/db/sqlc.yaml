@@ -3,6 +3,7 @@ sql:
   - engine: "postgresql"
     queries: "*.sql"
     schema: "../../../db/fundament.sql"
+    strict_order_by: false
     gen:
       go:
         package: "db"

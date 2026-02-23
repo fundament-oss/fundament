@@ -17,6 +17,73 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
 )
 
+func TestMockClient_ApplyShootWithNodePools(t *testing.T) {
+	logger := common.TestLogger()
+	mock := gardener.NewMockInstant(logger)
+
+	ctx := context.Background()
+	cluster := common.TestCluster("test-cluster", "test-tenant")
+	cluster.NodePools = []gardener.NodePool{
+		{Name: "pool-a", MachineType: "local", AutoscaleMin: 1, AutoscaleMax: 5},
+		{Name: "pool-b", MachineType: "local", AutoscaleMin: 2, AutoscaleMax: 10},
+	}
+
+	err := mock.ApplyShoot(ctx, &cluster)
+	if err != nil {
+		t.Fatalf("ApplyShoot with node pools failed: %v", err)
+	}
+
+	if !mock.HasShootForCluster(cluster.ID) {
+		t.Errorf("expected shoot for cluster %s to exist", cluster.ID)
+	}
+}
+
+func TestMockClient_ApplyShootWithoutNodePools(t *testing.T) {
+	logger := common.TestLogger()
+	mock := gardener.NewMockInstant(logger)
+
+	ctx := context.Background()
+	cluster := common.TestClusterWithoutNodePools("test-cluster", "test-tenant")
+
+	err := mock.ApplyShoot(ctx, &cluster)
+	if err != nil {
+		t.Fatalf("ApplyShoot without node pools failed: %v", err)
+	}
+
+	if !mock.HasShootForCluster(cluster.ID) {
+		t.Errorf("expected shoot for cluster %s to exist", cluster.ID)
+	}
+}
+
+func TestMockClient_NodePoolValidation(t *testing.T) {
+	logger := common.TestLogger()
+	mock := gardener.NewMockInstant(logger)
+
+	ctx := context.Background()
+
+	t.Run("empty node pool name", func(t *testing.T) {
+		cluster := common.TestCluster("test-cluster", "test-tenant")
+		cluster.NodePools = []gardener.NodePool{
+			{Name: "", MachineType: "local", AutoscaleMin: 1, AutoscaleMax: 3},
+		}
+		err := mock.ApplyShoot(ctx, &cluster)
+		if err == nil {
+			t.Error("expected error for empty node pool name")
+		}
+	})
+
+	t.Run("max less than min", func(t *testing.T) {
+		cluster := common.TestCluster("test-cluster2", "test-tenant")
+		cluster.NodePools = []gardener.NodePool{
+			{Name: "pool", MachineType: "local", AutoscaleMin: 5, AutoscaleMax: 2},
+		}
+		err := mock.ApplyShoot(ctx, &cluster)
+		if err == nil {
+			t.Error("expected error for max < min")
+		}
+	})
+}
+
 func TestMockClient_ApplyShoot(t *testing.T) {
 	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)

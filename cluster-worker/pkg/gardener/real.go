@@ -27,6 +27,10 @@ type ProviderConfig struct {
 	// This is used to create CredentialsBindings in new project namespaces.
 	// Format: "namespace/name" (e.g., "garden-local/local")
 	CredentialsSecretRef string
+
+	MachineImageName    string // e.g., "local", "gardenlinux"
+	MachineImageVersion string // e.g., "1.0.0", "1592.2.0"
+	DefaultMachineType  string // e.g., "local", "n1-standard-4" (fallback when no node pools configured)
 }
 
 // NewProviderConfig creates a ProviderConfig with defaults for the local provider.
@@ -37,6 +41,9 @@ func NewProviderConfig() ProviderConfig {
 		CloudProfile:           "local",
 		CredentialsBindingName: "local",              // Name of CredentialsBinding to create/reference
 		CredentialsSecretRef:   "garden-local/local", // Shared secret for local provider
+		MachineImageName:       "local",
+		MachineImageVersion:    "1.0.0",
+		DefaultMachineType:     "local",
 	}
 }
 
@@ -467,16 +474,6 @@ func (r *RealClient) isShootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 
 // buildShootSpec creates a new Shoot spec from cluster info using provider config.
 func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.Shoot {
-	// TODO: TB: Make these configurable per-cluster once we extend the DB schema
-	machineType := "local"
-	machineImageName := "local"
-	machineImageVer := "1.0.0"
-	zone := "" // Empty for local provider, e.g. "eu-central-1a" for AWS
-	minWorkers := int32(1)
-	maxWorkers := int32(3)
-	maxSurge := intstr.FromInt32(1)
-	maxUnavailable := intstr.FromInt32(0)
-
 	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.ShootName,
@@ -499,23 +496,8 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 				Version: cluster.KubernetesVersion,
 			},
 			Provider: gardencorev1beta1.Provider{
-				Type: r.provider.Type,
-				Workers: []gardencorev1beta1.Worker{
-					{
-						Name: "default",
-						Machine: gardencorev1beta1.Machine{
-							Type: machineType,
-							Image: &gardencorev1beta1.ShootMachineImage{
-								Name:    machineImageName,
-								Version: new(machineImageVer),
-							},
-						},
-						Minimum:        minWorkers,
-						Maximum:        maxWorkers,
-						MaxSurge:       &maxSurge,
-						MaxUnavailable: &maxUnavailable,
-					},
-				},
+				Type:    r.provider.Type,
+				Workers: r.buildWorkers(cluster),
 			},
 			Networking: &gardencorev1beta1.Networking{
 				Type:  new("calico"), // Default CNI
@@ -529,12 +511,53 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 		shoot.Spec.CredentialsBindingName = new(r.provider.CredentialsBindingName)
 	}
 
-	// Only set zones if configured (local provider doesn't support zones)
-	if zone != "" {
-		shoot.Spec.Provider.Workers[0].Zones = []string{zone}
+	return shoot
+}
+
+// buildWorkers converts node pools to Gardener worker groups.
+// If the cluster has no node pools, a default worker group is created.
+func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Worker {
+	maxSurge := intstr.FromInt32(1)
+	maxUnavailable := intstr.FromInt32(0)
+	imageVersion := r.provider.MachineImageVersion
+
+	if len(cluster.NodePools) == 0 {
+		return []gardencorev1beta1.Worker{
+			{
+				Name: "default",
+				Machine: gardencorev1beta1.Machine{
+					Type: r.provider.DefaultMachineType,
+					Image: &gardencorev1beta1.ShootMachineImage{
+						Name:    r.provider.MachineImageName,
+						Version: &imageVersion,
+					},
+				},
+				Minimum:        1,
+				Maximum:        3,
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+			},
+		}
 	}
 
-	return shoot
+	workers := make([]gardencorev1beta1.Worker, len(cluster.NodePools))
+	for i, np := range cluster.NodePools {
+		workers[i] = gardencorev1beta1.Worker{
+			Name: np.Name,
+			Machine: gardencorev1beta1.Machine{
+				Type: np.MachineType,
+				Image: &gardencorev1beta1.ShootMachineImage{
+					Name:    r.provider.MachineImageName,
+					Version: &imageVersion,
+				},
+			},
+			Minimum:        np.AutoscaleMin,
+			Maximum:        np.AutoscaleMax,
+			MaxSurge:       &maxSurge,
+			MaxUnavailable: &maxUnavailable,
+		}
+	}
+	return workers
 }
 
 // updateShootSpec updates an existing Shoot's spec and labels.
@@ -552,4 +575,5 @@ func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *Cl
 
 	shoot.Spec.Region = cluster.Region
 	shoot.Spec.Kubernetes.Version = cluster.KubernetesVersion
+	shoot.Spec.Provider.Workers = r.buildWorkers(cluster)
 }

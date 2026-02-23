@@ -57,6 +57,14 @@ type Client interface {
 	GetShootStatus(ctx context.Context, cluster *ClusterToSync) (*ShootStatus, error)
 }
 
+// NodePool represents a node pool configuration from the database.
+type NodePool struct {
+	Name         string
+	MachineType  string
+	AutoscaleMin int32
+	AutoscaleMax int32
+}
+
 // ClusterToSync contains all the information needed to sync a cluster to Gardener.
 type ClusterToSync struct {
 	ID                uuid.UUID
@@ -69,6 +77,7 @@ type ClusterToSync struct {
 	KubernetesVersion string
 	Deleted           *time.Time
 	SyncAttempts      int
+	NodePools         []NodePool // Node pool configurations for Gardener worker groups
 }
 
 // ShootInfo contains information about a Shoot retrieved from Gardener.

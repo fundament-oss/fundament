@@ -195,6 +195,24 @@ SET
 WHERE
     id = @cluster_id;
 
+-- name: NodePoolListByClusterID :many
+-- Fetch active (non-deleted) node pools for a cluster.
+-- Used by the sync worker to build Gardener worker groups.
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.name,
+    tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.autoscale_max,
+    tenant.node_pools.created
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.cluster_id = @cluster_id
+    AND tenant.node_pools.deleted IS NULL
+ORDER BY
+    tenant.node_pools.created;
+
 -- name: ClusterHasActiveWithSameName :one
 -- Check if there's an active (non-deleted) cluster with the same name in the same organization.
 -- Used to prevent deleting a shoot that's been recreated.
