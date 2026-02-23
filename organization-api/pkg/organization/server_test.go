@@ -32,7 +32,7 @@ type testEnv struct {
 type testUser struct {
 	Name        string
 	Email       string
-	ExternalRef string
+	ExternalRef *string
 	OrgIDs      []uuid.UUID
 }
 
@@ -51,7 +51,7 @@ func WithOrganization(id uuid.UUID, name string) APIOption {
 	}
 }
 
-func WithUser(id uuid.UUID, name, email, externalRef string, orgIDs []uuid.UUID) APIOption {
+func WithUser(id uuid.UUID, name, email string, externalRef *string, orgIDs []uuid.UUID) APIOption {
 	return func(o *APIOptions) {
 		_, exists := o.Users[id]
 		if exists {
