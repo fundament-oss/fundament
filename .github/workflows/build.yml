@@ -35,7 +35,11 @@ jobs:
           - image-name: docs-frontend
             dockerfile: docs-frontend/Dockerfile
             context: "."
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/build-image.yml
+    secrets: inherit
     with:
       image-name: ${{ matrix.image-name }}
       dockerfile: ${{ matrix.dockerfile }}
