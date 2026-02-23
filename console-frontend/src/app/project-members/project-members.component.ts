@@ -33,7 +33,7 @@ const roleToString = (role: ProjectMemberRole): string => {
     case ProjectMemberRole.VIEWER:
       return 'viewer';
     default:
-      return 'viewer';
+      return 'unknown';
   }
 };
 
