@@ -1,14 +1,22 @@
-import { Component, Output, EventEmitter, inject, OnInit, signal, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  Output,
+  EventEmitter,
+  inject,
+  OnInit,
+  signal,
+  Input,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { PLUGIN } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { PLUGIN } from '../../connect/tokens';
 import {
   ListPluginsRequestSchema,
   ListPresetsRequestSchema,
   type Preset,
 } from '../../generated/v1/plugin_pb';
-import { firstValueFrom } from 'rxjs';
 
 export interface Plugin {
   id: string;
@@ -20,23 +28,29 @@ export interface Plugin {
 
 @Component({
   selector: 'app-shared-plugins-form',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-plugins-form.component.html',
 })
 export class SharedPluginsFormComponent implements OnInit {
   private pluginClient = inject(PLUGIN);
 
   @Output() formSubmit = new EventEmitter<{ preset: string; plugins: string[] }>();
+
   @Input() initialPluginIds?: string[];
 
   selectedPreset = 'custom';
+
   customPluginUploadEnabled = false;
+
   selectedCustomPluginFile: File | null = null;
+
   isLoading = signal(true);
+
   errorMessage = signal<string | null>(null);
 
   plugins: Plugin[] = [];
+
   presets: Preset[] = [];
 
   async ngOnInit() {
@@ -67,8 +81,7 @@ export class SharedPluginsFormComponent implements OnInit {
 
       this.isLoading.set(false);
     } catch (error) {
-      console.error('Failed to load plugins:', error);
-      this.errorMessage.set('Failed to load plugins from server');
+      this.errorMessage.set(`Failed to load plugins from server: ${error}`);
       this.isLoading.set(false);
     }
   }
@@ -86,9 +99,10 @@ export class SharedPluginsFormComponent implements OnInit {
     }
 
     // Update plugin selections based on preset
-    this.plugins.forEach((plugin) => {
-      plugin.selected = preset.pluginIds.includes(plugin.id);
-    });
+    this.plugins = this.plugins.map((plugin) => ({
+      ...plugin,
+      selected: preset.pluginIds.includes(plugin.id),
+    }));
   }
 
   onCustomPluginFileChange(event: Event) {

@@ -1,8 +1,10 @@
 # Fundament Helm Chart - Default Values
 
 # JWT Secret - required for token signing/validation across services
-# Must be set in production (no default for security)
 jwtSecret: ""
+jwtSecretRef:
+  name: "" # Name of the Kubernetes Secret
+  key: "" # Key within the Secret containing the JWT secret
 
 # External URLs - must be set for your environment
 externalUrls:
@@ -14,11 +16,14 @@ externalUrls:
 
 # Container images
 images:
-  dbMigrations: db-migrations:latest
-  authnApi: authn-api:latest
-  organizationApi: organization-api:latest
-  consoleFrontend: console-frontend:latest
-  docsFrontend: docs-frontend:latest
+  dbMigrations: ghcr.io/fundament-oss/fundament/db-migrations:latest
+  authnApi: ghcr.io/fundament-oss/fundament/authn-api:latest
+  organizationApi: ghcr.io/fundament-oss/fundament/organization-api:latest
+  consoleFrontend: ghcr.io/fundament-oss/fundament/console-frontend:latest
+  docsFrontend: ghcr.io/fundament-oss/fundament/docs-frontend:latest
+  clusterWorker: ghcr.io/fundament-oss/fundament/cluster-worker:latest
+  authzWorker: ghcr.io/fundament-oss/fundament/authz-worker:latest
+  openfgaSetup: ghcr.io/fundament-oss/fundament/openfga-setup:latest
 
 # Database (CloudNativePG)
 db:
@@ -27,7 +32,7 @@ db:
   storageSize: 1Gi
   reset: false
   insertTestData: false
-  exposePort: 0  # Expose postgres on this port via LoadBalancer (0 = disabled)
+  exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
 
 # Authentication API
 authnApi:
@@ -41,6 +46,14 @@ organizationApi:
   replicas: 1
   logLevel: info
 
+# Cluster Worker
+clusterWorker:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  gardenerMode: mock # mock or real
+  gardenerKubeconfigSecret: "" # Secret name containing kubeconfig for real mode
+
 # Console Frontend
 consoleFrontend:
   enabled: false
@@ -50,6 +63,23 @@ consoleFrontend:
 docsFrontend:
   enabled: false
   replicas: 1
+
+# Authz Worker (outbox pattern for OpenFGA tuple sync)
+authzWorker:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  pollInterval: "5s"
+  batchSize: 100
+  maxRetries: 3
+
+# OpenFGA (Fine-Grained Authorization)
+openfga:
+  enabled: false
+  image: openfga/openfga:v1.11.3
+  replicas: 1
+  playground:
+    enabled: false
 
 # Dex (OIDC Identity Provider)
 dex:
@@ -67,3 +97,5 @@ ingress:
   enabled: false
   className: nginx
   domain: ""
+  tls:
+    clusterIssuer: ""

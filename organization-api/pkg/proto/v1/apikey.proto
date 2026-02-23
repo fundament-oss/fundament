@@ -2,9 +2,10 @@ syntax = "proto3";
 
 package organization.v1;
 
-import "v1/common.proto";
-import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "v1/common.proto";
 
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
@@ -30,23 +31,26 @@ service APIKeyService {
 message APIKey {
   string id = 10;
   string name = 20;
-  string token_prefix = 30;  // First 8 chars for display (fun_XXXX)
-  google.protobuf.Timestamp expires_at = 40;  // null if never expires
-  google.protobuf.Timestamp last_used_at = 50;
-  google.protobuf.Timestamp created_at = 60;
-  google.protobuf.Timestamp revoked_at = 70;  // null if not revoked
+  string token_prefix = 30; // First 8 chars for display (fun_XXXX)
+  google.protobuf.Timestamp expires = 40; // null if never expires
+  google.protobuf.Timestamp last_used = 50;
+  google.protobuf.Timestamp created = 60;
+  google.protobuf.Timestamp revoked = 70; // null if not revoked
 }
 
 // Create API key request
 message CreateAPIKeyRequest {
-  string name = 10;
-  optional int64 expires_in_days = 20;  // Days until expiry, null = never
+  string name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string expires_in = 20; // Time until expiry, empty = never
 }
 
 // Create API key response (only time the full token is returned)
 message CreateAPIKeyResponse {
   string id = 10;
-  string token = 20;  // IMPORTANT: Only returned once, must be copied by user
+  string token = 20; // IMPORTANT: Only returned once, must be copied by user
   string token_prefix = 30;
 }
 
@@ -60,7 +64,7 @@ message ListAPIKeysResponse {
 
 // Get API key request
 message GetAPIKeyRequest {
-  string api_key_id = 10;
+  string api_key_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Get API key response
@@ -70,10 +74,10 @@ message GetAPIKeyResponse {
 
 // Revoke API key request
 message RevokeAPIKeyRequest {
-  string api_key_id = 10;
+  string api_key_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Delete API key request
 message DeleteAPIKeyRequest {
-  string api_key_id = 10;
+  string api_key_id = 10 [(buf.validate.field).string = {uuid: true}];
 }

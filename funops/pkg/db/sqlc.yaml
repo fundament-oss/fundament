@@ -1,0 +1,27 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "."
+    schema: "../../../db/fundament.sql"
+    gen:
+      go:
+        package: "db"
+        out: "gen"
+        sql_package: "pgx/v5"
+        query_parameter_limit: 0
+        omit_unused_structs: true
+        output_db_file_name: "db.sqlc.go"
+        output_models_file_name: "models.sqlc.go"
+        overrides:
+          - db_type: "uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+          - column: "tenant.organizations_users.permission"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "OrganizationsUserPermission"
+          - column: "tenant.organizations_users.status"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "OrganizationsUserStatus"

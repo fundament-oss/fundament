@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file authn/v1/authn.proto.
  */
 export const file_authn_v1_authn: GenFile = /*@__PURE__*/
-  fileDesc("ChRhdXRobi92MS9hdXRobi5wcm90bxIIYXV0aG4udjEiFAoSR2V0VXNlckluZm9SZXF1ZXN0IjMKE0dldFVzZXJJbmZvUmVzcG9uc2USHAoEdXNlchgKIAEoCzIOLmF1dGhuLnYxLlVzZXIiXgoEVXNlchIKCgJpZBgKIAEoCRIXCg9vcmdhbml6YXRpb25faWQYFCABKAkSDAoEbmFtZRgeIAEoCRITCgtleHRlcm5hbF9pZBgoIAEoCRIOCgZncm91cHMYMiADKAkiFgoURXhjaGFuZ2VUb2tlblJlcXVlc3QiVQoVRXhjaGFuZ2VUb2tlblJlc3BvbnNlEhQKDGFjY2Vzc190b2tlbhgKIAEoCRISCgp0b2tlbl90eXBlGBQgASgJEhIKCmV4cGlyZXNfaW4YHiABKAMyWgoMQXV0aG5TZXJ2aWNlEkoKC0dldFVzZXJJbmZvEhwuYXV0aG4udjEuR2V0VXNlckluZm9SZXF1ZXN0Gh0uYXV0aG4udjEuR2V0VXNlckluZm9SZXNwb25zZTJgCgxUb2tlblNlcnZpY2USUAoNRXhjaGFuZ2VUb2tlbhIeLmF1dGhuLnYxLkV4Y2hhbmdlVG9rZW5SZXF1ZXN0Gh8uYXV0aG4udjEuRXhjaGFuZ2VUb2tlblJlc3BvbnNlQk1aS2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvYXV0aG4tYXBpL3BrZy9wcm90by9nZW4vYXV0aG4vdjE7YXV0aG52MWIGcHJvdG8z");
+  fileDesc("ChRhdXRobi92MS9hdXRobi5wcm90bxIIYXV0aG4udjEiFAoSR2V0VXNlckluZm9SZXF1ZXN0IjMKE0dldFVzZXJJbmZvUmVzcG9uc2USHAoEdXNlchgKIAEoCzIOLmF1dGhuLnYxLlVzZXIiYAoEVXNlchIKCgJpZBgKIAEoCRIYChBvcmdhbml6YXRpb25faWRzGBQgAygJEgwKBG5hbWUYHiABKAkSFAoMZXh0ZXJuYWxfcmVmGCggASgJEg4KBmdyb3VwcxgyIAMoCSIWChRFeGNoYW5nZVRva2VuUmVxdWVzdCJVChVFeGNoYW5nZVRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAzJaCgxBdXRoblNlcnZpY2USSgoLR2V0VXNlckluZm8SHC5hdXRobi52MS5HZXRVc2VySW5mb1JlcXVlc3QaHS5hdXRobi52MS5HZXRVc2VySW5mb1Jlc3BvbnNlMmAKDFRva2VuU2VydmljZRJQCg1FeGNoYW5nZVRva2VuEh4uYXV0aG4udjEuRXhjaGFuZ2VUb2tlblJlcXVlc3QaHy5hdXRobi52MS5FeGNoYW5nZVRva2VuUmVzcG9uc2VCTVpLZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9hdXRobi1hcGkvcGtnL3Byb3RvL2dlbi9hdXRobi92MTthdXRobnYxYgZwcm90bzM");
 
 /**
  * @generated from message authn.v1.GetUserInfoRequest
@@ -56,11 +56,11 @@ export type User = Message<"authn.v1.User"> & {
   id: string;
 
   /**
-   * Organization ID
+   * Organization IDs
    *
-   * @generated from field: string organization_id = 20;
+   * @generated from field: repeated string organization_ids = 20;
    */
-  organizationId: string;
+  organizationIds: string[];
 
   /**
    * User name
@@ -72,9 +72,9 @@ export type User = Message<"authn.v1.User"> & {
   /**
    * External ID from OIDC provider
    *
-   * @generated from field: string external_id = 40;
+   * @generated from field: string external_ref = 40;
    */
-  externalId: string;
+  externalRef: string;
 
   /**
    * Groups the user belongs to

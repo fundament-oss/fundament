@@ -1,0 +1,318 @@
+<div class="card">
+  <!-- Header -->
+  <div class="card-header">
+    <h1 class="text-2xl font-bold dark:text-white">API keys</h1>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+      Manage API keys for programmatic access to your organization
+    </p>
+  </div>
+
+  <div class="p-6">
+    <!-- Token Display (only shown once after creation) -->
+    @if (createdToken()) {
+      <div
+        class="mb-6 rounded-md border-2 border-green-500 bg-green-50 p-6 dark:border-green-600 dark:bg-green-950"
+      >
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold text-green-900 dark:text-green-100">
+            API key created successfully!
+          </h3>
+          <p class="mt-1 text-sm text-green-800 dark:text-green-200">
+            Copy this token now. For security reasons, it will not be shown again.
+          </p>
+        </div>
+        <div class="mb-4">
+          <label
+            for="apiToken"
+            class="mb-2 block text-sm font-medium text-green-900 dark:text-green-100"
+          >
+            Your API token
+          </label>
+          <div class="flex gap-2">
+            <input
+              id="apiToken"
+              type="text"
+              [value]="createdToken()"
+              readonly
+              class="block flex-1 rounded-md border border-green-300 bg-white px-3 py-2 font-mono text-sm dark:border-green-700 dark:bg-gray-900 dark:text-white"
+            />
+            <button
+              type="button"
+              (click)="copyToken()"
+              class="btn-primary inline-flex shrink-0 items-center"
+            >
+              <ng-icon name="tablerCopy" class="mr-1.5" /> Copy
+            </button>
+          </div>
+        </div>
+        <button type="button" (click)="dismissToken()" class="btn-primary inline-flex items-center">
+          <ng-icon name="tablerCheck" class="mr-1.5" /> I've saved the token
+        </button>
+      </div>
+    }
+
+    <!-- Error Message -->
+    @if (error()) {
+      <div class="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-950">
+        <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+      </div>
+    }
+
+    <!-- Create Form -->
+    @if (isCreating()) {
+      <div class="card card-body-lg mb-6 bg-gray-50! dark:bg-gray-900!">
+        <h3 class="-mt-2 mb-4 text-lg font-semibold dark:text-white">Create new API key</h3>
+        <div class="space-y-4">
+          <div>
+            <label
+              for="name"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Name
+            </label>
+            <input
+              #nameInput
+              #nameField="ngModel"
+              id="name"
+              class="validate-on-touch"
+              type="text"
+              [(ngModel)]="newKeyName"
+              placeholder="E.g. CLI key"
+              (keyup.enter)="createApiKey()"
+              (keyup.escape)="cancelCreating()"
+              required
+            />
+            @if (getNameError(nameField)) {
+              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+                {{ getNameError(nameField) }}
+              </p>
+            }
+          </div>
+          <div>
+            <label
+              for="expiresIn"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Expires after (duration)
+            </label>
+            <input
+              id="expiresIn"
+              type="text"
+              [(ngModel)]="newKeyExpiresIn"
+              placeholder="Leave blank if you don't want the key to expire."
+              (keyup.enter)="createApiKey()"
+              (keyup.escape)="cancelCreating()"
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Optional. Formatted as duration, eg. 300s, 5m or 1h.
+            </p>
+          </div>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              (click)="createApiKey()"
+              [disabled]="loading()"
+              class="btn-primary"
+            >
+              Create
+            </button>
+            <button
+              type="button"
+              (click)="cancelCreating()"
+              [disabled]="loading()"
+              class="btn-secondary"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <!-- Create Button -->
+      <button
+        type="button"
+        (click)="startCreating()"
+        [disabled]="loading()"
+        class="btn-primary mb-5 inline-flex items-center"
+      >
+        <ng-icon name="tablerPlus" class="mr-1.5" />
+        Create new API key
+      </button>
+    }
+
+    <!-- Loading State -->
+    @if (loading() && apiKeys().length === 0) {
+      <div class="py-8 text-center">
+        <p class="text-gray-600 dark:text-gray-300">Loading API keys...</p>
+      </div>
+    }
+
+    <!-- API Keys Table -->
+    @if (apiKeys().length > 0) {
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Token Prefix</th>
+              <th scope="col">Created</th>
+              <th scope="col">Last Used</th>
+              <th scope="col">Expires</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (apiKey of apiKeys(); track apiKey.id) {
+              <tr>
+                <td class="font-medium dark:text-white">
+                  {{ apiKey.name }}
+                </td>
+                <td class="font-mono text-sm text-gray-600 dark:text-gray-400">
+                  {{ apiKey.tokenPrefix }}
+                </td>
+                <td class="text-sm text-gray-600 dark:text-gray-400">
+                  {{ formatDate(apiKey.created) }}
+                </td>
+                <td class="text-sm text-gray-600 dark:text-gray-400">
+                  {{ formatDateTime(apiKey.lastUsed) }}
+                </td>
+                <td class="text-sm text-gray-600 dark:text-gray-400">
+                  @if (apiKey.expires) {
+                    <span
+                      [class.text-red-600]="isExpired(apiKey.expires)"
+                      title="{{ formatDateTime(apiKey.expires) }}"
+                    >
+                      {{ formatDate(apiKey.expires) }}
+                    </span>
+                  } @else {
+                    <span class="text-gray-600 dark:text-gray-400">Never</span>
+                  }
+                </td>
+                <td>
+                  @if (isRevoked(apiKey.revoked)) {
+                    <span class="badge badge-gray">Revoked</span>
+                  } @else if (isExpired(apiKey.expires)) {
+                    <span class="badge badge-rose">Expired</span>
+                  } @else {
+                    <span class="badge badge-emerald">Active</span>
+                  }
+                </td>
+                <td>
+                  <div class="flex gap-2">
+                    @if (!isRevoked(apiKey.revoked) && !isExpired(apiKey.expires)) {
+                      <button
+                        type="button"
+                        (click)="openRevokeModal(apiKey.id, apiKey.name)"
+                        [disabled]="loading()"
+                        class="btn-light inline-flex shrink-0 items-center"
+                      >
+                        <ng-icon name="tablerBan" class="mr-1.5" /> Revoke
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      (click)="openDeleteModal(apiKey.id, apiKey.name)"
+                      [disabled]="loading()"
+                      class="btn-remove inline-flex shrink-0 items-center"
+                    >
+                      <ng-icon name="tablerTrash" class="mr-1.5" /> Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Empty State -->
+    @if (!loading() && apiKeys().length === 0 && !error()) {
+      <div class="py-8 text-center">
+        <p class="text-gray-600 dark:text-gray-300">No API keys found</p>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Create your first API key</p>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Revoke API Key Modal -->
+<app-modal
+  [show]="showRevokeModal()"
+  title="Revoke API key"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showRevokeModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          Are you sure you want to revoke API key
+          <span class="font-semibold text-gray-800 dark:text-white">{{ pendingKeyName() }}</span
+          >? It will no longer be usable.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showRevokeModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="confirmRevoke()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, revoke this key
+    </button>
+  </div>
+</app-modal>
+
+<!-- Delete API Key Modal -->
+<app-modal
+  [show]="showDeleteModal()"
+  title="Delete API key"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showDeleteModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          Are you sure you want to delete API key
+          <span class="font-semibold text-gray-800 dark:text-white">{{ pendingKeyName() }}</span
+          >?
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="confirmDelete()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, delete this key
+    </button>
+  </div>
+</app-modal>

@@ -7,7 +7,8 @@ terraform {
 }
 
 provider "fundament" {
-  endpoint = "http://organization.127.0.0.1.nip.io:8080"
+  endpoint        = "http://organization.fundament.localhost:8080"
+  organization_id = "019b4000-0000-7000-8000-000000000002" # Globex
   # Token can be set via FUNDAMENT_TOKEN environment variable
   # token = ""
 }
@@ -22,7 +23,7 @@ output "project_id" {
   value       = fundament_project.example.id
 }
 
-output "project_created_at" {
+output "project_created" {
   description = "The creation timestamp of the project"
-  value       = fundament_project.example.created_at
+  value       = fundament_project.example.created
 }

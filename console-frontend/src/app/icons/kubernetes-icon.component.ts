@@ -1,11 +1,11 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-kubernetes-icon',
-  standalone: true,
   host: {
     class: 'contents',
   },
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <svg xmlns="http://www.w3.org/2000/svg" [attr.class]="class" viewBox="0 0 24 24">
       <path
@@ -15,6 +15,6 @@ import { Component, Input } from '@angular/core';
     </svg>
   `,
 })
-export class KubernetesIconComponent {
+export default class KubernetesIconComponent {
   @Input() class = '';
 }

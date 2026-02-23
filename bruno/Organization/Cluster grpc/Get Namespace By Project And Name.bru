@@ -1,0 +1,23 @@
+meta {
+  name: Get Namespace By Project And Name
+  type: grpc
+  seq: 7
+}
+
+grpc {
+  url: {{organizationUrl}}
+  method: /organization.v1.ClusterService/GetNamespaceByProjectAndName
+  body: grpc
+  auth: inherit
+  methodType: unary
+}
+
+body:grpc {
+  name: message 1
+  content: '''
+    {
+      "project_name": "{{projectName}}",
+      "namespace_name": "{{namespaceName}}"
+    }
+  '''
+}

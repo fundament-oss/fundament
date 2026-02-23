@@ -1,23 +1,31 @@
-import { Component, inject, OnInit, ViewChild, ElementRef, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  inject,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TitleService } from '../title.service';
-import { AUTHN, ORGANIZATION } from '../../connect/tokens';
 import { create } from '@bufbuild/protobuf';
-import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
+import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
 import {
   GetOrganizationRequestSchema,
   UpdateOrganizationRequestSchema,
   Organization,
 } from '../../generated/v1/organization_pb';
-import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
+import { ORGANIZATION } from '../../connect/tokens';
+import { TitleService } from '../title.service';
+import { OrganizationDataService } from '../organization-data.service';
+import { formatDate as formatDateUtil } from '../utils/date-format';
+import OrganizationContextService from '../organization-context.service';
 
 @Component({
   selector: 'app-organization',
-  standalone: true,
-  imports: [CommonModule, FormsModule, NgIcon],
+  imports: [FormsModule, NgIcon],
   viewProviders: [
     provideIcons({
       tablerPencil,
@@ -25,23 +33,32 @@ import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
       tablerCheck,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './organization.component.html',
 })
-export class OrganizationComponent implements OnInit {
+export default class OrganizationComponent implements OnInit {
   private titleService = inject(TitleService);
-  private authnClient = inject(AUTHN);
+
   private organizationClient = inject(ORGANIZATION);
+
+  private organizationContextService = inject(OrganizationContextService);
+
+  private organizationDataService = inject(OrganizationDataService);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   organization = signal<Organization | null>(null);
+
   isEditing = signal(false);
+
   editingName = signal('');
+
   loading = signal(false);
+
   error = signal<string | null>(null);
 
   constructor() {
-    this.titleService.setTitle('Organization details');
+    this.titleService.setTitle('Organization settings');
   }
 
   async ngOnInit() {
@@ -53,14 +70,14 @@ export class OrganizationComponent implements OnInit {
     this.error.set(null);
 
     try {
-      // Get current user to retrieve organization ID
-      const userResponse = await firstValueFrom(this.authnClient.getUserInfo({}));
-      if (!userResponse.user?.organizationId) {
+      // Get organization ID from context service
+      const organizationId = this.organizationContextService.currentOrganizationId();
+      if (!organizationId) {
         throw new Error('Organization ID not found');
       }
 
       const request = create(GetOrganizationRequestSchema, {
-        id: userResponse.user.organizationId,
+        id: organizationId,
       });
       const response = await firstValueFrom(this.organizationClient.getOrganization(request));
 
@@ -70,8 +87,11 @@ export class OrganizationComponent implements OnInit {
 
       this.organization.set(response.organization);
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to load organization');
-      console.error('Error loading organization:', err);
+      this.error.set(
+        err instanceof Error
+          ? `Failed to load organization: ${err.message}`
+          : 'Failed to load organization',
+      );
     } finally {
       this.loading.set(false);
     }
@@ -119,22 +139,22 @@ export class OrganizationComponent implements OnInit {
         ...currentOrganization,
         name: nameToSave.trim(),
       });
+      this.organizationDataService.updateOrganizationName(
+        currentOrganization.id,
+        nameToSave.trim(),
+      );
       this.isEditing.set(false);
       this.editingName.set('');
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to update organization');
-      console.error('Error updating organization:', err);
+      this.error.set(
+        err instanceof Error
+          ? `Failed to update organization: ${err.message}`
+          : 'Failed to update organization',
+      );
     } finally {
       this.loading.set(false);
     }
   }
 
-  formatDate(timestamp: Timestamp | undefined): string {
-    if (!timestamp) return 'Unknown';
-    return timestampDate(timestamp).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
+  readonly formatDate = formatDateUtil;
 }

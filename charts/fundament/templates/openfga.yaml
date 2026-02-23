@@ -1,0 +1,203 @@
+{{- if $.Values.openfga.enabled }}
+{{- if not $.Values.db.enabled }}
+{{- fail "OpenFGA requires the database to be enabled. Set db.enabled=true or disable OpenFGA with openfga.enabled=false" }}
+{{- end }}
+
+{{- /* Generate or reuse a stable password for the OpenFGA database user */ -}}
+{{- $openfgaSecretName := printf "%s-db-fun-openfga" $.Release.Name }}
+{{- $openfgaExisting := lookup "v1" "Secret" $.Release.Namespace $openfgaSecretName }}
+{{- $openfgaPassword := "" }}
+{{- if $openfgaExisting }}
+{{- $openfgaPassword = index $openfgaExisting.data "password" | b64dec }}
+{{- else }}
+{{- $openfgaPassword = randAlphaNum 32 }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $openfgaSecretName }}
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+type: kubernetes.io/basic-auth
+stringData:
+  username: fun_openfga
+  password: {{ $openfgaPassword | quote }}
+  uri: postgresql://fun_openfga:{{ $openfgaPassword }}@{{ include "fundament.db.host" . }}:5432/openfga
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: {{ $.Release.Name }}-openfga-db
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+spec:
+  name: openfga
+  owner: fun_openfga
+  cluster:
+    name: {{ include "fundament.db.name" . }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $.Release.Name }}-openfga-model
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+data:
+  model.fga: |
+{{- .Files.Get "openfga/model.fga" | nindent 4 }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $.Release.Name }}-openfga-setup
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $.Release.Name }}-openfga-setup
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $.Release.Name }}-openfga-setup
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $.Release.Name }}-openfga-setup
+subjects:
+  - kind: ServiceAccount
+    name: {{ $.Release.Name }}-openfga-setup
+    namespace: {{ $.Release.Namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-openfga
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+spec:
+  replicas: {{ $.Values.openfga.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: openfga
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: openfga
+    spec:
+      initContainers:
+        - name: wait-for-db
+          image: ghcr.io/cloudnative-pg/postgresql:18
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for OpenFGA database and role to be ready..."
+              until psql "$OPENFGA_DATASTORE_URI" -c "SELECT 1" > /dev/null 2>&1; do
+                echo "Database not ready, waiting..."
+                sleep 3
+              done
+              echo "Database is ready!"
+              {{- if $.Values.db.reset }}
+              echo "Resetting OpenFGA database..."
+              psql "$OPENFGA_DATASTORE_URI" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+              echo "OpenFGA database reset complete."
+              {{- end }}
+          env:
+            - name: OPENFGA_DATASTORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $openfgaSecretName }}
+                  key: uri
+        - name: migrate
+          image: {{ $.Values.openfga.image }}
+          args:
+            - migrate
+          env:
+            - name: OPENFGA_DATASTORE_ENGINE
+              value: postgres
+            - name: OPENFGA_DATASTORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $openfgaSecretName }}
+                  key: uri
+      containers:
+        - name: openfga
+          image: {{ $.Values.openfga.image }}
+          args:
+            - run
+          ports:
+            - name: http
+              containerPort: {{ $.Values.openfga.apiPort | default 8080 }}
+            - name: grpc
+              containerPort: 8081
+            {{- if $.Values.openfga.playground.enabled }}
+            - name: playground
+              containerPort: 3000
+            {{- end }}
+          env:
+            - name: OPENFGA_DATASTORE_ENGINE
+              value: postgres
+            - name: OPENFGA_DATASTORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $openfgaSecretName }}
+                  key: uri
+            - name: OPENFGA_PLAYGROUND_ENABLED
+              value: {{ $.Values.openfga.playground.enabled | quote }}
+            - name: OPENFGA_HTTP_ADDR
+              value: "0.0.0.0:{{ $.Values.openfga.apiPort | default 8080 }}"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Release.Name }}-openfga
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ $.Values.openfga.apiPort | default 8080 }}
+      targetPort: http
+      name: http
+    - port: 8081
+      targetPort: grpc
+      name: grpc
+    {{- if $.Values.openfga.playground.enabled }}
+    - port: 3000
+      targetPort: playground
+      name: playground
+    {{- end }}
+  selector:
+    app.kubernetes.io/component: openfga
+{{- end }}

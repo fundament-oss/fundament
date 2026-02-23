@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const organizationGetByID = `-- name: OrganizationGetByID :one
@@ -21,11 +22,49 @@ type OrganizationGetByIDParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) OrganizationGetByID(ctx context.Context, arg OrganizationGetByIDParams) (TenantOrganization, error) {
+type OrganizationGetByIDRow struct {
+	ID      uuid.UUID
+	Name    string
+	Created pgtype.Timestamptz
+}
+
+func (q *Queries) OrganizationGetByID(ctx context.Context, arg OrganizationGetByIDParams) (OrganizationGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, organizationGetByID, arg.ID)
-	var i TenantOrganization
+	var i OrganizationGetByIDRow
 	err := row.Scan(&i.ID, &i.Name, &i.Created)
 	return i, err
+}
+
+const organizationList = `-- name: OrganizationList :many
+SELECT id, name, created
+FROM tenant.organizations
+ORDER BY created
+`
+
+type OrganizationListRow struct {
+	ID      uuid.UUID
+	Name    string
+	Created pgtype.Timestamptz
+}
+
+func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, error) {
+	rows, err := q.db.Query(ctx, organizationList)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OrganizationListRow
+	for rows.Next() {
+		var i OrganizationListRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Created); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const organizationUpdate = `-- name: OrganizationUpdate :one
@@ -40,9 +79,15 @@ type OrganizationUpdateParams struct {
 	Name string
 }
 
-func (q *Queries) OrganizationUpdate(ctx context.Context, arg OrganizationUpdateParams) (TenantOrganization, error) {
+type OrganizationUpdateRow struct {
+	ID      uuid.UUID
+	Name    string
+	Created pgtype.Timestamptz
+}
+
+func (q *Queries) OrganizationUpdate(ctx context.Context, arg OrganizationUpdateParams) (OrganizationUpdateRow, error) {
 	row := q.db.QueryRow(ctx, organizationUpdate, arg.ID, arg.Name)
-	var i TenantOrganization
+	var i OrganizationUpdateRow
 	err := row.Scan(&i.ID, &i.Name, &i.Created)
 	return i, err
 }

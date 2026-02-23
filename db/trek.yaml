@@ -3,8 +3,11 @@ db_name: fundament
 roles:
   - name: fun_authn_api
   - name: fun_fundament_api
+  - name: fun_cluster_worker
   - name: fun_operator
   - name: fun_owner
+  - name: fun_authz
+  - name: fun_authz_worker
 outputs:
   - sql
 templates:

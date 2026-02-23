@@ -1,0 +1,22 @@
+meta {
+  name: Delete Namespace
+  type: grpc
+  seq: 6
+}
+
+grpc {
+  url: {{organizationUrl}}
+  method: /organization.v1.ClusterService/DeleteNamespace
+  body: grpc
+  auth: inherit
+  methodType: unary
+}
+
+body:grpc {
+  name: message 1
+  content: '''
+    {
+      "namespace_id": "{{namespaceId}}"
+    }
+  '''
+}

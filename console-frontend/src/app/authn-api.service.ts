@@ -3,38 +3,48 @@ import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { AUTHN } from '../connect/tokens';
 import { ConfigService } from './config.service';
+import { client as authnRestClient } from '../generated/authn-api/client.gen';
+import { handlePasswordLogin, handleRefresh, handleLogout } from '../generated/authn-api';
+import OrganizationContextService from './organization-context.service';
 
 @Injectable({
   providedIn: 'root',
 })
-export class AuthnApiService {
+export default class AuthnApiService {
   private client = inject(AUTHN);
+
+  private restClient = authnRestClient;
+
   private configService = inject(ConfigService);
+
+  private organizationContext = inject(OrganizationContextService);
+
   private currentUserSubject = new BehaviorSubject<User | undefined>(undefined);
+
   public currentUser$: Observable<User | undefined> = this.currentUserSubject.asObservable();
 
+  constructor() {
+    // Configure the authn REST client with the runtime base URL and credentials
+    this.restClient.setConfig({
+      baseUrl: this.configService.getConfig().authnApiUrl,
+      credentials: 'include',
+    });
+  }
+
   async login(email: string, password: string): Promise<void> {
-    // Submit credentials to Dex local connector endpoint
     const returnUrl = `${window.location.origin}/`;
 
-    const authnApiUrl = this.configService.getConfig().authnApiUrl;
-    const response = await fetch(`${authnApiUrl}/login/password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      credentials: 'include', // Allow cookies to be set
-      body: JSON.stringify({
+    const { error } = await handlePasswordLogin({
+      client: this.restClient,
+      body: {
         email,
         password,
         return_to: returnUrl,
-      }),
+      },
     });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(error.message || `Login failed: ${response.status}`);
+    if (error) {
+      throw new Error(error.error || 'Login failed');
     }
 
     // Backend sets HTTP-only cookie, no need to handle token in frontend
@@ -54,7 +64,7 @@ export class AuthnApiService {
   async initializeAuth(): Promise<void> {
     // Check hint flag to avoid unnecessary API calls when we know user isn't logged in
     // This is just an optimization - the server (via HTTP-only cookie) is still the source of truth
-    if (!this.hasAuthHint()) {
+    if (!AuthnApiService.hasAuthHint()) {
       this.currentUserSubject.next(undefined);
       return;
     }
@@ -71,32 +81,24 @@ export class AuthnApiService {
   }
 
   async refreshToken(): Promise<void> {
-    const authnApiUrl = this.configService.getConfig().authnApiUrl;
-    const response = await fetch(`${authnApiUrl}/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    });
+    const { error } = await handleRefresh({ client: this.restClient });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(error.message || `Request failed: ${response.status}`);
+    if (error) {
+      throw new Error(error.error || 'Refresh failed');
     }
   }
 
   async logout(): Promise<void> {
-    const authnApiUrl = this.configService.getConfig().authnApiUrl;
-    const response = await fetch(`${authnApiUrl}/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    });
+    const { error } = await handleLogout({ client: this.restClient });
 
-    if (!response.ok) {
-      throw new Error(`Logout failed: ${response.status}`);
+    if (error) {
+      throw new Error(error.error || 'Logout failed');
     }
 
-    // Clear user state and hint
+    // Clear user state, hint, and organization selection
     this.currentUserSubject.next(undefined);
     localStorage.removeItem('auth_hint');
+    this.organizationContext.clearOrganizationId();
   }
 
   isAuthenticated(): boolean {
@@ -104,7 +106,7 @@ export class AuthnApiService {
     return this.currentUserSubject.value !== undefined;
   }
 
-  private hasAuthHint(): boolean {
+  private static hasAuthHint(): boolean {
     // This is just an optimization hint, not the source of truth
     return localStorage.getItem('auth_hint') === 'true';
   }

@@ -27,13 +27,13 @@ When('I create an API key with name {string}', async function (this: ICustomWorl
   }
 });
 
-When('I create an API key with name {string} expiring in {int} days', async function (
+When('I create an API key with name {string} expiring in {string}', async function (
   this: ICustomWorld,
   name: string,
-  days: number
+  days: string
 ) {
   try {
-    const response = await this.apiKeyService!.createAPIKey({ name, expiresInDays: days });
+    const response = await this.apiKeyService!.createAPIKey({ name, expiresIn: days });
     setCurrentApiKey(response);
     this.createdApiKeys.set(name, response);
     // Also track by user for cleanup
@@ -169,12 +169,12 @@ Then('the API key should appear in the list of keys', async function (this: ICus
 
 Then('the API key should have an expiration date', async function (this: ICustomWorld) {
   const response = await this.apiKeyService!.getAPIKey(currentApiKey!.id);
-  expect(response.apiKey!.expiresAt).toBeDefined();
+  expect(response.apiKey!.expires).toBeDefined();
 });
 
 Then('the API key should be active', async function (this: ICustomWorld) {
   const response = await this.apiKeyService!.getAPIKey(currentApiKey!.id);
-  expect(response.apiKey!.revokedAt).toBeUndefined();
+  expect(response.apiKey!.revoked).toBeUndefined();
 });
 
 Then('I should see the API key {string} in the list', async function (this: ICustomWorld, name: string) {
@@ -200,7 +200,7 @@ Then('I should see the key name {string}', async function (this: ICustomWorld, n
 
 Then('I should see a created timestamp', async function (this: ICustomWorld) {
   expect(currentApiKeyDetails).toBeDefined();
-  expect(currentApiKeyDetails!.createdAt).toBeDefined();
+  expect(currentApiKeyDetails!.created).toBeDefined();
 });
 
 Then('I should NOT see the full token', async function (this: ICustomWorld) {
@@ -210,7 +210,7 @@ Then('I should NOT see the full token', async function (this: ICustomWorld) {
 
 Then('the API key should have a revoked timestamp', async function (this: ICustomWorld) {
   const response = await this.apiKeyService!.getAPIKey(currentApiKey!.id);
-  expect(response.apiKey!.revokedAt).toBeDefined();
+  expect(response.apiKey!.revoked).toBeDefined();
 });
 
 Then('the API key should still appear in the list', async function (this: ICustomWorld) {

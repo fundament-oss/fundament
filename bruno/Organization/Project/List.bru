@@ -1,0 +1,30 @@
+meta {
+  name: List
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{organizationUrl}}/organization.v1.ProjectService/ListProjects
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+script:post-response {
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setVar("projectId", res.body.projects[0].id);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

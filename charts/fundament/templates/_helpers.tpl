@@ -35,10 +35,20 @@ Database superuser secret name
 {{- end }}
 
 {{/*
-JWT Secret - used for signing and validating tokens across services
+JWT Secret environment variable - supports both direct value and secretRef
 */}}
-{{- define "fundament.jwtSecret" -}}
-{{- required "jwtSecret is required" .Values.jwtSecret -}}
+{{- define "fundament.jwtSecretEnv" -}}
+- name: JWT_SECRET
+{{- if and .Values.jwtSecretRef .Values.jwtSecretRef.name .Values.jwtSecretRef.key }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.jwtSecretRef.name }}
+      key: {{ .Values.jwtSecretRef.key }}
+{{- else if .Values.jwtSecret }}
+  value: {{ .Values.jwtSecret }}
+{{- else }}
+  {{- fail "Either jwtSecret or jwtSecretRef (with name and key) must be set" }}
+{{- end }}
 {{- end }}
 
 {{/*

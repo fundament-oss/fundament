@@ -1,68 +1,313 @@
 <div class="card">
   <!-- Header -->
-  <div class="card-header pb-0!">
+  <div class="card-header">
     <h1 class="text-2xl font-bold dark:text-white">Project members</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Members and roles for projects</p>
-
-    <!-- Tabs -->
-    <nav class="tabs">
-      <a routerLink="/project-members" routerLinkActive="active"> Members </a>
-      <a routerLink="/project-permissions" routerLinkActive="active"> Permissions </a>
-    </nav>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+      Manage members and their permissions for this project
+    </p>
   </div>
 
-  <div class="space-y-8 p-6">
-    <!-- Project Members Sections -->
-    @for (project of members.projects; track project.name) {
-      <div>
-        <h2 class="mb-2 text-lg font-semibold dark:text-white">{{ project.name }}</h2>
+  <div class="p-6">
+    <!-- Info banner -->
+    <div
+      class="mb-6 flex items-start gap-3 rounded-md border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
+    >
+      <ng-icon
+        name="tablerInfoCircle"
+        size="1.25rem"
+        class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
+      />
+      <div class="text-sm text-indigo-700 dark:text-indigo-300">
+        <p class="mb-2">
+          Members marked with
+          <ng-icon name="tablerLock" size="0.875rem" /> inherit their permission from the
+          organization level and cannot be changed here. Modify these in
+          <a
+            [routerLink]="['/organization/members']"
+            class="font-medium text-indigo-600 underline hover:text-indigo-700 hover:no-underline dark:text-indigo-400 dark:hover:text-indigo-300"
+            >Organization members</a
+          >. Organization viewers can be upgraded to admin at the project level.
+        </p>
+        <p>
+          Permissions only give access to manage members. To control access to project resources,
+          configure
+          <a
+            [routerLink]="['/projects', projectId(), 'roles']"
+            class="font-medium text-indigo-600 underline hover:text-indigo-700 hover:no-underline dark:text-indigo-400 dark:hover:text-indigo-300"
+            >Roles</a
+          >.
+        </p>
+      </div>
+    </div>
 
-        <button type="button" class="btn-light mb-5 inline-flex items-center">
-          <ng-icon name="tablerPlus" class="mr-1.5" />
-          Add a member
+    <button
+      type="button"
+      (click)="openAddMemberModal()"
+      class="btn-primary mb-5 inline-flex items-center"
+    >
+      <ng-icon name="tablerPlus" class="mr-1.5" />
+      Add a member
+    </button>
+
+    @if (error()) {
+      <div
+        class="mb-5 flex items-start gap-3 rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
+      >
+        <ng-icon name="tablerAlertTriangle" size="1.25rem" class="mt-0.5 shrink-0 text-rose-400!" />
+        <div class="flex-1">
+          <p class="text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
+        </div>
+        <button
+          type="button"
+          (click)="error.set(null)"
+          class="shrink-0 cursor-pointer text-sm text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
+        >
+          Dismiss
         </button>
+      </div>
+    }
 
-        <div class="table-container">
-          <table class="table">
-            <thead>
+    @if (isLoading()) {
+      <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
+        <div
+          class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"
+        ></div>
+        <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading members...</p>
+      </div>
+    } @else if (memberViews().length === 0) {
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        No members have been added to this project yet.
+      </p>
+    } @else {
+      <div class="table-container">
+        <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th width="40%" scope="col">Name</th>
+              <th width="20%" scope="col">Permission</th>
+              <th width="20%" scope="col">Source</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
+            @for (view of memberViews(); track view.member.id) {
               <tr>
-                <th width="50%" scope="col">Name</th>
-                <th width="30%" scope="col">Role</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (user of project.users; track user.name) {
-                <tr>
-                  <td class="font-medium dark:text-white">
-                    {{ user.name }}
-                  </td>
-                  <td>
+                <td>
+                  <div class="font-medium dark:text-white">{{ view.member.userName }}</div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                    Added to project {{ formatMemberDate(view.member) }}
+                  </div>
+                </td>
+                <td>
+                  <span
+                    class="badge capitalize"
+                    [class.badge-purple]="view.member.role === ProjectMemberRole.ADMIN"
+                    [class.badge-blue]="view.member.role === ProjectMemberRole.VIEWER"
+                  >
+                    {{ roleToString(view.member.role) }}
+                  </span>
+                </td>
+                <td>
+                  @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
                     <span
-                      class="badge"
-                      [ngClass]="{
-                        'badge-purple': user.role === 'Project admin',
-                        'badge-blue': user.role === 'Project member',
-                      }"
+                      class="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400"
                     >
-                      {{ user.role }}
+                      <ng-icon name="tablerLock" size="0.875rem" />
+                      Organization
                     </span>
-                  </td>
-                  <td>
-                    <button type="button" class="btn-light mr-2 inline-flex shrink-0 items-center">
+                  } @else if (view.source === 'org') {
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Organization</span>
+                  } @else {
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Project</span>
+                  }
+                </td>
+                <td>
+                  @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
+                    <!-- Org admin: locked, no actions -->
+                    <span class="text-sm text-gray-400 dark:text-gray-600">&mdash;</span>
+                  } @else {
+                    <button
+                      type="button"
+                      (click)="openEditMemberModal(view)"
+                      class="btn-light mr-2 inline-flex shrink-0 items-center"
+                    >
                       <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
                     </button>
-
-                    <button type="button" class="btn-remove shrink-0">
-                      <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+                    @if (view.source === 'project' && view.orgPermission !== null) {
+                      <button
+                        type="button"
+                        (click)="resetToOrgDefault(view)"
+                        class="btn-remove shrink-0"
+                      >
+                        <ng-icon name="tablerArrowBackUp" class="mr-1.5" /> Reset
+                      </button>
+                    } @else if (view.source === 'project') {
+                      <button
+                        type="button"
+                        (click)="openRemoveMemberModal(view)"
+                        class="btn-remove shrink-0"
+                      >
+                        <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
+                      </button>
+                    }
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
     }
   </div>
 </div>
+
+<!-- Add/Edit Member Modal -->
+<app-modal
+  [show]="showAddMemberModal()"
+  [title]="editingMemberView() ? 'Edit member' : 'Add member to project'"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showAddMemberModal.set(false)"
+>
+  <form [formGroup]="memberForm" (ngSubmit)="saveMember()">
+    <!-- User Selection (only show when adding) -->
+    @if (!editingMemberView()) {
+      <div class="mb-4">
+        <label for="userId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+          User
+        </label>
+        <select id="userId" formControlName="userId" class="w-full">
+          <option value="">Select a user</option>
+          @for (user of availableUsers(); track user.id) {
+            <option [value]="user.id">{{ user.name }}</option>
+          }
+        </select>
+        @if (availableUsers().length === 0) {
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No users available to add.</p>
+        }
+        @if (
+          memberForm.get('userId')?.invalid &&
+          (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
+        ) {
+          <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a user.</p>
+        }
+      </div>
+    }
+
+    <!-- Member name (only show when editing) -->
+    @if (editingMemberView()) {
+      <div class="mb-4">
+        <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"> Member </span>
+        <p class="text-sm dark:text-white">{{ editingMemberView()?.member?.userName }}</p>
+      </div>
+    }
+
+    <!-- Permissions Selection -->
+    <div class="mb-4">
+      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
+      <div class="space-y-2">
+        <label
+          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+        >
+          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
+            <input
+              name="permission"
+              type="radio"
+              value="viewer"
+              formControlName="permission"
+              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+            />
+            Project viewer
+          </span>
+          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+            Read access to project resources
+          </span>
+        </label>
+        <label
+          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+        >
+          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
+            <input
+              name="permission"
+              type="radio"
+              value="admin"
+              formControlName="permission"
+              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+            />
+            Project admin
+          </span>
+          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+            Full access to project resources
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <div modal-footer class="modal-footer">
+      <button
+        type="button"
+        (click)="showAddMemberModal.set(false)"
+        class="btn-secondary"
+        [disabled]="isAddingMember()"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
+      >
+        @if (isAddingMember()) {
+          Saving...
+        } @else if (editingMemberView()) {
+          Save changes
+        } @else {
+          Add member
+        }
+      </button>
+    </div>
+  </form>
+</app-modal>
+
+<!-- Remove Member Modal -->
+<app-modal
+  [show]="showRemoveMemberModal()"
+  title="Remove member"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showRemoveMemberModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          Are you sure you want to remove
+          <span class="font-semibold text-gray-800 dark:text-white">{{
+            pendingRemoveView()?.member?.userName
+          }}</span>
+          from this project?
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showRemoveMemberModal.set(false)" class="btn-secondary">
+      Cancel
+    </button>
+    <button
+      type="button"
+      (click)="confirmRemoveMember()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, remove this member
+    </button>
+  </div>
+</app-modal>

@@ -7,38 +7,40 @@ on:
     branches: [master]
 
 jobs:
-  build-authn-api:
-    name: Build authn-api
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build Docker image
-        run: docker build -f authn-api/Dockerfile .
-
-  build-organization-api:
-    name: Build organization-api
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build Docker image
-        run: docker build -f organization-api/Dockerfile .
-
-  build-db-migrations:
-    name: Build db-migrations
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build Docker image
-        run: docker build -f db/Dockerfile db
-
-  build-console-frontend:
-    name: Build console-frontend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build Docker image
-        run: docker build -f console-frontend/Dockerfile .
+  build:
+    strategy:
+      matrix:
+        include:
+          - image-name: authn-api
+            dockerfile: authn-api/Dockerfile
+            context: "."
+          - image-name: organization-api
+            dockerfile: organization-api/Dockerfile
+            context: "."
+          - image-name: db-migrations
+            dockerfile: db/Dockerfile
+            context: db
+          - image-name: console-frontend
+            dockerfile: console-frontend/Dockerfile
+            context: "."
+          - image-name: cluster-worker
+            dockerfile: cluster-worker/Dockerfile
+            context: "."
+          - image-name: authz-worker
+            dockerfile: authz-worker/Dockerfile
+            context: "."
+          - image-name: openfga-setup
+            dockerfile: openfga/setup/Dockerfile
+            context: openfga/setup
+          - image-name: docs-frontend
+            dockerfile: docs-frontend/Dockerfile
+            context: "."
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/build-image.yml
+    secrets: inherit
+    with:
+      image-name: ${{ matrix.image-name }}
+      dockerfile: ${{ matrix.dockerfile }}
+      context: ${{ matrix.context }}

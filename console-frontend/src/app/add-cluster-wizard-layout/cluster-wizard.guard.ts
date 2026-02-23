@@ -2,7 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { ClusterWizardStateService } from './cluster-wizard-state.service';
 
-export const clusterWizardGuard: CanActivateFn = (route) => {
+const clusterWizardGuard: CanActivateFn = (route) => {
   const stateService = inject(ClusterWizardStateService);
   const router = inject(Router);
 
@@ -19,3 +19,5 @@ export const clusterWizardGuard: CanActivateFn = (route) => {
 
   return true;
 };
+
+export default clusterWizardGuard;

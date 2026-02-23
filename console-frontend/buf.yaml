@@ -1,7 +1,9 @@
 version: v2
 modules:
-  - path: authn-api/pkg/proto
-  - path: organization-api/pkg/proto
+  - path: ../authn-api/pkg/proto
+  - path: ../organization-api/pkg/proto
+deps:
+  - buf.build/bufbuild/protovalidate
 lint:
   use:
     - DEFAULT

@@ -9,15 +9,41 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type TenantCluster struct {
-	ID                uuid.UUID
-	OrganizationID    uuid.UUID
-	Name              string
-	Region            string
-	KubernetesVersion string
-	Status            string
-	Created           pgtype.Timestamptz
-	Deleted           pgtype.Timestamptz
+type AppstoreInstall struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	PluginID  uuid.UUID
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
+}
+
+type AppstorePluginDocumentationLink struct {
+	ID       uuid.UUID
+	PluginID uuid.UUID
+	Title    string
+	UrlName  string
+	Url      string
+}
+
+type AppstorePreset struct {
+	ID          uuid.UUID
+	Name        string
+	Description pgtype.Text
+}
+
+type AppstorePresetPlugin struct {
+	PresetID uuid.UUID
+	PluginID uuid.UUID
+}
+
+type TenantClusterEvent struct {
+	ID         uuid.UUID
+	ClusterID  uuid.UUID
+	EventType  string
+	Created    pgtype.Timestamptz
+	SyncAction pgtype.Text
+	Message    pgtype.Text
+	Attempt    pgtype.Int4
 }
 
 type TenantNamespace struct {
@@ -40,43 +66,10 @@ type TenantNodePool struct {
 	Deleted      pgtype.Timestamptz
 }
 
-type TenantOrganization struct {
-	ID      uuid.UUID
-	Name    string
-	Created pgtype.Timestamptz
-}
-
 type TenantProject struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 	Name           string
 	Created        pgtype.Timestamptz
 	Deleted        pgtype.Timestamptz
-}
-
-type ZappstoreInstall struct {
-	ID        uuid.UUID
-	ClusterID uuid.UUID
-	PluginID  uuid.UUID
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-}
-
-type ZappstorePluginDocumentationLink struct {
-	ID       uuid.UUID
-	PluginID uuid.UUID
-	Title    string
-	UrlName  string
-	Url      string
-}
-
-type ZappstorePreset struct {
-	ID          uuid.UUID
-	Name        string
-	Description pgtype.Text
-}
-
-type ZappstorePresetPlugin struct {
-	PresetID uuid.UUID
-	PluginID uuid.UUID
 }

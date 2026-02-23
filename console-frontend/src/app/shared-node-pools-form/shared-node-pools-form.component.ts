@@ -8,8 +8,8 @@ import {
   ElementRef,
   AfterViewInit,
   inject,
+  ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
   FormBuilder,
@@ -31,24 +31,27 @@ export interface NodePoolData {
 
 @Component({
   selector: 'app-shared-node-pools-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NgIcon],
+  imports: [ReactiveFormsModule, NgIcon],
   viewProviders: [
     provideIcons({
       tablerTrash,
       tablerPlus,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-node-pools-form.component.html',
 })
 export class SharedNodePoolsFormComponent implements AfterViewInit {
   @ViewChildren('nodePoolNameInput') nodePoolNameInputs!: QueryList<ElementRef<HTMLInputElement>>;
+
   @Input() submitButtonText = 'Next step';
+
   @Input() set initialData(data: NodePoolData[] | null) {
     if (data && data.length > 0) {
       this.loadInitialData(data);
     }
   }
+
   @Output() formSubmit = new EventEmitter<{ nodePools: NodePoolData[] }>();
 
   private fb = inject(FormBuilder);
@@ -79,7 +82,7 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
   createNodePoolFormGroup(data?: NodePoolData): FormGroup {
     return this.fb.group({
       name: [
-        data?.name || this.generateNodePoolName(),
+        data?.name || SharedNodePoolsFormComponent.generateNodePoolName(),
         [
           Validators.required,
           Validators.maxLength(63),
@@ -111,7 +114,7 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     });
   }
 
-  private generateNodePoolName(): string {
+  private static generateNodePoolName(): string {
     const randomSuffix = Array.from({ length: 3 }, () =>
       String.fromCharCode(97 + Math.floor(Math.random() * 26)),
     ).join('');
@@ -175,14 +178,14 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
   onSubmit() {
     if (this.nodePoolsForm.invalid) {
       this.nodePoolsForm.markAllAsTouched();
-      this.scrollToFirstError();
+      SharedNodePoolsFormComponent.scrollToFirstError();
       return;
     }
 
     this.formSubmit.emit(this.nodePoolsForm.value);
   }
 
-  private scrollToFirstError() {
+  private static scrollToFirstError() {
     setTimeout(() => {
       const firstInvalidControl = document.querySelector('.ng-invalid:not(form)');
       if (firstInvalidControl) {

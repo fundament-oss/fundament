@@ -7,19 +7,20 @@ terraform {
 }
 
 provider "fundament" {
-  endpoint = "http://organization.127.0.0.1.nip.io:8080"
+  endpoint        = "http://organization.fundament.localhost:8080"
+  organization_id = "019b4000-0000-7000-8000-000000000002" # Globex
   # Token can be set via FUNDAMENT_TOKEN environment variable
   # token = ""
 }
 
-# Look up an existing cluster by ID
+# Look up an existing cluster by name
 data "fundament_cluster" "example" {
-  id = "your-cluster-uuid"
+  name = "my-cluster"
 }
 
-output "cluster_name" {
-  description = "The name of the cluster"
-  value       = data.fundament_cluster.example.name
+output "cluster_id" {
+  description = "The unique identifier of the cluster"
+  value       = data.fundament_cluster.example.id
 }
 
 output "cluster_status" {

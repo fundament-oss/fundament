@@ -4,6 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../buf/validate/validate_pb";
 import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_empty, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/organization.proto.
  */
 export const file_v1_organization: GenFile = /*@__PURE__*/
-  fileDesc("ChV2MS9vcmdhbml6YXRpb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSJVCgxPcmdhbml6YXRpb24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIrCgdjcmVhdGVkGB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIkChZHZXRPcmdhbml6YXRpb25SZXF1ZXN0EgoKAmlkGAogASgJIk4KF0dldE9yZ2FuaXphdGlvblJlc3BvbnNlEjMKDG9yZ2FuaXphdGlvbhgKIAEoCzIdLm9yZ2FuaXphdGlvbi52MS5Pcmdhbml6YXRpb24iNQoZVXBkYXRlT3JnYW5pemF0aW9uUmVxdWVzdBIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJMtUBChNPcmdhbml6YXRpb25TZXJ2aWNlEmQKD0dldE9yZ2FuaXphdGlvbhInLm9yZ2FuaXphdGlvbi52MS5HZXRPcmdhbml6YXRpb25SZXF1ZXN0Gigub3JnYW5pemF0aW9uLnYxLkdldE9yZ2FuaXphdGlvblJlc3BvbnNlElgKElVwZGF0ZU9yZ2FuaXphdGlvbhIqLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVPcmdhbml6YXRpb25SZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5QlVaU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_google_protobuf_empty]);
+  fileDesc("ChV2MS9vcmdhbml6YXRpb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSJVCgxPcmdhbml6YXRpb24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIrCgdjcmVhdGVkGB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIuChZHZXRPcmdhbml6YXRpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASJOChdHZXRPcmdhbml6YXRpb25SZXNwb25zZRIzCgxvcmdhbml6YXRpb24YCiABKAsyHS5vcmdhbml6YXRpb24udjEuT3JnYW5pemF0aW9uIksKGVVwZGF0ZU9yZ2FuaXphdGlvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEhgKBG5hbWUYFCABKAlCCrpIB3IFEAEY/wEiGgoYTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0IlEKGUxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USNAoNb3JnYW5pemF0aW9ucxgKIAMoCzIdLm9yZ2FuaXphdGlvbi52MS5Pcmdhbml6YXRpb24ywQIKE09yZ2FuaXphdGlvblNlcnZpY2USagoRTGlzdE9yZ2FuaXphdGlvbnMSKS5vcmdhbml6YXRpb24udjEuTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0Gioub3JnYW5pemF0aW9uLnYxLkxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USZAoPR2V0T3JnYW5pemF0aW9uEicub3JnYW5pemF0aW9uLnYxLkdldE9yZ2FuaXphdGlvblJlcXVlc3QaKC5vcmdhbml6YXRpb24udjEuR2V0T3JnYW5pemF0aW9uUmVzcG9uc2USWAoSVXBkYXRlT3JnYW5pemF0aW9uEioub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU9yZ2FuaXphdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCVVpTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjFiBnByb3RvMw", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_timestamp]);
 
 /**
  * Organization information
@@ -120,11 +121,57 @@ export const UpdateOrganizationRequestSchema: GenMessage<UpdateOrganizationReque
   messageDesc(file_v1_organization, 3);
 
 /**
+ * ListOrganizations request
+ *
+ * @generated from message organization.v1.ListOrganizationsRequest
+ */
+export type ListOrganizationsRequest = Message<"organization.v1.ListOrganizationsRequest"> & {
+};
+
+/**
+ * Describes the message organization.v1.ListOrganizationsRequest.
+ * Use `create(ListOrganizationsRequestSchema)` to create a new message.
+ */
+export const ListOrganizationsRequestSchema: GenMessage<ListOrganizationsRequest> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 4);
+
+/**
+ * ListOrganizations response
+ *
+ * @generated from message organization.v1.ListOrganizationsResponse
+ */
+export type ListOrganizationsResponse = Message<"organization.v1.ListOrganizationsResponse"> & {
+  /**
+   * List of organizations the user belongs to
+   *
+   * @generated from field: repeated organization.v1.Organization organizations = 10;
+   */
+  organizations: Organization[];
+};
+
+/**
+ * Describes the message organization.v1.ListOrganizationsResponse.
+ * Use `create(ListOrganizationsResponseSchema)` to create a new message.
+ */
+export const ListOrganizationsResponseSchema: GenMessage<ListOrganizationsResponse> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 5);
+
+/**
  * OrganizationService manages organizations
  *
  * @generated from service organization.v1.OrganizationService
  */
 export const OrganizationService: GenService<{
+  /**
+   * ListOrganizations lists all organizations the current user belongs to
+   *
+   * @generated from rpc organization.v1.OrganizationService.ListOrganizations
+   */
+  listOrganizations: {
+    methodKind: "unary";
+    input: typeof ListOrganizationsRequestSchema;
+    output: typeof ListOrganizationsResponseSchema;
+  },
   /**
    * GetOrganization retrieves the user's organization by ID
    *

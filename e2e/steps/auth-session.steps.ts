@@ -54,7 +54,7 @@ When(
 
 When('I trigger a token refresh', async function (this: ICustomWorld) {
   const authnApiUrl =
-    process.env.AUTHN_API_URL || 'http://authn.127.0.0.1.nip.io:8080';
+    process.env.AUTHN_API_URL || 'http://authn.fundament.localhost:8080';
 
   // Trigger refresh by calling the refresh endpoint via the page context
   const response = await this.page!.evaluate(async (url: string) => {
@@ -251,7 +251,7 @@ When(
   'I set the auth cookie to a random invalid value',
   async function (this: ICustomWorld) {
     this.testData.tamperedToken = 'not-a-valid-jwt-token';
-    this.testData.cookieDomain = '127.0.0.1.nip.io';
+    this.testData.cookieDomain = 'fundament.localhost';
     this.testData.cookiePath = '/';
   }
 );
@@ -260,7 +260,7 @@ When(
   'I make an API request with the tampered token',
   async function (this: ICustomWorld) {
     const tamperedToken = this.testData.tamperedToken as string;
-    const domain = (this.testData.cookieDomain as string) || '127.0.0.1.nip.io';
+    const domain = (this.testData.cookieDomain as string) || 'fundament.localhost';
     const path = (this.testData.cookiePath as string) || '/';
 
     // Clear existing cookies and set the tampered one
@@ -276,7 +276,7 @@ When(
 
     // Make API request via the organization API
     const orgApiUrl =
-      process.env.ORGANIZATION_API_URL || 'http://organization.127.0.0.1.nip.io:8080';
+      process.env.ORGANIZATION_API_URL || 'http://organization.fundament.localhost:8080';
 
     const response = await this.page!.evaluate(async (url: string) => {
       try {

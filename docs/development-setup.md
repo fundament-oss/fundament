@@ -8,6 +8,16 @@ title: Development setup
 - [Just](https://just.systems)
 - [Docker](https://www.docker.com)
 
+## MacOS
+
+On macOS, the default shared memory limits are too low for PostgreSQL.
+For embedded-postgres, create/edit `/etc/sysctl.conf`:
+
+```
+kern.sysv.shmall=65536
+kern.sysv.shmmax=16777216
+```
+
 ## Installation
 
 ```shell

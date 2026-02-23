@@ -23,7 +23,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
 
     server: {
-      allowedHosts: ['docs.127.0.0.1.nip.io'],
+      allowedHosts: ['docs.fundament.localhost'],
     },
   },
   integrations: [

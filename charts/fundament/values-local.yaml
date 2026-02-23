@@ -3,12 +3,12 @@
 jwtSecret: "local-dev-jwt-secret"
 
 externalUrls:
-  authn: http://authn.127.0.0.1.nip.io:8080
-  organization: http://organization.127.0.0.1.nip.io:8080
-  console: http://console.127.0.0.1.nip.io:8080
-  docs: http://docs.127.0.0.1.nip.io:8080
-  cookieDomain: 127.0.0.1.nip.io
-  corsAllowedOrigins: "http://console.127.0.0.1.nip.io:8080,http://localhost:4200,http://localhost:5173"
+  authn: http://authn.fundament.localhost:8080
+  organization: http://organization.fundament.localhost:8080
+  console: http://console.fundament.localhost:8080
+  docs: http://docs.fundament.localhost:8080
+  cookieDomain: fundament.localhost
+  corsAllowedOrigins: "http://console.fundament.localhost:8080,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true
@@ -17,6 +17,12 @@ db:
   reset: false
   insertTestData: true
   exposePort: 54328
+  postgresql:
+    parameters:
+      log_statement: "all"
+      log_error_verbosity: "verbose"
+      log_min_messages: "info"
+      log_min_error_statement: "error"
 
 authnApi:
   enabled: true
@@ -32,20 +38,24 @@ consoleFrontend:
   enabled: true
   replicas: 1
 
+clusterWorker:
+  enabled: true
+  replicas: 1
+  gardenerMode: mock
+
 docsFrontend:
   enabled: true
   replicas: 1
 
 dex:
   enabled: true
-  issuer: http://dex.127.0.0.1.nip.io:8080
+  issuer: http://dex.fundament.localhost:8080
   discoveryUrl: http://fundament-dex:5556
   staticClients:
     - id: fundament
       name: "Fundament Auth API"
       redirectURIs:
-        - http://fundament.127.0.0.1.nip.io:8080/callback
-        - http://authn.127.0.0.1.nip.io:8080/callback
+        - http://authn.fundament.localhost:8080/callback
       public: true
   staticPasswords:
     # All passwords are 'password' (echo 'password' | htpasswd -BinC 10 user)
@@ -85,7 +95,27 @@ dex:
       username: Grace Lee
       userID: "019b4000-1000-7000-8000-000000000007"
 
+authzWorker:
+  enabled: true
+  replicas: 1
+  logLevel: debug
+  pollInterval: "2s"
+  batchSize: 100
+
+openfga:
+  enabled: true
+  # Use a non-standard API port since 8080 is used by ingress.
+  # The playground auto-detects the API port from the URL it's served from.
+  apiPort: 18080
+  playground:
+    # To use the playground, you must port-forward both the API and playground ports to localhost:
+    #   kubectl port-forward svc/fundament-openfga 18080:18080 3000:3000
+    # Then access the playground at http://localhost:3000/playground
+    # This is due to CSP restrictions in the embedded play.fga.dev iframe.
+    # See: https://github.com/openfga/openfga/issues/1174
+    enabled: true
+
 ingress:
   enabled: true
   className: nginx
-  domain: 127.0.0.1.nip.io
+  domain: fundament.localhost

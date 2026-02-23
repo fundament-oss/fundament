@@ -1,0 +1,26 @@
+name: Format
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  fmt-pristine:
+    name: Formatting must be pristine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v3
+
+      - name: Run just fmt
+        run: mise exec -- just fmt
+
+      - name: Check for changes
+        run: |
+          if ! git diff --exit-code; then
+            echo "ERROR: Formatting is out of date. Run 'just fmt' and commit the changes."
+            exit 1
+          fi

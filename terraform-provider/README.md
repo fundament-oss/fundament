@@ -29,7 +29,7 @@ terraform {
 }
 
 provider "fundament" {
-  endpoint = "http://organization.127.0.0.1.nip.io:8080"
+  endpoint = "http://organization.fundament.localhost:8080"
   api_key  = var.fundament_api_key  # Or use FUNDAMENT_API_KEY environment variable
 }
 ```
@@ -55,7 +55,7 @@ API keys provide a more convenient authentication method that automatically hand
 
 ```hcl
 provider "fundament" {
-  endpoint = "http://organization.127.0.0.1.nip.io:8080"
+  endpoint = "http://organization.fundament.localhost:8080"
   api_key  = var.fundament_api_key
 }
 ```
@@ -74,7 +74,7 @@ You can also authenticate directly with a JWT token:
 
 ```hcl
 provider "fundament" {
-  endpoint = "http://organization.127.0.0.1.nip.io:8080"
+  endpoint = "http://organization.fundament.localhost:8080"
   token    = var.fundament_token
 }
 ```
@@ -156,6 +156,40 @@ output "cluster_name" {
 | `kubernetes_version` | The Kubernetes version of the cluster |
 | `status` | The current status of the cluster (`provisioning`, `starting`, `running`, `upgrading`, `error`, `stopping`, `stopped`) |
 
+### fundament_project_members
+
+Fetches the list of members for a project.
+
+#### Example Usage
+
+```hcl
+data "fundament_project_members" "all" {
+  project_id = fundament_project.example.id
+}
+
+output "members" {
+  value = data.fundament_project_members.all.members
+}
+```
+
+#### Argument Reference
+
+| Name | Description | Required |
+|------|-------------|----------|
+| `project_id` | The ID of the project to list members for. | Yes |
+
+#### Attribute Reference
+
+| Name | Description |
+|------|-------------|
+| `members` | List of project members. |
+| `members.id` | The unique identifier of the project member. |
+| `members.project_id` | The ID of the project. |
+| `members.user_id` | The ID of the user. |
+| `members.user_name` | The name of the user. |
+| `members.permission` | The permission of the project member (`admin`, `viewer`). |
+| `members.created` | The timestamp when the member was added. |
+
 ## Resources
 
 ### fundament_cluster
@@ -201,6 +235,56 @@ Clusters can be imported using the cluster ID:
 tofu import fundament_cluster.example <cluster-id>
 ```
 
+### fundament_project_member
+
+Manages a project member in Fundament. Assigns a user to a project with a specific role.
+
+> **Note:** When a project is created, the authenticated user is automatically added as an admin member. This implicit member cannot be managed by this resource. Attempting to add the project creator as a member will result in an `AlreadyExists` error.
+
+#### Example Usage
+
+```hcl
+resource "fundament_project" "example" {
+  name = "my-project"
+}
+
+resource "fundament_project_member" "admin" {
+  project_id = fundament_project.example.id
+  user_id    = "550e8400-e29b-41d4-a716-446655440000"
+  permission = "admin"
+}
+
+resource "fundament_project_member" "viewer" {
+  project_id = fundament_project.example.id
+  user_id    = "550e8400-e29b-41d4-a716-446655440001"
+  permission = "viewer"
+}
+```
+
+#### Argument Reference
+
+| Name | Description | Required | Forces Replacement |
+|------|-------------|----------|-------------------|
+| `project_id` | The ID of the project. | Yes | Yes |
+| `user_id` | The ID of the user to add as a member. | Yes | Yes |
+| `permission` | The permission of the project member. Valid values: `"admin"`, `"viewer"`. | Yes | No |
+
+#### Attribute Reference
+
+| Name | Description |
+|------|-------------|
+| `id` | The unique identifier of the project member. |
+| `user_name` | The name of the user. |
+| `created` | The timestamp when the member was added. |
+
+#### Import
+
+Import using the format `project_id:member_id`:
+
+```bash
+tofu import fundament_project_member.example <project-id>:<member-id>
+```
+
 ## Development
 
 ### Running Tests
@@ -239,12 +323,14 @@ Acceptance tests run against a real Fundament API. To run them:
 
 ```bash
 export TF_ACC=1
-export FUNDAMENT_ENDPOINT="http://organization.127.0.0.1.nip.io:8080"
+export FUNDAMENT_ENDPOINT="http://organization.fundament.localhost:8080"
 export FUNDAMENT_API_KEY="your-api-key"  # Or use FUNDAMENT_TOKEN instead
 # Optional: for project filter tests
 export FUNDAMENT_TEST_PROJECT_ID="your-project-uuid"
 # Optional: for cluster data source tests
-export FUNDAMENT_TEST_CLUSTER_ID="your-cluster-uuid"
+export FUNDAMENT_TEST_CLUSTER_NAME="your-cluster-name"
+# Optional: for project member tests
+export FUNDAMENT_TEST_USER_ID="your-user-uuid"
 
 just terraform-provider::test
 ```

@@ -8,134 +8,180 @@ package db
 import (
 	"context"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const memberDelete = `-- name: MemberDelete :exec
-UPDATE tenant.users SET deleted = NOW() WHERE id = $1 AND organization_id = $2 AND deleted IS NULL
+UPDATE tenant.organizations_users
+SET deleted = NOW(), status = 'revoked'
+WHERE id = $1
+  AND deleted IS NULL
 `
 
 type MemberDeleteParams struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
+	ID uuid.UUID
 }
 
 func (q *Queries) MemberDelete(ctx context.Context, arg MemberDeleteParams) error {
-	_, err := q.db.Exec(ctx, memberDelete, arg.ID, arg.OrganizationID)
+	_, err := q.db.Exec(ctx, memberDelete, arg.ID)
 	return err
 }
 
-const memberGetByEmail = `-- name: MemberGetByEmail :one
-SELECT id, organization_id, name, external_id, email, role, created
+const memberGetByID = `-- name: MemberGetByID :one
+SELECT
+    organizations_users.id,
+    organizations_users.organization_id,
+    organizations_users.user_id,
+    users.name,
+    users.external_ref,
+    users.email,
+    organizations_users.permission,
+    organizations_users.status,
+    organizations_users.created
 FROM tenant.users
-WHERE email = $1::text AND organization_id = $2 AND deleted IS NULL
+INNER JOIN tenant.organizations_users
+    ON organizations_users.user_id = users.id
+WHERE organizations_users.id = $1
+    AND organizations_users.deleted IS NULL
+    AND users.deleted IS NULL
 `
 
-type MemberGetByEmailParams struct {
-	Email          string
-	OrganizationID uuid.UUID
+type MemberGetByIDParams struct {
+	ID uuid.UUID
 }
 
-type MemberGetByEmailRow struct {
+type MemberGetByIDRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
+	UserID         uuid.UUID
 	Name           string
-	ExternalID     pgtype.Text
+	ExternalRef    pgtype.Text
 	Email          pgtype.Text
-	Role           string
+	Permission     dbconst.OrganizationsUserPermission
+	Status         dbconst.OrganizationsUserStatus
 	Created        pgtype.Timestamptz
 }
 
-func (q *Queries) MemberGetByEmail(ctx context.Context, arg MemberGetByEmailParams) (MemberGetByEmailRow, error) {
-	row := q.db.QueryRow(ctx, memberGetByEmail, arg.Email, arg.OrganizationID)
-	var i MemberGetByEmailRow
+func (q *Queries) MemberGetByID(ctx context.Context, arg MemberGetByIDParams) (MemberGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, memberGetByID, arg.ID)
+	var i MemberGetByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
+		&i.UserID,
 		&i.Name,
-		&i.ExternalID,
+		&i.ExternalRef,
 		&i.Email,
-		&i.Role,
+		&i.Permission,
+		&i.Status,
 		&i.Created,
 	)
 	return i, err
 }
 
-const memberInvite = `-- name: MemberInvite :one
-INSERT INTO tenant.users (organization_id, name, email, role)
-VALUES ($1, $2, $2, $3)
-RETURNING id, organization_id, name, external_id, email, role, created
+const memberGetByUserID = `-- name: MemberGetByUserID :one
+SELECT
+    organizations_users.id,
+    organizations_users.organization_id,
+    organizations_users.user_id,
+    users.name,
+    users.external_ref,
+    users.email,
+    organizations_users.permission,
+    organizations_users.status,
+    organizations_users.created
+FROM tenant.users
+INNER JOIN tenant.organizations_users
+    ON organizations_users.user_id = users.id
+WHERE organizations_users.user_id = $1
+    AND organizations_users.deleted IS NULL
+    AND users.deleted IS NULL
 `
 
-type MemberInviteParams struct {
-	OrganizationID uuid.UUID
-	Name           string
-	Role           string
+type MemberGetByUserIDParams struct {
+	UserID uuid.UUID
 }
 
-type MemberInviteRow struct {
+type MemberGetByUserIDRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
+	UserID         uuid.UUID
 	Name           string
-	ExternalID     pgtype.Text
+	ExternalRef    pgtype.Text
 	Email          pgtype.Text
-	Role           string
+	Permission     dbconst.OrganizationsUserPermission
+	Status         dbconst.OrganizationsUserStatus
 	Created        pgtype.Timestamptz
 }
 
-func (q *Queries) MemberInvite(ctx context.Context, arg MemberInviteParams) (MemberInviteRow, error) {
-	row := q.db.QueryRow(ctx, memberInvite, arg.OrganizationID, arg.Name, arg.Role)
-	var i MemberInviteRow
+func (q *Queries) MemberGetByUserID(ctx context.Context, arg MemberGetByUserIDParams) (MemberGetByUserIDRow, error) {
+	row := q.db.QueryRow(ctx, memberGetByUserID, arg.UserID)
+	var i MemberGetByUserIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
+		&i.UserID,
 		&i.Name,
-		&i.ExternalID,
+		&i.ExternalRef,
 		&i.Email,
-		&i.Role,
+		&i.Permission,
+		&i.Status,
 		&i.Created,
 	)
 	return i, err
 }
 
-const memberListByOrganizationID = `-- name: MemberListByOrganizationID :many
-SELECT id, organization_id, name, external_id, email, role, created
+const memberList = `-- name: MemberList :many
+SELECT
+    organizations_users.id,
+    organizations_users.organization_id,
+    organizations_users.user_id,
+    users.name,
+    users.external_ref,
+    users.email,
+    organizations_users.permission,
+    organizations_users.status,
+    organizations_users.created
 FROM tenant.users
-WHERE organization_id = $1 AND deleted IS NULL
-ORDER BY created DESC
+INNER JOIN tenant.organizations_users
+    ON organizations_users.user_id = users.id
+WHERE organizations_users.deleted IS NULL
+    AND users.deleted IS NULL
+ORDER BY organizations_users.created DESC
 `
 
-type MemberListByOrganizationIDParams struct {
-	OrganizationID uuid.UUID
-}
-
-type MemberListByOrganizationIDRow struct {
+type MemberListRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
+	UserID         uuid.UUID
 	Name           string
-	ExternalID     pgtype.Text
+	ExternalRef    pgtype.Text
 	Email          pgtype.Text
-	Role           string
+	Permission     dbconst.OrganizationsUserPermission
+	Status         dbconst.OrganizationsUserStatus
 	Created        pgtype.Timestamptz
 }
 
-func (q *Queries) MemberListByOrganizationID(ctx context.Context, arg MemberListByOrganizationIDParams) ([]MemberListByOrganizationIDRow, error) {
-	rows, err := q.db.Query(ctx, memberListByOrganizationID, arg.OrganizationID)
+func (q *Queries) MemberList(ctx context.Context) ([]MemberListRow, error) {
+	rows, err := q.db.Query(ctx, memberList)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []MemberListByOrganizationIDRow
+	var items []MemberListRow
 	for rows.Next() {
-		var i MemberListByOrganizationIDRow
+		var i MemberListRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
+			&i.UserID,
 			&i.Name,
-			&i.ExternalID,
+			&i.ExternalRef,
 			&i.Email,
-			&i.Role,
+			&i.Permission,
+			&i.Status,
 			&i.Created,
 		); err != nil {
 			return nil, err
@@ -146,4 +192,27 @@ func (q *Queries) MemberListByOrganizationID(ctx context.Context, arg MemberList
 		return nil, err
 	}
 	return items, nil
+}
+
+const memberUpdatePermission = `-- name: MemberUpdatePermission :execrows
+UPDATE tenant.organizations_users
+SET permission = $2
+WHERE
+    id = $1
+    AND organization_id = $3
+    AND deleted IS NULL
+`
+
+type MemberUpdatePermissionParams struct {
+	ID             uuid.UUID
+	Permission     dbconst.OrganizationsUserPermission
+	OrganizationID uuid.UUID
+}
+
+func (q *Queries) MemberUpdatePermission(ctx context.Context, arg MemberUpdatePermissionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, memberUpdatePermission, arg.ID, arg.Permission, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

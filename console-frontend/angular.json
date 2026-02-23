@@ -39,7 +39,7 @@
                 {
                   "type": "anyComponentStyle",
                   "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumError": "40kB"
                 }
               ],
               "outputHashing": "all"
@@ -55,7 +55,7 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
-            "allowedHosts": ["console.127.0.0.1.nip.io"]
+            "allowedHosts": ["console.fundament.localhost"]
           },
           "configurations": {
             "production": {

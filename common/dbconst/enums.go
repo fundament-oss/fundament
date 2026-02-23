@@ -2,16 +2,60 @@
 
 package dbconst
 
-// ClusterStatus represents valid values for tenant.clusters.status.
-type ClusterStatus string
+// ClusterEventEventType represents valid values for tenant.cluster_events.event_type.
+type ClusterEventEventType string
 
 const (
-	ClusterStatus_Unspecified ClusterStatus = "unspecified"
-	ClusterStatus_Provisioning ClusterStatus = "provisioning"
-	ClusterStatus_Starting ClusterStatus = "starting"
-	ClusterStatus_Running ClusterStatus = "running"
-	ClusterStatus_Upgrading ClusterStatus = "upgrading"
-	ClusterStatus_Error ClusterStatus = "error"
-	ClusterStatus_Stopping ClusterStatus = "stopping"
-	ClusterStatus_Stopped ClusterStatus = "stopped"
+	ClusterEventEventType_SyncRequested     ClusterEventEventType = "sync_requested"
+	ClusterEventEventType_SyncClaimed       ClusterEventEventType = "sync_claimed"
+	ClusterEventEventType_SyncSucceeded     ClusterEventEventType = "sync_succeeded"
+	ClusterEventEventType_SyncFailed        ClusterEventEventType = "sync_failed"
+	ClusterEventEventType_StatusProgressing ClusterEventEventType = "status_progressing"
+	ClusterEventEventType_StatusReady       ClusterEventEventType = "status_ready"
+	ClusterEventEventType_StatusError       ClusterEventEventType = "status_error"
+	ClusterEventEventType_StatusDeleted     ClusterEventEventType = "status_deleted"
+)
+
+// ClusterEventSyncAction represents valid values for tenant.cluster_events.sync_action.
+type ClusterEventSyncAction string
+
+const (
+	ClusterEventSyncAction_Sync   ClusterEventSyncAction = "sync"
+	ClusterEventSyncAction_Delete ClusterEventSyncAction = "delete"
+)
+
+// OrganizationsUserPermission represents valid values for tenant.organizations_users.permission.
+type OrganizationsUserPermission string
+
+const (
+	OrganizationsUserPermission_Admin  OrganizationsUserPermission = "admin"
+	OrganizationsUserPermission_Viewer OrganizationsUserPermission = "viewer"
+)
+
+// OrganizationsUserStatus represents valid values for tenant.organizations_users.status.
+type OrganizationsUserStatus string
+
+const (
+	OrganizationsUserStatus_Pending  OrganizationsUserStatus = "pending"
+	OrganizationsUserStatus_Accepted OrganizationsUserStatus = "accepted"
+	OrganizationsUserStatus_Declined OrganizationsUserStatus = "declined"
+	OrganizationsUserStatus_Revoked  OrganizationsUserStatus = "revoked"
+)
+
+// OutboxStatus represents valid values for authz.outbox.status.
+type OutboxStatus string
+
+const (
+	OutboxStatus_Pending   OutboxStatus = "pending"
+	OutboxStatus_Completed OutboxStatus = "completed"
+	OutboxStatus_Retrying  OutboxStatus = "retrying"
+	OutboxStatus_Failed    OutboxStatus = "failed"
+)
+
+// ProjectMemberRole represents valid values for tenant.project_members.role.
+type ProjectMemberRole string
+
+const (
+	ProjectMemberRole_Admin  ProjectMemberRole = "admin"
+	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
 )

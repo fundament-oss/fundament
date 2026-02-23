@@ -1,5 +1,12 @@
-import { Component, ViewChild, ElementRef, AfterViewInit, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  inject,
+  OnInit,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -7,32 +14,32 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
 
 @Component({
   selector: 'app-add-cluster',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster.component.html',
 })
-export class AddClusterComponent implements AfterViewInit, OnInit {
+export default class AddClusterComponent implements AfterViewInit, OnInit {
   @ViewChild('clusterNameInput') clusterNameInput!: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
+
   private router = inject(Router);
+
   private fb = inject(FormBuilder);
+
   private stateService = inject(ClusterWizardStateService);
 
   // Form
   clusterForm: FormGroup;
 
   // Dropdown options based on Gardener
-  regions = [
-    { value: 'nl1', label: 'NL1' },
-    { value: 'nl2', label: 'NL2' },
-    { value: 'nl3', label: 'NL3' },
-  ];
+  // TODO: Fetch from API based on cloud profile
+  regions = [{ value: 'local', label: 'Local' }];
 
-  kubernetesVersions = ['1.34.x', '1.28.x', '1.27.x', '1.26.x', '1.25.x'];
+  kubernetesVersions = ['1.31.1', '1.32.0', '1.33.0', '1.34.0'];
 
   constructor() {
-    this.titleService.setTitle('Add cluster components');
+    this.titleService.setTitle('Add a cluster');
 
     this.clusterForm = this.fb.group({
       clusterName: [
@@ -43,8 +50,8 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
           Validators.pattern(/^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$/),
         ],
       ],
-      region: ['nl1', Validators.required],
-      kubernetesVersion: ['1.34.x', Validators.required],
+      region: ['local', Validators.required],
+      kubernetesVersion: ['1.31.1', Validators.required],
     });
   }
 
@@ -85,12 +92,11 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
   onSubmit() {
     if (this.clusterForm.invalid) {
       this.clusterForm.markAllAsTouched();
-      this.scrollToFirstError();
+      AddClusterComponent.scrollToFirstError();
       return;
     }
 
     const clusterData = this.clusterForm.value;
-    console.log('Creating cluster with data:', clusterData);
 
     // Save state
     this.stateService.updateBasicInfo({
@@ -104,7 +110,7 @@ export class AddClusterComponent implements AfterViewInit, OnInit {
     this.router.navigate(['/add-cluster/nodes']);
   }
 
-  private scrollToFirstError() {
+  private static scrollToFirstError() {
     setTimeout(() => {
       const firstInvalidControl = document.querySelector('.ng-invalid:not(form)');
       if (firstInvalidControl) {

@@ -5,7 +5,7 @@ import { APIKeyService, type APIKey } from '../support/api/apikey-service.ts';
 import { type ExchangeTokenResponse } from '../support/api/token-service.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { currentApiKey, API_TOKEN_PREFIX } from './common.steps.ts';
+import { currentApiKey, extractOrganizationId, API_TOKEN_PREFIX } from './common.steps.ts';
 
 // Track state for token exchange tests
 let savedToken: string | undefined;
@@ -103,7 +103,8 @@ When('I get the API key details', async function (this: ICustomWorld) {
 
 When('I use the exchanged JWT to list API keys', async function (this: ICustomWorld) {
   // Create a new APIKeyService with the exchanged JWT
-  const exchangedService = new APIKeyService(this.organizationApiUrl!, exchangeResponse!.accessToken);
+  const orgId = extractOrganizationId(exchangeResponse!.accessToken);
+  const exchangedService = new APIKeyService(this.organizationApiUrl!, exchangeResponse!.accessToken, orgId);
   try {
     const response = await exchangedService.listAPIKeys();
     this.lastApiResponse = response;
@@ -137,10 +138,10 @@ Then('the token type should be {string}', async function (this: ICustomWorld, to
 
 Then('the last used timestamp should be recent', async function (this: ICustomWorld) {
   const response = this.lastApiResponse as { apiKey: APIKey };
-  expect(response.apiKey.lastUsedAt).toBeDefined();
+  expect(response.apiKey.lastUsed).toBeDefined();
 
   // Check that last_used is within the last minute
-  const lastUsed = timestampDate(response.apiKey.lastUsedAt!);
+  const lastUsed = timestampDate(response.apiKey.lastUsed!);
   const now = new Date();
   const diffMs = Math.abs(now.getTime() - lastUsed.getTime());
   expect(diffMs).toBeLessThan(60000); // Within 1 minute

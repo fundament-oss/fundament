@@ -4,9 +4,12 @@ import { Title } from '@angular/platform-browser';
 @Injectable({
   providedIn: 'root',
 })
+// eslint-disable-next-line import-x/prefer-default-export
 export class TitleService {
   private title = inject(Title);
+
   private readonly DEFAULT_TITLE = 'Fundament Console';
+
   private readonly SUFFIX = ' — Fundament Console';
 
   setTitle(pageTitle?: string): void {

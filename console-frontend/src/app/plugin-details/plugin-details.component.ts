@@ -1,24 +1,23 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { TitleService } from '../title.service';
-import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
+import { ActivatedRoute } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerChevronRight, tablerCheck } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { TitleService } from '../title.service';
+import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import { GetPluginDetailRequestSchema, type PluginDetail } from '../../generated/v1/plugin_pb';
 import {
   ListClustersRequestSchema,
   ListInstallsRequestSchema,
   AddInstallRequestSchema,
-  type ClusterSummary,
+  type ListClustersResponse_ClusterSummary as ClusterSummary,
   type Install,
 } from '../../generated/v1/cluster_pb';
-import { firstValueFrom } from 'rxjs';
 import { ToastService } from '../toast.service';
 
 // Extended cluster type for UI state
@@ -33,14 +32,7 @@ interface InstallWithCluster extends Install {
 
 @Component({
   selector: 'app-plugin-details',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    InstallPluginModalComponent,
-    NgIcon,
-    LoadingIndicatorComponent,
-  ],
+  imports: [InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerChevronRight,
@@ -48,23 +40,34 @@ interface InstallWithCluster extends Install {
       tablerCircleXFill,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
 })
-export class PluginDetailsComponent implements OnInit {
+export default class PluginDetailsComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private sanitizer = inject(DomSanitizer);
+
   private route = inject(ActivatedRoute);
+
   private pluginClient = inject(PLUGIN);
+
   private clusterClient = inject(CLUSTER);
+
   private toastService = inject(ToastService);
 
   pluginId = signal<string>('');
+
   plugin = signal<PluginDetail | null>(null);
+
   clusters = signal<ClusterWithState[]>([]);
+
   installs = signal<InstallWithCluster[]>([]);
 
   isLoading = signal<boolean>(true);
+
   errorMessage = signal<string | null>(null);
+
   showInstallModal = false;
 
   async ngOnInit() {
@@ -129,9 +132,10 @@ export class PluginDetailsComponent implements OnInit {
 
       this.isLoading.set(false);
     } catch (error) {
-      console.error('Failed to load plugin details:', error);
       this.errorMessage.set(
-        error instanceof Error ? error.message : 'Failed to load plugin details',
+        error instanceof Error
+          ? `Failed to load plugin details: ${error.message}`
+          : 'Failed to load plugin details',
       );
       this.isLoading.set(false);
     }
@@ -152,7 +156,7 @@ export class PluginDetailsComponent implements OnInit {
       .replace(/\n\n/g, '</p><p class="mb-3">')
       .trim();
 
-    html = '<p class="mb-3">' + html + '</p>';
+    html = `<p class="mb-3">${html}</p>`;
 
     return this.sanitizer.sanitize(1, html) || '';
   }
@@ -174,7 +178,7 @@ export class PluginDetailsComponent implements OnInit {
     try {
       // Call the API to install the plugin
       const request = create(AddInstallRequestSchema, {
-        clusterId: clusterId,
+        clusterId,
         pluginId: this.pluginId(),
       });
 
@@ -189,8 +193,11 @@ export class PluginDetailsComponent implements OnInit {
         `Plugin ${this.plugin()?.name} installed on cluster ${cluster.name}`,
       );
     } catch (error) {
-      console.error('Failed to install plugin:', error);
-      this.toastService.error(error instanceof Error ? error.message : 'Failed to install plugin');
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to install plugin: ${error.message}`
+          : 'Failed to install plugin',
+      );
     }
   }
 

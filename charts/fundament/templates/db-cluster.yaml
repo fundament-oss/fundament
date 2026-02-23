@@ -12,6 +12,11 @@ spec:
   instances: {{ $.Values.db.instances }}
   imageName: ghcr.io/cloudnative-pg/postgresql:18
   enableSuperuserAccess: true
+  {{- if $.Values.db.postgresql }}
+  postgresql:
+    parameters:
+      {{- toYaml $.Values.db.postgresql.parameters | nindent 6 }}
+  {{- end }}
   bootstrap:
     initdb:
       database: fundament
@@ -28,6 +33,10 @@ spec:
         login: true
         passwordSecret:
           name: {{ $.Release.Name }}-db-fun-fundament-api
+      - name: fun_cluster_worker
+        login: true
+        passwordSecret:
+          name: {{ $.Release.Name }}-db-fun-cluster-worker
       - name: fun_operator
         login: true
         superuser: true
@@ -36,6 +45,21 @@ spec:
           name: {{ $.Release.Name }}-db-fun-operator
       - name: fun_owner
         login: false
+      - name: fun_authz
+        login: false
+        bypassrls: true
+      - name: fun_authz_worker
+        login: true
+        bypassrls: true
+        passwordSecret:
+          name: {{ $.Release.Name }}-db-fun-authz-worker
+{{- if $.Values.openfga.enabled }}
+      - name: fun_openfga
+        login: true
+        createdb: true
+        passwordSecret:
+          name: {{ $.Release.Name }}-db-fun-openfga
+{{- end }}
 
 {{- if gt (int $.Values.db.exposePort) 0 }}
 ---
@@ -57,5 +81,4 @@ spec:
       protocol: TCP
       targetPort: 5432
 {{- end }}
-
 {{- end }}

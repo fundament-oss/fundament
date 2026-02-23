@@ -17,6 +17,7 @@ kubectl = "1.31.4"
 helm = "3.16.3"
 skaffold = "2.17.0"
 k3d = "5.7.5"
+kind = "0.27.0"
 
 # Protobuf
 "aqua:bufbuild/buf" = "1.61.0"
@@ -24,7 +25,7 @@ k3d = "5.7.5"
 "go:connectrpc.com/connect/cmd/protoc-gen-connect-go" = "1.19.1"
 
 # Go
-go = "1.25.5"
+go = "1.26.0"
 golangci-lint = "2.7.2"
 "aqua:sqlc-dev/sqlc" = "1.30.0"
 "go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen" = "2.4.1"
@@ -33,14 +34,12 @@ golangci-lint = "2.7.2"
 node = "24"
 bun = "1.3.6"
 "npm:@bufbuild/protoc-gen-es" = "2.10.2"
+"npm:@hey-api/openapi-ts" = "0.92.4"
 opentofu = "1.11.3"
 act = "latest"
 
-[tasks.install]
-depends = ["e2e:install"]
-description = "Install all project dependencies"
+"npm:@usebruno/cli" = "3.0.3"
+flux2 = "2.7.5"
 
-[tasks."e2e:install"]
-run = "bun install && bunx playwright install chromium"
-dir = "e2e"
-description = "Install e2e test dependencies"
+[hooks]
+postinstall = "just e2e::install"

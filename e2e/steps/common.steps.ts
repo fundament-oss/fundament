@@ -17,10 +17,22 @@ export function setCurrentApiKey(key: CreateAPIKeyResponse | undefined) {
 }
 
 /**
+ * Decode a JWT and extract the first organization ID from the claims.
+ */
+export function extractOrganizationId(token: string): string {
+  const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+  const orgIds: string[] = payload.organization_ids ?? [];
+  if (orgIds.length === 0) {
+    throw new Error('JWT contains no organization_ids');
+  }
+  return orgIds[0];
+}
+
+/**
  * Authenticate via password login and get JWT.
  */
 export async function authenticateWithPassword(email: string): Promise<string> {
-  const authnApiUrl = process.env.AUTHN_API_URL || 'http://authn.127.0.0.1.nip.io:8080';
+  const authnApiUrl = process.env.AUTHN_API_URL || 'http://authn.fundament.localhost:8080';
   const password = 'password';
 
   const response = await fetch(`${authnApiUrl}/login/password`, {
@@ -46,8 +58,9 @@ export async function authenticateWithPassword(email: string): Promise<string> {
 
 Given('I am authenticated as {string}', async function (this: ICustomWorld, email: string) {
   this.authToken = await authenticateWithPassword(email);
+  this.organizationId = extractOrganizationId(this.authToken);
   this.currentUserEmail = email;
-  this.apiKeyService = new APIKeyService(this.organizationApiUrl!, this.authToken);
+  this.apiKeyService = new APIKeyService(this.organizationApiUrl!, this.authToken, this.organizationId);
   // Initialize the user's API key map if not exists
   if (!this.createdApiKeysByUser.has(email)) {
     this.createdApiKeysByUser.set(email, new Map());

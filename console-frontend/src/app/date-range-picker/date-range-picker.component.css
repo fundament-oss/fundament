@@ -1,0 +1,218 @@
+@reference 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Vanilla Calendar styles. Based on:
+https://github.com/uvarov-frontend/vanilla-calendar-pro/blob/main/package/src/styles/themes/light.css
+https://github.com/uvarov-frontend/vanilla-calendar-pro/blob/main/package/src/styles/themes/dark.css
+
+Uses ViewEncapsulation.None because vanilla-calendar creates DOM outside Angular's view encapsulation.
+*/
+
+.vc {
+  @apply bg-white text-slate-900 dark:bg-slate-900 dark:text-white;
+}
+
+.vc[data-vc-input] {
+  @apply shadow-[0_9px_20px_rgba(0,0,0,.1)];
+}
+
+.vc:focus-visible,
+.vc button:focus-visible,
+.vc [tabindex='0']:focus-visible {
+  @apply outline-orange-300;
+}
+
+.vc-arrow {
+  @apply bg-transparent hover:before:opacity-60;
+}
+
+.vc-arrow:before {
+  background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzBmMTcyYSIgZD0iTTEyIDE2Yy0uMyAwLS41LS4xLS43LS4zbC02LTZjLS40LS40LS40LTEgMC0xLjRzMS0uNCAxLjQgMGw1LjMgNS4zIDUuMy01LjNjLjQtLjQgMS0uNCAxLjQgMHMuNCAxIDAgMS40bC02IDZjLS4yLjItLjQuMy0uNy4zIi8+PC9zdmc+);
+}
+
+.dark .vc-arrow:before {
+  background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDE2Yy0uMyAwLS41LS4xLS43LS4zbC02LTZjLS40LS40LS40LTEgMC0xLjRzMS0uNCAxLjQgMGw1LjMgNS4zIDUuMy01LjNjLjQtLjQgMS0uNCAxLjQgMHMuNCAxIDAgMS40bC02IDZjLS4yLjItLjQuMy0uNy4zIi8+PC9zdmc+);
+}
+
+.vc-header__content {
+  @apply text-slate-900 dark:text-white;
+}
+
+.vc-month,
+.vc-year {
+  @apply text-slate-900 hover:text-slate-500 disabled:text-slate-300 dark:text-white dark:disabled:text-slate-700 dark:disabled:opacity-80;
+}
+
+.vc-months__month,
+.vc-years__year {
+  @apply bg-white text-slate-500 hover:bg-slate-100 disabled:text-slate-300 disabled:hover:text-slate-300 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800 dark:disabled:text-slate-700 dark:disabled:opacity-80 dark:disabled:hover:text-slate-700;
+}
+
+.vc-months__month[data-vc-months-month-selected],
+.vc-years__year[data-vc-years-year-selected] {
+  @apply bg-cyan-500 text-white hover:bg-cyan-500 hover:text-white dark:bg-slate-500;
+}
+
+.vc-week-numbers__title {
+  @apply text-slate-500 dark:text-white;
+}
+
+.vc-week-number {
+  @apply text-slate-500 hover:text-slate-600 dark:text-white dark:hover:text-slate-300;
+}
+
+.vc-week__day {
+  @apply text-slate-500 dark:text-white;
+}
+
+button.vc-week__day {
+  @apply hover:text-slate-600 dark:hover:text-slate-300;
+}
+
+.vc-week__day[data-vc-week-day-off] {
+  @apply text-rose-500;
+}
+
+button.vc-week__day[data-vc-week-day-off] {
+  @apply hover:text-rose-600;
+}
+
+.vc-date[data-vc-date-selected='middle'][data-vc-date-weekend][data-vc-date-selected] .vc-date__btn,
+.vc-date[data-vc-date-selected='middle'][data-vc-date-holiday][data-vc-date-selected]
+  .vc-date__btn {
+  @apply bg-rose-500/70 text-white hover:bg-rose-500/70 hover:text-white dark:bg-rose-500/80 dark:hover:bg-rose-500/80;
+}
+
+.vc-date[data-vc-date-selected='middle'][data-vc-date-weekend][data-vc-date-month='prev'][data-vc-date-selected]
+  .vc-date__btn,
+.vc-date[data-vc-date-selected='middle'][data-vc-date-holiday][data-vc-date-month='prev'][data-vc-date-selected]
+  .vc-date__btn,
+.vc-date[data-vc-date-selected='middle'][data-vc-date-weekend][data-vc-date-month='next'][data-vc-date-selected]
+  .vc-date__btn,
+.vc-date[data-vc-date-selected='middle'][data-vc-date-holiday][data-vc-date-month='next'][data-vc-date-selected]
+  .vc-date__btn {
+  @apply bg-slate-200 text-slate-500 hover:bg-slate-200 hover:text-slate-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-300;
+}
+
+.vc-date[data-vc-date-selected='middle'][data-vc-date-selected] .vc-date__btn {
+  @apply bg-cyan-500/70 text-white hover:bg-cyan-500/70 hover:text-white dark:bg-cyan-500/80 dark:hover:bg-cyan-500/80;
+}
+
+.vc-date[data-vc-date-selected='middle'][data-vc-date-month='prev'][data-vc-date-selected]
+  .vc-date__btn,
+.vc-date[data-vc-date-selected='middle'][data-vc-date-month='next'][data-vc-date-selected]
+  .vc-date__btn {
+  @apply bg-slate-200 text-slate-500 hover:bg-slate-200 hover:text-slate-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-300;
+}
+
+.vc-date__btn {
+  @apply bg-white text-slate-900 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200;
+}
+
+.vc-date[data-vc-date-today] .vc-date__btn {
+  @apply bg-slate-100 text-cyan-500 hover:text-cyan-500 dark:bg-slate-800;
+}
+
+.vc-date[data-vc-date-today][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-today][data-vc-date-month='next'] .vc-date__btn {
+  @apply text-slate-500 dark:text-slate-600;
+}
+
+.vc-date[data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-month='next'] .vc-date__btn {
+  @apply text-slate-400 dark:text-slate-600;
+}
+
+.vc-date[data-vc-date-disabled] .vc-date__btn {
+  @apply text-slate-300 dark:text-slate-700 dark:opacity-80;
+}
+
+.vc-date[data-vc-date-hover] .vc-date__btn {
+  @apply bg-slate-100 dark:bg-slate-800;
+}
+
+.vc-date[data-vc-date-hover='last'] .vc-date__btn,
+.vc-date[data-vc-date-hover='first'] .vc-date__btn {
+  @apply bg-slate-200 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-700;
+}
+
+.vc-date[data-vc-date-weekend] .vc-date__btn,
+.vc-date[data-vc-date-holiday] .vc-date__btn {
+  @apply text-rose-500 hover:bg-rose-50 dark:hover:bg-slate-800;
+}
+
+.vc-date[data-vc-date-weekend][data-vc-date-hover] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-hover] .vc-date__btn {
+  @apply bg-rose-50 dark:bg-slate-800 dark:text-rose-500;
+}
+
+.vc-date[data-vc-date-weekend][data-vc-date-hover='last'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-hover='last'] .vc-date__btn,
+.vc-date[data-vc-date-weekend][data-vc-date-hover='first'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-hover='first'] .vc-date__btn {
+  @apply bg-rose-100 hover:bg-rose-100 dark:bg-slate-700 dark:hover:bg-slate-700;
+}
+
+.vc-date[data-vc-date-weekend][data-vc-date-disabled] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-disabled] .vc-date__btn {
+  @apply text-slate-300 dark:text-slate-700 dark:opacity-80;
+}
+
+.vc-date[data-vc-date-weekend][data-vc-date-today] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-today] .vc-date__btn {
+  @apply text-rose-500;
+}
+
+.vc-date[data-vc-date-weekend][data-vc-date-today][data-vc-date-disabled] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-today][data-vc-date-disabled] .vc-date__btn {
+  @apply text-slate-300 dark:text-slate-700;
+}
+
+.vc-date[data-vc-date-weekend][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-weekend][data-vc-date-month='next'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-month='next'] .vc-date__btn {
+  @apply bg-white text-slate-400 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300;
+}
+
+.vc-date[data-vc-date-weekend][data-vc-date-hover][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-hover][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-weekend][data-vc-date-hover][data-vc-date-month='next'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-hover][data-vc-date-month='next'] .vc-date__btn {
+  @apply bg-slate-100 dark:bg-slate-800;
+}
+
+.vc-date[data-vc-date-weekend][data-vc-date-today][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-today][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-weekend][data-vc-date-today][data-vc-date-month='next'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-today][data-vc-date-month='next'] .vc-date__btn {
+  @apply text-slate-400;
+}
+
+.vc-date[data-vc-date-weekend][data-vc-date-disabled][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-disabled][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-weekend][data-vc-date-disabled][data-vc-date-month='next'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-disabled][data-vc-date-month='next'] .vc-date__btn {
+  @apply text-slate-300 dark:text-slate-700 dark:opacity-80;
+}
+
+.vc-date[data-vc-date-weekend][data-vc-date-selected] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-selected] .vc-date__btn {
+  @apply bg-rose-500 text-white hover:bg-rose-500 hover:text-white;
+}
+
+.vc-date[data-vc-date-weekend][data-vc-date-selected][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-selected][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-weekend][data-vc-date-selected][data-vc-date-month='next'] .vc-date__btn,
+.vc-date[data-vc-date-holiday][data-vc-date-selected][data-vc-date-month='next'] .vc-date__btn {
+  @apply bg-slate-300 text-slate-500 hover:bg-slate-300 hover:text-slate-500 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-300;
+}
+
+.vc-date[data-vc-date-selected] .vc-date__btn {
+  @apply bg-cyan-500 text-white hover:bg-cyan-500 hover:text-white;
+}
+
+.vc-date[data-vc-date-selected][data-vc-date-month='prev'] .vc-date__btn,
+.vc-date[data-vc-date-selected][data-vc-date-month='next'] .vc-date__btn {
+  @apply bg-slate-300 text-slate-500 hover:bg-slate-300 hover:text-slate-500 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-300;
+}

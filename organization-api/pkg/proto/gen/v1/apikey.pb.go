@@ -7,6 +7,7 @@
 package organizationv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -29,10 +30,10 @@ type APIKey struct {
 	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	TokenPrefix   string                 `protobuf:"bytes,30,opt,name=token_prefix,json=tokenPrefix,proto3" json:"token_prefix,omitempty"` // First 8 chars for display (fun_XXXX)
-	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`       // null if never expires
-	LastUsedAt    *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	RevokedAt     *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=revoked_at,json=revokedAt,proto3" json:"revoked_at,omitempty"` // null if not revoked
+	Expires       *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=expires,proto3" json:"expires,omitempty"`                            // null if never expires
+	LastUsed      *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=last_used,json=lastUsed,proto3" json:"last_used,omitempty"`
+	Created       *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created,proto3" json:"created,omitempty"`
+	Revoked       *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=revoked,proto3" json:"revoked,omitempty"` // null if not revoked
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -88,30 +89,30 @@ func (x *APIKey) GetTokenPrefix() string {
 	return ""
 }
 
-func (x *APIKey) GetExpiresAt() *timestamppb.Timestamp {
+func (x *APIKey) GetExpires() *timestamppb.Timestamp {
 	if x != nil {
-		return x.ExpiresAt
+		return x.Expires
 	}
 	return nil
 }
 
-func (x *APIKey) GetLastUsedAt() *timestamppb.Timestamp {
+func (x *APIKey) GetLastUsed() *timestamppb.Timestamp {
 	if x != nil {
-		return x.LastUsedAt
+		return x.LastUsed
 	}
 	return nil
 }
 
-func (x *APIKey) GetCreatedAt() *timestamppb.Timestamp {
+func (x *APIKey) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.CreatedAt
+		return x.Created
 	}
 	return nil
 }
 
-func (x *APIKey) GetRevokedAt() *timestamppb.Timestamp {
+func (x *APIKey) GetRevoked() *timestamppb.Timestamp {
 	if x != nil {
-		return x.RevokedAt
+		return x.Revoked
 	}
 	return nil
 }
@@ -120,7 +121,7 @@ func (x *APIKey) GetRevokedAt() *timestamppb.Timestamp {
 type CreateAPIKeyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,10,opt,name=name,proto3" json:"name,omitempty"`
-	ExpiresInDays *int64                 `protobuf:"varint,20,opt,name=expires_in_days,json=expiresInDays,proto3,oneof" json:"expires_in_days,omitempty"` // Days until expiry, null = never
+	ExpiresIn     string                 `protobuf:"bytes,20,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"` // Time until expiry, empty = never
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -162,11 +163,11 @@ func (x *CreateAPIKeyRequest) GetName() string {
 	return ""
 }
 
-func (x *CreateAPIKeyRequest) GetExpiresInDays() int64 {
-	if x != nil && x.ExpiresInDays != nil {
-		return *x.ExpiresInDays
+func (x *CreateAPIKeyRequest) GetExpiresIn() string {
+	if x != nil {
+		return x.ExpiresIn
 	}
-	return 0
+	return ""
 }
 
 // Create API key response (only time the full token is returned)
@@ -496,25 +497,22 @@ var File_v1_apikey_proto protoreflect.FileDescriptor
 
 const file_v1_apikey_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/apikey.proto\x12\x0forganization.v1\x1a\x0fv1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xbe\x02\n" +
+	"\x0fv1/apikey.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xaa\x02\n" +
 	"\x06APIKey\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12!\n" +
-	"\ftoken_prefix\x18\x1e \x01(\tR\vtokenPrefix\x129\n" +
-	"\n" +
-	"expires_at\x18( \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12<\n" +
-	"\flast_used_at\x182 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"lastUsedAt\x129\n" +
-	"\n" +
-	"created_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"revoked_at\x18F \x01(\v2\x1a.google.protobuf.TimestampR\trevokedAt\"j\n" +
-	"\x13CreateAPIKeyRequest\x12\x12\n" +
+	"\ftoken_prefix\x18\x1e \x01(\tR\vtokenPrefix\x124\n" +
+	"\aexpires\x18( \x01(\v2\x1a.google.protobuf.TimestampR\aexpires\x127\n" +
+	"\tlast_used\x182 \x01(\v2\x1a.google.protobuf.TimestampR\blastUsed\x124\n" +
+	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x124\n" +
+	"\arevoked\x18F \x01(\v2\x1a.google.protobuf.TimestampR\arevoked\"T\n" +
+	"\x13CreateAPIKeyRequest\x12\x1e\n" +
 	"\x04name\x18\n" +
-	" \x01(\tR\x04name\x12+\n" +
-	"\x0fexpires_in_days\x18\x14 \x01(\x03H\x00R\rexpiresInDays\x88\x01\x01B\x12\n" +
-	"\x10_expires_in_days\"_\n" +
+	" \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\x12\x1d\n" +
+	"\n" +
+	"expires_in\x18\x14 \x01(\tR\texpiresIn\"_\n" +
 	"\x14CreateAPIKeyResponse\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x14\n" +
@@ -523,22 +521,22 @@ const file_v1_apikey_proto_rawDesc = "" +
 	"\x12ListAPIKeysRequest\"I\n" +
 	"\x13ListAPIKeysResponse\x122\n" +
 	"\bapi_keys\x18\n" +
-	" \x03(\v2\x17.organization.v1.APIKeyR\aapiKeys\"0\n" +
-	"\x10GetAPIKeyRequest\x12\x1c\n" +
+	" \x03(\v2\x17.organization.v1.APIKeyR\aapiKeys\":\n" +
+	"\x10GetAPIKeyRequest\x12&\n" +
 	"\n" +
 	"api_key_id\x18\n" +
-	" \x01(\tR\bapiKeyId\"E\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId\"E\n" +
 	"\x11GetAPIKeyResponse\x120\n" +
 	"\aapi_key\x18\n" +
-	" \x01(\v2\x17.organization.v1.APIKeyR\x06apiKey\"3\n" +
-	"\x13RevokeAPIKeyRequest\x12\x1c\n" +
+	" \x01(\v2\x17.organization.v1.APIKeyR\x06apiKey\"=\n" +
+	"\x13RevokeAPIKeyRequest\x12&\n" +
 	"\n" +
 	"api_key_id\x18\n" +
-	" \x01(\tR\bapiKeyId\"3\n" +
-	"\x13DeleteAPIKeyRequest\x12\x1c\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId\"=\n" +
+	"\x13DeleteAPIKeyRequest\x12&\n" +
 	"\n" +
 	"api_key_id\x18\n" +
-	" \x01(\tR\bapiKeyId2\xb6\x03\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId2\xb6\x03\n" +
 	"\rAPIKeyService\x12[\n" +
 	"\fCreateAPIKey\x12$.organization.v1.CreateAPIKeyRequest\x1a%.organization.v1.CreateAPIKeyResponse\x12X\n" +
 	"\vListAPIKeys\x12#.organization.v1.ListAPIKeysRequest\x1a$.organization.v1.ListAPIKeysResponse\x12R\n" +
@@ -573,10 +571,10 @@ var file_v1_apikey_proto_goTypes = []any{
 	(*emptypb.Empty)(nil),         // 10: google.protobuf.Empty
 }
 var file_v1_apikey_proto_depIdxs = []int32{
-	9,  // 0: organization.v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
-	9,  // 1: organization.v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
-	9,  // 2: organization.v1.APIKey.created_at:type_name -> google.protobuf.Timestamp
-	9,  // 3: organization.v1.APIKey.revoked_at:type_name -> google.protobuf.Timestamp
+	9,  // 0: organization.v1.APIKey.expires:type_name -> google.protobuf.Timestamp
+	9,  // 1: organization.v1.APIKey.last_used:type_name -> google.protobuf.Timestamp
+	9,  // 2: organization.v1.APIKey.created:type_name -> google.protobuf.Timestamp
+	9,  // 3: organization.v1.APIKey.revoked:type_name -> google.protobuf.Timestamp
 	0,  // 4: organization.v1.ListAPIKeysResponse.api_keys:type_name -> organization.v1.APIKey
 	0,  // 5: organization.v1.GetAPIKeyResponse.api_key:type_name -> organization.v1.APIKey
 	1,  // 6: organization.v1.APIKeyService.CreateAPIKey:input_type -> organization.v1.CreateAPIKeyRequest
@@ -602,7 +600,6 @@ func file_v1_apikey_proto_init() {
 		return
 	}
 	file_v1_common_proto_init()
-	file_v1_apikey_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

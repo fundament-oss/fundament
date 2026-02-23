@@ -1,13 +1,13 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TitleService } from '../title.service';
-import { InstallPluginModalComponent } from '../install-plugin-modal/install-plugin-modal';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCheck, tablerHelpCircle } from '@ng-icons/tabler-icons';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { TitleService } from '../title.service';
+import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
-import { create } from '@bufbuild/protobuf';
 import {
   ListPluginsRequestSchema,
   ListPresetsRequestSchema,
@@ -20,11 +20,13 @@ import {
   ListInstallsRequestSchema,
   AddInstallRequestSchema,
   InstallSchema,
-  type ClusterSummary,
+  type ListClustersResponse_ClusterSummary as ClusterSummary,
   type Install,
 } from '../../generated/v1/cluster_pb';
-import { firstValueFrom } from 'rxjs';
 import { ToastService } from '../toast.service';
+
+const getPluginIconName = (pluginName: string): string =>
+  pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
 
 // Extended plugin type with presets array (computed from backend data)
 interface PluginWithPresets extends Pick<
@@ -56,38 +58,39 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
 
 @Component({
   selector: 'app-plugins',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    InstallPluginModalComponent,
-    NgIcon,
-    LoadingIndicatorComponent,
-  ],
+  imports: [RouterLink, InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerCheck,
       tablerHelpCircle,
     }),
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',
 })
-export class PluginsComponent implements OnInit {
+export default class PluginsComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private pluginClient = inject(PLUGIN);
+
   private clusterClient = inject(CLUSTER);
+
   private toastService = inject(ToastService);
 
   selectedCategory = 'all';
+
   selectedPreset = 'all';
 
   showInstallModal = false;
+
   selectedPlugin: PluginWithPresets | null = null;
 
   isLoading = signal(true);
+
   errorMessage = signal<string | null>(null);
 
   clusters: ClusterSummary[] = [];
+
   installs: InstallWithCluster[] = [];
 
   get presets(): PresetWithCount[] {
@@ -131,6 +134,7 @@ export class PluginsComponent implements OnInit {
   }
 
   plugins: PluginWithPresets[] = [];
+
   backendPresets: Preset[] = [];
 
   async ngOnInit() {
@@ -191,8 +195,9 @@ export class PluginsComponent implements OnInit {
 
       this.isLoading.set(false);
     } catch (error) {
-      console.error('Failed to load data:', error);
-      this.errorMessage.set(error instanceof Error ? error.message : 'Failed to load data');
+      this.errorMessage.set(
+        error instanceof Error ? `Failed to load data: ${error.message}` : 'Failed to load data',
+      );
       this.isLoading.set(false);
     }
   }
@@ -211,7 +216,7 @@ export class PluginsComponent implements OnInit {
         plugin.categories.forEach((category) => {
           const existing = categoryMap.get(category.id);
           if (existing) {
-            existing.count++;
+            existing.count += 1;
           } else {
             categoryMap.set(category.id, { name: category.name, count: 1 });
           }
@@ -318,7 +323,7 @@ export class PluginsComponent implements OnInit {
     try {
       // Call the API to install the plugin
       const request = create(AddInstallRequestSchema, {
-        clusterId: clusterId,
+        clusterId,
         pluginId: this.selectedPlugin.id,
       });
 
@@ -330,7 +335,7 @@ export class PluginsComponent implements OnInit {
           id: response.installId,
           pluginId: this.selectedPlugin.id,
         }),
-        clusterId: clusterId,
+        clusterId,
       };
       this.installs.push(newInstall);
 
@@ -338,12 +343,13 @@ export class PluginsComponent implements OnInit {
         `Plugin ${this.selectedPlugin.name} installed on cluster ${cluster.name}`,
       );
     } catch (error) {
-      console.error('Failed to install plugin:', error);
-      this.toastService.error(error instanceof Error ? error.message : 'Failed to install plugin');
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to install plugin: ${error.message}`
+          : 'Failed to install plugin',
+      );
     }
   }
 
-  getPluginIconName(pluginName: string): string {
-    return pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
-  }
+  getPluginIconName = getPluginIconName;
 }

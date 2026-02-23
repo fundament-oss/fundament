@@ -83,7 +83,7 @@
           </h1>
         </div>
 
-        <!-- Right side dropdowns -->
+        <!-- Right side dropdown -->
         <div class="-my-1 flex items-center space-x-3">
           <!-- Theme (dark/light mode) Switcher -->
           <button
@@ -106,39 +106,6 @@
           </button>
 
           @if (!isLoginPage()) {
-            <div class="project-dropdown relative">
-              <button
-                (click)="toggleProjectDropdown()"
-                class="flex cursor-pointer items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 ring-indigo-500 hover:bg-gray-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-950 dark:bg-gray-950 dark:text-white dark:ring-offset-gray-950 dark:hover:bg-gray-900"
-              >
-                {{ selectedProject() }}
-                <ng-icon name="tablerChevronDown" class="ml-2" />
-              </button>
-
-              @if (projectDropdownOpen()) {
-                <div
-                  class="absolute right-0 z-10 mt-2 w-48 rounded-md bg-white shadow-lg ring-1 ring-gray-300 dark:bg-gray-950 dark:ring-gray-800"
-                >
-                  <div class="py-1">
-                    <button
-                      (click)="selectProject('Project 1')"
-                      class="block w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900 dark:[&.bg-gray-100]:bg-gray-700"
-                      [class.bg-gray-100]="selectedProject() === 'Project 1'"
-                    >
-                      Project 1
-                    </button>
-                    <button
-                      (click)="selectProject('Project 2')"
-                      class="block w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900 dark:[&.bg-gray-100]:bg-gray-700"
-                      [class.bg-gray-100]="selectedProject() === 'Project 2'"
-                    >
-                      Project 2
-                    </button>
-                  </div>
-                </div>
-              }
-            </div>
-
             <!-- User Dropdown -->
             <div class="user-dropdown relative">
               <button
@@ -166,6 +133,13 @@
                     >
                       My profile
                     </a>
+                    <a
+                      routerLink="/api-keys"
+                      (click)="userDropdownOpen.set(false)"
+                      class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900"
+                    >
+                      API keys
+                    </a>
                     <button
                       (click)="handleLogout()"
                       class="block w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-900"
@@ -182,154 +156,252 @@
     </div>
   </header>
 
-  <div class="flex">
-    <!-- Sidebar -->
-    @if (!isLoginPage()) {
-      <!-- Overlay for mobile -->
-      <div
-        class="fixed inset-0 z-40 bg-gray-900/50 transition-opacity duration-300 lg:hidden"
-        [class.opacity-0]="!sidebarOpen()"
-        [class.opacity-100]="sidebarOpen()"
-        [class.pointer-events-none]="!sidebarOpen()"
-        (click)="closeSidebar()"
-        (keydown.escape)="closeSidebar()"
-        role="button"
-        tabindex="0"
-        aria-label="Close sidebar"
-      ></div>
-
+  @if (showOrgPicker() && !isLoginPage()) {
+    <!-- Organization Picker (shown after login for multi-org users) -->
+    <app-org-picker
+      [organizations]="organizationDataService.userOrganizations()"
+      [invitations]="pendingInvitations()"
+      (selectOrganization)="handleOrgPickerSelection($event)"
+      (acceptInvitation)="handleAcceptInvitation($event)"
+      (declineInvitation)="handleDeclineInvitation($event)"
+    />
+  } @else {
+    <div class="flex">
       <!-- Sidebar -->
-      <aside
-        class="fixed inset-y-0 left-0 z-50 w-64 transform border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:static lg:min-h-[calc(100vh-4rem-1px)] lg:translate-x-0 dark:border-gray-800 dark:bg-gray-950"
-        [class.-translate-x-full]="!sidebarOpen()"
-      >
-        <!-- Close button for mobile -->
-        <div class="flex justify-end px-4 pt-4 lg:hidden">
-          <button
-            (click)="closeSidebar()"
-            type="button"
-            aria-label="Close sidebar"
-            class="cursor-pointer rounded-md p-2 text-gray-600 ring-indigo-500 hover:bg-gray-100 focus:ring-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
-          >
-            <ng-icon name="tablerX" class="block!" size="1.5rem" />
-          </button>
-        </div>
-        <nav class="h-full overflow-y-auto px-4 pt-1 pb-6 lg:pt-4">
-          <ul class="space-y-2">
-            <li>
-              <a
-                routerLink="/"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                [routerLinkActiveOptions]="{ exact: true }"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <ng-icon name="tablerLayoutDashboard" class="mr-3" size="1.25rem" />
-                Dashboard
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                [ngClass]="{
-                  'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
-                    isClustersActive(),
-                }"
-                (click)="closeSidebar()"
-              >
-                <app-kubernetes-icon class="mr-3 h-5 w-5" />
-                Clusters
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/projects"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <ng-icon name="tablerFolder" class="mr-3" size="1.25rem" />
-                Projects
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/plugins"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <ng-icon name="tablerPuzzle" class="mr-3" size="1.25rem" />
-                Plugins
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/project-members"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                [ngClass]="{
-                  'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300':
-                    isProjectMembersOrPermissions(),
-                }"
-                (click)="closeSidebar()"
-              >
-                <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
-                Members
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/usage"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
-                Usage
-              </a>
-            </li>
+      @if (!isLoginPage()) {
+        <!-- Overlay for mobile -->
+        <div
+          class="fixed inset-0 z-40 bg-gray-900/50 transition-opacity duration-300 lg:hidden"
+          [class.opacity-0]="!sidebarOpen()"
+          [class.opacity-100]="sidebarOpen()"
+          [class.pointer-events-none]="!sidebarOpen()"
+          (click)="closeSidebar()"
+          (keydown.escape)="closeSidebar()"
+          role="button"
+          tabindex="0"
+          aria-label="Close sidebar"
+        ></div>
 
-            <!-- Organization Section -->
-            <li class="pt-4">
-              <div class="border-t border-gray-200 dark:border-gray-800"></div>
-              <p
-                class="px-3 pt-4 pb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
-              >
-                Organization
-              </p>
-            </li>
-            <li>
-              <a
-                routerLink="/organization"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                [routerLinkActiveOptions]="{ exact: true }"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
-                Settings
-              </a>
-            </li>
-            <li>
-              <a
-                routerLink="/organization/members"
-                routerLinkActive="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                class="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 lg:pointer-events-auto dark:text-gray-300 dark:hover:bg-gray-800"
-                (click)="closeSidebar()"
-              >
-                <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
-                Members
-              </a>
-            </li>
-          </ul>
-        </nav>
-      </aside>
-    }
+        <!-- Sidebar -->
+        <aside
+          class="fixed inset-y-0 left-0 z-50 w-64 transform border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:static lg:min-h-[calc(100vh-4rem-1px)] lg:translate-x-0 dark:border-gray-800 dark:bg-gray-950"
+          [class.-translate-x-full]="!sidebarOpen()"
+        >
+          <!-- Close button for mobile -->
+          <div class="flex justify-end px-4 pt-4 lg:hidden">
+            <button
+              (click)="closeSidebar()"
+              type="button"
+              aria-label="Close sidebar"
+              class="cursor-pointer rounded-md p-2 text-gray-600 ring-indigo-500 hover:bg-gray-100 focus:ring-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
+            >
+              <ng-icon name="tablerX" class="block!" size="1.5rem" />
+            </button>
+          </div>
 
-    <!-- Main Content -->
-    <main class="mx-auto max-w-7xl flex-1 px-4 py-6 sm:px-6">
-      <router-outlet />
-    </main>
-  </div>
+          <!-- Selector Button -->
+          <div class="px-4 pt-4">
+            <!-- Label -->
+            <div class="mb-2 px-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+              Organization or project:
+            </div>
+
+            <!-- Button to open modal -->
+            <button
+              (click)="openSelectorModal()"
+              type="button"
+              class="btn-secondary flex w-full items-center"
+            >
+              <div class="flex min-w-0 flex-1 items-center">
+                @if (selectedItemDisplay(); as selected) {
+                  @if (selected.type === 'organization') {
+                    <ng-icon name="tablerBuilding" class="mr-2 shrink-0" />
+                  } @else if (selected.type === 'project') {
+                    <ng-icon name="tablerFolder" class="mr-2 shrink-0" />
+                  }
+                  <span class="truncate">{{ selected.name }}</span>
+                } @else {
+                  <span class="text-gray-500 dark:text-gray-400">Select...</span>
+                }
+              </div>
+              <ng-icon name="tablerChevronRight" class="ml-2 shrink-0" />
+            </button>
+          </div>
+
+          <nav class="overflow-y-auto px-4 pb-6">
+            @if (selectedType()) {
+              <div class="mb-3 pt-5 dark:border-gray-800">
+                <p
+                  class="px-3 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                >
+                  {{ settingsHeader() }}
+                </p>
+              </div>
+            }
+
+            <ul class="space-y-2">
+              @if (selectedType() === 'organization') {
+                <li>
+                  <a
+                    routerLink="/"
+                    [class.active]="isClustersActive()"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <app-kubernetes-icon class="mr-3 h-5 w-5" />
+                    Clusters
+                  </a>
+                </li>
+                <li>
+                  <a
+                    routerLink="/projects"
+                    routerLinkActive="active"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <ng-icon name="tablerFolders" class="mr-3" size="1.25rem" />
+                    Projects
+                  </a>
+                </li>
+                <li>
+                  <a
+                    routerLink="/plugins"
+                    routerLinkActive="active"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <ng-icon name="tablerPuzzle" class="mr-3" size="1.25rem" />
+                    Plugins
+                  </a>
+                </li>
+                <li>
+                  <a
+                    routerLink="/organization/members"
+                    routerLinkActive="active"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
+                    Members
+                  </a>
+                </li>
+                <li>
+                  <a
+                    routerLink="/usage"
+                    routerLinkActive="active"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
+                    Usage
+                  </a>
+                </li>
+                <li>
+                  <a
+                    routerLink="/organization"
+                    routerLinkActive="active"
+                    [routerLinkActiveOptions]="{ exact: true }"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
+                    Settings
+                  </a>
+                </li>
+              } @else if (selectedType() === 'project') {
+                <li>
+                  <a
+                    [routerLink]="['/projects', selectedProjectId()]"
+                    routerLinkActive="active"
+                    [routerLinkActiveOptions]="{ exact: true }"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <ng-icon name="tablerFolder" size="1.25rem" class="mr-3" />
+                    General
+                  </a>
+                </li>
+                <li>
+                  <a
+                    [routerLink]="['/projects', selectedProjectId(), 'namespaces']"
+                    routerLinkActive="active"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <ng-icon name="tablerBracketsContain" size="1.25rem" class="mr-3" />
+                    Namespaces
+                  </a>
+                </li>
+                <li>
+                  <a
+                    [routerLink]="['/projects', selectedProjectId(), 'members']"
+                    routerLinkActive="active"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
+                    Members
+                  </a>
+                </li>
+                <li>
+                  <a
+                    [routerLink]="['/projects', selectedProjectId(), 'roles']"
+                    routerLinkActive="active"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <ng-icon name="tablerUserCog" class="mr-3" size="1.25rem" />
+                    Roles
+                  </a>
+                </li>
+                <li>
+                  <a
+                    [routerLink]="['/projects', selectedProjectId(), 'usage']"
+                    routerLinkActive="active"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
+                    Usage
+                  </a>
+                </li>
+                <li>
+                  <a
+                    [routerLink]="['/projects', selectedProjectId(), 'settings']"
+                    routerLinkActive="active"
+                    class="nav-link"
+                    (click)="closeSidebar()"
+                  >
+                    <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
+                    Settings
+                  </a>
+                </li>
+              }
+            </ul>
+          </nav>
+        </aside>
+      }
+
+      <!-- Main Content (deferred until an organization is selected, to avoid API calls without Fun-Organization header) -->
+      <main class="mx-auto max-w-7xl min-w-0 flex-1 px-4 py-6 sm:px-6">
+        @if (isLoginPage() || selectedOrgId() || selectedProjectId()) {
+          @if (!isLoginPage()) {
+            <app-breadcrumb [segments]="breadcrumbSegments()" />
+          }
+          <router-outlet />
+        }
+      </main>
+    </div>
+
+    <!-- Selector Modal -->
+    <app-selector-modal
+      [show]="selectorModalOpen()"
+      [organizations]="selectorOrganizations()"
+      [selectedOrgId]="selectedOrgId()"
+      [selectedProjectId]="selectedProjectId()"
+      (closeModal)="closeSelectorModal()"
+      (selectOrganization)="selectOrganization($event)"
+      (selectProject)="selectProjectItem($event)"
+    />
+  }
 </div>

@@ -1,5 +1,6 @@
-mod terraform-provider 'terraform-provider'
-mod e2e 'e2e'
+mod terraform-provider
+mod e2e
+mod cluster-worker
 
 _default:
     @just --list
@@ -10,10 +11,10 @@ watch-d2:
 
 # Format all code and text in this repo
 fmt:
-    @find . -type f \( -name "*.md" -o -name "*.d2" \) -exec sed -i 's/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
+    @find . -type f \( -name "*.md" -o -name "*.adoc" -o -name "*.d2" \) -exec perl -pi -e 's/enterprise/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
     d2 fmt docs/assets/*.d2
+    go fmt ./...
     # TODO md fmt
-    # TODO go fmt
 
 # --- Cluster commands ---
 
@@ -65,21 +66,36 @@ logs:
 
 # Open a shell to the PostgreSQL database
 db-shell:
-    kubectl exec -it -n fundament fundament-db-1 -- psql -U postgres -d fundament
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PASSWORD=$(kubectl get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' |  {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
+    kubectl exec -it -n fundament fundament-db-1 -- env PGPASSWORD="$PASSWORD" psql -h localhost -U fun_operator -d fundament
 
 generate:
     cd db && trek generate --stdout
     go generate -x ./...
     cd console-frontend && buf generate
+    cd console-frontend && openapi-ts
     cd e2e && buf generate
+    just fmt
 
 # Lint all Go code
 lint:
     golangci-lint run --new-from-rev $(git rev-parse origin/master) ./...
 
-# Run functl against the local development instance/database
-functl *args:
+# Run funops against the local development instance/database
+funops *args:
     #!/usr/bin/env bash
     set -euo pipefail
     PASSWORD=$(kubectl --context k3d-fundament get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' | {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
-    DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./functl/cmd/functl {{ args }}
+    DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./funops/cmd/funops {{ args }}
+
+# Run functl CLI
+functl *args:
+    go run ./functl/cmd/functl {{ args }}
+
+# --- Cluster Worker ---
+
+# Set up local Gardener for testing real Gardener client
+local-gardener:
+    just -f cluster-worker/justfile local-gardener

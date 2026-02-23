@@ -1,143 +1,53 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-bold dark:text-white">Profile settings</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Manage your account information</p>
+    <h1 class="text-2xl font-bold dark:text-white">Profile</h1>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Your account information</p>
   </div>
 
   @if (isLoading()) {
-    <div class="flex justify-center p-6">
+    <div class="card-body-lg flex justify-center">
       <div class="text-gray-600 dark:text-gray-300">Loading user information...</div>
     </div>
   } @else if (error()) {
-    <div class="p-6">
+    <div class="card-body-lg">
       <div class="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
         <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
       </div>
     </div>
   } @else {
-    <!-- User Info Section -->
-    <div class="border-b border-gray-200 p-6 dark:border-gray-800">
-      <h3 class="mb-4 text-lg font-medium dark:text-white">User information</h3>
-      <div class="space-y-3">
+    <div class="card-body-lg">
+      <div
+        class="mb-6 flex items-start gap-3 rounded-md border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
+      >
+        <ng-icon
+          name="tablerInfoCircle"
+          size="1.25rem"
+          class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
+        />
+        <p class="text-sm text-indigo-700 dark:text-indigo-300">
+          Your name and password are managed by your OIDC provider and cannot be changed here.
+        </p>
+      </div>
+
+      <div class="space-y-4 text-sm">
         <div class="sm:flex">
           <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Name:</p>
           <p>{{ userInfo()?.name || 'N/A' }}</p>
         </div>
         <div class="sm:flex">
           <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">User ID:</p>
-          <p>{{ userInfo()?.id || 'N/A' }}</p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Organization ID:</p>
-          <p>{{ userInfo()?.organizationId || 'N/A' }}</p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">External ID:</p>
-          <p>{{ userInfo()?.externalId || 'N/A' }}</p>
-        </div>
-        <div class="sm:flex">
-          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Groups:</p>
           <p>
-            {{
-              userInfo()?.groups && userInfo()!.groups.length > 0
-                ? userInfo()!.groups.join(', ')
-                : 'None'
-            }}
+            <code class="rounded-md bg-gray-100 px-2 py-1 font-mono text-sm dark:bg-gray-900">{{
+              userInfo()?.id || 'N/A'
+            }}</code>
           </p>
+        </div>
+        <div class="sm:flex">
+          <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Organization(s):</p>
+          <p>{{ organizationNames() || 'N/A' }}</p>
         </div>
       </div>
-    </div>
-
-    <!-- Form Content -->
-    <div class="p-6">
-      <form [formGroup]="profileForm" (ngSubmit)="onSave()" class="space-y-6">
-        <!-- Personal Information Section -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Personal information</h3>
-
-          <div class="space-y-4">
-            <div>
-              <label
-                for="fullName"
-                class="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-400"
-              >
-                Full name
-              </label>
-              <input
-                type="text"
-                id="fullName"
-                formControlName="fullName"
-                placeholder="Enter your full name"
-              />
-              @if (fullName?.invalid && fullName?.dirty) {
-                <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
-                  {{ getFullNameError() }}
-                </p>
-              }
-            </div>
-          </div>
-        </div>
-
-        <!-- Security Section -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Security</h3>
-          <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
-            Your current password is required to make changes to your profile.
-          </p>
-
-          <div class="space-y-4">
-            <div>
-              <label
-                for="currentPassword"
-                class="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-400"
-              >
-                Current password
-              </label>
-              <input
-                type="password"
-                id="currentPassword"
-                formControlName="currentPassword"
-                placeholder="Enter your current password"
-              />
-              @if (currentPassword?.invalid && currentPassword?.dirty) {
-                <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
-                  {{ getCurrentPasswordError() }}
-                </p>
-              }
-            </div>
-
-            <div>
-              <label
-                for="password"
-                class="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-400"
-              >
-                New password
-              </label>
-              <input
-                type="password"
-                id="password"
-                formControlName="password"
-                placeholder="Enter new password"
-              />
-              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Leave empty to keep your current password
-              </p>
-              @if (password?.invalid && password?.dirty) {
-                <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
-                  {{ getPasswordError() }}
-                </p>
-              }
-            </div>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex gap-3">
-          <a routerLink="/" class="btn-secondary"> Cancel </a>
-          <button type="submit" class="btn-primary">Save changes</button>
-        </div>
-      </form>
     </div>
   }
 </div>

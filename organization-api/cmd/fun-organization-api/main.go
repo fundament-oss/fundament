@@ -9,13 +9,10 @@ import (
 	"os"
 	"time"
 
-	"connectrpc.com/connect"
-	"connectrpc.com/grpcreflect"
 	"github.com/caarlos0/env/v11"
+	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rs/cors"
-	"github.com/svrana/go-connect-middleware/interceptors/logging"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
@@ -23,7 +20,6 @@ import (
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
-	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
 type config struct {
@@ -66,14 +62,35 @@ func run() error {
 				queries := db.New(conn)
 
 				// Extract organization_id from context and set it in PostgreSQL session for RLS
-				organizationID, ok := organization.OrganizationIDFromContext(ctx)
-				if ok {
-					err := queries.SetOrganizationContext(ctx, db.SetOrganizationContextParams{
+
+				if organizationID, ok := organization.OrganizationIDFromContext(ctx); ok {
+					logger.Debug("setting organization context for RLS", "organization_id", organizationID.String())
+
+					params := db.SetOrganizationContextParams{
 						SetConfig: organizationID.String(),
-					})
-					if err != nil {
+					}
+
+					if err := queries.SetOrganizationContext(ctx, params); err != nil {
 						return false, fmt.Errorf("failed to set organization context: %w", err)
 					}
+				} else {
+					logger.Debug("no organization_id in context for PrepareConn")
+				}
+
+				// Extract user_id from context and set it in PostgreSQL session for RLS
+
+				if userID, ok := organization.UserIDFromContext(ctx); ok {
+					logger.Debug("setting user context for RLS", "user_id", userID.String())
+
+					params := db.SetUserContextParams{
+						SetConfig: userID.String(),
+					}
+
+					if err := queries.SetUserContext(ctx, params); err != nil {
+						return false, fmt.Errorf("failed to set user context: %w", err)
+					}
+				} else {
+					logger.Debug("no user_id in context for PrepareConn")
 				}
 
 				// Extract user_id from claims and set it in PostgreSQL session for RLS
@@ -102,6 +119,11 @@ func run() error {
 					return false // Destroy connection to prevent data leakage
 				}
 
+				if err := queries.ResetUserContext(ctx); err != nil {
+					logger.Warn("failed to reset user context on connection release, destroying connection", "error", err)
+					return false // Destroy connection to prevent user data leakage
+				}
+
 				return true // Keep connection in pool
 
 			}
@@ -119,65 +141,18 @@ func run() error {
 
 	logger.Debug("database connected")
 
-	server, err := organization.New(logger, &organization.Config{JWTSecret: []byte(cfg.JWTSecret)}, db)
+	server, err := organization.New(logger, &organization.Config{
+		JWTSecret:          []byte(cfg.JWTSecret),
+		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
+		Clock:              clock.New(),
+	}, db)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)
 	}
 
-	mux := http.NewServeMux()
-	loggingInterceptor := logging.UnaryServerInterceptor(
-		logging.LoggerFunc(func(ctx context.Context, level logging.Level, msg string, fields ...any) {
-			logger.Log(ctx, slog.Level(level), msg, fields...)
-		}),
-		logging.WithLogOnEvents(logging.FinishCall),
-	)
-
-	interceptors := connect.WithInterceptors(
-		server.AuthInterceptor(), // First: authenticate and enrich context
-		loggingInterceptor,       // Second: log with enriched context
-	)
-
-	orgPath, orgHandler := organizationv1connect.NewOrganizationServiceHandler(server, interceptors)
-	mux.Handle(orgPath, orgHandler)
-
-	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(server, interceptors)
-	mux.Handle(clusterPath, clusterHandler)
-
-	pluginPath, pluginHandler := organizationv1connect.NewPluginServiceHandler(server, interceptors)
-	mux.Handle(pluginPath, pluginHandler)
-
-	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)
-	reflector := grpcreflect.NewStaticReflector(
-		"organization.v1.OrganizationService",
-		"organization.v1.ClusterService",
-		"organization.v1.PluginService",
-		"organization.v1.MemberService",
-		"organization.v1.APIKeyService",
-	)
-	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
-	mux.Handle(reflectPath, reflectHandler)
-	reflectPathAlpha, reflectHandlerAlpha := grpcreflect.NewHandlerV1Alpha(reflector)
-	mux.Handle(reflectPathAlpha, reflectHandlerAlpha)
-
-	projectPath, projectHandler := organizationv1connect.NewProjectServiceHandler(server, interceptors)
-	mux.Handle(projectPath, projectHandler)
-
-	memberPath, memberHandler := organizationv1connect.NewMemberServiceHandler(server, interceptors)
-	mux.Handle(memberPath, memberHandler)
-
-	apiKeyPath, apiKeyHandler := organizationv1connect.NewAPIKeyServiceHandler(server, interceptors)
-	mux.Handle(apiKeyPath, apiKeyHandler)
-
-	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   cfg.CORSAllowedOrigins,
-		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization", "Connect-Protocol-Version"},
-		AllowCredentials: true,
-	})
-
 	httpServer := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           h2c.NewHandler(corsHandler.Handler(mux), &http2.Server{}),
+		Handler:           h2c.NewHandler(server.Handler(), &http2.Server{}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

@@ -1,0 +1,83 @@
+<app-modal [show]="show()" title="Select organization or project" (modalClose)="onClose()">
+  <!-- Filter Input -->
+  <div class="mb-4">
+    <div class="relative">
+      <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <ng-icon name="tablerSearch" class="text-gray-400! dark:text-gray-500!" size="1rem" />
+      </div>
+      <input
+        type="search"
+        placeholder="Search..."
+        [value]="filterInputValue()"
+        (input)="updateFilter($event)"
+        class="pl-9!"
+      />
+    </div>
+  </div>
+
+  <!-- Nested Tree -->
+  <div class="-mx-2 -mb-2 max-h-96 space-y-1 overflow-y-auto px-2 pb-2">
+    @if (filteredOrganizations().length === 0) {
+      <div class="py-1 text-center text-sm text-gray-500 dark:text-gray-400">No results found.</div>
+    } @else {
+      @for (org of filteredOrganizations(); track org.id) {
+        <div>
+          <!-- Organization -->
+          <div class="mb-0.5 px-2">
+            <span
+              class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
+              >Organization</span
+            >
+          </div>
+          <button
+            (click)="onSelectOrganization(org.id)"
+            [class]="
+              'flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950 dark:hover:bg-gray-800 ' +
+              (isOrganizationSelected(org.id)
+                ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+                : 'text-gray-700 dark:text-gray-300')
+            "
+          >
+            <ng-icon name="tablerBuilding" class="mr-2 shrink-0" size="1rem" />
+            <span class="truncate">{{ org.name }}</span>
+          </button>
+
+          <!-- Projects (only shown for the selected organization) -->
+          <div class="ml-5 space-y-1">
+            @if (org.projects.length === 0) {
+              @if (isOrganizationSelected(org.id)) {
+                <div class="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">
+                  No projects yet
+                </div>
+              }
+            } @else {
+              @for (project of org.projects; track project.id) {
+                <div>
+                  <!-- Project -->
+                  <div class="mb-0.5 px-2">
+                    <span
+                      class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                      >Project</span
+                    >
+                  </div>
+                  <button
+                    (click)="onSelectProject(project.id)"
+                    [class]="
+                      'flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950 dark:hover:bg-gray-800 ' +
+                      (isProjectSelected(project.id)
+                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+                        : 'text-gray-700 dark:text-gray-300')
+                    "
+                  >
+                    <ng-icon name="tablerFolder" class="mr-2 shrink-0" size="1rem" />
+                    <span class="truncate">{{ project.name }}</span>
+                  </button>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+</app-modal>

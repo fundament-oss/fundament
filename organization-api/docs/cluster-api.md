@@ -86,7 +86,7 @@ curl -X POST http://localhost:8081/organization.v1.ClusterService/GetCluster \
     "region": "eu-west-1",
     "kubernetesVersion": "1.28",
     "status": "CLUSTER_STATUS_RUNNING",
-    "createdAt": "2025-01-15T10:30:00Z",
+    "created": "2025-01-15T10:30:00Z",
     "resourceUsage": {
       "cpu": { "used": 0, "total": 0, "unit": "cores" },
       "memory": { "used": 0, "total": 0, "unit": "GB" },
@@ -199,7 +199,7 @@ curl -X POST http://localhost:8081/organization.v1.ClusterService/UpdateCluster 
     "region": "eu-west-1",
     "kubernetesVersion": "1.29",
     "status": "CLUSTER_STATUS_UPGRADING",
-    "createdAt": "2025-01-15T10:30:00Z",
+    "created": "2025-01-15T10:30:00Z",
     "resourceUsage": { ... },
     "nodePools": [],
     "members": [],

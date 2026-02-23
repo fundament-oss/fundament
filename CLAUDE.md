@@ -1,5 +1,14 @@
-- Always use 'go generate ./...' in the in project or 'just generate' in the root of the project to generate stuff.
-- You are not allowed to edit the files in: @db/migrations/
-- You are not allowed to edit the file: @db/fundament.sql
+- Always use `go generate ./...` or `just generate` to generate/regenerate files.
+- You are not allowed to edit the files in: db/migrations/
+- You are not allowed to edit the file: db/fundament.sql
+- You are not allowed to use aliases in SQL queries
+- You are not allowed to use postgres enums, use check constraints instead
 - For frontend development, use `bun` as package manager instead of `npm`
 - For frontend development in console-frontend, check for existing predefined classes in `console-frontend/src/styles.css` and use those if applicable
+- When working on the database schema you should always edit db/fundament.dbm.
+- When working on the database, never generate a migration. We generate that with trek
+- Always read @funs to find our architecture decision records
+- when using pgmodeler to generate fundament.sql always use the --pgsql-ver 18.0 flag
+- Panic in switch default when all enum cases should be exhaustively handled.
+- We always use soft deletes, records will never be thrown away
+- In the Terraform provider, always set fields to `types.StringNull()` (or the appropriate null type) in the `else` branch when a value may be nil or invalid. Never leave a field unset.

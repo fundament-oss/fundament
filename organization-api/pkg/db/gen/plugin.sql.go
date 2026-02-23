@@ -14,8 +14,8 @@ import (
 
 const pluginCategoriesList = `-- name: PluginCategoriesList :many
 SELECT cp.plugin_id, c.id, c.name
-FROM zappstore.categories_plugins cp
-JOIN zappstore.categories c ON c.id = cp.category_id
+FROM appstore.categories_plugins cp
+JOIN appstore.categories c ON c.id = cp.category_id
 WHERE c.deleted IS NULL
 ORDER BY c.name
 `
@@ -48,8 +48,8 @@ func (q *Queries) PluginCategoriesList(ctx context.Context) ([]PluginCategoriesL
 
 const pluginCategoriesListByPluginID = `-- name: PluginCategoriesListByPluginID :many
 SELECT cp.plugin_id, c.id, c.name
-FROM zappstore.categories_plugins cp
-JOIN zappstore.categories c ON c.id = cp.category_id
+FROM appstore.categories_plugins cp
+JOIN appstore.categories c ON c.id = cp.category_id
 WHERE cp.plugin_id = $1 AND c.deleted IS NULL
 ORDER BY c.name
 `
@@ -86,7 +86,7 @@ func (q *Queries) PluginCategoriesListByPluginID(ctx context.Context, arg Plugin
 
 const pluginDocumentationLinksList = `-- name: PluginDocumentationLinksList :many
 SELECT id, plugin_id, title, url_name, url
-FROM zappstore.plugin_documentation_links
+FROM appstore.plugin_documentation_links
 WHERE plugin_id = $1
 ORDER BY title
 `
@@ -95,15 +95,15 @@ type PluginDocumentationLinksListParams struct {
 	PluginID uuid.UUID
 }
 
-func (q *Queries) PluginDocumentationLinksList(ctx context.Context, arg PluginDocumentationLinksListParams) ([]ZappstorePluginDocumentationLink, error) {
+func (q *Queries) PluginDocumentationLinksList(ctx context.Context, arg PluginDocumentationLinksListParams) ([]AppstorePluginDocumentationLink, error) {
 	rows, err := q.db.Query(ctx, pluginDocumentationLinksList, arg.PluginID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ZappstorePluginDocumentationLink
+	var items []AppstorePluginDocumentationLink
 	for rows.Next() {
-		var i ZappstorePluginDocumentationLink
+		var i AppstorePluginDocumentationLink
 		if err := rows.Scan(
 			&i.ID,
 			&i.PluginID,
@@ -123,7 +123,7 @@ func (q *Queries) PluginDocumentationLinksList(ctx context.Context, arg PluginDo
 
 const pluginGetByID = `-- name: PluginGetByID :one
 SELECT id, name, description_short, description, author_name, author_url, repository_url
-FROM zappstore.plugins
+FROM appstore.plugins
 WHERE id = $1 AND deleted IS NULL
 `
 
@@ -158,7 +158,7 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 
 const pluginList = `-- name: PluginList :many
 SELECT id, name, description_short, description
-FROM zappstore.plugins
+FROM appstore.plugins
 WHERE deleted IS NULL
 ORDER BY name
 `
@@ -197,8 +197,8 @@ func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
 
 const pluginTagsList = `-- name: PluginTagsList :many
 SELECT pt.plugin_id, t.id, t.name
-FROM zappstore.plugins_tags pt
-JOIN zappstore.tags t ON t.id = pt.tag_id
+FROM appstore.plugins_tags pt
+JOIN appstore.tags t ON t.id = pt.tag_id
 WHERE t.deleted IS NULL
 ORDER BY t.name
 `
@@ -231,8 +231,8 @@ func (q *Queries) PluginTagsList(ctx context.Context) ([]PluginTagsListRow, erro
 
 const pluginTagsListByPluginID = `-- name: PluginTagsListByPluginID :many
 SELECT pt.plugin_id, t.id, t.name
-FROM zappstore.plugins_tags pt
-JOIN zappstore.tags t ON t.id = pt.tag_id
+FROM appstore.plugins_tags pt
+JOIN appstore.tags t ON t.id = pt.tag_id
 WHERE pt.plugin_id = $1 AND t.deleted IS NULL
 ORDER BY t.name
 `

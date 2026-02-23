@@ -33,6 +33,7 @@ const (
 	ClusterStatus_CLUSTER_STATUS_ERROR        ClusterStatus = 5
 	ClusterStatus_CLUSTER_STATUS_STOPPING     ClusterStatus = 6
 	ClusterStatus_CLUSTER_STATUS_STOPPED      ClusterStatus = 7
+	ClusterStatus_CLUSTER_STATUS_DELETING     ClusterStatus = 8 // Cluster deletion in progress
 )
 
 // Enum value maps for ClusterStatus.
@@ -46,6 +47,7 @@ var (
 		5: "CLUSTER_STATUS_ERROR",
 		6: "CLUSTER_STATUS_STOPPING",
 		7: "CLUSTER_STATUS_STOPPED",
+		8: "CLUSTER_STATUS_DELETING",
 	}
 	ClusterStatus_value = map[string]int32{
 		"CLUSTER_STATUS_UNSPECIFIED":  0,
@@ -56,6 +58,7 @@ var (
 		"CLUSTER_STATUS_ERROR":        5,
 		"CLUSTER_STATUS_STOPPING":     6,
 		"CLUSTER_STATUS_STOPPED":      7,
+		"CLUSTER_STATUS_DELETING":     8,
 	}
 )
 
@@ -209,7 +212,7 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x04used\x18\n" +
 	" \x01(\x01R\x04used\x12\x14\n" +
 	"\x05total\x18\x14 \x01(\x01R\x05total\x12\x12\n" +
-	"\x04unit\x18\x1e \x01(\tR\x04unit*\xfa\x01\n" +
+	"\x04unit\x18\x1e \x01(\tR\x04unit*\x97\x02\n" +
 	"\rClusterStatus\x12\x1e\n" +
 	"\x1aCLUSTER_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bCLUSTER_STATUS_PROVISIONING\x10\x01\x12\x1b\n" +
@@ -218,7 +221,8 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x18CLUSTER_STATUS_UPGRADING\x10\x04\x12\x18\n" +
 	"\x14CLUSTER_STATUS_ERROR\x10\x05\x12\x1b\n" +
 	"\x17CLUSTER_STATUS_STOPPING\x10\x06\x12\x1a\n" +
-	"\x16CLUSTER_STATUS_STOPPED\x10\a*\x8f\x01\n" +
+	"\x16CLUSTER_STATUS_STOPPED\x10\a\x12\x1b\n" +
+	"\x17CLUSTER_STATUS_DELETING\x10\b*\x8f\x01\n" +
 	"\x0eNodePoolStatus\x12 \n" +
 	"\x1cNODE_POOL_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18NODE_POOL_STATUS_HEALTHY\x10\x01\x12\x1d\n" +

@@ -11,19 +11,23 @@ const (
 	ConstraintApiKeysUqName = "api_keys_uq_name"
 	// ConstraintApiKeysUqTokenHash is defined on authn.api_keys.
 	ConstraintApiKeysUqTokenHash = "api_keys_uq_token_hash"
-	// ConstraintCategoriesUqName is defined on zappstore.categories.
+	// ConstraintCategoriesUqName is defined on appstore.categories.
 	ConstraintCategoriesUqName = "categories_uq_name"
-	// ConstraintClustersCkStatus is defined on tenant.clusters.
-	ConstraintClustersCkStatus = "clusters_ck_status"
+	// ConstraintClusterEventsCkEventType is defined on tenant.cluster_events.
+	ConstraintClusterEventsCkEventType = "cluster_events_ck_event_type"
+	// ConstraintClusterEventsCkSyncAction is defined on tenant.cluster_events.
+	ConstraintClusterEventsCkSyncAction = "cluster_events_ck_sync_action"
+	// ConstraintClusterEventsFkCluster is defined on tenant.cluster_events.
+	ConstraintClusterEventsFkCluster = "cluster_events_fk_cluster"
 	// ConstraintClustersFkOrganization is defined on tenant.clusters.
 	ConstraintClustersFkOrganization = "clusters_fk_organization"
 	// ConstraintClustersUqName is defined on tenant.clusters.
 	ConstraintClustersUqName = "clusters_uq_name"
-	// ConstraintInstallsFkCluster is defined on zappstore.installs.
+	// ConstraintInstallsFkCluster is defined on appstore.installs.
 	ConstraintInstallsFkCluster = "installs_fk_cluster"
-	// ConstraintInstallsFkPlugin is defined on zappstore.installs.
+	// ConstraintInstallsFkPlugin is defined on appstore.installs.
 	ConstraintInstallsFkPlugin = "installs_fk_plugin"
-	// ConstraintInstallsUq is defined on zappstore.installs.
+	// ConstraintInstallsUq is defined on appstore.installs.
 	ConstraintInstallsUq = "installs_uq"
 	// ConstraintNamespacesCkName is defined on tenant.namespaces.
 	ConstraintNamespacesCkName = "namespaces_ck_name"
@@ -39,34 +43,72 @@ const (
 	ConstraintNodePoolsUqName = "node_pools_uq_name"
 	// ConstraintOrganizationsUqName is defined on tenant.organizations.
 	ConstraintOrganizationsUqName = "organizations_uq_name"
-	// ConstraintPluginDocumentationLinksFkPlugin is defined on zappstore.plugin_documentation_links.
+	// ConstraintOrganizationsUsersCkPermission is defined on tenant.organizations_users.
+	ConstraintOrganizationsUsersCkPermission = "organizations_users_ck_permission"
+	// ConstraintOrganizationsUsersCkStatus is defined on tenant.organizations_users.
+	ConstraintOrganizationsUsersCkStatus = "organizations_users_ck_status"
+	// ConstraintOrganizationsUsersFkOrganization is defined on tenant.organizations_users.
+	ConstraintOrganizationsUsersFkOrganization = "organizations_users_fk_organization"
+	// ConstraintOrganizationsUsersFkUser is defined on tenant.organizations_users.
+	ConstraintOrganizationsUsersFkUser = "organizations_users_fk_user"
+	// ConstraintOrganizationsUsersUqUser is defined on tenant.organizations_users.
+	ConstraintOrganizationsUsersUqUser = "organizations_users_uq_user"
+	// ConstraintOutboxCkSingleFk is defined on authz.outbox.
+	ConstraintOutboxCkSingleFk = "outbox_ck_single_fk"
+	// ConstraintOutboxCkStatus is defined on authz.outbox.
+	ConstraintOutboxCkStatus = "outbox_ck_status"
+	// ConstraintOutboxFkApiKey is defined on authz.outbox.
+	ConstraintOutboxFkApiKey = "outbox_fk_api_key"
+	// ConstraintOutboxFkCluster is defined on authz.outbox.
+	ConstraintOutboxFkCluster = "outbox_fk_cluster"
+	// ConstraintOutboxFkInstall is defined on authz.outbox.
+	ConstraintOutboxFkInstall = "outbox_fk_install"
+	// ConstraintOutboxFkNamespace is defined on authz.outbox.
+	ConstraintOutboxFkNamespace = "outbox_fk_namespace"
+	// ConstraintOutboxFkNodePool is defined on authz.outbox.
+	ConstraintOutboxFkNodePool = "outbox_fk_node_pool"
+	// ConstraintOutboxFkOrganizationUser is defined on authz.outbox.
+	ConstraintOutboxFkOrganizationUser = "outbox_fk_organization_user"
+	// ConstraintOutboxFkProject is defined on authz.outbox.
+	ConstraintOutboxFkProject = "outbox_fk_project"
+	// ConstraintOutboxFkProjectMember is defined on authz.outbox.
+	ConstraintOutboxFkProjectMember = "outbox_fk_project_member"
+	// ConstraintPluginDocumentationLinksFkPlugin is defined on appstore.plugin_documentation_links.
 	ConstraintPluginDocumentationLinksFkPlugin = "plugin_documentation_links_fk_plugin"
-	// ConstraintPluginsCategoriesCategoryId is defined on zappstore.categories_plugins.
+	// ConstraintPluginsCategoriesCategoryId is defined on appstore.categories_plugins.
 	ConstraintPluginsCategoriesCategoryId = "plugins_categories_category_id"
-	// ConstraintPluginsCategoriesPluginId is defined on zappstore.categories_plugins.
+	// ConstraintPluginsCategoriesPluginId is defined on appstore.categories_plugins.
 	ConstraintPluginsCategoriesPluginId = "plugins_categories_plugin_id"
-	// ConstraintPluginsPresetsPluginId is defined on zappstore.preset_plugins.
+	// ConstraintPluginsPresetsPluginId is defined on appstore.preset_plugins.
 	ConstraintPluginsPresetsPluginId = "plugins_presets_plugin_id"
-	// ConstraintPluginsPresetsPresetId is defined on zappstore.preset_plugins.
+	// ConstraintPluginsPresetsPresetId is defined on appstore.preset_plugins.
 	ConstraintPluginsPresetsPresetId = "plugins_presets_preset_id"
-	// ConstraintPluginsTagsPluginId is defined on zappstore.plugins_tags.
+	// ConstraintPluginsTagsPluginId is defined on appstore.plugins_tags.
 	ConstraintPluginsTagsPluginId = "plugins_tags_plugin_id"
-	// ConstraintPluginsTagsTagId is defined on zappstore.plugins_tags.
+	// ConstraintPluginsTagsTagId is defined on appstore.plugins_tags.
 	ConstraintPluginsTagsTagId = "plugins_tags_tag_id"
-	// ConstraintPluginsUqName is defined on zappstore.plugins.
+	// ConstraintPluginsUqName is defined on appstore.plugins.
 	ConstraintPluginsUqName = "plugins_uq_name"
-	// ConstraintPresetsUqName is defined on zappstore.presets.
+	// ConstraintPresetsUqName is defined on appstore.presets.
 	ConstraintPresetsUqName = "presets_uq_name"
+	// ConstraintProjectMembersCkRole is defined on tenant.project_members.
+	ConstraintProjectMembersCkRole = "project_members_ck_role"
+	// ConstraintProjectMembersFkProject is defined on tenant.project_members.
+	ConstraintProjectMembersFkProject = "project_members_fk_project"
+	// ConstraintProjectMembersFkUser is defined on tenant.project_members.
+	ConstraintProjectMembersFkUser = "project_members_fk_user"
+	// ConstraintProjectMembersUqProjectUser is defined on tenant.project_members.
+	ConstraintProjectMembersUqProjectUser = "project_members_uq_project_user"
 	// ConstraintProjectsFkOrganization is defined on tenant.projects.
 	ConstraintProjectsFkOrganization = "projects_fk_organization"
 	// ConstraintProjectsUqOrganizationName is defined on tenant.projects.
 	ConstraintProjectsUqOrganizationName = "projects_uq_organization_name"
-	// ConstraintTagsUqName is defined on zappstore.tags.
+	// ConstraintRequireAdmin is defined on (constraint trigger).
+	ConstraintRequireAdmin = "require_admin"
+	// ConstraintTagsUqName is defined on appstore.tags.
 	ConstraintTagsUqName = "tags_uq_name"
-	// ConstraintUsersFkOrganization is defined on tenant.users.
-	ConstraintUsersFkOrganization = "users_fk_organization"
-	// ConstraintUsersUqExternalId is defined on tenant.users.
-	ConstraintUsersUqExternalId = "users_uq_external_id"
+	// ConstraintUsersUqExternalRef is defined on tenant.users.
+	ConstraintUsersUqExternalRef = "users_uq_external_ref"
 	// ConstraintVerifyDeleted is defined on (constraint trigger).
 	ConstraintVerifyDeleted = "verify_deleted"
 )

@@ -1,47 +1,61 @@
-import {
-  Component,
-  inject,
-  OnInit,
-  signal,
-  ChangeDetectionStrategy,
-  viewChild,
-  ElementRef,
-  afterNextRender,
-  Injector,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { TitleService } from '../title.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerPlus,
-  tablerX,
   tablerTrash,
   tablerClockHour4,
   tablerMail,
   tablerAlertTriangle,
+  tablerX,
+  tablerInfoCircle,
+  tablerPencil,
+  tablerUsersGroup,
 } from '@ng-icons/tabler-icons';
-import { heroUserGroup } from '@ng-icons/heroicons/outline';
-import { AuthnApiService } from '../authn-api.service';
-import { MEMBER } from '../../connect/tokens';
+import { TitleService } from '../title.service';
+import AuthnApiService from '../authn-api.service';
+import { MEMBER, INVITE } from '../../connect/tokens';
+import ModalComponent from '../modal/modal.component';
+import { formatTimeAgo } from '../utils/date-format';
+
+const getInitials = (name: string): string =>
+  name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+const getAvatarColor = (name: string): string => {
+  const colors = [
+    'bg-indigo-600',
+    'bg-emerald-600',
+    'bg-purple-600',
+    'bg-rose-600',
+    'bg-amber-600',
+    'bg-cyan-600',
+  ];
+  const index = name.charCodeAt(0) % colors.length;
+  return colors[index];
+};
 
 interface OrganizationMember {
   id: string;
   name: string;
   email?: string;
-  externalId?: string;
-  role: string;
+  externalRef?: string;
+  permission: string;
+  status: string;
   isCurrentUser?: boolean;
-  isPending: boolean;
-  createdAt?: Date;
+  created?: Date;
 }
 
 @Component({
   selector: 'app-organization-members',
-  imports: [CommonModule, FormsModule, NgIcon],
+  imports: [FormsModule, NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -50,41 +64,64 @@ interface OrganizationMember {
       tablerClockHour4,
       tablerMail,
       tablerAlertTriangle,
-      heroUserGroup,
+      tablerInfoCircle,
+      tablerPencil,
+      tablerUsersGroup,
     }),
   ],
   templateUrl: './organization-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class OrganizationMembersComponent implements OnInit {
+export default class OrganizationMembersComponent implements OnInit {
   private titleService = inject(TitleService);
+
   private memberClient = inject(MEMBER);
+
+  private inviteClient = inject(INVITE);
+
   private authnService = inject(AuthnApiService);
-  private injector = inject(Injector);
 
   // Loading and error state
   isLoading = signal(true);
+
   error = signal<string | null>(null);
+
   isSubmitting = signal(false);
 
-  // Modal state
+  // Invite modal state
   isModalOpen = signal(false);
-  inviteEmail = signal('');
-  inviteRole = signal('viewer');
-  inviteError = signal<string | null>(null);
-  private emailInput = viewChild<ElementRef<HTMLInputElement>>('emailInput');
 
-  // All members loaded from API (includes both active and pending)
+  inviteEmail = signal('');
+
+  invitePermission = signal('viewer');
+
+  inviteError = signal<string | null>(null);
+
+  // Delete modal state
+  showDeleteModal = signal(false);
+
+  deletingMember = signal<OrganizationMember | null>(null);
+
+  // Edit modal state
+  showEditModal = signal(false);
+
+  editingMember = signal<OrganizationMember | null>(null);
+
+  editPermission = signal('viewer');
+
+  isUpdating = signal(false);
+
+  // All members loaded from API (includes pending, active, declined and revoked)
   allMembers = signal<OrganizationMember[]>([]);
 
-  // Computed: active members (have external_id)
+  // Computed: active members (have status accepted)
   get activeMembers(): OrganizationMember[] {
-    return this.allMembers().filter((m) => !m.isPending);
+    return this.allMembers().filter((m) => m.status === 'accepted');
   }
 
-  // Computed: pending invitations (no external_id)
+  // Computed: pending invitations (have status pending)
   get pendingInvitations(): OrganizationMember[] {
-    return this.allMembers().filter((m) => m.isPending);
+    return this.allMembers().filter((m) => m.status === 'pending');
   }
 
   constructor() {
@@ -107,17 +144,18 @@ export class OrganizationMembersComponent implements OnInit {
         id: member.id,
         name: member.name,
         email: member.email,
-        externalId: member.externalId,
-        role: member.role,
+        externalRef: member.externalRef,
+        permission: member.permission,
+        status: member.status,
         isCurrentUser: currentUser?.id === member.id,
-        isPending: !member.externalId,
-        createdAt: member.createdAt ? timestampDate(member.createdAt) : undefined,
+        created: member.created ? timestampDate(member.created) : undefined,
       }));
 
       this.allMembers.set(members);
     } catch (err) {
-      this.error.set('Failed to load members. Please try again.');
-      console.error('Failed to load members:', err);
+      this.error.set(
+        err instanceof Error ? `Failed to load members: ${err.message}` : 'Failed to load members',
+      );
     } finally {
       this.isLoading.set(false);
     }
@@ -125,15 +163,9 @@ export class OrganizationMembersComponent implements OnInit {
 
   openModal() {
     this.inviteEmail.set('');
-    this.inviteRole.set('viewer');
+    this.invitePermission.set('viewer');
     this.inviteError.set(null);
     this.isModalOpen.set(true);
-    afterNextRender(
-      () => {
-        this.emailInput()?.nativeElement.focus();
-      },
-      { injector: this.injector },
-    );
   }
 
   closeModal() {
@@ -151,11 +183,12 @@ export class OrganizationMembersComponent implements OnInit {
     this.inviteError.set(null);
 
     try {
-      await firstValueFrom(this.memberClient.inviteMember({ email, role: this.inviteRole() }));
+      await firstValueFrom(
+        this.inviteClient.inviteMember({ email, permission: this.invitePermission() }),
+      );
       this.closeModal();
       await this.loadMembers();
     } catch (err: unknown) {
-      console.error('Failed to invite member:', err);
       if (err instanceof ConnectError) {
         if (err.code === Code.AlreadyExists) {
           this.inviteError.set('This email address is already in use.');
@@ -177,48 +210,79 @@ export class OrganizationMembersComponent implements OnInit {
       await firstValueFrom(this.memberClient.deleteMember({ id }));
       await this.loadMembers();
     } catch (err) {
-      console.error('Failed to cancel invitation:', err);
-      this.error.set('Failed to cancel invitation. Please try again.');
+      this.error.set(
+        err instanceof Error
+          ? `Failed to cancel invitation: ${err.message}`
+          : 'Failed to cancel invitation',
+      );
     }
   }
 
-  formatTimeAgo(date: Date | undefined): string {
-    if (!date) {
-      return '';
+  openDeleteModal(member: OrganizationMember) {
+    this.deletingMember.set(member);
+    this.showDeleteModal.set(true);
+  }
+
+  async confirmDeleteMember() {
+    const member = this.deletingMember();
+    if (!member) return;
+
+    try {
+      await firstValueFrom(this.memberClient.deleteMember({ id: member.id }));
+      this.showDeleteModal.set(false);
+      this.deletingMember.set(null);
+      await this.loadMembers();
+    } catch (err) {
+      this.error.set(
+        err instanceof Error
+          ? `Failed to remove member: ${err.message}`
+          : 'Failed to remove member',
+      );
+      this.showDeleteModal.set(false);
+    }
+  }
+
+  openEditModal(member: OrganizationMember) {
+    this.editingMember.set(member);
+    this.editPermission.set(member.permission);
+    this.showEditModal.set(true);
+  }
+
+  async confirmEditMember() {
+    const member = this.editingMember();
+    if (!member) return;
+
+    const newPermission = this.editPermission();
+    if (newPermission === member.permission) {
+      this.showEditModal.set(false);
+      return;
     }
 
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    this.isUpdating.set(true);
 
-    if (diffDays === 0) {
-      return 'today';
-    } else if (diffDays === 1) {
-      return 'yesterday';
-    } else {
-      return `${diffDays} days ago`;
+    try {
+      // Re-invite with the new permission (delete + invite)
+      await firstValueFrom(this.memberClient.deleteMember({ id: member.id }));
+      const email = member.email || member.name;
+      await firstValueFrom(this.inviteClient.inviteMember({ email, permission: newPermission }));
+      this.showEditModal.set(false);
+      this.editingMember.set(null);
+      await this.loadMembers();
+    } catch (err) {
+      this.error.set(
+        err instanceof Error
+          ? `Failed to update member: ${err.message}`
+          : 'Failed to update member',
+      );
+      this.showEditModal.set(false);
+    } finally {
+      this.isUpdating.set(false);
     }
   }
 
-  getInitials(name: string): string {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  }
+  formatTimeAgo = formatTimeAgo;
 
-  getAvatarColor(name: string): string {
-    const colors = [
-      'bg-indigo-600',
-      'bg-emerald-600',
-      'bg-purple-600',
-      'bg-rose-600',
-      'bg-amber-600',
-      'bg-cyan-600',
-    ];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
-  }
+  getInitials = getInitials;
+
+  getAvatarColor = getAvatarColor;
 }

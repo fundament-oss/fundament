@@ -34,17 +34,17 @@ func (d *ProjectDataSource) Metadata(ctx context.Context, req datasource.Metadat
 // Schema defines the schema for the data source.
 func (d *ProjectDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Fetches a single project by ID.",
+		Description: "Fetches a single project by name.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "The unique identifier of the project to look up.",
-				Required:    true,
-			},
-			"name": schema.StringAttribute{
-				Description: "The name of the project.",
+				Description: "The unique identifier of the project.",
 				Computed:    true,
 			},
-			"created_at": schema.StringAttribute{
+			"name": schema.StringAttribute{
+				Description: "The name of the project to look up.",
+				Required:    true,
+			},
+			"created": schema.StringAttribute{
 				Description: "The timestamp when the project was created.",
 				Computed:    true,
 			},
@@ -88,35 +88,35 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	tflog.Debug(ctx, "Reading project", map[string]any{
-		"id": config.ID.ValueString(),
+		"name": config.Name.ValueString(),
 	})
 
-	getReq := connect.NewRequest(&organizationv1.GetProjectRequest{
-		ProjectId: config.ID.ValueString(),
+	getReq := connect.NewRequest(&organizationv1.GetProjectByNameRequest{
+		Name: config.Name.ValueString(),
 	})
 
-	getResp, err := d.client.ProjectService.GetProject(ctx, getReq)
+	getResp, err := d.client.ProjectService.GetProjectByName(ctx, getReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeNotFound:
 			resp.Diagnostics.AddError(
 				"Project Not Found",
-				fmt.Sprintf("Project with ID %q does not exist.", config.ID.ValueString()),
+				fmt.Sprintf("Project with name %q does not exist.", config.Name.ValueString()),
 			)
 		case connect.CodeInvalidArgument:
 			resp.Diagnostics.AddError(
-				"Invalid Project ID",
-				fmt.Sprintf("The project ID %q is not valid: %s", config.ID.ValueString(), err.Error()),
+				"Invalid Project Name",
+				fmt.Sprintf("The project name %q is not valid: %s", config.Name.ValueString(), err.Error()),
 			)
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				fmt.Sprintf("You do not have permission to access project %q.", config.ID.ValueString()),
+				fmt.Sprintf("You do not have permission to access project %q.", config.Name.ValueString()),
 			)
 		default:
 			resp.Diagnostics.AddError(
 				"Unable to Read Project",
-				fmt.Sprintf("Unable to read project with ID %q: %s", config.ID.ValueString(), err.Error()),
+				fmt.Sprintf("Unable to read project with name %q: %s", config.Name.ValueString(), err.Error()),
 			)
 		}
 		return
@@ -128,8 +128,8 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	config.ID = types.StringValue(project.Id)
 	config.Name = types.StringValue(project.Name)
 
-	if project.CreatedAt.CheckValid() == nil {
-		config.CreatedAt = types.StringValue(project.CreatedAt.String())
+	if project.Created.CheckValid() == nil {
+		config.Created = types.StringValue(project.Created.String())
 	}
 
 	tflog.Debug(ctx, "Read project successfully", map[string]any{

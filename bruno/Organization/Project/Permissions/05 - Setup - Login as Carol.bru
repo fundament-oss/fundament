@@ -1,0 +1,38 @@
+meta {
+  name: 05 - Setup - Login as Carol
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{authnUrl}}/login/password
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{user3}}",
+    "password": "password",
+    "return_to": ""
+  }
+}
+
+script:post-response {
+  if (res.headers['content-type']?.includes('application/json')) {
+    bru.setVar("carolToken", res.body.access_token);
+
+    // Extract the first organization ID from the JWT claims
+    var payload = JSON.parse(atob(res.body.access_token.split('.')[1]));
+    if (payload.organization_ids && payload.organization_ids.length > 0) {
+      bru.setVar("organizationId", payload.organization_ids[0]);
+    }
+  }
+}
+
+tests {
+  test("should login as carol successfully", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.access_token).to.be.a('string');
+  });
+}

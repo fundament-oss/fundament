@@ -17,10 +17,10 @@ const AuthCookieName = "fundament_auth"
 // Claims represents the JWT claims used across fundament services.
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID         uuid.UUID `json:"user_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Groups         []string  `json:"groups"`
-	Name           string    `json:"name"`
+	UserID          uuid.UUID   `json:"user_id"`
+	OrganizationIDs []uuid.UUID `json:"organization_ids"`
+	Groups          []string    `json:"groups"`
+	Name            string      `json:"name"`
 }
 
 // Validator handles JWT validation from HTTP headers.
@@ -97,7 +97,7 @@ func (v *Validator) validateToken(tokenString string) (*Claims, error) {
 		return nil, fmt.Errorf("invalid token claims")
 	}
 
-	v.logger.Debug("token validated", "user_id", claims.UserID, "organization_id", claims.OrganizationID)
+	v.logger.Debug("token validated", "user_id", claims.UserID, "organization_ids", claims.OrganizationIDs)
 	return claims, nil
 }
 

@@ -47,7 +47,8 @@
 /* Form validation */
 
 input.ng-invalid.ng-dirty:not([type='email']), /* Exclude email inputs to avoid instant validation while typing */
-input[type='email'].ng-invalid.ng-touched {
+input[type='email'].ng-invalid.ng-touched,
+input.validate-on-touch.ng-invalid.ng-touched {
   @apply border-rose-500 ring-rose-500 focus:border-rose-500;
 }
 
@@ -109,7 +110,7 @@ input[type='email'].ng-invalid.ng-touched {
 }
 
 .badge-gray {
-  @apply bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200;
+  @apply bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200;
 }
 
 .badge-emerald {
@@ -135,6 +136,7 @@ input[type='email'].ng-invalid.ng-touched {
 }
 
 input[type='text'],
+input[type='search'],
 input[type='number'],
 input[type='date'],
 input[type='email'],
@@ -145,6 +147,12 @@ textarea {
 
 select {
   @apply rounded-md border border-gray-300 text-sm ring-indigo-500 focus:border-indigo-500 focus:ring-1 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950;
+}
+
+/* Switch (toggle) styles */
+
+.switch {
+  @apply relative h-5 w-9 rounded-full bg-gray-200 peer-checked:bg-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-200 peer-focus:outline-none peer-disabled:opacity-60 after:absolute after:start-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full focus:ring-offset-2 rtl:peer-checked:after:-translate-x-full dark:bg-gray-800 dark:ring-offset-gray-950 dark:peer-focus:ring-indigo-800 dark:after:bg-gray-950;
 }
 
 /* Tab styles */
@@ -163,10 +171,60 @@ select {
   @apply border-b-white text-gray-700 dark:border-b-gray-950 dark:text-gray-200;
 }
 
+/* Breadcrumb styles */
+
+.breadcrumb {
+  @apply -mt-2 mb-4 flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400;
+}
+
+.breadcrumb a {
+  @apply hover:text-indigo-600 dark:hover:text-indigo-400;
+}
+
+.breadcrumb .error-message {
+  @apply cursor-pointer text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300;
+}
+
+/* Navigation link styles */
+
+.nav-link {
+  @apply flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800;
+}
+
+.nav-link.active {
+  @apply bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300;
+}
+
+/* Modal styles */
+
+.modal-backdrop {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50;
+}
+
+.modal-container {
+  @apply rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950;
+}
+
+.modal-header {
+  @apply mb-4 flex items-start justify-between;
+}
+
+.modal-title {
+  @apply text-xl font-semibold dark:text-white;
+}
+
+.modal-body {
+  @apply space-y-4;
+}
+
+.modal-footer {
+  @apply mt-6 flex justify-end space-x-3;
+}
+
 /* Table styles */
 
 .table-container {
-  @apply overflow-hidden rounded-md shadow ring-1 ring-gray-300 dark:ring-gray-700;
+  @apply overflow-x-auto rounded-md shadow ring-1 ring-gray-300 dark:ring-gray-700;
 }
 
 .table {
@@ -185,298 +243,10 @@ select {
   @apply divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950;
 }
 
-.table tbody tr {
+/* .table tbody tr {
   @apply hover:bg-gray-50 dark:hover:bg-gray-900;
-}
+} */
 
 .table tbody td {
   @apply px-6 py-3 text-sm whitespace-nowrap dark:text-gray-300;
 }
-
-/* Vanilla Calendar styles. Based on:
-https://github.com/uvarov-frontend/vanilla-calendar-pro/blob/main/package/src/styles/themes/light.css
-https://github.com/uvarov-frontend/vanilla-calendar-pro/blob/main/package/src/styles/themes/dark.css
-
-Note: somehow do not work as component-specific styles
-*/
-
-.vc {
-  @apply bg-white text-slate-900 dark:bg-slate-900 dark:text-white;
-}
-
-.vc[data-vc-input] {
-  @apply shadow-[0_9px_20px_rgba(0,0,0,.1)];
-}
-
-.vc:focus-visible,
-.vc button:focus-visible,
-.vc [tabindex='0']:focus-visible {
-  @apply outline-orange-300;
-}
-
-.vc-arrow {
-  @apply bg-transparent hover:before:opacity-60;
-}
-
-.vc-arrow:before {
-  background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzBmMTcyYSIgZD0iTTEyIDE2Yy0uMyAwLS41LS4xLS43LS4zbC02LTZjLS40LS40LS40LTEgMC0xLjRzMS0uNCAxLjQgMGw1LjMgNS4zIDUuMy01LjNjLjQtLjQgMS0uNCAxLjQgMHMuNCAxIDAgMS40bC02IDZjLS4yLjItLjQuMy0uNy4zIi8+PC9zdmc+);
-}
-
-.dark .vc-arrow:before {
-  background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDE2Yy0uMyAwLS41LS4xLS43LS4zbC02LTZjLS40LS40LS40LTEgMC0xLjRzMS0uNCAxLjQgMGw1LjMgNS4zIDUuMy01LjNjLjQtLjQgMS0uNCAxLjQgMHMuNCAxIDAgMS40bC02IDZjLS4yLjItLjQuMy0uNy4zIi8+PC9zdmc+);
-}
-
-.vc-header__content {
-  @apply text-slate-900 dark:text-white;
-}
-
-.vc-month,
-.vc-year {
-  @apply text-slate-900 hover:text-slate-500 disabled:text-slate-300 dark:text-white dark:disabled:text-slate-700 dark:disabled:opacity-80;
-}
-
-.vc-months__month,
-.vc-years__year {
-  @apply bg-white text-slate-500 hover:bg-slate-100 disabled:text-slate-300 disabled:hover:text-slate-300 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800 dark:disabled:text-slate-700 dark:disabled:opacity-80 dark:disabled:hover:text-slate-700;
-}
-
-.vc-months__month[data-vc-months-month-selected],
-.vc-years__year[data-vc-years-year-selected] {
-  @apply bg-cyan-500 text-white hover:bg-cyan-500 hover:text-white dark:bg-slate-500;
-}
-
-.vc-week-numbers__title {
-  @apply text-slate-500 dark:text-white;
-}
-
-.vc-week-number {
-  @apply text-slate-500 hover:text-slate-600 dark:text-white dark:hover:text-slate-300;
-}
-
-.vc-week__day {
-  @apply text-slate-500 dark:text-white;
-}
-
-button.vc-week__day {
-  @apply hover:text-slate-600 dark:hover:text-slate-300;
-}
-
-.vc-week__day[data-vc-week-day-off] {
-  @apply text-rose-500;
-}
-
-button.vc-week__day[data-vc-week-day-off] {
-  @apply hover:text-rose-600;
-}
-
-.vc-date[data-vc-date-selected='middle'][data-vc-date-weekend][data-vc-date-selected] .vc-date__btn,
-.vc-date[data-vc-date-selected='middle'][data-vc-date-holiday][data-vc-date-selected]
-  .vc-date__btn {
-  @apply bg-rose-500/70 text-white hover:bg-rose-500/70 hover:text-white dark:bg-rose-500/80 dark:hover:bg-rose-500/80;
-}
-
-.vc-date[data-vc-date-selected='middle'][data-vc-date-weekend][data-vc-date-month='prev'][data-vc-date-selected]
-  .vc-date__btn,
-.vc-date[data-vc-date-selected='middle'][data-vc-date-holiday][data-vc-date-month='prev'][data-vc-date-selected]
-  .vc-date__btn,
-.vc-date[data-vc-date-selected='middle'][data-vc-date-weekend][data-vc-date-month='next'][data-vc-date-selected]
-  .vc-date__btn,
-.vc-date[data-vc-date-selected='middle'][data-vc-date-holiday][data-vc-date-month='next'][data-vc-date-selected]
-  .vc-date__btn {
-  @apply bg-slate-200 text-slate-500 hover:bg-slate-200 hover:text-slate-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-300;
-}
-
-.vc-date[data-vc-date-selected='middle'][data-vc-date-selected] .vc-date__btn {
-  @apply bg-cyan-500/70 text-white hover:bg-cyan-500/70 hover:text-white dark:bg-cyan-500/80 dark:hover:bg-cyan-500/80;
-}
-
-.vc-date[data-vc-date-selected='middle'][data-vc-date-month='prev'][data-vc-date-selected]
-  .vc-date__btn,
-.vc-date[data-vc-date-selected='middle'][data-vc-date-month='next'][data-vc-date-selected]
-  .vc-date__btn {
-  @apply bg-slate-200 text-slate-500 hover:bg-slate-200 hover:text-slate-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-300;
-}
-
-.vc-date__btn {
-  @apply bg-white text-slate-900 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200;
-}
-
-.vc-date[data-vc-date-today] .vc-date__btn {
-  @apply bg-slate-100 text-cyan-500 hover:text-cyan-500 dark:bg-slate-800;
-}
-
-.vc-date[data-vc-date-today][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-today][data-vc-date-month='next'] .vc-date__btn {
-  @apply text-slate-500 dark:text-slate-600;
-}
-
-.vc-date[data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-month='next'] .vc-date__btn {
-  @apply text-slate-400 dark:text-slate-600;
-}
-
-.vc-date[data-vc-date-disabled] .vc-date__btn {
-  @apply text-slate-300 dark:text-slate-700 dark:opacity-80;
-}
-
-.vc-date[data-vc-date-hover] .vc-date__btn {
-  @apply bg-slate-100 dark:bg-slate-800;
-}
-
-.vc-date[data-vc-date-hover='last'] .vc-date__btn,
-.vc-date[data-vc-date-hover='first'] .vc-date__btn {
-  @apply bg-slate-200 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-700;
-}
-
-.vc-date[data-vc-date-weekend] .vc-date__btn,
-.vc-date[data-vc-date-holiday] .vc-date__btn {
-  @apply text-rose-500 hover:bg-rose-50 dark:hover:bg-slate-800;
-}
-
-.vc-date[data-vc-date-weekend][data-vc-date-hover] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-hover] .vc-date__btn {
-  @apply bg-rose-50 dark:bg-slate-800 dark:text-rose-500;
-}
-
-.vc-date[data-vc-date-weekend][data-vc-date-hover='last'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-hover='last'] .vc-date__btn,
-.vc-date[data-vc-date-weekend][data-vc-date-hover='first'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-hover='first'] .vc-date__btn {
-  @apply bg-rose-100 hover:bg-rose-100 dark:bg-slate-700 dark:hover:bg-slate-700;
-}
-
-.vc-date[data-vc-date-weekend][data-vc-date-disabled] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-disabled] .vc-date__btn {
-  @apply text-slate-300 dark:text-slate-700 dark:opacity-80;
-}
-
-.vc-date[data-vc-date-weekend][data-vc-date-today] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-today] .vc-date__btn {
-  @apply text-rose-500;
-}
-
-.vc-date[data-vc-date-weekend][data-vc-date-today][data-vc-date-disabled] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-today][data-vc-date-disabled] .vc-date__btn {
-  @apply text-slate-300 dark:text-slate-700;
-}
-
-.vc-date[data-vc-date-weekend][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-weekend][data-vc-date-month='next'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-month='next'] .vc-date__btn {
-  @apply bg-white text-slate-400 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300;
-}
-
-.vc-date[data-vc-date-weekend][data-vc-date-hover][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-hover][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-weekend][data-vc-date-hover][data-vc-date-month='next'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-hover][data-vc-date-month='next'] .vc-date__btn {
-  @apply bg-slate-100 dark:bg-slate-800;
-}
-
-.vc-date[data-vc-date-weekend][data-vc-date-today][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-today][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-weekend][data-vc-date-today][data-vc-date-month='next'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-today][data-vc-date-month='next'] .vc-date__btn {
-  @apply text-slate-400;
-}
-
-.vc-date[data-vc-date-weekend][data-vc-date-disabled][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-disabled][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-weekend][data-vc-date-disabled][data-vc-date-month='next'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-disabled][data-vc-date-month='next'] .vc-date__btn {
-  @apply text-slate-300 dark:text-slate-700 dark:opacity-80;
-}
-
-.vc-date[data-vc-date-weekend][data-vc-date-selected] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-selected] .vc-date__btn {
-  @apply bg-rose-500 text-white hover:bg-rose-500 hover:text-white;
-}
-
-.vc-date[data-vc-date-weekend][data-vc-date-selected][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-selected][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-weekend][data-vc-date-selected][data-vc-date-month='next'] .vc-date__btn,
-.vc-date[data-vc-date-holiday][data-vc-date-selected][data-vc-date-month='next'] .vc-date__btn {
-  @apply bg-slate-300 text-slate-500 hover:bg-slate-300 hover:text-slate-500 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-300;
-}
-
-.vc-date[data-vc-date-selected] .vc-date__btn {
-  @apply bg-cyan-500 text-white hover:bg-cyan-500 hover:text-white;
-}
-
-.vc-date[data-vc-date-selected][data-vc-date-month='prev'] .vc-date__btn,
-.vc-date[data-vc-date-selected][data-vc-date-month='next'] .vc-date__btn {
-  @apply bg-slate-300 text-slate-500 hover:bg-slate-300 hover:text-slate-500 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-300;
-}
-
-/* .vc-date__popup {
-  @apply bg-white text-slate-900 shadow-[0_3px_15px_rgba(85,85,85,0.2)] dark:bg-slate-800 dark:text-white dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.05)];
-}
-
-.vc-date-range-tooltip {
-  @apply bg-slate-50 text-slate-500 shadow-[0px_1px_4px_rgba(85,85,85,0.2)] dark:bg-slate-800 dark:text-slate-400 dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.05)];
-}
-
-.vc-time {
-  @apply border-slate-300 dark:border-slate-800;
-}
-
-.vc-time__hour,
-.vc-time__minute {
-  @apply after:text-slate-900 dark:after:text-white;
-}
-
-.vc-time__hour input,
-.vc-time__minute input {
-  @apply bg-white text-slate-900 hover:bg-orange-100 focus-visible:outline-orange-300 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-700;
-}
-
-.vc-time__hour input[data-vc-input-focus],
-.vc-time__minute input[data-vc-input-focus] {
-  @apply bg-orange-100 dark:bg-slate-700;
-}
-
-.vc-time__keeping {
-  @apply text-slate-500 hover:bg-orange-100 focus-visible:outline-orange-300 dark:hover:bg-slate-700 dark:hover:text-slate-400;
-}
-
-.vc-time__range input {
-  @apply bg-white dark:bg-slate-900;
-}
-
-.vc-time__range::before,
-.vc-time__range::after {
-  @apply bg-slate-300 dark:bg-slate-600;
-}
-
-.vc-time__range:hover input::-webkit-slider-thumb {
-  @apply border-slate-400;
-}
-
-.vc-time__range:hover input::-moz-range-thumb {
-  @apply border-slate-400;
-}
-
-.vc-time__range input:focus-visible::-webkit-slider-thumb {
-  @apply border-orange-300;
-}
-
-.vc-time__range input:focus-visible::-moz-range-thumb {
-  @apply border-orange-300;
-}
-
-.vc-time__range input::-webkit-slider-thumb {
-  @apply border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800;
-}
-
-.vc-time__range input::-moz-range-thumb {
-  @apply border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800;
-}
-
-.vc-time__range input::-webkit-slider-runnable-track {
-  @apply bg-slate-300 dark:bg-slate-600;
-}
-
-.vc-time__range input::-moz-range-track {
-  @apply bg-slate-300 dark:bg-slate-600;
-} */

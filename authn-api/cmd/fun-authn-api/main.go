@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
+	"connectrpc.com/validate"
 	"github.com/caarlos0/env/v11"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/rs/cors"
@@ -23,6 +24,7 @@ import (
 	"github.com/fundament-oss/fundament/authn-api/pkg/authn"
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
+	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )
@@ -33,15 +35,15 @@ type config struct {
 	OIDCIssuer         string        `env:"OIDC_ISSUER,required,notEmpty" envDefault:"http://localhost:5556"`
 	OIDCDiscoveryURL   string        `env:"OIDC_DISCOVERY_URL"` // URL to fetch OIDC discovery document (defaults to OIDCIssuer)
 	ClientID           string        `env:"OIDC_CLIENT_ID,required,notEmpty" envDefault:"authn-api"`
-	RedirectURL        string        `env:"OIDC_REDIRECT_URL,required,notEmpty" envDefault:"http://authn.127.0.0.1.nip.io:8080/callback"`
-	FrontendURL        string        `env:"FRONTEND_URL,required,notEmpty" envDefault:"http://console.127.0.0.1.nip.io:8080"`
-	CookieDomain       string        `env:"COOKIE_DOMAIN,required,notEmpty" envDefault:"localhost"`
+	RedirectURL        string        `env:"OIDC_REDIRECT_URL,required,notEmpty" envDefault:"http://authn.fundament.localhost:8080/callback"`
+	FrontendURL        string        `env:"FRONTEND_URL,required,notEmpty" envDefault:"http://console.fundament.localhost:8080"`
+	CookieDomain       string        `env:"COOKIE_DOMAIN,required,notEmpty" envDefault:"fundament.localhost"`
 	CookieSecure       bool          `env:"COOKIE_SECURE,required,notEmpty"`
 	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
 	ListenAddr         string        `env:"LISTEN_ADDR" envDefault:":8080"`
 	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,http://console.127.0.0.1.nip.io:8080"`
+	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,http://console.fundament.localhost:8080"`
 }
 
 func main() {
@@ -150,10 +152,17 @@ func run() error {
 		}),
 		logging.WithLogOnEvents(logging.FinishCall),
 	)
-	path, handler := authnv1connect.NewAuthnServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
+
+	interceptors := connect.WithInterceptors(
+		connectrecovery.NewInterceptor(logger),
+		validate.NewInterceptor(),
+		loggingInterceptor,
+	)
+
+	path, handler := authnv1connect.NewAuthnServiceHandler(server, interceptors)
 	mux.Handle(path, handler)
 
-	tokenPath, tokenHandler := authnv1connect.NewTokenServiceHandler(server, connect.WithInterceptors(loggingInterceptor))
+	tokenPath, tokenHandler := authnv1connect.NewTokenServiceHandler(server, interceptors)
 	mux.Handle(tokenPath, tokenHandler)
 
 	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)
