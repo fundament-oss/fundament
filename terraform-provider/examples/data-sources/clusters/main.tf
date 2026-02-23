@@ -7,8 +7,9 @@ terraform {
 }
 
 provider "fundament" {
-  endpoint = "http://organization.fundament.localhost:8080"
-  authn_endpoint = "http://authn.fundament.localhost:8080"
+  endpoint        = "http://organization.fundament.localhost:8080"
+  organization_id = "019b4000-0000-7000-8000-000000000002" # Globex
+  authn_endpoint  = "http://authn.fundament.localhost:8080"
   # Token can be set via FUNDAMENT_TOKEN environment variable
   # token = ""
 }

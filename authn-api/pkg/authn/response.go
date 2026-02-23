@@ -24,8 +24,3 @@ func (s *AuthnServer) writeErrorJSON(w http.ResponseWriter, status int, message 
 		s.logger.Error("failed to write JSON response", "error", err)
 	}
 }
-
-// ptr returns a pointer to the given value.
-func ptr[T any](v T) *T {
-	return &v
-}

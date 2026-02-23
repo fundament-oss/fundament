@@ -78,8 +78,17 @@ metadata:
     app.kubernetes.io/component: authn-api
   annotations:
     nginx.ingress.kubernetes.io/enable-cors: "false"
+    {{- if $.Values.ingress.tls.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
+    {{- end }}
 spec:
   ingressClassName: {{ $.Values.ingress.className }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  tls:
+    - hosts:
+        - authn.{{ $.Values.ingress.domain }}
+      secretName: {{ $.Release.Name }}-authn-api-tls
+  {{- end }}
   rules:
     - host: authn.{{ $.Values.ingress.domain }}
       http:

@@ -1,0 +1,123 @@
+package organization_test
+
+import (
+	"context"
+	"testing"
+
+	"connectrpc.com/connect"
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func Test_Member_Get_Unauthenticated(t *testing.T) {
+	t.Parallel()
+
+	env := newTestAPI(t)
+
+	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
+
+	_, err := client.GetMember(context.Background(), connect.NewRequest(&organizationv1.GetMemberRequest{
+		Lookup: &organizationv1.GetMemberRequest_Id{Id: uuid.New().String()},
+	}))
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeUnauthenticated, connectErr.Code())
+}
+
+func Test_Member_Get(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	callerUserID := uuid.New()
+	targetUserID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(callerUserID, "caller-user", []uuid.UUID{orgID}),
+		WithUser(targetUserID, "target-user", []uuid.UUID{orgID}),
+	)
+
+	token := env.createAuthnToken(t, callerUserID)
+
+	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
+
+	// List members to discover the target member's membership ID
+	listReq := connect.NewRequest(&organizationv1.ListMembersRequest{})
+	listReq.Header().Set("Authorization", "Bearer "+token)
+	listReq.Header().Set("Fun-Organization", orgID.String())
+
+	listRes, err := client.ListMembers(context.Background(), listReq)
+	require.NoError(t, err)
+
+	var targetMemberID string
+	for _, m := range listRes.Msg.Members {
+		if m.UserId == targetUserID.String() {
+			targetMemberID = m.Id
+			break
+		}
+	}
+	require.NotEmpty(t, targetMemberID, "target member not found in ListMembers response")
+
+	tests := map[string]struct {
+		Request  *organizationv1.GetMemberRequest
+		WantCode connect.Code
+		WantErr  bool
+	}{
+		"by_id_not_found": {
+			Request: &organizationv1.GetMemberRequest{
+				Lookup: &organizationv1.GetMemberRequest_Id{Id: uuid.New().String()},
+			},
+			WantCode: connect.CodeNotFound,
+			WantErr:  true,
+		},
+		"by_user_id_not_found": {
+			Request: &organizationv1.GetMemberRequest{
+				Lookup: &organizationv1.GetMemberRequest_UserId{UserId: uuid.New().String()},
+			},
+			WantCode: connect.CodeNotFound,
+			WantErr:  true,
+		},
+		"by_id_happy_flow": {
+			Request: &organizationv1.GetMemberRequest{
+				Lookup: &organizationv1.GetMemberRequest_Id{Id: targetMemberID},
+			},
+		},
+		"by_user_id_happy_flow": {
+			Request: &organizationv1.GetMemberRequest{
+				Lookup: &organizationv1.GetMemberRequest_UserId{UserId: targetUserID.String()},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			req := connect.NewRequest(tc.Request)
+			req.Header().Set("Authorization", "Bearer "+token)
+			req.Header().Set("Fun-Organization", orgID.String())
+
+			res, err := client.GetMember(context.Background(), req)
+
+			if tc.WantErr {
+				var connectErr *connect.Error
+				require.ErrorAs(t, err, &connectErr)
+				assert.Equal(t, tc.WantCode, connectErr.Code())
+				return
+			}
+
+			require.NoError(t, err)
+
+			member := res.Msg.Member
+			assert.Equal(t, targetMemberID, member.Id)
+			assert.Equal(t, targetUserID.String(), member.UserId)
+			assert.Equal(t, "target-user", member.Name)
+			assert.Equal(t, "admin", member.Permission)
+			assert.Equal(t, "accepted", member.Status)
+		})
+	}
+}
