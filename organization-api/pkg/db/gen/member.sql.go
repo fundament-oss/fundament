@@ -136,7 +136,6 @@ func (q *Queries) MemberGetByUserID(ctx context.Context, arg MemberGetByUserIDPa
 const memberList = `-- name: MemberList :many
 SELECT
     organizations_users.id,
-    organizations_users.user_id,
     organizations_users.organization_id,
     organizations_users.user_id,
     users.name,
@@ -155,7 +154,6 @@ ORDER BY organizations_users.created DESC
 
 type MemberListRow struct {
 	ID             uuid.UUID
-	UserID         uuid.UUID
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
 	Name           string
@@ -177,7 +175,6 @@ func (q *Queries) MemberList(ctx context.Context) ([]MemberListRow, error) {
 		var i MemberListRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.UserID,
 			&i.OrganizationID,
 			&i.UserID,
 			&i.Name,
