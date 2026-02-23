@@ -170,6 +170,8 @@ export type Member = Message<"organization.v1.Member"> & {
   id: string;
 
   /**
+   * user_id is the actual user ID (users.id), as opposed to id which is the membership record ID (organizations_users.id)
+   *
    * @generated from field: string user_id = 80;
    */
   userId: string;

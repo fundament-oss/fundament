@@ -3,11 +3,43 @@
   <div class="card-header">
     <h1 class="text-2xl font-bold dark:text-white">Project members</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-      Manage members and their roles for this project
+      Manage members and their permissions for this project
     </p>
   </div>
 
   <div class="p-6">
+    <!-- Info banner -->
+    <div
+      class="mb-6 flex items-start gap-3 rounded-md border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
+    >
+      <ng-icon
+        name="tablerInfoCircle"
+        size="1.25rem"
+        class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
+      />
+      <div class="text-sm text-indigo-700 dark:text-indigo-300">
+        <p class="mb-2">
+          Members marked with
+          <ng-icon name="tablerLock" size="0.875rem" /> inherit their permission from the
+          organization level and cannot be changed here. Modify these in
+          <a
+            [routerLink]="['/organization/members']"
+            class="font-medium text-indigo-600 underline hover:text-indigo-700 hover:no-underline dark:text-indigo-400 dark:hover:text-indigo-300"
+            >Organization members</a
+          >. Organization viewers can be upgraded to admin at the project level.
+        </p>
+        <p>
+          Permissions only give access to manage members. To control access to project resources,
+          configure
+          <a
+            [routerLink]="['/projects', projectId(), 'roles']"
+            class="font-medium text-indigo-600 underline hover:text-indigo-700 hover:no-underline dark:text-indigo-400 dark:hover:text-indigo-300"
+            >Roles</a
+          >.
+        </p>
+      </div>
+    </div>
+
     <button
       type="button"
       (click)="openAddMemberModal()"
@@ -17,7 +49,32 @@
       Add a member
     </button>
 
-    @if (members().length === 0) {
+    @if (error()) {
+      <div
+        class="mb-5 flex items-start gap-3 rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
+      >
+        <ng-icon name="tablerAlertTriangle" size="1.25rem" class="mt-0.5 shrink-0 text-rose-400!" />
+        <div class="flex-1">
+          <p class="text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
+        </div>
+        <button
+          type="button"
+          (click)="error.set(null)"
+          class="shrink-0 cursor-pointer text-sm text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
+        >
+          Dismiss
+        </button>
+      </div>
+    }
+
+    @if (isLoading()) {
+      <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
+        <div
+          class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"
+        ></div>
+        <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading members...</p>
+      </div>
+    } @else if (memberViews().length === 0) {
       <p class="text-sm text-gray-500 dark:text-gray-400">
         No members have been added to this project yet.
       </p>
@@ -26,42 +83,74 @@
         <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th width="50%" scope="col">Name</th>
-              <th width="30%" scope="col">Role</th>
+              <th width="40%" scope="col">Name</th>
+              <th width="20%" scope="col">Permission</th>
+              <th width="20%" scope="col">Source</th>
               <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
-            @for (member of members(); track member.id) {
+            @for (view of memberViews(); track view.member.id) {
               <tr>
-                <td class="font-medium dark:text-white">
-                  {{ member.name }}
+                <td>
+                  <div class="font-medium dark:text-white">{{ view.member.userName }}</div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                    Added to project {{ formatMemberDate(view.member) }}
+                  </div>
                 </td>
                 <td>
                   <span
-                    class="badge"
-                    [class.badge-purple]="member.role === 'admin'"
-                    [class.badge-blue]="member.role === 'viewer'"
+                    class="badge capitalize"
+                    [class.badge-purple]="view.member.role === ProjectMemberRole.ADMIN"
+                    [class.badge-blue]="view.member.role === ProjectMemberRole.VIEWER"
                   >
-                    {{ member.role }}
+                    {{ roleToString(view.member.role) }}
                   </span>
                 </td>
                 <td>
-                  <button
-                    type="button"
-                    (click)="openEditMemberModal(member)"
-                    class="btn-light mr-2 inline-flex shrink-0 items-center"
-                  >
-                    <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
-                  </button>
-
-                  <button
-                    type="button"
-                    (click)="openRemoveMemberModal(member.id)"
-                    class="btn-remove shrink-0"
-                  >
-                    <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
-                  </button>
+                  @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
+                    <span
+                      class="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400"
+                    >
+                      <ng-icon name="tablerLock" size="0.875rem" />
+                      Organization
+                    </span>
+                  } @else if (view.source === 'org') {
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Organization</span>
+                  } @else {
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Project</span>
+                  }
+                </td>
+                <td>
+                  @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
+                    <!-- Org admin: locked, no actions -->
+                    <span class="text-sm text-gray-400 dark:text-gray-600">&mdash;</span>
+                  } @else {
+                    <button
+                      type="button"
+                      (click)="openEditMemberModal(view)"
+                      class="btn-light mr-2 inline-flex shrink-0 items-center"
+                    >
+                      <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
+                    </button>
+                    @if (view.source === 'project' && view.orgPermission !== null) {
+                      <button
+                        type="button"
+                        (click)="resetToOrgDefault(view)"
+                        class="btn-remove shrink-0"
+                      >
+                        <ng-icon name="tablerArrowBackUp" class="mr-1.5" /> Reset
+                      </button>
+                    } @else if (view.source === 'project') {
+                      <button
+                        type="button"
+                        (click)="openRemoveMemberModal(view)"
+                        class="btn-remove shrink-0"
+                      >
+                        <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
+                      </button>
+                    }
+                  }
                 </td>
               </tr>
             }
@@ -75,13 +164,13 @@
 <!-- Add/Edit Member Modal -->
 <app-modal
   [show]="showAddMemberModal()"
-  [title]="editingMember() ? 'Edit member' : 'Add member to project'"
+  [title]="editingMemberView() ? 'Edit member' : 'Add member to project'"
   [maxWidth]="'max-w-lg'"
   (modalClose)="showAddMemberModal.set(false)"
 >
   <form [formGroup]="memberForm" (ngSubmit)="saveMember()">
     <!-- User Selection (only show when adding) -->
-    @if (!editingMember()) {
+    @if (!editingMemberView()) {
       <div class="mb-4">
         <label for="userId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
           User
@@ -89,7 +178,7 @@
         <select id="userId" formControlName="userId" class="w-full">
           <option value="">Select a user</option>
           @for (user of availableUsers(); track user.id) {
-            <option [value]="user.id">{{ user.name }} ({{ user.email }})</option>
+            <option [value]="user.id">{{ user.name }}</option>
           }
         </select>
         @if (availableUsers().length === 0) {
@@ -105,23 +194,52 @@
     }
 
     <!-- Member name (only show when editing) -->
-    @if (editingMember()) {
+    @if (editingMemberView()) {
       <div class="mb-4">
         <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"> Member </span>
-        <p class="text-sm dark:text-white">{{ editingMember()?.name }}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400">{{ editingMember()?.email }}</p>
+        <p class="text-sm dark:text-white">{{ editingMemberView()?.member?.userName }}</p>
       </div>
     }
 
-    <!-- Role Selection -->
+    <!-- Permissions Selection -->
     <div class="mb-4">
-      <label for="role" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-        Role
-      </label>
-      <select id="role" formControlName="role" class="w-full">
-        <option value="viewer">Project member - Read access to project resources</option>
-        <option value="admin">Project admin - Full access to project resources</option>
-      </select>
+      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
+      <div class="space-y-2">
+        <label
+          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+        >
+          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
+            <input
+              name="permission"
+              type="radio"
+              value="viewer"
+              formControlName="permission"
+              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+            />
+            Project viewer
+          </span>
+          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+            Read access to project resources
+          </span>
+        </label>
+        <label
+          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+        >
+          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
+            <input
+              name="permission"
+              type="radio"
+              value="admin"
+              formControlName="permission"
+              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+            />
+            Project admin
+          </span>
+          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+            Full access to project resources
+          </span>
+        </label>
+      </div>
     </div>
 
     <div modal-footer class="modal-footer">
@@ -136,11 +254,11 @@
       <button
         type="submit"
         class="btn-primary"
-        [disabled]="isAddingMember() || (!editingMember() && !memberForm.valid)"
+        [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
       >
         @if (isAddingMember()) {
           Saving...
-        } @else if (editingMember()) {
+        } @else if (editingMemberView()) {
           Save changes
         } @else {
           Add member
@@ -171,7 +289,9 @@
       <div class="mt-2">
         <p class="text-sm text-gray-600 dark:text-gray-400">
           Are you sure you want to remove
-          <span class="font-semibold text-gray-800 dark:text-white">{{ pendingMemberName() }}</span>
+          <span class="font-semibold text-gray-800 dark:text-white">{{
+            pendingRemoveView()?.member?.userName
+          }}</span>
           from this project?
         </p>
       </div>

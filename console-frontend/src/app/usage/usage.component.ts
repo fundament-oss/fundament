@@ -8,7 +8,6 @@ import {
   signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
@@ -64,7 +63,7 @@ function getUsageColor(percentage: number): string {
 
 @Component({
   selector: 'app-usage',
-  imports: [CommonModule, FormsModule, DateRangePickerComponent, NgIcon],
+  imports: [FormsModule, DateRangePickerComponent, NgIcon],
   viewProviders: [
     provideIcons({
       tablerTableDown,

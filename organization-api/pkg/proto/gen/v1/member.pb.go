@@ -371,10 +371,11 @@ func (x *UpdateMemberPermissionRequest) GetPermission() string {
 
 // Member information
 type Member struct {
-	state  protoimpl.MessageState `protogen:"open.v1"`
-	Id     string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	UserId string                 `protobuf:"bytes,80,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Name   string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	// user_id is the actual user ID (users.id), as opposed to id which is the membership record ID (organizations_users.id)
+	UserId string `protobuf:"bytes,80,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Name   string `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
 	// external_ref is empty for pending invitations
 	ExternalRef *string `protobuf:"bytes,30,opt,name=external_ref,json=externalRef,proto3,oneof" json:"external_ref,omitempty"`
 	// email is set for invited members

@@ -10,13 +10,12 @@ import {
   ChangeDetectionStrategy,
   ViewEncapsulation,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Calendar } from 'vanilla-calendar-pro';
 import 'vanilla-calendar-pro/styles/layout.css';
 
 @Component({
   selector: 'app-date-range-picker',
-  imports: [CommonModule],
+  imports: [],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   templateUrl: './date-range-picker.component.html',

@@ -17,7 +17,6 @@ import {
   ActivatedRouteSnapshot,
 } from '@angular/router';
 import { filter, skip } from 'rxjs/operators';
-import { CommonModule } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerCircleCheck,
@@ -39,6 +38,7 @@ import {
   tablerChevronRight,
   tablerBuilding,
   tablerBracketsContain,
+  tablerUserCog,
 } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { firstValueFrom } from 'rxjs';
@@ -66,7 +66,6 @@ const reloadApp = () => {
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
-    CommonModule,
     SelectorModalComponent,
     OrgPickerComponent,
     FundamentLogoIconComponent,
@@ -96,6 +95,7 @@ const reloadApp = () => {
       tablerChevronRight,
       tablerBuilding,
       tablerBracketsContain,
+      tablerUserCog,
     }),
   ],
   host: {
@@ -406,6 +406,16 @@ export default class App implements OnInit {
       this.router.url === '/' ||
       this.router.url.startsWith('/clusters/') ||
       this.router.url.startsWith('/add-cluster')
+    );
+  }
+
+  // Check if current route is project members or roles
+  isMembersActive(): boolean {
+    const projectId = this.selectedProjectId();
+    if (!projectId) return false;
+    return (
+      this.router.url.startsWith(`/projects/${projectId}/members`) ||
+      this.router.url.startsWith(`/projects/${projectId}/roles`)
     );
   }
 

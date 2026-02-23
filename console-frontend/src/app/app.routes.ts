@@ -109,6 +109,14 @@ const routes: Routes = [
         },
       },
       {
+        path: 'projects/:id/roles',
+        loadComponent: () =>
+          import('./project-roles/project-roles.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Roles' }],
+        },
+      },
+      {
         path: 'clusters/:id',
         loadComponent: () =>
           import('./cluster-details/cluster-details.component').then((m) => m.default),

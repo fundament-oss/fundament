@@ -1,5 +1,4 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerArrowRight } from '@ng-icons/tabler-icons';
@@ -12,7 +11,7 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
 
 @Component({
   selector: 'app-add-cluster-nodes',
-  imports: [CommonModule, SharedNodePoolsFormComponent, RouterLink, NgIcon],
+  imports: [SharedNodePoolsFormComponent, RouterLink, NgIcon],
   viewProviders: [
     provideIcons({
       tablerArrowRight,

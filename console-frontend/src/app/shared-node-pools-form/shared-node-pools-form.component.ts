@@ -10,7 +10,6 @@ import {
   inject,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
   FormBuilder,
@@ -32,7 +31,7 @@ export interface NodePoolData {
 
 @Component({
   selector: 'app-shared-node-pools-form',
-  imports: [CommonModule, ReactiveFormsModule, NgIcon],
+  imports: [ReactiveFormsModule, NgIcon],
   viewProviders: [
     provideIcons({
       tablerTrash,
