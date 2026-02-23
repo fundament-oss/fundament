@@ -2,6 +2,7 @@ package organization_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -37,7 +38,7 @@ func Test_InviteMember_NewUser(t *testing.T) {
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
-		WithUser(userID, "test-user", "", []uuid.UUID{orgID}),
+		WithUser(userID, "test-user", "", "", []uuid.UUID{orgID}),
 	)
 
 	token := env.createAuthnToken(t, userID)
@@ -68,13 +69,12 @@ func Test_InviteMember_ExistingUser(t *testing.T) {
 	orgAID := uuid.New()
 	orgBID := uuid.New()
 	userID := uuid.New()
-	userID2 := uuid.New()
 
 	env := newTestAPI(t,
 		WithOrganization(orgAID, "test-org-a"),
 		WithOrganization(orgBID, "test-org-b"),
-		WithUser(userID, "test-user", "", []uuid.UUID{orgAID}),
-		WithUser(userID2, "second-user", "foo@bar.baz", []uuid.UUID{orgBID}),
+		WithUser(userID, "test-user", "", fmt.Sprintf("ext_%s", userID), []uuid.UUID{orgAID}),
+		WithUser(uuid.New(), "second-user", "foo@bar.baz", "", []uuid.UUID{orgBID}),
 	)
 
 	token := env.createAuthnToken(t, userID)

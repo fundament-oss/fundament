@@ -30,9 +30,10 @@ type testEnv struct {
 }
 
 type testUser struct {
-	Name   string
-	Email  string
-	OrgIDs []uuid.UUID
+	Name        string
+	Email       string
+	ExternalRef string
+	OrgIDs      []uuid.UUID
 }
 
 type APIOptions struct {
@@ -50,14 +51,14 @@ func WithOrganization(id uuid.UUID, name string) APIOption {
 	}
 }
 
-func WithUser(id uuid.UUID, name string, email string, orgIDs []uuid.UUID) APIOption {
+func WithUser(id uuid.UUID, name, email, externalRef string, orgIDs []uuid.UUID) APIOption {
 	return func(o *APIOptions) {
 		_, exists := o.Users[id]
 		if exists {
 			o.T.Fatalf("WithUser: duplicate user ID %q", id)
 		}
 
-		o.Users[id] = testUser{Name: name, Email: email, OrgIDs: orgIDs}
+		o.Users[id] = testUser{Name: name, Email: email, OrgIDs: orgIDs, ExternalRef: externalRef}
 	}
 }
 
@@ -106,10 +107,9 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	}
 
 	for id, user := range opts.Users {
-		externalRef := "external_ref_" + uuid.New().String()
 		_, err = testDb.Pool.Exec(t.Context(),
 			"INSERT INTO tenant.users (id, name, external_ref, email) VALUES ($1, $2, $3, $4)",
-			id, user.Name, externalRef, user.Email,
+			id, user.Name, user.ExternalRef, user.Email,
 		)
 		require.NoError(t, err)
 
