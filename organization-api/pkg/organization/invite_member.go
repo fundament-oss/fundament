@@ -83,7 +83,7 @@ func (s *Server) InviteMember(
 func memberFromInviteRow(email string, m *db.InviteCreateMembershipRow, userName string, userExternalRef *string) *organizationv1.Member {
 	return &organizationv1.Member{
 		Id:          m.ID.String(),
-		UserId:     m.UserID.String(),
+		UserId:      m.UserID.String(),
 		Name:        userName,
 		ExternalRef: userExternalRef,
 		Email:       &email,
