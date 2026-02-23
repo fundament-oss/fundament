@@ -38,7 +38,7 @@ func Test_InviteMember_NewUser(t *testing.T) {
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
-		WithUser(userID, "test-user", "", "", []uuid.UUID{orgID}),
+		WithUser(userID, "test-user", "", nil, []uuid.UUID{orgID}),
 	)
 
 	token := env.createAuthnToken(t, userID)
@@ -60,7 +60,7 @@ func Test_InviteMember_NewUser(t *testing.T) {
 	assert.Equal(t, "foo@bar.baz", *res.Msg.Member.Email)
 	assert.Nil(t, res.Msg.Member.ExternalRef)
 	assert.Equal(t, "", res.Msg.Member.Name)
-	assert.Equal(t, "", res.Msg.Member.Status)
+	assert.Equal(t, "pending", res.Msg.Member.Status)
 }
 
 func Test_InviteMember_ExistingUser(t *testing.T) {
@@ -69,12 +69,15 @@ func Test_InviteMember_ExistingUser(t *testing.T) {
 	orgAID := uuid.New()
 	orgBID := uuid.New()
 	userID := uuid.New()
+	userID2 := uuid.New()
+
+	externalRef := fmt.Sprintf("ext_%s", userID2.String())
 
 	env := newTestAPI(t,
 		WithOrganization(orgAID, "test-org-a"),
 		WithOrganization(orgBID, "test-org-b"),
-		WithUser(userID, "test-user", "", fmt.Sprintf("ext_%s", userID), []uuid.UUID{orgAID}),
-		WithUser(uuid.New(), "second-user", "foo@bar.baz", "", []uuid.UUID{orgBID}),
+		WithUser(userID, "test-user", "", nil, []uuid.UUID{orgAID}),
+		WithUser(userID2, "second-user", "foo@bar.baz", &externalRef, []uuid.UUID{}),
 	)
 
 	token := env.createAuthnToken(t, userID)
@@ -91,12 +94,10 @@ func Test_InviteMember_ExistingUser(t *testing.T) {
 	res, err := client.InviteMember(context.Background(), req)
 	require.NoError(t, err)
 
-	// I expect userB to be added, instead the test fails with
-	// 'permission_denied: user is not a member of organization 7fdf4b0a-113a-49dc-bacf-4a740081a320' (=orgA)
 	require.NotNil(t, res.Msg.Member)
 	assert.Equal(t, "viewer", res.Msg.Member.Permission)
 	assert.Equal(t, "foo@bar.baz", *res.Msg.Member.Email)
-	assert.Nil(t, res.Msg.Member.ExternalRef)
-	assert.Equal(t, "", res.Msg.Member.Name)
-	assert.Equal(t, "", res.Msg.Member.Status)
+	assert.Equal(t, &externalRef, res.Msg.Member.ExternalRef)
+	assert.Equal(t, "second-user", res.Msg.Member.Name)
+	assert.Equal(t, "pending", res.Msg.Member.Status)
 }

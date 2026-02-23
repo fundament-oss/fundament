@@ -34,7 +34,11 @@ func (s *Server) InviteMember(
 	permission := req.Msg.GetPermission()
 
 	// Find existing user by email, or create a new one
-	var userID uuid.UUID
+	var (
+		userID          uuid.UUID
+		userName        string
+		userExternalRef *string
+	)
 
 	existingUser, err := s.queries.UserFindByEmail(ctx, db.UserFindByEmailParams{Email: email})
 	if err != nil {
@@ -50,6 +54,11 @@ func (s *Server) InviteMember(
 		userID = newUser.ID
 	} else {
 		userID = existingUser.ID
+		userName = existingUser.Name
+
+		if existingUser.ExternalRef.Valid {
+			userExternalRef = &existingUser.ExternalRef.String
+		}
 	}
 
 	// Create the organization membership
@@ -67,17 +76,20 @@ func (s *Server) InviteMember(
 	}
 
 	return connect.NewResponse(organizationv1.InviteMemberResponse_builder{
-		Member: memberFromInviteRow(email, &membershipRow),
+		Member: memberFromInviteRow(email, &membershipRow, userName, userExternalRef),
 	}.Build()), nil
 }
 
-func memberFromInviteRow(email string, m *db.InviteCreateMembershipRow) *organizationv1.Member {
+func memberFromInviteRow(email string, m *db.InviteCreateMembershipRow, userName string, userExternalRef *string) *organizationv1.Member {
 	member := organizationv1.Member_builder{
-		Id:         m.ID.String(),
+		Id:          m.ID.String(),
 		UserId:     m.UserID.String(),
-		Email:      &email,
-		Permission: string(m.Permission),
-		Created:    timestamppb.New(m.Created.Time),
+		Name:        userName,
+		ExternalRef: userExternalRef,
+		Email:       &email,
+		Permission:  string(m.Permission),
+		Status:      string(m.Status),
+		Created:     timestamppb.New(m.Created.Time),
 	}.Build()
 	return member
 }
