@@ -101,3 +101,41 @@ func Test_InviteMember_ExistingUser(t *testing.T) {
 	assert.Equal(t, "second-user", res.Msg.Member.Name)
 	assert.Equal(t, "pending", res.Msg.Member.Status)
 }
+
+func Test_InviteMember_ExistingUser_AlreadyMember(t *testing.T) {
+	t.Parallel()
+
+	orgAID := uuid.New()
+	orgBID := uuid.New()
+	userID := uuid.New()
+	userID2 := uuid.New()
+
+	externalRef := fmt.Sprintf("ext_%s", userID2.String())
+
+	env := newTestAPI(t,
+		WithOrganization(orgAID, "test-org-a"),
+		WithOrganization(orgBID, "test-org-b"),
+		WithUser(userID, "test-user", "", nil, []uuid.UUID{orgAID}),
+		WithUser(userID2, "second-user", "foo@bar.baz", &externalRef, []uuid.UUID{}),
+	)
+
+	token := env.createAuthnToken(t, userID)
+
+	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
+
+	req := connect.NewRequest(&organizationv1.InviteMemberRequest{
+		Email:      "foo@bar.baz",
+		Permission: "viewer",
+	})
+	req.Header().Set("Authorization", "Bearer "+token)
+	req.Header().Set("Fun-Organization", orgAID.String())
+
+	_, err := client.InviteMember(context.Background(), req)
+	require.NoError(t, err)
+
+	_, err = client.InviteMember(context.Background(), req)
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeAlreadyExists, connectErr.Code())
+}
