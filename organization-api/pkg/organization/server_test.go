@@ -36,6 +36,7 @@ type testUser struct {
 }
 
 type APIOptions struct {
+	T             testing.TB
 	Organizations map[uuid.UUID]string
 	Users         map[uuid.UUID]testUser
 	Clock         clock.Clock
@@ -51,6 +52,11 @@ func WithOrganization(id uuid.UUID, name string) APIOption {
 
 func WithUser(id uuid.UUID, name string, email string, orgIDs []uuid.UUID) APIOption {
 	return func(o *APIOptions) {
+		_, exists := o.Users[id]
+		if exists {
+			o.T.Fatalf("WithUser: duplicate user ID %q", id)
+		}
+
 		o.Users[id] = testUser{Name: name, Email: email, OrgIDs: orgIDs}
 	}
 }
@@ -63,6 +69,7 @@ func WithClock(c clock.Clock) APIOption {
 
 func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	opts := APIOptions{
+		T:             t,
 		Organizations: make(map[uuid.UUID]string),
 		Users:         make(map[uuid.UUID]testUser),
 	}
