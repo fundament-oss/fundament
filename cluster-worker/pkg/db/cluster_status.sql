@@ -1,3 +1,5 @@
+-- Queries used by the cluster handler's CheckStatus method.
+
 -- name: ClusterListNeedingStatusCheck :many
 -- Get clusters where we need to check Gardener status (active clusters).
 -- Polls clusters in non-terminal states: NULL (never checked), pending, progressing, error.
