@@ -161,9 +161,23 @@ CREATE UNIQUE INDEX cluster_outbox_pk ON tenant.cluster_outbox USING btree (id);
 
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_pk" PRIMARY KEY USING INDEX "cluster_outbox_pk";
 
+CREATE INDEX cluster_outbox_idx_cluster_id ON tenant.cluster_outbox USING btree (cluster_id);
+
+CREATE INDEX cluster_outbox_idx_namespace_id ON tenant.cluster_outbox USING btree (namespace_id);
+
+CREATE INDEX cluster_outbox_idx_project_id ON tenant.cluster_outbox USING btree (project_id);
+
+CREATE INDEX cluster_outbox_idx_project_member_id ON tenant.cluster_outbox USING btree (project_member_id);
+
 CREATE INDEX cluster_outbox_status_retry_idx ON tenant.cluster_outbox USING btree (status, retry_after, id);
 
 CREATE TRIGGER cluster_outbox_notify AFTER INSERT ON tenant.cluster_outbox FOR EACH ROW EXECUTE FUNCTION tenant.cluster_outbox_notify();
+
+CREATE TRIGGER cluster_outbox_cluster AFTER INSERT OR UPDATE ON tenant.clusters FOR EACH ROW EXECUTE FUNCTION tenant.cluster_outbox_cluster_trigger();
+
+ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_fk_cluster" FOREIGN KEY (cluster_id) REFERENCES tenant.clusters(id) NOT VALID;
+
+ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_fk_cluster";
 
 CREATE TRIGGER cluster_outbox_namespace AFTER INSERT OR UPDATE ON tenant.namespaces FOR EACH ROW EXECUTE FUNCTION tenant.cluster_outbox_namespace_trigger();
 
@@ -220,11 +234,6 @@ ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_fk_project"
 
 ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_fk_project";
 
-CREATE TRIGGER cluster_outbox_cluster AFTER INSERT OR UPDATE ON tenant.clusters FOR EACH ROW EXECUTE FUNCTION tenant.cluster_outbox_cluster_trigger();
-
-ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_fk_cluster" FOREIGN KEY (cluster_id) REFERENCES tenant.clusters(id) NOT VALID;
-
-ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_fk_cluster";
 
 -- Statements generated automatically, please review:
 ALTER FUNCTION tenant.cluster_outbox_cluster_trigger() OWNER TO fun_owner;
