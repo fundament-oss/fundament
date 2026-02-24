@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
@@ -25,16 +24,14 @@ type Config struct {
 
 // Handler manages cluster lifecycle in Gardener (sync, status, orphan cleanup).
 type Handler struct {
-	pool     *pgxpool.Pool
 	queries  *db.Queries
 	gardener gardener.Client
 	logger   *slog.Logger
 	cfg      Config
 }
 
-func New(pool *pgxpool.Pool, gardenerClient gardener.Client, logger *slog.Logger, cfg Config) *Handler {
+func New(pool db.DBTX, gardenerClient gardener.Client, logger *slog.Logger, cfg Config) *Handler {
 	return &Handler{
-		pool:     pool,
 		queries:  db.New(pool),
 		gardener: gardenerClient,
 		logger:   logger.With("handler", "cluster"),
@@ -280,6 +277,8 @@ func (h *Handler) pollActiveClusters(ctx context.Context) {
 				// No event for these transient states
 			case gardener.StatusDeleted:
 				// Handled in pollDeletedClusters
+			default:
+				h.logger.Warn("unhandled ShootStatusType", "status", shootStatus.Status, "cluster_id", cluster.ID)
 			}
 
 			if eventType != "" {

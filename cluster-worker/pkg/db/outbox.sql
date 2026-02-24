@@ -38,6 +38,7 @@ RETURNING retries;
 
 -- name: OutboxInsertReconcile :exec
 -- Conditional insert that avoids flooding the outbox when a pending/retrying row already exists.
+-- TODO: not safe under concurrent callers — add a partial unique index and ON CONFLICT DO NOTHING if needed.
 INSERT INTO tenant.cluster_outbox (subject_id, entity_type, event, source)
 SELECT @subject_id, @entity_type, 'reconcile', 'reconcile'
 WHERE NOT EXISTS (

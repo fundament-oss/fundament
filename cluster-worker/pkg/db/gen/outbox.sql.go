@@ -71,6 +71,7 @@ type OutboxInsertReconcileParams struct {
 }
 
 // Conditional insert that avoids flooding the outbox when a pending/retrying row already exists.
+// TODO: not safe under concurrent callers — add a partial unique index and ON CONFLICT DO NOTHING if needed.
 func (q *Queries) OutboxInsertReconcile(ctx context.Context, arg OutboxInsertReconcileParams) error {
 	_, err := q.db.Exec(ctx, outboxInsertReconcile, arg.SubjectID, arg.EntityType)
 	return err

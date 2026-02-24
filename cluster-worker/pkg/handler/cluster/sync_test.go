@@ -315,6 +315,59 @@ func TestReconcile_OrphanCleanup(t *testing.T) {
 	}
 }
 
+func TestCheckStatus_DeletedClusterConfirmed(t *testing.T) {
+	clusterID := uuid.New()
+	orgID := uuid.New()
+
+	var statusEventCreated bool
+	var createdEventType string
+
+	mock := &mockDBTX{
+		queryFn: func(_ context.Context, sql string, _ ...any) (pgx.Rows, error) {
+			// Check deleted verification first — both queries contain "shoot_status IS NULL"
+			if containsSQL(sql, "deleted IS NOT NULL") {
+				// ClusterListDeletedNeedingVerification — one deleted cluster
+				return &deletedVerificationRows{
+					id: clusterID, name: "test", region: "local",
+					k8sVersion: "1.31.1", orgID: orgID, orgName: "test-org",
+				}, nil
+			}
+			return &emptyRows{}, nil
+		},
+		execFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
+			return pgconn.CommandTag{}, nil
+		},
+		queryRowFn: func(_ context.Context, sql string, args ...any) pgx.Row {
+			if containsSQL(sql, "cluster_events") {
+				statusEventCreated = true
+				if len(args) >= 2 {
+					if et, ok := args[1].(string); ok {
+						createdEventType = et
+					}
+				}
+			}
+			return &successRow{}
+		},
+	}
+
+	// Gardener has NO shoot for this cluster — GetShootStatus returns "pending"/"Shoot not found"
+	gardenerMock := gardener.NewMockInstant(common.TestLogger())
+
+	h := newTestHandler(mock, gardenerMock)
+
+	err := h.CheckStatus(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !statusEventCreated {
+		t.Error("expected a status_deleted event for confirmed shoot deletion")
+	}
+	if createdEventType != "status_deleted" {
+		t.Errorf("expected event_type 'status_deleted', got %q", createdEventType)
+	}
+}
+
 // --- Test helpers ---
 
 func containsSQL(s, substr string) bool {
@@ -427,5 +480,53 @@ func (r *singleClusterRows) Scan(dest ...any) error {
 	*dest[1].(*string) = r.name
 	// dest[2] (deleted) and dest[3] (synced) stay zero-value (null)
 	*dest[4].(*string) = "test-org"
+	return nil
+}
+
+// deletedVerificationRows returns one row for ClusterListDeletedNeedingVerification (9 columns).
+type deletedVerificationRows struct {
+	id         uuid.UUID
+	name       string
+	region     string
+	k8sVersion string
+	orgID      uuid.UUID
+	orgName    string
+	yielded    bool
+	closed     bool
+}
+
+func (r *deletedVerificationRows) Close()                                       { r.closed = true }
+func (r *deletedVerificationRows) Err() error                                   { return nil }
+func (r *deletedVerificationRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
+func (r *deletedVerificationRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
+func (r *deletedVerificationRows) Values() ([]any, error)                       { return nil, nil }
+func (r *deletedVerificationRows) RawValues() [][]byte                          { return nil }
+func (r *deletedVerificationRows) Conn() *pgx.Conn                              { return nil }
+
+func (r *deletedVerificationRows) Next() bool {
+	if r.yielded {
+		return false
+	}
+	r.yielded = true
+	return true
+}
+
+func (r *deletedVerificationRows) Scan(dest ...any) error {
+	// Columns: id, name, region, kubernetes_version, deleted, shoot_status, organization_id, shoot_status_updated, organization_name
+	if len(dest) != 9 {
+		return errors.New("wrong number of scan destinations")
+	}
+	*dest[0].(*uuid.UUID) = r.id
+	*dest[1].(*string) = r.name
+	*dest[2].(*string) = r.region
+	*dest[3].(*string) = r.k8sVersion
+	// Set deleted to a valid timestamp
+	if ts, ok := dest[4].(*pgtype.Timestamptz); ok {
+		ts.Valid = true
+	}
+	// shoot_status stays zero (null) — not yet confirmed
+	*dest[6].(*uuid.UUID) = r.orgID
+	// dest[7] (shoot_status_updated) stays zero (null)
+	*dest[8].(*string) = r.orgName
 	return nil
 }
