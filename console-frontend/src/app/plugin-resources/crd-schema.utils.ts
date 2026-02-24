@@ -222,6 +222,29 @@ export function getListColumns(
 }
 
 /**
+ * Pluralize an English word (handles common patterns).
+ */
+function pluralize(word: string): string {
+  if (word.endsWith('y') && !'aeiou'.includes(word[word.length - 2])) {
+    return word.slice(0, -1) + 'ies';
+  }
+  if (word.endsWith('s') || word.endsWith('x') || word.endsWith('z')) {
+    return word + 'es';
+  }
+  return word + 's';
+}
+
+/**
+ * Convert a CRD kind (PascalCase) to a human-readable plural label in sentence case.
+ * Examples: "Certificate" → "Certificates", "ClusterIssuer" → "Cluster issuers"
+ */
+export function kindToLabel(kind: string): string {
+  const words = kind.replace(/([A-Z])/g, ' $1').trim().split(' ');
+  words[words.length - 1] = pluralize(words[words.length - 1]);
+  return words.map((w, i) => (i === 0 ? w : w.toLowerCase())).join(' ');
+}
+
+/**
  * Convert a CRD property name to a human-readable label.
  */
 export function fieldNameToLabel(name: string): string {

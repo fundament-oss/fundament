@@ -1,4 +1,11 @@
-import { Component, ChangeDetectionStrategy, inject, computed, signal, OnInit } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  computed,
+  signal,
+  OnInit,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -31,7 +38,9 @@ export default class ResourceCreateComponent implements OnInit {
 
   private toastService = inject(ToastService);
 
-  private routeParams = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
+  private routeParams = toSignal(this.route.paramMap, {
+    initialValue: this.route.snapshot.paramMap,
+  });
 
   private pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
 

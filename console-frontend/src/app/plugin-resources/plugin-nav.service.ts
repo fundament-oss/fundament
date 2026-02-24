@@ -1,6 +1,7 @@
 import { Injectable, inject, computed } from '@angular/core';
 import PluginRegistryService from './plugin-registry.service';
 import type { PluginNavGroup, PluginNavItem } from './types';
+import { kindToLabel } from './crd-schema.utils';
 
 @Injectable({ providedIn: 'root' })
 export default class PluginNavService {
@@ -19,7 +20,7 @@ export default class PluginNavService {
           .map((menuItem) => {
             const crd = plugin.crds.find((c) => c.kind === menuItem.crd)!;
             return {
-              label: crd.kind,
+              label: kindToLabel(crd.kind),
               crdKind: crd.kind,
               crdPlural: crd.plural,
               routerLink: ['/plugin-resources', plugin.metadata.name, crd.plural],
@@ -51,7 +52,7 @@ export default class PluginNavService {
           .map((menuItem) => {
             const crd = plugin.crds.find((c) => c.kind === menuItem.crd)!;
             return {
-              label: crd.kind,
+              label: kindToLabel(crd.kind),
               crdKind: crd.kind,
               crdPlural: crd.plural,
               routerLink: [crd.plural],

@@ -1,6 +1,6 @@
 <div class="card">
   <div class="card-header">
-    <h1 class="text-2xl font-bold dark:text-white">{{ crdDef()?.kind ?? 'Resources' }}</h1>
+    <h1 class="text-2xl font-bold dark:text-white">{{ kindLabel() }}</h1>
     @if (plugin()?.metadata?.description) {
       <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
         {{ plugin()?.metadata?.description }}
@@ -82,6 +82,16 @@
                         <ng-icon name="tablerEye" />
                       </a>
                     }
+                    @if (menuItem()?.create) {
+                      <a
+                        [routerLink]="editLink(resource)"
+                        class="btn-light inline-flex shrink-0 items-center px-2!"
+                        aria-label="Edit"
+                        title="Edit"
+                      >
+                        <ng-icon name="tablerPencil" />
+                      </a>
+                    }
                     <button
                       type="button"
                       (click)="openDeleteModal(resource)"
@@ -105,7 +115,7 @@
       <div class="py-8 text-center">
         <ng-icon name="tablerDatabaseOff" size="3rem" class="mx-auto mb-3 text-gray-400!" />
         <p class="text-gray-600 dark:text-gray-300">
-          No {{ crdDef()?.plural ?? 'resources' }} found
+          No {{ kindLabel().toLowerCase() }} found
         </p>
         @if (menuItem()?.create) {
           <a [routerLink]="createLink()" class="btn-primary mt-4 inline-flex items-center">

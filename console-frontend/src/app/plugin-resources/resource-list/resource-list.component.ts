@@ -5,6 +5,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerPlus,
   tablerEye,
+  tablerPencil,
   tablerTrash,
   tablerAlertTriangle,
   tablerDatabaseOff,
@@ -25,6 +26,7 @@ import {
   formatColumnValue,
   getListColumns,
   resolveStatusBadge,
+  kindToLabel,
 } from '../crd-schema.utils';
 
 function buildCreateLink(): string[] {
@@ -33,6 +35,10 @@ function buildCreateLink(): string[] {
 
 function buildDetailLink(resource: KubeResource): string[] {
   return ['.', resource.metadata.uid];
+}
+
+function buildEditLink(resource: KubeResource): string[] {
+  return ['.', resource.metadata.uid, 'edit'];
 }
 
 function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): string {
@@ -53,6 +59,7 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
     provideIcons({
       tablerPlus,
       tablerEye,
+      tablerPencil,
       tablerTrash,
       tablerAlertTriangle,
       tablerDatabaseOff,
@@ -70,7 +77,9 @@ export default class ResourceListComponent {
 
   private toastService = inject(ToastService);
 
-  private routeParams = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
+  private routeParams = toSignal(this.route.paramMap, {
+    initialValue: this.route.snapshot.paramMap,
+  });
 
   private pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
 
@@ -110,9 +119,16 @@ export default class ResourceListComponent {
 
   pendingDeleteName = signal('');
 
+  kindLabel = computed(() => {
+    const crd = this.crdDef();
+    return crd ? kindToLabel(crd.kind) : 'Resources';
+  });
+
   createLink = buildCreateLink;
 
   detailLink = buildDetailLink;
+
+  editLink = buildEditLink;
 
   formatCell = buildCellValue;
 

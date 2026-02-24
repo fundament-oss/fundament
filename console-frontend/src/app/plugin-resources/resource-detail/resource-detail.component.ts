@@ -70,7 +70,9 @@ export default class ResourceDetailComponent {
 
   private toastService = inject(ToastService);
 
-  private routeParams = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
+  private routeParams = toSignal(this.route.paramMap, {
+    initialValue: this.route.snapshot.paramMap,
+  });
 
   private pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
 

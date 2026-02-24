@@ -46,14 +46,15 @@ function toStringArray(val: unknown): string[] {
           </select>
         }
         @case ('boolean') {
-          <label class="flex items-center gap-2">
+          <label class="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
               [id]="'field-' + fieldName()"
-              class="switch"
+              class="peer sr-only"
               [ngModel]="value()"
               (ngModelChange)="valueChange.emit($event)"
             />
+            <span class="switch"></span>
             <span class="text-sm text-gray-600 dark:text-gray-400">{{ label() }}</span>
           </label>
         }
