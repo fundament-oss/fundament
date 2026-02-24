@@ -13,7 +13,15 @@ import (
 )
 
 const outboxGetAndLock = `-- name: OutboxGetAndLock :one
-SELECT id, cluster_id, namespace_id, project_member_id, project_id, event, source, status, retries
+SELECT id,
+       cluster_id,
+       namespace_id,
+       project_member_id,
+       project_id,
+       event,
+       source,
+       status,
+       retries
 FROM tenant.cluster_outbox
 WHERE status IN ('pending', 'retrying')
   AND (retry_after IS NULL OR retry_after <= now())
