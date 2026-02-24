@@ -37,6 +37,18 @@ export default class PluginResourceStoreService {
     return uid;
   }
 
+  updateResource(pluginName: string, kind: string, uid: string, resource: KubeResource): void {
+    this.resources.update((current) => {
+      const updated = structuredClone(current);
+      if (updated[pluginName]?.[kind]) {
+        updated[pluginName][kind] = updated[pluginName][kind].map((r) =>
+          r.metadata.uid === uid ? { ...resource, metadata: { ...resource.metadata, uid } } : r,
+        );
+      }
+      return updated;
+    });
+  }
+
   deleteResource(pluginName: string, kind: string, uid: string): void {
     this.resources.update((current) => {
       const updated = structuredClone(current);

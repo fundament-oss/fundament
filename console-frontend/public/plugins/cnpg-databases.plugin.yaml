@@ -13,6 +13,11 @@ metadata:
     - postgresql
 
 menu:
+  organization:
+    - crd: Database
+      list: true
+      detail: true
+      create: true
   project:
     - crd: Database
       list: true

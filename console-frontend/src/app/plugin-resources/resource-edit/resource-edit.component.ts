@@ -7,20 +7,20 @@ import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
 import { ToastService } from '../../toast.service';
 import type { ParsedCrd, KubeResource } from '../types';
-import { groupFields, buildDefaultValue, isFieldRequired } from '../crd-schema.utils';
+import { groupFields, isFieldRequired } from '../crd-schema.utils';
 
-function buildListLink(): string[] {
+function buildDetailLink(): string[] {
   return ['..'];
 }
 
 @Component({
-  selector: 'app-resource-create',
+  selector: 'app-resource-edit',
   standalone: true,
   imports: [FormsModule, RouterLink, FormFieldComponent],
-  templateUrl: './resource-create.component.html',
+  templateUrl: './resource-edit.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class ResourceCreateComponent implements OnInit {
+export default class ResourceEditComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   private router = inject(Router);
@@ -37,11 +37,19 @@ export default class ResourceCreateComponent implements OnInit {
 
   private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
 
+  private resourceId = computed(() => this.routeParams().get('resourceId') ?? '');
+
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
   crdDef = computed<ParsedCrd | undefined>(() =>
     this.registry.getCrdByPlural(this.pluginName(), this.resourceKind()),
   );
+
+  resource = computed<KubeResource | undefined>(() => {
+    const crd = this.crdDef();
+    if (!crd) return undefined;
+    return this.store.getResource(this.pluginName(), crd.kind, this.resourceId());
+  });
 
   fieldGroups = computed(() => {
     const crd = this.crdDef();
@@ -51,23 +59,15 @@ export default class ResourceCreateComponent implements OnInit {
     return groupFields(crd.specSchema, hints?.formGroups, hints?.hiddenFields);
   });
 
-  resourceName = '';
-
-  resourceNamespace = 'default';
-
   private formData = signal<Record<string, unknown>>({});
 
-  listLink = buildListLink;
+  detailLink = buildDetailLink;
 
   ngOnInit(): void {
-    const crd = this.crdDef();
-    if (!crd) return;
-
-    const defaults: Record<string, unknown> = {};
-    Object.entries(crd.specSchema.properties).forEach(([name, schema]) => {
-      defaults[name] = buildDefaultValue(schema);
-    });
-    this.formData.set(defaults);
+    const resource = this.resource();
+    if (resource) {
+      this.formData.set(structuredClone(resource.spec) as Record<string, unknown>);
+    }
   }
 
   getFormValue(fieldName: string): unknown {
@@ -86,19 +86,9 @@ export default class ResourceCreateComponent implements OnInit {
 
   onSubmit(): void {
     const crd = this.crdDef();
-    if (!crd) return;
+    const existing = this.resource();
+    if (!crd || !existing) return;
 
-    if (!this.resourceName.trim()) {
-      this.toastService.show('Name is required', 'error');
-      return;
-    }
-
-    if (crd.scope === 'Namespaced' && !this.resourceNamespace.trim()) {
-      this.toastService.show('Namespace is required', 'error');
-      return;
-    }
-
-    // Check required spec fields
     const missingField = (crd.specSchema.required ?? []).find((reqField) => {
       const val = this.formData()[reqField];
       return val === null || val === undefined || val === '';
@@ -129,20 +119,9 @@ export default class ResourceCreateComponent implements OnInit {
       spec[key] = val;
     });
 
-    const resource: KubeResource = {
-      apiVersion: `${crd.group}/${crd.version}`,
-      kind: crd.kind,
-      metadata: {
-        name: this.resourceName.trim(),
-        namespace: crd.scope === 'Namespaced' ? this.resourceNamespace.trim() : undefined,
-        uid: '',
-        creationTimestamp: '',
-      },
-      spec,
-    };
-
-    this.store.createResource(this.pluginName(), crd.kind, resource);
-    this.toastService.show(`${crd.singular} created`, 'success');
+    const updated: KubeResource = { ...existing, spec };
+    this.store.updateResource(this.pluginName(), crd.kind, this.resourceId(), updated);
+    this.toastService.show(`${crd.singular} updated`, 'success');
     this.router.navigate(['..'], { relativeTo: this.route });
   }
 }

@@ -1,0 +1,76 @@
+@if (resource()) {
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="card">
+      <div class="card-header flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold dark:text-white">
+            Edit {{ crdDef()?.singular ?? 'resource' }}
+          </h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Update the fields below and save your changes.
+          </p>
+        </div>
+        <a [routerLink]="detailLink()" class="btn-secondary">Cancel</a>
+      </div>
+    </div>
+
+    <form (ngSubmit)="onSubmit()">
+      <!-- Name and namespace (read-only) -->
+      <div class="card mb-6">
+        <div class="card-header">
+          <h2 class="text-lg font-semibold dark:text-white">Identity</h2>
+        </div>
+        <div class="card-body">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="space-y-1">
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Name</dt>
+              <dd class="text-sm dark:text-white">{{ resource()!.metadata.name }}</dd>
+            </div>
+            @if (resource()!.metadata.namespace) {
+              <div class="space-y-1">
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Namespace</dt>
+                <dd class="text-sm dark:text-white">{{ resource()!.metadata.namespace }}</dd>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Field groups -->
+      @for (group of fieldGroups(); track group.name) {
+        <div class="card mb-6">
+          <div class="card-header">
+            <h2 class="text-lg font-semibold dark:text-white">{{ group.name }}</h2>
+          </div>
+          <div class="card-body">
+            <div class="space-y-4">
+              @for (field of group.fields; track field[0]) {
+                <app-form-field
+                  [schema]="field[1]"
+                  [fieldName]="field[0]"
+                  [value]="getFormValue(field[0])"
+                  [required]="isRequired(field[0])"
+                  (valueChange)="setFormValue(field[0], $event)"
+                />
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Submit -->
+      <div class="flex justify-end gap-3">
+        <a [routerLink]="detailLink()" class="btn-secondary">Cancel</a>
+        <button type="submit" class="btn-primary">Save changes</button>
+      </div>
+    </form>
+  </div>
+} @else {
+  <div class="card">
+    <div class="card-body text-center">
+      <p class="text-gray-600 dark:text-gray-300">Resource not found</p>
+      <a [routerLink]="detailLink()" class="btn-primary mt-4 inline-block">Go back</a>
+    </div>
+  </div>
+}

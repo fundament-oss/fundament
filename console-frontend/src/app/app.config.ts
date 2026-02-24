@@ -6,7 +6,7 @@ import {
   Injector,
   runInInjectionContext,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withRouterConfig } from '@angular/router';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { BehaviorSubject } from 'rxjs';
 import { provideNgIconsConfig } from '@ng-icons/core';
@@ -32,7 +32,7 @@ const handleVersionMismatch = (serverVersion: string) => {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter(routes, withRouterConfig({ paramsInheritanceStrategy: 'always' })),
     // Initialize configuration before app starts
     provideAppInitializer(() => {
       const configService = inject(ConfigService);

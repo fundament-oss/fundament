@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerAlertTriangle } from '@ng-icons/tabler-icons';
@@ -7,11 +8,15 @@ import FieldRendererComponent from '../field-renderers/field-renderer.component'
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
 import { ToastService } from '../../toast.service';
-import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
+import type { ParsedCrd, KubeResource, CrdPropertySchema, PluginMenuItem } from '../types';
 import { formatDate, fieldNameToLabel, groupFields, resolveStatusBadge } from '../crd-schema.utils';
 
 function buildListLink(): string[] {
   return ['..'];
+}
+
+function buildEditLink(): string[] {
+  return ['edit'];
 }
 
 function toDateValue(val: unknown): string {
@@ -65,22 +70,32 @@ export default class ResourceDetailComponent {
 
   private toastService = inject(ToastService);
 
-  private pluginName = this.route.snapshot.paramMap.get('pluginName') ?? '';
+  private routeParams = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
 
-  private resourceKind = this.route.snapshot.paramMap.get('resourceKind') ?? '';
+  private pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
 
-  private resourceId = this.route.snapshot.paramMap.get('resourceId') ?? '';
+  private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
 
-  private plugin = computed(() => this.registry.getPlugin(this.pluginName));
+  private resourceId = computed(() => this.routeParams().get('resourceId') ?? '');
+
+  private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
   crdDef = computed<ParsedCrd | undefined>(() =>
-    this.registry.getCrdByPlural(this.pluginName, this.resourceKind),
+    this.registry.getCrdByPlural(this.pluginName(), this.resourceKind()),
   );
+
+  menuItem = computed<PluginMenuItem | undefined>(() => {
+    const p = this.plugin();
+    const crd = this.crdDef();
+    if (!p || !crd) return undefined;
+    const allItems = [...(p.menu.organization ?? []), ...(p.menu.project ?? [])];
+    return allItems.find((item) => item.crd === crd.kind);
+  });
 
   resource = computed<KubeResource | undefined>(() => {
     const crd = this.crdDef();
     if (!crd) return undefined;
-    return this.store.getResource(this.pluginName, crd.kind, this.resourceId);
+    return this.store.getResource(this.pluginName(), crd.kind, this.resourceId());
   });
 
   statusBadge = computed(() => {
@@ -109,6 +124,8 @@ export default class ResourceDetailComponent {
 
   listLink = buildListLink;
 
+  editLink = buildEditLink;
+
   formatLabel = fieldNameToLabel;
 
   formatDateValue = toDateValue;
@@ -136,7 +153,7 @@ export default class ResourceDetailComponent {
   confirmDelete(): void {
     const crd = this.crdDef();
     if (!crd) return;
-    this.store.deleteResource(this.pluginName, crd.kind, this.resourceId);
+    this.store.deleteResource(this.pluginName(), crd.kind, this.resourceId());
     this.showDeleteModal.set(false);
     this.toastService.show(`${crd.singular} deleted`, 'success');
     this.router.navigate(['..'], { relativeTo: this.route });

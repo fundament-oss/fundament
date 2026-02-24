@@ -267,6 +267,27 @@ const routes: Routes = [
               ],
             },
           },
+          {
+            path: ':resourceKind/:resourceId/edit',
+            loadComponent: () =>
+              import('./plugin-resources/resource-edit/resource-edit.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/plugin-resources/:pluginName/:resourceKind',
+                },
+                {
+                  label: ':resourceId',
+                  route: '/plugin-resources/:pluginName/:resourceKind/:resourceId',
+                },
+                { label: 'Edit' },
+              ],
+            },
+          },
         ],
       },
       // Plugin resource routes (project-level)
@@ -322,6 +343,28 @@ const routes: Routes = [
                   route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
                 },
                 { label: 'Details' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/:resourceId/edit',
+            loadComponent: () =>
+              import('./plugin-resources/resource-edit/resource-edit.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
+                },
+                {
+                  label: ':resourceId',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind/:resourceId',
+                },
+                { label: 'Edit' },
               ],
             },
           },

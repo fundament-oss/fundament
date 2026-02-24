@@ -13,6 +13,9 @@
         </div>
         <div class="flex gap-2">
           <a [routerLink]="listLink()" class="btn-secondary">Back to list</a>
+          @if (menuItem()?.create) {
+            <a [routerLink]="editLink()" class="btn-secondary">Edit</a>
+          }
           <button type="button" (click)="openDeleteModal()" class="btn-remove">Delete</button>
         </div>
       </div>

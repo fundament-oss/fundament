@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -69,14 +70,16 @@ export default class ResourceListComponent {
 
   private toastService = inject(ToastService);
 
-  private pluginName = this.route.snapshot.paramMap.get('pluginName') ?? '';
+  private routeParams = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
 
-  private resourceKind = this.route.snapshot.paramMap.get('resourceKind') ?? '';
+  private pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
 
-  plugin = computed<PluginDefinition | undefined>(() => this.registry.getPlugin(this.pluginName));
+  private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
+
+  plugin = computed<PluginDefinition | undefined>(() => this.registry.getPlugin(this.pluginName()));
 
   crdDef = computed<ParsedCrd | undefined>(() =>
-    this.registry.getCrdByPlural(this.pluginName, this.resourceKind),
+    this.registry.getCrdByPlural(this.pluginName(), this.resourceKind()),
   );
 
   menuItem = computed<PluginMenuItem | undefined>(() => {
@@ -98,7 +101,7 @@ export default class ResourceListComponent {
   resources = computed<KubeResource[]>(() => {
     const crd = this.crdDef();
     if (!crd) return [];
-    return this.store.listResources(this.pluginName, crd.kind);
+    return this.store.listResources(this.pluginName(), crd.kind);
   });
 
   showDeleteModal = signal(false);
@@ -138,7 +141,7 @@ export default class ResourceListComponent {
   confirmDelete(): void {
     const crd = this.crdDef();
     if (!crd) return;
-    this.store.deleteResource(this.pluginName, crd.kind, this.pendingDeleteUid());
+    this.store.deleteResource(this.pluginName(), crd.kind, this.pendingDeleteUid());
     this.showDeleteModal.set(false);
     this.toastService.show(`${crd.singular} deleted`, 'success');
   }
