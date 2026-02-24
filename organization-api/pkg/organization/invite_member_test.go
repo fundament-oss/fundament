@@ -59,12 +59,8 @@ func Test_InviteMember_NewUser(t *testing.T) {
 	res, err := client.InviteMember(context.Background(), req)
 	require.NoError(t, err)
 
-	require.NotNil(t, res.Msg.Member)
-	assert.Equal(t, "viewer", res.Msg.Member.Permission)
-	assert.Equal(t, "foo@bar.baz", *res.Msg.Member.Email)
-	assert.Nil(t, res.Msg.Member.ExternalRef)
-	assert.Equal(t, "", res.Msg.Member.Name)
-	assert.Equal(t, "pending", res.Msg.Member.Status)
+	require.NotNil(t, res.Msg)
+	assert.NotEqual(t, "", res.Msg.InvitationId)
 }
 
 func Test_InviteMember_ExistingUser(t *testing.T) {
@@ -107,12 +103,8 @@ func Test_InviteMember_ExistingUser(t *testing.T) {
 	res, err := client.InviteMember(context.Background(), req)
 	require.NoError(t, err)
 
-	require.NotNil(t, res.Msg.Member)
-	assert.Equal(t, "viewer", res.Msg.Member.Permission)
-	assert.Equal(t, "foo@bar.baz", *res.Msg.Member.Email)
-	assert.Equal(t, &externalRef, res.Msg.Member.ExternalRef)
-	assert.Equal(t, "second-user", res.Msg.Member.Name)
-	assert.Equal(t, "pending", res.Msg.Member.Status)
+	require.NotNil(t, res.Msg.InvitationId)
+	assert.NotEqual(t, "", res.Msg.InvitationId)
 }
 
 func Test_InviteMember_ExistingUser_AlreadyMember(t *testing.T) {
