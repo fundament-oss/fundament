@@ -11,7 +11,7 @@ SELECT id,
 FROM tenant.cluster_outbox
 WHERE status IN ('pending', 'retrying')
   AND (retry_after IS NULL OR retry_after <= now())
-ORDER BY created ASC
+ORDER BY id ASC
 LIMIT 1
 FOR NO KEY UPDATE SKIP LOCKED;
 
