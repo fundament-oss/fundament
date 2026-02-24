@@ -19,6 +19,7 @@ import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
 import ModalComponent from '../modal/modal.component';
+import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatTimeAgo } from '../utils/date-format';
 
 const getInitials = (name: string): string =>
@@ -55,7 +56,7 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [FormsModule, NgIcon, ModalComponent],
+  imports: [FormsModule, NgIcon, ModalComponent, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,

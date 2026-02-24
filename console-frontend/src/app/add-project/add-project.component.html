@@ -26,11 +26,14 @@
         Cluster
       </label>
       @if (isLoadingClusters()) {
-        <div class="flex items-center py-2">
-          <div
-            class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"
-          ></div>
-          <span class="text-sm text-gray-500 dark:text-gray-400">Loading clusters...</span>
+        <div class="flex items-center gap-2">
+          <div role="status" class="flex justify-center">
+            <app-loading-indicator
+              class="h-4 w-4 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+            />
+            <span class="sr-only">Loading...</span>
+          </div>
+          <p class="text-sm text-gray-600 dark:text-gray-300">Loading clusters...</p>
         </div>
       } @else if (clusters().length === 0) {
         <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">

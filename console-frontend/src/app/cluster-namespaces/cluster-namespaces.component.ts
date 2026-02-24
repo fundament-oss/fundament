@@ -19,11 +19,12 @@ import {
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { fetchClusterName } from '../utils/cluster-status';
 import ModalComponent from '../modal/modal.component';
+import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-cluster-namespaces',
-  imports: [ReactiveFormsModule, NgIcon, ModalComponent, RouterLink],
+  imports: [ReactiveFormsModule, NgIcon, ModalComponent, RouterLink, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
