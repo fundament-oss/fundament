@@ -1,11 +1,3 @@
--- name: ClusterMarkSynced :exec
--- Mark cluster as synced (Gardener accepted the manifest).
-UPDATE tenant.clusters
-SET
-    synced = now()
-WHERE
-    id = @cluster_id;
-
 -- name: ClusterCreateSyncSucceededEvent :one
 -- Insert sync_succeeded event when Gardener accepts the manifest.
 INSERT INTO

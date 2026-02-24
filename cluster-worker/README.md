@@ -94,7 +94,7 @@ sequenceDiagram
     end
 
     alt Success
-        Worker->>DB: outbox status = completed, synced = now()
+        Worker->>DB: outbox status = completed
         Worker->>DB: INSERT cluster_events (sync_succeeded)
     else Error
         Worker->>DB: outbox retries++, retry_after = backoff
@@ -137,7 +137,7 @@ stateDiagram-v2
         Processing --> Completed: sync succeeded
         Processing --> Retrying: sync failed (retries < max)
         Processing --> Failed: sync failed (retries >= max)
-        Retrying --> Pending: retry_after elapsed
+        Retrying --> Processing: Worker locks row (retry_after elapsed)
 
         Pending: status = pending
         Processing: locked via SKIP LOCKED

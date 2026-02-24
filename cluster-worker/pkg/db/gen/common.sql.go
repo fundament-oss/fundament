@@ -17,7 +17,6 @@ SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
-    tenant.clusters.synced,
     tenant.clusters.shoot_status,
     tenant.clusters.shoot_status_message,
     tenant.clusters.shoot_status_updated,
@@ -37,7 +36,6 @@ type ClusterGetByIDRow struct {
 	ID                 uuid.UUID
 	Name               string
 	Deleted            pgtype.Timestamptz
-	Synced             pgtype.Timestamptz
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
@@ -52,7 +50,6 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.ID,
 		&i.Name,
 		&i.Deleted,
-		&i.Synced,
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,

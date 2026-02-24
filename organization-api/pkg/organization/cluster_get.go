@@ -121,7 +121,6 @@ func clusterDetailsFromRow(row *db.TenantCluster) *organizationv1.ClusterDetails
 		Created:           timestamppb.New(row.Created.Time),
 		ResourceUsage:     nil, // Stub
 		SyncState: syncStateFromRow(
-			row.Synced,
 			row.ShootStatus,
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,

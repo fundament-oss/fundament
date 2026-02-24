@@ -44,7 +44,6 @@ type TenantCluster struct {
 	KubernetesVersion  string
 	Created            pgtype.Timestamptz
 	Deleted            pgtype.Timestamptz
-	Synced             pgtype.Timestamptz
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz

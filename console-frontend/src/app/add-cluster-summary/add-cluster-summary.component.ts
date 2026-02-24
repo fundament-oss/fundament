@@ -358,8 +358,8 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
         } else if (status === 'error') {
           this.updateItem('cluster', {
             syncStatus: 'failed',
-            error: syncState.shootMessage || 'Sync failed',
-            shootStatus: syncState.shootStatus,
+            error: syncState?.shootMessage || 'Sync failed',
+            shootStatus: syncState?.shootStatus,
           });
         } else {
           this.updateItem('cluster', {

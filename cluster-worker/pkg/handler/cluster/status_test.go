@@ -23,7 +23,7 @@ func TestCheckStatus_ActiveClusterGetsStatusUpdated(t *testing.T) {
 	queries := db.New(pool)
 	h := cluster.New(queries, mock, logger)
 
-	// Insert an org and a synced cluster (active, shoot_status = NULL).
+	// Insert an org and a cluster with a completed outbox row (active, shoot_status = NULL).
 	orgID := uuid.New()
 	clusterID := uuid.New()
 	_, err := pool.Exec(ctx, "INSERT INTO tenant.organizations (id, name) VALUES ($1, $2)", orgID, "status-org")
@@ -31,10 +31,16 @@ func TestCheckStatus_ActiveClusterGetsStatusUpdated(t *testing.T) {
 		t.Fatalf("failed to insert org: %v", err)
 	}
 	_, err = pool.Exec(ctx,
-		"INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version, synced) VALUES ($1, $2, $3, $4, $5, now())",
+		"INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version) VALUES ($1, $2, $3, $4, $5)",
 		clusterID, orgID, "status-cluster", "local", "1.31.1")
 	if err != nil {
 		t.Fatalf("failed to insert cluster: %v", err)
+	}
+	_, err = pool.Exec(ctx,
+		"INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, processed) VALUES ($1, 'created', 'trigger', 'completed', now())",
+		clusterID)
+	if err != nil {
+		t.Fatalf("failed to insert outbox row: %v", err)
 	}
 
 	// Create a shoot in mock so GetShootStatus returns ready.
@@ -89,7 +95,7 @@ func TestCheckStatus_DeletedClusterConfirmedGone(t *testing.T) {
 	queries := db.New(pool)
 	h := cluster.New(queries, mock, logger)
 
-	// Insert org + soft-deleted cluster that was synced.
+	// Insert org + soft-deleted cluster with a completed outbox row.
 	orgID := uuid.New()
 	clusterID := uuid.New()
 	_, err := pool.Exec(ctx, "INSERT INTO tenant.organizations (id, name) VALUES ($1, $2)", orgID, "del-org")
@@ -97,10 +103,16 @@ func TestCheckStatus_DeletedClusterConfirmedGone(t *testing.T) {
 		t.Fatalf("failed to insert org: %v", err)
 	}
 	_, err = pool.Exec(ctx,
-		"INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version, synced, deleted) VALUES ($1, $2, $3, $4, $5, now(), now())",
+		"INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version, deleted) VALUES ($1, $2, $3, $4, $5, now())",
 		clusterID, orgID, "del-cluster", "local", "1.31.1")
 	if err != nil {
 		t.Fatalf("failed to insert cluster: %v", err)
+	}
+	_, err = pool.Exec(ctx,
+		"INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, processed) VALUES ($1, 'deleted', 'trigger', 'completed', now())",
+		clusterID)
+	if err != nil {
+		t.Fatalf("failed to insert outbox row: %v", err)
 	}
 
 	// Don't create a shoot — mock.GetShootStatus will return StatusPending + MsgShootNotFound.
@@ -142,7 +154,7 @@ func TestCheckStatus_DeletedClusterStillDeleting(t *testing.T) {
 	queries := db.New(pool)
 	h := cluster.New(queries, mock, logger)
 
-	// Insert org + soft-deleted, synced cluster.
+	// Insert org + soft-deleted cluster with a completed outbox row.
 	orgID := uuid.New()
 	clusterID := uuid.New()
 	_, err := pool.Exec(ctx, "INSERT INTO tenant.organizations (id, name) VALUES ($1, $2)", orgID, "deleting-org")
@@ -150,10 +162,16 @@ func TestCheckStatus_DeletedClusterStillDeleting(t *testing.T) {
 		t.Fatalf("failed to insert org: %v", err)
 	}
 	_, err = pool.Exec(ctx,
-		"INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version, synced, deleted) VALUES ($1, $2, $3, $4, $5, now(), now())",
+		"INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version, deleted) VALUES ($1, $2, $3, $4, $5, now())",
 		clusterID, orgID, "deleting-cluster", "local", "1.31.1")
 	if err != nil {
 		t.Fatalf("failed to insert cluster: %v", err)
+	}
+	_, err = pool.Exec(ctx,
+		"INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, processed) VALUES ($1, 'deleted', 'trigger', 'completed', now())",
+		clusterID)
+	if err != nil {
+		t.Fatalf("failed to insert outbox row: %v", err)
 	}
 
 	// Create a shoot and override status to deleting — shoot still exists.
@@ -197,7 +215,7 @@ func TestCheckStatus_AllFailsReturnsError(t *testing.T) {
 	queries := db.New(pool)
 	h := cluster.New(queries, mock, logger)
 
-	// Insert org + synced cluster.
+	// Insert org + cluster with a completed outbox row.
 	orgID := uuid.New()
 	clusterID := uuid.New()
 	_, err := pool.Exec(ctx, "INSERT INTO tenant.organizations (id, name) VALUES ($1, $2)", orgID, "fail-org")
@@ -205,10 +223,16 @@ func TestCheckStatus_AllFailsReturnsError(t *testing.T) {
 		t.Fatalf("failed to insert org: %v", err)
 	}
 	_, err = pool.Exec(ctx,
-		"INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version, synced) VALUES ($1, $2, $3, $4, $5, now())",
+		"INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version) VALUES ($1, $2, $3, $4, $5)",
 		clusterID, orgID, "fail-cluster", "local", "1.31.1")
 	if err != nil {
 		t.Fatalf("failed to insert cluster: %v", err)
+	}
+	_, err = pool.Exec(ctx,
+		"INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, processed) VALUES ($1, 'created', 'trigger', 'completed', now())",
+		clusterID)
+	if err != nil {
+		t.Fatalf("failed to insert outbox row: %v", err)
 	}
 
 	// Configure mock to fail on GetShootStatus.

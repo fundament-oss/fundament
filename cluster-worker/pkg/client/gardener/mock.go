@@ -94,7 +94,7 @@ func NewMock(logger *slog.Logger) *MockClient {
 		clock:                  time.Now,
 		StatusOverrides:        make(map[uuid.UUID]StatusOverride),
 		ProgressingDelay:       1 * time.Second,
-		ReadyDelay:             5 * time.Second,
+		ReadyDelay:             90 * time.Second,
 		DeleteDelay:            3 * time.Second,
 		ValidateSpecs:          true,
 		SimulateAsyncNamespace: false, // Default: instant namespace (backwards compatible)

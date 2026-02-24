@@ -16,7 +16,11 @@ FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
-    tenant.clusters.synced IS NOT NULL -- Manifest was applied
+    EXISTS (
+        SELECT 1 FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    ) -- Manifest was applied
     AND tenant.clusters.deleted IS NULL -- Active (not deleted)
     AND (
         tenant.clusters.shoot_status IS NULL -- Never checked
@@ -50,7 +54,11 @@ FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
-    tenant.clusters.synced IS NOT NULL -- Delete was synced
+    EXISTS (
+        SELECT 1 FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    ) -- Delete was synced
     AND tenant.clusters.deleted IS NOT NULL -- Soft-deleted
     AND (
         tenant.clusters.shoot_status IS NULL

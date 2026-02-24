@@ -23,7 +23,6 @@ SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
-    tenant.clusters.synced,
     tenant.clusters.shoot_status,
     tenant.clusters.shoot_status_message,
     tenant.clusters.shoot_status_updated,

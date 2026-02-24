@@ -147,21 +147,3 @@ func (q *Queries) ClusterListAllIDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 	return items, nil
 }
-
-const clusterMarkSynced = `-- name: ClusterMarkSynced :exec
-UPDATE tenant.clusters
-SET
-    synced = now()
-WHERE
-    id = $1
-`
-
-type ClusterMarkSyncedParams struct {
-	ClusterID uuid.UUID
-}
-
-// Mark cluster as synced (Gardener accepted the manifest).
-func (q *Queries) ClusterMarkSynced(ctx context.Context, arg ClusterMarkSyncedParams) error {
-	_, err := q.db.Exec(ctx, clusterMarkSynced, arg.ClusterID)
-	return err
-}

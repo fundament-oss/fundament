@@ -268,6 +268,21 @@ func (w *OutboxWorker) handleProcessingError(ctx context.Context, qtx *db.Querie
 	return nil
 }
 
+// reconcile performs two kinds of cross-system consistency checks:
+//
+//  1. Outbox re-enqueue: inserts pending outbox rows for entities that have
+//     unsynced changes but no in-flight row. This catches:
+//     - Triggers that never fired (bug, disabled trigger, schema mismatch)
+//     - Outbox rows lost before processing
+//     - Entities modified after their last completed sync
+//     - First deploy / backfill (entities predate the outbox system)
+//     Entities with a permanently failed row are excluded — those require
+//     manual intervention; re-enqueueing them would create an infinite retry loop.
+//
+//  2. Orphan detection: deletes resources in Gardener (e.g. Shoots) that have
+//     no corresponding entity in the database. This catches:
+//     - Manually created resources in Gardener
+//     - Leftover resources from a previous DB wipe or test environment
 func (w *OutboxWorker) reconcile(ctx context.Context) {
 	if ctx.Err() != nil {
 		return
@@ -275,6 +290,7 @@ func (w *OutboxWorker) reconcile(ctx context.Context) {
 
 	w.logger.Info("starting outbox reconciliation")
 
+	// 1. Re-enqueue entities with unsynced changes (per entity type).
 	if err := w.queries.OutboxReconcileClusters(ctx); err != nil {
 		w.logger.Error("reconcile clusters failed", "error", err)
 	}
@@ -288,6 +304,7 @@ func (w *OutboxWorker) reconcile(ctx context.Context) {
 		w.logger.Error("reconcile projects failed", "error", err)
 	}
 
+	// 2. Delete orphaned resources in external systems.
 	for _, h := range w.registry.ReconcileHandlers() {
 		if err := h.ReconcileOrphans(ctx); err != nil {
 			w.logger.Error("reconcile handler failed", "error", err)

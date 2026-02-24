@@ -135,12 +135,19 @@ WHERE tenant.cluster_outbox.id IS NULL
   AND NOT EXISTS (
     SELECT 1 FROM tenant.cluster_outbox
     WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
-      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying', 'failed')
   )
 `
 
-// Insert outbox rows for clusters that have no completed outbox entry
-// after their last modification, and no pending/retrying entry already in-flight.
+// Catches clusters whose state may not be synced to Gardener:
+//  1. Trigger never fired (bug, schema mismatch, trigger disabled)
+//  2. Outbox row was lost before processing
+//  3. Entity was modified after its last completed sync
+//  4. First deploy / backfill (entities predate the outbox system)
+//
+// Skips entities that already have an in-flight or permanently failed row.
+// Failed rows require manual intervention; re-enqueueing them would create
+// an infinite retry loop.
 func (q *Queries) OutboxReconcileClusters(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, outboxReconcileClusters)
 	return err
@@ -160,12 +167,11 @@ WHERE tenant.cluster_outbox.id IS NULL
   AND NOT EXISTS (
     SELECT 1 FROM tenant.cluster_outbox
     WHERE tenant.cluster_outbox.namespace_id = tenant.namespaces.id
-      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying', 'failed')
   )
 `
 
-// Insert outbox rows for namespaces that have no completed outbox entry
-// after their last modification, and no pending/retrying entry already in-flight.
+// Same logic as OutboxReconcileClusters, applied to namespaces.
 func (q *Queries) OutboxReconcileNamespaces(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, outboxReconcileNamespaces)
 	return err
@@ -185,12 +191,11 @@ WHERE tenant.cluster_outbox.id IS NULL
   AND NOT EXISTS (
     SELECT 1 FROM tenant.cluster_outbox
     WHERE tenant.cluster_outbox.project_member_id = tenant.project_members.id
-      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying', 'failed')
   )
 `
 
-// Insert outbox rows for project members that have no completed outbox entry
-// after their last modification, and no pending/retrying entry already in-flight.
+// Same logic as OutboxReconcileClusters, applied to project members.
 func (q *Queries) OutboxReconcileProjectMembers(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, outboxReconcileProjectMembers)
 	return err
@@ -210,13 +215,14 @@ WHERE tenant.projects.deleted IS NOT NULL
   AND NOT EXISTS (
     SELECT 1 FROM tenant.cluster_outbox
     WHERE tenant.cluster_outbox.project_id = tenant.projects.id
-      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying', 'failed')
   )
 `
 
-// Only reconciles deleted projects. Active project state is managed via
-// project_members; deletion cleanup (e.g. revoking Gardener access) is the
-// only project-level operation the cluster worker needs to perform.
+// Same logic as OutboxReconcileClusters, but only reconciles deleted projects.
+// Active project state is managed via project_members; deletion cleanup
+// (e.g. revoking Gardener access) is the only project-level operation the
+// cluster worker needs to perform.
 func (q *Queries) OutboxReconcileProjects(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, outboxReconcileProjects)
 	return err

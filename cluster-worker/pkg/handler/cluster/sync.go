@@ -93,12 +93,6 @@ func (h *Handler) Sync(ctx context.Context, clusterID uuid.UUID) error {
 		return fmt.Errorf("gardener sync: %w", syncErr)
 	}
 
-	if err := h.queries.ClusterMarkSynced(ctx, db.ClusterMarkSyncedParams{
-		ClusterID: clusterID,
-	}); err != nil {
-		return fmt.Errorf("mark synced: %w", err)
-	}
-
 	if _, err := h.queries.ClusterCreateSyncSucceededEvent(ctx, db.ClusterCreateSyncSucceededEventParams{
 		ClusterID:  clusterID,
 		SyncAction: pgtype.Text{String: string(syncAction), Valid: true},

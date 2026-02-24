@@ -628,7 +628,6 @@ CREATE TABLE tenant.clusters (
 	kubernetes_version text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
-	synced timestamptz,
 	shoot_status text,
 	shoot_status_message text,
 	shoot_status_updated timestamptz,

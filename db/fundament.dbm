@@ -759,9 +759,6 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
-	<column name="synced">
-		<type name="timestamptz" length="0"/>
-	</column>
 	<column name="shoot_status">
 		<type name="text" length="0"/>
 	</column>

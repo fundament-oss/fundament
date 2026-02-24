@@ -122,14 +122,6 @@
               </dd>
             </dl>
           }
-          @if (clusterData.syncState?.syncedAt) {
-            <dl>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last synced</dt>
-              <dd class="mt-1 text-sm dark:text-white">
-                {{ formatDate(clusterData.syncState!.syncedAt) }}
-              </dd>
-            </dl>
-          }
         </div>
 
         <!-- Collapsible Sync History -->
@@ -174,16 +166,6 @@
                       {{
                         clusterData.syncState.statusUpdatedAt
                           ? formatDate(clusterData.syncState.statusUpdatedAt)
-                          : 'N/A'
-                      }}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Last synced</td>
-                    <td class="px-3 py-2 dark:text-white">
-                      {{
-                        clusterData.syncState.syncedAt
-                          ? formatDate(clusterData.syncState.syncedAt)
                           : 'N/A'
                       }}
                     </td>
