@@ -17,7 +17,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 )
 
-// mockDBTX implements db.DBTX for testing handleProcessingError.
+// mockDBTX implements db.DBTX for testing handleRowError.
 type mockDBTX struct {
 	execCalled     bool
 	queryRowCalled bool
@@ -107,7 +107,7 @@ func TestHandleProcessingError_RetryBelowMax(t *testing.T) {
 	qtx := db.New(mock)
 	row := &db.OutboxGetAndLockRow{ID: uuid.New(), Retries: 5}
 
-	err := w.handleProcessingError(context.Background(), qtx, row, errors.New("sync failed"))
+	err := w.handleRowError(context.Background(), qtx, row, errors.New("sync failed"))
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -126,7 +126,7 @@ func TestHandleProcessingError_ExceedMaxRetries(t *testing.T) {
 	qtx := db.New(mock)
 	row := &db.OutboxGetAndLockRow{ID: uuid.New(), Retries: 9}
 
-	err := w.handleProcessingError(context.Background(), qtx, row, errors.New("sync failed"))
+	err := w.handleRowError(context.Background(), qtx, row, errors.New("sync failed"))
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -145,7 +145,7 @@ func TestHandleProcessingError_MarkRetryFails(t *testing.T) {
 	qtx := db.New(mock)
 	row := &db.OutboxGetAndLockRow{ID: uuid.New(), Retries: 5}
 
-	err := w.handleProcessingError(context.Background(), qtx, row, errors.New("sync failed"))
+	err := w.handleRowError(context.Background(), qtx, row, errors.New("sync failed"))
 
 	if err == nil {
 		t.Fatal("expected error")
@@ -161,7 +161,7 @@ func TestHandleProcessingError_MarkFailedFails(t *testing.T) {
 	qtx := db.New(mock)
 	row := &db.OutboxGetAndLockRow{ID: uuid.New(), Retries: 9}
 
-	err := w.handleProcessingError(context.Background(), qtx, row, errors.New("sync failed"))
+	err := w.handleRowError(context.Background(), qtx, row, errors.New("sync failed"))
 
 	if err == nil {
 		t.Fatal("expected error")

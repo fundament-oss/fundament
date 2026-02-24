@@ -33,10 +33,14 @@ type StatusHandler interface {
 	CheckStatus(ctx context.Context) error
 }
 
-// ReconcileHandler performs cross-system reconciliation (e.g. orphan detection).
+// ReconcileHandler performs periodic reconciliation for an entity type.
+// Implementations should:
+//   - Re-enqueue outbox rows for entities with unsynced changes (feeding the SyncHandler)
+//   - Detect and clean up orphaned resources in external systems
+//
 // Called periodically by the outbox worker's reconcile loop.
 type ReconcileHandler interface {
-	ReconcileOrphans(ctx context.Context) error
+	Reconcile(ctx context.Context) error
 }
 
 // Registry holds all registered handlers. The outbox worker and status worker
