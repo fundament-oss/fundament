@@ -56,14 +56,40 @@ func WithOrganization(id uuid.UUID, name string) APIOption {
 	}
 }
 
-func WithUser(id uuid.UUID, name, email string, externalRef *string, orgIDs []uuid.UUID) APIOption {
+type User struct {
+	id          uuid.UUID
+	name        string
+	email       string
+	externalRef *string
+	orgIDs      []uuid.UUID
+}
+
+func (u User) WithName(name string) User {
+	u.name = name
+	return u
+}
+
+type UserArgs struct {
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	ExternalRef *string
+	OrgIDs      []uuid.UUID
+}
+
+func WithUser(args *UserArgs) APIOption {
 	return func(o *apiOptions) {
-		_, exists := o.users[id]
+		_, exists := o.users[args.ID]
 		if exists {
-			o.t.Fatalf("WithUser: duplicate user ID %q", id)
+			o.t.Fatalf("WithUser: duplicate user ID %q", args.ID)
 		}
 
-		o.users[id] = testUser{Name: name, Email: email, OrgIDs: orgIDs, ExternalRef: externalRef}
+		o.users[args.ID] = testUser{
+			Name:        args.Name,
+			Email:       args.Email,
+			OrgIDs:      args.OrgIDs,
+			ExternalRef: args.ExternalRef,
+		}
 	}
 }
 

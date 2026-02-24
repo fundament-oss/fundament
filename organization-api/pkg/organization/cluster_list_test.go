@@ -34,7 +34,11 @@ func Test_Cluster_List(t *testing.T) {
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
-		WithUser(userID, "test-user", "", nil, []uuid.UUID{orgID}),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
 	)
 
 	token := env.createAuthnToken(t, userID)

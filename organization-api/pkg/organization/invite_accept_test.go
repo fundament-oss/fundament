@@ -36,7 +36,11 @@ func Test_AcceptInvitation_DoesNotExist(t *testing.T) {
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
-		WithUser(userID, "test-user", "", nil, []uuid.UUID{orgID}),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
 	)
 
 	token := env.createAuthnToken(t, userID)
@@ -65,8 +69,16 @@ func Test_AcceptInvitation_HappyFlow(t *testing.T) {
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
-		WithUser(userID, "test-user", "", nil, []uuid.UUID{orgID}),
-		WithUser(userToInviteUUID, "test-user2", "foo@bar.baz", nil, []uuid.UUID{}),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+		WithUser(&UserArgs{
+			ID:    userToInviteUUID,
+			Name:  "test-user2",
+			Email: "foo@bar.baz",
+		}),
 	)
 
 	token := env.createAuthnToken(t, userID)
