@@ -25,9 +25,9 @@ SELECT id,
 FROM tenant.cluster_outbox
 WHERE status IN ('pending', 'retrying')
   AND (retry_after IS NULL OR retry_after <= now())
-ORDER BY id
-FOR NO KEY UPDATE SKIP LOCKED
+ORDER BY created ASC
 LIMIT 1
+FOR NO KEY UPDATE SKIP LOCKED
 `
 
 type OutboxGetAndLockRow struct {
@@ -127,111 +127,4 @@ func (q *Queries) OutboxMarkRetry(ctx context.Context, arg OutboxMarkRetryParams
 	var retries int32
 	err := row.Scan(&retries)
 	return retries, err
-}
-
-const outboxReconcileClusters = `-- name: OutboxReconcileClusters :exec
-INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
-SELECT tenant.clusters.id, 'reconcile', 'reconcile'
-FROM tenant.clusters
-LEFT JOIN tenant.cluster_outbox ON tenant.cluster_outbox.cluster_id = tenant.clusters.id
-  AND tenant.cluster_outbox.status = 'completed'
-  AND tenant.cluster_outbox.processed >= GREATEST(
-      tenant.clusters.created,
-      COALESCE(tenant.clusters.deleted, '1970-01-01')
-  )
-WHERE tenant.cluster_outbox.id IS NULL
-  AND NOT EXISTS (
-    SELECT 1 FROM tenant.cluster_outbox
-    WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
-      AND tenant.cluster_outbox.status IN ('pending', 'retrying', 'failed')
-  )
-`
-
-// Catches clusters whose state may not be synced to Gardener:
-//  1. Trigger never fired (bug, schema mismatch, trigger disabled)
-//  2. Outbox row was lost before processing
-//  3. Entity was modified after its last completed sync
-//  4. First deploy / backfill (entities predate the outbox system)
-//
-// Skips entities that already have an in-flight or permanently failed row.
-// Failed rows require manual intervention; re-enqueueing them would create
-// an infinite retry loop.
-func (q *Queries) OutboxReconcileClusters(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, outboxReconcileClusters)
-	return err
-}
-
-const outboxReconcileNamespaces = `-- name: OutboxReconcileNamespaces :exec
-INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
-SELECT tenant.namespaces.id, 'reconcile', 'reconcile'
-FROM tenant.namespaces
-LEFT JOIN tenant.cluster_outbox ON tenant.cluster_outbox.namespace_id = tenant.namespaces.id
-  AND tenant.cluster_outbox.status = 'completed'
-  AND tenant.cluster_outbox.processed >= GREATEST(
-      tenant.namespaces.created,
-      COALESCE(tenant.namespaces.deleted, '1970-01-01')
-  )
-WHERE tenant.cluster_outbox.id IS NULL
-  AND NOT EXISTS (
-    SELECT 1 FROM tenant.cluster_outbox
-    WHERE tenant.cluster_outbox.namespace_id = tenant.namespaces.id
-      AND tenant.cluster_outbox.status IN ('pending', 'retrying', 'failed')
-  )
-`
-
-// Same logic as OutboxReconcileClusters, applied to namespaces.
-func (q *Queries) OutboxReconcileNamespaces(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, outboxReconcileNamespaces)
-	return err
-}
-
-const outboxReconcileProjectMembers = `-- name: OutboxReconcileProjectMembers :exec
-INSERT INTO tenant.cluster_outbox (project_member_id, event, source)
-SELECT tenant.project_members.id, 'reconcile', 'reconcile'
-FROM tenant.project_members
-LEFT JOIN tenant.cluster_outbox ON tenant.cluster_outbox.project_member_id = tenant.project_members.id
-  AND tenant.cluster_outbox.status = 'completed'
-  AND tenant.cluster_outbox.processed >= GREATEST(
-      tenant.project_members.created,
-      COALESCE(tenant.project_members.deleted, '1970-01-01')
-  )
-WHERE tenant.cluster_outbox.id IS NULL
-  AND NOT EXISTS (
-    SELECT 1 FROM tenant.cluster_outbox
-    WHERE tenant.cluster_outbox.project_member_id = tenant.project_members.id
-      AND tenant.cluster_outbox.status IN ('pending', 'retrying', 'failed')
-  )
-`
-
-// Same logic as OutboxReconcileClusters, applied to project members.
-func (q *Queries) OutboxReconcileProjectMembers(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, outboxReconcileProjectMembers)
-	return err
-}
-
-const outboxReconcileProjects = `-- name: OutboxReconcileProjects :exec
-INSERT INTO tenant.cluster_outbox (project_id, event, source)
-SELECT tenant.projects.id, 'reconcile', 'reconcile'
-FROM tenant.projects
-WHERE tenant.projects.deleted IS NOT NULL
-  AND NOT EXISTS (
-    SELECT 1 FROM tenant.cluster_outbox
-    WHERE tenant.cluster_outbox.project_id = tenant.projects.id
-      AND tenant.cluster_outbox.status = 'completed'
-      AND tenant.cluster_outbox.processed >= tenant.projects.deleted
-  )
-  AND NOT EXISTS (
-    SELECT 1 FROM tenant.cluster_outbox
-    WHERE tenant.cluster_outbox.project_id = tenant.projects.id
-      AND tenant.cluster_outbox.status IN ('pending', 'retrying', 'failed')
-  )
-`
-
-// Same logic as OutboxReconcileClusters, but only reconciles deleted projects.
-// Active project state is managed via project_members; deletion cleanup
-// (e.g. revoking Gardener access) is the only project-level operation the
-// cluster worker needs to perform.
-func (q *Queries) OutboxReconcileProjects(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, outboxReconcileProjects)
-	return err
 }

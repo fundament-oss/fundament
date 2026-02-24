@@ -91,26 +91,26 @@ func (w *OutboxWorker) runWithConnection(ctx context.Context) error {
 	w.ready.Store(true)
 
 	// Reconcile and process any pending work on startup
-	w.reconcile(ctx)
-	w.processAll(ctx)
+	w.reconcileAllHandlers(ctx)
+	w.processAllRows(ctx)
 	lastReconcile := time.Now()
 
 	for {
-		_, err := w.waitForTrigger(ctx, conn)
+		_, err := w.waitForNotification(ctx, conn)
 		if err != nil {
 			return err
 		}
 
-		w.processAll(ctx)
+		w.processAllRows(ctx)
 
 		if time.Since(lastReconcile) >= w.cfg.ReconcileInterval {
-			w.reconcile(ctx)
+			w.reconcileAllHandlers(ctx)
 			lastReconcile = time.Now()
 		}
 	}
 }
 
-func (w *OutboxWorker) waitForTrigger(ctx context.Context, conn *pgxpool.Conn) (bool, error) {
+func (w *OutboxWorker) waitForNotification(ctx context.Context, conn *pgxpool.Conn) (bool, error) {
 	waitCtx, cancel := context.WithTimeout(ctx, w.cfg.PollInterval)
 	defer cancel()
 
@@ -138,9 +138,9 @@ func (w *OutboxWorker) waitForTrigger(ctx context.Context, conn *pgxpool.Conn) (
 	}
 }
 
-func (w *OutboxWorker) processAll(ctx context.Context) {
+func (w *OutboxWorker) processAllRows(ctx context.Context) {
 	for {
-		found, err := w.processOne(ctx)
+		found, err := w.processNextRow(ctx)
 		if err != nil {
 			w.logger.Error("failed to process outbox item", "error", err)
 			select {
@@ -155,11 +155,14 @@ func (w *OutboxWorker) processAll(ctx context.Context) {
 	}
 }
 
-func (w *OutboxWorker) processOne(ctx context.Context) (found bool, err error) {
+func (w *OutboxWorker) processNextRow(ctx context.Context) (found bool, err error) {
 	if ctx.Err() != nil {
 		return false, nil
 	}
 
+	// Row lock acquired: OutboxGetAndLock uses FOR NO KEY UPDATE SKIP LOCKED,
+	// so the row is locked for the lifetime of this transaction.
+	// Row lock released: on tx.Commit() or defer rollback.Rollback().
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("begin transaction: %w", err)
@@ -204,7 +207,7 @@ func (w *OutboxWorker) processOne(ctx context.Context) (found bool, err error) {
 	}
 
 	if syncErr := h.Sync(ctx, entityID); syncErr != nil {
-		if err := w.handleProcessingError(ctx, qtx, &row, syncErr); err != nil {
+		if err := w.handleRowError(ctx, qtx, &row, syncErr); err != nil {
 			return true, fmt.Errorf("handle processing error: %w", err)
 		}
 		if err := tx.Commit(ctx); err != nil {
@@ -229,7 +232,7 @@ func (w *OutboxWorker) processOne(ctx context.Context) (found bool, err error) {
 	return true, nil
 }
 
-func (w *OutboxWorker) handleProcessingError(ctx context.Context, qtx *db.Queries, row *db.OutboxGetAndLockRow, processErr error) error {
+func (w *OutboxWorker) handleRowError(ctx context.Context, qtx *db.Queries, row *db.OutboxGetAndLockRow, processErr error) error {
 	statusInfo := pgtype.Text{String: processErr.Error(), Valid: true}
 
 	// Check if we've exceeded max retries. row.Retries is the current count
@@ -268,45 +271,17 @@ func (w *OutboxWorker) handleProcessingError(ctx context.Context, qtx *db.Querie
 	return nil
 }
 
-// reconcile performs two kinds of cross-system consistency checks:
-//
-//  1. Outbox re-enqueue: inserts pending outbox rows for entities that have
-//     unsynced changes but no in-flight row. This catches:
-//     - Triggers that never fired (bug, disabled trigger, schema mismatch)
-//     - Outbox rows lost before processing
-//     - Entities modified after their last completed sync
-//     - First deploy / backfill (entities predate the outbox system)
-//     Entities with a permanently failed row are excluded — those require
-//     manual intervention; re-enqueueing them would create an infinite retry loop.
-//
-//  2. Orphan detection: deletes resources in Gardener (e.g. Shoots) that have
-//     no corresponding entity in the database. This catches:
-//     - Manually created resources in Gardener
-//     - Leftover resources from a previous DB wipe or test environment
-func (w *OutboxWorker) reconcile(ctx context.Context) {
+// reconcile delegates reconciliation to each registered ReconcileHandler.
+// Each handler owns its own re-enqueue and orphan-detection logic.
+func (w *OutboxWorker) reconcileAllHandlers(ctx context.Context) {
 	if ctx.Err() != nil {
 		return
 	}
 
 	w.logger.Info("starting outbox reconciliation")
 
-	// 1. Re-enqueue entities with unsynced changes (per entity type).
-	if err := w.queries.OutboxReconcileClusters(ctx); err != nil {
-		w.logger.Error("reconcile clusters failed", "error", err)
-	}
-	if err := w.queries.OutboxReconcileNamespaces(ctx); err != nil {
-		w.logger.Error("reconcile namespaces failed", "error", err)
-	}
-	if err := w.queries.OutboxReconcileProjectMembers(ctx); err != nil {
-		w.logger.Error("reconcile project members failed", "error", err)
-	}
-	if err := w.queries.OutboxReconcileProjects(ctx); err != nil {
-		w.logger.Error("reconcile projects failed", "error", err)
-	}
-
-	// 2. Delete orphaned resources in external systems.
 	for _, h := range w.registry.ReconcileHandlers() {
-		if err := h.ReconcileOrphans(ctx); err != nil {
+		if err := h.Reconcile(ctx); err != nil {
 			w.logger.Error("reconcile handler failed", "error", err)
 		}
 	}
