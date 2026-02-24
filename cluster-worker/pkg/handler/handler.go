@@ -7,11 +7,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// EntityType identifies an entity type in the outbox table via its FK column.
+// EntityType identifies which outbox FK column a handler cares about.
 type EntityType string
 
 const (
-	EntityCluster EntityType = "cluster"
+	EntityCluster       EntityType = "cluster"
+	EntityNamespace     EntityType = "namespace"
+	EntityProjectMember EntityType = "project_member"
+	EntityProject       EntityType = "project"
 )
 
 // SyncHandler processes an outbox row for a specific entity type.
@@ -30,14 +33,10 @@ type StatusHandler interface {
 	CheckStatus(ctx context.Context) error
 }
 
-// ReconcileHandler performs periodic reconciliation for an entity type.
-// Implementations should:
-//   - Re-enqueue outbox rows for entities with unsynced changes (feeding the SyncHandler)
-//   - Detect and clean up orphaned resources in external systems
-//
+// ReconcileHandler performs cross-system reconciliation (e.g. orphan detection).
 // Called periodically by the outbox worker's reconcile loop.
 type ReconcileHandler interface {
-	Reconcile(ctx context.Context) error
+	ReconcileOrphans(ctx context.Context) error
 }
 
 // Registry holds all registered handlers. The outbox worker and status worker
@@ -68,11 +67,6 @@ func (r *Registry) RegisterStatus(h StatusHandler) {
 	r.statusHandlers = append(r.statusHandlers, h)
 }
 
-// RegisterReconcile registers a ReconcileHandler to be called during reconciliation.
-func (r *Registry) RegisterReconcile(h ReconcileHandler) {
-	r.reconcileHandlers = append(r.reconcileHandlers, h)
-}
-
 // SyncHandlerFor returns the handler for an entity type, or an error if none is registered.
 func (r *Registry) SyncHandlerFor(entityType EntityType) (SyncHandler, error) {
 	h, ok := r.syncHandlers[entityType]
@@ -80,6 +74,11 @@ func (r *Registry) SyncHandlerFor(entityType EntityType) (SyncHandler, error) {
 		return nil, fmt.Errorf("no sync handler registered for %s", entityType)
 	}
 	return h, nil
+}
+
+// RegisterReconcile registers a ReconcileHandler to be called during reconciliation.
+func (r *Registry) RegisterReconcile(h ReconcileHandler) {
+	r.reconcileHandlers = append(r.reconcileHandlers, h)
 }
 
 // StatusHandlers returns all registered status handlers.

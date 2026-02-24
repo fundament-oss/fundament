@@ -29,6 +29,12 @@ const (
 	ConstraintClusterOutboxCkStatus = "cluster_outbox_ck_status"
 	// ConstraintClusterOutboxFkCluster is defined on tenant.cluster_outbox.
 	ConstraintClusterOutboxFkCluster = "cluster_outbox_fk_cluster"
+	// ConstraintClusterOutboxFkNamespace is defined on tenant.cluster_outbox.
+	ConstraintClusterOutboxFkNamespace = "cluster_outbox_fk_namespace"
+	// ConstraintClusterOutboxFkProject is defined on tenant.cluster_outbox.
+	ConstraintClusterOutboxFkProject = "cluster_outbox_fk_project"
+	// ConstraintClusterOutboxFkProjectMember is defined on tenant.cluster_outbox.
+	ConstraintClusterOutboxFkProjectMember = "cluster_outbox_fk_project_member"
 	// ConstraintClustersFkOrganization is defined on tenant.clusters.
 	ConstraintClustersFkOrganization = "clusters_fk_organization"
 	// ConstraintClustersUqName is defined on tenant.clusters.
