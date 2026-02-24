@@ -38,7 +38,11 @@ func Test_InviteMember_NewUser(t *testing.T) {
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
-		WithUser(userID, "test-user", "", nil, []uuid.UUID{orgID}),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
 	)
 
 	token := env.createAuthnToken(t, userID)
@@ -76,8 +80,17 @@ func Test_InviteMember_ExistingUser(t *testing.T) {
 	env := newTestAPI(t,
 		WithOrganization(orgAID, "test-org-a"),
 		WithOrganization(orgBID, "test-org-b"),
-		WithUser(userID, "test-user", "", nil, []uuid.UUID{orgAID}),
-		WithUser(userID2, "second-user", "foo@bar.baz", &externalRef, []uuid.UUID{}),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgAID},
+		}),
+		WithUser(&UserArgs{
+			ID:          userID2,
+			Name:        "second-user",
+			Email:       "foo@bar.baz",
+			ExternalRef: &externalRef,
+		}),
 	)
 
 	token := env.createAuthnToken(t, userID)
@@ -115,8 +128,17 @@ func Test_InviteMember_ExistingUser_AlreadyMember(t *testing.T) {
 	env := newTestAPI(t,
 		WithOrganization(orgAID, "test-org-a"),
 		WithOrganization(orgBID, "test-org-b"),
-		WithUser(userID, "test-user", "", nil, []uuid.UUID{orgAID}),
-		WithUser(userID2, "second-user", "foo@bar.baz", &externalRef, []uuid.UUID{}),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgAID},
+		}),
+		WithUser(&UserArgs{
+			ID:          userID2,
+			Name:        "second-user",
+			Email:       "foo@bar.baz",
+			ExternalRef: &externalRef,
+		}),
 	)
 
 	token := env.createAuthnToken(t, userID)
