@@ -23,6 +23,11 @@ output "project_id" {
   value       = data.fundament_project.example.id
 }
 
+output "project_cluster_name" {
+  description = "The name of the cluster this project belongs to"
+  value       = data.fundament_project.example.cluster_name
+}
+
 output "project_created" {
   description = "The creation timestamp of the project"
   value       = data.fundament_project.example.created

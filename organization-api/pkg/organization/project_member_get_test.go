@@ -41,10 +41,24 @@ func Test_ProjectMember_Get(t *testing.T) {
 
 	token := env.createAuthnToken(t, userID)
 
+	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+
+	createClusterReq := connect.NewRequest(&organizationv1.CreateClusterRequest{
+		Name:              "test-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	})
+	createClusterReq.Header().Set("Authorization", "Bearer "+token)
+	createClusterReq.Header().Set("Fun-Organization", orgID.String())
+
+	createClusterRes, err := clusterClient.CreateCluster(context.Background(), createClusterReq)
+	require.NoError(t, err)
+
 	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
 	createProjectReq := connect.NewRequest(&organizationv1.CreateProjectRequest{
-		Name: "arbitrary",
+		ClusterId: createClusterRes.Msg.ClusterId,
+		Name:      "arbitrary",
 	})
 	createProjectReq.Header().Set("Authorization", "Bearer "+token)
 	createProjectReq.Header().Set("Fun-Organization", orgID.String())

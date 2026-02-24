@@ -70,7 +70,7 @@ func (d *ProjectNamespacesDataSource) Schema(ctx context.Context, req datasource
 							Computed:    true,
 						},
 						"cluster_id": schema.StringAttribute{
-							Description: "The ID of the cluster where this namespace is deployed.",
+							Description: "The ID of the cluster containing this namespace.",
 							Computed:    true,
 						},
 						"created": schema.StringAttribute{
@@ -129,7 +129,7 @@ func (d *ProjectNamespacesDataSource) Read(ctx context.Context, req datasource.R
 	})
 
 	// Call the API
-	rpcResp, err := d.client.ProjectService.ListProjectNamespaces(ctx, rpcReq)
+	rpcResp, err := d.client.NamespaceService.ListProjectNamespaces(ctx, rpcReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeInvalidArgument:
@@ -162,7 +162,7 @@ func (d *ProjectNamespacesDataSource) Read(ctx context.Context, req datasource.R
 		state.Namespaces[i] = NamespaceModel{
 			ID:        types.StringValue(ns.Id),
 			Name:      types.StringValue(ns.Name),
-			ProjectID: types.StringValue(projectID), // Set from request context
+			ProjectID: types.StringValue(projectID),
 			ClusterID: types.StringValue(ns.ClusterId),
 			Created:   types.StringValue(ns.Created.AsTime().Format(time.RFC3339)),
 		}

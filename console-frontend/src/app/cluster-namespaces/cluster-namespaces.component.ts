@@ -9,13 +9,13 @@ import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { CLUSTER, PROJECT } from '../../connect/tokens';
+import { CLUSTER, NAMESPACE, PROJECT } from '../../connect/tokens';
 import {
   ListClusterNamespacesRequestSchema,
   CreateNamespaceRequestSchema,
   DeleteNamespaceRequestSchema,
-  ClusterNamespace,
-} from '../../generated/v1/cluster_pb';
+  Namespace,
+} from '../../generated/v1/namespace_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { fetchClusterName } from '../utils/cluster-status';
 import ModalComponent from '../modal/modal.component';
@@ -44,6 +44,8 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   private client = inject(CLUSTER);
 
+  private namespaceClient = inject(NAMESPACE);
+
   private projectClient = inject(PROJECT);
 
   private toastService = inject(ToastService);
@@ -58,7 +60,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   isLoading = signal(true);
 
-  namespaces = signal<ClusterNamespace[]>([]);
+  namespaces = signal<Namespace[]>([]);
 
   projects = signal<Project[]>([]);
 
@@ -108,7 +110,7 @@ export default class ClusterNamespacesComponent implements OnInit {
   async loadNamespaces(): Promise<void> {
     try {
       const request = create(ListClusterNamespacesRequestSchema, { clusterId: this.clusterId });
-      const response = await firstValueFrom(this.client.listClusterNamespaces(request));
+      const response = await firstValueFrom(this.namespaceClient.listClusterNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
       this.toastService.error(
@@ -122,7 +124,7 @@ export default class ClusterNamespacesComponent implements OnInit {
   async loadProjects(): Promise<void> {
     try {
       this.isLoadingProjects.set(true);
-      const request = create(ListProjectsRequestSchema, {});
+      const request = create(ListProjectsRequestSchema, { clusterId: this.clusterId });
       const response = await firstValueFrom(this.projectClient.listProjects(request));
       this.projects.set(response.projects);
       if (response.projects.length > 0) {
@@ -161,11 +163,10 @@ export default class ClusterNamespacesComponent implements OnInit {
 
       const request = create(CreateNamespaceRequestSchema, {
         projectId: this.namespaceForm.value.projectId!,
-        clusterId: this.clusterId,
         name: this.namespaceForm.value.name!,
       });
 
-      await firstValueFrom(this.client.createNamespace(request));
+      await firstValueFrom(this.namespaceClient.createNamespace(request));
 
       this.showAddNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
@@ -201,7 +202,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
     try {
       const request = create(DeleteNamespaceRequestSchema, { namespaceId });
-      await firstValueFrom(this.client.deleteNamespace(request));
+      await firstValueFrom(this.namespaceClient.deleteNamespace(request));
 
       this.toastService.info(`Namespace '${namespaceName}' deleted`);
 

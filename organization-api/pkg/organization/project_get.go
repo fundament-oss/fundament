@@ -64,8 +64,9 @@ func (s *Server) GetProject(
 
 func projectFromGetRow(row *db.TenantProject) *organizationv1.Project {
 	return &organizationv1.Project{
-		Id:      row.ID.String(),
-		Name:    row.Name,
-		Created: timestamppb.New(row.Created.Time),
+		Id:        row.ID.String(),
+		ClusterId: row.ClusterID.String(),
+		Name:      row.Name,
+		Created:   timestamppb.New(row.Created.Time),
 	}
 }

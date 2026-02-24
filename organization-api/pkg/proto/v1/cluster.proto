@@ -69,29 +69,10 @@ service ClusterService {
   // Remove an install from a cluster
   rpc RemoveInstall(RemoveInstallRequest) returns (google.protobuf.Empty);
 
-  // List namespaces for a cluster
-  rpc ListClusterNamespaces(ListClusterNamespacesRequest) returns (ListClusterNamespacesResponse);
-
-  // Get a namespace by cluster name and namespace name
-  rpc GetNamespaceByClusterAndName(GetNamespaceByClusterAndNameRequest) returns (GetNamespaceByClusterAndNameResponse);
-
-  // Get a namespace by project name and namespace name
-  rpc GetNamespaceByProjectAndName(GetNamespaceByProjectAndNameRequest) returns (GetNamespaceByProjectAndNameResponse);
-
-  // Create a namespace in a cluster
-  rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse);
-
-  // Delete a namespace
-  rpc DeleteNamespace(DeleteNamespaceRequest) returns (google.protobuf.Empty);
 }
 
 // List clusters request
-message ListClustersRequest {
-  string project_id = 10 [
-    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
-    (buf.validate.field).string.uuid = true
-  ]; // Optional: filter by project
-}
+message ListClustersRequest {}
 
 // List clusters response
 message ListClustersResponse {
@@ -315,91 +296,3 @@ message RemoveInstallRequest {
   string install_id = 10 [(buf.validate.field).string = {uuid: true}]; // The UUID of the install record
 }
 
-// List cluster namespaces request
-message ListClusterNamespacesRequest {
-  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
-}
-
-// List cluster namespaces response
-message ListClusterNamespacesResponse {
-  repeated ClusterNamespace namespaces = 10;
-}
-
-// Cluster namespace information
-message ClusterNamespace {
-  string id = 10;
-  string name = 20;
-  string project_id = 30;
-  string cluster_id = 35;
-  google.protobuf.Timestamp created = 40;
-}
-
-// Create namespace request
-message CreateNamespaceRequest {
-  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
-  string cluster_id = 20 [(buf.validate.field).string = {uuid: true}];
-  string name = 30 [
-    (buf.validate.field).string = {max_len: 63},
-    (buf.validate.field).cel = {
-      // TODO: This expression is duplicated in at least one other place.
-      // We should use a predefined rule once we've moved to edition 2023.
-      // https://protovalidate.com/schemas/predefined-rules/
-      id: "dns1123label"
-      message: "must be a valid DNS-1123 label"
-      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
-    }
-  ];
-}
-
-// Create namespace response
-message CreateNamespaceResponse {
-  string namespace_id = 10;
-}
-
-// Delete namespace request
-message DeleteNamespaceRequest {
-  string namespace_id = 10 [(buf.validate.field).string = {uuid: true}];
-}
-
-// Get namespace by cluster and name request
-message GetNamespaceByClusterAndNameRequest {
-  string cluster_name = 10 [(buf.validate.field).string = {
-    min_len: 1
-    max_len: 255
-  }];
-  string namespace_name = 20 [
-    (buf.validate.field).string = {max_len: 63},
-    (buf.validate.field).cel = {
-      id: "dns1123label"
-      message: "must be a valid DNS-1123 label"
-      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
-    }
-  ];
-}
-
-// Get namespace by cluster and name response
-message GetNamespaceByClusterAndNameResponse {
-  ClusterNamespace namespace = 10;
-}
-
-// Get namespace by project and name request
-message GetNamespaceByProjectAndNameRequest {
-  string project_name = 10 [(buf.validate.field).cel = {
-    id: "dns1123label"
-    message: "must be a valid DNS-1123 label"
-    expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
-  }];
-  string namespace_name = 20 [
-    (buf.validate.field).string = {max_len: 63},
-    (buf.validate.field).cel = {
-      id: "dns1123label"
-      message: "must be a valid DNS-1123 label"
-      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
-    }
-  ];
-}
-
-// Get namespace by project and name response
-message GetNamespaceByProjectAndNameResponse {
-  ClusterNamespace namespace = 10;
-}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -16,16 +17,13 @@ func (s *Server) ListProjects(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListProjectsRequest],
 ) (*connect.Response[organizationv1.ListProjectsResponse], error) {
-	organizationID, ok := OrganizationIDFromContext(ctx)
-	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
+	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
-	if err := s.checkPermission(ctx, authz.CanListProjects(), authz.Organization(organizationID)); err != nil {
+	if err := s.checkPermission(ctx, authz.CanListProjects(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
 	}
 
-	projects, err := s.queries.ProjectList(ctx)
+	projects, err := s.queries.ProjectListByClusterID(ctx, db.ProjectListByClusterIDParams{ClusterID: clusterID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list projects: %w", err))
 	}
@@ -42,8 +40,9 @@ func (s *Server) ListProjects(
 
 func projectFromListRow(row *db.TenantProject) *organizationv1.Project {
 	return &organizationv1.Project{
-		Id:      row.ID.String(),
-		Name:    row.Name,
-		Created: timestamppb.New(row.Created.Time),
+		Id:        row.ID.String(),
+		ClusterId: row.ClusterID.String(),
+		Name:      row.Name,
+		Created:   timestamppb.New(row.Created.Time),
 	}
 }
