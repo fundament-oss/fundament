@@ -2,11 +2,11 @@
   <!-- Toast Message -->
   @if (toastService.toast()) {
     <div
-      class="fixed right-4 bottom-4 z-100 flex w-sm items-center rounded-md bg-gray-800/90 px-4 py-3 text-sm text-white shadow-lg dark:bg-gray-200/90 dark:text-gray-800"
+      class="fixed right-4 bottom-4 z-100 flex w-sm items-center gap-3 rounded-md bg-gray-800/90 px-4 py-3 text-sm text-white shadow-lg dark:bg-gray-200/90 dark:text-gray-800"
       role="alert"
     >
       <div
-        class="mr-3 rounded-full p-1"
+        class="rounded-full p-1"
         [class]="
           toastService.toast()?.type === 'success'
             ? 'bg-emerald-400/20 text-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-500'
@@ -27,7 +27,7 @@
           <ng-icon name="tablerInfoCircle" size="1.25rem" class="block!" />
         }
       </div>
-      {{ toastService.toast()?.message }}
+      <span class="min-w-0 flex-1 wrap-break-word">{{ toastService.toast()?.message }}</span>
       <button
         (click)="toastService.dismiss()"
         type="button"
