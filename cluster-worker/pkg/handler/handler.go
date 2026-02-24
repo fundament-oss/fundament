@@ -71,6 +71,11 @@ func (r *Registry) RegisterStatus(h StatusHandler) {
 	r.statusHandlers = append(r.statusHandlers, h)
 }
 
+// RegisterReconcile registers a ReconcileHandler to be called during reconciliation.
+func (r *Registry) RegisterReconcile(h ReconcileHandler) {
+	r.reconcileHandlers = append(r.reconcileHandlers, h)
+}
+
 // SyncHandlerFor returns the handler for an entity type, or an error if none is registered.
 func (r *Registry) SyncHandlerFor(entityType EntityType) (SyncHandler, error) {
 	h, ok := r.syncHandlers[entityType]
@@ -78,11 +83,6 @@ func (r *Registry) SyncHandlerFor(entityType EntityType) (SyncHandler, error) {
 		return nil, fmt.Errorf("no sync handler registered for %s", entityType)
 	}
 	return h, nil
-}
-
-// RegisterReconcile registers a ReconcileHandler to be called during reconciliation.
-func (r *Registry) RegisterReconcile(h ReconcileHandler) {
-	r.reconcileHandlers = append(r.reconcileHandlers, h)
 }
 
 // StatusHandlers returns all registered status handlers.
