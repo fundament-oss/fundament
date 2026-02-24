@@ -217,6 +217,116 @@ const routes: Routes = [
           breadcrumbs: [{ label: 'API keys' }],
         },
       },
+      // Plugin resource routes (organization-level)
+      {
+        path: 'plugin-resources/:pluginName',
+        loadComponent: () =>
+          import('./plugin-resources/plugin-layout/plugin-layout.component').then((m) => m.default),
+        children: [
+          {
+            path: ':resourceKind',
+            loadComponent: () =>
+              import('./plugin-resources/resource-list/resource-list.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [{ label: ':pluginDisplayName' }, { label: ':resourceKindLabel' }],
+            },
+          },
+          {
+            path: ':resourceKind/create',
+            loadComponent: () =>
+              import('./plugin-resources/resource-create/resource-create.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: 'Create' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/:resourceId',
+            loadComponent: () =>
+              import('./plugin-resources/resource-detail/resource-detail.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: 'Details' },
+              ],
+            },
+          },
+        ],
+      },
+      // Plugin resource routes (project-level)
+      {
+        path: 'projects/:id/plugin-resources/:pluginName',
+        loadComponent: () =>
+          import('./plugin-resources/plugin-layout/plugin-layout.component').then((m) => m.default),
+        children: [
+          {
+            path: ':resourceKind',
+            loadComponent: () =>
+              import('./plugin-resources/resource-list/resource-list.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                { label: ':resourceKindLabel' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/create',
+            loadComponent: () =>
+              import('./plugin-resources/resource-create/resource-create.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: 'Create' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/:resourceId',
+            loadComponent: () =>
+              import('./plugin-resources/resource-detail/resource-detail.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: 'Details' },
+              ],
+            },
+          },
+        ],
+      },
       {
         path: '',
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),

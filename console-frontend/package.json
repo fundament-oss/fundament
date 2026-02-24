@@ -42,6 +42,7 @@
     "@ng-icons/core": "^33.0.0",
     "@ng-icons/tabler-icons": "^33.0.0",
     "chart.js": "^4.5.1",
+    "js-yaml": "^4.1.1",
     "rxjs": "~7.8.2",
     "tslib": "^2.8.1",
     "vanilla-calendar-pro": "^3.0.5"
@@ -57,6 +58,7 @@
     "@eslint/js": "^9.39.2",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/postcss": "^4.1.18",
+    "@types/js-yaml": "^4.0.9",
     "angular-eslint": "21.1.0",
     "eslint": "^9.39.2",
     "eslint-config-airbnb-extended": "^3.0.1",

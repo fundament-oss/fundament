@@ -1,0 +1,199 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+
+metadata:
+  name: cnpg-databases
+  displayName: CNPG Databases
+  version: v1.25.1
+  description: Manage PostgreSQL databases via CloudNativePG.
+  icon: tablerDatabase
+  author: CloudNativePG / EDB
+  tags:
+    - database
+    - postgresql
+
+menu:
+  project:
+    - crd: Database
+      list: true
+      detail: true
+      create: true
+
+uiHints:
+  Database:
+    formGroups:
+      - name: Basic information
+        fields: [name, cluster, owner]
+      - name: Encoding & locale
+        fields: [encoding, locale, localeCollate, localeCType, localeProvider]
+      - name: Permissions
+        fields: [allowConnections, connectionLimit, isTemplate]
+      - name: Extensions
+        fields: [extensions]
+      - name: Lifecycle
+        fields: [ensure, databaseReclaimPolicy]
+    hiddenFields:
+      - builtinLocale
+      - icuLocale
+      - icuRules
+      - collationVersion
+      - fdws
+      - schemas
+      - servers
+      - tablespace
+      - template
+    statusMapping:
+      jsonPath: .status.applied
+      values:
+        'true':
+          badge: badge badge-sm badge-emerald
+          label: Applied
+        'false':
+          badge: badge badge-sm badge-yellow
+          label: Pending
+
+crds:
+  - |
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      name: databases.postgresql.cnpg.io
+    spec:
+      group: postgresql.cnpg.io
+      names:
+        kind: Database
+        plural: databases
+        singular: database
+      scope: Namespaced
+      versions:
+        - name: v1
+          served: true
+          storage: true
+          additionalPrinterColumns:
+            - jsonPath: .metadata.creationTimestamp
+              name: Age
+              type: date
+            - jsonPath: .spec.cluster.name
+              name: Cluster
+              type: string
+            - jsonPath: .spec.name
+              name: PG Name
+              type: string
+            - jsonPath: .status.applied
+              name: Applied
+              type: boolean
+            - jsonPath: .status.message
+              name: Message
+              type: string
+              description: Latest reconciliation message
+          schema:
+            openAPIV3Schema:
+              description: Database is the Schema for the databases API
+              type: object
+              required:
+                - metadata
+                - spec
+              properties:
+                apiVersion:
+                  type: string
+                kind:
+                  type: string
+                metadata:
+                  type: object
+                spec:
+                  description: Specification of the desired Database.
+                  type: object
+                  required:
+                    - cluster
+                    - name
+                    - owner
+                  properties:
+                    name:
+                      description: The name of the database to create inside PostgreSQL.
+                      type: string
+                    cluster:
+                      description: The name of the PostgreSQL cluster hosting the database.
+                      type: object
+                      properties:
+                        name:
+                          description: Name of the cluster.
+                          type: string
+                    owner:
+                      description: The role name of the user who owns the database.
+                      type: string
+                    encoding:
+                      description: Character set encoding to use in the database.
+                      type: string
+                    locale:
+                      description: Sets the default collation order and character classification.
+                      type: string
+                    localeCollate:
+                      description: Maps to the LC_COLLATE parameter.
+                      type: string
+                    localeCType:
+                      description: Maps to the LC_CTYPE parameter.
+                      type: string
+                    localeProvider:
+                      description: Maps to the LOCALE_PROVIDER parameter. Available from PostgreSQL 16.
+                      type: string
+                    allowConnections:
+                      description: If false then no one can connect to this database.
+                      type: boolean
+                    connectionLimit:
+                      description: "How many concurrent connections can be made. -1 means no limit."
+                      type: integer
+                    isTemplate:
+                      description: If true, this database can be cloned by any user with CREATEDB privileges.
+                      type: boolean
+                    ensure:
+                      description: "Ensure the database is present or absent. Defaults to present."
+                      type: string
+                      default: present
+                      enum:
+                        - present
+                        - absent
+                    databaseReclaimPolicy:
+                      description: The policy for end-of-life maintenance of this database.
+                      type: string
+                      default: retain
+                      enum:
+                        - delete
+                        - retain
+                    extensions:
+                      description: The list of extensions to be managed in the database.
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - name
+                        properties:
+                          name:
+                            description: Name of the extension.
+                            type: string
+                          ensure:
+                            description: Whether the extension should be present or absent.
+                            type: string
+                            default: present
+                            enum:
+                              - present
+                              - absent
+                          version:
+                            description: The version of the extension to install.
+                            type: string
+                          schema:
+                            description: The schema in which to install the extension.
+                            type: string
+                status:
+                  description: Most recently observed status of the Database.
+                  type: object
+                  properties:
+                    applied:
+                      description: Applied is true if the database was reconciled correctly.
+                      type: boolean
+                    message:
+                      description: Message is the reconciliation output message.
+                      type: string
+                    observedGeneration:
+                      description: A sequence number representing the latest desired state that was synchronized.
+                      type: integer
+                      format: int64

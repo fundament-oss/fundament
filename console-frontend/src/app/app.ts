@@ -39,6 +39,11 @@ import {
   tablerBuilding,
   tablerBracketsContain,
   tablerUserCog,
+  tablerShieldCheck,
+  tablerDatabase,
+  tablerCertificate,
+  tablerLock,
+  tablerCloud,
 } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { firstValueFrom } from 'rxjs';
@@ -55,6 +60,8 @@ import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
+import PluginNavService from './plugin-resources/plugin-nav.service';
+import PluginRegistryService from './plugin-resources/plugin-registry.service';
 
 const reloadApp = () => {
   window.location.reload();
@@ -96,6 +103,11 @@ const reloadApp = () => {
       tablerBuilding,
       tablerBracketsContain,
       tablerUserCog,
+      tablerShieldCheck,
+      tablerDatabase,
+      tablerCertificate,
+      tablerLock,
+      tablerCloud,
     }),
   ],
   host: {
@@ -116,6 +128,10 @@ export default class App implements OnInit {
   protected organizationDataService = inject(OrganizationDataService);
 
   private organizationContextService = inject(OrganizationContextService);
+
+  protected pluginNavService = inject(PluginNavService);
+
+  private pluginRegistry = inject(PluginRegistryService);
 
   private organizationClient = inject(ORGANIZATION);
 
@@ -368,6 +384,17 @@ export default class App implements OnInit {
     if (label === ':projectName') {
       const projectData = this.organizationDataService.getProjectById(params['id']);
       label = projectData?.project.name || 'Project';
+    }
+
+    if (label === ':pluginDisplayName') {
+      const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
+      label = plugin?.metadata.displayName ?? params['pluginName'] ?? 'Plugin';
+    }
+
+    if (label === ':resourceKindLabel') {
+      const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
+      const crd = plugin?.crds.find((c) => c.plural === params['resourceKind']);
+      label = crd?.kind ?? params['resourceKind'] ?? 'Resources';
     }
 
     if (label === ':clusterName') {

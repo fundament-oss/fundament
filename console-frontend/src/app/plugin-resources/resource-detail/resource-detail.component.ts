@@ -1,0 +1,144 @@
+import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerAlertTriangle } from '@ng-icons/tabler-icons';
+import ModalComponent from '../../modal/modal.component';
+import FieldRendererComponent from '../field-renderers/field-renderer.component';
+import PluginRegistryService from '../plugin-registry.service';
+import PluginResourceStoreService from '../plugin-resource-store.service';
+import { ToastService } from '../../toast.service';
+import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
+import { formatDate, fieldNameToLabel, groupFields, resolveStatusBadge } from '../crd-schema.utils';
+
+function buildListLink(): string[] {
+  return ['..'];
+}
+
+function toDateValue(val: unknown): string {
+  return formatDate(String(val ?? ''));
+}
+
+function toSimpleValue(val: unknown): string {
+  if (val === null || val === undefined) return '\u2014';
+  if (typeof val === 'object') return JSON.stringify(val);
+  return String(val);
+}
+
+function checkIsWideField(schema: CrdPropertySchema): boolean {
+  return (
+    schema.type === 'array' || schema.type === 'object' || (schema.description?.length ?? 0) > 100
+  );
+}
+
+function checkIsWideStatusField(key: string, value: unknown): boolean {
+  return key === 'conditions' || Array.isArray(value) || typeof value === 'object';
+}
+
+function checkIsConditionsField(key: string, value: unknown): boolean {
+  return key === 'conditions' && Array.isArray(value);
+}
+
+function toArray(val: unknown): unknown[] {
+  return Array.isArray(val) ? val : [];
+}
+
+function toRecord(val: unknown): Record<string, unknown> {
+  return (val as Record<string, unknown>) ?? {};
+}
+
+@Component({
+  selector: 'app-resource-detail',
+  standalone: true,
+  imports: [RouterLink, NgIcon, ModalComponent, FieldRendererComponent],
+  viewProviders: [provideIcons({ tablerAlertTriangle })],
+  templateUrl: './resource-detail.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export default class ResourceDetailComponent {
+  private route = inject(ActivatedRoute);
+
+  private router = inject(Router);
+
+  private registry = inject(PluginRegistryService);
+
+  private store = inject(PluginResourceStoreService);
+
+  private toastService = inject(ToastService);
+
+  private pluginName = this.route.snapshot.paramMap.get('pluginName') ?? '';
+
+  private resourceKind = this.route.snapshot.paramMap.get('resourceKind') ?? '';
+
+  private resourceId = this.route.snapshot.paramMap.get('resourceId') ?? '';
+
+  private plugin = computed(() => this.registry.getPlugin(this.pluginName));
+
+  crdDef = computed<ParsedCrd | undefined>(() =>
+    this.registry.getCrdByPlural(this.pluginName, this.resourceKind),
+  );
+
+  resource = computed<KubeResource | undefined>(() => {
+    const crd = this.crdDef();
+    if (!crd) return undefined;
+    return this.store.getResource(this.pluginName, crd.kind, this.resourceId);
+  });
+
+  statusBadge = computed(() => {
+    const r = this.resource();
+    const p = this.plugin();
+    const crd = this.crdDef();
+    if (!r || !p?.uiHints || !crd) return undefined;
+    return resolveStatusBadge(r, p.uiHints[crd.kind]?.statusMapping);
+  });
+
+  fieldGroups = computed(() => {
+    const crd = this.crdDef();
+    const p = this.plugin();
+    if (!crd) return [];
+    const hints = p?.uiHints?.[crd.kind];
+    return groupFields(crd.specSchema, hints?.formGroups, hints?.hiddenFields);
+  });
+
+  statusFields = computed<[string, unknown][]>(() => {
+    const r = this.resource();
+    if (!r?.status) return [];
+    return Object.entries(r.status);
+  });
+
+  showDeleteModal = signal(false);
+
+  listLink = buildListLink;
+
+  formatLabel = fieldNameToLabel;
+
+  formatDateValue = toDateValue;
+
+  formatSimpleValue = toSimpleValue;
+
+  isWideField = checkIsWideField;
+
+  isWideStatusField = checkIsWideStatusField;
+
+  isConditionsField = checkIsConditionsField;
+
+  asArray = toArray;
+
+  asRecord = toRecord;
+
+  getSpecValue(fieldName: string): unknown {
+    return this.resource()?.spec?.[fieldName] ?? null;
+  }
+
+  openDeleteModal(): void {
+    this.showDeleteModal.set(true);
+  }
+
+  confirmDelete(): void {
+    const crd = this.crdDef();
+    if (!crd) return;
+    this.store.deleteResource(this.pluginName, crd.kind, this.resourceId);
+    this.showDeleteModal.set(false);
+    this.toastService.show(`${crd.singular} deleted`, 'success');
+    this.router.navigate(['..'], { relativeTo: this.route });
+  }
+}

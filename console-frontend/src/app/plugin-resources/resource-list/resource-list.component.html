@@ -1,0 +1,158 @@
+<div class="card">
+  <div class="card-header">
+    <h1 class="text-2xl font-bold dark:text-white">{{ crdDef()?.kind ?? 'Resources' }}</h1>
+    @if (plugin()?.metadata?.description) {
+      <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        {{ plugin()?.metadata?.description }}
+      </p>
+    }
+  </div>
+
+  <div class="p-6">
+    <!-- Actions -->
+    @if (menuItem()?.create) {
+      <div class="mb-5">
+        <a [routerLink]="createLink()" class="btn-primary inline-flex items-center">
+          <ng-icon name="tablerPlus" class="mr-1.5" />
+          Create {{ crdDef()?.singular ?? 'resource' }}
+        </a>
+      </div>
+    }
+
+    <!-- Table -->
+    @if (resources().length > 0) {
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              @for (col of columns(); track col.name) {
+                <th
+                  scope="col"
+                  [class.hidden]="col.priority && col.priority > 0"
+                  [class.lg:table-cell]="col.priority && col.priority > 0"
+                >
+                  {{ col.name }}
+                </th>
+              }
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (resource of resources(); track resource.metadata.uid) {
+              <tr>
+                <td class="whitespace-normal">
+                  @if (menuItem()?.detail) {
+                    <a
+                      [routerLink]="detailLink(resource)"
+                      class="font-medium hover:underline dark:text-white"
+                      >{{ resource.metadata.name }}</a
+                    >
+                  } @else {
+                    <span class="font-medium dark:text-white">{{ resource.metadata.name }}</span>
+                  }
+                  @if (resource.metadata.namespace) {
+                    <div class="mt-0.5 font-mono text-xs text-gray-500 dark:text-gray-400">
+                      {{ resource.metadata.namespace }}
+                    </div>
+                  }
+                </td>
+                @for (col of columns(); track col.name) {
+                  <td
+                    [class.hidden]="col.priority && col.priority > 0"
+                    [class.lg:table-cell]="col.priority && col.priority > 0"
+                    class="whitespace-normal"
+                  >
+                    @if (getStatusBadge(resource, col); as badge) {
+                      <span [class]="badge.badge">{{ badge.label }}</span>
+                    } @else {
+                      {{ formatCell(resource, col) }}
+                    }
+                  </td>
+                }
+                <td>
+                  <div class="flex gap-1">
+                    @if (menuItem()?.detail) {
+                      <a
+                        [routerLink]="detailLink(resource)"
+                        class="btn-light inline-flex shrink-0 items-center px-2!"
+                        aria-label="View"
+                        title="View"
+                      >
+                        <ng-icon name="tablerEye" />
+                      </a>
+                    }
+                    <button
+                      type="button"
+                      (click)="openDeleteModal(resource)"
+                      class="btn-remove inline-flex shrink-0 items-center px-2!"
+                      aria-label="Delete"
+                      title="Delete"
+                    >
+                      <ng-icon name="tablerTrash" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Empty State -->
+    @if (resources().length === 0) {
+      <div class="py-8 text-center">
+        <ng-icon name="tablerDatabaseOff" size="3rem" class="mx-auto mb-3 text-gray-400!" />
+        <p class="text-gray-600 dark:text-gray-300">
+          No {{ crdDef()?.plural ?? 'resources' }} found
+        </p>
+        @if (menuItem()?.create) {
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Create your first {{ crdDef()?.singular ?? 'resource' }} to get started
+          </p>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<app-modal
+  [show]="showDeleteModal()"
+  title="Delete {{ crdDef()?.singular ?? 'resource' }}"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showDeleteModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          Are you sure you want to delete
+          <span class="font-semibold text-gray-800 dark:text-white">{{ pendingDeleteName() }}</span
+          >?
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="confirmDelete()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, delete
+    </button>
+  </div>
+</app-modal>
