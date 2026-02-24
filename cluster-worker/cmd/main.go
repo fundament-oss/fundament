@@ -31,9 +31,9 @@ type config struct {
 	ShutdownTimeout    time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 
 	// Worker configs (env tags defined in worker packages)
-	Outbox         worker_outbox.Config        `envPrefix:"OUTBOX_"`
-	StatusLoop     worker_outbox.StatusConfig  `envPrefix:"STATUS_"`
-	ClusterHandler cluster_handler.Config      `envPrefix:"CLUSTER_"`
+	Outbox         worker_outbox.Config       `envPrefix:"OUTBOX_"`
+	StatusLoop     worker_outbox.StatusConfig `envPrefix:"STATUS_"`
+	ClusterHandler cluster_handler.Config     `envPrefix:"CLUSTER_"`
 
 	// Provider configuration for real Gardener mode.
 	// These configure how Shoots are created in Gardener and depend on the target infrastructure.

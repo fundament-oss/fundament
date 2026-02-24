@@ -384,15 +384,15 @@ func (r *clusterGetForSyncDeletedRow) Scan(dest ...any) error {
 // emptyRows implements pgx.Rows returning no rows.
 type emptyRows struct{ closed bool }
 
-func (r *emptyRows) Close()                                         { r.closed = true }
-func (r *emptyRows) Err() error                                     { return nil }
-func (r *emptyRows) CommandTag() pgconn.CommandTag                   { return pgconn.CommandTag{} }
-func (r *emptyRows) FieldDescriptions() []pgconn.FieldDescription   { return nil }
-func (r *emptyRows) Next() bool                                     { return false }
-func (r *emptyRows) Scan(_ ...any) error                            { return pgx.ErrNoRows }
-func (r *emptyRows) Values() ([]any, error)                         { return nil, nil }
-func (r *emptyRows) RawValues() [][]byte                            { return nil }
-func (r *emptyRows) Conn() *pgx.Conn                                { return nil }
+func (r *emptyRows) Close()                                       { r.closed = true }
+func (r *emptyRows) Err() error                                   { return nil }
+func (r *emptyRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
+func (r *emptyRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
+func (r *emptyRows) Next() bool                                   { return false }
+func (r *emptyRows) Scan(_ ...any) error                          { return pgx.ErrNoRows }
+func (r *emptyRows) Values() ([]any, error)                       { return nil, nil }
+func (r *emptyRows) RawValues() [][]byte                          { return nil }
+func (r *emptyRows) Conn() *pgx.Conn                              { return nil }
 
 // singleClusterRows implements pgx.Rows returning one ClusterListActiveRow.
 type singleClusterRows struct {
@@ -404,7 +404,7 @@ type singleClusterRows struct {
 
 func (r *singleClusterRows) Close()                                       { r.closed = true }
 func (r *singleClusterRows) Err() error                                   { return nil }
-func (r *singleClusterRows) CommandTag() pgconn.CommandTag                 { return pgconn.CommandTag{} }
+func (r *singleClusterRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
 func (r *singleClusterRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
 func (r *singleClusterRows) Values() ([]any, error)                       { return nil, nil }
 func (r *singleClusterRows) RawValues() [][]byte                          { return nil }
