@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.2
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -43,10 +43,13 @@ SET search_path TO pg_catalog,public,tenant,appstore,authn,authz;
 CREATE TABLE tenant.organizations (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	name text NOT NULL,
+	display_name text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT organizations_pk PRIMARY KEY (id),
-	CONSTRAINT organizations_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted)
+	CONSTRAINT organizations_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
+	CONSTRAINT organizations_ck_name CHECK (name ~ '^[a-z][a-z0-9-]*[a-z0-9]$'),
+	CONSTRAINT organizations_ck_display_name CHECK (char_length(display_name) >= 1 AND char_length(display_name) <= 255)
 );
 -- ddl-end --
 ALTER TABLE tenant.organizations OWNER TO fun_owner;

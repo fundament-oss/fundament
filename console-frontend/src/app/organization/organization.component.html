@@ -40,6 +40,16 @@
         <!-- Organization Name -->
         <div>
           <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Name</div>
+          <p
+            class="rounded-md bg-gray-50 px-4 py-2 font-mono text-sm text-gray-900 dark:bg-gray-900 dark:text-white"
+          >
+            {{ organization()!.name }}
+          </p>
+        </div>
+
+        <!-- Organization Display Name -->
+        <div>
+          <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Display name</div>
           @if (isEditing()) {
             <div class="flex gap-2">
               <input
@@ -70,7 +80,7 @@
             </div>
           } @else {
             <div class="flex items-center justify-between">
-              <p class="text-sm text-gray-900 dark:text-white">{{ organization()!.name }}</p>
+              <p class="text-sm text-gray-900 dark:text-white">{{ organization()!.displayName }}</p>
               <button
                 type="button"
                 (click)="startEdit()"

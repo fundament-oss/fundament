@@ -59,7 +59,7 @@ func sanitizeName(name string) string {
 //
 // The hash is computed from the original (pre-sanitized) name, so organizations
 // with names that sanitize to the same prefix but have different original names
-// (e.g., "Acme Corp" vs "Acme-Corp") will produce different project names.
+// will produce different project names.
 func ProjectName(orgName string) string {
 	sanitized := sanitizeName(orgName)
 

@@ -27,6 +27,7 @@ export interface ClusterData {
 export interface OrganizationData {
   id: string;
   name: string;
+  displayName: string;
   clusters: ClusterData[];
 }
 
@@ -162,6 +163,7 @@ export class OrganizationDataService {
       const organizationData: OrganizationData = {
         id: orgResponse.organization.id,
         name: orgResponse.organization.name,
+        displayName: orgResponse.organization.displayName,
         clusters: clustersData,
       };
 
@@ -205,9 +207,9 @@ export class OrganizationDataService {
   /**
    * Update the cached organization name without a full reload
    */
-  updateOrganizationName(organizationId: string, name: string) {
+  updateOrganizationDisplayName(organizationId: string, displayName: string) {
     this.organizations.update((orgs) =>
-      orgs.map((org) => (org.id === organizationId ? { ...org, name } : org)),
+      orgs.map((org) => (org.id === organizationId ? { ...org, displayName } : org)),
     );
   }
 

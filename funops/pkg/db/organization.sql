@@ -1,15 +1,17 @@
 -- name: OrganizationCreate :one
-INSERT INTO tenant.organizations (name)
-VALUES ($1)
+INSERT INTO tenant.organizations (name, display_name)
+VALUES ($1, $2)
 RETURNING
   id,
   name,
+  display_name,
   created;
 
 -- name: OrganizationList :many
 SELECT
   id,
   name,
+  display_name,
   created
 FROM tenant.organizations
 ORDER BY created DESC;

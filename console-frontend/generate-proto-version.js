@@ -47,7 +47,7 @@ try {
   const version = hash.digest('hex').substring(0, 12);
 
   // Write version to a TypeScript file
-  const outputPath = path.join(__dirname, 'src', 'proto-version.ts');
+  const outputPath = path.join(__dirname, 'src', 'proto-version.gen.ts');
   const content = `// Auto-generated file - do not edit
 export default '${version}';
 `;
