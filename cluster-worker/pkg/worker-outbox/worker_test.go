@@ -1,78 +1,60 @@
 package worker_outbox
 
 import (
+	"context"
+	"errors"
+	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 )
 
-func TestEntityFromRow_Cluster(t *testing.T) {
-	clusterID := uuid.New()
-	row := &db.OutboxGetAndLockRow{
-		ClusterID: pgtype.UUID{Bytes: clusterID, Valid: true},
-	}
-
-	entityType, entityID := entityFromRow(row)
-
-	if entityType != handler.EntityCluster {
-		t.Errorf("expected EntityCluster, got %q", entityType)
-	}
-	if entityID != clusterID {
-		t.Errorf("expected %s, got %s", clusterID, entityID)
-	}
+// mockDBTX implements db.DBTX for testing handleProcessingError.
+type mockDBTX struct {
+	execCalled     bool
+	queryRowCalled bool
+	execErr        error
+	queryRowResult pgx.Row
 }
 
-func TestEntityFromRow_Namespace(t *testing.T) {
-	nsID := uuid.New()
-	row := &db.OutboxGetAndLockRow{
-		NamespaceID: pgtype.UUID{Bytes: nsID, Valid: true},
-	}
-
-	entityType, entityID := entityFromRow(row)
-
-	if entityType != handler.EntityNamespace {
-		t.Errorf("expected EntityNamespace, got %q", entityType)
-	}
-	if entityID != nsID {
-		t.Errorf("expected %s, got %s", nsID, entityID)
-	}
+func (m *mockDBTX) Exec(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
+	m.execCalled = true
+	return pgconn.CommandTag{}, m.execErr
 }
 
-func TestEntityFromRow_ProjectMember(t *testing.T) {
-	pmID := uuid.New()
-	row := &db.OutboxGetAndLockRow{
-		ProjectMemberID: pgtype.UUID{Bytes: pmID, Valid: true},
-	}
-
-	entityType, entityID := entityFromRow(row)
-
-	if entityType != handler.EntityProjectMember {
-		t.Errorf("expected EntityProjectMember, got %q", entityType)
-	}
-	if entityID != pmID {
-		t.Errorf("expected %s, got %s", pmID, entityID)
-	}
+func (m *mockDBTX) Query(_ context.Context, _ string, _ ...any) (pgx.Rows, error) {
+	panic("Query should not be called")
 }
 
-func TestEntityFromRow_Project(t *testing.T) {
-	projID := uuid.New()
-	row := &db.OutboxGetAndLockRow{
-		ProjectID: pgtype.UUID{Bytes: projID, Valid: true},
-	}
+func (m *mockDBTX) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row {
+	m.queryRowCalled = true
+	return m.queryRowResult
+}
 
-	entityType, entityID := entityFromRow(row)
+// mockRow implements pgx.Row for testing OutboxMarkRetry results.
+type mockRow struct {
+	retries int32
+	err     error
+}
 
-	if entityType != handler.EntityProject {
-		t.Errorf("expected EntityProject, got %q", entityType)
+func (m *mockRow) Scan(dest ...any) error {
+	if m.err != nil {
+		return m.err
 	}
-	if entityID != projID {
-		t.Errorf("expected %s, got %s", projID, entityID)
+	if len(dest) > 0 {
+		if p, ok := dest[0].(*int32); ok {
+			*p = m.retries
+		}
 	}
+	return nil
 }
 
 func TestEntityFromRow_NoFKPanics(t *testing.T) {
@@ -108,28 +90,83 @@ func TestEntityFromRow_Priority(t *testing.T) {
 	}
 }
 
-func TestDurationToInterval(t *testing.T) {
-	tests := []struct {
-		name     string
-		duration time.Duration
-		wantUs   int64
-	}{
-		{"500ms", 500 * time.Millisecond, 500_000},
-		{"1s", time.Second, 1_000_000},
-		{"1m", time.Minute, 60_000_000},
-		{"zero", 0, 0},
+func newTestWorker() *OutboxWorker {
+	return &OutboxWorker{
+		logger: slog.Default(),
+		cfg: Config{
+			MaxRetries:  10,
+			BaseBackoff: 500 * time.Millisecond,
+			MaxBackoff:  time.Minute,
+		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			interval := durationToInterval(tt.duration)
+func TestHandleProcessingError_RetryBelowMax(t *testing.T) {
+	mock := &mockDBTX{queryRowResult: &mockRow{retries: 6}}
+	w := newTestWorker()
+	qtx := db.New(mock)
+	row := &db.OutboxGetAndLockRow{ID: uuid.New(), Retries: 5}
 
-			if !interval.Valid {
-				t.Error("expected Valid to be true")
-			}
-			if interval.Microseconds != tt.wantUs {
-				t.Errorf("expected %d microseconds, got %d", tt.wantUs, interval.Microseconds)
-			}
-		})
+	err := w.handleProcessingError(context.Background(), qtx, row, errors.New("sync failed"))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !mock.queryRowCalled {
+		t.Error("expected OutboxMarkRetry (QueryRow) to be called")
+	}
+	if mock.execCalled {
+		t.Error("did not expect OutboxMarkFailed (Exec) to be called")
+	}
+}
+
+func TestHandleProcessingError_ExceedMaxRetries(t *testing.T) {
+	mock := &mockDBTX{}
+	w := newTestWorker()
+	qtx := db.New(mock)
+	row := &db.OutboxGetAndLockRow{ID: uuid.New(), Retries: 9}
+
+	err := w.handleProcessingError(context.Background(), qtx, row, errors.New("sync failed"))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !mock.execCalled {
+		t.Error("expected OutboxMarkFailed (Exec) to be called")
+	}
+	if mock.queryRowCalled {
+		t.Error("did not expect OutboxMarkRetry (QueryRow) to be called")
+	}
+}
+
+func TestHandleProcessingError_MarkRetryFails(t *testing.T) {
+	mock := &mockDBTX{queryRowResult: &mockRow{err: errors.New("db down")}}
+	w := newTestWorker()
+	qtx := db.New(mock)
+	row := &db.OutboxGetAndLockRow{ID: uuid.New(), Retries: 5}
+
+	err := w.handleProcessingError(context.Background(), qtx, row, errors.New("sync failed"))
+
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "mark outbox retry") {
+		t.Errorf("expected error to contain 'mark outbox retry', got: %v", err)
+	}
+}
+
+func TestHandleProcessingError_MarkFailedFails(t *testing.T) {
+	mock := &mockDBTX{execErr: errors.New("db down")}
+	w := newTestWorker()
+	qtx := db.New(mock)
+	row := &db.OutboxGetAndLockRow{ID: uuid.New(), Retries: 9}
+
+	err := w.handleProcessingError(context.Background(), qtx, row, errors.New("sync failed"))
+
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "mark outbox failed") {
+		t.Errorf("expected error to contain 'mark outbox failed', got: %v", err)
 	}
 }
