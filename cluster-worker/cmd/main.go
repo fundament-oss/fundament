@@ -15,7 +15,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	worker_status "github.com/fundament-oss/fundament/cluster-worker/pkg/worker-status"
 	worker_sync "github.com/fundament-oss/fundament/cluster-worker/pkg/worker-sync"
 	"github.com/fundament-oss/fundament/common/psqldb"
