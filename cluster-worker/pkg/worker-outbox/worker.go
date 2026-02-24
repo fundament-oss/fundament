@@ -291,18 +291,7 @@ func (w *OutboxWorker) reconcileAllHandlers(ctx context.Context) {
 
 // entityFromRow returns the entity type and ID from an outbox row.
 func entityFromRow(row *db.OutboxGetAndLockRow) (handler.EntityType, uuid.UUID) {
-	switch {
-	case row.ClusterID.Valid:
-		return handler.EntityCluster, row.ClusterID.Bytes
-	case row.NamespaceID.Valid:
-		return handler.EntityNamespace, row.NamespaceID.Bytes
-	case row.ProjectMemberID.Valid:
-		return handler.EntityProjectMember, row.ProjectMemberID.Bytes
-	case row.ProjectID.Valid:
-		return handler.EntityProject, row.ProjectID.Bytes
-	default:
-		panic(fmt.Sprintf("outbox row %s has no entity FK set", row.ID))
-	}
+	return handler.EntityType(row.EntityType), row.SubjectID
 }
 
 func durationToInterval(d time.Duration) pgtype.Interval {

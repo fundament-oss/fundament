@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
@@ -57,36 +56,21 @@ func (m *mockRow) Scan(dest ...any) error {
 	return nil
 }
 
-func TestEntityFromRow_NoFKPanics(t *testing.T) {
+func TestEntityFromRow(t *testing.T) {
+	id := uuid.New()
 	row := &db.OutboxGetAndLockRow{
-		ID: uuid.New(),
-	}
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("expected panic when no FK column is set")
-		}
-	}()
-
-	entityFromRow(row)
-}
-
-func TestEntityFromRow_Priority(t *testing.T) {
-	// When multiple FKs are set (shouldn't happen, but test precedence), cluster wins.
-	clusterID := uuid.New()
-	nsID := uuid.New()
-	row := &db.OutboxGetAndLockRow{
-		ClusterID:   pgtype.UUID{Bytes: clusterID, Valid: true},
-		NamespaceID: pgtype.UUID{Bytes: nsID, Valid: true},
+		ID:         uuid.New(),
+		SubjectID:  id,
+		EntityType: string(handler.EntityCluster),
 	}
 
 	entityType, entityID := entityFromRow(row)
 
 	if entityType != handler.EntityCluster {
-		t.Errorf("expected EntityCluster (highest priority), got %q", entityType)
+		t.Errorf("expected EntityCluster, got %q", entityType)
 	}
-	if entityID != clusterID {
-		t.Errorf("expected cluster ID %s, got %s", clusterID, entityID)
+	if entityID != id {
+		t.Errorf("expected %s, got %s", id, entityID)
 	}
 }
 

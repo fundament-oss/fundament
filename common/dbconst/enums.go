@@ -24,6 +24,13 @@ const (
 	ClusterEventSyncAction_Delete ClusterEventSyncAction = "delete"
 )
 
+// ClusterOutboxEntityType represents valid values for tenant.cluster_outbox.entity_type.
+type ClusterOutboxEntityType string
+
+const (
+	ClusterOutboxEntityType_Cluster ClusterOutboxEntityType = "cluster"
+)
+
 // ClusterOutboxEvent represents valid values for tenant.cluster_outbox.event.
 type ClusterOutboxEvent string
 
