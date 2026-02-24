@@ -33,8 +33,8 @@
           <span class="text-sm text-gray-500 dark:text-gray-400">Loading clusters...</span>
         </div>
       } @else if (clusters().length === 0) {
-        <p class="mt-2 text-sm text-rose-500 dark:text-rose-400">
-          No clusters available. Create a cluster first.
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          No clusters available. <a routerLink="/clusters/add" class="link">Add a cluster first</a>.
         </p>
       } @else {
         <select id="clusterId" formControlName="clusterId" class="w-full">
@@ -42,13 +42,14 @@
             <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
           }
         </select>
+
+        @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
+          <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getClusterError() }}</p>
+        }
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          Select the cluster this project will belong to.
+        </p>
       }
-      @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getClusterError() }}</p>
-      }
-      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        Select the cluster this project will belong to.
-      </p>
     </div>
 
     <div>
