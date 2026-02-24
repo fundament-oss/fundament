@@ -36,43 +36,48 @@ type testUser struct {
 	OrgIDs      []uuid.UUID
 }
 
-type APIOptions struct {
-	T             testing.TB
-	Organizations map[uuid.UUID]string
-	Users         map[uuid.UUID]testUser
-	Clock         clock.Clock
+type apiOptions struct {
+	t             testing.TB
+	organizations map[uuid.UUID]string
+	users         map[uuid.UUID]testUser
+	clock         clock.Clock
 }
 
-type APIOption func(*APIOptions)
+type APIOption func(*apiOptions)
 
 func WithOrganization(id uuid.UUID, name string) APIOption {
-	return func(o *APIOptions) {
-		o.Organizations[id] = name
+	return func(o *apiOptions) {
+		_, exists := o.organizations[id]
+		if exists {
+			o.t.Fatalf("WithOrganization: duplicate organization ID %q", id)
+		}
+
+		o.organizations[id] = name
 	}
 }
 
 func WithUser(id uuid.UUID, name, email string, externalRef *string, orgIDs []uuid.UUID) APIOption {
-	return func(o *APIOptions) {
-		_, exists := o.Users[id]
+	return func(o *apiOptions) {
+		_, exists := o.users[id]
 		if exists {
-			o.T.Fatalf("WithUser: duplicate user ID %q", id)
+			o.t.Fatalf("WithUser: duplicate user ID %q", id)
 		}
 
-		o.Users[id] = testUser{Name: name, Email: email, OrgIDs: orgIDs, ExternalRef: externalRef}
+		o.users[id] = testUser{Name: name, Email: email, OrgIDs: orgIDs, ExternalRef: externalRef}
 	}
 }
 
 func WithClock(c clock.Clock) APIOption {
-	return func(o *APIOptions) {
-		o.Clock = c
+	return func(o *apiOptions) {
+		o.clock = c
 	}
 }
 
 func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
-	opts := APIOptions{
-		T:             t,
-		Organizations: make(map[uuid.UUID]string),
-		Users:         make(map[uuid.UUID]testUser),
+	opts := apiOptions{
+		t:             t,
+		organizations: make(map[uuid.UUID]string),
+		users:         make(map[uuid.UUID]testUser),
 	}
 	for _, option := range options {
 		option(&opts)
@@ -89,7 +94,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	organizationCfg := &organization.Config{
 		JWTSecret:          jwtSecret,
 		CORSAllowedOrigins: []string{"*"},
-		Clock:              opts.Clock,
+		Clock:              opts.clock,
 	}
 
 	organizationServer, err := organization.New(testLogger, organizationCfg, testDb, nil)
@@ -98,7 +103,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	ts := httptest.NewServer(organizationServer.Handler())
 	t.Cleanup(ts.Close)
 
-	for id, name := range opts.Organizations {
+	for id, name := range opts.organizations {
 		_, err = testDb.Pool.Exec(t.Context(),
 			"INSERT INTO tenant.organizations (id, name) VALUES ($1, $2)",
 			id, name,
@@ -106,7 +111,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		require.NoError(t, err)
 	}
 
-	for id, user := range opts.Users {
+	for id, user := range opts.users {
 		_, err = testDb.Pool.Exec(t.Context(),
 			"INSERT INTO tenant.users (id, name, external_ref, email) VALUES ($1, $2, $3, $4)",
 			id, user.Name, user.ExternalRef, user.Email,
@@ -126,8 +131,8 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	return &testEnv{
 		server:    ts,
 		jwtSecret: jwtSecret,
-		orgs:      opts.Organizations,
-		users:     opts.Users,
+		orgs:      opts.organizations,
+		users:     opts.users,
 	}
 }
 
