@@ -19,7 +19,7 @@ type ProjectCmd struct {
 
 // ProjectListCmd handles the project list command.
 type ProjectListCmd struct {
-	Cluster string `help:"Filter projects by cluster ID." short:"c"`
+	Cluster string `arg:"" help:"Cluster ID to list projects for."`
 }
 
 // Run executes the project list command.
@@ -29,10 +29,7 @@ func (c *ProjectListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	listReq := &organizationv1.ListProjectsRequest{}
-	if c.Cluster != "" {
-		listReq.ClusterId = c.Cluster
-	}
+	listReq := &organizationv1.ListProjectsRequest{ClusterId: c.Cluster}
 	resp, err := apiClient.Projects().ListProjects(context.Background(), connect.NewRequest(listReq))
 	if err != nil {
 		return fmt.Errorf("failed to list projects: %w", err)

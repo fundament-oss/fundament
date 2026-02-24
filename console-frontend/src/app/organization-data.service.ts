@@ -1,8 +1,9 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
-import { ORGANIZATION, NAMESPACE, PROJECT } from '../connect/tokens';
+import { ORGANIZATION, CLUSTER, NAMESPACE, PROJECT } from '../connect/tokens';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
+import { ListClustersRequestSchema } from '../generated/v1/cluster_pb';
 import { ListProjectsRequestSchema } from '../generated/v1/project_pb';
 import { ListProjectNamespacesRequestSchema } from '../generated/v1/namespace_pb';
 
@@ -17,10 +18,16 @@ export interface ProjectData {
   namespaces: NamespaceData[];
 }
 
-export interface OrganizationData {
+export interface ClusterData {
   id: string;
   name: string;
   projects: ProjectData[];
+}
+
+export interface OrganizationData {
+  id: string;
+  name: string;
+  clusters: ClusterData[];
 }
 
 @Injectable({
@@ -29,6 +36,8 @@ export interface OrganizationData {
 export class OrganizationDataService {
   private organizationClient = inject(ORGANIZATION);
 
+  private clusterClient = inject(CLUSTER);
+
   private projectClient = inject(PROJECT);
 
   private namespaceClient = inject(NAMESPACE);
@@ -36,7 +45,7 @@ export class OrganizationDataService {
   /** All organizations the user belongs to. Lightweight, without nested projects and namespaces. */
   userOrganizations = signal<Organization[]>([]);
 
-  /** Full data (with projects and namespaces) for the currently selected organization. */
+  /** Full data (with clusters, projects and namespaces) for the currently selected organization. */
   organizations = signal<OrganizationData[]>([]);
 
   loading = signal(false);
@@ -45,12 +54,19 @@ export class OrganizationDataService {
   private namespaceMap = computed(() => {
     const map = new Map<
       string,
-      { namespace: NamespaceData; project: ProjectData; organization: OrganizationData }
+      {
+        namespace: NamespaceData;
+        project: ProjectData;
+        cluster: ClusterData;
+        organization: OrganizationData;
+      }
     >();
     this.organizations().forEach((org) => {
-      org.projects.forEach((project) => {
-        project.namespaces.forEach((namespace) => {
-          map.set(namespace.id, { namespace, project, organization: org });
+      org.clusters.forEach((cluster) => {
+        cluster.projects.forEach((project) => {
+          project.namespaces.forEach((namespace) => {
+            map.set(namespace.id, { namespace, project, cluster, organization: org });
+          });
         });
       });
     });
@@ -58,10 +74,25 @@ export class OrganizationDataService {
   });
 
   private projectMap = computed(() => {
-    const map = new Map<string, { project: ProjectData; organization: OrganizationData }>();
+    const map = new Map<
+      string,
+      { project: ProjectData; cluster: ClusterData; organization: OrganizationData }
+    >();
     this.organizations().forEach((org) => {
-      org.projects.forEach((project) => {
-        map.set(project.id, { project, organization: org });
+      org.clusters.forEach((cluster) => {
+        cluster.projects.forEach((project) => {
+          map.set(project.id, { project, cluster, organization: org });
+        });
+      });
+    });
+    return map;
+  });
+
+  private clusterMap = computed(() => {
+    const map = new Map<string, { cluster: ClusterData; organization: OrganizationData }>();
+    this.organizations().forEach((org) => {
+      org.clusters.forEach((cluster) => {
+        map.set(cluster.id, { cluster, organization: org });
       });
     });
     return map;
@@ -76,38 +107,53 @@ export class OrganizationDataService {
 
     this.loading.set(true);
     try {
-      // Parallelize organization and projects requests (they don't depend on each other)
-      const orgRequest = create(GetOrganizationRequestSchema, {
-        id: orgId,
-      });
-      const projectsRequest = create(ListProjectsRequestSchema, {});
+      // Fetch organization and clusters in parallel
+      const orgRequest = create(GetOrganizationRequestSchema, { id: orgId });
+      const clustersRequest = create(ListClustersRequestSchema, {});
 
-      const [orgResponse, projectsResponse] = await Promise.all([
+      const [orgResponse, clustersResponse] = await Promise.all([
         firstValueFrom(this.organizationClient.getOrganization(orgRequest)),
-        firstValueFrom(this.projectClient.listProjects(projectsRequest)),
+        firstValueFrom(this.clusterClient.listClusters(clustersRequest)),
       ]);
 
       if (!orgResponse.organization) {
         return;
       }
 
-      // For each project, get its namespaces
-      const projectsData: ProjectData[] = await Promise.all(
-        projectsResponse.projects.map(async (project) => {
-          const namespacesRequest = create(ListProjectNamespacesRequestSchema, {
-            projectId: project.id,
+      // For each cluster, fetch its projects, then for each project fetch namespaces
+      const clustersData: ClusterData[] = await Promise.all(
+        clustersResponse.clusters.map(async (cluster) => {
+          const projectsRequest = create(ListProjectsRequestSchema, {
+            clusterId: cluster.id,
           });
-          const namespacesResponse = await firstValueFrom(
-            this.namespaceClient.listProjectNamespaces(namespacesRequest),
+          const projectsResponse = await firstValueFrom(
+            this.projectClient.listProjects(projectsRequest),
+          );
+
+          const projects: ProjectData[] = await Promise.all(
+            projectsResponse.projects.map(async (project) => {
+              const namespacesRequest = create(ListProjectNamespacesRequestSchema, {
+                projectId: project.id,
+              });
+              const namespacesResponse = await firstValueFrom(
+                this.namespaceClient.listProjectNamespaces(namespacesRequest),
+              );
+
+              return {
+                id: project.id,
+                name: project.name,
+                namespaces: namespacesResponse.namespaces.map((ns) => ({
+                  id: ns.id,
+                  name: ns.name,
+                })),
+              };
+            }),
           );
 
           return {
-            id: project.id,
-            name: project.name,
-            namespaces: namespacesResponse.namespaces.map((ns) => ({
-              id: ns.id,
-              name: ns.name,
-            })),
+            id: cluster.id,
+            name: cluster.name,
+            projects,
           };
         }),
       );
@@ -116,7 +162,7 @@ export class OrganizationDataService {
       const organizationData: OrganizationData = {
         id: orgResponse.organization.id,
         name: orgResponse.organization.name,
-        projects: projectsData,
+        clusters: clustersData,
       };
 
       this.organizations.set([organizationData]);
@@ -129,17 +175,24 @@ export class OrganizationDataService {
   }
 
   /**
-   * Get namespace by ID with its parent project and organization (O(1) lookup)
+   * Get namespace by ID with its parent project, cluster and organization (O(1) lookup)
    */
   getNamespaceById(namespaceId: string) {
     return this.namespaceMap().get(namespaceId);
   }
 
   /**
-   * Get project by ID with its parent organization (O(1) lookup)
+   * Get project by ID with its parent cluster and organization (O(1) lookup)
    */
   getProjectById(projectId: string) {
     return this.projectMap().get(projectId);
+  }
+
+  /**
+   * Get cluster by ID with its parent organization (O(1) lookup)
+   */
+  getClusterById(clusterId: string) {
+    return this.clusterMap().get(clusterId);
   }
 
   /**
@@ -165,7 +218,10 @@ export class OrganizationDataService {
     this.organizations.update((orgs) =>
       orgs.map((org) => ({
         ...org,
-        projects: org.projects.map((p) => (p.id === projectId ? { ...p, name } : p)),
+        clusters: org.clusters.map((c) => ({
+          ...c,
+          projects: c.projects.map((p) => (p.id === projectId ? { ...p, name } : p)),
+        })),
       })),
     );
   }

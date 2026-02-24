@@ -1,14 +1,11 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, computed, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { create } from '@bufbuild/protobuf';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerChevronRight } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
-import { firstValueFrom } from 'rxjs';
 import { LoadingIndicatorComponent } from '../icons';
 import { TitleService } from '../title.service';
-import { PROJECT } from '../../connect/tokens';
-import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
+import { OrganizationDataService } from '../organization-data.service';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
@@ -24,43 +21,20 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
   templateUrl: './projects.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class ProjectsComponent implements OnInit {
+export default class ProjectsComponent {
   private titleService = inject(TitleService);
 
-  private client = inject(PROJECT);
+  private organizationDataService = inject(OrganizationDataService);
 
-  projects = signal<Project[]>([]);
+  isLoading = this.organizationDataService.loading;
 
-  isLoading = signal<boolean>(true);
-
-  errorMessage = signal<string | null>(null);
+  clusters = computed(() => {
+    const orgs = this.organizationDataService.organizations();
+    return orgs.flatMap((org) => org.clusters);
+  });
 
   constructor() {
     this.titleService.setTitle('Projects');
-  }
-
-  async ngOnInit() {
-    await this.loadProjects();
-  }
-
-  async loadProjects() {
-    try {
-      this.isLoading.set(true);
-      this.errorMessage.set(null);
-
-      const request = create(ListProjectsRequestSchema, {});
-      const response = await firstValueFrom(this.client.listProjects(request));
-
-      this.projects.set(response.projects);
-    } catch (error) {
-      this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to load projects: ${error.message}`
-          : 'Failed to load projects',
-      );
-    } finally {
-      this.isLoading.set(false);
-    }
   }
 
   readonly formatDate = formatDateUtil;

@@ -17,16 +17,11 @@ func (s *Server) ListProjects(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListProjectsRequest],
 ) (*connect.Response[organizationv1.ListProjectsResponse], error) {
-	organizationID, ok := OrganizationIDFromContext(ctx)
-	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
+	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
-	if err := s.checkPermission(ctx, authz.CanListProjects(), authz.Organization(organizationID)); err != nil {
+	if err := s.checkPermission(ctx, authz.CanListProjects(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
 	}
-
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
 
 	projects, err := s.queries.ProjectListByClusterID(ctx, db.ProjectListByClusterIDParams{ClusterID: clusterID})
 	if err != nil {

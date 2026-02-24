@@ -47,10 +47,7 @@ service ProjectService {
 
 // List projects request
 message ListProjectsRequest {
-  string cluster_id = 10 [
-    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
-    (buf.validate.field).string.uuid = true
-  ]; // Optional: filter by cluster
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
 // List projects response

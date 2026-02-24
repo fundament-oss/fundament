@@ -31,23 +31,23 @@ const (
 	ActionCanListApikeys     ActionName = "can_list_apikeys"
 	ActionCanCreateCluster   ActionName = "can_create_cluster"
 	ActionCanListClusters    ActionName = "can_list_clusters"
-	ActionCanCreateProject   ActionName = "can_create_project"
-	ActionCanListProjects    ActionName = "can_list_projects"
 	ActionCanInviteMember    ActionName = "can_invite_member"
 	ActionCanDeleteMember    ActionName = "can_delete_member"
 	ActionCanListMembers     ActionName = "can_list_members"
-	ActionOwner              ActionName = "owner"
+	ActionParent             ActionName = "parent"
 	ActionProjectAdmin       ActionName = "project_admin"
 	ActionProjectViewer      ActionName = "project_viewer"
 	ActionCanDelete          ActionName = "can_delete"
 	ActionCanManageMembers   ActionName = "can_manage_members"
 	ActionCanCreateNamespace ActionName = "can_create_namespace"
 	ActionCanListNamespaces  ActionName = "can_list_namespaces"
-	ActionParent             ActionName = "parent"
+	ActionOwner              ActionName = "owner"
 	ActionCanCreateNodePool  ActionName = "can_create_node_pool"
 	ActionCanListNodePools   ActionName = "can_list_node_pools"
 	ActionCanCreateInstall   ActionName = "can_create_install"
 	ActionCanListInstalls    ActionName = "can_list_installs"
+	ActionCanCreateProject   ActionName = "can_create_project"
+	ActionCanListProjects    ActionName = "can_list_projects"
 	ActionCreator            ActionName = "creator"
 	ActionCanUse             ActionName = "can_use"
 )
@@ -238,16 +238,6 @@ func CanListClusters() Action {
 	return Action{Name: ActionCanListClusters}
 }
 
-// CanCreateProject creates an Action for the can_create_project relation.
-func CanCreateProject() Action {
-	return Action{Name: ActionCanCreateProject}
-}
-
-// CanListProjects creates an Action for the can_list_projects relation.
-func CanListProjects() Action {
-	return Action{Name: ActionCanListProjects}
-}
-
 // CanInviteMember creates an Action for the can_invite_member relation.
 func CanInviteMember() Action {
 	return Action{Name: ActionCanInviteMember}
@@ -263,9 +253,9 @@ func CanListMembers() Action {
 	return Action{Name: ActionCanListMembers}
 }
 
-// Owner creates an Action for the owner relation.
-func Owner() Action {
-	return Action{Name: ActionOwner}
+// Parent creates an Action for the parent relation.
+func Parent() Action {
+	return Action{Name: ActionParent}
 }
 
 // ProjectAdmin creates an Action for the project_admin relation.
@@ -298,9 +288,9 @@ func CanListNamespaces() Action {
 	return Action{Name: ActionCanListNamespaces}
 }
 
-// Parent creates an Action for the parent relation.
-func Parent() Action {
-	return Action{Name: ActionParent}
+// Owner creates an Action for the owner relation.
+func Owner() Action {
+	return Action{Name: ActionOwner}
 }
 
 // CanCreateNodePool creates an Action for the can_create_node_pool relation.
@@ -321,6 +311,16 @@ func CanCreateInstall() Action {
 // CanListInstalls creates an Action for the can_list_installs relation.
 func CanListInstalls() Action {
 	return Action{Name: ActionCanListInstalls}
+}
+
+// CanCreateProject creates an Action for the can_create_project relation.
+func CanCreateProject() Action {
+	return Action{Name: ActionCanCreateProject}
+}
+
+// CanListProjects creates an Action for the can_list_projects relation.
+func CanListProjects() Action {
+	return Action{Name: ActionCanListProjects}
 }
 
 // Creator creates an Action for the creator relation.

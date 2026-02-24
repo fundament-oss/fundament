@@ -21,7 +21,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-namespaces',
-  imports: [ReactiveFormsModule, RouterLink, NgIcon, ModalComponent],
+  imports: [ReactiveFormsModule, NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,

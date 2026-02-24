@@ -49,8 +49,8 @@ func (d *ProjectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 				Computed:    true,
 			},
 			"cluster_id": schema.StringAttribute{
-				Description: "Filter projects by cluster ID.",
-				Optional:    true,
+				Description: "The cluster ID to list projects for.",
+				Required:    true,
 			},
 			"projects": schema.ListNestedAttribute{
 				Description: "List of projects.",
@@ -121,10 +121,7 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	tflog.Debug(ctx, "Fetching projects")
 
-	listReq := &organizationv1.ListProjectsRequest{}
-	if !state.ClusterID.IsNull() && state.ClusterID.ValueString() != "" {
-		listReq.ClusterId = state.ClusterID.ValueString()
-	}
+	listReq := &organizationv1.ListProjectsRequest{ClusterId: state.ClusterID.ValueString()}
 	rpcReq := connect.NewRequest(listReq)
 
 	// Call the API
