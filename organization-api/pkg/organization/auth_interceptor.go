@@ -55,9 +55,6 @@ func (s *Server) authInterceptor() connect.UnaryInterceptorFunc {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid organization ID: %w", err))
 			}
 
-			fmt.Printf("claims.OrganizationIDs: %v\n", claims.OrganizationIDs)
-			fmt.Printf("organizationID: %v\n", organizationID)
-
 			// Validate user belongs to the organization
 			if !slices.Contains(claims.OrganizationIDs, organizationID) {
 				return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("user is not a member of organization %s", organizationID))
