@@ -1,4 +1,11 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  signal,
+  computed,
+  effect,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -8,8 +15,15 @@ import FieldRendererComponent from '../field-renderers/field-renderer.component'
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
 import { ToastService } from '../../toast.service';
+import { TitleService } from '../../title.service';
 import type { ParsedCrd, KubeResource, CrdPropertySchema, PluginMenuItem } from '../types';
-import { formatDate, fieldNameToLabel, groupFields, resolveStatusBadge } from '../crd-schema.utils';
+import {
+  formatDate,
+  fieldNameToLabel,
+  groupFields,
+  resolveStatusBadge,
+  kindToSingularLabel,
+} from '../crd-schema.utils';
 
 function buildListLink(): string[] {
   return ['..'];
@@ -70,6 +84,8 @@ export default class ResourceDetailComponent {
 
   private toastService = inject(ToastService);
 
+  private titleService = inject(TitleService);
+
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
@@ -122,7 +138,19 @@ export default class ResourceDetailComponent {
     return Object.entries(r.status);
   });
 
+  singularLabel = computed(() => {
+    const crd = this.crdDef();
+    return crd ? kindToSingularLabel(crd.kind) : 'resource';
+  });
+
   showDeleteModal = signal(false);
+
+  constructor() {
+    effect(() => {
+      const r = this.resource();
+      this.titleService.setTitle(r?.metadata.name);
+    });
+  }
 
   listLink = buildListLink;
 
@@ -157,7 +185,7 @@ export default class ResourceDetailComponent {
     if (!crd) return;
     this.store.deleteResource(this.pluginName(), crd.kind, this.resourceId());
     this.showDeleteModal.set(false);
-    this.toastService.show(`${crd.singular} deleted`, 'success');
+    this.toastService.show(`${kindToSingularLabel(crd.kind)} deleted`, 'success');
     this.router.navigate(['..'], { relativeTo: this.route });
   }
 }

@@ -1,4 +1,11 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  signal,
+  computed,
+  effect,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -14,6 +21,7 @@ import ModalComponent from '../../modal/modal.component';
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
 import { ToastService } from '../../toast.service';
+import { TitleService } from '../../title.service';
 import type {
   PluginDefinition,
   ParsedCrd,
@@ -27,6 +35,7 @@ import {
   getListColumns,
   resolveStatusBadge,
   kindToLabel,
+  kindToSingularLabel,
 } from '../crd-schema.utils';
 
 function buildCreateLink(): string[] {
@@ -77,6 +86,8 @@ export default class ResourceListComponent {
 
   private toastService = inject(ToastService);
 
+  private titleService = inject(TitleService);
+
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
@@ -124,6 +135,17 @@ export default class ResourceListComponent {
     return crd ? kindToLabel(crd.kind) : 'Resources';
   });
 
+  singularLabel = computed(() => {
+    const crd = this.crdDef();
+    return crd ? kindToSingularLabel(crd.kind) : 'resource';
+  });
+
+  constructor() {
+    effect(() => {
+      this.titleService.setTitle(this.kindLabel());
+    });
+  }
+
   createLink = buildCreateLink;
 
   detailLink = buildDetailLink;
@@ -159,6 +181,6 @@ export default class ResourceListComponent {
     if (!crd) return;
     this.store.deleteResource(this.pluginName(), crd.kind, this.pendingDeleteUid());
     this.showDeleteModal.set(false);
-    this.toastService.show(`${crd.singular} deleted`, 'success');
+    this.toastService.show(`${kindToSingularLabel(crd.kind)} deleted`, 'success');
   }
 }

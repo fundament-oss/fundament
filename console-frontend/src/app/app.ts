@@ -62,6 +62,7 @@ import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
+import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
 import { kindToLabel } from './plugin-resources/crd-schema.utils';
 
 const reloadApp = () => {
@@ -133,6 +134,8 @@ export default class App implements OnInit {
   protected pluginNavService = inject(PluginNavService);
 
   private pluginRegistry = inject(PluginRegistryService);
+
+  private pluginStore = inject(PluginResourceStoreService);
 
   private organizationClient = inject(ORGANIZATION);
 
@@ -396,6 +399,21 @@ export default class App implements OnInit {
       const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
       const crd = plugin?.crds.find((c) => c.plural === params['resourceKind']);
       label = crd ? kindToLabel(crd.kind) : (params['resourceKind'] ?? 'Resources');
+    }
+
+    if (label === ':resourceName') {
+      const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
+      const crd = plugin?.crds.find((c) => c.plural === params['resourceKind']);
+      if (crd && params['resourceId']) {
+        const resource = this.pluginStore.getResource(
+          params['pluginName'],
+          crd.kind,
+          params['resourceId'],
+        );
+        label = resource?.metadata.name ?? params['resourceId'] ?? 'Resource';
+      } else {
+        label = params['resourceId'] ?? 'Resource';
+      }
     }
 
     if (label === ':clusterName') {

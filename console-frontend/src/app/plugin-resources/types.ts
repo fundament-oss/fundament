@@ -34,6 +34,7 @@ export interface PluginMenuItem {
 export interface CrdUiHints {
   formGroups?: FormGroup[];
   hiddenFields?: string[];
+  editableFields?: string[];
   statusMapping?: StatusMapping;
 }
 

@@ -195,7 +195,7 @@ export function buildDefaultValue(schema: CrdPropertySchema): unknown {
     case 'array':
       return [];
     case 'object': {
-      if (!schema.properties) return {};
+      if (!schema.properties || Object.keys(schema.properties).length === 0) return null;
       const obj: Record<string, unknown> = {};
       Object.entries(schema.properties).forEach(([name, propSchema]) => {
         obj[name] = buildDefaultValue(propSchema);
@@ -226,12 +226,12 @@ export function getListColumns(
  */
 function pluralize(word: string): string {
   if (word.endsWith('y') && !'aeiou'.includes(word[word.length - 2])) {
-    return word.slice(0, -1) + 'ies';
+    return `${word.slice(0, -1)}ies`;
   }
   if (word.endsWith('s') || word.endsWith('x') || word.endsWith('z')) {
-    return word + 'es';
+    return `${word}es`;
   }
-  return word + 's';
+  return `${word}s`;
 }
 
 /**
@@ -239,9 +239,24 @@ function pluralize(word: string): string {
  * Examples: "Certificate" → "Certificates", "ClusterIssuer" → "Cluster issuers"
  */
 export function kindToLabel(kind: string): string {
-  const words = kind.replace(/([A-Z])/g, ' $1').trim().split(' ');
+  const words = kind
+    .replace(/([A-Z])/g, ' $1')
+    .trim()
+    .split(' ');
   words[words.length - 1] = pluralize(words[words.length - 1]);
   return words.map((w, i) => (i === 0 ? w : w.toLowerCase())).join(' ');
+}
+
+/**
+ * Convert a CRD kind (PascalCase) to a human-readable singular label in all lowercase.
+ * Intended for use mid-sentence: "Create cluster issuer", "Delete database".
+ * Examples: "Certificate" → "certificate", "ClusterIssuer" → "cluster issuer"
+ */
+export function kindToSingularLabel(kind: string): string {
+  return kind
+    .replace(/([A-Z])/g, ' $1')
+    .trim()
+    .toLowerCase();
 }
 
 /**

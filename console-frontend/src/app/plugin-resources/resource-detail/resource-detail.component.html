@@ -153,7 +153,7 @@
 <!-- Delete Modal -->
 <app-modal
   [show]="showDeleteModal()"
-  title="Delete {{ crdDef()?.singular ?? 'resource' }}"
+  title="Delete {{ singularLabel() }}"
   [maxWidth]="'max-w-lg'"
   (modalClose)="showDeleteModal.set(false)"
 >

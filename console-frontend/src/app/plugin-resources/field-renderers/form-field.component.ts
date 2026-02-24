@@ -123,6 +123,19 @@ function toStringArray(val: unknown): string[] {
             }
           </div>
         }
+        @case ('empty-object') {
+          <label class="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              [id]="'field-' + fieldName()"
+              class="peer sr-only"
+              [ngModel]="value() !== null && value() !== undefined"
+              (ngModelChange)="valueChange.emit($event ? {} : null)"
+            />
+            <span class="switch"></span>
+            <span class="text-sm text-gray-600 dark:text-gray-400">Enabled</span>
+          </label>
+        }
         @default {
           <input
             type="text"
@@ -155,7 +168,9 @@ export default class FormFieldComponent {
     if (s.type === 'boolean') return 'boolean';
     if (s.type === 'integer' || s.type === 'number') return 'integer';
     if (s.type === 'array' && s.items?.type === 'string') return 'string-array';
-    if (s.type === 'object' && s.properties) return 'object';
+    if (s.type === 'object' && s.properties && Object.keys(s.properties).length > 0)
+      return 'object';
+    if (s.type === 'object') return 'empty-object';
     return 'text';
   }
 

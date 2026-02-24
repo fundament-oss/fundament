@@ -14,7 +14,7 @@
       <div class="mb-5">
         <a [routerLink]="createLink()" class="btn-primary inline-flex items-center">
           <ng-icon name="tablerPlus" class="mr-1.5" />
-          Create {{ crdDef()?.singular ?? 'resource' }}
+          Create {{ singularLabel() }}
         </a>
       </div>
     }
@@ -114,13 +114,11 @@
     @if (resources().length === 0) {
       <div class="py-8 text-center">
         <ng-icon name="tablerDatabaseOff" size="3rem" class="mx-auto mb-3 text-gray-400!" />
-        <p class="text-gray-600 dark:text-gray-300">
-          No {{ kindLabel().toLowerCase() }} found
-        </p>
+        <p class="text-gray-600 dark:text-gray-300">No {{ kindLabel().toLowerCase() }} found</p>
         @if (menuItem()?.create) {
           <a [routerLink]="createLink()" class="btn-primary mt-4 inline-flex items-center">
             <ng-icon name="tablerPlus" class="mr-1.5" />
-            Create {{ crdDef()?.singular ?? 'resource' }}
+            Create {{ singularLabel() }}
           </a>
         }
       </div>
@@ -131,7 +129,7 @@
 <!-- Delete Modal -->
 <app-modal
   [show]="showDeleteModal()"
-  title="Delete {{ crdDef()?.singular ?? 'resource' }}"
+  title="Delete {{ singularLabel() }}"
   [maxWidth]="'max-w-lg'"
   (modalClose)="showDeleteModal.set(false)"
 >

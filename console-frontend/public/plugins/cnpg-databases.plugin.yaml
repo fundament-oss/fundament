@@ -37,6 +37,19 @@ uiHints:
         fields: [extensions]
       - name: Lifecycle
         fields: [ensure, databaseReclaimPolicy]
+    editableFields:
+      - owner
+      - encoding
+      - locale
+      - localeCollate
+      - localeCType
+      - localeProvider
+      - allowConnections
+      - connectionLimit
+      - isTemplate
+      - ensure
+      - databaseReclaimPolicy
+      - extensions
     hiddenFields:
       - builtinLocale
       - icuLocale

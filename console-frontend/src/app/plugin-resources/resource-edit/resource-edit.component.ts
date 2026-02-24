@@ -4,6 +4,7 @@ import {
   inject,
   computed,
   signal,
+  effect,
   OnInit,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -13,8 +14,9 @@ import FormFieldComponent from '../field-renderers/form-field.component';
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
 import { ToastService } from '../../toast.service';
+import { TitleService } from '../../title.service';
 import type { ParsedCrd, KubeResource } from '../types';
-import { groupFields, isFieldRequired } from '../crd-schema.utils';
+import { groupFields, isFieldRequired, kindToSingularLabel } from '../crd-schema.utils';
 
 function buildDetailLink(): string[] {
   return ['..'];
@@ -37,6 +39,8 @@ export default class ResourceEditComponent implements OnInit {
   private store = inject(PluginResourceStoreService);
 
   private toastService = inject(ToastService);
+
+  private titleService = inject(TitleService);
 
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -65,12 +69,29 @@ export default class ResourceEditComponent implements OnInit {
     const p = this.plugin();
     if (!crd) return [];
     const hints = p?.uiHints?.[crd.kind];
+    if (hints?.editableFields) {
+      const allFields = Object.keys(crd.specSchema.properties);
+      const hiddenFields = allFields.filter((f) => !hints.editableFields!.includes(f));
+      return groupFields(crd.specSchema, hints.formGroups, hiddenFields);
+    }
     return groupFields(crd.specSchema, hints?.formGroups, hints?.hiddenFields);
+  });
+
+  singularLabel = computed(() => {
+    const crd = this.crdDef();
+    return crd ? kindToSingularLabel(crd.kind) : 'resource';
   });
 
   private formData = signal<Record<string, unknown>>({});
 
   detailLink = buildDetailLink;
+
+  constructor() {
+    effect(() => {
+      const r = this.resource();
+      this.titleService.setTitle(`Edit ${r?.metadata.name ?? this.singularLabel()}`);
+    });
+  }
 
   ngOnInit(): void {
     const resource = this.resource();
@@ -114,6 +135,10 @@ export default class ResourceEditComponent implements OnInit {
       if (Array.isArray(val) && val.length === 0) return;
       if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
         const obj = val as Record<string, unknown>;
+        if (Object.keys(obj).length === 0) {
+          spec[key] = obj;
+          return;
+        }
         const cleaned: Record<string, unknown> = {};
         let hasValue = false;
         Object.entries(obj).forEach(([k, v]) => {
@@ -130,7 +155,7 @@ export default class ResourceEditComponent implements OnInit {
 
     const updated: KubeResource = { ...existing, spec };
     this.store.updateResource(this.pluginName(), crd.kind, this.resourceId(), updated);
-    this.toastService.show(`${crd.singular} updated`, 'success');
+    this.toastService.show(`${kindToSingularLabel(crd.kind)} updated`, 'success');
     this.router.navigate(['..'], { relativeTo: this.route });
   }
 }

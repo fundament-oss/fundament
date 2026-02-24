@@ -4,6 +4,7 @@ import {
   inject,
   computed,
   signal,
+  effect,
   OnInit,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -13,8 +14,14 @@ import FormFieldComponent from '../field-renderers/form-field.component';
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
 import { ToastService } from '../../toast.service';
+import { TitleService } from '../../title.service';
 import type { ParsedCrd, KubeResource } from '../types';
-import { groupFields, buildDefaultValue, isFieldRequired } from '../crd-schema.utils';
+import {
+  groupFields,
+  buildDefaultValue,
+  isFieldRequired,
+  kindToSingularLabel,
+} from '../crd-schema.utils';
 
 function buildListLink(): string[] {
   return ['..'];
@@ -37,6 +44,8 @@ export default class ResourceCreateComponent implements OnInit {
   private store = inject(PluginResourceStoreService);
 
   private toastService = inject(ToastService);
+
+  private titleService = inject(TitleService);
 
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -64,9 +73,20 @@ export default class ResourceCreateComponent implements OnInit {
 
   resourceNamespace = 'default';
 
+  singularLabel = computed(() => {
+    const crd = this.crdDef();
+    return crd ? kindToSingularLabel(crd.kind) : 'resource';
+  });
+
   private formData = signal<Record<string, unknown>>({});
 
   listLink = buildListLink;
+
+  constructor() {
+    effect(() => {
+      this.titleService.setTitle(`Create ${this.singularLabel()}`);
+    });
+  }
 
   ngOnInit(): void {
     const crd = this.crdDef();
@@ -124,6 +144,10 @@ export default class ResourceCreateComponent implements OnInit {
       if (Array.isArray(val) && val.length === 0) return;
       if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
         const obj = val as Record<string, unknown>;
+        if (Object.keys(obj).length === 0) {
+          spec[key] = obj;
+          return;
+        }
         const cleaned: Record<string, unknown> = {};
         let hasValue = false;
         Object.entries(obj).forEach(([k, v]) => {
@@ -151,7 +175,7 @@ export default class ResourceCreateComponent implements OnInit {
     };
 
     this.store.createResource(this.pluginName(), crd.kind, resource);
-    this.toastService.show(`${crd.singular} created`, 'success');
+    this.toastService.show(`${kindToSingularLabel(crd.kind)} created`, 'success');
     this.router.navigate(['..'], { relativeTo: this.route });
   }
 }
