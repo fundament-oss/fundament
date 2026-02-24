@@ -259,6 +259,62 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="cluster_outbox_cluster_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF TG_OP = 'INSERT'
+       OR OLD.deleted IS DISTINCT FROM NEW.deleted
+       OR OLD.name IS DISTINCT FROM NEW.name
+       OR OLD.region IS DISTINCT FROM NEW.region
+       OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
+    THEN
+        INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+        VALUES (COALESCE(NEW.id, OLD.id),
+                CASE
+                    WHEN TG_OP = 'INSERT' THEN 'created'
+                    WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                    ELSE 'updated'
+                END,
+                'trigger');
+    END IF;
+    RETURN NEW;
+END;]]> </definition>
+</function>
+
+<function name="cluster_outbox_notify"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    PERFORM pg_notify('cluster_outbox', '');
+    RETURN NEW;
+END;]]> </definition>
+</function>
+
 <function name="current_user_id"
 		window-func="false"
 		returns-setof="false"
@@ -295,6 +351,38 @@ END;]]> </definition>
 	<definition> <![CDATA[SELECT NULLIF(current_setting('app.current_organization_id', true), '')::uuid]]> </definition>
 </function>
 
+<function name="is_project_member"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="STABLE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL SAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authn"/>
+	<role name="fun_authz"/>
+	<language name="sql"/>
+	<return-type>
+	<type name="boolean" length="0"/>
+	</return-type>
+	<parameter name="p_project_id" in="true">
+		<type name="uuid" length="0"/>
+	</parameter>
+	<parameter name="p_user_id" in="true">
+		<type name="uuid" length="0"/>
+	</parameter>
+	<parameter name="p_role" in="true">
+		<type name="text" length="0"/>
+	</parameter>
+	<definition> <![CDATA[SELECT EXISTS (
+    SELECT 1 FROM tenant.project_members
+    WHERE project_id = p_project_id
+    AND user_id = p_user_id
+    AND (p_role IS NULL OR role = p_role)
+    AND deleted IS NULL
+)]]> </definition>
+</function>
 
 <function name="is_project_in_organization"
 		window-func="false"
@@ -347,6 +435,32 @@ END;]]> </definition>
 )]]> </definition>
 </function>
 
+<function name="is_user_in_organization"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="STABLE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL SAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authn"/>
+	<role name="fun_authz"/>
+	<language name="sql"/>
+	<return-type>
+	<type name="boolean" length="0"/>
+	</return-type>
+	<parameter name="p_user_id" in="true">
+		<type name="uuid" length="0"/>
+	</parameter>
+	<definition> <![CDATA[SELECT EXISTS (
+    SELECT 1 FROM tenant.organizations_users
+    WHERE user_id = p_user_id
+    AND organization_id = authn.current_organization_id()
+    AND deleted IS NULL
+)]]> </definition>
+</function>
+
 <function name="is_organization_member"
 		window-func="false"
 		returns-setof="false"
@@ -372,7 +486,6 @@ END;]]> </definition>
     AND deleted IS NULL
 )]]> </definition>
 </function>
-
 
 <function name="projects_tr_verify_deleted"
 		window-func="false"
@@ -403,6 +516,30 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="project_has_members"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="STABLE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL SAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_authz"/>
+	<language name="sql"/>
+	<return-type>
+	<type name="boolean" length="0"/>
+	</return-type>
+	<parameter name="p_project_id" in="true">
+		<type name="uuid" length="0"/>
+	</parameter>
+	<definition> <![CDATA[SELECT EXISTS (
+    SELECT 1 FROM tenant.project_members
+    WHERE project_id = p_project_id
+    AND deleted IS NULL
+)]]> </definition>
+</function>
 
 <function name="project_members_tr_protect_last_admin"
 		window-func="false"
@@ -557,7 +694,7 @@ END;]]> </definition>
 </table>
 
 <policy name="api_keys_organization_policy" table="authn.api_keys" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid]]> </expression>
+	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid AND user_id = current_setting('app.current_user_id')::uuid]]> </expression>
 </policy>
 
 <function name="api_key_get_by_hash"
@@ -1018,27 +1155,65 @@ END;]]> </definition>
 		<function signature="tenant.project_members_tr_protect_last_admin()"/>
 </trigger>
 
-<policy name="project_members_organization_policy" table="tenant.project_members" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)]]> </expression>
+<policy name="project_members_select_policy" table="tenant.project_members" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)
+AND (authn.is_project_member(project_id, authn.current_user_id(), NULL)
+	OR user_id = authn.current_user_id())]]> </expression>
 </policy>
 
-<policy name="projects_organization_policy" table="tenant.projects" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+<policy name="project_members_insert_policy" table="tenant.project_members" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="check-exp"> <![CDATA[authn.is_project_in_organization(project_id)
+AND (deleted IS NOT NULL OR authn.is_user_in_organization(user_id))
+AND (
+    authn.is_project_member(project_id, authn.current_user_id(), 'admin')
+    OR NOT tenant.project_has_members(project_id)
+)]]> </expression>
+</policy>
+
+<policy name="project_members_update_policy" table="tenant.project_members" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)
+AND authn.is_project_member(project_id, authn.current_user_id(), 'admin')]]> </expression>
+</policy>
+
+<policy name="project_members_cluster_worker_policy" table="tenant.project_members" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="projects_select_policy" table="tenant.projects" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
+</policy>
+
+<policy name="projects_insert_policy" table="tenant.projects" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="check-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
+</policy>
+
+<policy name="projects_update_policy" table="tenant.projects" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)
+AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expression>
+</policy>
+
+<policy name="projects_delete_policy" table="tenant.projects" command="DELETE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)
+AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expression>
+</policy>
+
+<policy name="projects_cluster_worker_policy" table="tenant.projects" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
 <policy name="namespaces_organization_policy" table="tenant.namespaces" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)]]> </expression>
 </policy>
 
-<policy name="organizations_organization_policy" table="tenant.organizations" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[id = authn.current_organization_id()]]> </expression>
-</policy>
-
-<policy name="organizations_user_select_policy" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+<policy name="organizations_select_policy" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[authn.is_organization_member(id)]]> </expression>
 </policy>
 
 <policy name="organizations_authn_api_policy" table="tenant.organizations" command="ALL" permissive="true">	<roles names="fun_authn_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="organizations_cluster_worker_policy" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
@@ -1098,6 +1273,115 @@ END;]]> </definition>
 		</idxelement>
 		<idxelement use-sorting="true" nulls-first="false" asc-order="false">
 			<column name="created"/>
+		</idxelement>
+</index>
+
+<table name="cluster_outbox" layers="0" collapse-mode="2" max-obj-count="16" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<position x="2200" y="400"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="cluster_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="namespace_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="project_member_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="project_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="event" not-null="true" default-value="'updated'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="source" not-null="true" default-value="'trigger'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status" not-null="true" default-value="'pending'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="retries" not-null="true" default-value="0">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="retry_after">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="processed">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="failed">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="status_info">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="cluster_outbox_pk" type="pk-constr" table="tenant.cluster_outbox">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="cluster_outbox_ck_single_fk" type="ck-constr" table="tenant.cluster_outbox">
+			<expression> <![CDATA[num_nonnulls(cluster_id, namespace_id, project_member_id, project_id) = 1]]> </expression>
+	</constraint>
+	<constraint name="cluster_outbox_ck_status" type="ck-constr" table="tenant.cluster_outbox">
+			<expression> <![CDATA[status IN ('pending', 'completed', 'retrying', 'failed')]]> </expression>
+	</constraint>
+	<constraint name="cluster_outbox_ck_event" type="ck-constr" table="tenant.cluster_outbox">
+			<expression> <![CDATA[event IN ('created', 'updated', 'deleted', 'reconcile')]]> </expression>
+	</constraint>
+	<constraint name="cluster_outbox_ck_source" type="ck-constr" table="tenant.cluster_outbox">
+			<expression> <![CDATA[source IN ('trigger', 'reconcile', 'manual')]]> </expression>
+	</constraint>
+</table>
+
+<index name="cluster_outbox_status_retry_idx" table="tenant.cluster_outbox"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="status"/>
+		</idxelement>
+		<idxelement use-sorting="false">
+			<column name="retry_after"/>
+		</idxelement>
+		<idxelement use-sorting="false">
+			<column name="id"/>
+		</idxelement>
+</index>
+
+<index name="cluster_outbox_idx_cluster_id" table="tenant.cluster_outbox"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="cluster_id"/>
+		</idxelement>
+</index>
+
+<index name="cluster_outbox_idx_namespace_id" table="tenant.cluster_outbox"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="namespace_id"/>
+		</idxelement>
+</index>
+
+<index name="cluster_outbox_idx_project_member_id" table="tenant.cluster_outbox"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="project_member_id"/>
+		</idxelement>
+</index>
+
+<index name="cluster_outbox_idx_project_id" table="tenant.cluster_outbox"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="project_id"/>
 		</idxelement>
 </index>
 
@@ -1467,6 +1751,17 @@ END;]]> </definition>
 		<function signature="authz.outbox_notify_trigger()"/>
 </trigger>
 
+<trigger name="cluster_outbox_cluster" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.clusters">
+		<function signature="tenant.cluster_outbox_cluster_trigger()"/>
+</trigger>
+
+<trigger name="cluster_outbox_notify" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="false" trunc-event="false"
+	 table="tenant.cluster_outbox">
+		<function signature="tenant.cluster_outbox_notify()"/>
+</trigger>
 
 <table name="organizations_users" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
@@ -1504,7 +1799,15 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<policy name="organizations_users_organization_policy" table="tenant.organizations_users" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+<policy name="organizations_users_select_policy" table="tenant.organizations_users" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<policy name="organizations_users_insert_policy" table="tenant.organizations_users" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<policy name="organizations_users_update_policy" table="tenant.organizations_users" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 </policy>
 
@@ -1655,6 +1958,30 @@ END;]]> </definition>
 <constraint name="cluster_events_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="CASCADE" ref-table="tenant.clusters" table="tenant.cluster_events">
 	<columns names="cluster_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="cluster_outbox_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.cluster_outbox">
+	<columns names="cluster_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="cluster_outbox_fk_namespace" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.namespaces" table="tenant.cluster_outbox">
+	<columns names="namespace_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="cluster_outbox_fk_project_member" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.project_members" table="tenant.cluster_outbox">
+	<columns names="project_member_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="cluster_outbox_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.cluster_outbox">
+	<columns names="project_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
@@ -1811,6 +2138,26 @@ END;]]> </definition>
 	 src-table="tenant.project_members"
 	 dst-table="tenant.users" reference-fk="project_members_fk_user"
 	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_cluster_outbox_clusters" type="relfk" layers="0"
+	 src-table="tenant.cluster_outbox"
+	 dst-table="tenant.clusters" reference-fk="cluster_outbox_fk_cluster"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_cluster_outbox_namespaces" type="relfk" layers="0"
+	 src-table="tenant.cluster_outbox"
+	 dst-table="tenant.namespaces" reference-fk="cluster_outbox_fk_namespace"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_cluster_outbox_project_members" type="relfk" layers="0"
+	 src-table="tenant.cluster_outbox"
+	 dst-table="tenant.project_members" reference-fk="cluster_outbox_fk_project_member"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_cluster_outbox_projects" type="relfk" layers="0"
+	 src-table="tenant.cluster_outbox"
+	 dst-table="tenant.projects" reference-fk="cluster_outbox_fk_project"
+	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_outbox_projects" type="relfk" layers="0"
 	 src-table="authz.outbox"
@@ -2170,6 +2517,26 @@ END;]]> </definition>
 <permission>
 	<object name="tenant.organizations_users" type="table"/>
 	<roles names="fun_authz"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.cluster_outbox" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.cluster_outbox" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
+	<object name="tenant.project_members" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.projects" type="table"/>
+	<roles names="fun_cluster_worker"/>
 	<privileges select="true"/>
 </permission>
 </dbmodel>
