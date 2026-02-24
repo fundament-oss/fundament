@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -34,11 +33,7 @@ func (s *Server) InviteMember(
 	permission := req.Msg.Permission
 
 	// Find existing user by email, or create a new one
-	var (
-		userID          uuid.UUID
-		userName        string
-		userExternalRef *string
-	)
+	var userID uuid.UUID
 
 	existingUser, err := s.queries.UserFindByEmail(ctx, db.UserFindByEmailParams{Email: email})
 	if err != nil {
@@ -54,11 +49,6 @@ func (s *Server) InviteMember(
 		userID = newUser.ID
 	} else {
 		userID = existingUser.ID
-		userName = existingUser.Name
-
-		if existingUser.ExternalRef.Valid {
-			userExternalRef = &existingUser.ExternalRef.String
-		}
 	}
 
 	// Create the organization membership
@@ -76,19 +66,6 @@ func (s *Server) InviteMember(
 	}
 
 	return connect.NewResponse(&organizationv1.InviteMemberResponse{
-		Member: memberFromInviteRow(email, &membershipRow, userName, userExternalRef),
+		InvitationId: membershipRow.ID.String(),
 	}), nil
-}
-
-func memberFromInviteRow(email string, m *db.InviteCreateMembershipRow, userName string, userExternalRef *string) *organizationv1.Member {
-	return &organizationv1.Member{
-		Id:          m.ID.String(),
-		UserId:      m.UserID.String(),
-		Name:        userName,
-		ExternalRef: userExternalRef,
-		Email:       &email,
-		Permission:  string(m.Permission),
-		Status:      string(m.Status),
-		Created:     timestamppb.New(m.Created.Time),
-	}
 }
