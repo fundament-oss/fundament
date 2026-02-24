@@ -7,6 +7,17 @@ type organization
   relations
     define admin: [user]
     define viewer: [user] or admin
+    define can_view: viewer
+    define can_edit: admin
+    define can_create_apikey: viewer
+    define can_list_apikeys: viewer
+    define can_create_cluster: admin
+    define can_list_clusters: admin
+    define can_create_project: viewer
+    define can_list_projects: viewer
+    define can_invite_member: admin
+    define can_delete_member: admin
+    define can_list_members: viewer
 
 type project
   relations
@@ -17,6 +28,16 @@ type project
     define can_edit: project_admin
     define can_delete: project_admin
     define can_manage_members: project_admin
+    define can_list_members: project_admin or project_viewer
+    define can_create_namespace: project_admin
+    define can_list_namespaces: project_admin or project_viewer
+
+type project_member
+  relations
+    define parent: [project]
+    define can_view: project_admin from parent or project_viewer from parent
+    define can_edit: project_admin from parent
+    define can_delete: project_admin from parent
 
 type cluster
   relations
@@ -26,6 +47,11 @@ type cluster
     define can_view: admin or viewer
     define can_edit: admin
     define can_delete: admin
+    define can_create_node_pool: admin
+    define can_list_node_pools: admin or viewer
+    define can_create_install: admin
+    define can_list_installs: admin or viewer
+    define can_list_namespaces: admin or viewer
 
 type node_pool
   relations

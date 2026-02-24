@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -16,11 +17,11 @@ func (s *Server) DeleteNamespace(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteNamespaceRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	if _, ok := OrganizationIDFromContext(ctx); !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
-
 	namespaceID := uuid.MustParse(req.Msg.NamespaceId)
+
+	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Namespace(namespaceID)); err != nil {
+		return nil, err
+	}
 
 	rowsAffected, err := s.queries.NamespaceDelete(ctx, db.NamespaceDeleteParams{ID: namespaceID})
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -18,6 +19,10 @@ func (s *Server) UpdateCluster(
 	req *connect.Request[organizationv1.UpdateClusterRequest],
 ) (*connect.Response[emptypb.Empty], error) {
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
+
+	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
 
 	params := db.ClusterUpdateParams{
 		ID: clusterID,

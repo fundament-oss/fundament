@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -19,6 +20,10 @@ func (s *Server) CreateProject(
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanCreateProject(), authz.Organization(organizationID)); err != nil {
+		return nil, err
 	}
 
 	userID, ok := UserIDFromContext(ctx)

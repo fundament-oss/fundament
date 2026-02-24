@@ -7,14 +7,15 @@ import "github.com/google/uuid"
 type ObjectType string
 
 const (
-	ObjectTypeUser         ObjectType = "user"
-	ObjectTypeOrganization ObjectType = "organization"
-	ObjectTypeProject      ObjectType = "project"
-	ObjectTypeCluster      ObjectType = "cluster"
-	ObjectTypeNodePool     ObjectType = "node_pool"
-	ObjectTypeNamespace    ObjectType = "namespace"
-	ObjectTypeApiKey       ObjectType = "api_key"
-	ObjectTypeInstall      ObjectType = "install"
+	ObjectTypeUser          ObjectType = "user"
+	ObjectTypeOrganization  ObjectType = "organization"
+	ObjectTypeProject       ObjectType = "project"
+	ObjectTypeProjectMember ObjectType = "project_member"
+	ObjectTypeCluster       ObjectType = "cluster"
+	ObjectTypeNodePool      ObjectType = "node_pool"
+	ObjectTypeNamespace     ObjectType = "namespace"
+	ObjectTypeApiKey        ObjectType = "api_key"
+	ObjectTypeInstall       ObjectType = "install"
 )
 
 // ActionName identifies the operation being performed.
@@ -22,18 +23,33 @@ const (
 type ActionName string
 
 const (
-	ActionAdmin            ActionName = "admin"
-	ActionViewer           ActionName = "viewer"
-	ActionOwner            ActionName = "owner"
-	ActionProjectAdmin     ActionName = "project_admin"
-	ActionProjectViewer    ActionName = "project_viewer"
-	ActionCanView          ActionName = "can_view"
-	ActionCanEdit          ActionName = "can_edit"
-	ActionCanDelete        ActionName = "can_delete"
-	ActionCanManageMembers ActionName = "can_manage_members"
-	ActionParent           ActionName = "parent"
-	ActionCreator          ActionName = "creator"
-	ActionCanUse           ActionName = "can_use"
+	ActionAdmin              ActionName = "admin"
+	ActionViewer             ActionName = "viewer"
+	ActionCanView            ActionName = "can_view"
+	ActionCanEdit            ActionName = "can_edit"
+	ActionCanCreateApikey    ActionName = "can_create_apikey"
+	ActionCanListApikeys     ActionName = "can_list_apikeys"
+	ActionCanCreateCluster   ActionName = "can_create_cluster"
+	ActionCanListClusters    ActionName = "can_list_clusters"
+	ActionCanCreateProject   ActionName = "can_create_project"
+	ActionCanListProjects    ActionName = "can_list_projects"
+	ActionCanInviteMember    ActionName = "can_invite_member"
+	ActionCanDeleteMember    ActionName = "can_delete_member"
+	ActionCanListMembers     ActionName = "can_list_members"
+	ActionOwner              ActionName = "owner"
+	ActionProjectAdmin       ActionName = "project_admin"
+	ActionProjectViewer      ActionName = "project_viewer"
+	ActionCanDelete          ActionName = "can_delete"
+	ActionCanManageMembers   ActionName = "can_manage_members"
+	ActionCanCreateNamespace ActionName = "can_create_namespace"
+	ActionCanListNamespaces  ActionName = "can_list_namespaces"
+	ActionParent             ActionName = "parent"
+	ActionCanCreateNodePool  ActionName = "can_create_node_pool"
+	ActionCanListNodePools   ActionName = "can_list_node_pools"
+	ActionCanCreateInstall   ActionName = "can_create_install"
+	ActionCanListInstalls    ActionName = "can_list_installs"
+	ActionCreator            ActionName = "creator"
+	ActionCanUse             ActionName = "can_use"
 )
 
 // Object represents an entity in an authorization check (subject or resource).
@@ -132,6 +148,14 @@ func Project(id uuid.UUID) Object {
 	}
 }
 
+// ProjectMember creates an Object of type project_member.
+func ProjectMember(id uuid.UUID) Object {
+	return Object{
+		Type: ObjectTypeProjectMember,
+		ID:   id.String(),
+	}
+}
+
 // Cluster creates an Object of type cluster.
 func Cluster(id uuid.UUID) Object {
 	return Object{
@@ -184,6 +208,61 @@ func Viewer() Action {
 	return Action{Name: ActionViewer}
 }
 
+// CanView creates an Action for the can_view relation.
+func CanView() Action {
+	return Action{Name: ActionCanView}
+}
+
+// CanEdit creates an Action for the can_edit relation.
+func CanEdit() Action {
+	return Action{Name: ActionCanEdit}
+}
+
+// CanCreateApikey creates an Action for the can_create_apikey relation.
+func CanCreateApikey() Action {
+	return Action{Name: ActionCanCreateApikey}
+}
+
+// CanListApikeys creates an Action for the can_list_apikeys relation.
+func CanListApikeys() Action {
+	return Action{Name: ActionCanListApikeys}
+}
+
+// CanCreateCluster creates an Action for the can_create_cluster relation.
+func CanCreateCluster() Action {
+	return Action{Name: ActionCanCreateCluster}
+}
+
+// CanListClusters creates an Action for the can_list_clusters relation.
+func CanListClusters() Action {
+	return Action{Name: ActionCanListClusters}
+}
+
+// CanCreateProject creates an Action for the can_create_project relation.
+func CanCreateProject() Action {
+	return Action{Name: ActionCanCreateProject}
+}
+
+// CanListProjects creates an Action for the can_list_projects relation.
+func CanListProjects() Action {
+	return Action{Name: ActionCanListProjects}
+}
+
+// CanInviteMember creates an Action for the can_invite_member relation.
+func CanInviteMember() Action {
+	return Action{Name: ActionCanInviteMember}
+}
+
+// CanDeleteMember creates an Action for the can_delete_member relation.
+func CanDeleteMember() Action {
+	return Action{Name: ActionCanDeleteMember}
+}
+
+// CanListMembers creates an Action for the can_list_members relation.
+func CanListMembers() Action {
+	return Action{Name: ActionCanListMembers}
+}
+
 // Owner creates an Action for the owner relation.
 func Owner() Action {
 	return Action{Name: ActionOwner}
@@ -199,16 +278,6 @@ func ProjectViewer() Action {
 	return Action{Name: ActionProjectViewer}
 }
 
-// CanView creates an Action for the can_view relation.
-func CanView() Action {
-	return Action{Name: ActionCanView}
-}
-
-// CanEdit creates an Action for the can_edit relation.
-func CanEdit() Action {
-	return Action{Name: ActionCanEdit}
-}
-
 // CanDelete creates an Action for the can_delete relation.
 func CanDelete() Action {
 	return Action{Name: ActionCanDelete}
@@ -219,9 +288,39 @@ func CanManageMembers() Action {
 	return Action{Name: ActionCanManageMembers}
 }
 
+// CanCreateNamespace creates an Action for the can_create_namespace relation.
+func CanCreateNamespace() Action {
+	return Action{Name: ActionCanCreateNamespace}
+}
+
+// CanListNamespaces creates an Action for the can_list_namespaces relation.
+func CanListNamespaces() Action {
+	return Action{Name: ActionCanListNamespaces}
+}
+
 // Parent creates an Action for the parent relation.
 func Parent() Action {
 	return Action{Name: ActionParent}
+}
+
+// CanCreateNodePool creates an Action for the can_create_node_pool relation.
+func CanCreateNodePool() Action {
+	return Action{Name: ActionCanCreateNodePool}
+}
+
+// CanListNodePools creates an Action for the can_list_node_pools relation.
+func CanListNodePools() Action {
+	return Action{Name: ActionCanListNodePools}
+}
+
+// CanCreateInstall creates an Action for the can_create_install relation.
+func CanCreateInstall() Action {
+	return Action{Name: ActionCanCreateInstall}
+}
+
+// CanListInstalls creates an Action for the can_list_installs relation.
+func CanListInstalls() Action {
+	return Action{Name: ActionCanListInstalls}
 }
 
 // Creator creates an Action for the creator relation.

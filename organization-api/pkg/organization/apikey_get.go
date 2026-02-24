@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -18,6 +19,10 @@ func (s *Server) GetAPIKey(
 	req *connect.Request[organizationv1.GetAPIKeyRequest],
 ) (*connect.Response[organizationv1.GetAPIKeyResponse], error) {
 	apiKeyID := uuid.MustParse(req.Msg.ApiKeyId)
+
+	if err := s.checkPermission(ctx, authz.CanView(), authz.ApiKey(apiKeyID)); err != nil {
+		return nil, err
+	}
 
 	key, err := s.queries.APIKeyGetByID(ctx, db.APIKeyGetByIDParams{
 		ID: apiKeyID,
