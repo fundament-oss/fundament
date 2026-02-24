@@ -40,8 +40,9 @@
           @for (cluster of clusters(); track cluster.id) {
             <div>
               <h2 class="mb-3 font-medium">
-                Cluster:
-                <a routerLink="/clusters/{{ cluster.id }}" class="link">{{ cluster.name }}</a>
+                Projects for cluster
+                <a routerLink="/clusters/{{ cluster.id }}" class="link">{{ cluster.name }}</a
+                >:
               </h2>
               <div
                 class="divide-y divide-gray-200 overflow-hidden rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
