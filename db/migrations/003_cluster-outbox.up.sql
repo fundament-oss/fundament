@@ -33,32 +33,6 @@ $function$
 /* Hazards:
  - HAS_UNTRACKABLE_DEPENDENCIES: Dependencies, i.e. other functions used in the function body, of non-sql functions cannot be tracked. As a result, we cannot guarantee that function dependencies are ordered properly relative to this statement. For adds, this means you need to ensure that all functions this function depends on are created/altered before this statement.
 */
-CREATE OR REPLACE FUNCTION tenant.cluster_outbox_namespace_trigger()
- RETURNS trigger
- LANGUAGE plpgsql
- COST 1
-AS $function$
-BEGIN
-    IF TG_OP = 'INSERT'
-       OR OLD.deleted IS DISTINCT FROM NEW.deleted
-    THEN
-        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
-        VALUES (COALESCE(NEW.id, OLD.id),
-                CASE
-                    WHEN TG_OP = 'INSERT' THEN 'created'
-                    WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
-                    ELSE 'updated'
-                END,
-                'trigger');
-    END IF;
-    RETURN NEW;
-END;
-$function$
-;
-
-/* Hazards:
- - HAS_UNTRACKABLE_DEPENDENCIES: Dependencies, i.e. other functions used in the function body, of non-sql functions cannot be tracked. As a result, we cannot guarantee that function dependencies are ordered properly relative to this statement. For adds, this means you need to ensure that all functions this function depends on are created/altered before this statement.
-*/
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_notify()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -66,59 +40,6 @@ CREATE OR REPLACE FUNCTION tenant.cluster_outbox_notify()
 AS $function$
 BEGIN
     PERFORM pg_notify('cluster_outbox', '');
-    RETURN NEW;
-END;
-$function$
-;
-
-/* Hazards:
- - HAS_UNTRACKABLE_DEPENDENCIES: Dependencies, i.e. other functions used in the function body, of non-sql functions cannot be tracked. As a result, we cannot guarantee that function dependencies are ordered properly relative to this statement. For adds, this means you need to ensure that all functions this function depends on are created/altered before this statement.
-*/
-CREATE OR REPLACE FUNCTION tenant.cluster_outbox_project_member_trigger()
- RETURNS trigger
- LANGUAGE plpgsql
- COST 1
-AS $function$
-BEGIN
-    IF TG_OP = 'INSERT'
-       OR OLD.deleted IS DISTINCT FROM NEW.deleted
-       OR OLD.role IS DISTINCT FROM NEW.role
-    THEN
-        INSERT INTO tenant.cluster_outbox (project_member_id, event, source)
-        VALUES (COALESCE(NEW.id, OLD.id),
-                CASE
-                    WHEN TG_OP = 'INSERT' THEN 'created'
-                    WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
-                    ELSE 'updated'
-                END,
-                'trigger');
-    END IF;
-    RETURN NEW;
-END;
-$function$
-;
-
-/* Hazards:
- - HAS_UNTRACKABLE_DEPENDENCIES: Dependencies, i.e. other functions used in the function body, of non-sql functions cannot be tracked. As a result, we cannot guarantee that function dependencies are ordered properly relative to this statement. For adds, this means you need to ensure that all functions this function depends on are created/altered before this statement.
-*/
-CREATE OR REPLACE FUNCTION tenant.cluster_outbox_project_trigger()
- RETURNS trigger
- LANGUAGE plpgsql
- COST 1
-AS $function$
-BEGIN
-    IF TG_OP = 'INSERT'
-       OR OLD.deleted IS DISTINCT FROM NEW.deleted
-    THEN
-        INSERT INTO tenant.cluster_outbox (project_id, event, source)
-        VALUES (COALESCE(NEW.id, OLD.id),
-                CASE
-                    WHEN TG_OP = 'INSERT' THEN 'created'
-                    WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
-                    ELSE 'updated'
-                END,
-                'trigger');
-    END IF;
     RETURN NEW;
 END;
 $function$
@@ -179,8 +100,6 @@ ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_fk_cluster"
 
 ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_fk_cluster";
 
-CREATE TRIGGER cluster_outbox_namespace AFTER INSERT OR UPDATE ON tenant.namespaces FOR EACH ROW EXECUTE FUNCTION tenant.cluster_outbox_namespace_trigger();
-
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_fk_namespace" FOREIGN KEY (namespace_id) REFERENCES tenant.namespaces(id) NOT VALID;
 
 ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_fk_namespace";
@@ -208,8 +127,6 @@ CREATE POLICY "project_members_cluster_worker_policy" ON "tenant"."project_membe
 */
 GRANT SELECT ON "tenant"."project_members" TO "fun_cluster_worker";
 
-CREATE TRIGGER cluster_outbox_project_member AFTER INSERT OR UPDATE ON tenant.project_members FOR EACH ROW EXECUTE FUNCTION tenant.cluster_outbox_project_member_trigger();
-
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_fk_project_member" FOREIGN KEY (project_member_id) REFERENCES tenant.project_members(id) NOT VALID;
 
 ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_fk_project_member";
@@ -228,8 +145,6 @@ CREATE POLICY "projects_cluster_worker_policy" ON "tenant"."projects"
 */
 GRANT SELECT ON "tenant"."projects" TO "fun_cluster_worker";
 
-CREATE TRIGGER cluster_outbox_project AFTER INSERT OR UPDATE ON tenant.projects FOR EACH ROW EXECUTE FUNCTION tenant.cluster_outbox_project_trigger();
-
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_fk_project" FOREIGN KEY (project_id) REFERENCES tenant.projects(id) NOT VALID;
 
 ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_fk_project";
@@ -237,8 +152,5 @@ ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_fk_pro
 
 -- Statements generated automatically, please review:
 ALTER FUNCTION tenant.cluster_outbox_cluster_trigger() OWNER TO fun_owner;
-ALTER FUNCTION tenant.cluster_outbox_namespace_trigger() OWNER TO fun_owner;
 ALTER FUNCTION tenant.cluster_outbox_notify() OWNER TO fun_owner;
-ALTER FUNCTION tenant.cluster_outbox_project_member_trigger() OWNER TO fun_owner;
-ALTER FUNCTION tenant.cluster_outbox_project_trigger() OWNER TO fun_owner;
 ALTER TABLE tenant.cluster_outbox OWNER TO fun_owner;
