@@ -36,10 +36,18 @@ SET retries = retries + 1,
 WHERE id = @id
 RETURNING retries;
 
+-- name: OutboxInsertReconcile :exec
+-- Conditional insert that avoids flooding the outbox when a pending/retrying row already exists.
+INSERT INTO tenant.cluster_outbox (subject_id, entity_type, event, source)
+SELECT @subject_id, @entity_type, 'reconcile', 'reconcile'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE subject_id = @subject_id AND entity_type = @entity_type
+      AND status IN ('pending', 'retrying')
+);
+
 -- name: OutboxMarkFailed :exec
 -- Marks a row as permanently failed after exceeding max retries.
 UPDATE tenant.cluster_outbox
 SET status = 'failed', failed = now(), status_info = @status_info
 WHERE id = @id;
-
-

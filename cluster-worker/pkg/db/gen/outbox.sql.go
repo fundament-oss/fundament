@@ -55,6 +55,27 @@ func (q *Queries) OutboxGetAndLock(ctx context.Context) (OutboxGetAndLockRow, er
 	return i, err
 }
 
+const outboxInsertReconcile = `-- name: OutboxInsertReconcile :exec
+INSERT INTO tenant.cluster_outbox (subject_id, entity_type, event, source)
+SELECT $1, $2, 'reconcile', 'reconcile'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE subject_id = $1 AND entity_type = $2
+      AND status IN ('pending', 'retrying')
+)
+`
+
+type OutboxInsertReconcileParams struct {
+	SubjectID  uuid.UUID
+	EntityType string
+}
+
+// Conditional insert that avoids flooding the outbox when a pending/retrying row already exists.
+func (q *Queries) OutboxInsertReconcile(ctx context.Context, arg OutboxInsertReconcileParams) error {
+	_, err := q.db.Exec(ctx, outboxInsertReconcile, arg.SubjectID, arg.EntityType)
+	return err
+}
+
 const outboxMarkFailed = `-- name: OutboxMarkFailed :exec
 UPDATE tenant.cluster_outbox
 SET status = 'failed', failed = now(), status_info = $1
