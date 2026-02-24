@@ -75,6 +75,7 @@ resource "fundament_namespace" "test" {
 
 data "fundament_namespace" "test" {
   cluster_name = fundament_cluster.test.name
+  project_name = fundament_project.test.name
   name         = fundament_namespace.test.name
 }
 `

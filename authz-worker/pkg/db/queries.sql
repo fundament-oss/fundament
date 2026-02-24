@@ -55,7 +55,7 @@ FROM tenant.organizations_users
 WHERE id = @id;
 
 -- name: GetProjectByID :one
-SELECT id, organization_id, deleted
+SELECT id, cluster_id, deleted
 FROM tenant.projects
 WHERE id = @id;
 
@@ -75,7 +75,7 @@ FROM tenant.node_pools
 WHERE id = @id;
 
 -- name: GetNamespaceByID :one
-SELECT id, project_id, cluster_id, deleted
+SELECT id, project_id, deleted
 FROM tenant.namespaces
 WHERE id = @id;
 

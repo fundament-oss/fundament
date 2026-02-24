@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -9,17 +9,13 @@ import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { PROJECT, CLUSTER } from '../../connect/tokens';
+import { NAMESPACE } from '../../connect/tokens';
 import {
   ListProjectNamespacesRequestSchema,
-  ProjectNamespace,
-} from '../../generated/v1/project_pb';
-import {
-  ListClustersRequestSchema,
   CreateNamespaceRequestSchema,
   DeleteNamespaceRequestSchema,
-  type ListClustersResponse_ClusterSummary as ClusterSummary,
-} from '../../generated/v1/cluster_pb';
+  Namespace,
+} from '../../generated/v1/namespace_pb';
 import ModalComponent from '../modal/modal.component';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
@@ -44,9 +40,7 @@ export default class NamespacesComponent implements OnInit {
 
   private fb = inject(FormBuilder);
 
-  private projectClient = inject(PROJECT);
-
-  private clusterClient = inject(CLUSTER);
+  private namespaceClient = inject(NAMESPACE);
 
   private toastService = inject(ToastService);
 
@@ -54,15 +48,11 @@ export default class NamespacesComponent implements OnInit {
 
   projectId = signal<string>('');
 
-  namespaces = signal<ProjectNamespace[]>([]);
-
-  clusters = signal<ClusterSummary[]>([]);
+  namespaces = signal<Namespace[]>([]);
 
   errorMessage = signal<string | null>(null);
 
   showCreateNamespaceModal = signal<boolean>(false);
-
-  isLoadingClusters = signal<boolean>(false);
 
   isCreatingNamespace = signal<boolean>(false);
 
@@ -73,7 +63,6 @@ export default class NamespacesComponent implements OnInit {
   pendingNamespaceName = signal<string | null>(null);
 
   namespaceForm = this.fb.group({
-    clusterId: ['', Validators.required],
     name: [
       '',
       [
@@ -92,13 +81,13 @@ export default class NamespacesComponent implements OnInit {
   async ngOnInit() {
     const projectId = this.route.snapshot.params['id'];
     this.projectId.set(projectId);
-    await Promise.all([this.loadNamespaces(projectId), this.loadClusters()]);
+    await this.loadNamespaces(projectId);
   }
 
   async loadNamespaces(projectId: string) {
     try {
       const request = create(ListProjectNamespacesRequestSchema, { projectId });
-      const response = await firstValueFrom(this.projectClient.listProjectNamespaces(request));
+      const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
       this.toastService.error(
@@ -109,35 +98,9 @@ export default class NamespacesComponent implements OnInit {
     }
   }
 
-  async loadClusters() {
-    try {
-      this.isLoadingClusters.set(true);
-      const request = create(ListClustersRequestSchema, {});
-      const response = await firstValueFrom(this.clusterClient.listClusters(request));
-      this.clusters.set(response.clusters);
-      if (response.clusters.length > 0) {
-        this.namespaceForm.patchValue({ clusterId: response.clusters[0].id });
-      }
-    } catch (error) {
-      this.toastService.error(
-        error instanceof Error
-          ? `Failed to load clusters: ${error.message}`
-          : 'Failed to load clusters',
-      );
-    } finally {
-      this.isLoadingClusters.set(false);
-    }
-  }
-
-  getClusterName(clusterId: string): string {
-    const cluster = this.clusters().find((c) => c.id === clusterId);
-    return cluster?.name || clusterId;
-  }
-
   openCreateNamespaceModal() {
     this.namespaceForm.reset();
     this.showCreateNamespaceModal.set(true);
-    this.loadClusters();
   }
 
   async createNamespace() {
@@ -151,11 +114,10 @@ export default class NamespacesComponent implements OnInit {
 
       const request = create(CreateNamespaceRequestSchema, {
         projectId: this.projectId(),
-        clusterId: this.namespaceForm.value.clusterId!,
         name: this.namespaceForm.value.name!,
       });
 
-      await firstValueFrom(this.clusterClient.createNamespace(request));
+      await firstValueFrom(this.namespaceClient.createNamespace(request));
 
       this.showCreateNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
@@ -191,7 +153,7 @@ export default class NamespacesComponent implements OnInit {
 
     try {
       const request = create(DeleteNamespaceRequestSchema, { namespaceId });
-      await firstValueFrom(this.clusterClient.deleteNamespace(request));
+      await firstValueFrom(this.namespaceClient.deleteNamespace(request));
 
       this.toastService.info(`Namespace '${namespaceName}' deleted`);
 

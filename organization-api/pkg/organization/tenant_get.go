@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -19,6 +20,10 @@ func (s *Server) GetOrganization(
 	req *connect.Request[organizationv1.GetOrganizationRequest],
 ) (*connect.Response[organizationv1.GetOrganizationResponse], error) {
 	organizationID := uuid.MustParse(req.Msg.Id)
+
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Organization(organizationID)); err != nil {
+		return nil, err
+	}
 
 	organization, err := s.queries.OrganizationGetByID(ctx, db.OrganizationGetByIDParams{ID: organizationID})
 	if err != nil {

@@ -1,5 +1,11 @@
-import { Component, inject, signal, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  OnDestroy,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -14,7 +20,7 @@ import { getStatusColor, getStatusLabel, isTransitionalStatus } from '../utils/c
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, RouterLink, NgIcon],
+  imports: [RouterLink, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,

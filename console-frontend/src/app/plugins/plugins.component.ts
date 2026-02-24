@@ -1,5 +1,4 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCheck, tablerHelpCircle } from '@ng-icons/tabler-icons';
@@ -59,13 +58,7 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
 
 @Component({
   selector: 'app-plugins',
-  imports: [
-    CommonModule,
-    RouterLink,
-    InstallPluginModalComponent,
-    NgIcon,
-    LoadingIndicatorComponent,
-  ],
+  imports: [RouterLink, InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerCheck,

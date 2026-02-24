@@ -10,8 +10,11 @@ import (
 
 // FundamentClient wraps the Connect RPC clients for the Fundament API.
 type FundamentClient struct {
-	ClusterService organizationv1connect.ClusterServiceClient
-	ProjectService organizationv1connect.ProjectServiceClient
+	ClusterService   organizationv1connect.ClusterServiceClient
+	ProjectService   organizationv1connect.ProjectServiceClient
+	MemberService    organizationv1connect.MemberServiceClient
+	InviteService    organizationv1connect.InviteServiceClient
+	NamespaceService organizationv1connect.NamespaceServiceClient
 }
 
 // TokenSource provides authentication tokens.
@@ -19,10 +22,11 @@ type TokenSource interface {
 	GetToken(ctx context.Context) (string, error)
 }
 
-// AuthTransport is an http.RoundTripper that adds a Bearer token to requests.
+// AuthTransport is an http.RoundTripper that adds authentication and organization headers to requests.
 type AuthTransport struct {
-	TokenSource TokenSource
-	Transport   http.RoundTripper
+	TokenSource    TokenSource
+	OrganizationID string
+	Transport      http.RoundTripper
 }
 
 // RoundTrip implements http.RoundTripper.
@@ -38,6 +42,10 @@ func (t *AuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		reqClone.Header.Set("Authorization", "Bearer "+token)
 	}
 
+	if t.OrganizationID != "" {
+		reqClone.Header.Set("Fun-Organization", t.OrganizationID)
+	}
+
 	transport := t.Transport
 	if transport == nil {
 		transport = http.DefaultTransport
@@ -46,18 +54,20 @@ func (t *AuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 // NewFundamentClient creates a new FundamentClient with static token authentication.
-func NewFundamentClient(endpoint, token string) *FundamentClient {
+func NewFundamentClient(endpoint, token, organizationID string) *FundamentClient {
 	return newFundamentClientWithTransport(endpoint, &AuthTransport{
-		TokenSource: StaticTokenSource(token),
-		Transport:   http.DefaultTransport,
+		TokenSource:    StaticTokenSource(token),
+		OrganizationID: organizationID,
+		Transport:      http.DefaultTransport,
 	})
 }
 
 // NewFundamentClientWithTokenManager creates a new FundamentClient with API key authentication.
-func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager) *FundamentClient {
+func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organizationID string) *FundamentClient {
 	return newFundamentClientWithTransport(endpoint, &AuthTransport{
-		TokenSource: tm,
-		Transport:   http.DefaultTransport,
+		TokenSource:    tm,
+		OrganizationID: organizationID,
+		Transport:      http.DefaultTransport,
 	})
 }
 
@@ -68,7 +78,10 @@ func newFundamentClientWithTransport(endpoint string, transport http.RoundTrippe
 	}
 
 	return &FundamentClient{
-		ClusterService: organizationv1connect.NewClusterServiceClient(httpClient, endpoint),
-		ProjectService: organizationv1connect.NewProjectServiceClient(httpClient, endpoint),
+		ClusterService:   organizationv1connect.NewClusterServiceClient(httpClient, endpoint),
+		ProjectService:   organizationv1connect.NewProjectServiceClient(httpClient, endpoint),
+		MemberService:    organizationv1connect.NewMemberServiceClient(httpClient, endpoint),
+		InviteService:    organizationv1connect.NewInviteServiceClient(httpClient, endpoint),
+		NamespaceService: organizationv1connect.NewNamespaceServiceClient(httpClient, endpoint),
 	}
 }

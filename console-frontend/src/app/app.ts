@@ -17,7 +17,6 @@ import {
   ActivatedRouteSnapshot,
 } from '@angular/router';
 import { filter, skip } from 'rxjs/operators';
-import { CommonModule } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerCircleCheck,
@@ -40,6 +39,7 @@ import {
   tablerChevronRight,
   tablerBuilding,
   tablerBracketsContain,
+  tablerUserCog,
 } from '@ng-icons/tabler-icons';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
@@ -66,7 +66,6 @@ const reloadApp = () => {
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
-    CommonModule,
     SelectorModalComponent,
     OrgPickerComponent,
     FundamentLogoIconComponent,
@@ -96,6 +95,7 @@ const reloadApp = () => {
       tablerChevronRight,
       tablerBuilding,
       tablerBracketsContain,
+      tablerUserCog,
     }),
   ],
   host: {
@@ -405,6 +405,16 @@ export default class App implements OnInit {
     return this.router.url === '/' || this.router.url.startsWith('/clusters/');
   }
 
+  // Check if current route is project members or roles
+  isMembersActive(): boolean {
+    const projectId = this.selectedProjectId();
+    if (!projectId) return false;
+    return (
+      this.router.url.startsWith(`/projects/${projectId}/members`) ||
+      this.router.url.startsWith(`/projects/${projectId}/roles`)
+    );
+  }
+
   // Initialize theme from localStorage or system preference
   private initializeTheme() {
     const savedTheme = localStorage.getItem('theme');
@@ -542,7 +552,8 @@ export default class App implements OnInit {
       .filter((org) => !pendingOrgIds.has(org.id))
       .map((org) => {
         const detailed = detailedOrgs.find((d) => d.id === org.id);
-        return detailed ?? { id: org.id, name: org.name, projects: [] };
+        const projects = detailed ? detailed.clusters.flatMap((c) => c.projects) : [];
+        return { id: org.id, name: org.name, projects };
       });
   });
 

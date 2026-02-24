@@ -56,6 +56,12 @@
             </dd>
           </dl>
           <dl>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Cluster</dt>
+            <dd class="mt-1 text-sm dark:text-white">
+              {{ getClusterName(project()?.clusterId ?? '') }}
+            </dd>
+          </dl>
+          <dl>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Namespaces</dt>
             <dd class="mt-1 text-sm dark:text-white">{{ namespaces().length }}</dd>
           </dl>
@@ -75,11 +81,9 @@
           </a>
         </div>
         @if (namespaces().length === 0) {
-          <div class="py-4">
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              No namespaces belong to this project yet.
-            </p>
-          </div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            No namespaces belong to this project yet.
+          </p>
         } @else {
           <div class="space-y-3">
             @for (namespace of namespaces(); track namespace.id) {
@@ -89,8 +93,7 @@
                 <div>
                   <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
                   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Cluster: {{ getClusterName(namespace.clusterId) }} &bull; Created
-                    {{ formatDate(namespace.created) }}
+                    Created {{ formatDate(namespace.created) }}
                   </p>
                 </div>
               </div>

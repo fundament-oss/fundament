@@ -7,14 +7,15 @@ terraform {
 }
 
 provider "fundament" {
-  endpoint = "http://organization.fundament.localhost:8080"
+  endpoint        = "http://organization.fundament.localhost:8080"
+  organization_id = "019b4000-0000-7000-8000-000000000001" # Globex
   # Token can be set via FUNDAMENT_TOKEN environment variable
   # token = ""
 }
 
 # List all namespaces belonging to a project
 data "fundament_project_namespaces" "all" {
-  project_id = "your-project-uuid"
+  project_id = "019c8ea3-804d-734b-a31d-4bf074fc578c"
 }
 
 output "data_source_id" {
@@ -32,14 +33,10 @@ output "namespace_names" {
   value       = [for ns in data.fundament_project_namespaces.all.namespaces : ns.name]
 }
 
-output "namespace_clusters" {
-  description = "Cluster IDs where project namespaces are deployed"
-  value       = [for ns in data.fundament_project_namespaces.all.namespaces : ns.cluster_id]
-}
-
 # Example: Combine with project resource
 resource "fundament_project" "example" {
-  name = "my-project"
+  cluster_name = "abc"
+  name = "abcdefgejasdfsa"
 }
 
 data "fundament_project_namespaces" "example_project" {

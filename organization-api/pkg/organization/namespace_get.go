@@ -6,20 +6,21 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-func (s *Server) GetNamespaceByClusterAndName(
+func (s *Server) GetNamespace(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetNamespaceByClusterAndNameRequest],
-) (*connect.Response[organizationv1.GetNamespaceByClusterAndNameResponse], error) {
-	namespace, err := s.queries.NamespaceGetByClusterAndName(ctx, db.NamespaceGetByClusterAndNameParams{
-		ClusterName:   req.Msg.ClusterName,
-		NamespaceName: req.Msg.NamespaceName,
-	})
+	req *connect.Request[organizationv1.GetNamespaceRequest],
+) (*connect.Response[organizationv1.GetNamespaceResponse], error) {
+	namespaceID := uuid.MustParse(req.Msg.NamespaceId)
+
+	namespace, err := s.queries.NamespaceGetByID(ctx, db.NamespaceGetByIDParams{ID: namespaceID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("namespace not found"))
@@ -27,8 +28,13 @@ func (s *Server) GetNamespaceByClusterAndName(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get namespace: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.GetNamespaceByClusterAndNameResponse{
-		Namespace: clusterNamespaceFromRow(&namespace),
+	// Auth is done after the DB call because we don't know the namespace ID yet.
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Namespace(namespace.ID)); err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&organizationv1.GetNamespaceResponse{
+		Namespace: namespaceFromRow((db.NamespaceListByClusterIDRow)(namespace)),
 	}), nil
 }
 
@@ -37,6 +43,7 @@ func (s *Server) GetNamespaceByProjectAndName(
 	req *connect.Request[organizationv1.GetNamespaceByProjectAndNameRequest],
 ) (*connect.Response[organizationv1.GetNamespaceByProjectAndNameResponse], error) {
 	namespace, err := s.queries.NamespaceGetByProjectAndName(ctx, db.NamespaceGetByProjectAndNameParams{
+		ClusterName:   req.Msg.ClusterName,
 		ProjectName:   req.Msg.ProjectName,
 		NamespaceName: req.Msg.NamespaceName,
 	})
@@ -47,7 +54,12 @@ func (s *Server) GetNamespaceByProjectAndName(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get namespace: %w", err))
 	}
 
+	// Auth is done after the DB call because we don't know the namespace ID yet.
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Namespace(namespace.ID)); err != nil {
+		return nil, err
+	}
+
 	return connect.NewResponse(&organizationv1.GetNamespaceByProjectAndNameResponse{
-		Namespace: clusterNamespaceFromRow(&namespace),
+		Namespace: namespaceFromRow((db.NamespaceListByClusterIDRow)(namespace)),
 	}), nil
 }

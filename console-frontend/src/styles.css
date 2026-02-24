@@ -164,6 +164,12 @@ select {
   @apply text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300;
 }
 
+/* Switch (toggle) styles */
+
+.switch {
+  @apply relative h-5 w-9 rounded-full bg-gray-200 peer-checked:bg-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-200 peer-focus:outline-none peer-disabled:opacity-60 after:absolute after:start-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full focus:ring-offset-2 rtl:peer-checked:after:-translate-x-full dark:bg-gray-800 dark:ring-offset-gray-950 dark:peer-focus:ring-indigo-800 dark:after:bg-gray-950;
+}
+
 /* Tab styles */
 
 .tabs {
@@ -252,9 +258,9 @@ select {
   @apply divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950;
 }
 
-.table tbody tr {
+/* .table tbody tr {
   @apply hover:bg-gray-50 dark:hover:bg-gray-900;
-}
+} */
 
 .table tbody td {
   @apply px-6 py-3 text-sm whitespace-nowrap dark:text-gray-300;

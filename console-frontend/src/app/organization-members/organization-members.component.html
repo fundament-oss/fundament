@@ -8,20 +8,37 @@
           Manage who has access to your organization
         </p>
       </div>
-      <div class="flex gap-2 sm:justify-end">
-        <button
-          type="button"
-          (click)="openModal()"
-          class="btn-primary inline-flex items-center px-3!"
-        >
-          <ng-icon name="tablerPlus" class="mr-2" />
-          Invite user
-        </button>
-      </div>
     </div>
   </div>
 
   <div class="p-6">
+    <!-- Info banner -->
+    <div
+      class="mb-6 flex items-start gap-3 rounded-md border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
+    >
+      <ng-icon
+        name="tablerInfoCircle"
+        size="1.25rem"
+        class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
+      />
+      <div class="text-sm text-indigo-700 dark:text-indigo-300">
+        <p class="mb-2">
+          Organization admins can manage members across all projects. This permission overrides
+          project-level permissions.
+        </p>
+
+        <p>
+          Permissions only give access to manage members. To control access to project resources,
+          configure <strong class="font-semibold">roles</strong> on project level.
+        </p>
+      </div>
+    </div>
+
+    <button type="button" (click)="openModal()" class="btn-primary mb-6 inline-flex items-center">
+      <ng-icon name="tablerPlus" class="mr-2" />
+      Invite member
+    </button>
+
     <!-- Pending Invitations Section -->
     <div class="mb-8">
       <h2 class="mb-4 text-lg font-semibold dark:text-white">Pending invitations</h2>
@@ -37,50 +54,53 @@
           <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       } @else if (pendingInvitations.length > 0) {
-        <div
-          class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
-        >
-          @for (invitation of pendingInvitations; track invitation.id) {
-            <div class="flex items-center justify-between px-4 py-3">
-              <div class="flex items-center gap-3">
-                <div
-                  class="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900"
-                >
-                  <ng-icon
-                    name="tablerClockHour4"
-                    size="1.25rem"
-                    class="text-yellow-600! dark:text-yellow-400!"
-                  />
-                </div>
-                <div>
-                  <p class="font-medium dark:text-white">
-                    {{ invitation.email || invitation.name }}
-                  </p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">
-                    Invited {{ formatTimeAgo(invitation.created) }}
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-center gap-3">
-                <span
-                  class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 capitalize dark:bg-gray-800 dark:text-gray-300"
-                  >{{ invitation.permission }}</span
-                >
-                <button
-                  (click)="cancelInvitation(invitation.id)"
-                  class="cursor-pointer text-gray-400 hover:text-rose-600 dark:hover:text-rose-400"
-                  title="Cancel invitation"
-                >
-                  <ng-icon name="tablerX" size="1.25rem" class="block!" />
-                </button>
-              </div>
-            </div>
-          }
+        <div class="table-container">
+          <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th width="60%" scope="col">Email</th>
+                <th width="20%" scope="col">Permission</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
+              @for (invitation of pendingInvitations; track invitation.id) {
+                <tr>
+                  <td>
+                    <div>
+                      <span class="font-medium dark:text-white">
+                        {{ invitation.email || invitation.name }}
+                      </span>
+                      <p class="text-sm text-gray-500 dark:text-gray-400">
+                        Invited {{ formatTimeAgo(invitation.created) }}
+                      </p>
+                    </div>
+                  </td>
+                  <td>
+                    <span
+                      class="badge capitalize"
+                      [class.badge-purple]="invitation.permission === 'admin'"
+                      [class.badge-blue]="invitation.permission === 'viewer'"
+                    >
+                      {{ invitation.permission }}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      (click)="cancelInvitation(invitation.id)"
+                      class="btn-remove shrink-0"
+                    >
+                      <ng-icon name="tablerTrash" class="mr-1.5" /> Cancel
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
         </div>
       } @else {
-        <div
-          class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700"
-        >
+        <div class="rounded-md border border-gray-200 p-4 text-center dark:border-gray-800">
           <ng-icon
             name="tablerMail"
             size="3rem"
@@ -131,48 +151,206 @@
           <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No members found</p>
         </div>
       } @else {
-        <div
-          class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
-        >
-          @for (member of activeMembers; track member.id) {
-            <div
-              class="flex items-center justify-between px-4 py-3"
-              [class.bg-gray-50]="member.isCurrentUser"
-              [class.dark:bg-gray-900]="member.isCurrentUser"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="flex h-10 w-10 items-center justify-center rounded-full font-medium text-white"
-                  [class]="getAvatarColor(member.name)"
-                >
-                  {{ getInitials(member.name) }}
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <p class="font-medium dark:text-white">{{ member.name }}</p>
-                    @if (member.isCurrentUser) {
-                      <span
-                        class="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
-                        >You</span
+        <div class="table-container">
+          <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th width="60%" scope="col">Name</th>
+                <th width="20%" scope="col">Permission</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
+              @for (member of activeMembers; track member.id) {
+                <tr>
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-medium text-white"
+                        [class]="getAvatarColor(member.name)"
                       >
+                        {{ getInitials(member.name) }}
+                      </div>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-medium dark:text-white">{{ member.name }}</span>
+                          @if (member.isCurrentUser) {
+                            <span
+                              class="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                              >You</span
+                            >
+                          }
+                        </div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                          Joined {{ formatTimeAgo(member.created) }}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span
+                      class="badge capitalize"
+                      [class.badge-purple]="member.permission === 'admin'"
+                      [class.badge-blue]="member.permission === 'viewer'"
+                    >
+                      {{ member.permission }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (member.isCurrentUser) {
+                      <span class="text-sm text-gray-400 dark:text-gray-600">&mdash;</span>
+                    } @else {
+                      <button
+                        type="button"
+                        (click)="openEditModal(member)"
+                        class="btn-light mr-2 inline-flex shrink-0 items-center"
+                      >
+                        <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        (click)="openDeleteModal(member)"
+                        class="btn-remove shrink-0"
+                      >
+                        <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
+                      </button>
                     }
-                  </div>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ member.email || member.externalRef }}
-                  </p>
-                </div>
-              </div>
-              <span
-                class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 capitalize dark:bg-gray-800 dark:text-gray-300"
-                >{{ member.permission }}</span
-              >
-            </div>
-          }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
         </div>
       }
     </div>
   </div>
 </div>
+
+<!-- Delete Member Modal -->
+<app-modal
+  [show]="showDeleteModal()"
+  title="Remove member"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showDeleteModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Are you sure you want to remove
+          <span class="font-semibold text-gray-900 dark:text-white">{{
+            deletingMember()?.name
+          }}</span>
+          from this organization?
+        </p>
+        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+          This will revoke their access to all organization resources.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="confirmDeleteMember()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, remove member
+    </button>
+  </div>
+</app-modal>
+
+<!-- Edit Member Modal -->
+<app-modal
+  [show]="showEditModal()"
+  title="Edit member"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showEditModal.set(false)"
+>
+  <div class="mb-4">
+    <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Member</span>
+    <p class="text-sm dark:text-white">{{ editingMember()?.name }}</p>
+    <p class="text-xs text-gray-500 dark:text-gray-400">
+      {{ editingMember()?.email || editingMember()?.externalRef }}
+    </p>
+  </div>
+
+  <div class="mb-4">
+    <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
+    <div class="space-y-2">
+      <label
+        class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+      >
+        <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
+          <input
+            name="editPermission"
+            type="radio"
+            value="viewer"
+            [ngModel]="editPermission()"
+            (ngModelChange)="editPermission.set($event)"
+            class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+          />
+          Viewer
+        </span>
+        <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+          Read access to resources
+        </span>
+      </label>
+      <label
+        class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+      >
+        <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
+          <input
+            name="editPermission"
+            type="radio"
+            value="admin"
+            [ngModel]="editPermission()"
+            (ngModelChange)="editPermission.set($event)"
+            class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+          />
+          Admin
+        </span>
+        <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+          Full access to resources
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button
+      type="button"
+      (click)="showEditModal.set(false)"
+      class="btn-secondary"
+      [disabled]="isUpdating()"
+    >
+      Cancel
+    </button>
+    <button
+      type="button"
+      (click)="confirmEditMember()"
+      class="btn-primary"
+      [disabled]="isUpdating()"
+    >
+      @if (isUpdating()) {
+        Saving...
+      } @else {
+        Save changes
+      }
+    </button>
+  </div>
+</app-modal>
 
 <!-- Invite Modal -->
 <app-modal [show]="isModalOpen()" title="Invite user" (modalClose)="closeModal()">
@@ -208,23 +386,47 @@
     </div>
 
     <div class="mb-6">
-      <label
-        for="permission"
-        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-      >
-        Permission
-      </label>
-      <select
-        id="permission"
-        [ngModel]="invitePermission()"
-        (ngModelChange)="invitePermission.set($event)"
-        name="permission"
-        [disabled]="isSubmitting()"
-        class="w-full"
-      >
-        <option value="viewer">Viewer</option>
-        <option value="admin">Admin</option>
-      </select>
+      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
+      <div class="space-y-2">
+        <label
+          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+        >
+          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
+            <input
+              name="permission"
+              type="radio"
+              value="viewer"
+              [ngModel]="invitePermission()"
+              (ngModelChange)="invitePermission.set($event)"
+              [disabled]="isSubmitting()"
+              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+            />
+            Viewer
+          </span>
+          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+            Read access to resources
+          </span>
+        </label>
+        <label
+          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
+        >
+          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
+            <input
+              name="permission"
+              type="radio"
+              value="admin"
+              [ngModel]="invitePermission()"
+              (ngModelChange)="invitePermission.set($event)"
+              [disabled]="isSubmitting()"
+              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
+            />
+            Admin
+          </span>
+          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+            Full access to resources
+          </span>
+        </label>
+      </div>
     </div>
 
     <div modal-footer class="modal-footer">

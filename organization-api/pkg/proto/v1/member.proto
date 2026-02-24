@@ -3,6 +3,7 @@ syntax = "proto3";
 package organization.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
 
@@ -12,12 +13,29 @@ option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/pro
 service MemberService {
   // List all members of the current organization
   rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  // Get a member by membership ID or user ID
+  rpc GetMember(GetMemberRequest) returns (GetMemberResponse);
   // Delete a member from the organization
   rpc DeleteMember(DeleteMemberRequest) returns (DeleteMemberResponse);
+  // Update a member's permission
+  rpc UpdateMemberPermission(UpdateMemberPermissionRequest) returns (google.protobuf.Empty);
 }
 
 // List members request
 message ListMembersRequest {}
+
+// Get member request — look up by membership ID or user ID
+message GetMemberRequest {
+  oneof lookup {
+    string id = 10 [(buf.validate.field).string = {uuid: true}];
+    string user_id = 20 [(buf.validate.field).string = {uuid: true}];
+  }
+}
+
+// Get member response
+message GetMemberResponse {
+  Member member = 10;
+}
 
 // List members response
 message ListMembersResponse {
@@ -32,9 +50,22 @@ message DeleteMemberRequest {
 // Delete member response
 message DeleteMemberResponse {}
 
+// Update member permission request
+message UpdateMemberPermissionRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+  string permission = 20 [(buf.validate.field).string = {
+    in: [
+      "viewer",
+      "admin"
+    ]
+  }];
+}
+
 // Member information
 message Member {
   string id = 10;
+  // user_id is the actual user ID (users.id), as opposed to id which is the membership record ID (organizations_users.id)
+  string user_id = 80;
   string name = 20;
   // external_ref is empty for pending invitations
   optional string external_ref = 30;

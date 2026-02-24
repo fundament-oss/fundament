@@ -29,9 +29,6 @@ service ProjectService {
   // Delete a project
   rpc DeleteProject(DeleteProjectRequest) returns (google.protobuf.Empty);
 
-  // List all namespaces belonging to a project
-  rpc ListProjectNamespaces(ListProjectNamespacesRequest) returns (ListProjectNamespacesResponse);
-
   // List all members of a project
   rpc ListProjectMembers(ListProjectMembersRequest) returns (ListProjectMembersResponse);
 
@@ -49,7 +46,9 @@ service ProjectService {
 }
 
 // List projects request
-message ListProjectsRequest {}
+message ListProjectsRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
 
 // List projects response
 message ListProjectsResponse {
@@ -78,12 +77,14 @@ message GetProjectResponse {
 // Project information
 message Project {
   string id = 10;
+  string cluster_id = 15;
   string name = 20;
   google.protobuf.Timestamp created = 30;
 }
 
 // Create project request
 message CreateProjectRequest {
+  string cluster_id = 5 [(buf.validate.field).string = {uuid: true}];
   string name = 10 [(buf.validate.field).cel = {
     id: "dns1123label"
     message: "must be a valid DNS-1123 label"
@@ -108,24 +109,6 @@ message UpdateProjectRequest {
 // Delete project request
 message DeleteProjectRequest {
   string project_id = 10 [(buf.validate.field).string = {uuid: true}];
-}
-
-// List project namespaces request
-message ListProjectNamespacesRequest {
-  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
-}
-
-// List project namespaces response
-message ListProjectNamespacesResponse {
-  repeated ProjectNamespace namespaces = 10;
-}
-
-// Project namespace information
-message ProjectNamespace {
-  string id = 10;
-  string name = 20;
-  string cluster_id = 30;
-  google.protobuf.Timestamp created = 40;
 }
 
 // Project member role

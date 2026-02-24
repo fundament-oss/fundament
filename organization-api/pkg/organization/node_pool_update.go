@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -18,6 +19,10 @@ func (s *Server) UpdateNodePool(
 	req *connect.Request[organizationv1.UpdateNodePoolRequest],
 ) (*connect.Response[emptypb.Empty], error) {
 	nodePoolID := uuid.MustParse(req.Msg.NodePoolId)
+
+	if err := s.checkPermission(ctx, authz.CanEdit(), authz.NodePool(nodePoolID)); err != nil {
+		return nil, err
+	}
 
 	params := db.NodePoolUpdateParams{
 		ID:           nodePoolID,

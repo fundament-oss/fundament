@@ -7,7 +7,6 @@ import {
   OnInit,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
@@ -15,7 +14,7 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
 
 @Component({
   selector: 'app-add-cluster',
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster.component.html',
 })

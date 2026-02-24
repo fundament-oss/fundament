@@ -7,7 +7,8 @@ terraform {
 }
 
 provider "fundament" {
-  endpoint = "http://organization.fundament.localhost:8080"
+  endpoint        = "http://organization.fundament.localhost:8080"
+  organization_id = "019b4000-0000-7000-8000-000000000002" # Globex
   # Token can be set via FUNDAMENT_TOKEN environment variable
   # token = ""
 }
@@ -20,6 +21,11 @@ data "fundament_project" "example" {
 output "project_id" {
   description = "The unique identifier of the project"
   value       = data.fundament_project.example.id
+}
+
+output "project_cluster_name" {
+  description = "The name of the cluster this project belongs to"
+  value       = data.fundament_project.example.cluster_name
 }
 
 output "project_created" {

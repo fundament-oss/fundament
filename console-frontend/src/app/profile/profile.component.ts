@@ -6,17 +6,18 @@ import {
   computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerInfoCircle } from '@ng-icons/tabler-icons';
 import { AUTHN, ORGANIZATION } from '../../connect/tokens';
 import type { User } from '../../generated/authn/v1/authn_pb';
 import type { Organization } from '../../generated/v1/organization_pb';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerInfoCircle } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
 
 @Component({
   selector: 'app-profile',
-  imports: [NgIcon],
+  imports: [ReactiveFormsModule, NgIcon],
   viewProviders: [provideIcons({ tablerInfoCircle })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile.component.html',

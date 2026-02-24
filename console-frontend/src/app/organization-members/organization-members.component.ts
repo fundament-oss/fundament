@@ -1,5 +1,4 @@
 import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
@@ -12,30 +11,15 @@ import {
   tablerMail,
   tablerAlertTriangle,
   tablerX,
+  tablerInfoCircle,
+  tablerPencil,
   tablerUsersGroup,
 } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
 import ModalComponent from '../modal/modal.component';
-
-const formatTimeAgo = (date: Date | undefined): string => {
-  if (!date) {
-    return '';
-  }
-
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    return 'today';
-  }
-  if (diffDays === 1) {
-    return 'yesterday';
-  }
-  return `${diffDays} days ago`;
-};
+import { formatTimeAgo } from '../utils/date-format';
 
 const getInitials = (name: string): string =>
   name
@@ -71,7 +55,7 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [CommonModule, FormsModule, NgIcon, ModalComponent],
+  imports: [FormsModule, NgIcon, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -80,6 +64,8 @@ interface OrganizationMember {
       tablerClockHour4,
       tablerMail,
       tablerAlertTriangle,
+      tablerInfoCircle,
+      tablerPencil,
       tablerUsersGroup,
     }),
   ],
@@ -102,7 +88,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
   isSubmitting = signal(false);
 
-  // Modal state
+  // Invite modal state
   isModalOpen = signal(false);
 
   inviteEmail = signal('');
@@ -111,7 +97,21 @@ export default class OrganizationMembersComponent implements OnInit {
 
   inviteError = signal<string | null>(null);
 
-  // All members loaded from API (includes pending, active, rejected and revoked)
+  // Delete modal state
+  showDeleteModal = signal(false);
+
+  deletingMember = signal<OrganizationMember | null>(null);
+
+  // Edit modal state
+  showEditModal = signal(false);
+
+  editingMember = signal<OrganizationMember | null>(null);
+
+  editPermission = signal('viewer');
+
+  isUpdating = signal(false);
+
+  // All members loaded from API (includes pending, active, declined and revoked)
   allMembers = signal<OrganizationMember[]>([]);
 
   // Computed: active members (have status accepted)
@@ -215,6 +215,68 @@ export default class OrganizationMembersComponent implements OnInit {
           ? `Failed to cancel invitation: ${err.message}`
           : 'Failed to cancel invitation',
       );
+    }
+  }
+
+  openDeleteModal(member: OrganizationMember) {
+    this.deletingMember.set(member);
+    this.showDeleteModal.set(true);
+  }
+
+  async confirmDeleteMember() {
+    const member = this.deletingMember();
+    if (!member) return;
+
+    try {
+      await firstValueFrom(this.memberClient.deleteMember({ id: member.id }));
+      this.showDeleteModal.set(false);
+      this.deletingMember.set(null);
+      await this.loadMembers();
+    } catch (err) {
+      this.error.set(
+        err instanceof Error
+          ? `Failed to remove member: ${err.message}`
+          : 'Failed to remove member',
+      );
+      this.showDeleteModal.set(false);
+    }
+  }
+
+  openEditModal(member: OrganizationMember) {
+    this.editingMember.set(member);
+    this.editPermission.set(member.permission);
+    this.showEditModal.set(true);
+  }
+
+  async confirmEditMember() {
+    const member = this.editingMember();
+    if (!member) return;
+
+    const newPermission = this.editPermission();
+    if (newPermission === member.permission) {
+      this.showEditModal.set(false);
+      return;
+    }
+
+    this.isUpdating.set(true);
+
+    try {
+      // Re-invite with the new permission (delete + invite)
+      await firstValueFrom(this.memberClient.deleteMember({ id: member.id }));
+      const email = member.email || member.name;
+      await firstValueFrom(this.inviteClient.inviteMember({ email, permission: newPermission }));
+      this.showEditModal.set(false);
+      this.editingMember.set(null);
+      await this.loadMembers();
+    } catch (err) {
+      this.error.set(
+        err instanceof Error
+          ? `Failed to update member: ${err.message}`
+          : 'Failed to update member',
+      );
+      this.showEditModal.set(false);
+    } finally {
+      this.isUpdating.set(false);
     }
   }
 

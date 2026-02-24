@@ -69,7 +69,7 @@ const routes: Routes = [
         data: {
           breadcrumbs: [
             { label: 'Clusters', route: '/' },
-            { label: 'Cluster details' },
+            { label: ':clusterName', route: '/clusters/:id' },
             { label: 'Nodes' },
           ],
         },
@@ -81,8 +81,20 @@ const routes: Routes = [
         data: {
           breadcrumbs: [
             { label: 'Clusters', route: '/' },
-            { label: 'Cluster details' },
+            { label: ':clusterName', route: '/clusters/:id' },
             { label: 'Plugins' },
+          ],
+        },
+      },
+      {
+        path: 'clusters/:id/namespaces',
+        loadComponent: () =>
+          import('./cluster-namespaces/cluster-namespaces.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [
+            { label: 'Clusters', route: '/' },
+            { label: ':clusterName', route: '/clusters/:id' },
+            { label: 'Namespaces' },
           ],
         },
       },
@@ -109,11 +121,19 @@ const routes: Routes = [
         },
       },
       {
+        path: 'projects/:id/roles',
+        loadComponent: () =>
+          import('./project-roles/project-roles.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Roles' }],
+        },
+      },
+      {
         path: 'clusters/:id',
         loadComponent: () =>
           import('./cluster-details/cluster-details.component').then((m) => m.default),
         data: {
-          breadcrumbs: [{ label: 'Clusters', route: '/' }, { label: 'Cluster details' }],
+          breadcrumbs: [{ label: 'Clusters', route: '/' }, { label: ':clusterName' }],
         },
       },
       {

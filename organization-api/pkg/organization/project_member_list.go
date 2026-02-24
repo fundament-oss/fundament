@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -17,6 +18,10 @@ func (s *Server) ListProjectMembers(
 	req *connect.Request[organizationv1.ListProjectMembersRequest],
 ) (*connect.Response[organizationv1.ListProjectMembersResponse], error) {
 	projectID := uuid.MustParse(req.Msg.ProjectId)
+
+	if err := s.checkPermission(ctx, authz.CanListMembers(), authz.Project(projectID)); err != nil {
+		return nil, err
+	}
 
 	members, err := s.queries.ProjectMemberList(ctx, db.ProjectMemberListParams{ProjectID: projectID})
 	if err != nil {

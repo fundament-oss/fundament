@@ -11,13 +11,12 @@ import {
   AfterViewChecked,
   OnDestroy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerX } from '@ng-icons/tabler-icons';
 
 @Component({
   selector: 'app-modal',
-  imports: [CommonModule, NgIconComponent],
+  imports: [NgIconComponent],
   viewProviders: [
     provideIcons({
       tablerX,
