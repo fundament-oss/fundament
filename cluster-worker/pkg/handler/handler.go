@@ -7,14 +7,11 @@ import (
 	"github.com/google/uuid"
 )
 
-// EntityType identifies which outbox FK column a handler cares about.
+// EntityType identifies the entity_type column value in the outbox table.
 type EntityType string
 
 const (
-	EntityCluster       EntityType = "cluster"
-	EntityNamespace     EntityType = "namespace"
-	EntityProjectMember EntityType = "project_member"
-	EntityProject       EntityType = "project"
+	EntityCluster EntityType = "cluster"
 )
 
 // SyncHandler processes an outbox row for a specific entity type.

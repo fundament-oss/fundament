@@ -2,10 +2,8 @@
 -- Claims the next pending/retryable outbox row.
 -- Uses FOR NO KEY UPDATE SKIP LOCKED for concurrent worker safety.
 SELECT id,
-       cluster_id,
-       namespace_id,
-       project_member_id,
-       project_id,
+       subject_id,
+       entity_type,
        event,
        source,
        status,

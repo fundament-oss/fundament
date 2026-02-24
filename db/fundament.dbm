@@ -3,7 +3,7 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="73"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="63"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
 	 last-position="0,0" last-zoom="0.5" scene-rect="-588,-87,3186.2,2626.52"
 	 default-owner="postgres"
@@ -242,12 +242,10 @@ END;]]> </definition>
 	<definition> <![CDATA[BEGIN
     IF TG_OP = 'INSERT'
        OR OLD.deleted IS DISTINCT FROM NEW.deleted
-       OR OLD.name IS DISTINCT FROM NEW.name
-       OR OLD.region IS DISTINCT FROM NEW.region
-       OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
     THEN
-        INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+        INSERT INTO tenant.cluster_outbox (subject_id, entity_type, event, source)
         VALUES (COALESCE(NEW.id, OLD.id),
+                'cluster',
                 CASE
                     WHEN TG_OP = 'INSERT' THEN 'created'
                     WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
@@ -1234,24 +1232,18 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 		</idxelement>
 </index>
 
-<table name="cluster_outbox" layers="0" collapse-mode="2" max-obj-count="16" z-value="0">
+<table name="cluster_outbox" layers="0" collapse-mode="2" max-obj-count="14" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
 	<position x="2200" y="400"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="cluster_id">
+	<column name="subject_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="namespace_id">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="project_member_id">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="project_id">
-		<type name="uuid" length="0"/>
+	<column name="entity_type" not-null="true">
+		<type name="text" length="0"/>
 	</column>
 	<column name="event" not-null="true" default-value="'updated'">
 		<type name="text" length="0"/>
@@ -1283,8 +1275,8 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<constraint name="cluster_outbox_pk" type="pk-constr" table="tenant.cluster_outbox">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="cluster_outbox_ck_single_fk" type="ck-constr" table="tenant.cluster_outbox">
-			<expression> <![CDATA[num_nonnulls(cluster_id, namespace_id, project_member_id, project_id) = 1]]> </expression>
+	<constraint name="cluster_outbox_ck_entity_type" type="ck-constr" table="tenant.cluster_outbox">
+			<expression> <![CDATA[entity_type IN ('cluster')]]> </expression>
 	</constraint>
 	<constraint name="cluster_outbox_ck_status" type="ck-constr" table="tenant.cluster_outbox">
 			<expression> <![CDATA[status IN ('pending', 'completed', 'retrying', 'failed')]]> </expression>
@@ -1311,35 +1303,11 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 		</idxelement>
 </index>
 
-<index name="cluster_outbox_idx_cluster_id" table="tenant.cluster_outbox"
+<index name="cluster_outbox_idx_subject_id" table="tenant.cluster_outbox"
 	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
 	 index-type="btree" factor="0">
 		<idxelement use-sorting="false">
-			<column name="cluster_id"/>
-		</idxelement>
-</index>
-
-<index name="cluster_outbox_idx_namespace_id" table="tenant.cluster_outbox"
-	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
-	 index-type="btree" factor="0">
-		<idxelement use-sorting="false">
-			<column name="namespace_id"/>
-		</idxelement>
-</index>
-
-<index name="cluster_outbox_idx_project_member_id" table="tenant.cluster_outbox"
-	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
-	 index-type="btree" factor="0">
-		<idxelement use-sorting="false">
-			<column name="project_member_id"/>
-		</idxelement>
-</index>
-
-<index name="cluster_outbox_idx_project_id" table="tenant.cluster_outbox"
-	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
-	 index-type="btree" factor="0">
-		<idxelement use-sorting="false">
-			<column name="project_id"/>
+			<column name="subject_id"/>
 		</idxelement>
 </index>
 
@@ -1912,29 +1880,6 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
-<constraint name="cluster_outbox_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.cluster_outbox">
-	<columns names="cluster_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="cluster_outbox_fk_namespace" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.namespaces" table="tenant.cluster_outbox">
-	<columns names="namespace_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="cluster_outbox_fk_project_member" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.project_members" table="tenant.cluster_outbox">
-	<columns names="project_member_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="cluster_outbox_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.cluster_outbox">
-	<columns names="project_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
 
 <constraint name="outbox_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="authz.outbox">
@@ -2090,25 +2035,6 @@ END;]]> </definition>
 	 dst-table="tenant.users" reference-fk="project_members_fk_user"
 	 src-required="false" dst-required="true"/>
 
-<relationship name="rel_cluster_outbox_clusters" type="relfk" layers="0"
-	 src-table="tenant.cluster_outbox"
-	 dst-table="tenant.clusters" reference-fk="cluster_outbox_fk_cluster"
-	 src-required="false" dst-required="false"/>
-
-<relationship name="rel_cluster_outbox_namespaces" type="relfk" layers="0"
-	 src-table="tenant.cluster_outbox"
-	 dst-table="tenant.namespaces" reference-fk="cluster_outbox_fk_namespace"
-	 src-required="false" dst-required="false"/>
-
-<relationship name="rel_cluster_outbox_project_members" type="relfk" layers="0"
-	 src-table="tenant.cluster_outbox"
-	 dst-table="tenant.project_members" reference-fk="cluster_outbox_fk_project_member"
-	 src-required="false" dst-required="false"/>
-
-<relationship name="rel_cluster_outbox_projects" type="relfk" layers="0"
-	 src-table="tenant.cluster_outbox"
-	 dst-table="tenant.projects" reference-fk="cluster_outbox_fk_project"
-	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_outbox_projects" type="relfk" layers="0"
 	 src-table="authz.outbox"
