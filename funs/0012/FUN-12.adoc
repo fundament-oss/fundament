@@ -1,0 +1,51 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: published
+
+= FUN-12 Unauthorized vs Not Found
+
+== Problem
+
+When a user requests a resource they lack access to, should the API return `PERMISSION_DENIED` (HTTP 403) or `NOT_FOUND` (HTTP 404)? A common security practice is to return `NOT_FOUND`, preventing the caller from learning whether a resource exists. This makes sense when identifiers are guessable (sequential integers, short slugs), because an attacker could enumerate resources by probing IDs and observing the difference between 403 and 404. However, this comes with trade-offs in developer experience and implementation complexity.
+
+== Decision
+
+When a resource exists but the caller lacks permission, the API returns `PERMISSION_DENIED`. When a resource genuinely does not exist, the API returns `NOT_FOUND`.
+
+=== Scope
+
+This applies to all single-resource endpoints (Get, Update, Delete) across all services. List endpoints are out of scope -- they inherently filter results by access, so unauthorized resources are simply omitted.
+
+=== Check ordering
+
+Authorization checks should be performed before loading the resource where possible. When object-level authorization requires the resource to exist in OpenFGA first, the handler may load the resource first and then check authorization.
+
+=== Nested resources
+
+When a request targets a nested resource (e.g. a project under an organization) and the caller lacks access to the parent, the API returns `PERMISSION_DENIED` referencing the parent resource.
+
+== Rationale
+
+=== Guessing is not feasible
+
+Fundament uses UUIDv7 identifiers. A UUIDv7 contains 74 bits of cryptographic randomness (12 bits in `rand_a` and 62 bits in `rand_b`), yielding approximately 1.9 * 10^22 possible values. Some implementations use `rand_a` for monotonic ordering rather than randomness, leaving 62 bits as the minimum.
+
+With 74 bits of randomness, an attacker making one billion requests per second would need on average `2^74 / 10^9 / 86400 / 365 ≈ 597 years` to guess a single specific ID (roughly 300 years at the 50th percentile). Even with the 62-bit minimum, this is `2^62 / 10^9 / 86400 / 365 ≈ 146 years` (roughly 73 years at the 50th percentile). In practice, rate limiting and network latency make this even less viable.
+
+=== Better developer experience
+
+Returning the true status code lets API consumers distinguish between "you lack access" and "this does not exist." This matters for:
+
+* **Debugging** -- a developer immediately knows whether the problem is a missing permission or a wrong ID.
+* **Automation** -- scripts and Terraform providers can react differently to permission errors versus missing resources, e.g. prompting the user for elevated access instead of assuming the resource was deleted.
+* **Support** -- when a user reports an error, "permission denied" points directly at authorization rather than requiring investigation into whether the resource exists.
+
+=== Simpler implementation
+
+Checking existence and authorization separately keeps each concern in its own layer. The database query fetches the resource; the authorization layer evaluates access. There is no need to merge these concerns into a single ambiguous response.
+
+=== Consistency with authorization model
+
+Fundament uses OpenFGA for authorization. When an `authz.Evaluate()` call denies access, the natural response is `PERMISSION_DENIED`. Translating this into `NOT_FOUND` would add unnecessary complexity and obscure the true cause.
