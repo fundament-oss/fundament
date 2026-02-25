@@ -19,6 +19,14 @@ const (
 	ConstraintClusterEventsCkSyncAction = "cluster_events_ck_sync_action"
 	// ConstraintClusterEventsFkCluster is defined on tenant.cluster_events.
 	ConstraintClusterEventsFkCluster = "cluster_events_fk_cluster"
+	// ConstraintClusterOutboxCkEntityType is defined on tenant.cluster_outbox.
+	ConstraintClusterOutboxCkEntityType = "cluster_outbox_ck_entity_type"
+	// ConstraintClusterOutboxCkEvent is defined on tenant.cluster_outbox.
+	ConstraintClusterOutboxCkEvent = "cluster_outbox_ck_event"
+	// ConstraintClusterOutboxCkSource is defined on tenant.cluster_outbox.
+	ConstraintClusterOutboxCkSource = "cluster_outbox_ck_source"
+	// ConstraintClusterOutboxCkStatus is defined on tenant.cluster_outbox.
+	ConstraintClusterOutboxCkStatus = "cluster_outbox_ck_status"
 	// ConstraintClustersFkOrganization is defined on tenant.clusters.
 	ConstraintClustersFkOrganization = "clusters_fk_organization"
 	// ConstraintClustersUqName is defined on tenant.clusters.

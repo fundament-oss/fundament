@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 )
 
 // TestCluster creates a logger for tests.

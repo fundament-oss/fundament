@@ -9,8 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/common"
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
 )
 
 func TestStatusWorker_Creation(t *testing.T) {
