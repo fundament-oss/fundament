@@ -1,4 +1,11 @@
-import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  signal,
+  computed,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
@@ -110,20 +117,12 @@ export default class OrganizationMembersComponent implements OnInit {
 
   editPermission = signal('viewer');
 
-  isUpdating = signal(false);
-
   // All members loaded from API (includes pending, active, declined and revoked)
   allMembers = signal<OrganizationMember[]>([]);
 
-  // Computed: active members (have status accepted)
-  get activeMembers(): OrganizationMember[] {
-    return this.allMembers().filter((m) => m.status === 'accepted');
-  }
+  activeMembers = computed(() => this.allMembers().filter((m) => m.status === 'accepted'));
 
-  // Computed: pending invitations (have status pending)
-  get pendingInvitations(): OrganizationMember[] {
-    return this.allMembers().filter((m) => m.status === 'pending');
-  }
+  pendingInvitations = computed(() => this.allMembers().filter((m) => m.status === 'pending'));
 
   constructor() {
     this.titleService.setTitle('Organization members');
@@ -148,7 +147,7 @@ export default class OrganizationMembersComponent implements OnInit {
         externalRef: member.externalRef,
         permission: member.permission,
         status: member.status,
-        isCurrentUser: currentUser?.id === member.id,
+        isCurrentUser: currentUser?.id === member.userId,
         created: member.created ? timestampDate(member.created) : undefined,
       }));
 
@@ -259,10 +258,12 @@ export default class OrganizationMembersComponent implements OnInit {
       return;
     }
 
-    this.isUpdating.set(true);
+    this.isSubmitting.set(true);
 
     try {
-      await firstValueFrom(this.memberClient.updateMemberPermission({ id: member.id, permission: newPermission }));
+      await firstValueFrom(
+        this.memberClient.updateMemberPermission({ id: member.id, permission: newPermission }),
+      );
       this.showEditModal.set(false);
       this.editingMember.set(null);
       await this.loadMembers();
@@ -274,7 +275,7 @@ export default class OrganizationMembersComponent implements OnInit {
       );
       this.showEditModal.set(false);
     } finally {
-      this.isUpdating.set(false);
+      this.isSubmitting.set(false);
     }
   }
 
