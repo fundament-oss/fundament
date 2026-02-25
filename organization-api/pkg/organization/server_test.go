@@ -175,7 +175,7 @@ func createTestDB(t *testing.T) *psqldb.DB {
 	dbCfg := psqldb.Config{
 		URL: fmt.Sprintf("postgres://postgres:postgres@localhost:%d/%s?sslmode=disable", testDBPort, name),
 	}
-	testDb, err := psqldb.New(t.Context(), testLogger, dbCfg, organization.NewRLSOptions(testLogger)...)
+	testDb, err := organization.NewDB(t.Context(), testLogger, dbCfg)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {

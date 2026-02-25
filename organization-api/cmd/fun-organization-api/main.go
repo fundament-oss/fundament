@@ -55,11 +55,9 @@ func run() error {
 
 	logger.Debug("connecting to database")
 
-	options := organization.NewRLSOptions(logger)
-
-	db, err := psqldb.New(ctx, logger, cfg.Database, options...)
+	db, err := organization.NewDB(ctx, logger, cfg.Database)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return fmt.Errorf("failed to setup to database: %w", err)
 	}
 
 	defer db.Close()
