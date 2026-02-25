@@ -113,7 +113,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		Level: slog.LevelError,
 	}))
 
-	testDb := createTestDB(t)
+	testDb, adminPool := createTestDB(t)
 
 	jwtSecret := []byte(uuid.New().String())
 
@@ -130,7 +130,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	t.Cleanup(ts.Close)
 
 	for id, name := range opts.organizations {
-		_, err = testDb.Pool.Exec(t.Context(),
+		_, err = adminPool.Exec(t.Context(),
 			"INSERT INTO tenant.organizations (id, name) VALUES ($1, $2)",
 			id, name,
 		)
@@ -138,14 +138,14 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	}
 
 	for id, user := range opts.users {
-		_, err = testDb.Pool.Exec(t.Context(),
+		_, err = adminPool.Exec(t.Context(),
 			"INSERT INTO tenant.users (id, name, external_ref, email) VALUES ($1, $2, $3, $4)",
 			id, user.Name, user.ExternalRef, user.Email,
 		)
 		require.NoError(t, err)
 
 		for _, orgID := range user.OrgIDs {
-			_, err = testDb.Pool.Exec(t.Context(),
+			_, err = adminPool.Exec(t.Context(),
 				"INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status) VALUES ($1, $2, 'admin', 'accepted')",
 				orgID, id,
 			)
@@ -162,7 +162,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	}
 }
 
-func createTestDB(t *testing.T) *psqldb.DB {
+func createTestDB(t *testing.T) (*psqldb.DB, *pgxpool.Pool) {
 	t.Helper()
 
 	name := testNameToDbName(t.Name())
@@ -177,12 +177,16 @@ func createTestDB(t *testing.T) *psqldb.DB {
 	}
 	testDb, err := organization.NewDB(t.Context(), testLogger, dbCfg)
 	require.NoError(t, err)
+	t.Cleanup(testDb.Close)
 
-	t.Cleanup(func() {
-		testDb.Close()
-	})
+	adminPool, err := pgxpool.New(t.Context(), fmt.Sprintf(
+		"postgres://postgres:postgres@localhost:%d/%s?sslmode=disable",
+		testDBPort, name,
+	))
+	require.NoError(t, err)
+	t.Cleanup(adminPool.Close)
 
-	return testDb
+	return testDb, adminPool
 }
 
 func createTestDatabase(t *testing.T, name string) {

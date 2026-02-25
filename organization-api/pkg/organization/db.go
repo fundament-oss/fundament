@@ -56,6 +56,10 @@ func rlsOptions(logger *slog.Logger) []psqldb.Option {
 					}
 				}
 
+				if _, err := conn.Exec(ctx, "SET ROLE fun_fundament_api"); err != nil {
+					return false, fmt.Errorf("failed to set application role: %w", err)
+				}
+
 				return true, nil
 			}
 
@@ -69,6 +73,11 @@ func rlsOptions(logger *slog.Logger) []psqldb.Option {
 
 				if err := queries.ResetUserContext(context.Background()); err != nil {
 					logger.Warn("failed to reset user context on connection release, destroying connection", "error", err)
+					return false
+				}
+
+				if _, err := c.Exec(context.Background(), "RESET ROLE"); err != nil {
+					logger.Warn("failed to reset role on connection release, destroying connection", "error", err)
 					return false
 				}
 
