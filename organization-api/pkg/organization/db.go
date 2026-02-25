@@ -9,20 +9,26 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
-	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
+	dbgen "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 )
 
-// NewRLSOptions returns psqldb.Option values that configure a connection pool
-// to set and reset PostgreSQL session variables for Row-Level Security.
-func NewRLSOptions(logger *slog.Logger) []psqldb.Option {
+func NewDB(ctx context.Context, logger *slog.Logger, cfg psqldb.Config) (*psqldb.DB, error) {
+	db, err := psqldb.New(ctx, logger, cfg, rlsOptions(logger)...)
+	if err != nil {
+		return nil, fmt.Errorf("creating organization database: %w", err)
+	}
+	return db, nil
+}
+
+func rlsOptions(logger *slog.Logger) []psqldb.Option {
 	return []psqldb.Option{
 		func(ctx context.Context, config *pgxpool.Config) {
 			config.PrepareConn = func(ctx context.Context, conn *pgx.Conn) (bool, error) {
-				queries := db.New(conn)
+				queries := dbgen.New(conn)
 
 				if organizationID, ok := OrganizationIDFromContext(ctx); ok {
 					logger.Debug("setting organization context for RLS", "organization_id", organizationID.String())
-					if err := queries.SetOrganizationContext(ctx, db.SetOrganizationContextParams{
+					if err := queries.SetOrganizationContext(ctx, dbgen.SetOrganizationContextParams{
 						SetConfig: organizationID.String(),
 					}); err != nil {
 						return false, fmt.Errorf("failed to set organization context: %w", err)
@@ -33,7 +39,7 @@ func NewRLSOptions(logger *slog.Logger) []psqldb.Option {
 
 				if userID, ok := UserIDFromContext(ctx); ok {
 					logger.Debug("setting user context for RLS", "user_id", userID.String())
-					if err := queries.SetUserContext(ctx, db.SetUserContextParams{
+					if err := queries.SetUserContext(ctx, dbgen.SetUserContextParams{
 						SetConfig: userID.String(),
 					}); err != nil {
 						return false, fmt.Errorf("failed to set user context: %w", err)
@@ -43,7 +49,7 @@ func NewRLSOptions(logger *slog.Logger) []psqldb.Option {
 				}
 
 				if claims, ok := ClaimsFromContext(ctx); ok {
-					if err := queries.SetUserContext(ctx, db.SetUserContextParams{
+					if err := queries.SetUserContext(ctx, dbgen.SetUserContextParams{
 						SetConfig: claims.UserID.String(),
 					}); err != nil {
 						return false, fmt.Errorf("failed to set user context: %w", err)
@@ -54,7 +60,7 @@ func NewRLSOptions(logger *slog.Logger) []psqldb.Option {
 			}
 
 			config.AfterRelease = func(c *pgx.Conn) bool {
-				queries := db.New(c)
+				queries := dbgen.New(c)
 
 				if err := queries.ResetOrganizationContext(context.Background()); err != nil {
 					logger.Warn("failed to reset organization context on connection release, destroying connection", "error", err)
