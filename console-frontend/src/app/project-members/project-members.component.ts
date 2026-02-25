@@ -129,7 +129,7 @@ export default class ProjectMembersComponent implements OnInit {
       const orgRoleByUserId = new Map<string, string>();
       orgResponse.members
         .filter((m) => m.externalRef)
-        .forEach((m) => orgRoleByUserId.set(m.id, m.permission));
+        .forEach((m) => orgRoleByUserId.set(m.userId, m.permission));
 
       // Enrich project members with source info
       const views: ProjectMemberView[] = projectResponse.members.map((member) => {
@@ -232,6 +232,7 @@ export default class ProjectMembersComponent implements OnInit {
     try {
       await firstValueFrom(this.projectClient.removeProjectMember({ memberId: view.member.id }));
       this.showRemoveMemberModal.set(false);
+      this.pendingRemoveView.set(null);
       await this.loadMembers();
     } catch (err) {
       this.error.set(
