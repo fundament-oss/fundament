@@ -15,17 +15,27 @@ function toStringArray(val: unknown): string[] {
   imports: [FormsModule, NgIcon],
   viewProviders: [provideIcons({ tablerPlus, tablerX })],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <div class="space-y-1">
-      <label
-        [attr.for]="'field-' + fieldName()"
-        class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-      >
-        {{ label() }}
-        @if (required()) {
-          <span class="text-rose-500">*</span>
-        }
-      </label>
+      @if (effectiveType() === 'object') {
+        <div class="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {{ label() }}
+          @if (required()) {
+            <span class="text-rose-500">*</span>
+          }
+        </div>
+      } @else {
+        <label
+          [attr.for]="'field-' + fieldId()"
+          class="text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          {{ label() }}
+          @if (required()) {
+            <span class="text-rose-500">*</span>
+          }
+        </label>
+      }
 
       @if (schema().description) {
         <p class="text-xs text-gray-500 dark:text-gray-400">{{ schema().description }}</p>
@@ -34,7 +44,7 @@ function toStringArray(val: unknown): string[] {
       @switch (effectiveType()) {
         @case ('enum') {
           <select
-            [id]="'field-' + fieldName()"
+            [id]="'field-' + fieldId()"
             [ngModel]="value()"
             (ngModelChange)="valueChange.emit($event)"
             class="w-full"
@@ -49,7 +59,7 @@ function toStringArray(val: unknown): string[] {
           <label class="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
-              [id]="'field-' + fieldName()"
+              [id]="'field-' + fieldId()"
               class="peer sr-only"
               [ngModel]="value()"
               (ngModelChange)="valueChange.emit($event)"
@@ -61,7 +71,7 @@ function toStringArray(val: unknown): string[] {
         @case ('integer') {
           <input
             type="number"
-            [id]="'field-' + fieldName()"
+            [id]="'field-' + fieldId()"
             [ngModel]="value()"
             (ngModelChange)="valueChange.emit($event)"
             [placeholder]="label()"
@@ -89,7 +99,7 @@ function toStringArray(val: unknown): string[] {
             <div class="flex gap-2">
               <input
                 type="text"
-                [id]="'field-' + fieldName()"
+                [id]="'field-' + fieldId()"
                 [(ngModel)]="newArrayItem"
                 placeholder="Add item..."
                 class="flex-1"
@@ -113,6 +123,7 @@ function toStringArray(val: unknown): string[] {
             @for (entry of objectFields(); track entry[0]) {
               <div class="mb-3 last:mb-0">
                 <app-form-field
+                  [fieldIdPrefix]="fieldIdPrefix() + fieldName() + '-'"
                   [schema]="entry[1]"
                   [fieldName]="entry[0]"
                   [value]="getNestedValue(entry[0])"
@@ -127,7 +138,7 @@ function toStringArray(val: unknown): string[] {
           <label class="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
-              [id]="'field-' + fieldName()"
+              [id]="'field-' + fieldId()"
               class="peer sr-only"
               [ngModel]="value() !== null && value() !== undefined"
               (ngModelChange)="valueChange.emit($event ? {} : null)"
@@ -139,7 +150,7 @@ function toStringArray(val: unknown): string[] {
         @default {
           <input
             type="text"
-            [id]="'field-' + fieldName()"
+            [id]="'field-' + fieldId()"
             [ngModel]="value()"
             (ngModelChange)="valueChange.emit($event)"
             [placeholder]="label()"
@@ -153,6 +164,8 @@ export default class FormFieldComponent {
   schema = input.required<CrdPropertySchema>();
 
   fieldName = input.required<string>();
+
+  fieldIdPrefix = input<string>('');
 
   value = input.required<unknown>();
 
@@ -172,6 +185,10 @@ export default class FormFieldComponent {
       return 'object';
     if (s.type === 'object') return 'empty-object';
     return 'text';
+  }
+
+  fieldId(): string {
+    return this.fieldIdPrefix() + this.fieldName();
   }
 
   label(): string {
