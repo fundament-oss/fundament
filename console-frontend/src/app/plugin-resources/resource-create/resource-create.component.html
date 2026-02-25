@@ -4,7 +4,7 @@
     <a
       [routerLink]="listLink()"
       class="mb-1 inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-      ><ng-icon name="tablerArrowLeft" class="mr-1" size="1rem" /> Back to list</a
+      ><ng-icon name="tablerArrowLeft" class="mr-1" /> Back to list</a
     >
     <h1 class="text-2xl font-bold dark:text-white">Create {{ singularLabel() }}</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
@@ -19,7 +19,9 @@
         <h2 class="text-lg font-semibold dark:text-white">Identity</h2>
       </div>
       <div class="card-body">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div
+          [class]="crdDef()?.scope === 'Namespaced' ? 'grid grid-cols-1 gap-4 sm:grid-cols-2' : ''"
+        >
           <div class="space-y-1">
             <label
               for="resourceName"
