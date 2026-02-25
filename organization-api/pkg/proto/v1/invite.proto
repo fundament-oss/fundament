@@ -35,7 +35,7 @@ message InviteMemberRequest {
 
 // Invite member response
 message InviteMemberResponse {
-  Member member = 10;
+  string invitation_id = 10;
 }
 
 // List invitations request

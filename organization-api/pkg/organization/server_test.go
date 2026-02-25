@@ -30,40 +30,80 @@ type testEnv struct {
 }
 
 type testUser struct {
-	Name   string
-	OrgIDs []uuid.UUID
+	Name        string
+	Email       string
+	ExternalRef *string
+	OrgIDs      []uuid.UUID
 }
 
-type APIOptions struct {
-	Organizations map[uuid.UUID]string
-	Users         map[uuid.UUID]testUser
-	Clock         clock.Clock
+type apiOptions struct {
+	t             testing.TB
+	organizations map[uuid.UUID]string
+	users         map[uuid.UUID]testUser
+	clock         clock.Clock
 }
 
-type APIOption func(*APIOptions)
+type APIOption func(*apiOptions)
 
 func WithOrganization(id uuid.UUID, name string) APIOption {
-	return func(o *APIOptions) {
-		o.Organizations[id] = name
+	return func(o *apiOptions) {
+		_, exists := o.organizations[id]
+		if exists {
+			o.t.Fatalf("WithOrganization: duplicate organization ID %q", id)
+		}
+
+		o.organizations[id] = name
 	}
 }
 
-func WithUser(id uuid.UUID, name string, orgIDs []uuid.UUID) APIOption {
-	return func(o *APIOptions) {
-		o.Users[id] = testUser{Name: name, OrgIDs: orgIDs}
+type User struct {
+	id          uuid.UUID
+	name        string
+	email       string
+	externalRef *string
+	orgIDs      []uuid.UUID
+}
+
+func (u User) WithName(name string) User {
+	u.name = name
+	return u
+}
+
+type UserArgs struct {
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	ExternalRef *string
+	OrgIDs      []uuid.UUID
+}
+
+func WithUser(args *UserArgs) APIOption {
+	return func(o *apiOptions) {
+		_, exists := o.users[args.ID]
+		if exists {
+			o.t.Fatalf("WithUser: duplicate user ID %q", args.ID)
+		}
+
+		o.users[args.ID] = testUser{
+			Name:        args.Name,
+			Email:       args.Email,
+			OrgIDs:      args.OrgIDs,
+			ExternalRef: args.ExternalRef,
+		}
 	}
 }
 
 func WithClock(c clock.Clock) APIOption {
-	return func(o *APIOptions) {
-		o.Clock = c
+	return func(o *apiOptions) {
+		o.clock = c
 	}
 }
 
 func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
-	opts := APIOptions{
-		Organizations: make(map[uuid.UUID]string),
-		Users:         make(map[uuid.UUID]testUser),
+	opts := apiOptions{
+		t:             t,
+		organizations: make(map[uuid.UUID]string),
+		users:         make(map[uuid.UUID]testUser),
 	}
 	for _, option := range options {
 		option(&opts)
@@ -73,14 +113,14 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		Level: slog.LevelError,
 	}))
 
-	testDb := createTestDB(t)
+	testDb, adminPool := createTestDB(t)
 
 	jwtSecret := []byte(uuid.New().String())
 
 	organizationCfg := &organization.Config{
 		JWTSecret:          jwtSecret,
 		CORSAllowedOrigins: []string{"*"},
-		Clock:              opts.Clock,
+		Clock:              opts.clock,
 	}
 
 	organizationServer, err := organization.New(testLogger, organizationCfg, testDb, nil)
@@ -89,24 +129,23 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	ts := httptest.NewServer(organizationServer.Handler())
 	t.Cleanup(ts.Close)
 
-	for id, name := range opts.Organizations {
-		_, err = testDb.Pool.Exec(t.Context(),
+	for id, name := range opts.organizations {
+		_, err = adminPool.Exec(t.Context(),
 			"INSERT INTO tenant.organizations (id, name) VALUES ($1, $2)",
 			id, name,
 		)
 		require.NoError(t, err)
 	}
 
-	for id, user := range opts.Users {
-		externalRef := "external_ref_" + uuid.New().String()
-		_, err = testDb.Pool.Exec(t.Context(),
-			"INSERT INTO tenant.users (id, name, external_ref) VALUES ($1, $2, $3)",
-			id, user.Name, externalRef,
+	for id, user := range opts.users {
+		_, err = adminPool.Exec(t.Context(),
+			"INSERT INTO tenant.users (id, name, external_ref, email) VALUES ($1, $2, $3, $4)",
+			id, user.Name, user.ExternalRef, user.Email,
 		)
 		require.NoError(t, err)
 
 		for _, orgID := range user.OrgIDs {
-			_, err = testDb.Pool.Exec(t.Context(),
+			_, err = adminPool.Exec(t.Context(),
 				"INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status) VALUES ($1, $2, 'admin', 'accepted')",
 				orgID, id,
 			)
@@ -118,12 +157,12 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	return &testEnv{
 		server:    ts,
 		jwtSecret: jwtSecret,
-		orgs:      opts.Organizations,
-		users:     opts.Users,
+		orgs:      opts.organizations,
+		users:     opts.users,
 	}
 }
 
-func createTestDB(t *testing.T) *psqldb.DB {
+func createTestDB(t *testing.T) (*psqldb.DB, *pgxpool.Pool) {
 	t.Helper()
 
 	name := testNameToDbName(t.Name())
@@ -136,14 +175,18 @@ func createTestDB(t *testing.T) *psqldb.DB {
 	dbCfg := psqldb.Config{
 		URL: fmt.Sprintf("postgres://postgres:postgres@localhost:%d/%s?sslmode=disable", testDBPort, name),
 	}
-	testDb, err := psqldb.New(t.Context(), testLogger, dbCfg)
+	testDb, err := organization.NewDB(t.Context(), testLogger, dbCfg)
 	require.NoError(t, err)
+	t.Cleanup(testDb.Close)
 
-	t.Cleanup(func() {
-		testDb.Close()
-	})
+	adminPool, err := pgxpool.New(t.Context(), fmt.Sprintf(
+		"postgres://postgres:postgres@localhost:%d/%s?sslmode=disable",
+		testDBPort, name,
+	))
+	require.NoError(t, err)
+	t.Cleanup(adminPool.Close)
 
-	return testDb
+	return testDb, adminPool
 }
 
 func createTestDatabase(t *testing.T, name string) {

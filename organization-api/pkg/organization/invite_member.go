@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -67,18 +66,6 @@ func (s *Server) InviteMember(
 	}
 
 	return connect.NewResponse(&organizationv1.InviteMemberResponse{
-		Member: memberFromInviteRow(email, &membershipRow),
+		InvitationId: membershipRow.ID.String(),
 	}), nil
-}
-
-func memberFromInviteRow(email string, m *db.InviteCreateMembershipRow) *organizationv1.Member {
-	return &organizationv1.Member{
-		Id:         m.ID.String(),
-		UserId:     m.UserID.String(),
-		Name:       email,
-		Email:      &email,
-		Permission: string(m.Permission),
-		Status:     string(m.Status),
-		Created:    timestamppb.New(m.Created.Time),
-	}
 }

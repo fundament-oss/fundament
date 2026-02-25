@@ -35,8 +35,16 @@ func Test_ProjectMember_Get(t *testing.T) {
 
 	env := newTestAPI(t,
 		WithOrganization(orgID, "test-org"),
-		WithUser(userID, "test-user", []uuid.UUID{orgID}),
-		WithUser(projectMemberUserID, "project-member-name", []uuid.UUID{orgID}),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+		WithUser(&UserArgs{
+			ID:     projectMemberUserID,
+			Name:   "project-member-name",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
 	)
 
 	token := env.createAuthnToken(t, userID)
