@@ -27,9 +27,7 @@ import {
   tablerMenu2,
   tablerMoon,
   tablerSun,
-  tablerChevronDown,
   tablerUserCircle,
-  tablerLayoutDashboard,
   tablerFolder,
   tablerFolders,
   tablerPuzzle,
@@ -40,11 +38,6 @@ import {
   tablerBuilding,
   tablerBracketsContain,
   tablerUserCog,
-  tablerShieldCheck,
-  tablerDatabase,
-  tablerCertificate,
-  tablerLock,
-  tablerCloud,
 } from '@ng-icons/tabler-icons';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
@@ -92,9 +85,7 @@ const reloadApp = () => {
       tablerMenu2,
       tablerMoon,
       tablerSun,
-      tablerChevronDown,
       tablerUserCircle,
-      tablerLayoutDashboard,
       tablerFolder,
       tablerFolders,
       tablerPuzzle,
@@ -105,11 +96,6 @@ const reloadApp = () => {
       tablerBuilding,
       tablerBracketsContain,
       tablerUserCog,
-      tablerShieldCheck,
-      tablerDatabase,
-      tablerCertificate,
-      tablerLock,
-      tablerCloud,
     }),
   ],
   host: {

@@ -24,6 +24,7 @@ export default class PluginNavService {
               crdKind: crd.kind,
               crdPlural: crd.plural,
               routerLink: ['/plugin-resources', plugin.metadata.name, crd.plural],
+              icon: menuItem.icon,
             };
           });
 
@@ -31,7 +32,6 @@ export default class PluginNavService {
           groups.push({
             pluginName: plugin.metadata.name,
             displayName: plugin.metadata.displayName,
-            icon: plugin.metadata.icon,
             items,
           });
         }
@@ -56,6 +56,7 @@ export default class PluginNavService {
               crdKind: crd.kind,
               crdPlural: crd.plural,
               routerLink: [crd.plural],
+              icon: menuItem.icon,
             };
           });
 
@@ -63,7 +64,6 @@ export default class PluginNavService {
           groups.push({
             pluginName: plugin.metadata.name,
             displayName: plugin.metadata.displayName,
-            icon: plugin.metadata.icon,
             items,
           });
         }

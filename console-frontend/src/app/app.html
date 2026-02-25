@@ -328,7 +328,9 @@
                             class="nav-link"
                             (click)="closeSidebar()"
                           >
-                            <ng-icon [name]="group.icon" class="mr-3" size="1.25rem" />
+                            @if (item.icon) {
+                              <ng-icon [name]="item.icon" class="mr-3" size="1.25rem" />
+                            }
                             {{ item.label }}
                           </a>
                         </li>
@@ -428,7 +430,9 @@
                             class="nav-link"
                             (click)="closeSidebar()"
                           >
-                            <ng-icon [name]="group.icon" class="mr-3" size="1.25rem" />
+                            @if (item.icon) {
+                              <ng-icon [name]="item.icon" class="mr-3" size="1.25rem" />
+                            }
                             {{ item.label }}
                           </a>
                         </li>

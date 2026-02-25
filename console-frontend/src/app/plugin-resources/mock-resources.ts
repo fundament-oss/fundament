@@ -233,7 +233,7 @@ export const MOCK_RESOURCES: MockResourceMap = {
       },
     ],
   },
-  'cnpg-databases': {
+  cnpg: {
     Database: [
       {
         apiVersion: 'postgresql.cnpg.io/v1',

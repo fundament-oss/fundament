@@ -9,7 +9,8 @@ import {
 import { provideRouter, withRouterConfig } from '@angular/router';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { BehaviorSubject } from 'rxjs';
-import { provideNgIconsConfig } from '@ng-icons/core';
+import { provideNgIconsConfig, provideIcons } from '@ng-icons/core';
+import pluginIcons from './plugin-resources/generated-plugin-icons';
 import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
 import EXPECTED_API_VERSION from '../proto-version';
 import routes from './app.routes';
@@ -46,6 +47,7 @@ export const appConfig: ApplicationConfig = {
     provideNgIconsConfig({
       size: '1rem', // Default icon size
     }),
+    provideIcons(pluginIcons),
     // Provide the Authn transport
     {
       provide: AUTHN_TRANSPORT,

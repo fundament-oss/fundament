@@ -6,7 +6,6 @@ metadata:
   displayName: Cert Manager
   version: v1.19.3
   description: Automatic TLS certificate management using cert-manager. Supports ACME, CA, and self-signed issuers.
-  icon: tablerShieldCheck
   author: Jetstack / CNCF
   tags:
     - security
@@ -19,15 +18,18 @@ menu:
       list: true
       detail: true
       create: true
+      icon: tablerShieldCheck
   project:
     - crd: Certificate
       list: true
       detail: true
       create: true
+      icon: tablerCertificate
     - crd: Issuer
       list: true
       detail: true
       create: true
+      icon: tablerUserCircle
 
 uiHints:
   Certificate:

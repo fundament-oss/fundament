@@ -14,7 +14,6 @@ export interface PluginMetadata {
   displayName: string;
   version: string;
   description: string;
-  icon: string;
   author?: string;
   tags?: string[];
 }
@@ -29,6 +28,7 @@ export interface PluginMenuItem {
   list: boolean;
   detail: boolean;
   create: boolean;
+  icon?: string;
 }
 
 export interface CrdUiHints {
@@ -108,7 +108,6 @@ export interface KubeResource {
 export interface PluginNavGroup {
   pluginName: string;
   displayName: string;
-  icon: string;
   items: PluginNavItem[];
 }
 
@@ -117,6 +116,7 @@ export interface PluginNavItem {
   crdKind: string;
   crdPlural: string;
   routerLink: string[];
+  icon?: string;
 }
 
 // Raw YAML types (before parsing)
