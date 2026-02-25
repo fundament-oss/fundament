@@ -262,10 +262,7 @@ export default class OrganizationMembersComponent implements OnInit {
     this.isUpdating.set(true);
 
     try {
-      // Re-invite with the new permission (delete + invite)
-      await firstValueFrom(this.memberClient.deleteMember({ id: member.id }));
-      const email = member.email || member.name;
-      await firstValueFrom(this.inviteClient.inviteMember({ email, permission: newPermission }));
+      await firstValueFrom(this.memberClient.updateMemberPermission({ id: member.id, permission: newPermission }));
       this.showEditModal.set(false);
       this.editingMember.set(null);
       await this.loadMembers();
