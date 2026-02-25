@@ -1,15 +1,15 @@
 <div class="space-y-6">
   <!-- Header -->
-  <div class="card">
-    <div class="card-header flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold dark:text-white">Create {{ singularLabel() }}</h1>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          Fill in the fields below to create a new {{ singularLabel() }}.
-        </p>
-      </div>
-      <a [routerLink]="listLink()" class="btn-secondary">Cancel</a>
-    </div>
+  <div class="card px-6 py-4">
+    <a
+      [routerLink]="listLink()"
+      class="mb-1 inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+      ><ng-icon name="tablerArrowLeft" class="mr-1" size="1rem" /> Back to list</a
+    >
+    <h1 class="text-2xl font-bold dark:text-white">Create {{ singularLabel() }}</h1>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+      Fill in the fields below to create a new {{ singularLabel() }}.
+    </p>
   </div>
 
   <form (ngSubmit)="onSubmit()">
@@ -81,7 +81,7 @@
     }
 
     <!-- Submit -->
-    <div class="flex justify-end gap-3">
+    <div class="flex gap-3">
       <a [routerLink]="listLink()" class="btn-secondary">Cancel</a>
       <button type="submit" class="btn-primary">Create {{ singularLabel() }}</button>
     </div>

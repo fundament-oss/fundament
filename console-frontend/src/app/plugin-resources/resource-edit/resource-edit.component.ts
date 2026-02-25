@@ -10,6 +10,8 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerArrowLeft } from '@ng-icons/tabler-icons';
 import FormFieldComponent from '../field-renderers/form-field.component';
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
@@ -25,7 +27,12 @@ function buildDetailLink(): string[] {
 @Component({
   selector: 'app-resource-edit',
   standalone: true,
-  imports: [FormsModule, RouterLink, FormFieldComponent],
+  imports: [FormsModule, RouterLink, FormFieldComponent, NgIcon],
+  viewProviders: [
+    provideIcons({
+      tablerArrowLeft,
+    }),
+  ],
   templateUrl: './resource-edit.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

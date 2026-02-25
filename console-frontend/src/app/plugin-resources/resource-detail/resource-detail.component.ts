@@ -9,7 +9,12 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerAlertTriangle } from '@ng-icons/tabler-icons';
+import {
+  tablerAlertTriangle,
+  tablerArrowLeft,
+  tablerPencil,
+  tablerTrash,
+} from '@ng-icons/tabler-icons';
 import ModalComponent from '../../modal/modal.component';
 import FieldRendererComponent from '../field-renderers/field-renderer.component';
 import PluginRegistryService from '../plugin-registry.service';
@@ -69,7 +74,9 @@ function toRecord(val: unknown): Record<string, unknown> {
   selector: 'app-resource-detail',
   standalone: true,
   imports: [RouterLink, NgIcon, ModalComponent, FieldRendererComponent],
-  viewProviders: [provideIcons({ tablerAlertTriangle })],
+  viewProviders: [
+    provideIcons({ tablerAlertTriangle, tablerArrowLeft, tablerPencil, tablerTrash }),
+  ],
   templateUrl: './resource-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -10,7 +10,7 @@
 
   <div class="p-6">
     <!-- Actions -->
-    @if (menuItem()?.create) {
+    @if (menuItem()?.create && resources().length > 0) {
       <div class="mb-5">
         <a [routerLink]="createLink()" class="btn-primary inline-flex items-center">
           <ng-icon name="tablerPlus" class="mr-1.5" />
