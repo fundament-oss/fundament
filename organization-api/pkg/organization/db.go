@@ -26,6 +26,10 @@ func rlsOptions(logger *slog.Logger) []psqldb.Option {
 			config.PrepareConn = func(ctx context.Context, conn *pgx.Conn) (bool, error) {
 				queries := dbgen.New(conn)
 
+				if _, err := conn.Exec(ctx, "SET ROLE fun_fundament_api"); err != nil {
+					return false, fmt.Errorf("failed to set application role: %w", err)
+				}
+
 				if organizationID, ok := OrganizationIDFromContext(ctx); ok {
 					logger.Debug("setting organization context for RLS", "organization_id", organizationID.String())
 					if err := queries.SetOrganizationContext(ctx, dbgen.SetOrganizationContextParams{
@@ -54,10 +58,6 @@ func rlsOptions(logger *slog.Logger) []psqldb.Option {
 					}); err != nil {
 						return false, fmt.Errorf("failed to set user context: %w", err)
 					}
-				}
-
-				if _, err := conn.Exec(ctx, "SET ROLE fun_fundament_api"); err != nil {
-					return false, fmt.Errorf("failed to set application role: %w", err)
 				}
 
 				return true, nil

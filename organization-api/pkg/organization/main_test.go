@@ -236,11 +236,55 @@ func newAdminPool() *pgxpool.Pool {
 
 func createRoles(pool *pgxpool.Pool) {
 	ctx := context.Background()
-	roles := []string{"fun_authn_api", "fun_fundament_api", "fun_operator", "fun_owner", "fun_authz", "fun_cluster_worker", "fun_authz_worker"}
+	type dbRole struct {
+		name      string
+		bypassrls bool
+	}
+
+	roles := []dbRole{
+		{
+			name:      "fun_authn_api",
+			bypassrls: false,
+		},
+		{
+			name:      "fun_fundament_api",
+			bypassrls: false,
+		},
+		{
+			name:      "fun_operator",
+			bypassrls: true,
+		},
+		{
+			name:      "fun_owner",
+			bypassrls: false,
+		},
+		{
+			name:      "fun_authz",
+			bypassrls: true,
+		},
+		{
+			name:      "fun_cluster_worker",
+			bypassrls: false,
+		},
+		{
+			name:      "fun_authz_worker",
+			bypassrls: true,
+		},
+	}
 	for _, role := range roles {
-		_, err := pool.Exec(ctx, fmt.Sprintf(`DO $$ BEGIN CREATE ROLE %s WITH LOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$`, role))
+		_, err := pool.Exec(ctx, fmt.Sprintf(`DO $$ BEGIN CREATE ROLE %s WITH LOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$`, role.name))
 		if err != nil {
-			log.Fatalf("failed to create role %s: %v", role, err)
+			log.Fatalf("failed to create role %s: %v", role.name, err)
+		}
+
+		bypassrls := "NOBYPASSRLS"
+		if role.bypassrls {
+			bypassrls = "BYPASSRLS"
+		}
+
+		_, err = pool.Exec(ctx, fmt.Sprintf(`ALTER ROLE %s %s`, role.name, bypassrls))
+		if err != nil {
+			log.Fatalf("failed to alter role %s: %v", role.name, err)
 		}
 	}
 }
