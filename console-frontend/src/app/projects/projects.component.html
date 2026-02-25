@@ -31,21 +31,24 @@
 
       <!-- Projects by Cluster -->
       @if (clusters().length === 0) {
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          No clusters found. Create a cluster first to add projects.
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          No clusters found.
+          <a routerLink="/clusters/add" class="link">Create a cluster first</a> to add projects.
         </p>
       } @else {
         <div class="space-y-6">
           @for (cluster of clusters(); track cluster.id) {
             <div>
-              <h2 class="mb-3 text-sm font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                {{ cluster.name }}
+              <h2 class="mb-3 font-medium">
+                Projects for cluster
+                <a routerLink="/clusters/{{ cluster.id }}" class="link">{{ cluster.name }}</a
+                >:
               </h2>
               <div
-                class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
+                class="divide-y divide-gray-200 overflow-hidden rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
               >
                 @if (cluster.projects.length === 0) {
-                  <div class="px-6 py-6 text-center">
+                  <div class="px-6 py-5 text-center">
                     <p class="text-sm text-gray-500 dark:text-gray-400">
                       No projects in this cluster.
                     </p>

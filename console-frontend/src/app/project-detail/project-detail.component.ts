@@ -9,10 +9,7 @@ import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { PROJECT, NAMESPACE, CLUSTER } from '../../connect/tokens';
 import { GetProjectRequestSchema, Project } from '../../generated/v1/project_pb';
-import {
-  ListProjectNamespacesRequestSchema,
-  Namespace,
-} from '../../generated/v1/namespace_pb';
+import { ListProjectNamespacesRequestSchema, Namespace } from '../../generated/v1/namespace_pb';
 import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,

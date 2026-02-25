@@ -20,6 +20,7 @@ import { filter, skip } from 'rxjs/operators';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerCircleCheck,
+  tablerCircleX,
   tablerAlertTriangle,
   tablerInfoCircle,
   tablerX,
@@ -40,7 +41,6 @@ import {
   tablerBracketsContain,
   tablerUserCog,
 } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
@@ -76,7 +76,7 @@ const reloadApp = () => {
   viewProviders: [
     provideIcons({
       tablerCircleCheck,
-      tablerCircleXFill,
+      tablerCircleX,
       tablerAlertTriangle,
       tablerInfoCircle,
       tablerX,
@@ -400,13 +400,9 @@ export default class App implements OnInit {
     return { label, route };
   }
 
-  // Check if current route is clusters or add-cluster
+  // Check if current route is clusters or clusters/add
   isClustersActive(): boolean {
-    return (
-      this.router.url === '/' ||
-      this.router.url.startsWith('/clusters/') ||
-      this.router.url.startsWith('/add-cluster')
-    );
+    return this.router.url === '/' || this.router.url.startsWith('/clusters/');
   }
 
   // Check if current route is project members or roles
