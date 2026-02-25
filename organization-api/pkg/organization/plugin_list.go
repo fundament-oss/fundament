@@ -63,18 +63,18 @@ func (s *Server) ListPlugins(
 		result = append(result, pluginSummaryFromRow(&plugins[i], tagsByPlugin, categoriesByPlugin))
 	}
 
-	return connect.NewResponse(&organizationv1.ListPluginsResponse{
+	return connect.NewResponse(organizationv1.ListPluginsResponse_builder{
 		Plugins: result,
-	}), nil
+	}.Build()), nil
 }
 
 func buildTagsByPlugin(tags []db.PluginTagsListRow) map[uuid.UUID][]*organizationv1.Tag {
 	tagsByPlugin := make(map[uuid.UUID][]*organizationv1.Tag)
 	for _, t := range tags {
-		tagsByPlugin[t.PluginID] = append(tagsByPlugin[t.PluginID], &organizationv1.Tag{
+		tagsByPlugin[t.PluginID] = append(tagsByPlugin[t.PluginID], organizationv1.Tag_builder{
 			Id:   t.ID.String(),
 			Name: t.Name,
-		})
+		}.Build())
 	}
 	return tagsByPlugin
 }
@@ -82,10 +82,10 @@ func buildTagsByPlugin(tags []db.PluginTagsListRow) map[uuid.UUID][]*organizatio
 func buildCategoriesByPlugin(categories []db.PluginCategoriesListRow) map[uuid.UUID][]*organizationv1.Category {
 	categoriesByPlugin := make(map[uuid.UUID][]*organizationv1.Category)
 	for _, c := range categories {
-		categoriesByPlugin[c.PluginID] = append(categoriesByPlugin[c.PluginID], &organizationv1.Category{
+		categoriesByPlugin[c.PluginID] = append(categoriesByPlugin[c.PluginID], organizationv1.Category_builder{
 			Id:   c.ID.String(),
 			Name: c.Name,
-		})
+		}.Build())
 	}
 	return categoriesByPlugin
 }
@@ -95,12 +95,12 @@ func pluginSummaryFromRow(
 	tagsByPlugin map[uuid.UUID][]*organizationv1.Tag,
 	categoriesByPlugin map[uuid.UUID][]*organizationv1.Category,
 ) *organizationv1.PluginSummary {
-	return &organizationv1.PluginSummary{
+	return organizationv1.PluginSummary_builder{
 		Id:               row.ID.String(),
 		Name:             row.Name,
 		Description:      row.Description,
 		DescriptionShort: row.DescriptionShort,
 		Tags:             tagsByPlugin[row.ID],
 		Categories:       categoriesByPlugin[row.ID],
-	}
+	}.Build()
 }

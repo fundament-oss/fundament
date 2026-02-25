@@ -18,7 +18,7 @@ func (s *Server) GetNamespace(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetNamespaceRequest],
 ) (*connect.Response[organizationv1.GetNamespaceResponse], error) {
-	namespaceID := uuid.MustParse(req.Msg.NamespaceId)
+	namespaceID := uuid.MustParse(req.Msg.GetNamespaceId())
 
 	namespace, err := s.queries.NamespaceGetByID(ctx, db.NamespaceGetByIDParams{ID: namespaceID})
 	if err != nil {
@@ -33,9 +33,9 @@ func (s *Server) GetNamespace(
 		return nil, err
 	}
 
-	return connect.NewResponse(&organizationv1.GetNamespaceResponse{
+	return connect.NewResponse(organizationv1.GetNamespaceResponse_builder{
 		Namespace: namespaceFromRow((db.NamespaceListByClusterIDRow)(namespace)),
-	}), nil
+	}.Build()), nil
 }
 
 func (s *Server) GetNamespaceByProjectAndName(
@@ -43,9 +43,9 @@ func (s *Server) GetNamespaceByProjectAndName(
 	req *connect.Request[organizationv1.GetNamespaceByProjectAndNameRequest],
 ) (*connect.Response[organizationv1.GetNamespaceByProjectAndNameResponse], error) {
 	namespace, err := s.queries.NamespaceGetByProjectAndName(ctx, db.NamespaceGetByProjectAndNameParams{
-		ClusterName:   req.Msg.ClusterName,
-		ProjectName:   req.Msg.ProjectName,
-		NamespaceName: req.Msg.NamespaceName,
+		ClusterName:   req.Msg.GetClusterName(),
+		ProjectName:   req.Msg.GetProjectName(),
+		NamespaceName: req.Msg.GetNamespaceName(),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -59,7 +59,7 @@ func (s *Server) GetNamespaceByProjectAndName(
 		return nil, err
 	}
 
-	return connect.NewResponse(&organizationv1.GetNamespaceByProjectAndNameResponse{
+	return connect.NewResponse(organizationv1.GetNamespaceByProjectAndNameResponse_builder{
 		Namespace: namespaceFromRow((db.NamespaceListByClusterIDRow)(namespace)),
-	}), nil
+	}.Build()), nil
 }

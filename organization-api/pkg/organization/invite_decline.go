@@ -15,7 +15,7 @@ func (s *Server) DeclineInvitation(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeclineInvitationRequest],
 ) (*connect.Response[organizationv1.DeclineInvitationResponse], error) {
-	id := uuid.MustParse(req.Msg.Id)
+	id := uuid.MustParse(req.Msg.GetId())
 
 	rows, err := s.queries.InviteDecline(ctx, db.InviteDeclineParams{ID: id})
 	if err != nil {
@@ -26,5 +26,5 @@ func (s *Server) DeclineInvitation(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no pending invitation found"))
 	}
 
-	return connect.NewResponse(&organizationv1.DeclineInvitationResponse{}), nil
+	return connect.NewResponse(organizationv1.DeclineInvitationResponse_builder{}.Build()), nil
 }

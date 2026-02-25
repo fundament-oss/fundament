@@ -245,7 +245,12 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 	for attempt := 0; attempt < 10; attempt++ {
 		candidateName := orgName
 		if attempt > 0 {
-			candidateName = fmt.Sprintf("%s-%d", orgName, attempt+1)
+			suffix := fmt.Sprintf("-%d", attempt+1)
+			base := orgName
+			if len(base)+len(suffix) > 63 {
+				base = strings.TrimRight(base[:63-len(suffix)], "-")
+			}
+			candidateName = base + suffix
 		}
 		organization, err = qtx.OrganizationCreate(ctx, db.OrganizationCreateParams{
 			Name:        candidateName,
@@ -262,7 +267,7 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 	}
 	if err != nil {
 		s.logger.Error("failed to create organization after retries", "error", err)
-		return nil, "", fmt.Errorf("creating organization: name conflict after retries")
+		return nil, "", fmt.Errorf("creating organization: name conflict after retries: %w", err)
 	}
 
 	params := db.UserUpsertParams{

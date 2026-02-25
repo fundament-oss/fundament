@@ -19,7 +19,7 @@ func (s *Server) UpdateOrganization(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateOrganizationRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	organizationID := uuid.MustParse(req.Msg.Id)
+	organizationID := uuid.MustParse(req.Msg.GetId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Organization(organizationID)); err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (s *Server) UpdateOrganization(
 
 	params := db.OrganizationUpdateParams{
 		ID:          organizationID,
-		DisplayName: req.Msg.DisplayName,
+		DisplayName: req.Msg.GetDisplayName(),
 	}
 
 	organization, err := s.queries.OrganizationUpdate(ctx, params)

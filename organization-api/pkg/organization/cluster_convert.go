@@ -40,23 +40,24 @@ func syncStateFromRow(
 	shootStatusMessage pgtype.Text,
 	shootStatusUpdated pgtype.Timestamptz,
 ) *organizationv1.SyncState {
-	state := &organizationv1.SyncState{}
+	state := organizationv1.SyncState_builder{
+		SyncAttempts: syncAttempts,
+	}.Build()
 
 	if synced.Valid {
-		state.SyncedAt = timestamppb.New(synced.Time)
+		state.SetSyncedAt(timestamppb.New(synced.Time))
 	}
 	if syncError.Valid {
-		state.SyncError = &syncError.String
+		state.SetSyncError(syncError.String)
 	}
-	state.SyncAttempts = syncAttempts
 	if shootStatus.Valid {
-		state.ShootStatus = &shootStatus.String
+		state.SetShootStatus(shootStatus.String)
 	}
 	if shootStatusMessage.Valid {
-		state.ShootMessage = &shootStatusMessage.String
+		state.SetShootMessage(shootStatusMessage.String)
 	}
 	if shootStatusUpdated.Valid {
-		state.StatusUpdatedAt = timestamppb.New(shootStatusUpdated.Time)
+		state.SetStatusUpdatedAt(timestamppb.New(shootStatusUpdated.Time))
 	}
 
 	return state
@@ -71,20 +72,20 @@ func clusterEventsFromRows(events []db.TenantClusterEvent) []*organizationv1.Clu
 }
 
 func clusterEventFromRow(e *db.TenantClusterEvent) *organizationv1.ClusterEvent {
-	event := &organizationv1.ClusterEvent{
+	event := organizationv1.ClusterEvent_builder{
 		Id:        e.ID.String(),
 		EventType: string(e.EventType),
 		CreatedAt: timestamppb.New(e.Created.Time),
-	}
+	}.Build()
 
 	if e.SyncAction.Valid {
-		event.SyncAction = &e.SyncAction.String
+		event.SetSyncAction(e.SyncAction.String)
 	}
 	if e.Message.Valid {
-		event.Message = &e.Message.String
+		event.SetMessage(e.Message.String)
 	}
 	if e.Attempt.Valid {
-		event.Attempt = &e.Attempt.Int32
+		event.SetAttempt(e.Attempt.Int32)
 	}
 
 	return event

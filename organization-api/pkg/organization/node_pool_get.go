@@ -18,7 +18,7 @@ func (s *Server) GetNodePool(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetNodePoolRequest],
 ) (*connect.Response[organizationv1.GetNodePoolResponse], error) {
-	nodePoolID := uuid.MustParse(req.Msg.NodePoolId)
+	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.NodePool(nodePoolID)); err != nil {
 		return nil, err
@@ -32,13 +32,13 @@ func (s *Server) GetNodePool(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pool: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.GetNodePoolResponse{
+	return connect.NewResponse(organizationv1.GetNodePoolResponse_builder{
 		NodePool: nodePoolFromRow(&nodePool),
-	}), nil
+	}.Build()), nil
 }
 
 func nodePoolFromRow(row *db.TenantNodePool) *organizationv1.NodePool {
-	return &organizationv1.NodePool{
+	return organizationv1.NodePool_builder{
 		Id:           row.ID.String(),
 		Name:         row.Name,
 		MachineType:  row.MachineType,
@@ -47,5 +47,5 @@ func nodePoolFromRow(row *db.TenantNodePool) *organizationv1.NodePool {
 		MaxNodes:     row.AutoscaleMax,
 		Status:       organizationv1.NodePoolStatus_NODE_POOL_STATUS_UNSPECIFIED, // Stub
 		Version:      "",                                                         // Stub: would come from actual cluster state
-	}
+	}.Build()
 }

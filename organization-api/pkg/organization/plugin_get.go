@@ -18,7 +18,7 @@ func (s *Server) GetPluginDetail(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetPluginDetailRequest],
 ) (*connect.Response[organizationv1.GetPluginDetailResponse], error) {
-	pluginID, err := uuid.Parse(req.Msg.PluginId)
+	pluginID, err := uuid.Parse(req.Msg.GetPluginId())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid plugin_id: %w", err))
 	}
@@ -70,9 +70,9 @@ func (s *Server) GetPluginDetail(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get plugin details: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.GetPluginDetailResponse{
+	return connect.NewResponse(organizationv1.GetPluginDetailResponse_builder{
 		Plugin: pluginDetailFromRow(&plugin, tags, categories, docLinks),
-	}), nil
+	}.Build()), nil
 }
 
 func pluginDetailFromRow(
@@ -83,39 +83,40 @@ func pluginDetailFromRow(
 ) *organizationv1.PluginDetail {
 	protoTags := make([]*organizationv1.Tag, 0, len(tags))
 	for _, t := range tags {
-		protoTags = append(protoTags, &organizationv1.Tag{
+		protoTags = append(protoTags, organizationv1.Tag_builder{
 			Id:   t.ID.String(),
 			Name: t.Name,
-		})
+		}.Build())
 	}
 
 	protoCategories := make([]*organizationv1.Category, 0, len(categories))
 	for _, c := range categories {
-		protoCategories = append(protoCategories, &organizationv1.Category{
+		protoCategories = append(protoCategories, organizationv1.Category_builder{
 			Id:   c.ID.String(),
 			Name: c.Name,
-		})
+		}.Build())
 	}
 
 	protoDocLinks := make([]*organizationv1.DocumentationLink, 0, len(docLinks))
 	for _, d := range docLinks {
-		protoDocLinks = append(protoDocLinks, &organizationv1.DocumentationLink{
+		protoDocLinks = append(protoDocLinks, organizationv1.DocumentationLink_builder{
 			Id:      d.ID.String(),
 			Title:   d.Title,
 			UrlName: d.UrlName,
 			Url:     d.Url,
-		})
+		}.Build())
 	}
 
 	var author *organizationv1.Author
 	if plugin.AuthorName.Valid || plugin.AuthorUrl.Valid {
-		author = &organizationv1.Author{}
+		authorBuilder := organizationv1.Author_builder{}
 		if plugin.AuthorName.Valid {
-			author.Name = plugin.AuthorName.String
+			authorBuilder.Name = plugin.AuthorName.String
 		}
 		if plugin.AuthorUrl.Valid {
-			author.Url = plugin.AuthorUrl.String
+			authorBuilder.Url = plugin.AuthorUrl.String
 		}
+		author = authorBuilder.Build()
 	}
 
 	repositoryUrl := ""
@@ -123,7 +124,7 @@ func pluginDetailFromRow(
 		repositoryUrl = plugin.RepositoryUrl.String
 	}
 
-	return &organizationv1.PluginDetail{
+	return organizationv1.PluginDetail_builder{
 		Id:                 plugin.ID.String(),
 		Name:               plugin.Name,
 		Description:        plugin.Description,
@@ -133,5 +134,5 @@ func pluginDetailFromRow(
 		Author:             author,
 		RepositoryUrl:      repositoryUrl,
 		DocumentationLinks: protoDocLinks,
-	}
+	}.Build()
 }

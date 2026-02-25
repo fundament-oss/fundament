@@ -10,10 +10,10 @@ import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	_ "google.golang.org/protobuf/types/gofeaturespb"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
-	sync "sync"
 	unsafe "unsafe"
 )
 
@@ -26,10 +26,10 @@ const (
 
 // List cluster namespaces request
 type ListClusterNamespacesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ClusterId     string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterId string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ListClusterNamespacesRequest) Reset() {
@@ -57,24 +57,37 @@ func (x *ListClusterNamespacesRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListClusterNamespacesRequest.ProtoReflect.Descriptor instead.
-func (*ListClusterNamespacesRequest) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{0}
-}
-
 func (x *ListClusterNamespacesRequest) GetClusterId() string {
 	if x != nil {
-		return x.ClusterId
+		return x.xxx_hidden_ClusterId
 	}
 	return ""
 }
 
+func (x *ListClusterNamespacesRequest) SetClusterId(v string) {
+	x.xxx_hidden_ClusterId = v
+}
+
+type ListClusterNamespacesRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ClusterId string
+}
+
+func (b0 ListClusterNamespacesRequest_builder) Build() *ListClusterNamespacesRequest {
+	m0 := &ListClusterNamespacesRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ClusterId = b.ClusterId
+	return m0
+}
+
 // List cluster namespaces response
 type ListClusterNamespacesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Namespaces    []*Namespace           `protobuf:"bytes,10,rep,name=namespaces,proto3" json:"namespaces,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Namespaces *[]*Namespace          `protobuf:"bytes,10,rep,name=namespaces"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ListClusterNamespacesResponse) Reset() {
@@ -102,28 +115,43 @@ func (x *ListClusterNamespacesResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListClusterNamespacesResponse.ProtoReflect.Descriptor instead.
-func (*ListClusterNamespacesResponse) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{1}
-}
-
 func (x *ListClusterNamespacesResponse) GetNamespaces() []*Namespace {
 	if x != nil {
-		return x.Namespaces
+		if x.xxx_hidden_Namespaces != nil {
+			return *x.xxx_hidden_Namespaces
+		}
 	}
 	return nil
 }
 
+func (x *ListClusterNamespacesResponse) SetNamespaces(v []*Namespace) {
+	x.xxx_hidden_Namespaces = &v
+}
+
+type ListClusterNamespacesResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Namespaces []*Namespace
+}
+
+func (b0 ListClusterNamespacesResponse_builder) Build() *ListClusterNamespacesResponse {
+	m0 := &ListClusterNamespacesResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Namespaces = &b.Namespaces
+	return m0
+}
+
 // Namespace information
 type Namespace struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,30,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	ClusterId     string                 `protobuf:"bytes,35,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
-	Created       *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created,proto3" json:"created,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id        string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name      string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_ProjectId string                 `protobuf:"bytes,30,opt,name=project_id,json=projectId"`
+	xxx_hidden_ClusterId string                 `protobuf:"bytes,35,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_Created   *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *Namespace) Reset() {
@@ -151,52 +179,100 @@ func (x *Namespace) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Namespace.ProtoReflect.Descriptor instead.
-func (*Namespace) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{2}
-}
-
 func (x *Namespace) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *Namespace) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
 func (x *Namespace) GetProjectId() string {
 	if x != nil {
-		return x.ProjectId
+		return x.xxx_hidden_ProjectId
 	}
 	return ""
 }
 
 func (x *Namespace) GetClusterId() string {
 	if x != nil {
-		return x.ClusterId
+		return x.xxx_hidden_ClusterId
 	}
 	return ""
 }
 
 func (x *Namespace) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Created
+		return x.xxx_hidden_Created
 	}
 	return nil
 }
 
+func (x *Namespace) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *Namespace) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *Namespace) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+func (x *Namespace) SetClusterId(v string) {
+	x.xxx_hidden_ClusterId = v
+}
+
+func (x *Namespace) SetCreated(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Created = v
+}
+
+func (x *Namespace) HasCreated() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Created != nil
+}
+
+func (x *Namespace) ClearCreated() {
+	x.xxx_hidden_Created = nil
+}
+
+type Namespace_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id        string
+	Name      string
+	ProjectId string
+	ClusterId string
+	Created   *timestamppb.Timestamp
+}
+
+func (b0 Namespace_builder) Build() *Namespace {
+	m0 := &Namespace{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_ProjectId = b.ProjectId
+	x.xxx_hidden_ClusterId = b.ClusterId
+	x.xxx_hidden_Created = b.Created
+	return m0
+}
+
 // Get namespace by ID request
 type GetNamespaceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NamespaceId   string                 `protobuf:"bytes,10,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_NamespaceId string                 `protobuf:"bytes,10,opt,name=namespace_id,json=namespaceId"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *GetNamespaceRequest) Reset() {
@@ -224,24 +300,37 @@ func (x *GetNamespaceRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetNamespaceRequest.ProtoReflect.Descriptor instead.
-func (*GetNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{3}
-}
-
 func (x *GetNamespaceRequest) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceId
+		return x.xxx_hidden_NamespaceId
 	}
 	return ""
 }
 
+func (x *GetNamespaceRequest) SetNamespaceId(v string) {
+	x.xxx_hidden_NamespaceId = v
+}
+
+type GetNamespaceRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	NamespaceId string
+}
+
+func (b0 GetNamespaceRequest_builder) Build() *GetNamespaceRequest {
+	m0 := &GetNamespaceRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_NamespaceId = b.NamespaceId
+	return m0
+}
+
 // Get namespace by ID response
 type GetNamespaceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Namespace     *Namespace             `protobuf:"bytes,10,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Namespace *Namespace             `protobuf:"bytes,10,opt,name=namespace"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GetNamespaceResponse) Reset() {
@@ -269,25 +358,49 @@ func (x *GetNamespaceResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetNamespaceResponse.ProtoReflect.Descriptor instead.
-func (*GetNamespaceResponse) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{4}
-}
-
 func (x *GetNamespaceResponse) GetNamespace() *Namespace {
 	if x != nil {
-		return x.Namespace
+		return x.xxx_hidden_Namespace
 	}
 	return nil
 }
 
+func (x *GetNamespaceResponse) SetNamespace(v *Namespace) {
+	x.xxx_hidden_Namespace = v
+}
+
+func (x *GetNamespaceResponse) HasNamespace() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Namespace != nil
+}
+
+func (x *GetNamespaceResponse) ClearNamespace() {
+	x.xxx_hidden_Namespace = nil
+}
+
+type GetNamespaceResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Namespace *Namespace
+}
+
+func (b0 GetNamespaceResponse_builder) Build() *GetNamespaceResponse {
+	m0 := &GetNamespaceResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Namespace = b.Namespace
+	return m0
+}
+
 // Create namespace request
 type CreateNamespaceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Name          string                 `protobuf:"bytes,30,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ProjectId string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
+	xxx_hidden_Name      string                 `protobuf:"bytes,30,opt,name=name"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *CreateNamespaceRequest) Reset() {
@@ -315,31 +428,50 @@ func (x *CreateNamespaceRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateNamespaceRequest.ProtoReflect.Descriptor instead.
-func (*CreateNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{5}
-}
-
 func (x *CreateNamespaceRequest) GetProjectId() string {
 	if x != nil {
-		return x.ProjectId
+		return x.xxx_hidden_ProjectId
 	}
 	return ""
 }
 
 func (x *CreateNamespaceRequest) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
+func (x *CreateNamespaceRequest) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+func (x *CreateNamespaceRequest) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+type CreateNamespaceRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ProjectId string
+	Name      string
+}
+
+func (b0 CreateNamespaceRequest_builder) Build() *CreateNamespaceRequest {
+	m0 := &CreateNamespaceRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ProjectId = b.ProjectId
+	x.xxx_hidden_Name = b.Name
+	return m0
+}
+
 // Create namespace response
 type CreateNamespaceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NamespaceId   string                 `protobuf:"bytes,10,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_NamespaceId string                 `protobuf:"bytes,10,opt,name=namespace_id,json=namespaceId"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *CreateNamespaceResponse) Reset() {
@@ -367,24 +499,37 @@ func (x *CreateNamespaceResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateNamespaceResponse.ProtoReflect.Descriptor instead.
-func (*CreateNamespaceResponse) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{6}
-}
-
 func (x *CreateNamespaceResponse) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceId
+		return x.xxx_hidden_NamespaceId
 	}
 	return ""
 }
 
+func (x *CreateNamespaceResponse) SetNamespaceId(v string) {
+	x.xxx_hidden_NamespaceId = v
+}
+
+type CreateNamespaceResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	NamespaceId string
+}
+
+func (b0 CreateNamespaceResponse_builder) Build() *CreateNamespaceResponse {
+	m0 := &CreateNamespaceResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_NamespaceId = b.NamespaceId
+	return m0
+}
+
 // Delete namespace request
 type DeleteNamespaceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NamespaceId   string                 `protobuf:"bytes,10,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_NamespaceId string                 `protobuf:"bytes,10,opt,name=namespace_id,json=namespaceId"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *DeleteNamespaceRequest) Reset() {
@@ -412,26 +557,39 @@ func (x *DeleteNamespaceRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteNamespaceRequest.ProtoReflect.Descriptor instead.
-func (*DeleteNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{7}
-}
-
 func (x *DeleteNamespaceRequest) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceId
+		return x.xxx_hidden_NamespaceId
 	}
 	return ""
 }
 
+func (x *DeleteNamespaceRequest) SetNamespaceId(v string) {
+	x.xxx_hidden_NamespaceId = v
+}
+
+type DeleteNamespaceRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	NamespaceId string
+}
+
+func (b0 DeleteNamespaceRequest_builder) Build() *DeleteNamespaceRequest {
+	m0 := &DeleteNamespaceRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_NamespaceId = b.NamespaceId
+	return m0
+}
+
 // Get namespace by project and name request
 type GetNamespaceByProjectAndNameRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ClusterName   string                 `protobuf:"bytes,10,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
-	ProjectName   string                 `protobuf:"bytes,20,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`
-	NamespaceName string                 `protobuf:"bytes,30,opt,name=namespace_name,json=namespaceName,proto3" json:"namespace_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterName   string                 `protobuf:"bytes,10,opt,name=cluster_name,json=clusterName"`
+	xxx_hidden_ProjectName   string                 `protobuf:"bytes,20,opt,name=project_name,json=projectName"`
+	xxx_hidden_NamespaceName string                 `protobuf:"bytes,30,opt,name=namespace_name,json=namespaceName"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *GetNamespaceByProjectAndNameRequest) Reset() {
@@ -459,38 +617,63 @@ func (x *GetNamespaceByProjectAndNameRequest) ProtoReflect() protoreflect.Messag
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetNamespaceByProjectAndNameRequest.ProtoReflect.Descriptor instead.
-func (*GetNamespaceByProjectAndNameRequest) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{8}
-}
-
 func (x *GetNamespaceByProjectAndNameRequest) GetClusterName() string {
 	if x != nil {
-		return x.ClusterName
+		return x.xxx_hidden_ClusterName
 	}
 	return ""
 }
 
 func (x *GetNamespaceByProjectAndNameRequest) GetProjectName() string {
 	if x != nil {
-		return x.ProjectName
+		return x.xxx_hidden_ProjectName
 	}
 	return ""
 }
 
 func (x *GetNamespaceByProjectAndNameRequest) GetNamespaceName() string {
 	if x != nil {
-		return x.NamespaceName
+		return x.xxx_hidden_NamespaceName
 	}
 	return ""
 }
 
+func (x *GetNamespaceByProjectAndNameRequest) SetClusterName(v string) {
+	x.xxx_hidden_ClusterName = v
+}
+
+func (x *GetNamespaceByProjectAndNameRequest) SetProjectName(v string) {
+	x.xxx_hidden_ProjectName = v
+}
+
+func (x *GetNamespaceByProjectAndNameRequest) SetNamespaceName(v string) {
+	x.xxx_hidden_NamespaceName = v
+}
+
+type GetNamespaceByProjectAndNameRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ClusterName   string
+	ProjectName   string
+	NamespaceName string
+}
+
+func (b0 GetNamespaceByProjectAndNameRequest_builder) Build() *GetNamespaceByProjectAndNameRequest {
+	m0 := &GetNamespaceByProjectAndNameRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ClusterName = b.ClusterName
+	x.xxx_hidden_ProjectName = b.ProjectName
+	x.xxx_hidden_NamespaceName = b.NamespaceName
+	return m0
+}
+
 // Get namespace by project and name response
 type GetNamespaceByProjectAndNameResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Namespace     *Namespace             `protobuf:"bytes,10,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Namespace *Namespace             `protobuf:"bytes,10,opt,name=namespace"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GetNamespaceByProjectAndNameResponse) Reset() {
@@ -518,24 +701,48 @@ func (x *GetNamespaceByProjectAndNameResponse) ProtoReflect() protoreflect.Messa
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetNamespaceByProjectAndNameResponse.ProtoReflect.Descriptor instead.
-func (*GetNamespaceByProjectAndNameResponse) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{9}
-}
-
 func (x *GetNamespaceByProjectAndNameResponse) GetNamespace() *Namespace {
 	if x != nil {
-		return x.Namespace
+		return x.xxx_hidden_Namespace
 	}
 	return nil
 }
 
+func (x *GetNamespaceByProjectAndNameResponse) SetNamespace(v *Namespace) {
+	x.xxx_hidden_Namespace = v
+}
+
+func (x *GetNamespaceByProjectAndNameResponse) HasNamespace() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Namespace != nil
+}
+
+func (x *GetNamespaceByProjectAndNameResponse) ClearNamespace() {
+	x.xxx_hidden_Namespace = nil
+}
+
+type GetNamespaceByProjectAndNameResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Namespace *Namespace
+}
+
+func (b0 GetNamespaceByProjectAndNameResponse_builder) Build() *GetNamespaceByProjectAndNameResponse {
+	m0 := &GetNamespaceByProjectAndNameResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Namespace = b.Namespace
+	return m0
+}
+
 // List project namespaces request
 type ListProjectNamespacesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ProjectId string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ListProjectNamespacesRequest) Reset() {
@@ -563,24 +770,37 @@ func (x *ListProjectNamespacesRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListProjectNamespacesRequest.ProtoReflect.Descriptor instead.
-func (*ListProjectNamespacesRequest) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{10}
-}
-
 func (x *ListProjectNamespacesRequest) GetProjectId() string {
 	if x != nil {
-		return x.ProjectId
+		return x.xxx_hidden_ProjectId
 	}
 	return ""
 }
 
+func (x *ListProjectNamespacesRequest) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+type ListProjectNamespacesRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ProjectId string
+}
+
+func (b0 ListProjectNamespacesRequest_builder) Build() *ListProjectNamespacesRequest {
+	m0 := &ListProjectNamespacesRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ProjectId = b.ProjectId
+	return m0
+}
+
 // List project namespaces response
 type ListProjectNamespacesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Namespaces    []*Namespace           `protobuf:"bytes,10,rep,name=namespaces,proto3" json:"namespaces,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Namespaces *[]*Namespace          `protobuf:"bytes,10,rep,name=namespaces"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ListProjectNamespacesResponse) Reset() {
@@ -608,23 +828,38 @@ func (x *ListProjectNamespacesResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListProjectNamespacesResponse.ProtoReflect.Descriptor instead.
-func (*ListProjectNamespacesResponse) Descriptor() ([]byte, []int) {
-	return file_v1_namespace_proto_rawDescGZIP(), []int{11}
-}
-
 func (x *ListProjectNamespacesResponse) GetNamespaces() []*Namespace {
 	if x != nil {
-		return x.Namespaces
+		if x.xxx_hidden_Namespaces != nil {
+			return *x.xxx_hidden_Namespaces
+		}
 	}
 	return nil
+}
+
+func (x *ListProjectNamespacesResponse) SetNamespaces(v []*Namespace) {
+	x.xxx_hidden_Namespaces = &v
+}
+
+type ListProjectNamespacesResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Namespaces []*Namespace
+}
+
+func (b0 ListProjectNamespacesResponse_builder) Build() *ListProjectNamespacesResponse {
+	m0 := &ListProjectNamespacesResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Namespaces = &b.Namespaces
+	return m0
 }
 
 var File_v1_namespace_proto protoreflect.FileDescriptor
 
 const file_v1_namespace_proto_rawDesc = "" +
 	"\n" +
-	"\x12v1/namespace.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"G\n" +
+	"\x12v1/namespace.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"G\n" +
 	"\x1cListClusterNamespacesRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -687,19 +922,7 @@ const file_v1_namespace_proto_rawDesc = "" +
 	"\fGetNamespace\x12$.organization.v1.GetNamespaceRequest\x1a%.organization.v1.GetNamespaceResponse\x12\x8b\x01\n" +
 	"\x1cGetNamespaceByProjectAndName\x124.organization.v1.GetNamespaceByProjectAndNameRequest\x1a5.organization.v1.GetNamespaceByProjectAndNameResponse\x12d\n" +
 	"\x0fCreateNamespace\x12'.organization.v1.CreateNamespaceRequest\x1a(.organization.v1.CreateNamespaceResponse\x12R\n" +
-	"\x0fDeleteNamespace\x12'.organization.v1.DeleteNamespaceRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
-
-var (
-	file_v1_namespace_proto_rawDescOnce sync.Once
-	file_v1_namespace_proto_rawDescData []byte
-)
-
-func file_v1_namespace_proto_rawDescGZIP() []byte {
-	file_v1_namespace_proto_rawDescOnce.Do(func() {
-		file_v1_namespace_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_v1_namespace_proto_rawDesc), len(file_v1_namespace_proto_rawDesc)))
-	})
-	return file_v1_namespace_proto_rawDescData
-}
+	"\x0fDeleteNamespace\x12'.organization.v1.DeleteNamespaceRequest\x1a\x16.google.protobuf.EmptyB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_namespace_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_v1_namespace_proto_goTypes = []any{

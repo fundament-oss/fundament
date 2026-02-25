@@ -25,16 +25,16 @@ func (s *Server) ListOrganizations(
 		result = append(result, toOrg(org))
 	}
 
-	return connect.NewResponse(&organizationv1.ListOrganizationsResponse{
+	return connect.NewResponse(organizationv1.ListOrganizationsResponse_builder{
 		Organizations: result,
-	}), nil
+	}.Build()), nil
 }
 
 func toOrg(org db.OrganizationListRow) *organizationv1.Organization {
-	return &organizationv1.Organization{
+	return organizationv1.Organization_builder{
 		Id:          org.ID.String(),
 		Name:        org.Name,
 		DisplayName: org.DisplayName,
 		Created:     timestamppb.New(org.Created.Time),
-	}
+	}.Build()
 }

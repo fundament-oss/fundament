@@ -34,13 +34,13 @@ func (s *Server) ListClusters(
 		summaries = append(summaries, clusterSummaryFromListRow(&clusters[i]))
 	}
 
-	return connect.NewResponse(&organizationv1.ListClustersResponse{
+	return connect.NewResponse(organizationv1.ListClustersResponse_builder{
 		Clusters: summaries,
-	}), nil
+	}.Build()), nil
 }
 
 func clusterSummaryFromListRow(row *db.ClusterListRow) *organizationv1.ListClustersResponse_ClusterSummary {
-	return &organizationv1.ListClustersResponse_ClusterSummary{
+	return organizationv1.ListClustersResponse_ClusterSummary_builder{
 		Id:            row.ID.String(),
 		Name:          row.Name,
 		Status:        clusterStatusFromDB(row.Deleted, row.ShootStatus),
@@ -55,5 +55,5 @@ func clusterSummaryFromListRow(row *db.ClusterListRow) *organizationv1.ListClust
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
 		),
-	}
+	}.Build()
 }

@@ -17,7 +17,7 @@ func (s *Server) RevokeAPIKey(
 	ctx context.Context,
 	req *connect.Request[organizationv1.RevokeAPIKeyRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	apiKeyID := uuid.MustParse(req.Msg.ApiKeyId)
+	apiKeyID := uuid.MustParse(req.Msg.GetApiKeyId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.ApiKey(apiKeyID)); err != nil {
 		return nil, err

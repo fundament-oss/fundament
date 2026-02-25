@@ -17,7 +17,7 @@ func (s *Server) DeleteNamespace(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteNamespaceRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	namespaceID := uuid.MustParse(req.Msg.NamespaceId)
+	namespaceID := uuid.MustParse(req.Msg.GetNamespaceId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Namespace(namespaceID)); err != nil {
 		return nil, err

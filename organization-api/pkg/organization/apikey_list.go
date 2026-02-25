@@ -42,7 +42,7 @@ func (s *Server) ListAPIKeys(
 		result = append(result, apiKeyFromListRow(&keys[idx]))
 	}
 
-	return connect.NewResponse(&organizationv1.ListAPIKeysResponse{
+	return connect.NewResponse(organizationv1.ListAPIKeysResponse_builder{
 		ApiKeys: result,
-	}), nil
+	}.Build()), nil
 }

@@ -29,13 +29,13 @@ func (c *ProjectListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	listReq := &organizationv1.ListProjectsRequest{ClusterId: c.Cluster}
+	listReq := organizationv1.ListProjectsRequest_builder{ClusterId: c.Cluster}.Build()
 	resp, err := apiClient.Projects().ListProjects(context.Background(), connect.NewRequest(listReq))
 	if err != nil {
 		return fmt.Errorf("failed to list projects: %w", err)
 	}
 
-	projects := resp.Msg.Projects
+	projects := resp.Msg.GetProjects()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(projects)
@@ -50,13 +50,13 @@ func (c *ProjectListCmd) Run(ctx *Context) error {
 	fmt.Fprintln(w, "ID\tNAME\tCLUSTER ID\tCREATED")
 	for _, project := range projects {
 		created := ""
-		if project.Created != nil {
-			created = project.Created.AsTime().Format(TimeFormat)
+		if project.GetCreated() != nil {
+			created = project.GetCreated().AsTime().Format(TimeFormat)
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-			project.Id,
-			project.Name,
-			project.ClusterId,
+			project.GetId(),
+			project.GetName(),
+			project.GetClusterId(),
 			created,
 		)
 	}
@@ -75,26 +75,26 @@ func (c *ProjectGetCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Projects().GetProject(context.Background(), connect.NewRequest(&organizationv1.GetProjectRequest{
+	resp, err := apiClient.Projects().GetProject(context.Background(), connect.NewRequest(organizationv1.GetProjectRequest_builder{
 		ProjectId: c.ProjectID,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to get project: %w", err)
 	}
 
-	project := resp.Msg.Project
+	project := resp.Msg.GetProject()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(project)
 	}
 
 	w := NewTableWriter()
-	PrintKeyValue(w, "ID", project.Id)
-	PrintKeyValue(w, "Name", project.Name)
-	PrintKeyValue(w, "Cluster ID", project.ClusterId)
+	PrintKeyValue(w, "ID", project.GetId())
+	PrintKeyValue(w, "Name", project.GetName())
+	PrintKeyValue(w, "Cluster ID", project.GetClusterId())
 
-	if project.Created.IsValid() {
-		PrintKeyValue(w, "Created", project.Created.AsTime().Format(TimeFormat))
+	if project.GetCreated().IsValid() {
+		PrintKeyValue(w, "Created", project.GetCreated().AsTime().Format(TimeFormat))
 	}
 
 	return w.Flush()
@@ -113,15 +113,15 @@ func (c *ProjectCreateCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Projects().CreateProject(context.Background(), connect.NewRequest(&organizationv1.CreateProjectRequest{
+	resp, err := apiClient.Projects().CreateProject(context.Background(), connect.NewRequest(organizationv1.CreateProjectRequest_builder{
 		ClusterId: c.Cluster,
 		Name:      c.Name,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to create project: %w", err)
 	}
 
-	projectID := resp.Msg.ProjectId
+	projectID := resp.Msg.GetProjectId()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]string{

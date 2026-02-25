@@ -18,7 +18,7 @@ func (s *Server) ListNodePools(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListNodePoolsRequest],
 ) (*connect.Response[organizationv1.ListNodePoolsResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanListNodePools(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -41,13 +41,13 @@ func (s *Server) ListNodePools(
 		result = append(result, nodePoolFromListRow(&nodePools[i]))
 	}
 
-	return connect.NewResponse(&organizationv1.ListNodePoolsResponse{
+	return connect.NewResponse(organizationv1.ListNodePoolsResponse_builder{
 		NodePools: result,
-	}), nil
+	}.Build()), nil
 }
 
 func nodePoolFromListRow(row *db.TenantNodePool) *organizationv1.NodePool {
-	return &organizationv1.NodePool{
+	return organizationv1.NodePool_builder{
 		Id:           row.ID.String(),
 		Name:         row.Name,
 		MachineType:  row.MachineType,
@@ -56,5 +56,5 @@ func nodePoolFromListRow(row *db.TenantNodePool) *organizationv1.NodePool {
 		MaxNodes:     row.AutoscaleMax,
 		Status:       organizationv1.NodePoolStatus_NODE_POOL_STATUS_UNSPECIFIED, // Stub
 		Version:      "",                                                         // Stub: would come from actual cluster state
-	}
+	}.Build()
 }

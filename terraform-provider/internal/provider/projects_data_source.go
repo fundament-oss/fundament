@@ -121,7 +121,7 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	tflog.Debug(ctx, "Fetching projects")
 
-	listReq := &organizationv1.ListProjectsRequest{ClusterId: state.ClusterID.ValueString()}
+	listReq := organizationv1.ListProjectsRequest_builder{ClusterId: state.ClusterID.ValueString()}.Build()
 	rpcReq := connect.NewRequest(listReq)
 
 	// Call the API
@@ -149,35 +149,35 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	// Build cluster name cache to avoid redundant API calls
 	clusterNames := make(map[string]string)
-	for _, project := range rpcResp.Msg.Projects {
-		if _, ok := clusterNames[project.ClusterId]; !ok {
-			clusterReq := connect.NewRequest(&organizationv1.GetClusterRequest{
-				ClusterId: project.ClusterId,
-			})
+	for _, project := range rpcResp.Msg.GetProjects() {
+		if _, ok := clusterNames[project.GetClusterId()]; !ok {
+			clusterReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+				ClusterId: project.GetClusterId(),
+			}.Build())
 			clusterResp, err := d.client.ClusterService.GetCluster(ctx, clusterReq)
 			if err == nil {
-				clusterNames[project.ClusterId] = clusterResp.Msg.Cluster.Name
+				clusterNames[project.GetClusterId()] = clusterResp.Msg.GetCluster().GetName()
 			}
 		}
 	}
 
 	// Map response to state
-	state.Projects = make([]ProjectModel, len(rpcResp.Msg.Projects))
-	for i, project := range rpcResp.Msg.Projects {
+	state.Projects = make([]ProjectModel, len(rpcResp.Msg.GetProjects()))
+	for i, project := range rpcResp.Msg.GetProjects() {
 		var created basetypes.StringValue
 
-		if project.Created.CheckValid() == nil {
-			created = types.StringValue(project.Created.String())
+		if project.GetCreated().CheckValid() == nil {
+			created = types.StringValue(project.GetCreated().String())
 		}
 
 		pm := ProjectModel{
-			ID:        types.StringValue(project.Id),
-			ClusterID: types.StringValue(project.ClusterId),
-			Name:      types.StringValue(project.Name),
+			ID:        types.StringValue(project.GetId()),
+			ClusterID: types.StringValue(project.GetClusterId()),
+			Name:      types.StringValue(project.GetName()),
 			Created:   created,
 		}
 
-		if name, ok := clusterNames[project.ClusterId]; ok {
+		if name, ok := clusterNames[project.GetClusterId()]; ok {
 			pm.ClusterName = types.StringValue(name)
 		}
 

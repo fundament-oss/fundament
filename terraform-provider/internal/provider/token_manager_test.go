@@ -85,9 +85,9 @@ func TestTokenManager_GetToken_Fresh(t *testing.T) {
 			if req.Header().Get("Authorization") != "Bearer test-api-key" {
 				t.Errorf("Authorization header = %q, want %q", req.Header().Get("Authorization"), "Bearer test-api-key")
 			}
-			return connect.NewResponse(&authnv1.ExchangeTokenResponse{
+			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
 				AccessToken: testToken,
-			}), nil
+			}.Build()), nil
 		},
 	}
 
@@ -113,9 +113,9 @@ func TestTokenManager_GetToken_Cached(t *testing.T) {
 
 	mock := &mockTokenServiceClient{
 		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
-			return connect.NewResponse(&authnv1.ExchangeTokenResponse{
+			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
 				AccessToken: testToken,
-			}), nil
+			}.Build()), nil
 		},
 	}
 
@@ -150,9 +150,9 @@ func TestTokenManager_GetToken_RefreshesExpiredToken(t *testing.T) {
 
 	mock := &mockTokenServiceClient{
 		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
-			return connect.NewResponse(&authnv1.ExchangeTokenResponse{
+			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
 				AccessToken: newToken,
-			}), nil
+			}.Build()), nil
 		},
 	}
 
@@ -203,9 +203,9 @@ func TestTokenManager_GetToken_ExchangeError(t *testing.T) {
 func TestTokenManager_GetToken_InvalidJWT(t *testing.T) {
 	mock := &mockTokenServiceClient{
 		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
-			return connect.NewResponse(&authnv1.ExchangeTokenResponse{
+			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
 				AccessToken: "not-a-valid-jwt",
-			}), nil
+			}.Build()), nil
 		},
 	}
 
@@ -230,9 +230,9 @@ func TestTokenManager_GetToken_MissingExpiration(t *testing.T) {
 
 	mock := &mockTokenServiceClient{
 		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
-			return connect.NewResponse(&authnv1.ExchangeTokenResponse{
+			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
 				AccessToken: tokenString,
-			}), nil
+			}.Build()), nil
 		},
 	}
 
@@ -261,9 +261,9 @@ func TestTokenManager_GetToken_ConcurrentAccess(t *testing.T) {
 		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
 			// Add a small delay to simulate network latency
 			time.Sleep(10 * time.Millisecond)
-			return connect.NewResponse(&authnv1.ExchangeTokenResponse{
+			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
 				AccessToken: testToken,
-			}), nil
+			}.Build()), nil
 		},
 	}
 

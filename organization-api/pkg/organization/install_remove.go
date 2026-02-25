@@ -17,7 +17,7 @@ func (s *Server) RemoveInstall(
 	ctx context.Context,
 	req *connect.Request[organizationv1.RemoveInstallRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	installID := uuid.MustParse(req.Msg.InstallId)
+	installID := uuid.MustParse(req.Msg.GetInstallId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Install(installID)); err != nil {
 		return nil, err

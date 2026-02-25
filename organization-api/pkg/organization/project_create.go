@@ -18,7 +18,7 @@ func (s *Server) CreateProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.CreateProjectRequest],
 ) (*connect.Response[organizationv1.CreateProjectResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 	if err := s.checkPermission(ctx, authz.CanCreateProject(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func (s *Server) CreateProject(
 	s.logger.DebugContext(ctx, "creating project with member",
 		"cluster_id", clusterID,
 		"user_id", userID,
-		"name", req.Msg.Name,
+		"name", req.Msg.GetName(),
 	)
 
 	tx, err := s.db.Pool.Begin(ctx)
@@ -44,7 +44,7 @@ func (s *Server) CreateProject(
 
 	projectID, err := qtx.ProjectCreate(ctx, db.ProjectCreateParams{
 		ClusterID: clusterID,
-		Name:      req.Msg.Name,
+		Name:      req.Msg.GetName(),
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create project: %w", err))
@@ -67,10 +67,10 @@ func (s *Server) CreateProject(
 		"project_id", projectID,
 		"cluster_id", clusterID,
 		"user_id", userID,
-		"name", req.Msg.Name,
+		"name", req.Msg.GetName(),
 	)
 
-	return connect.NewResponse(&organizationv1.CreateProjectResponse{
+	return connect.NewResponse(organizationv1.CreateProjectResponse_builder{
 		ProjectId: projectID.String(),
-	}), nil
+	}.Build()), nil
 }

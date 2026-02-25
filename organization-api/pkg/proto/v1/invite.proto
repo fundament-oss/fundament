@@ -1,12 +1,15 @@
-syntax = "proto3";
+edition = "2023";
 
 package organization.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
 import "v1/member.proto";
 
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
 // InviteService manages organization invitations

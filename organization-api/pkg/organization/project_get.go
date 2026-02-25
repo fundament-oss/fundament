@@ -20,7 +20,7 @@ func (s *Server) GetProjectByName(
 	req *connect.Request[organizationv1.GetProjectByNameRequest],
 ) (*connect.Response[organizationv1.GetProjectResponse], error) {
 	project, err := s.queries.ProjectGetByName(ctx, db.ProjectGetByNameParams{
-		Name: req.Msg.Name,
+		Name: req.Msg.GetName(),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -34,16 +34,16 @@ func (s *Server) GetProjectByName(
 		return nil, err
 	}
 
-	return connect.NewResponse(&organizationv1.GetProjectResponse{
+	return connect.NewResponse(organizationv1.GetProjectResponse_builder{
 		Project: projectFromGetRow(&project),
-	}), nil
+	}.Build()), nil
 }
 
 func (s *Server) GetProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetProjectRequest],
 ) (*connect.Response[organizationv1.GetProjectResponse], error) {
-	projectID := uuid.MustParse(req.Msg.ProjectId)
+	projectID := uuid.MustParse(req.Msg.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Project(projectID)); err != nil {
 		return nil, err
@@ -57,16 +57,16 @@ func (s *Server) GetProject(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.GetProjectResponse{
+	return connect.NewResponse(organizationv1.GetProjectResponse_builder{
 		Project: projectFromGetRow(&project),
-	}), nil
+	}.Build()), nil
 }
 
 func projectFromGetRow(row *db.TenantProject) *organizationv1.Project {
-	return &organizationv1.Project{
+	return organizationv1.Project_builder{
 		Id:        row.ID.String(),
 		ClusterId: row.ClusterID.String(),
 		Name:      row.Name,
 		Created:   timestamppb.New(row.Created.Time),
-	}
+	}.Build()
 }

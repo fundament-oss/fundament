@@ -19,7 +19,7 @@ func (s *Server) GetOrganization(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetOrganizationRequest],
 ) (*connect.Response[organizationv1.GetOrganizationResponse], error) {
-	organizationID := uuid.MustParse(req.Msg.Id)
+	organizationID := uuid.MustParse(req.Msg.GetId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Organization(organizationID)); err != nil {
 		return nil, err
@@ -33,16 +33,16 @@ func (s *Server) GetOrganization(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get organization: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.GetOrganizationResponse{
+	return connect.NewResponse(organizationv1.GetOrganizationResponse_builder{
 		Organization: organizationFromRow(&organization),
-	}), nil
+	}.Build()), nil
 }
 
 func organizationFromRow(row *db.OrganizationGetByIDRow) *organizationv1.Organization {
-	return &organizationv1.Organization{
+	return organizationv1.Organization_builder{
 		Id:          row.ID.String(),
 		Name:        row.Name,
 		DisplayName: row.DisplayName,
 		Created:     timestamppb.New(row.Created.Time),
-	}
+	}.Build()
 }

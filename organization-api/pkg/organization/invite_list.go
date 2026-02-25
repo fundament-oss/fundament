@@ -29,16 +29,16 @@ func (s *Server) ListInvitations(
 
 	invitations := make([]*organizationv1.Invitation, 0, len(rows))
 	for i := range rows {
-		invitations = append(invitations, &organizationv1.Invitation{
+		invitations = append(invitations, organizationv1.Invitation_builder{
 			Id:                      rows[i].ID.String(),
 			OrganizationId:          rows[i].OrganizationID.String(),
 			OrganizationDisplayName: rows[i].DisplayName,
 			Permission:              string(rows[i].Permission),
 			Created:                 timestamppb.New(rows[i].Created.Time),
-		})
+		}.Build())
 	}
 
-	return connect.NewResponse(&organizationv1.ListInvitationsResponse{
+	return connect.NewResponse(organizationv1.ListInvitationsResponse_builder{
 		Invitations: invitations,
-	}), nil
+	}.Build()), nil
 }

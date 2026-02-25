@@ -18,7 +18,7 @@ func (s *Server) CreateNodePool(
 	ctx context.Context,
 	req *connect.Request[organizationv1.CreateNodePoolRequest],
 ) (*connect.Response[organizationv1.CreateNodePoolResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanCreateNodePool(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -33,10 +33,10 @@ func (s *Server) CreateNodePool(
 
 	params := db.NodePoolCreateParams{
 		ClusterID:    clusterID,
-		Name:         req.Msg.Name,
-		MachineType:  req.Msg.MachineType,
-		AutoscaleMin: req.Msg.AutoscaleMin,
-		AutoscaleMax: req.Msg.AutoscaleMax,
+		Name:         req.Msg.GetName(),
+		MachineType:  req.Msg.GetMachineType(),
+		AutoscaleMin: req.Msg.GetAutoscaleMin(),
+		AutoscaleMax: req.Msg.GetAutoscaleMax(),
 	}
 
 	nodePoolID, err := s.queries.NodePoolCreate(ctx, params)
@@ -47,10 +47,10 @@ func (s *Server) CreateNodePool(
 	s.logger.InfoContext(ctx, "node pool created",
 		"node_pool_id", nodePoolID,
 		"cluster_id", clusterID,
-		"name", req.Msg.Name,
+		"name", req.Msg.GetName(),
 	)
 
-	return connect.NewResponse(&organizationv1.CreateNodePoolResponse{
+	return connect.NewResponse(organizationv1.CreateNodePoolResponse_builder{
 		NodePoolId: nodePoolID.String(),
-	}), nil
+	}.Build()), nil
 }

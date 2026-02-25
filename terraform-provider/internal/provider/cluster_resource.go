@@ -124,11 +124,11 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	})
 
 	// Create the cluster
-	createReq := connect.NewRequest(&organizationv1.CreateClusterRequest{
+	createReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
 		Name:              plan.Name.ValueString(),
 		Region:            plan.Region.ValueString(),
 		KubernetesVersion: plan.KubernetesVersion.ValueString(),
-	})
+	}.Build())
 
 	createResp, err := r.client.ClusterService.CreateCluster(ctx, createReq)
 	if err != nil {
@@ -140,12 +140,12 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Set the ID from the response
-	plan.ID = types.StringValue(createResp.Msg.ClusterId)
+	plan.ID = types.StringValue(createResp.Msg.GetClusterId())
 
 	// Read the cluster to get the full state including status
-	getReq := connect.NewRequest(&organizationv1.GetClusterRequest{
-		ClusterId: createResp.Msg.ClusterId,
-	})
+	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+		ClusterId: createResp.Msg.GetClusterId(),
+	}.Build())
 
 	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
 	if err != nil {
@@ -157,7 +157,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Map response to state
-	plan.Status = types.StringValue(clusterStatusToString(getResp.Msg.Cluster.Status))
+	plan.Status = types.StringValue(clusterStatusToString(getResp.Msg.GetCluster().GetStatus()))
 
 	tflog.Info(ctx, "Created cluster", map[string]any{
 		"id":     plan.ID.ValueString(),
@@ -188,9 +188,9 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		"id": state.ID.ValueString(),
 	})
 
-	getReq := connect.NewRequest(&organizationv1.GetClusterRequest{
+	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
 		ClusterId: state.ID.ValueString(),
-	})
+	}.Build())
 
 	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
 	if err != nil {
@@ -211,14 +211,14 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	cluster := getResp.Msg.Cluster
+	cluster := getResp.Msg.GetCluster()
 
 	// Map response to state
-	state.ID = types.StringValue(cluster.Id)
-	state.Name = types.StringValue(cluster.Name)
-	state.Region = types.StringValue(cluster.Region)
-	state.KubernetesVersion = types.StringValue(cluster.KubernetesVersion)
-	state.Status = types.StringValue(clusterStatusToString(cluster.Status))
+	state.ID = types.StringValue(cluster.GetId())
+	state.Name = types.StringValue(cluster.GetName())
+	state.Region = types.StringValue(cluster.GetRegion())
+	state.KubernetesVersion = types.StringValue(cluster.GetKubernetesVersion())
+	state.Status = types.StringValue(clusterStatusToString(cluster.GetStatus()))
 
 	tflog.Debug(ctx, "Read cluster successfully", map[string]any{
 		"id":     state.ID.ValueString(),
@@ -254,10 +254,11 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	})
 
 	// Only kubernetes_version can be updated
-	updateReq := connect.NewRequest(&organizationv1.UpdateClusterRequest{
+	kubernetesVersion := plan.KubernetesVersion.ValueString()
+	updateReq := connect.NewRequest(organizationv1.UpdateClusterRequest_builder{
 		ClusterId:         state.ID.ValueString(),
-		KubernetesVersion: new(plan.KubernetesVersion.ValueString()),
-	})
+		KubernetesVersion: &kubernetesVersion,
+	}.Build())
 
 	_, err := r.client.ClusterService.UpdateCluster(ctx, updateReq)
 	if err != nil {
@@ -287,9 +288,9 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	// Read the cluster to get the updated state
-	getReq := connect.NewRequest(&organizationv1.GetClusterRequest{
+	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
 		ClusterId: state.ID.ValueString(),
-	})
+	}.Build())
 
 	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
 	if err != nil {
@@ -308,14 +309,14 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	cluster := getResp.Msg.Cluster
+	cluster := getResp.Msg.GetCluster()
 
 	// Update the plan with the server response
-	plan.ID = types.StringValue(cluster.Id)
-	plan.Name = types.StringValue(cluster.Name)
-	plan.Region = types.StringValue(cluster.Region)
-	plan.KubernetesVersion = types.StringValue(cluster.KubernetesVersion)
-	plan.Status = types.StringValue(clusterStatusToString(cluster.Status))
+	plan.ID = types.StringValue(cluster.GetId())
+	plan.Name = types.StringValue(cluster.GetName())
+	plan.Region = types.StringValue(cluster.GetRegion())
+	plan.KubernetesVersion = types.StringValue(cluster.GetKubernetesVersion())
+	plan.Status = types.StringValue(clusterStatusToString(cluster.GetStatus()))
 
 	tflog.Info(ctx, "Updated cluster", map[string]any{
 		"id":     plan.ID.ValueString(),
@@ -346,9 +347,9 @@ func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 		"id": state.ID.ValueString(),
 	})
 
-	deleteReq := connect.NewRequest(&organizationv1.DeleteClusterRequest{
+	deleteReq := connect.NewRequest(organizationv1.DeleteClusterRequest_builder{
 		ClusterId: state.ID.ValueString(),
-	})
+	}.Build())
 
 	_, err := r.client.ClusterService.DeleteCluster(ctx, deleteReq)
 	if err != nil {

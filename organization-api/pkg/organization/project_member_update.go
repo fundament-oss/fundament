@@ -21,9 +21,9 @@ func (s *Server) UpdateProjectMemberRole(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateProjectMemberRoleRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	memberID := uuid.MustParse(req.Msg.MemberId)
+	memberID := uuid.MustParse(req.Msg.GetMemberId())
 
-	role := projectMemberRoleToDB(req.Msg.Role)
+	role := projectMemberRoleToDB(req.Msg.GetRole())
 	if role == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid role"))
 	}

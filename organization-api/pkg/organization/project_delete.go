@@ -17,7 +17,7 @@ func (s *Server) DeleteProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteProjectRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	projectID := uuid.MustParse(req.Msg.ProjectId)
+	projectID := uuid.MustParse(req.Msg.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Project(projectID)); err != nil {
 		return nil, err
