@@ -112,7 +112,6 @@ func (x *SyncState) GetStatusUpdatedAt() *timestamppb.Timestamp {
 // List clusters request
 type ListClustersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"` // Optional: filter by project
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,13 +144,6 @@ func (x *ListClustersRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ListClustersRequest.ProtoReflect.Descriptor instead.
 func (*ListClustersRequest) Descriptor() ([]byte, []int) {
 	return file_v1_cluster_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *ListClustersRequest) GetProjectId() string {
-	if x != nil {
-		return x.ProjectId
-	}
-	return ""
 }
 
 // List clusters response
@@ -1853,520 +1845,6 @@ func (x *RemoveInstallRequest) GetInstallId() string {
 	return ""
 }
 
-// List cluster namespaces request
-type ListClusterNamespacesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ClusterId     string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListClusterNamespacesRequest) Reset() {
-	*x = ListClusterNamespacesRequest{}
-	mi := &file_v1_cluster_proto_msgTypes[33]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListClusterNamespacesRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListClusterNamespacesRequest) ProtoMessage() {}
-
-func (x *ListClusterNamespacesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[33]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListClusterNamespacesRequest.ProtoReflect.Descriptor instead.
-func (*ListClusterNamespacesRequest) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{33}
-}
-
-func (x *ListClusterNamespacesRequest) GetClusterId() string {
-	if x != nil {
-		return x.ClusterId
-	}
-	return ""
-}
-
-// List cluster namespaces response
-type ListClusterNamespacesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Namespaces    []*ClusterNamespace    `protobuf:"bytes,10,rep,name=namespaces,proto3" json:"namespaces,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListClusterNamespacesResponse) Reset() {
-	*x = ListClusterNamespacesResponse{}
-	mi := &file_v1_cluster_proto_msgTypes[34]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListClusterNamespacesResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListClusterNamespacesResponse) ProtoMessage() {}
-
-func (x *ListClusterNamespacesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[34]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListClusterNamespacesResponse.ProtoReflect.Descriptor instead.
-func (*ListClusterNamespacesResponse) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{34}
-}
-
-func (x *ListClusterNamespacesResponse) GetNamespaces() []*ClusterNamespace {
-	if x != nil {
-		return x.Namespaces
-	}
-	return nil
-}
-
-// Cluster namespace information
-type ClusterNamespace struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,30,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	ClusterId     string                 `protobuf:"bytes,35,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
-	Created       *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created,proto3" json:"created,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ClusterNamespace) Reset() {
-	*x = ClusterNamespace{}
-	mi := &file_v1_cluster_proto_msgTypes[35]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ClusterNamespace) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ClusterNamespace) ProtoMessage() {}
-
-func (x *ClusterNamespace) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[35]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ClusterNamespace.ProtoReflect.Descriptor instead.
-func (*ClusterNamespace) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{35}
-}
-
-func (x *ClusterNamespace) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *ClusterNamespace) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *ClusterNamespace) GetProjectId() string {
-	if x != nil {
-		return x.ProjectId
-	}
-	return ""
-}
-
-func (x *ClusterNamespace) GetClusterId() string {
-	if x != nil {
-		return x.ClusterId
-	}
-	return ""
-}
-
-func (x *ClusterNamespace) GetCreated() *timestamppb.Timestamp {
-	if x != nil {
-		return x.Created
-	}
-	return nil
-}
-
-// Create namespace request
-type CreateNamespaceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	ClusterId     string                 `protobuf:"bytes,20,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
-	Name          string                 `protobuf:"bytes,30,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateNamespaceRequest) Reset() {
-	*x = CreateNamespaceRequest{}
-	mi := &file_v1_cluster_proto_msgTypes[36]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateNamespaceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateNamespaceRequest) ProtoMessage() {}
-
-func (x *CreateNamespaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[36]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateNamespaceRequest.ProtoReflect.Descriptor instead.
-func (*CreateNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{36}
-}
-
-func (x *CreateNamespaceRequest) GetProjectId() string {
-	if x != nil {
-		return x.ProjectId
-	}
-	return ""
-}
-
-func (x *CreateNamespaceRequest) GetClusterId() string {
-	if x != nil {
-		return x.ClusterId
-	}
-	return ""
-}
-
-func (x *CreateNamespaceRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-// Create namespace response
-type CreateNamespaceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NamespaceId   string                 `protobuf:"bytes,10,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateNamespaceResponse) Reset() {
-	*x = CreateNamespaceResponse{}
-	mi := &file_v1_cluster_proto_msgTypes[37]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateNamespaceResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateNamespaceResponse) ProtoMessage() {}
-
-func (x *CreateNamespaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[37]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateNamespaceResponse.ProtoReflect.Descriptor instead.
-func (*CreateNamespaceResponse) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{37}
-}
-
-func (x *CreateNamespaceResponse) GetNamespaceId() string {
-	if x != nil {
-		return x.NamespaceId
-	}
-	return ""
-}
-
-// Delete namespace request
-type DeleteNamespaceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NamespaceId   string                 `protobuf:"bytes,10,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteNamespaceRequest) Reset() {
-	*x = DeleteNamespaceRequest{}
-	mi := &file_v1_cluster_proto_msgTypes[38]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteNamespaceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteNamespaceRequest) ProtoMessage() {}
-
-func (x *DeleteNamespaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[38]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteNamespaceRequest.ProtoReflect.Descriptor instead.
-func (*DeleteNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{38}
-}
-
-func (x *DeleteNamespaceRequest) GetNamespaceId() string {
-	if x != nil {
-		return x.NamespaceId
-	}
-	return ""
-}
-
-// Get namespace by cluster and name request
-type GetNamespaceByClusterAndNameRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ClusterName   string                 `protobuf:"bytes,10,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
-	NamespaceName string                 `protobuf:"bytes,20,opt,name=namespace_name,json=namespaceName,proto3" json:"namespace_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetNamespaceByClusterAndNameRequest) Reset() {
-	*x = GetNamespaceByClusterAndNameRequest{}
-	mi := &file_v1_cluster_proto_msgTypes[39]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetNamespaceByClusterAndNameRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetNamespaceByClusterAndNameRequest) ProtoMessage() {}
-
-func (x *GetNamespaceByClusterAndNameRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[39]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetNamespaceByClusterAndNameRequest.ProtoReflect.Descriptor instead.
-func (*GetNamespaceByClusterAndNameRequest) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{39}
-}
-
-func (x *GetNamespaceByClusterAndNameRequest) GetClusterName() string {
-	if x != nil {
-		return x.ClusterName
-	}
-	return ""
-}
-
-func (x *GetNamespaceByClusterAndNameRequest) GetNamespaceName() string {
-	if x != nil {
-		return x.NamespaceName
-	}
-	return ""
-}
-
-// Get namespace by cluster and name response
-type GetNamespaceByClusterAndNameResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Namespace     *ClusterNamespace      `protobuf:"bytes,10,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetNamespaceByClusterAndNameResponse) Reset() {
-	*x = GetNamespaceByClusterAndNameResponse{}
-	mi := &file_v1_cluster_proto_msgTypes[40]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetNamespaceByClusterAndNameResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetNamespaceByClusterAndNameResponse) ProtoMessage() {}
-
-func (x *GetNamespaceByClusterAndNameResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[40]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetNamespaceByClusterAndNameResponse.ProtoReflect.Descriptor instead.
-func (*GetNamespaceByClusterAndNameResponse) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{40}
-}
-
-func (x *GetNamespaceByClusterAndNameResponse) GetNamespace() *ClusterNamespace {
-	if x != nil {
-		return x.Namespace
-	}
-	return nil
-}
-
-// Get namespace by project and name request
-type GetNamespaceByProjectAndNameRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectName   string                 `protobuf:"bytes,10,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`
-	NamespaceName string                 `protobuf:"bytes,20,opt,name=namespace_name,json=namespaceName,proto3" json:"namespace_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetNamespaceByProjectAndNameRequest) Reset() {
-	*x = GetNamespaceByProjectAndNameRequest{}
-	mi := &file_v1_cluster_proto_msgTypes[41]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetNamespaceByProjectAndNameRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetNamespaceByProjectAndNameRequest) ProtoMessage() {}
-
-func (x *GetNamespaceByProjectAndNameRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[41]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetNamespaceByProjectAndNameRequest.ProtoReflect.Descriptor instead.
-func (*GetNamespaceByProjectAndNameRequest) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{41}
-}
-
-func (x *GetNamespaceByProjectAndNameRequest) GetProjectName() string {
-	if x != nil {
-		return x.ProjectName
-	}
-	return ""
-}
-
-func (x *GetNamespaceByProjectAndNameRequest) GetNamespaceName() string {
-	if x != nil {
-		return x.NamespaceName
-	}
-	return ""
-}
-
-// Get namespace by project and name response
-type GetNamespaceByProjectAndNameResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Namespace     *ClusterNamespace      `protobuf:"bytes,10,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetNamespaceByProjectAndNameResponse) Reset() {
-	*x = GetNamespaceByProjectAndNameResponse{}
-	mi := &file_v1_cluster_proto_msgTypes[42]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetNamespaceByProjectAndNameResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetNamespaceByProjectAndNameResponse) ProtoMessage() {}
-
-func (x *GetNamespaceByProjectAndNameResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[42]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetNamespaceByProjectAndNameResponse.ProtoReflect.Descriptor instead.
-func (*GetNamespaceByProjectAndNameResponse) Descriptor() ([]byte, []int) {
-	return file_v1_cluster_proto_rawDescGZIP(), []int{42}
-}
-
-func (x *GetNamespaceByProjectAndNameResponse) GetNamespace() *ClusterNamespace {
-	if x != nil {
-		return x.Namespace
-	}
-	return nil
-}
-
 // Cluster summary information
 type ListClustersResponse_ClusterSummary struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2383,7 +1861,7 @@ type ListClustersResponse_ClusterSummary struct {
 
 func (x *ListClustersResponse_ClusterSummary) Reset() {
 	*x = ListClustersResponse_ClusterSummary{}
-	mi := &file_v1_cluster_proto_msgTypes[43]
+	mi := &file_v1_cluster_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2395,7 +1873,7 @@ func (x *ListClustersResponse_ClusterSummary) String() string {
 func (*ListClustersResponse_ClusterSummary) ProtoMessage() {}
 
 func (x *ListClustersResponse_ClusterSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_cluster_proto_msgTypes[43]
+	mi := &file_v1_cluster_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2479,11 +1957,8 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\v_sync_errorB\x0f\n" +
 	"\r_shoot_statusB\x10\n" +
 	"\x0e_shoot_messageB\x14\n" +
-	"\x12_status_updated_at\"A\n" +
-	"\x13ListClustersRequest\x12*\n" +
-	"\n" +
-	"project_id\x18\n" +
-	" \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\tprojectId\"\xf7\x02\n" +
+	"\x12_status_updated_at\"\x15\n" +
+	"\x13ListClustersRequest\"\xf7\x02\n" +
 	"\x14ListClustersResponse\x12P\n" +
 	"\bclusters\x18\n" +
 	" \x03(\v24.organization.v1.ListClustersResponse.ClusterSummaryR\bclusters\x1a\x8c\x02\n" +
@@ -2656,57 +2131,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\x14RemoveInstallRequest\x12'\n" +
 	"\n" +
 	"install_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tinstallId\"G\n" +
-	"\x1cListClusterNamespacesRequest\x12'\n" +
-	"\n" +
-	"cluster_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"b\n" +
-	"\x1dListClusterNamespacesResponse\x12A\n" +
-	"\n" +
-	"namespaces\x18\n" +
-	" \x03(\v2!.organization.v1.ClusterNamespaceR\n" +
-	"namespaces\"\xaa\x01\n" +
-	"\x10ClusterNamespace\x12\x0e\n" +
-	"\x02id\x18\n" +
-	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x12\x1d\n" +
-	"\n" +
-	"project_id\x18\x1e \x01(\tR\tprojectId\x12\x1d\n" +
-	"\n" +
-	"cluster_id\x18# \x01(\tR\tclusterId\x124\n" +
-	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"\xeb\x01\n" +
-	"\x16CreateNamespaceRequest\x12'\n" +
-	"\n" +
-	"project_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\x12'\n" +
-	"\n" +
-	"cluster_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x12\x7f\n" +
-	"\x04name\x18\x1e \x01(\tBk\xbaHh\xba\x01a\n" +
-	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')r\x02\x18?R\x04name\"<\n" +
-	"\x17CreateNamespaceResponse\x12!\n" +
-	"\fnamespace_id\x18\n" +
-	" \x01(\tR\vnamespaceId\"E\n" +
-	"\x16DeleteNamespaceRequest\x12+\n" +
-	"\fnamespace_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vnamespaceId\"\xe9\x01\n" +
-	"#GetNamespaceByClusterAndNameRequest\x12-\n" +
-	"\fcluster_name\x18\n" +
-	" \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\vclusterName\x12\x92\x01\n" +
-	"\x0enamespace_name\x18\x14 \x01(\tBk\xbaHh\xba\x01a\n" +
-	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')r\x02\x18?R\rnamespaceName\"g\n" +
-	"$GetNamespaceByClusterAndNameResponse\x12?\n" +
-	"\tnamespace\x18\n" +
-	" \x01(\v2!.organization.v1.ClusterNamespaceR\tnamespace\"\xc7\x02\n" +
-	"#GetNamespaceByProjectAndNameRequest\x12\x8a\x01\n" +
-	"\fproject_name\x18\n" +
-	" \x01(\tBg\xbaHd\xba\x01a\n" +
-	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\vprojectName\x12\x92\x01\n" +
-	"\x0enamespace_name\x18\x14 \x01(\tBk\xbaHh\xba\x01a\n" +
-	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')r\x02\x18?R\rnamespaceName\"g\n" +
-	"$GetNamespaceByProjectAndNameResponse\x12?\n" +
-	"\tnamespace\x18\n" +
-	" \x01(\v2!.organization.v1.ClusterNamespaceR\tnamespace2\x89\x10\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tinstallId2\xbb\v\n" +
 	"\x0eClusterService\x12[\n" +
 	"\fListClusters\x12$.organization.v1.ListClustersRequest\x1a%.organization.v1.ListClustersResponse\x12U\n" +
 	"\n" +
@@ -2725,12 +2150,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\fListInstalls\x12$.organization.v1.ListInstallsRequest\x1a%.organization.v1.ListInstallsResponse\x12U\n" +
 	"\n" +
 	"AddInstall\x12\".organization.v1.AddInstallRequest\x1a#.organization.v1.AddInstallResponse\x12N\n" +
-	"\rRemoveInstall\x12%.organization.v1.RemoveInstallRequest\x1a\x16.google.protobuf.Empty\x12v\n" +
-	"\x15ListClusterNamespaces\x12-.organization.v1.ListClusterNamespacesRequest\x1a..organization.v1.ListClusterNamespacesResponse\x12\x8b\x01\n" +
-	"\x1cGetNamespaceByClusterAndName\x124.organization.v1.GetNamespaceByClusterAndNameRequest\x1a5.organization.v1.GetNamespaceByClusterAndNameResponse\x12\x8b\x01\n" +
-	"\x1cGetNamespaceByProjectAndName\x124.organization.v1.GetNamespaceByProjectAndNameRequest\x1a5.organization.v1.GetNamespaceByProjectAndNameResponse\x12d\n" +
-	"\x0fCreateNamespace\x12'.organization.v1.CreateNamespaceRequest\x1a(.organization.v1.CreateNamespaceResponse\x12R\n" +
-	"\x0fDeleteNamespace\x12'.organization.v1.DeleteNamespaceRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
+	"\rRemoveInstall\x12%.organization.v1.RemoveInstallRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
 
 var (
 	file_v1_cluster_proto_rawDescOnce sync.Once
@@ -2744,131 +2164,107 @@ func file_v1_cluster_proto_rawDescGZIP() []byte {
 	return file_v1_cluster_proto_rawDescData
 }
 
-var file_v1_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
+var file_v1_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_v1_cluster_proto_goTypes = []any{
-	(*SyncState)(nil),                            // 0: organization.v1.SyncState
-	(*ListClustersRequest)(nil),                  // 1: organization.v1.ListClustersRequest
-	(*ListClustersResponse)(nil),                 // 2: organization.v1.ListClustersResponse
-	(*GetClusterRequest)(nil),                    // 3: organization.v1.GetClusterRequest
-	(*GetClusterByNameRequest)(nil),              // 4: organization.v1.GetClusterByNameRequest
-	(*GetClusterResponse)(nil),                   // 5: organization.v1.GetClusterResponse
-	(*ClusterDetails)(nil),                       // 6: organization.v1.ClusterDetails
-	(*ResourceUsageInfo)(nil),                    // 7: organization.v1.ResourceUsageInfo
-	(*NodePool)(nil),                             // 8: organization.v1.NodePool
-	(*CreateClusterRequest)(nil),                 // 9: organization.v1.CreateClusterRequest
-	(*NodePoolSpec)(nil),                         // 10: organization.v1.NodePoolSpec
-	(*CreateClusterResponse)(nil),                // 11: organization.v1.CreateClusterResponse
-	(*UpdateClusterRequest)(nil),                 // 12: organization.v1.UpdateClusterRequest
-	(*DeleteClusterRequest)(nil),                 // 13: organization.v1.DeleteClusterRequest
-	(*GetClusterActivityRequest)(nil),            // 14: organization.v1.GetClusterActivityRequest
-	(*GetClusterActivityResponse)(nil),           // 15: organization.v1.GetClusterActivityResponse
-	(*ClusterEvent)(nil),                         // 16: organization.v1.ClusterEvent
-	(*GetKubeconfigRequest)(nil),                 // 17: organization.v1.GetKubeconfigRequest
-	(*GetKubeconfigResponse)(nil),                // 18: organization.v1.GetKubeconfigResponse
-	(*CreateNodePoolRequest)(nil),                // 19: organization.v1.CreateNodePoolRequest
-	(*CreateNodePoolResponse)(nil),               // 20: organization.v1.CreateNodePoolResponse
-	(*UpdateNodePoolRequest)(nil),                // 21: organization.v1.UpdateNodePoolRequest
-	(*DeleteNodePoolRequest)(nil),                // 22: organization.v1.DeleteNodePoolRequest
-	(*ListNodePoolsRequest)(nil),                 // 23: organization.v1.ListNodePoolsRequest
-	(*ListNodePoolsResponse)(nil),                // 24: organization.v1.ListNodePoolsResponse
-	(*GetNodePoolRequest)(nil),                   // 25: organization.v1.GetNodePoolRequest
-	(*GetNodePoolResponse)(nil),                  // 26: organization.v1.GetNodePoolResponse
-	(*Install)(nil),                              // 27: organization.v1.Install
-	(*ListInstallsRequest)(nil),                  // 28: organization.v1.ListInstallsRequest
-	(*ListInstallsResponse)(nil),                 // 29: organization.v1.ListInstallsResponse
-	(*AddInstallRequest)(nil),                    // 30: organization.v1.AddInstallRequest
-	(*AddInstallResponse)(nil),                   // 31: organization.v1.AddInstallResponse
-	(*RemoveInstallRequest)(nil),                 // 32: organization.v1.RemoveInstallRequest
-	(*ListClusterNamespacesRequest)(nil),         // 33: organization.v1.ListClusterNamespacesRequest
-	(*ListClusterNamespacesResponse)(nil),        // 34: organization.v1.ListClusterNamespacesResponse
-	(*ClusterNamespace)(nil),                     // 35: organization.v1.ClusterNamespace
-	(*CreateNamespaceRequest)(nil),               // 36: organization.v1.CreateNamespaceRequest
-	(*CreateNamespaceResponse)(nil),              // 37: organization.v1.CreateNamespaceResponse
-	(*DeleteNamespaceRequest)(nil),               // 38: organization.v1.DeleteNamespaceRequest
-	(*GetNamespaceByClusterAndNameRequest)(nil),  // 39: organization.v1.GetNamespaceByClusterAndNameRequest
-	(*GetNamespaceByClusterAndNameResponse)(nil), // 40: organization.v1.GetNamespaceByClusterAndNameResponse
-	(*GetNamespaceByProjectAndNameRequest)(nil),  // 41: organization.v1.GetNamespaceByProjectAndNameRequest
-	(*GetNamespaceByProjectAndNameResponse)(nil), // 42: organization.v1.GetNamespaceByProjectAndNameResponse
-	(*ListClustersResponse_ClusterSummary)(nil),  // 43: organization.v1.ListClustersResponse.ClusterSummary
-	(*timestamppb.Timestamp)(nil),                // 44: google.protobuf.Timestamp
-	(ClusterStatus)(0),                           // 45: organization.v1.ClusterStatus
-	(*ResourceUsage)(nil),                        // 46: organization.v1.ResourceUsage
-	(NodePoolStatus)(0),                          // 47: organization.v1.NodePoolStatus
-	(*emptypb.Empty)(nil),                        // 48: google.protobuf.Empty
+	(*SyncState)(nil),                           // 0: organization.v1.SyncState
+	(*ListClustersRequest)(nil),                 // 1: organization.v1.ListClustersRequest
+	(*ListClustersResponse)(nil),                // 2: organization.v1.ListClustersResponse
+	(*GetClusterRequest)(nil),                   // 3: organization.v1.GetClusterRequest
+	(*GetClusterByNameRequest)(nil),             // 4: organization.v1.GetClusterByNameRequest
+	(*GetClusterResponse)(nil),                  // 5: organization.v1.GetClusterResponse
+	(*ClusterDetails)(nil),                      // 6: organization.v1.ClusterDetails
+	(*ResourceUsageInfo)(nil),                   // 7: organization.v1.ResourceUsageInfo
+	(*NodePool)(nil),                            // 8: organization.v1.NodePool
+	(*CreateClusterRequest)(nil),                // 9: organization.v1.CreateClusterRequest
+	(*NodePoolSpec)(nil),                        // 10: organization.v1.NodePoolSpec
+	(*CreateClusterResponse)(nil),               // 11: organization.v1.CreateClusterResponse
+	(*UpdateClusterRequest)(nil),                // 12: organization.v1.UpdateClusterRequest
+	(*DeleteClusterRequest)(nil),                // 13: organization.v1.DeleteClusterRequest
+	(*GetClusterActivityRequest)(nil),           // 14: organization.v1.GetClusterActivityRequest
+	(*GetClusterActivityResponse)(nil),          // 15: organization.v1.GetClusterActivityResponse
+	(*ClusterEvent)(nil),                        // 16: organization.v1.ClusterEvent
+	(*GetKubeconfigRequest)(nil),                // 17: organization.v1.GetKubeconfigRequest
+	(*GetKubeconfigResponse)(nil),               // 18: organization.v1.GetKubeconfigResponse
+	(*CreateNodePoolRequest)(nil),               // 19: organization.v1.CreateNodePoolRequest
+	(*CreateNodePoolResponse)(nil),              // 20: organization.v1.CreateNodePoolResponse
+	(*UpdateNodePoolRequest)(nil),               // 21: organization.v1.UpdateNodePoolRequest
+	(*DeleteNodePoolRequest)(nil),               // 22: organization.v1.DeleteNodePoolRequest
+	(*ListNodePoolsRequest)(nil),                // 23: organization.v1.ListNodePoolsRequest
+	(*ListNodePoolsResponse)(nil),               // 24: organization.v1.ListNodePoolsResponse
+	(*GetNodePoolRequest)(nil),                  // 25: organization.v1.GetNodePoolRequest
+	(*GetNodePoolResponse)(nil),                 // 26: organization.v1.GetNodePoolResponse
+	(*Install)(nil),                             // 27: organization.v1.Install
+	(*ListInstallsRequest)(nil),                 // 28: organization.v1.ListInstallsRequest
+	(*ListInstallsResponse)(nil),                // 29: organization.v1.ListInstallsResponse
+	(*AddInstallRequest)(nil),                   // 30: organization.v1.AddInstallRequest
+	(*AddInstallResponse)(nil),                  // 31: organization.v1.AddInstallResponse
+	(*RemoveInstallRequest)(nil),                // 32: organization.v1.RemoveInstallRequest
+	(*ListClustersResponse_ClusterSummary)(nil), // 33: organization.v1.ListClustersResponse.ClusterSummary
+	(*timestamppb.Timestamp)(nil),               // 34: google.protobuf.Timestamp
+	(ClusterStatus)(0),                          // 35: organization.v1.ClusterStatus
+	(*ResourceUsage)(nil),                       // 36: organization.v1.ResourceUsage
+	(NodePoolStatus)(0),                         // 37: organization.v1.NodePoolStatus
+	(*emptypb.Empty)(nil),                       // 38: google.protobuf.Empty
 }
 var file_v1_cluster_proto_depIdxs = []int32{
-	44, // 0: organization.v1.SyncState.synced_at:type_name -> google.protobuf.Timestamp
-	44, // 1: organization.v1.SyncState.status_updated_at:type_name -> google.protobuf.Timestamp
-	43, // 2: organization.v1.ListClustersResponse.clusters:type_name -> organization.v1.ListClustersResponse.ClusterSummary
+	34, // 0: organization.v1.SyncState.synced_at:type_name -> google.protobuf.Timestamp
+	34, // 1: organization.v1.SyncState.status_updated_at:type_name -> google.protobuf.Timestamp
+	33, // 2: organization.v1.ListClustersResponse.clusters:type_name -> organization.v1.ListClustersResponse.ClusterSummary
 	6,  // 3: organization.v1.GetClusterResponse.cluster:type_name -> organization.v1.ClusterDetails
-	45, // 4: organization.v1.ClusterDetails.status:type_name -> organization.v1.ClusterStatus
-	44, // 5: organization.v1.ClusterDetails.created:type_name -> google.protobuf.Timestamp
+	35, // 4: organization.v1.ClusterDetails.status:type_name -> organization.v1.ClusterStatus
+	34, // 5: organization.v1.ClusterDetails.created:type_name -> google.protobuf.Timestamp
 	7,  // 6: organization.v1.ClusterDetails.resource_usage:type_name -> organization.v1.ResourceUsageInfo
 	0,  // 7: organization.v1.ClusterDetails.sync_state:type_name -> organization.v1.SyncState
-	46, // 8: organization.v1.ResourceUsageInfo.cpu:type_name -> organization.v1.ResourceUsage
-	46, // 9: organization.v1.ResourceUsageInfo.memory:type_name -> organization.v1.ResourceUsage
-	46, // 10: organization.v1.ResourceUsageInfo.disk:type_name -> organization.v1.ResourceUsage
-	46, // 11: organization.v1.ResourceUsageInfo.pods:type_name -> organization.v1.ResourceUsage
-	47, // 12: organization.v1.NodePool.status:type_name -> organization.v1.NodePoolStatus
+	36, // 8: organization.v1.ResourceUsageInfo.cpu:type_name -> organization.v1.ResourceUsage
+	36, // 9: organization.v1.ResourceUsageInfo.memory:type_name -> organization.v1.ResourceUsage
+	36, // 10: organization.v1.ResourceUsageInfo.disk:type_name -> organization.v1.ResourceUsage
+	36, // 11: organization.v1.ResourceUsageInfo.pods:type_name -> organization.v1.ResourceUsage
+	37, // 12: organization.v1.NodePool.status:type_name -> organization.v1.NodePoolStatus
 	16, // 13: organization.v1.GetClusterActivityResponse.events:type_name -> organization.v1.ClusterEvent
-	44, // 14: organization.v1.ClusterEvent.created_at:type_name -> google.protobuf.Timestamp
+	34, // 14: organization.v1.ClusterEvent.created_at:type_name -> google.protobuf.Timestamp
 	8,  // 15: organization.v1.ListNodePoolsResponse.node_pools:type_name -> organization.v1.NodePool
 	8,  // 16: organization.v1.GetNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
-	44, // 17: organization.v1.Install.created:type_name -> google.protobuf.Timestamp
+	34, // 17: organization.v1.Install.created:type_name -> google.protobuf.Timestamp
 	27, // 18: organization.v1.ListInstallsResponse.installs:type_name -> organization.v1.Install
-	35, // 19: organization.v1.ListClusterNamespacesResponse.namespaces:type_name -> organization.v1.ClusterNamespace
-	44, // 20: organization.v1.ClusterNamespace.created:type_name -> google.protobuf.Timestamp
-	35, // 21: organization.v1.GetNamespaceByClusterAndNameResponse.namespace:type_name -> organization.v1.ClusterNamespace
-	35, // 22: organization.v1.GetNamespaceByProjectAndNameResponse.namespace:type_name -> organization.v1.ClusterNamespace
-	45, // 23: organization.v1.ListClustersResponse.ClusterSummary.status:type_name -> organization.v1.ClusterStatus
-	0,  // 24: organization.v1.ListClustersResponse.ClusterSummary.sync_state:type_name -> organization.v1.SyncState
-	1,  // 25: organization.v1.ClusterService.ListClusters:input_type -> organization.v1.ListClustersRequest
-	3,  // 26: organization.v1.ClusterService.GetCluster:input_type -> organization.v1.GetClusterRequest
-	4,  // 27: organization.v1.ClusterService.GetClusterByName:input_type -> organization.v1.GetClusterByNameRequest
-	9,  // 28: organization.v1.ClusterService.CreateCluster:input_type -> organization.v1.CreateClusterRequest
-	12, // 29: organization.v1.ClusterService.UpdateCluster:input_type -> organization.v1.UpdateClusterRequest
-	13, // 30: organization.v1.ClusterService.DeleteCluster:input_type -> organization.v1.DeleteClusterRequest
-	14, // 31: organization.v1.ClusterService.GetClusterActivity:input_type -> organization.v1.GetClusterActivityRequest
-	17, // 32: organization.v1.ClusterService.GetKubeconfig:input_type -> organization.v1.GetKubeconfigRequest
-	23, // 33: organization.v1.ClusterService.ListNodePools:input_type -> organization.v1.ListNodePoolsRequest
-	25, // 34: organization.v1.ClusterService.GetNodePool:input_type -> organization.v1.GetNodePoolRequest
-	19, // 35: organization.v1.ClusterService.CreateNodePool:input_type -> organization.v1.CreateNodePoolRequest
-	21, // 36: organization.v1.ClusterService.UpdateNodePool:input_type -> organization.v1.UpdateNodePoolRequest
-	22, // 37: organization.v1.ClusterService.DeleteNodePool:input_type -> organization.v1.DeleteNodePoolRequest
-	28, // 38: organization.v1.ClusterService.ListInstalls:input_type -> organization.v1.ListInstallsRequest
-	30, // 39: organization.v1.ClusterService.AddInstall:input_type -> organization.v1.AddInstallRequest
-	32, // 40: organization.v1.ClusterService.RemoveInstall:input_type -> organization.v1.RemoveInstallRequest
-	33, // 41: organization.v1.ClusterService.ListClusterNamespaces:input_type -> organization.v1.ListClusterNamespacesRequest
-	39, // 42: organization.v1.ClusterService.GetNamespaceByClusterAndName:input_type -> organization.v1.GetNamespaceByClusterAndNameRequest
-	41, // 43: organization.v1.ClusterService.GetNamespaceByProjectAndName:input_type -> organization.v1.GetNamespaceByProjectAndNameRequest
-	36, // 44: organization.v1.ClusterService.CreateNamespace:input_type -> organization.v1.CreateNamespaceRequest
-	38, // 45: organization.v1.ClusterService.DeleteNamespace:input_type -> organization.v1.DeleteNamespaceRequest
-	2,  // 46: organization.v1.ClusterService.ListClusters:output_type -> organization.v1.ListClustersResponse
-	5,  // 47: organization.v1.ClusterService.GetCluster:output_type -> organization.v1.GetClusterResponse
-	5,  // 48: organization.v1.ClusterService.GetClusterByName:output_type -> organization.v1.GetClusterResponse
-	11, // 49: organization.v1.ClusterService.CreateCluster:output_type -> organization.v1.CreateClusterResponse
-	48, // 50: organization.v1.ClusterService.UpdateCluster:output_type -> google.protobuf.Empty
-	48, // 51: organization.v1.ClusterService.DeleteCluster:output_type -> google.protobuf.Empty
-	15, // 52: organization.v1.ClusterService.GetClusterActivity:output_type -> organization.v1.GetClusterActivityResponse
-	18, // 53: organization.v1.ClusterService.GetKubeconfig:output_type -> organization.v1.GetKubeconfigResponse
-	24, // 54: organization.v1.ClusterService.ListNodePools:output_type -> organization.v1.ListNodePoolsResponse
-	26, // 55: organization.v1.ClusterService.GetNodePool:output_type -> organization.v1.GetNodePoolResponse
-	20, // 56: organization.v1.ClusterService.CreateNodePool:output_type -> organization.v1.CreateNodePoolResponse
-	48, // 57: organization.v1.ClusterService.UpdateNodePool:output_type -> google.protobuf.Empty
-	48, // 58: organization.v1.ClusterService.DeleteNodePool:output_type -> google.protobuf.Empty
-	29, // 59: organization.v1.ClusterService.ListInstalls:output_type -> organization.v1.ListInstallsResponse
-	31, // 60: organization.v1.ClusterService.AddInstall:output_type -> organization.v1.AddInstallResponse
-	48, // 61: organization.v1.ClusterService.RemoveInstall:output_type -> google.protobuf.Empty
-	34, // 62: organization.v1.ClusterService.ListClusterNamespaces:output_type -> organization.v1.ListClusterNamespacesResponse
-	40, // 63: organization.v1.ClusterService.GetNamespaceByClusterAndName:output_type -> organization.v1.GetNamespaceByClusterAndNameResponse
-	42, // 64: organization.v1.ClusterService.GetNamespaceByProjectAndName:output_type -> organization.v1.GetNamespaceByProjectAndNameResponse
-	37, // 65: organization.v1.ClusterService.CreateNamespace:output_type -> organization.v1.CreateNamespaceResponse
-	48, // 66: organization.v1.ClusterService.DeleteNamespace:output_type -> google.protobuf.Empty
-	46, // [46:67] is the sub-list for method output_type
-	25, // [25:46] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	35, // 19: organization.v1.ListClustersResponse.ClusterSummary.status:type_name -> organization.v1.ClusterStatus
+	0,  // 20: organization.v1.ListClustersResponse.ClusterSummary.sync_state:type_name -> organization.v1.SyncState
+	1,  // 21: organization.v1.ClusterService.ListClusters:input_type -> organization.v1.ListClustersRequest
+	3,  // 22: organization.v1.ClusterService.GetCluster:input_type -> organization.v1.GetClusterRequest
+	4,  // 23: organization.v1.ClusterService.GetClusterByName:input_type -> organization.v1.GetClusterByNameRequest
+	9,  // 24: organization.v1.ClusterService.CreateCluster:input_type -> organization.v1.CreateClusterRequest
+	12, // 25: organization.v1.ClusterService.UpdateCluster:input_type -> organization.v1.UpdateClusterRequest
+	13, // 26: organization.v1.ClusterService.DeleteCluster:input_type -> organization.v1.DeleteClusterRequest
+	14, // 27: organization.v1.ClusterService.GetClusterActivity:input_type -> organization.v1.GetClusterActivityRequest
+	17, // 28: organization.v1.ClusterService.GetKubeconfig:input_type -> organization.v1.GetKubeconfigRequest
+	23, // 29: organization.v1.ClusterService.ListNodePools:input_type -> organization.v1.ListNodePoolsRequest
+	25, // 30: organization.v1.ClusterService.GetNodePool:input_type -> organization.v1.GetNodePoolRequest
+	19, // 31: organization.v1.ClusterService.CreateNodePool:input_type -> organization.v1.CreateNodePoolRequest
+	21, // 32: organization.v1.ClusterService.UpdateNodePool:input_type -> organization.v1.UpdateNodePoolRequest
+	22, // 33: organization.v1.ClusterService.DeleteNodePool:input_type -> organization.v1.DeleteNodePoolRequest
+	28, // 34: organization.v1.ClusterService.ListInstalls:input_type -> organization.v1.ListInstallsRequest
+	30, // 35: organization.v1.ClusterService.AddInstall:input_type -> organization.v1.AddInstallRequest
+	32, // 36: organization.v1.ClusterService.RemoveInstall:input_type -> organization.v1.RemoveInstallRequest
+	2,  // 37: organization.v1.ClusterService.ListClusters:output_type -> organization.v1.ListClustersResponse
+	5,  // 38: organization.v1.ClusterService.GetCluster:output_type -> organization.v1.GetClusterResponse
+	5,  // 39: organization.v1.ClusterService.GetClusterByName:output_type -> organization.v1.GetClusterResponse
+	11, // 40: organization.v1.ClusterService.CreateCluster:output_type -> organization.v1.CreateClusterResponse
+	38, // 41: organization.v1.ClusterService.UpdateCluster:output_type -> google.protobuf.Empty
+	38, // 42: organization.v1.ClusterService.DeleteCluster:output_type -> google.protobuf.Empty
+	15, // 43: organization.v1.ClusterService.GetClusterActivity:output_type -> organization.v1.GetClusterActivityResponse
+	18, // 44: organization.v1.ClusterService.GetKubeconfig:output_type -> organization.v1.GetKubeconfigResponse
+	24, // 45: organization.v1.ClusterService.ListNodePools:output_type -> organization.v1.ListNodePoolsResponse
+	26, // 46: organization.v1.ClusterService.GetNodePool:output_type -> organization.v1.GetNodePoolResponse
+	20, // 47: organization.v1.ClusterService.CreateNodePool:output_type -> organization.v1.CreateNodePoolResponse
+	38, // 48: organization.v1.ClusterService.UpdateNodePool:output_type -> google.protobuf.Empty
+	38, // 49: organization.v1.ClusterService.DeleteNodePool:output_type -> google.protobuf.Empty
+	29, // 50: organization.v1.ClusterService.ListInstalls:output_type -> organization.v1.ListInstallsResponse
+	31, // 51: organization.v1.ClusterService.AddInstall:output_type -> organization.v1.AddInstallResponse
+	38, // 52: organization.v1.ClusterService.RemoveInstall:output_type -> google.protobuf.Empty
+	37, // [37:53] is the sub-list for method output_type
+	21, // [21:37] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_v1_cluster_proto_init() }
@@ -2886,7 +2282,7 @@ func file_v1_cluster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_cluster_proto_rawDesc), len(file_v1_cluster_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   44,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

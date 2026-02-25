@@ -23,6 +23,18 @@ export async function fetchClusterName(
   }
 }
 
+const TRANSITIONAL_STATUSES: ReadonlySet<ClusterStatus> = new Set([
+  ClusterStatus.PROVISIONING,
+  ClusterStatus.STARTING,
+  ClusterStatus.UPGRADING,
+  ClusterStatus.STOPPING,
+  ClusterStatus.DELETING,
+]);
+
+export function isTransitionalStatus(status: ClusterStatus): boolean {
+  return TRANSITIONAL_STATUSES.has(status);
+}
+
 export function getStatusColor(status: ClusterStatus): string {
   const colors: Record<ClusterStatus, string> = {
     [ClusterStatus.PROVISIONING]: 'badge-yellow',

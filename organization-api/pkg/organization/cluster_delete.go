@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -17,6 +18,10 @@ func (s *Server) DeleteCluster(
 	req *connect.Request[organizationv1.DeleteClusterRequest],
 ) (*connect.Response[emptypb.Empty], error) {
 	clusterID := uuid.MustParse(req.Msg.ClusterId)
+
+	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
 
 	rowsAffected, err := s.queries.ClusterDelete(ctx, db.ClusterDeleteParams{ID: clusterID})
 	if err != nil {

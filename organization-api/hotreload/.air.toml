@@ -5,7 +5,7 @@ tmp_dir = "tmp"
 cmd = "go build -o tmp/fun-organization-api ./organization-api/cmd/fun-organization-api"
 entrypoint = "tmp/fun-organization-api"
 include_ext = ["go", "mod", "sum"]
-include_dir = ["organization-api"]
+include_dir = ["organization-api", "common"]
 exclude_dir = ["tmp"]
 delay = 500
 

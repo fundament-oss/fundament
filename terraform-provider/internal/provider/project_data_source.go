@@ -40,6 +40,14 @@ func (d *ProjectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				Description: "The unique identifier of the project.",
 				Computed:    true,
 			},
+			"cluster_id": schema.StringAttribute{
+				Description: "The ID of the cluster this project belongs to.",
+				Computed:    true,
+			},
+			"cluster_name": schema.StringAttribute{
+				Description: "The name of the cluster this project belongs to.",
+				Computed:    true,
+			},
 			"name": schema.StringAttribute{
 				Description: "The name of the project to look up.",
 				Required:    true,
@@ -127,6 +135,23 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	// Map response to state
 	config.ID = types.StringValue(project.Id)
 	config.Name = types.StringValue(project.Name)
+	config.ClusterID = types.StringValue(project.ClusterId)
+
+	// Resolve cluster name
+	clusterReq := connect.NewRequest(&organizationv1.GetClusterRequest{
+		ClusterId: project.ClusterId,
+	})
+
+	clusterResp, err := d.client.ClusterService.GetCluster(ctx, clusterReq)
+	if err != nil {
+		tflog.Error(ctx, "Unable to resolve cluster name", map[string]any{
+			"cluster_id": project.ClusterId,
+			"error":      err.Error(),
+		})
+		return
+	} else {
+		config.ClusterName = types.StringValue(clusterResp.Msg.Cluster.Name)
+	}
 
 	if project.Created.CheckValid() == nil {
 		config.Created = types.StringValue(project.Created.String())

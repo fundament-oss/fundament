@@ -27,10 +27,10 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
   protected stateService = inject(ClusterWizardStateService);
 
   steps: ProgressStep[] = [
-    { name: 'Basics', route: '/add-cluster' },
-    { name: 'Worker nodes', route: '/add-cluster/nodes' },
-    { name: 'Plugins', route: '/add-cluster/plugins' },
-    { name: 'Summary', route: '/add-cluster/summary' },
+    { name: 'Basics', route: '/clusters/add' },
+    { name: 'Worker nodes', route: '/clusters/add/nodes' },
+    { name: 'Plugins', route: '/clusters/add/plugins' },
+    { name: 'Summary', route: '/clusters/add/summary' },
   ];
 
   // Signal to track route changes
@@ -40,7 +40,7 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
   currentStepIndex = computed(() => {
     const currentRoute = this.routeSignal();
     // Find the last matching step (most specific route)
-    // e.g., /add-cluster/nodes should match /add-cluster/nodes, not /add-cluster
+    // e.g., /clusters/add/nodes should match /clusters/add/nodes, not /clusters/add
     for (let i = this.steps.length - 1; i >= 0; i -= 1) {
       if (currentRoute.startsWith(this.steps[i].route)) {
         return i;

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -17,6 +18,10 @@ func (s *Server) RevokeAPIKey(
 	req *connect.Request[organizationv1.RevokeAPIKeyRequest],
 ) (*connect.Response[emptypb.Empty], error) {
 	apiKeyID := uuid.MustParse(req.Msg.ApiKeyId)
+
+	if err := s.checkPermission(ctx, authz.CanEdit(), authz.ApiKey(apiKeyID)); err != nil {
+		return nil, err
+	}
 
 	rowsAffected, err := s.queries.APIKeyRevoke(ctx, db.APIKeyRevokeParams{ID: apiKeyID})
 	if err != nil {

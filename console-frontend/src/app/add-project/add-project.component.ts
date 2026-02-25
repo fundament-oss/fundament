@@ -3,6 +3,7 @@ import {
   ViewChild,
   ElementRef,
   AfterViewInit,
+  OnInit,
   inject,
   signal,
   ChangeDetectionStrategy,
@@ -13,15 +14,20 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
+import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { PROJECT } from '../../connect/tokens';
+import { PROJECT, CLUSTER } from '../../connect/tokens';
 import { CreateProjectRequestSchema } from '../../generated/v1/project_pb';
+import {
+  ListClustersRequestSchema,
+  type ListClustersResponse_ClusterSummary as ClusterSummary,
+} from '../../generated/v1/cluster_pb';
 
 @Component({
   selector: 'app-add-project',
-  imports: [RouterLink, ReactiveFormsModule, NgIcon],
+  imports: [RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -30,7 +36,7 @@ import { CreateProjectRequestSchema } from '../../generated/v1/project_pb';
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class AddProjectComponent implements AfterViewInit {
+export default class AddProjectComponent implements AfterViewInit, OnInit {
   @ViewChild('projectNameInput') projectNameInput!: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
@@ -41,6 +47,8 @@ export default class AddProjectComponent implements AfterViewInit {
 
   private client = inject(PROJECT);
 
+  private clusterClient = inject(CLUSTER);
+
   private toastService = inject(ToastService);
 
   private organizationDataService = inject(OrganizationDataService);
@@ -49,7 +57,12 @@ export default class AddProjectComponent implements AfterViewInit {
 
   isSubmitting = signal<boolean>(false);
 
+  clusters = signal<ClusterSummary[]>([]);
+
+  isLoadingClusters = signal<boolean>(false);
+
   projectForm = this.fb.group({
+    clusterId: ['', Validators.required],
     name: [
       '',
       [
@@ -65,9 +78,33 @@ export default class AddProjectComponent implements AfterViewInit {
     this.titleService.setTitle('Add a project');
   }
 
+  async ngOnInit() {
+    await this.loadClusters();
+  }
+
   ngAfterViewInit() {
     // Focus the project name input after the view is initialized
     this.projectNameInput.nativeElement.focus();
+  }
+
+  async loadClusters() {
+    try {
+      this.isLoadingClusters.set(true);
+      const request = create(ListClustersRequestSchema, {});
+      const response = await firstValueFrom(this.clusterClient.listClusters(request));
+      this.clusters.set(response.clusters);
+      if (response.clusters.length > 0) {
+        this.projectForm.patchValue({ clusterId: response.clusters[0].id });
+      }
+    } catch (error) {
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to load clusters: ${error.message}`
+          : 'Failed to load clusters',
+      );
+    } finally {
+      this.isLoadingClusters.set(false);
+    }
   }
 
   async onSubmit() {
@@ -81,6 +118,7 @@ export default class AddProjectComponent implements AfterViewInit {
       this.errorMessage.set(null);
 
       const request = create(CreateProjectRequestSchema, {
+        clusterId: this.projectForm.value.clusterId!,
         name: this.projectForm.value.name!,
       });
 
@@ -101,6 +139,14 @@ export default class AddProjectComponent implements AfterViewInit {
     } finally {
       this.isSubmitting.set(false);
     }
+  }
+
+  getClusterError(): string {
+    const clusterControl = this.projectForm.get('clusterId');
+    if (clusterControl?.hasError('required')) {
+      return 'Please select a cluster.';
+    }
+    return '';
   }
 
   getNameError(): string {

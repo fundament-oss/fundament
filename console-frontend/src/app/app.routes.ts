@@ -12,7 +12,7 @@ const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
-        path: 'add-cluster',
+        path: 'clusters/add',
         loadComponent: () =>
           import('./add-cluster-wizard-layout/add-cluster-wizard-layout.component').then(
             (m) => m.default,
@@ -20,7 +20,7 @@ const routes: Routes = [
         data: {
           breadcrumbs: [
             { label: 'Clusters', route: '/' },
-            { label: 'Add cluster', route: '/add-cluster' },
+            { label: 'Add cluster', route: '/clusters/add' },
           ],
         },
         children: [

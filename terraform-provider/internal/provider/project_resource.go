@@ -47,6 +47,24 @@ func (r *ProjectResource) Schema(ctx context.Context, req resource.SchemaRequest
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"cluster_id": schema.StringAttribute{
+				Description: "The ID of the cluster this project belongs to. Either cluster_id or cluster_name must be specified, but not both.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"cluster_name": schema.StringAttribute{
+				Description: "The name of the cluster this project belongs to. Either cluster_id or cluster_name must be specified, but not both.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"name": schema.StringAttribute{
 				Description: "The name of the project. Can be updated to rename the project.",
 				Required:    true,
@@ -80,6 +98,55 @@ func (r *ProjectResource) Configure(ctx context.Context, req resource.ConfigureR
 	r.client = client
 }
 
+// resolveClusterID resolves a cluster_id from the state, using cluster_name if cluster_id is not provided.
+func (r *ProjectResource) resolveClusterID(ctx context.Context, state *ProjectModel) (string, error) {
+	hasClusterID := !state.ClusterID.IsNull() && !state.ClusterID.IsUnknown()
+	hasClusterName := !state.ClusterName.IsNull() && !state.ClusterName.IsUnknown()
+
+	if !hasClusterID && !hasClusterName {
+		return "", fmt.Errorf("either 'cluster_id' or 'cluster_name' must be specified")
+	}
+
+	// Prefer cluster_id when both are present (UseStateForUnknown may populate both from state)
+	if hasClusterID {
+		return state.ClusterID.ValueString(), nil
+	}
+
+	// Resolve cluster_name to cluster_id
+	getReq := connect.NewRequest(&organizationv1.GetClusterByNameRequest{
+		Name: state.ClusterName.ValueString(),
+	})
+
+	getResp, err := r.client.ClusterService.GetClusterByName(ctx, getReq)
+	if err != nil {
+		return "", fmt.Errorf("unable to find cluster with name %q: %s", state.ClusterName.ValueString(), err.Error())
+	}
+
+	return getResp.Msg.Cluster.Id, nil
+}
+
+// populateClusterFields populates both cluster_id and cluster_name on the state from the given cluster_id.
+func (r *ProjectResource) populateClusterFields(ctx context.Context, state *ProjectModel, clusterID string) {
+	state.ClusterID = types.StringValue(clusterID)
+
+	getReq := connect.NewRequest(&organizationv1.GetClusterRequest{
+		ClusterId: clusterID,
+	})
+
+	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
+	if err != nil {
+		tflog.Warn(ctx, "Unable to resolve cluster name", map[string]any{
+			"cluster_id": clusterID,
+			"error":      err.Error(),
+		})
+
+		state.ClusterName = types.StringNull()
+		return
+	}
+
+	state.ClusterName = types.StringValue(getResp.Msg.Cluster.Name)
+}
+
 // Create creates a new project.
 func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var state ProjectModel
@@ -97,13 +164,25 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	// Resolve cluster_id from cluster_name if needed
+	clusterID, err := r.resolveClusterID(ctx, &state)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Cluster Configuration",
+			err.Error(),
+		)
+		return
+	}
+
 	tflog.Debug(ctx, "Creating project", map[string]any{
-		"name": state.Name.ValueString(),
+		"name":       state.Name.ValueString(),
+		"cluster_id": clusterID,
 	})
 
 	// Create the project
 	createReq := connect.NewRequest(&organizationv1.CreateProjectRequest{
-		Name: state.Name.ValueString(),
+		ClusterId: clusterID,
+		Name:      state.Name.ValueString(),
 	})
 
 	createResp, err := r.client.ProjectService.CreateProject(ctx, createReq)
@@ -132,7 +211,9 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// Map response to state
+	// Populate cluster fields (both ID and name)
+	r.populateClusterFields(ctx, &state, getResp.Msg.Project.ClusterId)
+
 	if getResp.Msg.Project.Created.CheckValid() == nil {
 		state.Created = types.StringValue(getResp.Msg.Project.Created.String())
 	}
@@ -192,6 +273,9 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	// Map response to state
 	state.ID = types.StringValue(project.Id)
 	state.Name = types.StringValue(project.Name)
+
+	// Populate cluster fields (both ID and name)
+	r.populateClusterFields(ctx, &state, project.ClusterId)
 
 	if project.Created.CheckValid() == nil {
 		state.Created = types.StringValue(project.Created.String())
@@ -289,6 +373,9 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 	// Update the plan with the server response
 	plan.ID = types.StringValue(project.Id)
 	plan.Name = types.StringValue(project.Name)
+
+	// Populate cluster fields (both ID and name)
+	r.populateClusterFields(ctx, &plan, project.ClusterId)
 
 	if project.Created.CheckValid() == nil {
 		plan.Created = types.StringValue(project.Created.String())

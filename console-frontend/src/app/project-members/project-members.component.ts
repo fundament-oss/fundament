@@ -16,6 +16,7 @@ import {
 import { TitleService } from '../title.service';
 import { PROJECT, MEMBER } from '../../connect/tokens';
 import ModalComponent from '../modal/modal.component';
+import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatTimeAgo } from '../utils/date-format';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
@@ -51,7 +52,7 @@ const formatMemberDate = (member: ProjectMember): string =>
 
 @Component({
   selector: 'app-project-members',
-  imports: [ReactiveFormsModule, NgIcon, ModalComponent, RouterLink],
+  imports: [ReactiveFormsModule, NgIcon, ModalComponent, RouterLink, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,

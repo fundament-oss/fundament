@@ -83,7 +83,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		Clock:              opts.Clock,
 	}
 
-	organizationServer, err := organization.New(testLogger, organizationCfg, testDb)
+	organizationServer, err := organization.New(testLogger, organizationCfg, testDb, nil)
 	require.NoError(t, err)
 
 	ts := httptest.NewServer(organizationServer.Handler())

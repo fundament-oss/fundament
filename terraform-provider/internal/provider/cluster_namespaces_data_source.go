@@ -129,7 +129,7 @@ func (d *ClusterNamespacesDataSource) Read(ctx context.Context, req datasource.R
 	})
 
 	// Call the API
-	rpcResp, err := d.client.ClusterService.ListClusterNamespaces(ctx, rpcReq)
+	rpcResp, err := d.client.NamespaceService.ListClusterNamespaces(ctx, rpcReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeInvalidArgument:
@@ -163,7 +163,7 @@ func (d *ClusterNamespacesDataSource) Read(ctx context.Context, req datasource.R
 			ID:        types.StringValue(ns.Id),
 			Name:      types.StringValue(ns.Name),
 			ProjectID: types.StringValue(ns.ProjectId),
-			ClusterID: types.StringValue(clusterID), // Set from request context
+			ClusterID: types.StringValue(ns.ClusterId),
 			Created:   types.StringValue(ns.Created.AsTime().Format(time.RFC3339)),
 		}
 	}

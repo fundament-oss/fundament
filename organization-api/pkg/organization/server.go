@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/validate"
 	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
@@ -30,11 +31,12 @@ type Server struct {
 	queries       *db.Queries
 	logger        *slog.Logger
 	authValidator *auth.Validator
+	authz         *authz.Client
 	clock         clock.Clock
 	handler       http.Handler
 }
 
-func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*Server, error) {
+func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client) (*Server, error) {
 	clk := cfg.Clock
 	if clk == nil {
 		clk = clock.New()
@@ -46,6 +48,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*Server, error)
 		db:            database,
 		queries:       db.New(database.Pool),
 		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
+		authz:         authzClient,
 		clock:         clk,
 	}
 
@@ -81,6 +84,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*Server, error)
 		"organization.v1.MemberService",
 		"organization.v1.InviteService",
 		"organization.v1.APIKeyService",
+		"organization.v1.NamespaceService",
 	)
 	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
 	mux.Handle(reflectPath, reflectHandler)
@@ -89,6 +93,9 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB) (*Server, error)
 
 	projectPath, projectHandler := organizationv1connect.NewProjectServiceHandler(s, interceptors)
 	mux.Handle(projectPath, projectHandler)
+
+	namespacePath, namespaceHandler := organizationv1connect.NewNamespaceServiceHandler(s, interceptors)
+	mux.Handle(namespacePath, namespaceHandler)
 
 	memberPath, memberHandler := organizationv1connect.NewMemberServiceHandler(s, interceptors)
 	mux.Handle(memberPath, memberHandler)
