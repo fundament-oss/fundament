@@ -32,6 +32,7 @@ const (
 	ActionCanCreateCluster   ActionName = "can_create_cluster"
 	ActionCanListClusters    ActionName = "can_list_clusters"
 	ActionCanInviteMember    ActionName = "can_invite_member"
+	ActionCanEditMember      ActionName = "can_edit_member"
 	ActionCanDeleteMember    ActionName = "can_delete_member"
 	ActionCanListMembers     ActionName = "can_list_members"
 	ActionParent             ActionName = "parent"
@@ -241,6 +242,11 @@ func CanListClusters() Action {
 // CanInviteMember creates an Action for the can_invite_member relation.
 func CanInviteMember() Action {
 	return Action{Name: ActionCanInviteMember}
+}
+
+// CanEditMember creates an Action for the can_edit_member relation.
+func CanEditMember() Action {
+	return Action{Name: ActionCanEditMember}
 }
 
 // CanDeleteMember creates an Action for the can_delete_member relation.

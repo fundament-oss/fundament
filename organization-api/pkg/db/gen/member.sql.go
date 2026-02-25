@@ -199,18 +199,16 @@ UPDATE tenant.organizations_users
 SET permission = $2
 WHERE
     id = $1
-    AND organization_id = $3
     AND deleted IS NULL
 `
 
 type MemberUpdatePermissionParams struct {
-	ID             uuid.UUID
-	Permission     dbconst.OrganizationsUserPermission
-	OrganizationID uuid.UUID
+	ID         uuid.UUID
+	Permission dbconst.OrganizationsUserPermission
 }
 
 func (q *Queries) MemberUpdatePermission(ctx context.Context, arg MemberUpdatePermissionParams) (int64, error) {
-	result, err := q.db.Exec(ctx, memberUpdatePermission, arg.ID, arg.Permission, arg.OrganizationID)
+	result, err := q.db.Exec(ctx, memberUpdatePermission, arg.ID, arg.Permission)
 	if err != nil {
 		return 0, err
 	}

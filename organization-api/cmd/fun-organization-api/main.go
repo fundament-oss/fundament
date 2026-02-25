@@ -64,7 +64,6 @@ func run() error {
 				queries := db.New(conn)
 
 				// Extract organization_id from context and set it in PostgreSQL session for RLS
-
 				if organizationID, ok := organization.OrganizationIDFromContext(ctx); ok {
 					logger.Debug("setting organization context for RLS", "organization_id", organizationID.String())
 

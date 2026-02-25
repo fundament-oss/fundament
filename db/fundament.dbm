@@ -260,38 +260,6 @@ END;]]> </definition>
 	<definition> <![CDATA[SELECT NULLIF(current_setting('app.current_organization_id', true), '')::uuid]]> </definition>
 </function>
 
-<function name="is_project_member"
-		window-func="false"
-		returns-setof="false"
-		behavior-type="CALLED ON NULL INPUT"
-		function-type="STABLE"
-		security-type="SECURITY DEFINER"
-		parallel-type="PARALLEL SAFE"
-		execution-cost="1"
-		row-amount="0">
-	<schema name="authn"/>
-	<role name="fun_authz"/>
-	<language name="sql"/>
-	<return-type>
-	<type name="boolean" length="0"/>
-	</return-type>
-	<parameter name="p_project_id" in="true">
-		<type name="uuid" length="0"/>
-	</parameter>
-	<parameter name="p_user_id" in="true">
-		<type name="uuid" length="0"/>
-	</parameter>
-	<parameter name="p_role" in="true">
-		<type name="text" length="0"/>
-	</parameter>
-	<definition> <![CDATA[SELECT EXISTS (
-    SELECT 1 FROM tenant.project_members
-    WHERE project_id = p_project_id
-    AND user_id = p_user_id
-    AND (p_role IS NULL OR role = p_role)
-    AND deleted IS NULL
-)]]> </definition>
-</function>
 
 <function name="is_project_in_organization"
 		window-func="false"
@@ -344,32 +312,6 @@ END;]]> </definition>
 )]]> </definition>
 </function>
 
-<function name="is_user_in_organization"
-		window-func="false"
-		returns-setof="false"
-		behavior-type="CALLED ON NULL INPUT"
-		function-type="STABLE"
-		security-type="SECURITY DEFINER"
-		parallel-type="PARALLEL SAFE"
-		execution-cost="1"
-		row-amount="0">
-	<schema name="authn"/>
-	<role name="fun_authz"/>
-	<language name="sql"/>
-	<return-type>
-	<type name="boolean" length="0"/>
-	</return-type>
-	<parameter name="p_user_id" in="true">
-		<type name="uuid" length="0"/>
-	</parameter>
-	<definition> <![CDATA[SELECT EXISTS (
-    SELECT 1 FROM tenant.organizations_users
-    WHERE user_id = p_user_id
-    AND organization_id = authn.current_organization_id()
-    AND deleted IS NULL
-)]]> </definition>
-</function>
-
 <function name="is_organization_member"
 		window-func="false"
 		returns-setof="false"
@@ -395,6 +337,7 @@ END;]]> </definition>
     AND deleted IS NULL
 )]]> </definition>
 </function>
+
 
 <function name="projects_tr_verify_deleted"
 		window-func="false"
@@ -425,30 +368,6 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
-<function name="project_has_members"
-		window-func="false"
-		returns-setof="false"
-		behavior-type="CALLED ON NULL INPUT"
-		function-type="STABLE"
-		security-type="SECURITY DEFINER"
-		parallel-type="PARALLEL SAFE"
-		execution-cost="1"
-		row-amount="0">
-	<schema name="tenant"/>
-	<role name="fun_authz"/>
-	<language name="sql"/>
-	<return-type>
-	<type name="boolean" length="0"/>
-	</return-type>
-	<parameter name="p_project_id" in="true">
-		<type name="uuid" length="0"/>
-	</parameter>
-	<definition> <![CDATA[SELECT EXISTS (
-    SELECT 1 FROM tenant.project_members
-    WHERE project_id = p_project_id
-    AND deleted IS NULL
-)]]> </definition>
-</function>
 
 <function name="project_members_tr_protect_last_admin"
 		window-func="false"
@@ -603,7 +522,7 @@ END;]]> </definition>
 </table>
 
 <policy name="api_keys_organization_policy" table="authn.api_keys" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid AND user_id = current_setting('app.current_user_id')::uuid]]> </expression>
+	<expression type="using-exp"> <![CDATA[organization_id = current_setting('app.current_organization_id')::uuid]]> </expression>
 </policy>
 
 <function name="api_key_get_by_hash"
@@ -1057,49 +976,23 @@ END;]]> </definition>
 		<function signature="tenant.project_members_tr_protect_last_admin()"/>
 </trigger>
 
-<policy name="project_members_select_policy" table="tenant.project_members" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)
-AND (authn.is_project_member(project_id, authn.current_user_id(), NULL)
-	OR user_id = authn.current_user_id())]]> </expression>
+<policy name="project_members_organization_policy" table="tenant.project_members" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)]]> </expression>
 </policy>
 
-<policy name="project_members_insert_policy" table="tenant.project_members" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="check-exp"> <![CDATA[authn.is_project_in_organization(project_id)
-AND (deleted IS NOT NULL OR authn.is_user_in_organization(user_id))
-AND (
-    authn.is_project_member(project_id, authn.current_user_id(), 'admin')
-    OR NOT tenant.project_has_members(project_id)
-)]]> </expression>
-</policy>
-
-<policy name="project_members_update_policy" table="tenant.project_members" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)
-AND authn.is_project_member(project_id, authn.current_user_id(), 'admin')]]> </expression>
-</policy>
-
-<policy name="projects_select_policy" table="tenant.projects" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+<policy name="projects_organization_policy" table="tenant.projects" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
-</policy>
-
-<policy name="projects_insert_policy" table="tenant.projects" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="check-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
-</policy>
-
-<policy name="projects_update_policy" table="tenant.projects" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)
-AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expression>
-</policy>
-
-<policy name="projects_delete_policy" table="tenant.projects" command="DELETE" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)
-AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expression>
 </policy>
 
 <policy name="namespaces_organization_policy" table="tenant.namespaces" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)]]> </expression>
 </policy>
 
-<policy name="organizations_select_policy" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+<policy name="organizations_organization_policy" table="tenant.organizations" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<policy name="organizations_user_select_policy" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[authn.is_organization_member(id)]]> </expression>
 </policy>
 
@@ -1562,15 +1455,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<policy name="organizations_users_select_policy" table="tenant.organizations_users" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
-</policy>
-
-<policy name="organizations_users_insert_policy" table="tenant.organizations_users" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
-</policy>
-
-<policy name="organizations_users_update_policy" table="tenant.organizations_users" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+<policy name="organizations_users_organization_policy" table="tenant.organizations_users" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 </policy>
 
