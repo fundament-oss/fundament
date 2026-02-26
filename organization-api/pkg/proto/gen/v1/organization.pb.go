@@ -29,10 +29,12 @@ type Organization struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Organization ID (UUID)
 	Id string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	// Organization name
+	// Organization name (immutable, machine-readable identifier)
 	Name string `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
+	// Organization display name (human-readable label)
+	DisplayName string `protobuf:"bytes,30,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// Creation timestamp (RFC3339)
-	Created       *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created,proto3" json:"created,omitempty"`
+	Created       *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created,proto3" json:"created,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -77,6 +79,13 @@ func (x *Organization) GetId() string {
 func (x *Organization) GetName() string {
 	if x != nil {
 		return x.Name
+	}
+	return ""
+}
+
+func (x *Organization) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
 	}
 	return ""
 }
@@ -185,8 +194,8 @@ type UpdateOrganizationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// ID of the organization to update
 	Id string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	// New name for the organization
-	Name          string `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
+	// New display name for the organization
+	DisplayName   string `protobuf:"bytes,20,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -228,9 +237,9 @@ func (x *UpdateOrganizationRequest) GetId() string {
 	return ""
 }
 
-func (x *UpdateOrganizationRequest) GetName() string {
+func (x *UpdateOrganizationRequest) GetDisplayName() string {
 	if x != nil {
-		return x.Name
+		return x.DisplayName
 	}
 	return ""
 }
@@ -322,23 +331,24 @@ var File_v1_organization_proto protoreflect.FileDescriptor
 
 const file_v1_organization_proto_rawDesc = "" +
 	"\n" +
-	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"h\n" +
+	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8b\x01\n" +
 	"\fOrganization\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x124\n" +
-	"\acreated\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"2\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x1e \x01(\tR\vdisplayName\x124\n" +
+	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"2\n" +
 	"\x16GetOrganizationRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\\\n" +
 	"\x17GetOrganizationResponse\x12A\n" +
 	"\forganization\x18\n" +
-	" \x01(\v2\x1d.organization.v1.OrganizationR\forganization\"U\n" +
+	" \x01(\v2\x1d.organization.v1.OrganizationR\forganization\"d\n" +
 	"\x19UpdateOrganizationRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1e\n" +
-	"\x04name\x18\x14 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\"\x1a\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12-\n" +
+	"\fdisplay_name\x18\x14 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\vdisplayName\"\x1a\n" +
 	"\x18ListOrganizationsRequest\"`\n" +
 	"\x19ListOrganizationsResponse\x12C\n" +
 	"\rorganizations\x18\n" +

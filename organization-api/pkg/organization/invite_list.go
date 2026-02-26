@@ -30,11 +30,11 @@ func (s *Server) ListInvitations(
 	invitations := make([]*organizationv1.Invitation, 0, len(rows))
 	for i := range rows {
 		invitations = append(invitations, &organizationv1.Invitation{
-			Id:               rows[i].ID.String(),
-			OrganizationId:   rows[i].OrganizationID.String(),
-			OrganizationName: rows[i].Name,
-			Permission:       string(rows[i].Permission),
-			Created:          timestamppb.New(rows[i].Created.Time),
+			Id:                      rows[i].ID.String(),
+			OrganizationId:          rows[i].OrganizationID.String(),
+			OrganizationDisplayName: rows[i].DisplayName,
+			Permission:              string(rows[i].Permission),
+			Created:                 timestamppb.New(rows[i].Created.Time),
 		})
 	}
 

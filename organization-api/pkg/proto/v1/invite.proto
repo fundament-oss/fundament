@@ -50,7 +50,7 @@ message ListInvitationsResponse {
 message Invitation {
   string id = 10;
   string organization_id = 20;
-  string organization_name = 30;
+  string organization_display_name = 30;
   string permission = 40;
   google.protobuf.Timestamp created = 50;
 }

@@ -32,8 +32,9 @@ func (s *Server) ListOrganizations(
 
 func toOrg(org db.OrganizationListRow) *organizationv1.Organization {
 	return &organizationv1.Organization{
-		Id:      org.ID.String(),
-		Name:    org.Name,
-		Created: timestamppb.New(org.Created.Time),
+		Id:          org.ID.String(),
+		Name:        org.Name,
+		DisplayName: org.DisplayName,
+		Created:     timestamppb.New(org.Created.Time),
 	}
 }

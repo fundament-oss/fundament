@@ -206,14 +206,14 @@ func (x *ListInvitationsResponse) GetInvitations() []*Invitation {
 
 // Invitation represents a pending organization invitation
 type Invitation struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Id               string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	OrganizationId   string                 `protobuf:"bytes,20,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	OrganizationName string                 `protobuf:"bytes,30,opt,name=organization_name,json=organizationName,proto3" json:"organization_name,omitempty"`
-	Permission       string                 `protobuf:"bytes,40,opt,name=permission,proto3" json:"permission,omitempty"`
-	Created          *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=created,proto3" json:"created,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	Id                      string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	OrganizationId          string                 `protobuf:"bytes,20,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	OrganizationDisplayName string                 `protobuf:"bytes,30,opt,name=organization_display_name,json=organizationDisplayName,proto3" json:"organization_display_name,omitempty"`
+	Permission              string                 `protobuf:"bytes,40,opt,name=permission,proto3" json:"permission,omitempty"`
+	Created                 *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=created,proto3" json:"created,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *Invitation) Reset() {
@@ -260,9 +260,9 @@ func (x *Invitation) GetOrganizationId() string {
 	return ""
 }
 
-func (x *Invitation) GetOrganizationName() string {
+func (x *Invitation) GetOrganizationDisplayName() string {
 	if x != nil {
-		return x.OrganizationName
+		return x.OrganizationDisplayName
 	}
 	return ""
 }
@@ -462,13 +462,13 @@ const file_v1_invite_proto_rawDesc = "" +
 	"\x16ListInvitationsRequest\"X\n" +
 	"\x17ListInvitationsResponse\x12=\n" +
 	"\vinvitations\x18\n" +
-	" \x03(\v2\x1b.organization.v1.InvitationR\vinvitations\"\xc8\x01\n" +
+	" \x03(\v2\x1b.organization.v1.InvitationR\vinvitations\"\xd7\x01\n" +
 	"\n" +
 	"Invitation\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12'\n" +
-	"\x0forganization_id\x18\x14 \x01(\tR\x0eorganizationId\x12+\n" +
-	"\x11organization_name\x18\x1e \x01(\tR\x10organizationName\x12\x1e\n" +
+	"\x0forganization_id\x18\x14 \x01(\tR\x0eorganizationId\x12:\n" +
+	"\x19organization_display_name\x18\x1e \x01(\tR\x17organizationDisplayName\x12\x1e\n" +
 	"\n" +
 	"permission\x18( \x01(\tR\n" +
 	"permission\x124\n" +

@@ -55,25 +55,32 @@ func (q *Queries) APIKeyGetByHash(ctx context.Context, arg APIKeyGetByHashParams
 }
 
 const organizationCreate = `-- name: OrganizationCreate :one
-INSERT INTO tenant.organizations (name)
-VALUES ($1)
-RETURNING id, name, created
+INSERT INTO tenant.organizations (name, display_name)
+VALUES ($1, $2)
+RETURNING id, name, display_name, created
 `
 
 type OrganizationCreateParams struct {
-	Name string
+	Name        string
+	DisplayName string
 }
 
 type OrganizationCreateRow struct {
-	ID      uuid.UUID
-	Name    string
-	Created pgtype.Timestamptz
+	ID          uuid.UUID
+	Name        string
+	DisplayName string
+	Created     pgtype.Timestamptz
 }
 
 func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreateParams) (OrganizationCreateRow, error) {
-	row := q.db.QueryRow(ctx, organizationCreate, arg.Name)
+	row := q.db.QueryRow(ctx, organizationCreate, arg.Name, arg.DisplayName)
 	var i OrganizationCreateRow
-	err := row.Scan(&i.ID, &i.Name, &i.Created)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.DisplayName,
+		&i.Created,
+	)
 	return i, err
 }
 
