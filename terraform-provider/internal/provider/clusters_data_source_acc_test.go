@@ -7,8 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-// TestAccClustersDataSource tests the fundament_clusters data source against a real API.
-// Set TF_ACC=1 and configure FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN to run.
 func TestAccClustersDataSource(t *testing.T) {
 	// Skip if not running acceptance tests
 	if os.Getenv("TF_ACC") == "" {
@@ -19,8 +17,8 @@ func TestAccClustersDataSource(t *testing.T) {
 	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
 		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
 	}
-	if os.Getenv("FUNDAMENT_TOKEN") == "" {
-		t.Fatal("FUNDAMENT_TOKEN must be set for acceptance tests")
+	if os.Getenv("FUNDAMENT_API_KEY") == "" {
+		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -41,7 +39,7 @@ func TestAccClustersDataSource(t *testing.T) {
 
 const testAccClustersDataSourceConfig = `
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN from environment
+  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_API_KEY from environment
 }
 
 data "fundament_clusters" "test" {}
@@ -58,8 +56,8 @@ func TestAccClustersDataSourceWithProjectFilter(t *testing.T) {
 	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
 		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
 	}
-	if os.Getenv("FUNDAMENT_TOKEN") == "" {
-		t.Fatal("FUNDAMENT_TOKEN must be set for acceptance tests")
+	if os.Getenv("FUNDAMENT_API_KEY") == "" {
+		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
 	}
 
 	projectID := os.Getenv("FUNDAMENT_TEST_PROJECT_ID")
@@ -85,7 +83,7 @@ func TestAccClustersDataSourceWithProjectFilter(t *testing.T) {
 func testAccClustersDataSourceConfigWithProject(projectID string) string {
 	return `
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN from environment
+  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_API_KEY from environment
 }
 
 data "fundament_clusters" "by_project" {

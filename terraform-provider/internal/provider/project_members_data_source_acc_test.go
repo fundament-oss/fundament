@@ -8,8 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-// TestAccProjectMembersDataSource tests the fundament_project_members data source against a real API.
-// Set TF_ACC=1 and configure FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN or FUNDAMENT_API_KEY to run.
 func TestAccProjectMembersDataSource(t *testing.T) {
 	// Skip if not running acceptance tests
 	if os.Getenv("TF_ACC") == "" {
@@ -20,8 +18,8 @@ func TestAccProjectMembersDataSource(t *testing.T) {
 	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
 		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
 	}
-	if os.Getenv("FUNDAMENT_TOKEN") == "" && os.Getenv("FUNDAMENT_API_KEY") == "" {
-		t.Fatal("FUNDAMENT_TOKEN or FUNDAMENT_API_KEY must be set for acceptance tests")
+	if os.Getenv("FUNDAMENT_API_KEY") == "" {
+		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
 	}
 
 	userID := os.Getenv("FUNDAMENT_TEST_USER_ID")
@@ -46,7 +44,7 @@ func TestAccProjectMembersDataSource(t *testing.T) {
 func testAccProjectMembersDataSourceConfig(userID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN or FUNDAMENT_API_KEY from environment
+  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_API_KEY from environment
 }
 
 resource "fundament_project" "test" {

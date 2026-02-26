@@ -16,8 +16,8 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
 		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
 	}
-	if os.Getenv("FUNDAMENT_TOKEN") == "" {
-		t.Fatal("FUNDAMENT_TOKEN must be set for acceptance tests")
+	if os.Getenv("FUNDAMENT_API_KEY") == "" {
+		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
 	}
 
 	testEmail := os.Getenv("FUNDAMENT_TEST_MEMBER_EMAIL")
@@ -64,7 +64,7 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 func testAccOrganizationMemberResourceConfig(email, permission string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN from environment
+  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_API_KEY from environment
 }
 
 resource "fundament_organization_member" "test" {
