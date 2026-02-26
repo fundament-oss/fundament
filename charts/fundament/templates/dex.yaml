@@ -1,11 +1,11 @@
 {{- if $.Values.dex.enabled }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $.Release.Name }}-dex
+  name: dex
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: dex
+    {{- include "fundament.labels" (dict "root" $ "name" "dex" "component" "backend") | nindent 4 }}
 data:
   config.yaml: |
     issuer: {{ $.Values.dex.issuer }}
@@ -26,25 +26,25 @@ data:
     staticPasswords:
       {{- toYaml $.Values.dex.staticPasswords | nindent 6 }}
     {{- end }}
+
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $.Release.Name }}-dex
+  name: dex
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: dex
+    {{- include "fundament.labels" (dict "root" $ "name" "dex" "component" "backend") | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/component: dex
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "dex") | nindent 6 }}
   template:
     metadata:
       annotations:
         checksum/config: {{ $.Values.dex.issuer | sha256sum }}
       labels:
-        app.kubernetes.io/component: dex
+        {{- include "fundament.labels" (dict "root" $ "name" "dex" "component" "backend") | nindent 8 }}
     spec:
       containers:
         - name: dex
@@ -63,15 +63,15 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ $.Release.Name }}-dex
+            name: dex
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $.Release.Name }}-dex
+  name: dex
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: dex
+    {{- include "fundament.labels" (dict "root" $ "name" "dex" "component" "backend") | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
@@ -82,16 +82,16 @@ spec:
       targetPort: http
       name: http-alt
   selector:
-    app.kubernetes.io/component: dex
----
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "dex") | nindent 4 }}
+
 {{- if $.Values.ingress.enabled }}
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ $.Release.Name }}-dex
+  name: dex
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: dex
+    {{- include "fundament.labels" (dict "root" $ "name" "dex" "component" "backend") | nindent 4 }}
   {{- if $.Values.ingress.tls.clusterIssuer }}
   annotations:
     cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
@@ -102,7 +102,7 @@ spec:
   tls:
     - hosts:
         - dex.{{ $.Values.ingress.domain }}
-      secretName: {{ $.Release.Name }}-dex-tls
+      secretName: dex-tls
   {{- end }}
   rules:
     - host: dex.{{ $.Values.ingress.domain }}
@@ -112,8 +112,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ $.Release.Name }}-dex
+                name: dex
                 port:
                   name: http
 {{- end }}
+
 {{- end }}

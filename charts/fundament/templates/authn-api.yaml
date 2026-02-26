@@ -1,20 +1,20 @@
 {{- if $.Values.authnApi.enabled }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $.Release.Name }}-authn-api
+  name: authn-api
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: authn-api
+    {{- include "fundament.labels" (dict "root" $ "name" "authn-api" "component" "backend") | nindent 4 }}
 spec:
   replicas: {{ $.Values.authnApi.replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: authn-api
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "authn-api") | nindent 6 }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: authn-api
+        {{- include "fundament.labels" (dict "root" $ "name" "authn-api" "component" "backend") | nindent 8 }}
     spec:
       {{- if .Values.hostAliases }}
       hostAliases:
@@ -30,7 +30,7 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ $.Release.Name }}-db-fun-authn-api
+                  name: db-fun-authn-api
                   key: uri
             {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
             - name: OIDC_ISSUER
@@ -51,14 +51,14 @@ spec:
               value: {{ .Values.authnApi.logLevel }}
             - name: CORS_ALLOWED_ORIGINS
               value: {{ .Values.externalUrls.corsAllowedOrigins | default .Values.externalUrls.console }}
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $.Release.Name }}-authn-api
+  name: authn-api
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: authn-api
+    {{- include "fundament.labels" (dict "root" $ "name" "authn-api" "component" "backend") | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
@@ -66,16 +66,16 @@ spec:
       targetPort: http
       name: http
   selector:
-    app.kubernetes.io/component: authn-api
----
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "authn-api") | nindent 4 }}
+
 {{- if $.Values.ingress.enabled }}
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ $.Release.Name }}-authn-api
+  name: authn-api
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: authn-api
+    {{- include "fundament.labels" (dict "root" $ "name" "authn-api" "component" "backend") | nindent 4 }}
   annotations:
     nginx.ingress.kubernetes.io/enable-cors: "false"
     {{- if $.Values.ingress.tls.clusterIssuer }}
@@ -87,7 +87,7 @@ spec:
   tls:
     - hosts:
         - authn.{{ $.Values.ingress.domain }}
-      secretName: {{ $.Release.Name }}-authn-api-tls
+      secretName: authn-api-tls
   {{- end }}
   rules:
     - host: authn.{{ $.Values.ingress.domain }}
@@ -97,8 +97,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ $.Release.Name }}-authn-api
+                name: authn-api
                 port:
                   name: http
 {{- end }}
+
 {{- end }}

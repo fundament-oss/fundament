@@ -36,7 +36,7 @@ docsFrontend:
 dex:
   enabled: true
   issuer: https://dex.apps.digilab.network
-  discoveryUrl: http://fundament-dex:5556
+  discoveryUrl: http://dex:5556
   staticClients:
     - id: fundament
       name: Fundament
@@ -90,7 +90,7 @@ openfga:
   apiPort: 18080
   playground:
     # To use the playground, you must port-forward both the API and playground ports to localhost:
-    #   kubectl port-forward svc/fundament-openfga 18080:18080 3000:3000
+    #   kubectl port-forward svc/openfga 18080:18080 3000:3000
     # Then access the playground at http://localhost:3000/playground
     # This is due to CSP restrictions in the embedded play.fga.dev iframe.
     # See: https://github.com/openfga/openfga/issues/1174

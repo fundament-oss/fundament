@@ -1,10 +1,11 @@
 {{- if $.Values.openfga.enabled }}
+
 {{- if not $.Values.db.enabled }}
 {{- fail "OpenFGA requires the database to be enabled. Set db.enabled=true or disable OpenFGA with openfga.enabled=false" }}
 {{- end }}
 
 {{- /* Generate or reuse a stable password for the OpenFGA database user */ -}}
-{{- $openfgaSecretName := printf "%s-db-fun-openfga" $.Release.Name }}
+{{- $openfgaSecretName := "db-fun-openfga" }}
 {{- $openfgaExisting := lookup "v1" "Secret" $.Release.Namespace $openfgaSecretName }}
 {{- $openfgaPassword := "" }}
 {{- if $openfgaExisting }}
@@ -12,95 +13,96 @@
 {{- else }}
 {{- $openfgaPassword = randAlphaNum 32 }}
 {{- end }}
+
+---
 apiVersion: v1
 kind: Secret
 metadata:
   name: {{ $openfgaSecretName }}
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: openfga
+    {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 4 }}
 type: kubernetes.io/basic-auth
 stringData:
   username: fun_openfga
   password: {{ $openfgaPassword | quote }}
   uri: postgresql://fun_openfga:{{ $openfgaPassword }}@{{ include "fundament.db.host" . }}:5432/openfga
+
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: Database
 metadata:
-  name: {{ $.Release.Name }}-openfga-db
+  name: openfga-db
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: openfga
+    {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 4 }}
 spec:
   name: openfga
   owner: fun_openfga
   cluster:
     name: {{ include "fundament.db.name" . }}
+
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $.Release.Name }}-openfga-model
+  name: openfga-model
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: openfga
+    {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 4 }}
 data:
   model.fga: |
 {{- .Files.Get "openfga/model.fga" | nindent 4 }}
+
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ $.Release.Name }}-openfga-setup
+  name: openfga-setup
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: openfga
+    {{- include "fundament.labels" (dict "root" $ "name" "openfga-setup" "component" "backend") | nindent 4 }}
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ $.Release.Name }}-openfga-setup
+  name: openfga-setup
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: openfga
+    {{- include "fundament.labels" (dict "root" $ "name" "openfga-setup" "component" "backend") | nindent 4 }}
 rules:
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "create", "update", "patch"]
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ $.Release.Name }}-openfga-setup
+  name: openfga-setup
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: openfga
+    {{- include "fundament.labels" (dict "root" $ "name" "openfga-setup" "component" "backend") | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ $.Release.Name }}-openfga-setup
+  name: openfga-setup
 subjects:
   - kind: ServiceAccount
-    name: {{ $.Release.Name }}-openfga-setup
+    name: openfga-setup
     namespace: {{ $.Release.Namespace }}
+
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $.Release.Name }}-openfga
+  name: openfga
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: openfga
+    {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 4 }}
 spec:
   replicas: {{ $.Values.openfga.replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: openfga
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "openfga") | nindent 6 }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: openfga
+        {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 8 }}
     spec:
       initContainers:
         - name: wait-for-db
@@ -176,14 +178,14 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $.Release.Name }}-openfga
+  name: openfga
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: openfga
+    {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
@@ -199,5 +201,6 @@ spec:
       name: playground
     {{- end }}
   selector:
-    app.kubernetes.io/component: openfga
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "openfga") | nindent 4 }}
+
 {{- end }}

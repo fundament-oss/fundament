@@ -56,7 +56,9 @@ build:
 
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
+  statusCheck: true
   statusCheckDeadlineSeconds: 300
+  tolerateFailuresUntilDeadline: true
   helm:
     releases:
       - name: fundament

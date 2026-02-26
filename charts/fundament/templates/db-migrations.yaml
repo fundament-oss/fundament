@@ -1,18 +1,18 @@
 {{- if $.Values.db.enabled }}
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ $.Release.Name }}-db-migrations
+  name: db-migrations
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: db-migrations
+    {{- include "fundament.labels" (dict "root" $ "name" "db-migrations" "component" "database") | nindent 4 }}
 spec:
   backoffLimit: 3
   ttlSecondsAfterFinished: 300
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: db-migrations
+        {{- include "fundament.labels" (dict "root" $ "name" "db-migrations" "component" "database") | nindent 8 }}
     spec:
       restartPolicy: OnFailure
       initContainers:
