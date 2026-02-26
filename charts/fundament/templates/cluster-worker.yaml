@@ -3,19 +3,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $.Release.Name }}-cluster-worker
+  name: cluster-worker
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: cluster-worker
+    {{- include "fundament.labels" (dict "root" $ "name" "cluster-worker" "component" "worker") | nindent 4 }}
 spec:
   replicas: {{ $.Values.clusterWorker.replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: cluster-worker
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "cluster-worker") | nindent 6 }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: cluster-worker
+        {{- include "fundament.labels" (dict "root" $ "name" "cluster-worker" "component" "worker") | nindent 8 }}
     spec:
       containers:
         - name: cluster-worker
@@ -27,7 +26,7 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ $.Release.Name }}-db-fun-cluster-worker
+                  name: db-fun-cluster-worker
                   key: uri
             - name: GARDENER_MODE
               value: {{ $.Values.clusterWorker.gardenerMode }}

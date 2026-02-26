@@ -3,21 +3,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $.Release.Name }}-organization-api
+  name: organization-api
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: organization-api
+    {{- include "fundament.labels" (dict "root" $ "name" "organization-api" "component" "backend") | nindent 4 }}
   annotations:
     reloader.stakater.com/auto: "true"
 spec:
   replicas: {{ $.Values.organizationApi.replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: organization-api
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "organization-api") | nindent 6 }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: organization-api
+        {{- include "fundament.labels" (dict "root" $ "name" "organization-api" "component" "backend") | nindent 8 }}
     spec:
       containers:
         - name: organization-api
@@ -29,7 +28,7 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ $.Release.Name }}-db-fun-fundament-api
+                  name: db-fun-fundament-api
                   key: uri
             {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
             - name: LOG_LEVEL
@@ -40,16 +39,16 @@ spec:
             {{- end }}
             {{- if $.Values.openfga.enabled }}
             - name: OPENFGA_API_URL
-              value: http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.apiPort | default 8080 }}
+              value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
             - name: OPENFGA_STORE_ID
               valueFrom:
                 configMapKeyRef:
-                  name: {{ $.Release.Name }}-openfga-config
+                  name: openfga-config
                   key: store-id
             - name: OPENFGA_AUTHORIZATION_MODEL_ID
               valueFrom:
                 configMapKeyRef:
-                  name: {{ $.Release.Name }}-openfga-config
+                  name: openfga-config
                   key: authorization-model-id
             {{- end }}
 
@@ -57,10 +56,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $.Release.Name }}-organization-api
+  name: organization-api
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: organization-api
+    {{- include "fundament.labels" (dict "root" $ "name" "organization-api" "component" "backend") | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
@@ -68,17 +66,16 @@ spec:
       targetPort: http
       name: http
   selector:
-    app.kubernetes.io/component: organization-api
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "organization-api") | nindent 4 }}
 
 {{- if $.Values.ingress.enabled }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ $.Release.Name }}-organization-api
+  name: organization-api
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: organization-api
+    {{- include "fundament.labels" (dict "root" $ "name" "organization-api" "component" "backend") | nindent 4 }}
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
     {{- if $.Values.ingress.tls.clusterIssuer }}
@@ -90,7 +87,7 @@ spec:
   tls:
     - hosts:
         - organization.{{ $.Values.ingress.domain }}
-      secretName: {{ $.Release.Name }}-organization-api-tls
+      secretName: organization-api-tls
   {{- end }}
   rules:
     - host: organization.{{ $.Values.ingress.domain }}
@@ -100,7 +97,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ $.Release.Name }}-organization-api
+                name: organization-api
                 port:
                   name: http
 {{- end }}
