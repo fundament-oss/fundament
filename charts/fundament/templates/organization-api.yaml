@@ -1,4 +1,5 @@
 {{- if $.Values.organizationApi.enabled }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -53,6 +54,7 @@ spec:
                   name: {{ $.Release.Name }}-openfga-config
                   key: authorization-model-id
             {{- end }}
+
 ---
 apiVersion: v1
 kind: Service
@@ -69,8 +71,9 @@ spec:
       name: http
   selector:
     app.kubernetes.io/component: organization-api
----
+
 {{- if $.Values.ingress.enabled }}
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -103,4 +106,5 @@ spec:
                 port:
                   name: http
 {{- end }}
+
 {{- end }}

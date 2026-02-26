@@ -1,4 +1,5 @@
 {{- if $.Values.dex.enabled }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -26,6 +27,7 @@ data:
     staticPasswords:
       {{- toYaml $.Values.dex.staticPasswords | nindent 6 }}
     {{- end }}
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -64,6 +66,7 @@ spec:
         - name: config
           configMap:
             name: {{ $.Release.Name }}-dex
+
 ---
 apiVersion: v1
 kind: Service
@@ -83,8 +86,9 @@ spec:
       name: http-alt
   selector:
     app.kubernetes.io/component: dex
----
+
 {{- if $.Values.ingress.enabled }}
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -116,4 +120,5 @@ spec:
                 port:
                   name: http
 {{- end }}
+
 {{- end }}
