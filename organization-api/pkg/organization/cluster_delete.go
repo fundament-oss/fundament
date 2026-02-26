@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -16,7 +15,7 @@ import (
 func (s *Server) DeleteCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteClusterRequest],
-) (*connect.Response[emptypb.Empty], error) {
+) (*connect.Response[organizationv1.DeleteClusterResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Cluster(clusterID)); err != nil {
@@ -34,5 +33,5 @@ func (s *Server) DeleteCluster(
 
 	s.logger.InfoContext(ctx, "cluster deleted", "cluster_id", clusterID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.DeleteClusterResponse_builder{}.Build()), nil
 }

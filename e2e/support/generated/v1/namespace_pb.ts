@@ -6,15 +6,15 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/namespace.proto.
  */
 export const file_v1_namespace: GenFile = /*@__PURE__*/
-  fileDesc("ChJ2MS9uYW1lc3BhY2UucHJvdG8SD29yZ2FuaXphdGlvbi52MSI8ChxMaXN0Q2x1c3Rlck5hbWVzcGFjZXNSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBIk8KHUxpc3RDbHVzdGVyTmFtZXNwYWNlc1Jlc3BvbnNlEi4KCm5hbWVzcGFjZXMYCiADKAsyGi5vcmdhbml6YXRpb24udjEuTmFtZXNwYWNlInoKCU5hbWVzcGFjZRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhIKCnByb2plY3RfaWQYHiABKAkSEgoKY2x1c3Rlcl9pZBgjIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCI1ChNHZXROYW1lc3BhY2VSZXF1ZXN0Eh4KDG5hbWVzcGFjZV9pZBgKIAEoCUIIukgFcgOwAQEiRQoUR2V0TmFtZXNwYWNlUmVzcG9uc2USLQoJbmFtZXNwYWNlGAogASgLMhoub3JnYW5pemF0aW9uLnYxLk5hbWVzcGFjZSKxAQoWQ3JlYXRlTmFtZXNwYWNlUmVxdWVzdBIcCgpwcm9qZWN0X2lkGAogASgJQgi6SAVyA7ABARJ5CgRuYW1lGB4gASgJQmu6SGi6AWEKDGRuczExMjNsYWJlbBIebXVzdCBiZSBhIHZhbGlkIEROUy0xMTIzIGxhYmVsGjF0aGlzLm1hdGNoZXMoJ15bYS16XShbLWEtejAtOV17MCw2MX1bYS16MC05XSk/JCcpcgIYPyIvChdDcmVhdGVOYW1lc3BhY2VSZXNwb25zZRIUCgxuYW1lc3BhY2VfaWQYCiABKAkiOAoWRGVsZXRlTmFtZXNwYWNlUmVxdWVzdBIeCgxuYW1lc3BhY2VfaWQYCiABKAlCCLpIBXIDsAEBIswCCiNHZXROYW1lc3BhY2VCeVByb2plY3RBbmROYW1lUmVxdWVzdBIgCgxjbHVzdGVyX25hbWUYCiABKAlCCrpIB3IFEAEY/wESfQoMcHJvamVjdF9uYW1lGBQgASgJQme6SGS6AWEKDGRuczExMjNsYWJlbBIebXVzdCBiZSBhIHZhbGlkIEROUy0xMTIzIGxhYmVsGjF0aGlzLm1hdGNoZXMoJ15bYS16XShbLWEtejAtOV17MCw2MX1bYS16MC05XSk/JCcpEoMBCg5uYW1lc3BhY2VfbmFtZRgeIAEoCUJrukhougFhCgxkbnMxMTIzbGFiZWwSHm11c3QgYmUgYSB2YWxpZCBETlMtMTEyMyBsYWJlbBoxdGhpcy5tYXRjaGVzKCdeW2Etel0oWy1hLXowLTldezAsNjF9W2EtejAtOV0pPyQnKXICGD8iVQokR2V0TmFtZXNwYWNlQnlQcm9qZWN0QW5kTmFtZVJlc3BvbnNlEi0KCW5hbWVzcGFjZRgKIAEoCzIaLm9yZ2FuaXphdGlvbi52MS5OYW1lc3BhY2UiPAocTGlzdFByb2plY3ROYW1lc3BhY2VzUmVxdWVzdBIcCgpwcm9qZWN0X2lkGAogASgJQgi6SAVyA7ABASJPCh1MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXNwb25zZRIuCgpuYW1lc3BhY2VzGAogAygLMhoub3JnYW5pemF0aW9uLnYxLk5hbWVzcGFjZTKnBQoQTmFtZXNwYWNlU2VydmljZRJ2ChVMaXN0Q2x1c3Rlck5hbWVzcGFjZXMSLS5vcmdhbml6YXRpb24udjEuTGlzdENsdXN0ZXJOYW1lc3BhY2VzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5MaXN0Q2x1c3Rlck5hbWVzcGFjZXNSZXNwb25zZRJ2ChVMaXN0UHJvamVjdE5hbWVzcGFjZXMSLS5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3ROYW1lc3BhY2VzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXNwb25zZRJbCgxHZXROYW1lc3BhY2USJC5vcmdhbml6YXRpb24udjEuR2V0TmFtZXNwYWNlUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5HZXROYW1lc3BhY2VSZXNwb25zZRKLAQocR2V0TmFtZXNwYWNlQnlQcm9qZWN0QW5kTmFtZRI0Lm9yZ2FuaXphdGlvbi52MS5HZXROYW1lc3BhY2VCeVByb2plY3RBbmROYW1lUmVxdWVzdBo1Lm9yZ2FuaXphdGlvbi52MS5HZXROYW1lc3BhY2VCeVByb2plY3RBbmROYW1lUmVzcG9uc2USZAoPQ3JlYXRlTmFtZXNwYWNlEicub3JnYW5pemF0aW9uLnYxLkNyZWF0ZU5hbWVzcGFjZVJlcXVlc3QaKC5vcmdhbml6YXRpb24udjEuQ3JlYXRlTmFtZXNwYWNlUmVzcG9uc2USUgoPRGVsZXRlTmFtZXNwYWNlEicub3JnYW5pemF0aW9uLnYxLkRlbGV0ZU5hbWVzcGFjZVJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCX1pTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("ChJ2MS9uYW1lc3BhY2UucHJvdG8SD29yZ2FuaXphdGlvbi52MSI8ChxMaXN0Q2x1c3Rlck5hbWVzcGFjZXNSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBIk8KHUxpc3RDbHVzdGVyTmFtZXNwYWNlc1Jlc3BvbnNlEi4KCm5hbWVzcGFjZXMYCiADKAsyGi5vcmdhbml6YXRpb24udjEuTmFtZXNwYWNlInoKCU5hbWVzcGFjZRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhIKCnByb2plY3RfaWQYHiABKAkSEgoKY2x1c3Rlcl9pZBgjIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCI1ChNHZXROYW1lc3BhY2VSZXF1ZXN0Eh4KDG5hbWVzcGFjZV9pZBgKIAEoCUIIukgFcgOwAQEiRQoUR2V0TmFtZXNwYWNlUmVzcG9uc2USLQoJbmFtZXNwYWNlGAogASgLMhoub3JnYW5pemF0aW9uLnYxLk5hbWVzcGFjZSKxAQoWQ3JlYXRlTmFtZXNwYWNlUmVxdWVzdBIcCgpwcm9qZWN0X2lkGAogASgJQgi6SAVyA7ABARJ5CgRuYW1lGB4gASgJQmu6SGi6AWEKDGRuczExMjNsYWJlbBIebXVzdCBiZSBhIHZhbGlkIEROUy0xMTIzIGxhYmVsGjF0aGlzLm1hdGNoZXMoJ15bYS16XShbLWEtejAtOV17MCw2MX1bYS16MC05XSk/JCcpcgIYPyIvChdDcmVhdGVOYW1lc3BhY2VSZXNwb25zZRIUCgxuYW1lc3BhY2VfaWQYCiABKAkiGQoXRGVsZXRlTmFtZXNwYWNlUmVzcG9uc2UiOAoWRGVsZXRlTmFtZXNwYWNlUmVxdWVzdBIeCgxuYW1lc3BhY2VfaWQYCiABKAlCCLpIBXIDsAEBIswCCiNHZXROYW1lc3BhY2VCeVByb2plY3RBbmROYW1lUmVxdWVzdBIgCgxjbHVzdGVyX25hbWUYCiABKAlCCrpIB3IFEAEY/wESfQoMcHJvamVjdF9uYW1lGBQgASgJQme6SGS6AWEKDGRuczExMjNsYWJlbBIebXVzdCBiZSBhIHZhbGlkIEROUy0xMTIzIGxhYmVsGjF0aGlzLm1hdGNoZXMoJ15bYS16XShbLWEtejAtOV17MCw2MX1bYS16MC05XSk/JCcpEoMBCg5uYW1lc3BhY2VfbmFtZRgeIAEoCUJrukhougFhCgxkbnMxMTIzbGFiZWwSHm11c3QgYmUgYSB2YWxpZCBETlMtMTEyMyBsYWJlbBoxdGhpcy5tYXRjaGVzKCdeW2Etel0oWy1hLXowLTldezAsNjF9W2EtejAtOV0pPyQnKXICGD8iVQokR2V0TmFtZXNwYWNlQnlQcm9qZWN0QW5kTmFtZVJlc3BvbnNlEi0KCW5hbWVzcGFjZRgKIAEoCzIaLm9yZ2FuaXphdGlvbi52MS5OYW1lc3BhY2UiPAocTGlzdFByb2plY3ROYW1lc3BhY2VzUmVxdWVzdBIcCgpwcm9qZWN0X2lkGAogASgJQgi6SAVyA7ABASJPCh1MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXNwb25zZRIuCgpuYW1lc3BhY2VzGAogAygLMhoub3JnYW5pemF0aW9uLnYxLk5hbWVzcGFjZTK5BQoQTmFtZXNwYWNlU2VydmljZRJ2ChVMaXN0Q2x1c3Rlck5hbWVzcGFjZXMSLS5vcmdhbml6YXRpb24udjEuTGlzdENsdXN0ZXJOYW1lc3BhY2VzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5MaXN0Q2x1c3Rlck5hbWVzcGFjZXNSZXNwb25zZRJ2ChVMaXN0UHJvamVjdE5hbWVzcGFjZXMSLS5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3ROYW1lc3BhY2VzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE5hbWVzcGFjZXNSZXNwb25zZRJbCgxHZXROYW1lc3BhY2USJC5vcmdhbml6YXRpb24udjEuR2V0TmFtZXNwYWNlUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5HZXROYW1lc3BhY2VSZXNwb25zZRKLAQocR2V0TmFtZXNwYWNlQnlQcm9qZWN0QW5kTmFtZRI0Lm9yZ2FuaXphdGlvbi52MS5HZXROYW1lc3BhY2VCeVByb2plY3RBbmROYW1lUmVxdWVzdBo1Lm9yZ2FuaXphdGlvbi52MS5HZXROYW1lc3BhY2VCeVByb2plY3RBbmROYW1lUmVzcG9uc2USZAoPQ3JlYXRlTmFtZXNwYWNlEicub3JnYW5pemF0aW9uLnYxLkNyZWF0ZU5hbWVzcGFjZVJlcXVlc3QaKC5vcmdhbml6YXRpb24udjEuQ3JlYXRlTmFtZXNwYWNlUmVzcG9uc2USZAoPRGVsZXRlTmFtZXNwYWNlEicub3JnYW5pemF0aW9uLnYxLkRlbGV0ZU5hbWVzcGFjZVJlcXVlc3QaKC5vcmdhbml6YXRpb24udjEuRGVsZXRlTmFtZXNwYWNlUmVzcG9uc2VCX1pTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * List cluster namespaces request
@@ -175,6 +175,21 @@ export const CreateNamespaceResponseSchema: GenMessage<CreateNamespaceResponse> 
   messageDesc(file_v1_namespace, 6);
 
 /**
+ * Delete namespace response
+ *
+ * @generated from message organization.v1.DeleteNamespaceResponse
+ */
+export type DeleteNamespaceResponse = Message<"organization.v1.DeleteNamespaceResponse"> & {
+};
+
+/**
+ * Describes the message organization.v1.DeleteNamespaceResponse.
+ * Use `create(DeleteNamespaceResponseSchema)` to create a new message.
+ */
+export const DeleteNamespaceResponseSchema: GenMessage<DeleteNamespaceResponse> = /*@__PURE__*/
+  messageDesc(file_v1_namespace, 7);
+
+/**
  * Delete namespace request
  *
  * @generated from message organization.v1.DeleteNamespaceRequest
@@ -191,7 +206,7 @@ export type DeleteNamespaceRequest = Message<"organization.v1.DeleteNamespaceReq
  * Use `create(DeleteNamespaceRequestSchema)` to create a new message.
  */
 export const DeleteNamespaceRequestSchema: GenMessage<DeleteNamespaceRequest> = /*@__PURE__*/
-  messageDesc(file_v1_namespace, 7);
+  messageDesc(file_v1_namespace, 8);
 
 /**
  * Get namespace by project and name request
@@ -220,7 +235,7 @@ export type GetNamespaceByProjectAndNameRequest = Message<"organization.v1.GetNa
  * Use `create(GetNamespaceByProjectAndNameRequestSchema)` to create a new message.
  */
 export const GetNamespaceByProjectAndNameRequestSchema: GenMessage<GetNamespaceByProjectAndNameRequest> = /*@__PURE__*/
-  messageDesc(file_v1_namespace, 8);
+  messageDesc(file_v1_namespace, 9);
 
 /**
  * Get namespace by project and name response
@@ -239,7 +254,7 @@ export type GetNamespaceByProjectAndNameResponse = Message<"organization.v1.GetN
  * Use `create(GetNamespaceByProjectAndNameResponseSchema)` to create a new message.
  */
 export const GetNamespaceByProjectAndNameResponseSchema: GenMessage<GetNamespaceByProjectAndNameResponse> = /*@__PURE__*/
-  messageDesc(file_v1_namespace, 9);
+  messageDesc(file_v1_namespace, 10);
 
 /**
  * List project namespaces request
@@ -258,7 +273,7 @@ export type ListProjectNamespacesRequest = Message<"organization.v1.ListProjectN
  * Use `create(ListProjectNamespacesRequestSchema)` to create a new message.
  */
 export const ListProjectNamespacesRequestSchema: GenMessage<ListProjectNamespacesRequest> = /*@__PURE__*/
-  messageDesc(file_v1_namespace, 10);
+  messageDesc(file_v1_namespace, 11);
 
 /**
  * List project namespaces response
@@ -277,7 +292,7 @@ export type ListProjectNamespacesResponse = Message<"organization.v1.ListProject
  * Use `create(ListProjectNamespacesResponseSchema)` to create a new message.
  */
 export const ListProjectNamespacesResponseSchema: GenMessage<ListProjectNamespacesResponse> = /*@__PURE__*/
-  messageDesc(file_v1_namespace, 11);
+  messageDesc(file_v1_namespace, 12);
 
 /**
  * NamespaceService manages namespaces within clusters and projects
@@ -343,7 +358,7 @@ export const NamespaceService: GenService<{
   deleteNamespace: {
     methodKind: "unary";
     input: typeof DeleteNamespaceRequestSchema;
-    output: typeof EmptySchema;
+    output: typeof DeleteNamespaceResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_namespace, 0);

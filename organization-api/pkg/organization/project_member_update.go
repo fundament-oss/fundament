@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -20,7 +19,7 @@ import (
 func (s *Server) UpdateProjectMemberRole(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateProjectMemberRoleRequest],
-) (*connect.Response[emptypb.Empty], error) {
+) (*connect.Response[organizationv1.UpdateProjectMemberRoleResponse], error) {
 	memberID := uuid.MustParse(req.Msg.GetMemberId())
 
 	role := projectMemberRoleToDB(req.Msg.GetRole())
@@ -55,5 +54,5 @@ func (s *Server) UpdateProjectMemberRole(
 		"role", role,
 	)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.UpdateProjectMemberRoleResponse_builder{}.Build()), nil
 }

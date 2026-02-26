@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -16,7 +15,7 @@ import (
 func (s *Server) DeleteNodePool(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteNodePoolRequest],
-) (*connect.Response[emptypb.Empty], error) {
+) (*connect.Response[organizationv1.DeleteNodePoolResponse], error) {
 	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.NodePool(nodePoolID)); err != nil {
@@ -34,5 +33,5 @@ func (s *Server) DeleteNodePool(
 
 	s.logger.InfoContext(ctx, "node pool deleted", "node_pool_id", nodePoolID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.DeleteNodePoolResponse_builder{}.Build()), nil
 }

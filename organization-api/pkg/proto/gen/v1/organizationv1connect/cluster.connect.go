@@ -9,7 +9,6 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -95,9 +94,9 @@ type ClusterServiceClient interface {
 	// Create a new cluster
 	CreateCluster(context.Context, *connect.Request[v1.CreateClusterRequest]) (*connect.Response[v1.CreateClusterResponse], error)
 	// Update cluster configuration
-	UpdateCluster(context.Context, *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[emptypb.Empty], error)
+	UpdateCluster(context.Context, *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[v1.UpdateClusterResponse], error)
 	// Delete a cluster
-	DeleteCluster(context.Context, *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteCluster(context.Context, *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[v1.DeleteClusterResponse], error)
 	// Get cluster activity log
 	GetClusterActivity(context.Context, *connect.Request[v1.GetClusterActivityRequest]) (*connect.Response[v1.GetClusterActivityResponse], error)
 	// Download kubeconfig for a cluster
@@ -109,15 +108,15 @@ type ClusterServiceClient interface {
 	// Create a node pool in a cluster
 	CreateNodePool(context.Context, *connect.Request[v1.CreateNodePoolRequest]) (*connect.Response[v1.CreateNodePoolResponse], error)
 	// Update a node pool
-	UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[emptypb.Empty], error)
+	UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error)
 	// Delete a node pool
-	DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error)
 	// List installs for a cluster
 	ListInstalls(context.Context, *connect.Request[v1.ListInstallsRequest]) (*connect.Response[v1.ListInstallsResponse], error)
 	// Add an install to a cluster
 	AddInstall(context.Context, *connect.Request[v1.AddInstallRequest]) (*connect.Response[v1.AddInstallResponse], error)
 	// Remove an install from a cluster
-	RemoveInstall(context.Context, *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[emptypb.Empty], error)
+	RemoveInstall(context.Context, *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[v1.RemoveInstallResponse], error)
 }
 
 // NewClusterServiceClient constructs a client for the organization.v1.ClusterService service. By
@@ -155,13 +154,13 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(clusterServiceMethods.ByName("CreateCluster")),
 			connect.WithClientOptions(opts...),
 		),
-		updateCluster: connect.NewClient[v1.UpdateClusterRequest, emptypb.Empty](
+		updateCluster: connect.NewClient[v1.UpdateClusterRequest, v1.UpdateClusterResponse](
 			httpClient,
 			baseURL+ClusterServiceUpdateClusterProcedure,
 			connect.WithSchema(clusterServiceMethods.ByName("UpdateCluster")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteCluster: connect.NewClient[v1.DeleteClusterRequest, emptypb.Empty](
+		deleteCluster: connect.NewClient[v1.DeleteClusterRequest, v1.DeleteClusterResponse](
 			httpClient,
 			baseURL+ClusterServiceDeleteClusterProcedure,
 			connect.WithSchema(clusterServiceMethods.ByName("DeleteCluster")),
@@ -197,13 +196,13 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(clusterServiceMethods.ByName("CreateNodePool")),
 			connect.WithClientOptions(opts...),
 		),
-		updateNodePool: connect.NewClient[v1.UpdateNodePoolRequest, emptypb.Empty](
+		updateNodePool: connect.NewClient[v1.UpdateNodePoolRequest, v1.UpdateNodePoolResponse](
 			httpClient,
 			baseURL+ClusterServiceUpdateNodePoolProcedure,
 			connect.WithSchema(clusterServiceMethods.ByName("UpdateNodePool")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteNodePool: connect.NewClient[v1.DeleteNodePoolRequest, emptypb.Empty](
+		deleteNodePool: connect.NewClient[v1.DeleteNodePoolRequest, v1.DeleteNodePoolResponse](
 			httpClient,
 			baseURL+ClusterServiceDeleteNodePoolProcedure,
 			connect.WithSchema(clusterServiceMethods.ByName("DeleteNodePool")),
@@ -221,7 +220,7 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(clusterServiceMethods.ByName("AddInstall")),
 			connect.WithClientOptions(opts...),
 		),
-		removeInstall: connect.NewClient[v1.RemoveInstallRequest, emptypb.Empty](
+		removeInstall: connect.NewClient[v1.RemoveInstallRequest, v1.RemoveInstallResponse](
 			httpClient,
 			baseURL+ClusterServiceRemoveInstallProcedure,
 			connect.WithSchema(clusterServiceMethods.ByName("RemoveInstall")),
@@ -236,18 +235,18 @@ type clusterServiceClient struct {
 	getCluster         *connect.Client[v1.GetClusterRequest, v1.GetClusterResponse]
 	getClusterByName   *connect.Client[v1.GetClusterByNameRequest, v1.GetClusterResponse]
 	createCluster      *connect.Client[v1.CreateClusterRequest, v1.CreateClusterResponse]
-	updateCluster      *connect.Client[v1.UpdateClusterRequest, emptypb.Empty]
-	deleteCluster      *connect.Client[v1.DeleteClusterRequest, emptypb.Empty]
+	updateCluster      *connect.Client[v1.UpdateClusterRequest, v1.UpdateClusterResponse]
+	deleteCluster      *connect.Client[v1.DeleteClusterRequest, v1.DeleteClusterResponse]
 	getClusterActivity *connect.Client[v1.GetClusterActivityRequest, v1.GetClusterActivityResponse]
 	getKubeconfig      *connect.Client[v1.GetKubeconfigRequest, v1.GetKubeconfigResponse]
 	listNodePools      *connect.Client[v1.ListNodePoolsRequest, v1.ListNodePoolsResponse]
 	getNodePool        *connect.Client[v1.GetNodePoolRequest, v1.GetNodePoolResponse]
 	createNodePool     *connect.Client[v1.CreateNodePoolRequest, v1.CreateNodePoolResponse]
-	updateNodePool     *connect.Client[v1.UpdateNodePoolRequest, emptypb.Empty]
-	deleteNodePool     *connect.Client[v1.DeleteNodePoolRequest, emptypb.Empty]
+	updateNodePool     *connect.Client[v1.UpdateNodePoolRequest, v1.UpdateNodePoolResponse]
+	deleteNodePool     *connect.Client[v1.DeleteNodePoolRequest, v1.DeleteNodePoolResponse]
 	listInstalls       *connect.Client[v1.ListInstallsRequest, v1.ListInstallsResponse]
 	addInstall         *connect.Client[v1.AddInstallRequest, v1.AddInstallResponse]
-	removeInstall      *connect.Client[v1.RemoveInstallRequest, emptypb.Empty]
+	removeInstall      *connect.Client[v1.RemoveInstallRequest, v1.RemoveInstallResponse]
 }
 
 // ListClusters calls organization.v1.ClusterService.ListClusters.
@@ -271,12 +270,12 @@ func (c *clusterServiceClient) CreateCluster(ctx context.Context, req *connect.R
 }
 
 // UpdateCluster calls organization.v1.ClusterService.UpdateCluster.
-func (c *clusterServiceClient) UpdateCluster(ctx context.Context, req *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[emptypb.Empty], error) {
+func (c *clusterServiceClient) UpdateCluster(ctx context.Context, req *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[v1.UpdateClusterResponse], error) {
 	return c.updateCluster.CallUnary(ctx, req)
 }
 
 // DeleteCluster calls organization.v1.ClusterService.DeleteCluster.
-func (c *clusterServiceClient) DeleteCluster(ctx context.Context, req *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[emptypb.Empty], error) {
+func (c *clusterServiceClient) DeleteCluster(ctx context.Context, req *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[v1.DeleteClusterResponse], error) {
 	return c.deleteCluster.CallUnary(ctx, req)
 }
 
@@ -306,12 +305,12 @@ func (c *clusterServiceClient) CreateNodePool(ctx context.Context, req *connect.
 }
 
 // UpdateNodePool calls organization.v1.ClusterService.UpdateNodePool.
-func (c *clusterServiceClient) UpdateNodePool(ctx context.Context, req *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[emptypb.Empty], error) {
+func (c *clusterServiceClient) UpdateNodePool(ctx context.Context, req *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error) {
 	return c.updateNodePool.CallUnary(ctx, req)
 }
 
 // DeleteNodePool calls organization.v1.ClusterService.DeleteNodePool.
-func (c *clusterServiceClient) DeleteNodePool(ctx context.Context, req *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[emptypb.Empty], error) {
+func (c *clusterServiceClient) DeleteNodePool(ctx context.Context, req *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error) {
 	return c.deleteNodePool.CallUnary(ctx, req)
 }
 
@@ -326,7 +325,7 @@ func (c *clusterServiceClient) AddInstall(ctx context.Context, req *connect.Requ
 }
 
 // RemoveInstall calls organization.v1.ClusterService.RemoveInstall.
-func (c *clusterServiceClient) RemoveInstall(ctx context.Context, req *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[emptypb.Empty], error) {
+func (c *clusterServiceClient) RemoveInstall(ctx context.Context, req *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[v1.RemoveInstallResponse], error) {
 	return c.removeInstall.CallUnary(ctx, req)
 }
 
@@ -341,9 +340,9 @@ type ClusterServiceHandler interface {
 	// Create a new cluster
 	CreateCluster(context.Context, *connect.Request[v1.CreateClusterRequest]) (*connect.Response[v1.CreateClusterResponse], error)
 	// Update cluster configuration
-	UpdateCluster(context.Context, *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[emptypb.Empty], error)
+	UpdateCluster(context.Context, *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[v1.UpdateClusterResponse], error)
 	// Delete a cluster
-	DeleteCluster(context.Context, *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteCluster(context.Context, *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[v1.DeleteClusterResponse], error)
 	// Get cluster activity log
 	GetClusterActivity(context.Context, *connect.Request[v1.GetClusterActivityRequest]) (*connect.Response[v1.GetClusterActivityResponse], error)
 	// Download kubeconfig for a cluster
@@ -355,15 +354,15 @@ type ClusterServiceHandler interface {
 	// Create a node pool in a cluster
 	CreateNodePool(context.Context, *connect.Request[v1.CreateNodePoolRequest]) (*connect.Response[v1.CreateNodePoolResponse], error)
 	// Update a node pool
-	UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[emptypb.Empty], error)
+	UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error)
 	// Delete a node pool
-	DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error)
 	// List installs for a cluster
 	ListInstalls(context.Context, *connect.Request[v1.ListInstallsRequest]) (*connect.Response[v1.ListInstallsResponse], error)
 	// Add an install to a cluster
 	AddInstall(context.Context, *connect.Request[v1.AddInstallRequest]) (*connect.Response[v1.AddInstallResponse], error)
 	// Remove an install from a cluster
-	RemoveInstall(context.Context, *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[emptypb.Empty], error)
+	RemoveInstall(context.Context, *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[v1.RemoveInstallResponse], error)
 }
 
 // NewClusterServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -528,11 +527,11 @@ func (UnimplementedClusterServiceHandler) CreateCluster(context.Context, *connec
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.CreateCluster is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) UpdateCluster(context.Context, *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedClusterServiceHandler) UpdateCluster(context.Context, *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[v1.UpdateClusterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.UpdateCluster is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) DeleteCluster(context.Context, *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedClusterServiceHandler) DeleteCluster(context.Context, *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[v1.DeleteClusterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.DeleteCluster is not implemented"))
 }
 
@@ -556,11 +555,11 @@ func (UnimplementedClusterServiceHandler) CreateNodePool(context.Context, *conne
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.CreateNodePool is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedClusterServiceHandler) UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.UpdateNodePool is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedClusterServiceHandler) DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.DeleteNodePool is not implemented"))
 }
 
@@ -572,6 +571,6 @@ func (UnimplementedClusterServiceHandler) AddInstall(context.Context, *connect.R
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.AddInstall is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) RemoveInstall(context.Context, *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedClusterServiceHandler) RemoveInstall(context.Context, *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[v1.RemoveInstallResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.RemoveInstall is not implemented"))
 }

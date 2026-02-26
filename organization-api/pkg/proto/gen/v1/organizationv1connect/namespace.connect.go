@@ -9,7 +9,6 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -67,7 +66,7 @@ type NamespaceServiceClient interface {
 	// Create a namespace in a project
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	// Delete a namespace
-	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
 }
 
 // NewNamespaceServiceClient constructs a client for the organization.v1.NamespaceService service.
@@ -111,7 +110,7 @@ func NewNamespaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(namespaceServiceMethods.ByName("CreateNamespace")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteNamespace: connect.NewClient[v1.DeleteNamespaceRequest, emptypb.Empty](
+		deleteNamespace: connect.NewClient[v1.DeleteNamespaceRequest, v1.DeleteNamespaceResponse](
 			httpClient,
 			baseURL+NamespaceServiceDeleteNamespaceProcedure,
 			connect.WithSchema(namespaceServiceMethods.ByName("DeleteNamespace")),
@@ -127,7 +126,7 @@ type namespaceServiceClient struct {
 	getNamespace                 *connect.Client[v1.GetNamespaceRequest, v1.GetNamespaceResponse]
 	getNamespaceByProjectAndName *connect.Client[v1.GetNamespaceByProjectAndNameRequest, v1.GetNamespaceByProjectAndNameResponse]
 	createNamespace              *connect.Client[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse]
-	deleteNamespace              *connect.Client[v1.DeleteNamespaceRequest, emptypb.Empty]
+	deleteNamespace              *connect.Client[v1.DeleteNamespaceRequest, v1.DeleteNamespaceResponse]
 }
 
 // ListClusterNamespaces calls organization.v1.NamespaceService.ListClusterNamespaces.
@@ -156,7 +155,7 @@ func (c *namespaceServiceClient) CreateNamespace(ctx context.Context, req *conne
 }
 
 // DeleteNamespace calls organization.v1.NamespaceService.DeleteNamespace.
-func (c *namespaceServiceClient) DeleteNamespace(ctx context.Context, req *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[emptypb.Empty], error) {
+func (c *namespaceServiceClient) DeleteNamespace(ctx context.Context, req *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error) {
 	return c.deleteNamespace.CallUnary(ctx, req)
 }
 
@@ -173,7 +172,7 @@ type NamespaceServiceHandler interface {
 	// Create a namespace in a project
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	// Delete a namespace
-	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
 }
 
 // NewNamespaceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -262,6 +261,6 @@ func (UnimplementedNamespaceServiceHandler) CreateNamespace(context.Context, *co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.NamespaceService.CreateNamespace is not implemented"))
 }
 
-func (UnimplementedNamespaceServiceHandler) DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedNamespaceServiceHandler) DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.NamespaceService.DeleteNamespace is not implemented"))
 }

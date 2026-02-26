@@ -11,7 +11,6 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -657,6 +656,50 @@ func (b0 RevokeAPIKeyRequest_builder) Build() *RevokeAPIKeyRequest {
 	return m0
 }
 
+// Revoke API key response
+type RevokeAPIKeyResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeAPIKeyResponse) Reset() {
+	*x = RevokeAPIKeyResponse{}
+	mi := &file_v1_apikey_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeAPIKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeAPIKeyResponse) ProtoMessage() {}
+
+func (x *RevokeAPIKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_apikey_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type RevokeAPIKeyResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 RevokeAPIKeyResponse_builder) Build() *RevokeAPIKeyResponse {
+	m0 := &RevokeAPIKeyResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
 // Delete API key request
 type DeleteAPIKeyRequest struct {
 	state               protoimpl.MessageState `protogen:"opaque.v1"`
@@ -667,7 +710,7 @@ type DeleteAPIKeyRequest struct {
 
 func (x *DeleteAPIKeyRequest) Reset() {
 	*x = DeleteAPIKeyRequest{}
-	mi := &file_v1_apikey_proto_msgTypes[8]
+	mi := &file_v1_apikey_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -679,7 +722,7 @@ func (x *DeleteAPIKeyRequest) String() string {
 func (*DeleteAPIKeyRequest) ProtoMessage() {}
 
 func (x *DeleteAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_apikey_proto_msgTypes[8]
+	mi := &file_v1_apikey_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -715,11 +758,55 @@ func (b0 DeleteAPIKeyRequest_builder) Build() *DeleteAPIKeyRequest {
 	return m0
 }
 
+// Delete API key response
+type DeleteAPIKeyResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAPIKeyResponse) Reset() {
+	*x = DeleteAPIKeyResponse{}
+	mi := &file_v1_apikey_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAPIKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAPIKeyResponse) ProtoMessage() {}
+
+func (x *DeleteAPIKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_apikey_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type DeleteAPIKeyResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 DeleteAPIKeyResponse_builder) Build() *DeleteAPIKeyResponse {
+	m0 := &DeleteAPIKeyResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
 var File_v1_apikey_proto protoreflect.FileDescriptor
 
 const file_v1_apikey_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/apikey.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xaa\x02\n" +
+	"\x0fv1/apikey.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xaa\x02\n" +
 	"\x06APIKey\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -754,19 +841,21 @@ const file_v1_apikey_proto_rawDesc = "" +
 	"\x13RevokeAPIKeyRequest\x12&\n" +
 	"\n" +
 	"api_key_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId\"=\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId\"\x16\n" +
+	"\x14RevokeAPIKeyResponse\"=\n" +
 	"\x13DeleteAPIKeyRequest\x12&\n" +
 	"\n" +
 	"api_key_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId2\xb6\x03\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId\"\x16\n" +
+	"\x14DeleteAPIKeyResponse2\xd4\x03\n" +
 	"\rAPIKeyService\x12[\n" +
 	"\fCreateAPIKey\x12$.organization.v1.CreateAPIKeyRequest\x1a%.organization.v1.CreateAPIKeyResponse\x12X\n" +
 	"\vListAPIKeys\x12#.organization.v1.ListAPIKeysRequest\x1a$.organization.v1.ListAPIKeysResponse\x12R\n" +
-	"\tGetAPIKey\x12!.organization.v1.GetAPIKeyRequest\x1a\".organization.v1.GetAPIKeyResponse\x12L\n" +
-	"\fRevokeAPIKey\x12$.organization.v1.RevokeAPIKeyRequest\x1a\x16.google.protobuf.Empty\x12L\n" +
-	"\fDeleteAPIKey\x12$.organization.v1.DeleteAPIKeyRequest\x1a\x16.google.protobuf.EmptyB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\tGetAPIKey\x12!.organization.v1.GetAPIKeyRequest\x1a\".organization.v1.GetAPIKeyResponse\x12[\n" +
+	"\fRevokeAPIKey\x12$.organization.v1.RevokeAPIKeyRequest\x1a%.organization.v1.RevokeAPIKeyResponse\x12[\n" +
+	"\fDeleteAPIKey\x12$.organization.v1.DeleteAPIKeyRequest\x1a%.organization.v1.DeleteAPIKeyResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_apikey_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_v1_apikey_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_v1_apikey_proto_goTypes = []any{
 	(*APIKey)(nil),                // 0: organization.v1.APIKey
 	(*CreateAPIKeyRequest)(nil),   // 1: organization.v1.CreateAPIKeyRequest
@@ -776,27 +865,28 @@ var file_v1_apikey_proto_goTypes = []any{
 	(*GetAPIKeyRequest)(nil),      // 5: organization.v1.GetAPIKeyRequest
 	(*GetAPIKeyResponse)(nil),     // 6: organization.v1.GetAPIKeyResponse
 	(*RevokeAPIKeyRequest)(nil),   // 7: organization.v1.RevokeAPIKeyRequest
-	(*DeleteAPIKeyRequest)(nil),   // 8: organization.v1.DeleteAPIKeyRequest
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 10: google.protobuf.Empty
+	(*RevokeAPIKeyResponse)(nil),  // 8: organization.v1.RevokeAPIKeyResponse
+	(*DeleteAPIKeyRequest)(nil),   // 9: organization.v1.DeleteAPIKeyRequest
+	(*DeleteAPIKeyResponse)(nil),  // 10: organization.v1.DeleteAPIKeyResponse
+	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
 }
 var file_v1_apikey_proto_depIdxs = []int32{
-	9,  // 0: organization.v1.APIKey.expires:type_name -> google.protobuf.Timestamp
-	9,  // 1: organization.v1.APIKey.last_used:type_name -> google.protobuf.Timestamp
-	9,  // 2: organization.v1.APIKey.created:type_name -> google.protobuf.Timestamp
-	9,  // 3: organization.v1.APIKey.revoked:type_name -> google.protobuf.Timestamp
+	11, // 0: organization.v1.APIKey.expires:type_name -> google.protobuf.Timestamp
+	11, // 1: organization.v1.APIKey.last_used:type_name -> google.protobuf.Timestamp
+	11, // 2: organization.v1.APIKey.created:type_name -> google.protobuf.Timestamp
+	11, // 3: organization.v1.APIKey.revoked:type_name -> google.protobuf.Timestamp
 	0,  // 4: organization.v1.ListAPIKeysResponse.api_keys:type_name -> organization.v1.APIKey
 	0,  // 5: organization.v1.GetAPIKeyResponse.api_key:type_name -> organization.v1.APIKey
 	1,  // 6: organization.v1.APIKeyService.CreateAPIKey:input_type -> organization.v1.CreateAPIKeyRequest
 	3,  // 7: organization.v1.APIKeyService.ListAPIKeys:input_type -> organization.v1.ListAPIKeysRequest
 	5,  // 8: organization.v1.APIKeyService.GetAPIKey:input_type -> organization.v1.GetAPIKeyRequest
 	7,  // 9: organization.v1.APIKeyService.RevokeAPIKey:input_type -> organization.v1.RevokeAPIKeyRequest
-	8,  // 10: organization.v1.APIKeyService.DeleteAPIKey:input_type -> organization.v1.DeleteAPIKeyRequest
+	9,  // 10: organization.v1.APIKeyService.DeleteAPIKey:input_type -> organization.v1.DeleteAPIKeyRequest
 	2,  // 11: organization.v1.APIKeyService.CreateAPIKey:output_type -> organization.v1.CreateAPIKeyResponse
 	4,  // 12: organization.v1.APIKeyService.ListAPIKeys:output_type -> organization.v1.ListAPIKeysResponse
 	6,  // 13: organization.v1.APIKeyService.GetAPIKey:output_type -> organization.v1.GetAPIKeyResponse
-	10, // 14: organization.v1.APIKeyService.RevokeAPIKey:output_type -> google.protobuf.Empty
-	10, // 15: organization.v1.APIKeyService.DeleteAPIKey:output_type -> google.protobuf.Empty
+	8,  // 14: organization.v1.APIKeyService.RevokeAPIKey:output_type -> organization.v1.RevokeAPIKeyResponse
+	10, // 15: organization.v1.APIKeyService.DeleteAPIKey:output_type -> organization.v1.DeleteAPIKeyResponse
 	11, // [11:16] is the sub-list for method output_type
 	6,  // [6:11] is the sub-list for method input_type
 	6,  // [6:6] is the sub-list for extension type_name
@@ -816,7 +906,7 @@ func file_v1_apikey_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_apikey_proto_rawDesc), len(file_v1_apikey_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -11,7 +11,6 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -524,6 +523,50 @@ func (b0 CreateNamespaceResponse_builder) Build() *CreateNamespaceResponse {
 	return m0
 }
 
+// Delete namespace response
+type DeleteNamespaceResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteNamespaceResponse) Reset() {
+	*x = DeleteNamespaceResponse{}
+	mi := &file_v1_namespace_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteNamespaceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteNamespaceResponse) ProtoMessage() {}
+
+func (x *DeleteNamespaceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_namespace_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type DeleteNamespaceResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 DeleteNamespaceResponse_builder) Build() *DeleteNamespaceResponse {
+	m0 := &DeleteNamespaceResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
 // Delete namespace request
 type DeleteNamespaceRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
@@ -534,7 +577,7 @@ type DeleteNamespaceRequest struct {
 
 func (x *DeleteNamespaceRequest) Reset() {
 	*x = DeleteNamespaceRequest{}
-	mi := &file_v1_namespace_proto_msgTypes[7]
+	mi := &file_v1_namespace_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -546,7 +589,7 @@ func (x *DeleteNamespaceRequest) String() string {
 func (*DeleteNamespaceRequest) ProtoMessage() {}
 
 func (x *DeleteNamespaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_namespace_proto_msgTypes[7]
+	mi := &file_v1_namespace_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -594,7 +637,7 @@ type GetNamespaceByProjectAndNameRequest struct {
 
 func (x *GetNamespaceByProjectAndNameRequest) Reset() {
 	*x = GetNamespaceByProjectAndNameRequest{}
-	mi := &file_v1_namespace_proto_msgTypes[8]
+	mi := &file_v1_namespace_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -606,7 +649,7 @@ func (x *GetNamespaceByProjectAndNameRequest) String() string {
 func (*GetNamespaceByProjectAndNameRequest) ProtoMessage() {}
 
 func (x *GetNamespaceByProjectAndNameRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_namespace_proto_msgTypes[8]
+	mi := &file_v1_namespace_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -678,7 +721,7 @@ type GetNamespaceByProjectAndNameResponse struct {
 
 func (x *GetNamespaceByProjectAndNameResponse) Reset() {
 	*x = GetNamespaceByProjectAndNameResponse{}
-	mi := &file_v1_namespace_proto_msgTypes[9]
+	mi := &file_v1_namespace_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -690,7 +733,7 @@ func (x *GetNamespaceByProjectAndNameResponse) String() string {
 func (*GetNamespaceByProjectAndNameResponse) ProtoMessage() {}
 
 func (x *GetNamespaceByProjectAndNameResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_namespace_proto_msgTypes[9]
+	mi := &file_v1_namespace_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -747,7 +790,7 @@ type ListProjectNamespacesRequest struct {
 
 func (x *ListProjectNamespacesRequest) Reset() {
 	*x = ListProjectNamespacesRequest{}
-	mi := &file_v1_namespace_proto_msgTypes[10]
+	mi := &file_v1_namespace_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -759,7 +802,7 @@ func (x *ListProjectNamespacesRequest) String() string {
 func (*ListProjectNamespacesRequest) ProtoMessage() {}
 
 func (x *ListProjectNamespacesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_namespace_proto_msgTypes[10]
+	mi := &file_v1_namespace_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -805,7 +848,7 @@ type ListProjectNamespacesResponse struct {
 
 func (x *ListProjectNamespacesResponse) Reset() {
 	*x = ListProjectNamespacesResponse{}
-	mi := &file_v1_namespace_proto_msgTypes[11]
+	mi := &file_v1_namespace_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -817,7 +860,7 @@ func (x *ListProjectNamespacesResponse) String() string {
 func (*ListProjectNamespacesResponse) ProtoMessage() {}
 
 func (x *ListProjectNamespacesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_namespace_proto_msgTypes[11]
+	mi := &file_v1_namespace_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -859,7 +902,7 @@ var File_v1_namespace_proto protoreflect.FileDescriptor
 
 const file_v1_namespace_proto_rawDesc = "" +
 	"\n" +
-	"\x12v1/namespace.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"G\n" +
+	"\x12v1/namespace.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"G\n" +
 	"\x1cListClusterNamespacesRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -892,7 +935,8 @@ const file_v1_namespace_proto_rawDesc = "" +
 	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')r\x02\x18?R\x04name\"<\n" +
 	"\x17CreateNamespaceResponse\x12!\n" +
 	"\fnamespace_id\x18\n" +
-	" \x01(\tR\vnamespaceId\"E\n" +
+	" \x01(\tR\vnamespaceId\"\x19\n" +
+	"\x17DeleteNamespaceResponse\"E\n" +
 	"\x16DeleteNamespaceRequest\x12+\n" +
 	"\fnamespace_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vnamespaceId\"\xf6\x02\n" +
@@ -915,16 +959,16 @@ const file_v1_namespace_proto_rawDesc = "" +
 	"\n" +
 	"namespaces\x18\n" +
 	" \x03(\v2\x1a.organization.v1.NamespaceR\n" +
-	"namespaces2\xa7\x05\n" +
+	"namespaces2\xb9\x05\n" +
 	"\x10NamespaceService\x12v\n" +
 	"\x15ListClusterNamespaces\x12-.organization.v1.ListClusterNamespacesRequest\x1a..organization.v1.ListClusterNamespacesResponse\x12v\n" +
 	"\x15ListProjectNamespaces\x12-.organization.v1.ListProjectNamespacesRequest\x1a..organization.v1.ListProjectNamespacesResponse\x12[\n" +
 	"\fGetNamespace\x12$.organization.v1.GetNamespaceRequest\x1a%.organization.v1.GetNamespaceResponse\x12\x8b\x01\n" +
 	"\x1cGetNamespaceByProjectAndName\x124.organization.v1.GetNamespaceByProjectAndNameRequest\x1a5.organization.v1.GetNamespaceByProjectAndNameResponse\x12d\n" +
-	"\x0fCreateNamespace\x12'.organization.v1.CreateNamespaceRequest\x1a(.organization.v1.CreateNamespaceResponse\x12R\n" +
-	"\x0fDeleteNamespace\x12'.organization.v1.DeleteNamespaceRequest\x1a\x16.google.protobuf.EmptyB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x0fCreateNamespace\x12'.organization.v1.CreateNamespaceRequest\x1a(.organization.v1.CreateNamespaceResponse\x12d\n" +
+	"\x0fDeleteNamespace\x12'.organization.v1.DeleteNamespaceRequest\x1a(.organization.v1.DeleteNamespaceResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_namespace_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_v1_namespace_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_v1_namespace_proto_goTypes = []any{
 	(*ListClusterNamespacesRequest)(nil),         // 0: organization.v1.ListClusterNamespacesRequest
 	(*ListClusterNamespacesResponse)(nil),        // 1: organization.v1.ListClusterNamespacesResponse
@@ -933,32 +977,32 @@ var file_v1_namespace_proto_goTypes = []any{
 	(*GetNamespaceResponse)(nil),                 // 4: organization.v1.GetNamespaceResponse
 	(*CreateNamespaceRequest)(nil),               // 5: organization.v1.CreateNamespaceRequest
 	(*CreateNamespaceResponse)(nil),              // 6: organization.v1.CreateNamespaceResponse
-	(*DeleteNamespaceRequest)(nil),               // 7: organization.v1.DeleteNamespaceRequest
-	(*GetNamespaceByProjectAndNameRequest)(nil),  // 8: organization.v1.GetNamespaceByProjectAndNameRequest
-	(*GetNamespaceByProjectAndNameResponse)(nil), // 9: organization.v1.GetNamespaceByProjectAndNameResponse
-	(*ListProjectNamespacesRequest)(nil),         // 10: organization.v1.ListProjectNamespacesRequest
-	(*ListProjectNamespacesResponse)(nil),        // 11: organization.v1.ListProjectNamespacesResponse
-	(*timestamppb.Timestamp)(nil),                // 12: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                        // 13: google.protobuf.Empty
+	(*DeleteNamespaceResponse)(nil),              // 7: organization.v1.DeleteNamespaceResponse
+	(*DeleteNamespaceRequest)(nil),               // 8: organization.v1.DeleteNamespaceRequest
+	(*GetNamespaceByProjectAndNameRequest)(nil),  // 9: organization.v1.GetNamespaceByProjectAndNameRequest
+	(*GetNamespaceByProjectAndNameResponse)(nil), // 10: organization.v1.GetNamespaceByProjectAndNameResponse
+	(*ListProjectNamespacesRequest)(nil),         // 11: organization.v1.ListProjectNamespacesRequest
+	(*ListProjectNamespacesResponse)(nil),        // 12: organization.v1.ListProjectNamespacesResponse
+	(*timestamppb.Timestamp)(nil),                // 13: google.protobuf.Timestamp
 }
 var file_v1_namespace_proto_depIdxs = []int32{
 	2,  // 0: organization.v1.ListClusterNamespacesResponse.namespaces:type_name -> organization.v1.Namespace
-	12, // 1: organization.v1.Namespace.created:type_name -> google.protobuf.Timestamp
+	13, // 1: organization.v1.Namespace.created:type_name -> google.protobuf.Timestamp
 	2,  // 2: organization.v1.GetNamespaceResponse.namespace:type_name -> organization.v1.Namespace
 	2,  // 3: organization.v1.GetNamespaceByProjectAndNameResponse.namespace:type_name -> organization.v1.Namespace
 	2,  // 4: organization.v1.ListProjectNamespacesResponse.namespaces:type_name -> organization.v1.Namespace
 	0,  // 5: organization.v1.NamespaceService.ListClusterNamespaces:input_type -> organization.v1.ListClusterNamespacesRequest
-	10, // 6: organization.v1.NamespaceService.ListProjectNamespaces:input_type -> organization.v1.ListProjectNamespacesRequest
+	11, // 6: organization.v1.NamespaceService.ListProjectNamespaces:input_type -> organization.v1.ListProjectNamespacesRequest
 	3,  // 7: organization.v1.NamespaceService.GetNamespace:input_type -> organization.v1.GetNamespaceRequest
-	8,  // 8: organization.v1.NamespaceService.GetNamespaceByProjectAndName:input_type -> organization.v1.GetNamespaceByProjectAndNameRequest
+	9,  // 8: organization.v1.NamespaceService.GetNamespaceByProjectAndName:input_type -> organization.v1.GetNamespaceByProjectAndNameRequest
 	5,  // 9: organization.v1.NamespaceService.CreateNamespace:input_type -> organization.v1.CreateNamespaceRequest
-	7,  // 10: organization.v1.NamespaceService.DeleteNamespace:input_type -> organization.v1.DeleteNamespaceRequest
+	8,  // 10: organization.v1.NamespaceService.DeleteNamespace:input_type -> organization.v1.DeleteNamespaceRequest
 	1,  // 11: organization.v1.NamespaceService.ListClusterNamespaces:output_type -> organization.v1.ListClusterNamespacesResponse
-	11, // 12: organization.v1.NamespaceService.ListProjectNamespaces:output_type -> organization.v1.ListProjectNamespacesResponse
+	12, // 12: organization.v1.NamespaceService.ListProjectNamespaces:output_type -> organization.v1.ListProjectNamespacesResponse
 	4,  // 13: organization.v1.NamespaceService.GetNamespace:output_type -> organization.v1.GetNamespaceResponse
-	9,  // 14: organization.v1.NamespaceService.GetNamespaceByProjectAndName:output_type -> organization.v1.GetNamespaceByProjectAndNameResponse
+	10, // 14: organization.v1.NamespaceService.GetNamespaceByProjectAndName:output_type -> organization.v1.GetNamespaceByProjectAndNameResponse
 	6,  // 15: organization.v1.NamespaceService.CreateNamespace:output_type -> organization.v1.CreateNamespaceResponse
-	13, // 16: organization.v1.NamespaceService.DeleteNamespace:output_type -> google.protobuf.Empty
+	7,  // 16: organization.v1.NamespaceService.DeleteNamespace:output_type -> organization.v1.DeleteNamespaceResponse
 	11, // [11:17] is the sub-list for method output_type
 	5,  // [5:11] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
@@ -977,7 +1021,7 @@ func file_v1_namespace_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_namespace_proto_rawDesc), len(file_v1_namespace_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

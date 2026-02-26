@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -16,7 +15,7 @@ import (
 func (s *Server) DeleteNamespace(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteNamespaceRequest],
-) (*connect.Response[emptypb.Empty], error) {
+) (*connect.Response[organizationv1.DeleteNamespaceResponse], error) {
 	namespaceID := uuid.MustParse(req.Msg.GetNamespaceId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Namespace(namespaceID)); err != nil {
@@ -34,5 +33,5 @@ func (s *Server) DeleteNamespace(
 
 	s.logger.InfoContext(ctx, "namespace deleted", "namespace_id", namespaceID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.DeleteNamespaceResponse_builder{}.Build()), nil
 }
