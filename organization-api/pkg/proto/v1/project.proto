@@ -1,12 +1,15 @@
-syntax = "proto3";
+edition = "2023";
 
 package organization.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
 
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
 // ProjectService manages projects within an organization
@@ -100,10 +103,13 @@ message CreateProjectResponse {
 // Update project request
 message UpdateProjectRequest {
   string project_id = 10 [(buf.validate.field).string = {uuid: true}];
-  optional string name = 20 [(buf.validate.field).string = {
-    min_len: 1
-    max_len: 255
-  }];
+  string name = 20 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 255
+    }
+  ];
 }
 
 // Delete project request

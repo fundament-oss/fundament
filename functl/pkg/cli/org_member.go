@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/fundament-oss/fundament/functl/pkg/client"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -33,12 +34,12 @@ func (c *OrgMemberListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Members().ListMembers(context.Background(), connect.NewRequest(&organizationv1.ListMembersRequest{}))
+	resp, err := apiClient.Members().ListMembers(context.Background(), connect.NewRequest(organizationv1.ListMembersRequest_builder{}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to list members: %w", err)
 	}
 
-	members := resp.Msg.Members
+	members := resp.Msg.GetMembers()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(members)
@@ -53,15 +54,15 @@ func (c *OrgMemberListCmd) Run(ctx *Context) error {
 	fmt.Fprintln(w, "USER ID\tNAME\tEMAIL\tPERMISSION\tSTATUS\tCREATED")
 	for _, member := range members {
 		created := ""
-		if member.Created.IsValid() {
-			created = member.Created.AsTime().Format(TimeFormat)
+		if member.GetCreated().IsValid() {
+			created = member.GetCreated().AsTime().Format(TimeFormat)
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
-			member.UserId,
-			member.Name,
+			member.GetUserId(),
+			member.GetName(),
 			member.GetEmail(),
-			member.Permission,
-			member.Status,
+			member.GetPermission(),
+			member.GetStatus(),
 			created,
 		)
 	}
@@ -82,15 +83,15 @@ func (c *OrgMemberInviteCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Invites().InviteMember(context.Background(), connect.NewRequest(&organizationv1.InviteMemberRequest{
+	resp, err := apiClient.Invites().InviteMember(context.Background(), connect.NewRequest(organizationv1.InviteMemberRequest_builder{
 		Email:      c.Email,
 		Permission: c.Permission,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to invite member: %w", err)
 	}
 
-	member := resp.Msg.Member
+	member := resp.Msg.GetMember()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(member)
@@ -119,10 +120,10 @@ func (c *OrgMemberUpdatePermissionCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	_, err = apiClient.Members().UpdateMemberPermission(context.Background(), connect.NewRequest(&organizationv1.UpdateMemberPermissionRequest{
-		Id:         member.Id,
+	_, err = apiClient.Members().UpdateMemberPermission(context.Background(), connect.NewRequest(organizationv1.UpdateMemberPermissionRequest_builder{
+		Id:         member.GetId(),
 		Permission: c.Permission,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to update member permission: %w", err)
 	}
@@ -158,7 +159,7 @@ func (c *OrgMemberRemoveCmd) Run(ctx *Context) error {
 	}
 
 	if !c.Yes {
-		fmt.Printf("Remove member %q (%s) from the organization? [y/N] ", member.Name, c.UserID)
+		fmt.Printf("Remove member %q (%s) from the organization? [y/N] ", member.GetName(), c.UserID)
 		reader := bufio.NewReader(os.Stdin)
 		input, err := reader.ReadString('\n')
 		if err != nil {
@@ -170,9 +171,9 @@ func (c *OrgMemberRemoveCmd) Run(ctx *Context) error {
 		}
 	}
 
-	_, err = apiClient.Members().DeleteMember(context.Background(), connect.NewRequest(&organizationv1.DeleteMemberRequest{
-		Id: member.Id,
-	}))
+	_, err = apiClient.Members().DeleteMember(context.Background(), connect.NewRequest(organizationv1.DeleteMemberRequest_builder{
+		Id: member.GetId(),
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to remove member: %w", err)
 	}
@@ -189,9 +190,9 @@ func (c *OrgMemberRemoveCmd) Run(ctx *Context) error {
 
 // findOrgMember resolves an org member from a user ID.
 func findOrgMember(apiClient *client.Client, userID string) (*organizationv1.Member, error) {
-	resp, err := apiClient.Members().GetMember(context.Background(), connect.NewRequest(&organizationv1.GetMemberRequest{
-		Lookup: &organizationv1.GetMemberRequest_UserId{UserId: userID},
-	}))
+	resp, err := apiClient.Members().GetMember(context.Background(), connect.NewRequest(organizationv1.GetMemberRequest_builder{
+		UserId: proto.String(userID),
+	}.Build()))
 	if err != nil {
 		if connect.CodeOf(err) == connect.CodeNotFound {
 			return nil, fmt.Errorf("user %s is not a member of this organization", userID)
@@ -199,5 +200,5 @@ func findOrgMember(apiClient *client.Client, userID string) (*organizationv1.Mem
 		return nil, fmt.Errorf("failed to get member: %w", err)
 	}
 
-	return resp.Msg.Member, nil
+	return resp.Msg.GetMember(), nil
 }

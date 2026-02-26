@@ -21,7 +21,7 @@ func (s *Server) RemoveProjectMember(
 	ctx context.Context,
 	req *connect.Request[organizationv1.RemoveProjectMemberRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	memberID := uuid.MustParse(req.Msg.MemberId)
+	memberID := uuid.MustParse(req.Msg.GetMemberId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.ProjectMember(memberID)); err != nil {
 		return nil, err

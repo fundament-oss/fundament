@@ -1,11 +1,14 @@
-syntax = "proto3";
+edition = "2023";
 
-package organization.v1; // TODO: Should maybe be renamed to `fundament.v1`?
+package organization.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
 // OrganizationService manages organizations
@@ -24,10 +27,12 @@ service OrganizationService {
 message Organization {
   // Organization ID (UUID)
   string id = 10;
-  // Organization name
+  // Organization name (immutable, machine-readable identifier)
   string name = 20;
+  // Organization display name (human-readable label)
+  string display_name = 30;
   // Creation timestamp (RFC3339)
-  google.protobuf.Timestamp created = 30;
+  google.protobuf.Timestamp created = 40;
 }
 
 // GetOrganization request
@@ -46,8 +51,8 @@ message GetOrganizationResponse {
 message UpdateOrganizationRequest {
   // ID of the organization to update
   string id = 10 [(buf.validate.field).string = {uuid: true}];
-  // New name for the organization
-  string name = 20 [(buf.validate.field).string = {
+  // New display name for the organization
+  string display_name = 20 [(buf.validate.field).string = {
     min_len: 1
     max_len: 255
   }];

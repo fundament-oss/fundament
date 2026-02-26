@@ -9,8 +9,8 @@ package organizationv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	_ "google.golang.org/protobuf/types/gofeaturespb"
 	reflect "reflect"
-	sync "sync"
 	unsafe "unsafe"
 )
 
@@ -84,11 +84,6 @@ func (x ClusterStatus) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use ClusterStatus.Descriptor instead.
-func (ClusterStatus) EnumDescriptor() ([]byte, []int) {
-	return file_v1_common_proto_rawDescGZIP(), []int{0}
-}
-
 // Node pool status
 type NodePoolStatus int32
 
@@ -137,19 +132,14 @@ func (x NodePoolStatus) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use NodePoolStatus.Descriptor instead.
-func (NodePoolStatus) EnumDescriptor() ([]byte, []int) {
-	return file_v1_common_proto_rawDescGZIP(), []int{1}
-}
-
 // Resource usage information
 type ResourceUsage struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Used          float64                `protobuf:"fixed64,10,opt,name=used,proto3" json:"used,omitempty"`
-	Total         float64                `protobuf:"fixed64,20,opt,name=total,proto3" json:"total,omitempty"`
-	Unit          string                 `protobuf:"bytes,30,opt,name=unit,proto3" json:"unit,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Used  float64                `protobuf:"fixed64,10,opt,name=used"`
+	xxx_hidden_Total float64                `protobuf:"fixed64,20,opt,name=total"`
+	xxx_hidden_Unit  string                 `protobuf:"bytes,30,opt,name=unit"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ResourceUsage) Reset() {
@@ -177,37 +167,62 @@ func (x *ResourceUsage) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ResourceUsage.ProtoReflect.Descriptor instead.
-func (*ResourceUsage) Descriptor() ([]byte, []int) {
-	return file_v1_common_proto_rawDescGZIP(), []int{0}
-}
-
 func (x *ResourceUsage) GetUsed() float64 {
 	if x != nil {
-		return x.Used
+		return x.xxx_hidden_Used
 	}
 	return 0
 }
 
 func (x *ResourceUsage) GetTotal() float64 {
 	if x != nil {
-		return x.Total
+		return x.xxx_hidden_Total
 	}
 	return 0
 }
 
 func (x *ResourceUsage) GetUnit() string {
 	if x != nil {
-		return x.Unit
+		return x.xxx_hidden_Unit
 	}
 	return ""
+}
+
+func (x *ResourceUsage) SetUsed(v float64) {
+	x.xxx_hidden_Used = v
+}
+
+func (x *ResourceUsage) SetTotal(v float64) {
+	x.xxx_hidden_Total = v
+}
+
+func (x *ResourceUsage) SetUnit(v string) {
+	x.xxx_hidden_Unit = v
+}
+
+type ResourceUsage_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Used  float64
+	Total float64
+	Unit  string
+}
+
+func (b0 ResourceUsage_builder) Build() *ResourceUsage {
+	m0 := &ResourceUsage{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Used = b.Used
+	x.xxx_hidden_Total = b.Total
+	x.xxx_hidden_Unit = b.Unit
+	return m0
 }
 
 var File_v1_common_proto protoreflect.FileDescriptor
 
 const file_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/common.proto\x12\x0forganization.v1\"M\n" +
+	"\x0fv1/common.proto\x12\x0forganization.v1\x1a!google/protobuf/go_features.proto\"M\n" +
 	"\rResourceUsage\x12\x12\n" +
 	"\x04used\x18\n" +
 	" \x01(\x01R\x04used\x12\x14\n" +
@@ -227,19 +242,7 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x1cNODE_POOL_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18NODE_POOL_STATUS_HEALTHY\x10\x01\x12\x1d\n" +
 	"\x19NODE_POOL_STATUS_DEGRADED\x10\x02\x12\x1e\n" +
-	"\x1aNODE_POOL_STATUS_UNHEALTHY\x10\x03BUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
-
-var (
-	file_v1_common_proto_rawDescOnce sync.Once
-	file_v1_common_proto_rawDescData []byte
-)
-
-func file_v1_common_proto_rawDescGZIP() []byte {
-	file_v1_common_proto_rawDescOnce.Do(func() {
-		file_v1_common_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_v1_common_proto_rawDesc), len(file_v1_common_proto_rawDesc)))
-	})
-	return file_v1_common_proto_rawDescData
-}
+	"\x1aNODE_POOL_STATUS_UNHEALTHY\x10\x03B_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 1)

@@ -72,8 +72,8 @@ func (c *Client) ensureToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to exchange API key for token: %w", err)
 	}
 
-	c.jwt = resp.Msg.AccessToken
-	c.expiry = time.Now().Add(time.Duration(resp.Msg.ExpiresIn) * time.Second)
+	c.jwt = resp.Msg.GetAccessToken()
+	c.expiry = time.Now().Add(time.Duration(resp.Msg.GetExpiresIn()) * time.Second)
 
 	return c.jwt, nil
 }

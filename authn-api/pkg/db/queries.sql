@@ -37,9 +37,9 @@ LIMIT 1;
 UPDATE tenant.users SET external_ref = $2, name = $3 WHERE id = $1;
 
 -- name: OrganizationCreate :one
-INSERT INTO tenant.organizations (name)
-VALUES ($1)
-RETURNING id, name, created;
+INSERT INTO tenant.organizations (name, display_name)
+VALUES ($1, $2)
+RETURNING id, name, display_name, created;
 
 -- name: OrganizationUserCreate :one
 -- Creates a membership for a user in an organization

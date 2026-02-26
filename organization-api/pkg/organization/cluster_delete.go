@@ -17,7 +17,7 @@ func (s *Server) DeleteCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteClusterRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Cluster(clusterID)); err != nil {
 		return nil, err

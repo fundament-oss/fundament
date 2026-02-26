@@ -18,8 +18,8 @@ func (s *Server) AddInstall(
 	ctx context.Context,
 	req *connect.Request[organizationv1.AddInstallRequest],
 ) (*connect.Response[organizationv1.AddInstallResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
-	pluginID := uuid.MustParse(req.Msg.PluginId)
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	pluginID := uuid.MustParse(req.Msg.GetPluginId())
 
 	if err := s.checkPermission(ctx, authz.CanCreateInstall(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (s *Server) AddInstall(
 		"plugin_id", pluginID,
 	)
 
-	return connect.NewResponse(&organizationv1.AddInstallResponse{
+	return connect.NewResponse(organizationv1.AddInstallResponse_builder{
 		InstallId: installID.String(),
-	}), nil
+	}.Build()), nil
 }

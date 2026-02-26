@@ -15,7 +15,7 @@ func (s *Server) AcceptInvitation(
 	ctx context.Context,
 	req *connect.Request[organizationv1.AcceptInvitationRequest],
 ) (*connect.Response[organizationv1.AcceptInvitationResponse], error) {
-	id := uuid.MustParse(req.Msg.Id)
+	id := uuid.MustParse(req.Msg.GetId())
 
 	rows, err := s.queries.InviteAccept(ctx, db.InviteAcceptParams{ID: id})
 	if err != nil {
@@ -26,5 +26,5 @@ func (s *Server) AcceptInvitation(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no pending invitation found"))
 	}
 
-	return connect.NewResponse(&organizationv1.AcceptInvitationResponse{}), nil
+	return connect.NewResponse(organizationv1.AcceptInvitationResponse_builder{}.Build()), nil
 }

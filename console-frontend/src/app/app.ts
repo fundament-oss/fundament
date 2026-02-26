@@ -585,7 +585,7 @@ export default class App implements OnInit {
       .map((org) => {
         const detailed = detailedOrgs.find((d) => d.id === org.id);
         const projects = detailed ? detailed.clusters.flatMap((c) => c.projects) : [];
-        return { id: org.id, name: org.name, projects };
+        return { id: org.id, name: org.name, displayName: org.displayName, projects };
       });
   });
 
@@ -617,7 +617,7 @@ export default class App implements OnInit {
       if (orgId) {
         const org = this.organizationDataService.getOrganizationById(orgId);
         if (org) {
-          return { type: 'organization', name: org.name };
+          return { type: 'organization', name: org.displayName };
         }
       }
     }

@@ -9,8 +9,8 @@ package organizationv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	_ "google.golang.org/protobuf/types/gofeaturespb"
 	reflect "reflect"
-	sync "sync"
 	unsafe "unsafe"
 )
 
@@ -23,11 +23,11 @@ const (
 
 // Tag information
 type Tag struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id   string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name string                 `protobuf:"bytes,20,opt,name=name"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Tag) Reset() {
@@ -55,32 +55,51 @@ func (x *Tag) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Tag.ProtoReflect.Descriptor instead.
-func (*Tag) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{0}
-}
-
 func (x *Tag) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *Tag) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
+func (x *Tag) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *Tag) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+type Tag_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id   string
+	Name string
+}
+
+func (b0 Tag_builder) Build() *Tag {
+	m0 := &Tag{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Name = b.Name
+	return m0
+}
+
 // Category information
 type Category struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id   string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name string                 `protobuf:"bytes,20,opt,name=name"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Category) Reset() {
@@ -108,36 +127,55 @@ func (x *Category) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Category.ProtoReflect.Descriptor instead.
-func (*Category) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{1}
-}
-
 func (x *Category) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *Category) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
+func (x *Category) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *Category) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+type Category_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id   string
+	Name string
+}
+
+func (b0 Category_builder) Build() *Category {
+	m0 := &Category{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Name = b.Name
+	return m0
+}
+
 // PluginSummary information
 type PluginSummary struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Id               string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Name             string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	Description      string                 `protobuf:"bytes,30,opt,name=description,proto3" json:"description,omitempty"`
-	DescriptionShort string                 `protobuf:"bytes,35,opt,name=description_short,json=descriptionShort,proto3" json:"description_short,omitempty"`
-	Tags             []*Tag                 `protobuf:"bytes,40,rep,name=tags,proto3" json:"tags,omitempty"`
-	Categories       []*Category            `protobuf:"bytes,50,rep,name=categories,proto3" json:"categories,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                       protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id               string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name             string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_Description      string                 `protobuf:"bytes,30,opt,name=description"`
+	xxx_hidden_DescriptionShort string                 `protobuf:"bytes,35,opt,name=description_short,json=descriptionShort"`
+	xxx_hidden_Tags             *[]*Tag                `protobuf:"bytes,40,rep,name=tags"`
+	xxx_hidden_Categories       *[]*Category           `protobuf:"bytes,50,rep,name=categories"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *PluginSummary) Reset() {
@@ -165,56 +203,103 @@ func (x *PluginSummary) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PluginSummary.ProtoReflect.Descriptor instead.
-func (*PluginSummary) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{2}
-}
-
 func (x *PluginSummary) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *PluginSummary) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
 func (x *PluginSummary) GetDescription() string {
 	if x != nil {
-		return x.Description
+		return x.xxx_hidden_Description
 	}
 	return ""
 }
 
 func (x *PluginSummary) GetDescriptionShort() string {
 	if x != nil {
-		return x.DescriptionShort
+		return x.xxx_hidden_DescriptionShort
 	}
 	return ""
 }
 
 func (x *PluginSummary) GetTags() []*Tag {
 	if x != nil {
-		return x.Tags
+		if x.xxx_hidden_Tags != nil {
+			return *x.xxx_hidden_Tags
+		}
 	}
 	return nil
 }
 
 func (x *PluginSummary) GetCategories() []*Category {
 	if x != nil {
-		return x.Categories
+		if x.xxx_hidden_Categories != nil {
+			return *x.xxx_hidden_Categories
+		}
 	}
 	return nil
 }
 
+func (x *PluginSummary) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *PluginSummary) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *PluginSummary) SetDescription(v string) {
+	x.xxx_hidden_Description = v
+}
+
+func (x *PluginSummary) SetDescriptionShort(v string) {
+	x.xxx_hidden_DescriptionShort = v
+}
+
+func (x *PluginSummary) SetTags(v []*Tag) {
+	x.xxx_hidden_Tags = &v
+}
+
+func (x *PluginSummary) SetCategories(v []*Category) {
+	x.xxx_hidden_Categories = &v
+}
+
+type PluginSummary_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id               string
+	Name             string
+	Description      string
+	DescriptionShort string
+	Tags             []*Tag
+	Categories       []*Category
+}
+
+func (b0 PluginSummary_builder) Build() *PluginSummary {
+	m0 := &PluginSummary{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Description = b.Description
+	x.xxx_hidden_DescriptionShort = b.DescriptionShort
+	x.xxx_hidden_Tags = &b.Tags
+	x.xxx_hidden_Categories = &b.Categories
+	return m0
+}
+
 // List plugins request
 type ListPluginsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -244,17 +329,24 @@ func (x *ListPluginsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListPluginsRequest.ProtoReflect.Descriptor instead.
-func (*ListPluginsRequest) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{3}
+type ListPluginsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 ListPluginsRequest_builder) Build() *ListPluginsRequest {
+	m0 := &ListPluginsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
 }
 
 // List plugins response
 type ListPluginsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Plugins       []*PluginSummary       `protobuf:"bytes,10,rep,name=plugins,proto3" json:"plugins,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Plugins *[]*PluginSummary      `protobuf:"bytes,10,rep,name=plugins"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ListPluginsResponse) Reset() {
@@ -282,27 +374,42 @@ func (x *ListPluginsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListPluginsResponse.ProtoReflect.Descriptor instead.
-func (*ListPluginsResponse) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{4}
-}
-
 func (x *ListPluginsResponse) GetPlugins() []*PluginSummary {
 	if x != nil {
-		return x.Plugins
+		if x.xxx_hidden_Plugins != nil {
+			return *x.xxx_hidden_Plugins
+		}
 	}
 	return nil
 }
 
+func (x *ListPluginsResponse) SetPlugins(v []*PluginSummary) {
+	x.xxx_hidden_Plugins = &v
+}
+
+type ListPluginsResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Plugins []*PluginSummary
+}
+
+func (b0 ListPluginsResponse_builder) Build() *ListPluginsResponse {
+	m0 := &ListPluginsResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Plugins = &b.Plugins
+	return m0
+}
+
 // Preset information
 type Preset struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,30,opt,name=description,proto3" json:"description,omitempty"`
-	PluginIds     []string               `protobuf:"bytes,40,rep,name=plugin_ids,json=pluginIds,proto3" json:"plugin_ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_Description string                 `protobuf:"bytes,30,opt,name=description"`
+	xxx_hidden_PluginIds   []string               `protobuf:"bytes,40,rep,name=plugin_ids,json=pluginIds"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *Preset) Reset() {
@@ -330,42 +437,73 @@ func (x *Preset) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Preset.ProtoReflect.Descriptor instead.
-func (*Preset) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{5}
-}
-
 func (x *Preset) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *Preset) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
 func (x *Preset) GetDescription() string {
 	if x != nil {
-		return x.Description
+		return x.xxx_hidden_Description
 	}
 	return ""
 }
 
 func (x *Preset) GetPluginIds() []string {
 	if x != nil {
-		return x.PluginIds
+		return x.xxx_hidden_PluginIds
 	}
 	return nil
 }
 
+func (x *Preset) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *Preset) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *Preset) SetDescription(v string) {
+	x.xxx_hidden_Description = v
+}
+
+func (x *Preset) SetPluginIds(v []string) {
+	x.xxx_hidden_PluginIds = v
+}
+
+type Preset_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id          string
+	Name        string
+	Description string
+	PluginIds   []string
+}
+
+func (b0 Preset_builder) Build() *Preset {
+	m0 := &Preset{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Description = b.Description
+	x.xxx_hidden_PluginIds = b.PluginIds
+	return m0
+}
+
 // List presets request
 type ListPresetsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -395,17 +533,24 @@ func (x *ListPresetsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListPresetsRequest.ProtoReflect.Descriptor instead.
-func (*ListPresetsRequest) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{6}
+type ListPresetsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 ListPresetsRequest_builder) Build() *ListPresetsRequest {
+	m0 := &ListPresetsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
 }
 
 // List presets response
 type ListPresetsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Presets       []*Preset              `protobuf:"bytes,10,rep,name=presets,proto3" json:"presets,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Presets *[]*Preset             `protobuf:"bytes,10,rep,name=presets"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ListPresetsResponse) Reset() {
@@ -433,27 +578,42 @@ func (x *ListPresetsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListPresetsResponse.ProtoReflect.Descriptor instead.
-func (*ListPresetsResponse) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{7}
-}
-
 func (x *ListPresetsResponse) GetPresets() []*Preset {
 	if x != nil {
-		return x.Presets
+		if x.xxx_hidden_Presets != nil {
+			return *x.xxx_hidden_Presets
+		}
 	}
 	return nil
 }
 
+func (x *ListPresetsResponse) SetPresets(v []*Preset) {
+	x.xxx_hidden_Presets = &v
+}
+
+type ListPresetsResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Presets []*Preset
+}
+
+func (b0 ListPresetsResponse_builder) Build() *ListPresetsResponse {
+	m0 := &ListPresetsResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Presets = &b.Presets
+	return m0
+}
+
 // Documentation link for a plugin
 type DocumentationLink struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Title         string                 `protobuf:"bytes,20,opt,name=title,proto3" json:"title,omitempty"`
-	UrlName       string                 `protobuf:"bytes,30,opt,name=url_name,json=urlName,proto3" json:"url_name,omitempty"`
-	Url           string                 `protobuf:"bytes,40,opt,name=url,proto3" json:"url,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id      string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Title   string                 `protobuf:"bytes,20,opt,name=title"`
+	xxx_hidden_UrlName string                 `protobuf:"bytes,30,opt,name=url_name,json=urlName"`
+	xxx_hidden_Url     string                 `protobuf:"bytes,40,opt,name=url"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *DocumentationLink) Reset() {
@@ -481,46 +641,77 @@ func (x *DocumentationLink) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DocumentationLink.ProtoReflect.Descriptor instead.
-func (*DocumentationLink) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{8}
-}
-
 func (x *DocumentationLink) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *DocumentationLink) GetTitle() string {
 	if x != nil {
-		return x.Title
+		return x.xxx_hidden_Title
 	}
 	return ""
 }
 
 func (x *DocumentationLink) GetUrlName() string {
 	if x != nil {
-		return x.UrlName
+		return x.xxx_hidden_UrlName
 	}
 	return ""
 }
 
 func (x *DocumentationLink) GetUrl() string {
 	if x != nil {
-		return x.Url
+		return x.xxx_hidden_Url
 	}
 	return ""
 }
 
+func (x *DocumentationLink) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *DocumentationLink) SetTitle(v string) {
+	x.xxx_hidden_Title = v
+}
+
+func (x *DocumentationLink) SetUrlName(v string) {
+	x.xxx_hidden_UrlName = v
+}
+
+func (x *DocumentationLink) SetUrl(v string) {
+	x.xxx_hidden_Url = v
+}
+
+type DocumentationLink_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id      string
+	Title   string
+	UrlName string
+	Url     string
+}
+
+func (b0 DocumentationLink_builder) Build() *DocumentationLink {
+	m0 := &DocumentationLink{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Title = b.Title
+	x.xxx_hidden_UrlName = b.UrlName
+	x.xxx_hidden_Url = b.Url
+	return m0
+}
+
 // Author information
 type Author struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,10,opt,name=name,proto3" json:"name,omitempty"`
-	Url           string                 `protobuf:"bytes,20,opt,name=url,proto3" json:"url,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name string                 `protobuf:"bytes,10,opt,name=name"`
+	xxx_hidden_Url  string                 `protobuf:"bytes,20,opt,name=url"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Author) Reset() {
@@ -548,39 +739,58 @@ func (x *Author) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Author.ProtoReflect.Descriptor instead.
-func (*Author) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{9}
-}
-
 func (x *Author) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
 func (x *Author) GetUrl() string {
 	if x != nil {
-		return x.Url
+		return x.xxx_hidden_Url
 	}
 	return ""
 }
 
+func (x *Author) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *Author) SetUrl(v string) {
+	x.xxx_hidden_Url = v
+}
+
+type Author_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name string
+	Url  string
+}
+
+func (b0 Author_builder) Build() *Author {
+	m0 := &Author{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Url = b.Url
+	return m0
+}
+
 // Detailed plugin information
 type PluginDetail struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Id                 string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Name               string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	Description        string                 `protobuf:"bytes,30,opt,name=description,proto3" json:"description,omitempty"`
-	DescriptionShort   string                 `protobuf:"bytes,35,opt,name=description_short,json=descriptionShort,proto3" json:"description_short,omitempty"`
-	Tags               []*Tag                 `protobuf:"bytes,40,rep,name=tags,proto3" json:"tags,omitempty"`
-	Categories         []*Category            `protobuf:"bytes,50,rep,name=categories,proto3" json:"categories,omitempty"`
-	Author             *Author                `protobuf:"bytes,60,opt,name=author,proto3" json:"author,omitempty"`
-	RepositoryUrl      string                 `protobuf:"bytes,70,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
-	DocumentationLinks []*DocumentationLink   `protobuf:"bytes,80,rep,name=documentation_links,json=documentationLinks,proto3" json:"documentation_links,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id                 string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name               string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_Description        string                 `protobuf:"bytes,30,opt,name=description"`
+	xxx_hidden_DescriptionShort   string                 `protobuf:"bytes,35,opt,name=description_short,json=descriptionShort"`
+	xxx_hidden_Tags               *[]*Tag                `protobuf:"bytes,40,rep,name=tags"`
+	xxx_hidden_Categories         *[]*Category           `protobuf:"bytes,50,rep,name=categories"`
+	xxx_hidden_Author             *Author                `protobuf:"bytes,60,opt,name=author"`
+	xxx_hidden_RepositoryUrl      string                 `protobuf:"bytes,70,opt,name=repository_url,json=repositoryUrl"`
+	xxx_hidden_DocumentationLinks *[]*DocumentationLink  `protobuf:"bytes,80,rep,name=documentation_links,json=documentationLinks"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *PluginDetail) Reset() {
@@ -608,80 +818,158 @@ func (x *PluginDetail) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PluginDetail.ProtoReflect.Descriptor instead.
-func (*PluginDetail) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{10}
-}
-
 func (x *PluginDetail) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *PluginDetail) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
 func (x *PluginDetail) GetDescription() string {
 	if x != nil {
-		return x.Description
+		return x.xxx_hidden_Description
 	}
 	return ""
 }
 
 func (x *PluginDetail) GetDescriptionShort() string {
 	if x != nil {
-		return x.DescriptionShort
+		return x.xxx_hidden_DescriptionShort
 	}
 	return ""
 }
 
 func (x *PluginDetail) GetTags() []*Tag {
 	if x != nil {
-		return x.Tags
+		if x.xxx_hidden_Tags != nil {
+			return *x.xxx_hidden_Tags
+		}
 	}
 	return nil
 }
 
 func (x *PluginDetail) GetCategories() []*Category {
 	if x != nil {
-		return x.Categories
+		if x.xxx_hidden_Categories != nil {
+			return *x.xxx_hidden_Categories
+		}
 	}
 	return nil
 }
 
 func (x *PluginDetail) GetAuthor() *Author {
 	if x != nil {
-		return x.Author
+		return x.xxx_hidden_Author
 	}
 	return nil
 }
 
 func (x *PluginDetail) GetRepositoryUrl() string {
 	if x != nil {
-		return x.RepositoryUrl
+		return x.xxx_hidden_RepositoryUrl
 	}
 	return ""
 }
 
 func (x *PluginDetail) GetDocumentationLinks() []*DocumentationLink {
 	if x != nil {
-		return x.DocumentationLinks
+		if x.xxx_hidden_DocumentationLinks != nil {
+			return *x.xxx_hidden_DocumentationLinks
+		}
 	}
 	return nil
 }
 
+func (x *PluginDetail) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *PluginDetail) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *PluginDetail) SetDescription(v string) {
+	x.xxx_hidden_Description = v
+}
+
+func (x *PluginDetail) SetDescriptionShort(v string) {
+	x.xxx_hidden_DescriptionShort = v
+}
+
+func (x *PluginDetail) SetTags(v []*Tag) {
+	x.xxx_hidden_Tags = &v
+}
+
+func (x *PluginDetail) SetCategories(v []*Category) {
+	x.xxx_hidden_Categories = &v
+}
+
+func (x *PluginDetail) SetAuthor(v *Author) {
+	x.xxx_hidden_Author = v
+}
+
+func (x *PluginDetail) SetRepositoryUrl(v string) {
+	x.xxx_hidden_RepositoryUrl = v
+}
+
+func (x *PluginDetail) SetDocumentationLinks(v []*DocumentationLink) {
+	x.xxx_hidden_DocumentationLinks = &v
+}
+
+func (x *PluginDetail) HasAuthor() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Author != nil
+}
+
+func (x *PluginDetail) ClearAuthor() {
+	x.xxx_hidden_Author = nil
+}
+
+type PluginDetail_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id                 string
+	Name               string
+	Description        string
+	DescriptionShort   string
+	Tags               []*Tag
+	Categories         []*Category
+	Author             *Author
+	RepositoryUrl      string
+	DocumentationLinks []*DocumentationLink
+}
+
+func (b0 PluginDetail_builder) Build() *PluginDetail {
+	m0 := &PluginDetail{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Description = b.Description
+	x.xxx_hidden_DescriptionShort = b.DescriptionShort
+	x.xxx_hidden_Tags = &b.Tags
+	x.xxx_hidden_Categories = &b.Categories
+	x.xxx_hidden_Author = b.Author
+	x.xxx_hidden_RepositoryUrl = b.RepositoryUrl
+	x.xxx_hidden_DocumentationLinks = &b.DocumentationLinks
+	return m0
+}
+
 // Get plugin detail request
 type GetPluginDetailRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PluginId      string                 `protobuf:"bytes,10,opt,name=plugin_id,json=pluginId,proto3" json:"plugin_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PluginId string                 `protobuf:"bytes,10,opt,name=plugin_id,json=pluginId"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *GetPluginDetailRequest) Reset() {
@@ -709,24 +997,37 @@ func (x *GetPluginDetailRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetPluginDetailRequest.ProtoReflect.Descriptor instead.
-func (*GetPluginDetailRequest) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{11}
-}
-
 func (x *GetPluginDetailRequest) GetPluginId() string {
 	if x != nil {
-		return x.PluginId
+		return x.xxx_hidden_PluginId
 	}
 	return ""
 }
 
+func (x *GetPluginDetailRequest) SetPluginId(v string) {
+	x.xxx_hidden_PluginId = v
+}
+
+type GetPluginDetailRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	PluginId string
+}
+
+func (b0 GetPluginDetailRequest_builder) Build() *GetPluginDetailRequest {
+	m0 := &GetPluginDetailRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_PluginId = b.PluginId
+	return m0
+}
+
 // Get plugin detail response
 type GetPluginDetailResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Plugin        *PluginDetail          `protobuf:"bytes,10,opt,name=plugin,proto3" json:"plugin,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Plugin *PluginDetail          `protobuf:"bytes,10,opt,name=plugin"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *GetPluginDetailResponse) Reset() {
@@ -754,23 +1055,47 @@ func (x *GetPluginDetailResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetPluginDetailResponse.ProtoReflect.Descriptor instead.
-func (*GetPluginDetailResponse) Descriptor() ([]byte, []int) {
-	return file_v1_plugin_proto_rawDescGZIP(), []int{12}
-}
-
 func (x *GetPluginDetailResponse) GetPlugin() *PluginDetail {
 	if x != nil {
-		return x.Plugin
+		return x.xxx_hidden_Plugin
 	}
 	return nil
+}
+
+func (x *GetPluginDetailResponse) SetPlugin(v *PluginDetail) {
+	x.xxx_hidden_Plugin = v
+}
+
+func (x *GetPluginDetailResponse) HasPlugin() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Plugin != nil
+}
+
+func (x *GetPluginDetailResponse) ClearPlugin() {
+	x.xxx_hidden_Plugin = nil
+}
+
+type GetPluginDetailResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Plugin *PluginDetail
+}
+
+func (b0 GetPluginDetailResponse_builder) Build() *GetPluginDetailResponse {
+	m0 := &GetPluginDetailResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Plugin = b.Plugin
+	return m0
 }
 
 var File_v1_plugin_proto protoreflect.FileDescriptor
 
 const file_v1_plugin_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/plugin.proto\x12\x0forganization.v1\")\n" +
+	"\x0fv1/plugin.proto\x12\x0forganization.v1\x1a!google/protobuf/go_features.proto\")\n" +
 	"\x03Tag\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -836,19 +1161,7 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\rPluginService\x12X\n" +
 	"\vListPlugins\x12#.organization.v1.ListPluginsRequest\x1a$.organization.v1.ListPluginsResponse\x12d\n" +
 	"\x0fGetPluginDetail\x12'.organization.v1.GetPluginDetailRequest\x1a(.organization.v1.GetPluginDetailResponse\x12X\n" +
-	"\vListPresets\x12#.organization.v1.ListPresetsRequest\x1a$.organization.v1.ListPresetsResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
-
-var (
-	file_v1_plugin_proto_rawDescOnce sync.Once
-	file_v1_plugin_proto_rawDescData []byte
-)
-
-func file_v1_plugin_proto_rawDescGZIP() []byte {
-	file_v1_plugin_proto_rawDescOnce.Do(func() {
-		file_v1_plugin_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_v1_plugin_proto_rawDesc), len(file_v1_plugin_proto_rawDesc)))
-	})
-	return file_v1_plugin_proto_rawDescData
-}
+	"\vListPresets\x12#.organization.v1.ListPresetsRequest\x1a$.organization.v1.ListPresetsResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_v1_plugin_proto_goTypes = []any{

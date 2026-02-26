@@ -32,9 +32,9 @@ func (s *Server) ListPresets(
 		result = append(result, presetFromRow(&presets[i], pluginsByPreset))
 	}
 
-	return connect.NewResponse(&organizationv1.ListPresetsResponse{
+	return connect.NewResponse(organizationv1.ListPresetsResponse_builder{
 		Presets: result,
-	}), nil
+	}.Build()), nil
 }
 
 func buildPluginsByPreset(presetPlugins []db.AppstorePresetPlugin) map[uuid.UUID][]string {
@@ -51,10 +51,10 @@ func presetFromRow(row *db.AppstorePreset, pluginsByPreset map[uuid.UUID][]strin
 		description = row.Description.String
 	}
 
-	return &organizationv1.Preset{
+	return organizationv1.Preset_builder{
 		Id:          row.ID.String(),
 		Name:        row.Name,
 		Description: description,
 		PluginIds:   pluginsByPreset[row.ID],
-	}
+	}.Build()
 }

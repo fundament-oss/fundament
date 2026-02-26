@@ -27,12 +27,12 @@ func (c *APIKeyListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.APIKeys().ListAPIKeys(context.Background(), connect.NewRequest(&organizationv1.ListAPIKeysRequest{}))
+	resp, err := apiClient.APIKeys().ListAPIKeys(context.Background(), connect.NewRequest(organizationv1.ListAPIKeysRequest_builder{}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to list API keys: %w", err)
 	}
 
-	apiKeys := resp.Msg.ApiKeys
+	apiKeys := resp.Msg.GetApiKeys()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(apiKeys)
@@ -47,25 +47,25 @@ func (c *APIKeyListCmd) Run(ctx *Context) error {
 	fmt.Fprintln(w, "ID\tNAME\tPREFIX\tCREATED\tEXPIRES\tLAST USED\tREVOKED")
 	for _, key := range apiKeys {
 		created := ""
-		if key.Created.IsValid() {
-			created = key.Created.AsTime().Format(TimeFormat)
+		if key.GetCreated().IsValid() {
+			created = key.GetCreated().AsTime().Format(TimeFormat)
 		}
 		expires := "never"
-		if key.Expires.IsValid() {
-			expires = key.Expires.AsTime().Format(TimeFormat)
+		if key.GetExpires().IsValid() {
+			expires = key.GetExpires().AsTime().Format(TimeFormat)
 		}
 		lastUsed := "never"
-		if key.LastUsed.IsValid() {
-			lastUsed = key.LastUsed.AsTime().Format(TimeFormat)
+		if key.GetLastUsed().IsValid() {
+			lastUsed = key.GetLastUsed().AsTime().Format(TimeFormat)
 		}
 		revoked := "no"
-		if key.Revoked.IsValid() {
-			revoked = key.Revoked.AsTime().Format(TimeFormat)
+		if key.GetRevoked().IsValid() {
+			revoked = key.GetRevoked().AsTime().Format(TimeFormat)
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s...\t%s\t%s\t%s\t%s\n",
-			key.Id,
-			key.Name,
-			key.TokenPrefix,
+			key.GetId(),
+			key.GetName(),
+			key.GetTokenPrefix(),
 			created,
 			expires,
 			lastUsed,
@@ -88,10 +88,10 @@ func (c *APIKeyCreateCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	req := &organizationv1.CreateAPIKeyRequest{
+	req := organizationv1.CreateAPIKeyRequest_builder{
 		Name:      c.Name,
 		ExpiresIn: c.ExpiresIn,
-	}
+	}.Build()
 
 	resp, err := apiClient.APIKeys().CreateAPIKey(context.Background(), connect.NewRequest(req))
 	if err != nil {
@@ -104,8 +104,8 @@ func (c *APIKeyCreateCmd) Run(ctx *Context) error {
 
 	fmt.Println("API key created successfully!")
 	fmt.Println()
-	fmt.Printf("ID:    %s\n", resp.Msg.Id)
-	fmt.Printf("Token: %s\n", resp.Msg.Token)
+	fmt.Printf("ID:    %s\n", resp.Msg.GetId())
+	fmt.Printf("Token: %s\n", resp.Msg.GetToken())
 	fmt.Println()
 	fmt.Println("IMPORTANT: Copy this token now. You will not be able to see it again.")
 	return nil
@@ -123,9 +123,9 @@ func (c *APIKeyRevokeCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	_, err = apiClient.APIKeys().RevokeAPIKey(context.Background(), connect.NewRequest(&organizationv1.RevokeAPIKeyRequest{
+	_, err = apiClient.APIKeys().RevokeAPIKey(context.Background(), connect.NewRequest(organizationv1.RevokeAPIKeyRequest_builder{
 		ApiKeyId: c.APIKeyID,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to revoke API key: %w", err)
 	}
@@ -146,9 +146,9 @@ func (c *APIKeyDeleteCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	_, err = apiClient.APIKeys().DeleteAPIKey(context.Background(), connect.NewRequest(&organizationv1.DeleteAPIKeyRequest{
+	_, err = apiClient.APIKeys().DeleteAPIKey(context.Background(), connect.NewRequest(organizationv1.DeleteAPIKeyRequest_builder{
 		ApiKeyId: c.APIKeyID,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to delete API key: %w", err)
 	}

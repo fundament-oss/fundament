@@ -1,7 +1,11 @@
-syntax = "proto3";
+edition = "2023";
 
 package authn.v1;
 
+import "google/protobuf/go_features.proto";
+
+option features.field_presence = IMPLICIT;
+option features.(pb.go).api_level = API_OPAQUE;
 option go_package = "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1;authnv1";
 
 service AuthnService {

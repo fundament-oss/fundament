@@ -124,9 +124,9 @@ func (d *ClusterNamespacesDataSource) Read(ctx context.Context, req datasource.R
 		"cluster_id": clusterID,
 	})
 
-	rpcReq := connect.NewRequest(&organizationv1.ListClusterNamespacesRequest{
+	rpcReq := connect.NewRequest(organizationv1.ListClusterNamespacesRequest_builder{
 		ClusterId: clusterID,
-	})
+	}.Build())
 
 	// Call the API
 	rpcResp, err := d.client.NamespaceService.ListClusterNamespaces(ctx, rpcReq)
@@ -157,14 +157,14 @@ func (d *ClusterNamespacesDataSource) Read(ctx context.Context, req datasource.R
 	}
 
 	// Map response to state
-	state.Namespaces = make([]NamespaceModel, len(rpcResp.Msg.Namespaces))
-	for i, ns := range rpcResp.Msg.Namespaces {
+	state.Namespaces = make([]NamespaceModel, len(rpcResp.Msg.GetNamespaces()))
+	for i, ns := range rpcResp.Msg.GetNamespaces() {
 		state.Namespaces[i] = NamespaceModel{
-			ID:        types.StringValue(ns.Id),
-			Name:      types.StringValue(ns.Name),
-			ProjectID: types.StringValue(ns.ProjectId),
-			ClusterID: types.StringValue(ns.ClusterId),
-			Created:   types.StringValue(ns.Created.AsTime().Format(time.RFC3339)),
+			ID:        types.StringValue(ns.GetId()),
+			Name:      types.StringValue(ns.GetName()),
+			ProjectID: types.StringValue(ns.GetProjectId()),
+			ClusterID: types.StringValue(ns.GetClusterId()),
+			Created:   types.StringValue(ns.GetCreated().AsTime().Format(time.RFC3339)),
 		}
 	}
 

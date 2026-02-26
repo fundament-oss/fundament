@@ -10,9 +10,9 @@ import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	_ "google.golang.org/protobuf/types/gofeaturespb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
-	sync "sync"
 	unsafe "unsafe"
 )
 
@@ -25,12 +25,11 @@ const (
 
 // Invite member request
 type InviteMemberRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Email string                 `protobuf:"bytes,10,opt,name=email,proto3" json:"email,omitempty"`
-	// Permission for the invited user: "viewer" or "admin"
-	Permission    string `protobuf:"bytes,20,opt,name=permission,proto3" json:"permission,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Email      string                 `protobuf:"bytes,10,opt,name=email"`
+	xxx_hidden_Permission string                 `protobuf:"bytes,20,opt,name=permission"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *InviteMemberRequest) Reset() {
@@ -58,31 +57,51 @@ func (x *InviteMemberRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use InviteMemberRequest.ProtoReflect.Descriptor instead.
-func (*InviteMemberRequest) Descriptor() ([]byte, []int) {
-	return file_v1_invite_proto_rawDescGZIP(), []int{0}
-}
-
 func (x *InviteMemberRequest) GetEmail() string {
 	if x != nil {
-		return x.Email
+		return x.xxx_hidden_Email
 	}
 	return ""
 }
 
 func (x *InviteMemberRequest) GetPermission() string {
 	if x != nil {
-		return x.Permission
+		return x.xxx_hidden_Permission
 	}
 	return ""
 }
 
+func (x *InviteMemberRequest) SetEmail(v string) {
+	x.xxx_hidden_Email = v
+}
+
+func (x *InviteMemberRequest) SetPermission(v string) {
+	x.xxx_hidden_Permission = v
+}
+
+type InviteMemberRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Email string
+	// Permission for the invited user: "viewer" or "admin"
+	Permission string
+}
+
+func (b0 InviteMemberRequest_builder) Build() *InviteMemberRequest {
+	m0 := &InviteMemberRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Email = b.Email
+	x.xxx_hidden_Permission = b.Permission
+	return m0
+}
+
 // Invite member response
 type InviteMemberResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Member        *Member                `protobuf:"bytes,10,opt,name=member,proto3" json:"member,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Member *Member                `protobuf:"bytes,10,opt,name=member"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *InviteMemberResponse) Reset() {
@@ -110,21 +129,45 @@ func (x *InviteMemberResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use InviteMemberResponse.ProtoReflect.Descriptor instead.
-func (*InviteMemberResponse) Descriptor() ([]byte, []int) {
-	return file_v1_invite_proto_rawDescGZIP(), []int{1}
-}
-
 func (x *InviteMemberResponse) GetMember() *Member {
 	if x != nil {
-		return x.Member
+		return x.xxx_hidden_Member
 	}
 	return nil
 }
 
+func (x *InviteMemberResponse) SetMember(v *Member) {
+	x.xxx_hidden_Member = v
+}
+
+func (x *InviteMemberResponse) HasMember() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Member != nil
+}
+
+func (x *InviteMemberResponse) ClearMember() {
+	x.xxx_hidden_Member = nil
+}
+
+type InviteMemberResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Member *Member
+}
+
+func (b0 InviteMemberResponse_builder) Build() *InviteMemberResponse {
+	m0 := &InviteMemberResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Member = b.Member
+	return m0
+}
+
 // List invitations request
 type ListInvitationsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -154,17 +197,24 @@ func (x *ListInvitationsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListInvitationsRequest.ProtoReflect.Descriptor instead.
-func (*ListInvitationsRequest) Descriptor() ([]byte, []int) {
-	return file_v1_invite_proto_rawDescGZIP(), []int{2}
+type ListInvitationsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 ListInvitationsRequest_builder) Build() *ListInvitationsRequest {
+	m0 := &ListInvitationsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
 }
 
 // List invitations response
 type ListInvitationsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Invitations   []*Invitation          `protobuf:"bytes,10,rep,name=invitations,proto3" json:"invitations,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Invitations *[]*Invitation         `protobuf:"bytes,10,rep,name=invitations"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ListInvitationsResponse) Reset() {
@@ -192,28 +242,43 @@ func (x *ListInvitationsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListInvitationsResponse.ProtoReflect.Descriptor instead.
-func (*ListInvitationsResponse) Descriptor() ([]byte, []int) {
-	return file_v1_invite_proto_rawDescGZIP(), []int{3}
-}
-
 func (x *ListInvitationsResponse) GetInvitations() []*Invitation {
 	if x != nil {
-		return x.Invitations
+		if x.xxx_hidden_Invitations != nil {
+			return *x.xxx_hidden_Invitations
+		}
 	}
 	return nil
 }
 
+func (x *ListInvitationsResponse) SetInvitations(v []*Invitation) {
+	x.xxx_hidden_Invitations = &v
+}
+
+type ListInvitationsResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Invitations []*Invitation
+}
+
+func (b0 ListInvitationsResponse_builder) Build() *ListInvitationsResponse {
+	m0 := &ListInvitationsResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Invitations = &b.Invitations
+	return m0
+}
+
 // Invitation represents a pending organization invitation
 type Invitation struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Id               string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	OrganizationId   string                 `protobuf:"bytes,20,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	OrganizationName string                 `protobuf:"bytes,30,opt,name=organization_name,json=organizationName,proto3" json:"organization_name,omitempty"`
-	Permission       string                 `protobuf:"bytes,40,opt,name=permission,proto3" json:"permission,omitempty"`
-	Created          *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=created,proto3" json:"created,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id                      string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_OrganizationId          string                 `protobuf:"bytes,20,opt,name=organization_id,json=organizationId"`
+	xxx_hidden_OrganizationDisplayName string                 `protobuf:"bytes,30,opt,name=organization_display_name,json=organizationDisplayName"`
+	xxx_hidden_Permission              string                 `protobuf:"bytes,40,opt,name=permission"`
+	xxx_hidden_Created                 *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=created"`
+	unknownFields                      protoimpl.UnknownFields
+	sizeCache                          protoimpl.SizeCache
 }
 
 func (x *Invitation) Reset() {
@@ -241,50 +306,98 @@ func (x *Invitation) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Invitation.ProtoReflect.Descriptor instead.
-func (*Invitation) Descriptor() ([]byte, []int) {
-	return file_v1_invite_proto_rawDescGZIP(), []int{4}
-}
-
 func (x *Invitation) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *Invitation) GetOrganizationId() string {
 	if x != nil {
-		return x.OrganizationId
+		return x.xxx_hidden_OrganizationId
 	}
 	return ""
 }
 
-func (x *Invitation) GetOrganizationName() string {
+func (x *Invitation) GetOrganizationDisplayName() string {
 	if x != nil {
-		return x.OrganizationName
+		return x.xxx_hidden_OrganizationDisplayName
 	}
 	return ""
 }
 
 func (x *Invitation) GetPermission() string {
 	if x != nil {
-		return x.Permission
+		return x.xxx_hidden_Permission
 	}
 	return ""
 }
 
 func (x *Invitation) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Created
+		return x.xxx_hidden_Created
 	}
 	return nil
 }
 
+func (x *Invitation) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *Invitation) SetOrganizationId(v string) {
+	x.xxx_hidden_OrganizationId = v
+}
+
+func (x *Invitation) SetOrganizationDisplayName(v string) {
+	x.xxx_hidden_OrganizationDisplayName = v
+}
+
+func (x *Invitation) SetPermission(v string) {
+	x.xxx_hidden_Permission = v
+}
+
+func (x *Invitation) SetCreated(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Created = v
+}
+
+func (x *Invitation) HasCreated() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Created != nil
+}
+
+func (x *Invitation) ClearCreated() {
+	x.xxx_hidden_Created = nil
+}
+
+type Invitation_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id                      string
+	OrganizationId          string
+	OrganizationDisplayName string
+	Permission              string
+	Created                 *timestamppb.Timestamp
+}
+
+func (b0 Invitation_builder) Build() *Invitation {
+	m0 := &Invitation{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_OrganizationId = b.OrganizationId
+	x.xxx_hidden_OrganizationDisplayName = b.OrganizationDisplayName
+	x.xxx_hidden_Permission = b.Permission
+	x.xxx_hidden_Created = b.Created
+	return m0
+}
+
 // Accept invitation request
 type AcceptInvitationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -314,21 +427,34 @@ func (x *AcceptInvitationRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use AcceptInvitationRequest.ProtoReflect.Descriptor instead.
-func (*AcceptInvitationRequest) Descriptor() ([]byte, []int) {
-	return file_v1_invite_proto_rawDescGZIP(), []int{5}
-}
-
 func (x *AcceptInvitationRequest) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
+func (x *AcceptInvitationRequest) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+type AcceptInvitationRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id string
+}
+
+func (b0 AcceptInvitationRequest_builder) Build() *AcceptInvitationRequest {
+	m0 := &AcceptInvitationRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	return m0
+}
+
 // Accept invitation response
 type AcceptInvitationResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -358,15 +484,22 @@ func (x *AcceptInvitationResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use AcceptInvitationResponse.ProtoReflect.Descriptor instead.
-func (*AcceptInvitationResponse) Descriptor() ([]byte, []int) {
-	return file_v1_invite_proto_rawDescGZIP(), []int{6}
+type AcceptInvitationResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 AcceptInvitationResponse_builder) Build() *AcceptInvitationResponse {
+	m0 := &AcceptInvitationResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
 }
 
 // Decline invitation request
 type DeclineInvitationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -396,21 +529,34 @@ func (x *DeclineInvitationRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeclineInvitationRequest.ProtoReflect.Descriptor instead.
-func (*DeclineInvitationRequest) Descriptor() ([]byte, []int) {
-	return file_v1_invite_proto_rawDescGZIP(), []int{7}
-}
-
 func (x *DeclineInvitationRequest) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
+func (x *DeclineInvitationRequest) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+type DeclineInvitationRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id string
+}
+
+func (b0 DeclineInvitationRequest_builder) Build() *DeclineInvitationRequest {
+	m0 := &DeclineInvitationRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	return m0
+}
+
 // Decline invitation response
 type DeclineInvitationResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -440,16 +586,23 @@ func (x *DeclineInvitationResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeclineInvitationResponse.ProtoReflect.Descriptor instead.
-func (*DeclineInvitationResponse) Descriptor() ([]byte, []int) {
-	return file_v1_invite_proto_rawDescGZIP(), []int{8}
+type DeclineInvitationResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 DeclineInvitationResponse_builder) Build() *DeclineInvitationResponse {
+	m0 := &DeclineInvitationResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
 }
 
 var File_v1_invite_proto protoreflect.FileDescriptor
 
 const file_v1_invite_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/invite.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\x1a\x0fv1/member.proto\"j\n" +
+	"\x0fv1/invite.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\x1a\x0fv1/member.proto\"j\n" +
 	"\x13InviteMemberRequest\x12\x1d\n" +
 	"\x05email\x18\n" +
 	" \x01(\tB\a\xbaH\x04r\x02`\x01R\x05email\x124\n" +
@@ -462,13 +615,13 @@ const file_v1_invite_proto_rawDesc = "" +
 	"\x16ListInvitationsRequest\"X\n" +
 	"\x17ListInvitationsResponse\x12=\n" +
 	"\vinvitations\x18\n" +
-	" \x03(\v2\x1b.organization.v1.InvitationR\vinvitations\"\xc8\x01\n" +
+	" \x03(\v2\x1b.organization.v1.InvitationR\vinvitations\"\xd7\x01\n" +
 	"\n" +
 	"Invitation\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12'\n" +
-	"\x0forganization_id\x18\x14 \x01(\tR\x0eorganizationId\x12+\n" +
-	"\x11organization_name\x18\x1e \x01(\tR\x10organizationName\x12\x1e\n" +
+	"\x0forganization_id\x18\x14 \x01(\tR\x0eorganizationId\x12:\n" +
+	"\x19organization_display_name\x18\x1e \x01(\tR\x17organizationDisplayName\x12\x1e\n" +
 	"\n" +
 	"permission\x18( \x01(\tR\n" +
 	"permission\x124\n" +
@@ -485,19 +638,7 @@ const file_v1_invite_proto_rawDesc = "" +
 	"\fInviteMember\x12$.organization.v1.InviteMemberRequest\x1a%.organization.v1.InviteMemberResponse\x12d\n" +
 	"\x0fListInvitations\x12'.organization.v1.ListInvitationsRequest\x1a(.organization.v1.ListInvitationsResponse\x12g\n" +
 	"\x10AcceptInvitation\x12(.organization.v1.AcceptInvitationRequest\x1a).organization.v1.AcceptInvitationResponse\x12j\n" +
-	"\x11DeclineInvitation\x12).organization.v1.DeclineInvitationRequest\x1a*.organization.v1.DeclineInvitationResponseBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
-
-var (
-	file_v1_invite_proto_rawDescOnce sync.Once
-	file_v1_invite_proto_rawDescData []byte
-)
-
-func file_v1_invite_proto_rawDescGZIP() []byte {
-	file_v1_invite_proto_rawDescOnce.Do(func() {
-		file_v1_invite_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_v1_invite_proto_rawDesc), len(file_v1_invite_proto_rawDesc)))
-	})
-	return file_v1_invite_proto_rawDescData
-}
+	"\x11DeclineInvitation\x12).organization.v1.DeclineInvitationRequest\x1a*.organization.v1.DeclineInvitationResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_invite_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_v1_invite_proto_goTypes = []any{

@@ -146,11 +146,11 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	// Create the project member
-	createReq := connect.NewRequest(&organizationv1.AddProjectMemberRequest{
+	createReq := connect.NewRequest(organizationv1.AddProjectMemberRequest_builder{
 		ProjectId: plan.ProjectID.ValueString(),
 		UserId:    plan.UserID.ValueString(),
 		Role:      protoRole,
-	})
+	}.Build())
 
 	createResp, err := r.client.ProjectService.AddProjectMember(ctx, createReq)
 	if err != nil {
@@ -180,7 +180,7 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	// Set the ID from the response
-	plan.ID = types.StringValue(createResp.Msg.MemberId)
+	plan.ID = types.StringValue(createResp.Msg.GetMemberId())
 
 	// Read back the created member to get computed fields
 	found, diags := readProjectMemberIntoModel(ctx, r.client, &plan)
@@ -283,10 +283,10 @@ func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	// Update the member role
-	updateReq := connect.NewRequest(&organizationv1.UpdateProjectMemberRoleRequest{
+	updateReq := connect.NewRequest(organizationv1.UpdateProjectMemberRoleRequest_builder{
 		MemberId: state.ID.ValueString(),
 		Role:     protoRole,
-	})
+	}.Build())
 
 	_, err = r.client.ProjectService.UpdateProjectMemberRole(ctx, updateReq)
 	if err != nil {
@@ -362,9 +362,9 @@ func (r *ProjectMemberResource) Delete(ctx context.Context, req resource.DeleteR
 		"id": state.ID.ValueString(),
 	})
 
-	deleteReq := connect.NewRequest(&organizationv1.RemoveProjectMemberRequest{
+	deleteReq := connect.NewRequest(organizationv1.RemoveProjectMemberRequest_builder{
 		MemberId: state.ID.ValueString(),
-	})
+	}.Build())
 
 	_, err := r.client.ProjectService.RemoveProjectMember(ctx, deleteReq)
 	if err != nil {
@@ -436,9 +436,9 @@ func (r *ProjectMemberResource) ImportState(ctx context.Context, req resource.Im
 func readProjectMemberIntoModel(ctx context.Context, client *FundamentClient, model *ProjectMemberModel) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	getReq := connect.NewRequest(&organizationv1.GetProjectMemberRequest{
+	getReq := connect.NewRequest(organizationv1.GetProjectMemberRequest_builder{
 		MemberId: model.ID.ValueString(),
-	})
+	}.Build())
 
 	getResp, err := client.ProjectService.GetProjectMember(ctx, getReq)
 	if err != nil {
@@ -452,22 +452,22 @@ func readProjectMemberIntoModel(ctx context.Context, client *FundamentClient, mo
 		return false, diags
 	}
 
-	member := getResp.Msg.Member
-	permissionStr, err := projectMemberPermissionFromProto(member.Role)
+	member := getResp.Msg.GetMember()
+	permissionStr, err := projectMemberPermissionFromProto(member.GetRole())
 	if err != nil {
 		diags.AddError(
 			"Invalid Project Member Permission",
-			fmt.Sprintf("Unable to convert permission for member %q: %s", member.Id, err.Error()),
+			fmt.Sprintf("Unable to convert permission for member %q: %s", member.GetId(), err.Error()),
 		)
 		return false, diags
 	}
 
-	model.ProjectID = types.StringValue(member.ProjectId)
-	model.UserID = types.StringValue(member.UserId)
-	model.UserName = types.StringValue(member.UserName)
+	model.ProjectID = types.StringValue(member.GetProjectId())
+	model.UserID = types.StringValue(member.GetUserId())
+	model.UserName = types.StringValue(member.GetUserName())
 	model.Permission = types.StringValue(permissionStr)
-	if member.Created != nil {
-		model.Created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+	if member.HasCreated() {
+		model.Created = types.StringValue(member.GetCreated().AsTime().Format(time.RFC3339))
 	} else {
 		model.Created = types.StringNull()
 	}

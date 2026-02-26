@@ -19,15 +19,15 @@ func (s *Server) UpdateOrganization(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateOrganizationRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	organizationID := uuid.MustParse(req.Msg.Id)
+	organizationID := uuid.MustParse(req.Msg.GetId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Organization(organizationID)); err != nil {
 		return nil, err
 	}
 
 	params := db.OrganizationUpdateParams{
-		ID:   organizationID,
-		Name: req.Msg.Name,
+		ID:          organizationID,
+		DisplayName: req.Msg.GetDisplayName(),
 	}
 
 	organization, err := s.queries.OrganizationUpdate(ctx, params)
@@ -38,7 +38,7 @@ func (s *Server) UpdateOrganization(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update organization: %w", err))
 	}
 
-	s.logger.InfoContext(ctx, "organization updated", "organization_id", organization.ID, "name", organization.Name)
+	s.logger.InfoContext(ctx, "organization updated", "organization_id", organization.ID, "name", organization.Name, "display_name", organization.DisplayName)
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }

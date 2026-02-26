@@ -81,11 +81,11 @@ func (s *AuthnServer) ExchangeToken(
 		"organization_ids", u.OrganizationIDs,
 	)
 
-	return connect.NewResponse(&authnv1.ExchangeTokenResponse{
+	return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
 		AccessToken: accessToken,
 		TokenType:   "Bearer",
 		ExpiresIn:   int64(APITokenExpiry.Seconds()),
-	}), nil
+	}.Build()), nil
 }
 
 // extractBearerToken extracts the token from a Bearer authorization header.

@@ -113,11 +113,11 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		"namespace_name": namespaceName,
 	})
 
-	rpcReq := connect.NewRequest(&organizationv1.GetNamespaceByProjectAndNameRequest{
+	rpcReq := connect.NewRequest(organizationv1.GetNamespaceByProjectAndNameRequest_builder{
 		ClusterName:   clusterName,
 		ProjectName:   projectName,
 		NamespaceName: namespaceName,
-	})
+	}.Build())
 
 	rpcResp, err := d.client.NamespaceService.GetNamespaceByProjectAndName(ctx, rpcReq)
 	if err != nil {
@@ -146,12 +146,12 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	ns := rpcResp.Msg.Namespace
-	config.ID = types.StringValue(ns.Id)
-	config.Name = types.StringValue(ns.Name)
-	config.ProjectID = types.StringValue(ns.ProjectId)
-	config.ClusterID = types.StringValue(ns.ClusterId)
-	config.Created = types.StringValue(ns.Created.String())
+	ns := rpcResp.Msg.GetNamespace()
+	config.ID = types.StringValue(ns.GetId())
+	config.Name = types.StringValue(ns.GetName())
+	config.ProjectID = types.StringValue(ns.GetProjectId())
+	config.ClusterID = types.StringValue(ns.GetClusterId())
+	config.Created = types.StringValue(ns.GetCreated().String())
 
 	tflog.Debug(ctx, "Read namespace successfully", map[string]any{
 		"id":         config.ID.ValueString(),

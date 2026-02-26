@@ -18,7 +18,7 @@ func (s *Server) UpdateProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateProjectRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	projectID := uuid.MustParse(req.Msg.ProjectId)
+	projectID := uuid.MustParse(req.Msg.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Project(projectID)); err != nil {
 		return nil, err
@@ -28,8 +28,8 @@ func (s *Server) UpdateProject(
 		ID: projectID,
 	}
 
-	if req.Msg.Name != nil {
-		params.Name = pgtype.Text{String: *req.Msg.Name, Valid: true}
+	if req.Msg.HasName() {
+		params.Name = pgtype.Text{String: req.Msg.GetName(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.ProjectUpdate(ctx, params)

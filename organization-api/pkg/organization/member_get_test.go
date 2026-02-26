@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func Test_Member_Get_Unauthenticated(t *testing.T) {
@@ -19,9 +20,9 @@ func Test_Member_Get_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.GetMember(context.Background(), connect.NewRequest(&organizationv1.GetMemberRequest{
-		Lookup: &organizationv1.GetMemberRequest_Id{Id: uuid.New().String()},
-	}))
+	_, err := client.GetMember(context.Background(), connect.NewRequest(organizationv1.GetMemberRequest_builder{
+		Id: proto.String(uuid.New().String()),
+	}.Build()))
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -46,7 +47,7 @@ func Test_Member_Get(t *testing.T) {
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
 	// List members to discover the target member's membership ID
-	listReq := connect.NewRequest(&organizationv1.ListMembersRequest{})
+	listReq := connect.NewRequest(organizationv1.ListMembersRequest_builder{}.Build())
 	listReq.Header().Set("Authorization", "Bearer "+token)
 	listReq.Header().Set("Fun-Organization", orgID.String())
 
@@ -54,9 +55,9 @@ func Test_Member_Get(t *testing.T) {
 	require.NoError(t, err)
 
 	var targetMemberID string
-	for _, m := range listRes.Msg.Members {
-		if m.UserId == targetUserID.String() {
-			targetMemberID = m.Id
+	for _, m := range listRes.Msg.GetMembers() {
+		if m.GetUserId() == targetUserID.String() {
+			targetMemberID = m.GetId()
 			break
 		}
 	}
@@ -68,28 +69,28 @@ func Test_Member_Get(t *testing.T) {
 		WantErr  bool
 	}{
 		"by_id_not_found": {
-			Request: &organizationv1.GetMemberRequest{
-				Lookup: &organizationv1.GetMemberRequest_Id{Id: uuid.New().String()},
-			},
+			Request: organizationv1.GetMemberRequest_builder{
+				Id: proto.String(uuid.New().String()),
+			}.Build(),
 			WantCode: connect.CodeNotFound,
 			WantErr:  true,
 		},
 		"by_user_id_not_found": {
-			Request: &organizationv1.GetMemberRequest{
-				Lookup: &organizationv1.GetMemberRequest_UserId{UserId: uuid.New().String()},
-			},
+			Request: organizationv1.GetMemberRequest_builder{
+				UserId: proto.String(uuid.New().String()),
+			}.Build(),
 			WantCode: connect.CodeNotFound,
 			WantErr:  true,
 		},
 		"by_id_happy_flow": {
-			Request: &organizationv1.GetMemberRequest{
-				Lookup: &organizationv1.GetMemberRequest_Id{Id: targetMemberID},
-			},
+			Request: organizationv1.GetMemberRequest_builder{
+				Id: proto.String(targetMemberID),
+			}.Build(),
 		},
 		"by_user_id_happy_flow": {
-			Request: &organizationv1.GetMemberRequest{
-				Lookup: &organizationv1.GetMemberRequest_UserId{UserId: targetUserID.String()},
-			},
+			Request: organizationv1.GetMemberRequest_builder{
+				UserId: proto.String(targetUserID.String()),
+			}.Build(),
 		},
 	}
 
@@ -112,12 +113,12 @@ func Test_Member_Get(t *testing.T) {
 
 			require.NoError(t, err)
 
-			member := res.Msg.Member
-			assert.Equal(t, targetMemberID, member.Id)
-			assert.Equal(t, targetUserID.String(), member.UserId)
-			assert.Equal(t, "target-user", member.Name)
-			assert.Equal(t, "admin", member.Permission)
-			assert.Equal(t, "accepted", member.Status)
+			member := res.Msg.GetMember()
+			assert.Equal(t, targetMemberID, member.GetId())
+			assert.Equal(t, targetUserID.String(), member.GetUserId())
+			assert.Equal(t, "target-user", member.GetName())
+			assert.Equal(t, "admin", member.GetPermission())
+			assert.Equal(t, "accepted", member.GetStatus())
 		})
 	}
 }

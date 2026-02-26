@@ -61,7 +61,7 @@ type Client interface {
 type ClusterToSync struct {
 	ID                uuid.UUID
 	OrganizationID    uuid.UUID // Organization UUID (for labels)
-	OrganizationName  string    // Organization name (for reference, used in logging)
+	OrganizationName  string    // Organization name (for Gardener project naming)
 	Name              string    // Cluster name
 	ShootName         string    // Generated Gardener Shoot name (used only on create)
 	Namespace         string    // Gardener namespace (garden-{project-name})

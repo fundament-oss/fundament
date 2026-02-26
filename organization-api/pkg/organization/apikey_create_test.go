@@ -21,10 +21,10 @@ func Test_APIKey_Create_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.CreateAPIKey(context.Background(), connect.NewRequest(&organizationv1.CreateAPIKeyRequest{
+	_, err := client.CreateAPIKey(context.Background(), connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
 		Name:      "my-first-key",
 		ExpiresIn: "",
-	}))
+	}.Build()))
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -57,24 +57,24 @@ func Test_APIKey_Create(t *testing.T) {
 		WantExpiresAt *time.Time
 	}{
 		"without_expiration": {
-			CreateRequest: &organizationv1.CreateAPIKeyRequest{
+			CreateRequest: organizationv1.CreateAPIKeyRequest_builder{
 				Name:      "my-first-key",
 				ExpiresIn: "",
-			},
+			}.Build(),
 			WantExpiresAt: nil,
 		},
 		"with_expiration_in_minutes": {
-			CreateRequest: &organizationv1.CreateAPIKeyRequest{
+			CreateRequest: organizationv1.CreateAPIKeyRequest_builder{
 				Name:      "another-key",
 				ExpiresIn: "2m",
-			},
+			}.Build(),
 			WantExpiresAt: &inTwoMinutes,
 		},
 		"with_expiration_in_hours": {
-			CreateRequest: &organizationv1.CreateAPIKeyRequest{
+			CreateRequest: organizationv1.CreateAPIKeyRequest_builder{
 				Name:      "yet-another-key",
 				ExpiresIn: "120h",
-			},
+			}.Build(),
 			WantExpiresAt: &inFiveDays,
 		},
 	}
@@ -90,9 +90,9 @@ func Test_APIKey_Create(t *testing.T) {
 			res, err := client.CreateAPIKey(context.Background(), createReq)
 			require.NoError(t, err)
 
-			getReq := connect.NewRequest(&organizationv1.GetAPIKeyRequest{
-				ApiKeyId: res.Msg.Id,
-			})
+			getReq := connect.NewRequest(organizationv1.GetAPIKeyRequest_builder{
+				ApiKeyId: res.Msg.GetId(),
+			}.Build())
 			getReq.Header().Set("Authorization", "Bearer "+token)
 			getReq.Header().Set("Fun-Organization", orgID.String())
 
@@ -100,10 +100,10 @@ func Test_APIKey_Create(t *testing.T) {
 			require.NoError(t, err)
 
 			if tc.WantExpiresAt == nil {
-				assert.Nil(t, getRes.Msg.ApiKey.Expires)
+				assert.False(t, getRes.Msg.GetApiKey().HasExpires())
 			} else {
-				require.NotNil(t, getRes.Msg.ApiKey.Expires)
-				assert.Equal(t, *tc.WantExpiresAt, getRes.Msg.ApiKey.Expires.AsTime())
+				require.True(t, getRes.Msg.GetApiKey().HasExpires())
+				assert.Equal(t, *tc.WantExpiresAt, getRes.Msg.GetApiKey().GetExpires().AsTime())
 			}
 		})
 	}

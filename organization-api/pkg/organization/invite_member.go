@@ -30,8 +30,8 @@ func (s *Server) InviteMember(
 		return nil, err
 	}
 
-	email := req.Msg.Email
-	permission := req.Msg.Permission
+	email := req.Msg.GetEmail()
+	permission := req.Msg.GetPermission()
 
 	// Find existing user by email, or create a new one
 	var userID uuid.UUID
@@ -66,13 +66,13 @@ func (s *Server) InviteMember(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create membership: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.InviteMemberResponse{
+	return connect.NewResponse(organizationv1.InviteMemberResponse_builder{
 		Member: memberFromInviteRow(email, &membershipRow),
-	}), nil
+	}.Build()), nil
 }
 
 func memberFromInviteRow(email string, m *db.InviteCreateMembershipRow) *organizationv1.Member {
-	return &organizationv1.Member{
+	member := organizationv1.Member_builder{
 		Id:         m.ID.String(),
 		UserId:     m.UserID.String(),
 		Name:       email,
@@ -80,5 +80,6 @@ func memberFromInviteRow(email string, m *db.InviteCreateMembershipRow) *organiz
 		Permission: string(m.Permission),
 		Status:     string(m.Status),
 		Created:    timestamppb.New(m.Created.Time),
-	}
+	}.Build()
+	return member
 }

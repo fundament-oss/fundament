@@ -12,7 +12,7 @@ import { BehaviorSubject } from 'rxjs';
 import { provideNgIconsConfig, provideIcons } from '@ng-icons/core';
 import pluginIcons from './plugin-resources/generated-plugin-icons';
 import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
-import EXPECTED_API_VERSION from '../proto-version';
+import EXPECTED_API_VERSION from '../proto-version.gen';
 import routes from './app.routes';
 import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';

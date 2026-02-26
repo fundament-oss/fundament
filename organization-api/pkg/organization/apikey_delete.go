@@ -17,7 +17,7 @@ func (s *Server) DeleteAPIKey(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteAPIKeyRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	apiKeyID := uuid.MustParse(req.Msg.ApiKeyId)
+	apiKeyID := uuid.MustParse(req.Msg.GetApiKeyId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.ApiKey(apiKeyID)); err != nil {
 		return nil, err

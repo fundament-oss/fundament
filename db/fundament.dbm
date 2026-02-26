@@ -67,7 +67,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<role name="fun_owner"/>
 </schema>
 
-<table name="organizations" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="4" z-value="0">
+<table name="organizations" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
 	<position x="260" y="1200"/>
@@ -75,6 +75,9 @@ CAUTION: Do not modify this file unless you know what you are doing.
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="display_name" not-null="true">
 		<type name="text" length="0"/>
 	</column>
 	<column name="created" not-null="true" default-value="now()">
@@ -88,6 +91,12 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 	<constraint name="organizations_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.organizations">
 		<columns names="name,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="organizations_ck_name" type="ck-constr" table="tenant.organizations">
+			<expression> <![CDATA[name ~ '^[a-z][a-z0-9-]*[a-z0-9]$']]> </expression>
+	</constraint>
+	<constraint name="organizations_ck_display_name" type="ck-constr" table="tenant.organizations">
+			<expression> <![CDATA[char_length(display_name) >= 1 AND char_length(display_name) <= 255]]> </expression>
 	</constraint>
 </table>
 
