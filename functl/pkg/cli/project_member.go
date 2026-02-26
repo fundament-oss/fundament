@@ -33,14 +33,14 @@ func (c *ProjectMemberListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Projects().ListProjectMembers(context.Background(), connect.NewRequest(&organizationv1.ListProjectMembersRequest{
+	resp, err := apiClient.Projects().ListProjectMembers(context.Background(), connect.NewRequest(organizationv1.ListProjectMembersRequest_builder{
 		ProjectId: c.ProjectID,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to list project members: %w", err)
 	}
 
-	members := resp.Msg.Members
+	members := resp.Msg.GetMembers()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(members)
@@ -55,13 +55,13 @@ func (c *ProjectMemberListCmd) Run(ctx *Context) error {
 	fmt.Fprintln(w, "USER ID\tUSER NAME\tROLE\tCREATED")
 	for _, member := range members {
 		created := ""
-		if member.Created.IsValid() {
-			created = member.Created.AsTime().Format(TimeFormat)
+		if member.GetCreated().IsValid() {
+			created = member.GetCreated().AsTime().Format(TimeFormat)
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-			member.UserId,
-			member.UserName,
-			formatMemberRole(member.Role),
+			member.GetUserId(),
+			member.GetUserName(),
+			formatMemberRole(member.GetRole()),
 			created,
 		)
 	}
@@ -87,16 +87,16 @@ func (c *ProjectMemberAddCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Projects().AddProjectMember(context.Background(), connect.NewRequest(&organizationv1.AddProjectMemberRequest{
+	resp, err := apiClient.Projects().AddProjectMember(context.Background(), connect.NewRequest(organizationv1.AddProjectMemberRequest_builder{
 		ProjectId: c.ProjectID,
 		UserId:    c.UserID,
 		Role:      role,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to add project member: %w", err)
 	}
 
-	memberID := resp.Msg.MemberId
+	memberID := resp.Msg.GetMemberId()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]string{
@@ -137,10 +137,10 @@ func (c *ProjectMemberUpdateRoleCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	_, err = projectsClient.UpdateProjectMemberRole(context.Background(), connect.NewRequest(&organizationv1.UpdateProjectMemberRoleRequest{
-		MemberId: member.Id,
+	_, err = projectsClient.UpdateProjectMemberRole(context.Background(), connect.NewRequest(organizationv1.UpdateProjectMemberRoleRequest_builder{
+		MemberId: member.GetId(),
 		Role:     role,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to update project member role: %w", err)
 	}
@@ -179,7 +179,7 @@ func (c *ProjectMemberRemoveCmd) Run(ctx *Context) error {
 	}
 
 	if !c.Yes {
-		fmt.Printf("Remove member %q (%s) from project %s? [y/N] ", member.UserName, c.UserID, c.ProjectID)
+		fmt.Printf("Remove member %q (%s) from project %s? [y/N] ", member.GetUserName(), c.UserID, c.ProjectID)
 		reader := bufio.NewReader(os.Stdin)
 		input, err := reader.ReadString('\n')
 		if err != nil {
@@ -191,9 +191,9 @@ func (c *ProjectMemberRemoveCmd) Run(ctx *Context) error {
 		}
 	}
 
-	_, err = projectsClient.RemoveProjectMember(context.Background(), connect.NewRequest(&organizationv1.RemoveProjectMemberRequest{
-		MemberId: member.Id,
-	}))
+	_, err = projectsClient.RemoveProjectMember(context.Background(), connect.NewRequest(organizationv1.RemoveProjectMemberRequest_builder{
+		MemberId: member.GetId(),
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to remove project member: %w", err)
 	}
@@ -211,15 +211,15 @@ func (c *ProjectMemberRemoveCmd) Run(ctx *Context) error {
 
 // findProjectMember resolves a project member from a project ID and user ID.
 func findProjectMember(ctx context.Context, client organizationv1connect.ProjectServiceClient, projectID, userID string) (*organizationv1.ProjectMember, error) {
-	resp, err := client.ListProjectMembers(ctx, connect.NewRequest(&organizationv1.ListProjectMembersRequest{
+	resp, err := client.ListProjectMembers(ctx, connect.NewRequest(organizationv1.ListProjectMembersRequest_builder{
 		ProjectId: projectID,
-	}))
+	}.Build()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list project members: %w", err)
 	}
 
-	for _, member := range resp.Msg.Members {
-		if member.UserId == userID {
+	for _, member := range resp.Msg.GetMembers() {
+		if member.GetUserId() == userID {
 			return member, nil
 		}
 	}

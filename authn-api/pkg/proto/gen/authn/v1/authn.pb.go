@@ -9,8 +9,8 @@ package authnv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	_ "google.golang.org/protobuf/types/gofeaturespb"
 	reflect "reflect"
-	sync "sync"
 	unsafe "unsafe"
 )
 
@@ -22,7 +22,7 @@ const (
 )
 
 type GetUserInfoRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -52,17 +52,23 @@ func (x *GetUserInfoRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetUserInfoRequest.ProtoReflect.Descriptor instead.
-func (*GetUserInfoRequest) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{0}
+type GetUserInfoRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 GetUserInfoRequest_builder) Build() *GetUserInfoRequest {
+	m0 := &GetUserInfoRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
 }
 
 type GetUserInfoResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// User information
-	User          *User `protobuf:"bytes,10,opt,name=user,proto3" json:"user,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_User *User                  `protobuf:"bytes,10,opt,name=user"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetUserInfoResponse) Reset() {
@@ -90,32 +96,52 @@ func (x *GetUserInfoResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetUserInfoResponse.ProtoReflect.Descriptor instead.
-func (*GetUserInfoResponse) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{1}
-}
-
 func (x *GetUserInfoResponse) GetUser() *User {
 	if x != nil {
-		return x.User
+		return x.xxx_hidden_User
 	}
 	return nil
 }
 
+func (x *GetUserInfoResponse) SetUser(v *User) {
+	x.xxx_hidden_User = v
+}
+
+func (x *GetUserInfoResponse) HasUser() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_User != nil
+}
+
+func (x *GetUserInfoResponse) ClearUser() {
+	x.xxx_hidden_User = nil
+}
+
+type GetUserInfoResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// User information
+	User *User
+}
+
+func (b0 GetUserInfoResponse_builder) Build() *GetUserInfoResponse {
+	m0 := &GetUserInfoResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_User = b.User
+	return m0
+}
+
 type User struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// User ID
-	Id string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	// Organization IDs
-	OrganizationIds []string `protobuf:"bytes,20,rep,name=organization_ids,json=organizationIds,proto3" json:"organization_ids,omitempty"`
-	// User name
-	Name string `protobuf:"bytes,30,opt,name=name,proto3" json:"name,omitempty"`
-	// External ID from OIDC provider
-	ExternalRef string `protobuf:"bytes,40,opt,name=external_ref,json=externalRef,proto3" json:"external_ref,omitempty"`
-	// Groups the user belongs to
-	Groups        []string `protobuf:"bytes,50,rep,name=groups,proto3" json:"groups,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                      protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id              string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_OrganizationIds []string               `protobuf:"bytes,20,rep,name=organization_ids,json=organizationIds"`
+	xxx_hidden_Name            string                 `protobuf:"bytes,30,opt,name=name"`
+	xxx_hidden_ExternalRef     string                 `protobuf:"bytes,40,opt,name=external_ref,json=externalRef"`
+	xxx_hidden_Groups          []string               `protobuf:"bytes,50,rep,name=groups"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *User) Reset() {
@@ -143,49 +169,91 @@ func (x *User) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use User.ProtoReflect.Descriptor instead.
-func (*User) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{2}
-}
-
 func (x *User) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *User) GetOrganizationIds() []string {
 	if x != nil {
-		return x.OrganizationIds
+		return x.xxx_hidden_OrganizationIds
 	}
 	return nil
 }
 
 func (x *User) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
 func (x *User) GetExternalRef() string {
 	if x != nil {
-		return x.ExternalRef
+		return x.xxx_hidden_ExternalRef
 	}
 	return ""
 }
 
 func (x *User) GetGroups() []string {
 	if x != nil {
-		return x.Groups
+		return x.xxx_hidden_Groups
 	}
 	return nil
 }
 
+func (x *User) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *User) SetOrganizationIds(v []string) {
+	x.xxx_hidden_OrganizationIds = v
+}
+
+func (x *User) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *User) SetExternalRef(v string) {
+	x.xxx_hidden_ExternalRef = v
+}
+
+func (x *User) SetGroups(v []string) {
+	x.xxx_hidden_Groups = v
+}
+
+type User_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// User ID
+	Id string
+	// Organization IDs
+	OrganizationIds []string
+	// User name
+	Name string
+	// External ID from OIDC provider
+	ExternalRef string
+	// Groups the user belongs to
+	Groups []string
+}
+
+func (b0 User_builder) Build() *User {
+	m0 := &User{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_OrganizationIds = b.OrganizationIds
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_ExternalRef = b.ExternalRef
+	x.xxx_hidden_Groups = b.Groups
+	return m0
+}
+
 // ExchangeToken request - empty, API key is in Authorization header
 type ExchangeTokenRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -215,22 +283,26 @@ func (x *ExchangeTokenRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ExchangeTokenRequest.ProtoReflect.Descriptor instead.
-func (*ExchangeTokenRequest) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{3}
+type ExchangeTokenRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 ExchangeTokenRequest_builder) Build() *ExchangeTokenRequest {
+	m0 := &ExchangeTokenRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
 }
 
 // ExchangeToken response
 type ExchangeTokenResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// JWT access token for API calls
-	AccessToken string `protobuf:"bytes,10,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
-	// Token type (always "Bearer")
-	TokenType string `protobuf:"bytes,20,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"`
-	// Seconds until token expires
-	ExpiresIn     int64 `protobuf:"varint,30,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_AccessToken string                 `protobuf:"bytes,10,opt,name=access_token,json=accessToken"`
+	xxx_hidden_TokenType   string                 `protobuf:"bytes,20,opt,name=token_type,json=tokenType"`
+	xxx_hidden_ExpiresIn   int64                  `protobuf:"varint,30,opt,name=expires_in,json=expiresIn"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ExchangeTokenResponse) Reset() {
@@ -258,37 +330,65 @@ func (x *ExchangeTokenResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ExchangeTokenResponse.ProtoReflect.Descriptor instead.
-func (*ExchangeTokenResponse) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{4}
-}
-
 func (x *ExchangeTokenResponse) GetAccessToken() string {
 	if x != nil {
-		return x.AccessToken
+		return x.xxx_hidden_AccessToken
 	}
 	return ""
 }
 
 func (x *ExchangeTokenResponse) GetTokenType() string {
 	if x != nil {
-		return x.TokenType
+		return x.xxx_hidden_TokenType
 	}
 	return ""
 }
 
 func (x *ExchangeTokenResponse) GetExpiresIn() int64 {
 	if x != nil {
-		return x.ExpiresIn
+		return x.xxx_hidden_ExpiresIn
 	}
 	return 0
+}
+
+func (x *ExchangeTokenResponse) SetAccessToken(v string) {
+	x.xxx_hidden_AccessToken = v
+}
+
+func (x *ExchangeTokenResponse) SetTokenType(v string) {
+	x.xxx_hidden_TokenType = v
+}
+
+func (x *ExchangeTokenResponse) SetExpiresIn(v int64) {
+	x.xxx_hidden_ExpiresIn = v
+}
+
+type ExchangeTokenResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// JWT access token for API calls
+	AccessToken string
+	// Token type (always "Bearer")
+	TokenType string
+	// Seconds until token expires
+	ExpiresIn int64
+}
+
+func (b0 ExchangeTokenResponse_builder) Build() *ExchangeTokenResponse {
+	m0 := &ExchangeTokenResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_AccessToken = b.AccessToken
+	x.xxx_hidden_TokenType = b.TokenType
+	x.xxx_hidden_ExpiresIn = b.ExpiresIn
+	return m0
 }
 
 var File_authn_v1_authn_proto protoreflect.FileDescriptor
 
 const file_authn_v1_authn_proto_rawDesc = "" +
 	"\n" +
-	"\x14authn/v1/authn.proto\x12\bauthn.v1\"\x14\n" +
+	"\x14authn/v1/authn.proto\x12\bauthn.v1\x1a!google/protobuf/go_features.proto\"\x14\n" +
 	"\x12GetUserInfoRequest\"9\n" +
 	"\x13GetUserInfoResponse\x12\"\n" +
 	"\x04user\x18\n" +
@@ -311,19 +411,7 @@ const file_authn_v1_authn_proto_rawDesc = "" +
 	"\fAuthnService\x12J\n" +
 	"\vGetUserInfo\x12\x1c.authn.v1.GetUserInfoRequest\x1a\x1d.authn.v1.GetUserInfoResponse2`\n" +
 	"\fTokenService\x12P\n" +
-	"\rExchangeToken\x12\x1e.authn.v1.ExchangeTokenRequest\x1a\x1f.authn.v1.ExchangeTokenResponseBMZKgithub.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1;authnv1b\x06proto3"
-
-var (
-	file_authn_v1_authn_proto_rawDescOnce sync.Once
-	file_authn_v1_authn_proto_rawDescData []byte
-)
-
-func file_authn_v1_authn_proto_rawDescGZIP() []byte {
-	file_authn_v1_authn_proto_rawDescOnce.Do(func() {
-		file_authn_v1_authn_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_authn_v1_authn_proto_rawDesc), len(file_authn_v1_authn_proto_rawDesc)))
-	})
-	return file_authn_v1_authn_proto_rawDescData
-}
+	"\rExchangeToken\x12\x1e.authn.v1.ExchangeTokenRequest\x1a\x1f.authn.v1.ExchangeTokenResponseBWZKgithub.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1;authnv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_authn_v1_authn_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_authn_v1_authn_proto_goTypes = []any{

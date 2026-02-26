@@ -52,7 +52,7 @@ func (c *AuthLoginCmd) Run(ctx *Context) error {
 	}
 
 	testClient := client.New(apiKey, cfg.APIEndpoint, cfg.AuthnURL, "")
-	resp, err := testClient.Authn().GetUserInfo(context.Background(), connect.NewRequest(&authnv1.GetUserInfoRequest{}))
+	resp, err := testClient.Authn().GetUserInfo(context.Background(), connect.NewRequest(authnv1.GetUserInfoRequest_builder{}.Build()))
 	if err != nil {
 		return fmt.Errorf("invalid API key: %w", err)
 	}
@@ -65,7 +65,7 @@ func (c *AuthLoginCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	fmt.Printf("Logged in as %s\n", resp.Msg.User.Name)
+	fmt.Printf("Logged in as %s\n", resp.Msg.GetUser().GetName())
 	return nil
 }
 
@@ -88,29 +88,29 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	}
 
 	apiClient := client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL, "")
-	resp, err := apiClient.Authn().GetUserInfo(context.Background(), connect.NewRequest(&authnv1.GetUserInfoRequest{}))
+	resp, err := apiClient.Authn().GetUserInfo(context.Background(), connect.NewRequest(authnv1.GetUserInfoRequest_builder{}.Build()))
 	if err != nil {
 		fmt.Println("Authentication failed: credentials may be invalid or expired")
 		fmt.Println("Run 'functl auth login' to re-authenticate")
 		return nil
 	}
 
-	user := resp.Msg.User
+	user := resp.Msg.GetUser()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]any{
 			"authenticated":    true,
-			"user_id":          user.Id,
-			"user_name":        user.Name,
-			"organization_ids": user.OrganizationIds,
+			"user_id":          user.GetId(),
+			"user_name":        user.GetName(),
+			"organization_ids": user.GetOrganizationIds(),
 		})
 	}
 
 	w := NewTableWriter()
 	PrintKeyValue(w, "Authenticated", "yes")
-	PrintKeyValue(w, "User ID", user.Id)
-	PrintKeyValue(w, "User Name", user.Name)
-	PrintKeyValue(w, "Organization IDs", user.OrganizationIds)
+	PrintKeyValue(w, "User ID", user.GetId())
+	PrintKeyValue(w, "User Name", user.GetName())
+	PrintKeyValue(w, "Organization IDs", user.GetOrganizationIds())
 	return w.Flush()
 }
 

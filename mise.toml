@@ -20,7 +20,7 @@ k3d = "5.7.5"
 kind = "0.27.0"
 
 # Protobuf
-"aqua:bufbuild/buf" = "1.61.0"
+"aqua:bufbuild/buf" = "1.66.0"
 "go:google.golang.org/protobuf/cmd/protoc-gen-go" = "1.36.11"
 "go:connectrpc.com/connect/cmd/protoc-gen-connect-go" = "1.19.1"
 
@@ -33,13 +33,14 @@ golangci-lint = "2.7.2"
 # Console Frontend
 node = "24"
 bun = "1.3.6"
-"npm:@bufbuild/protoc-gen-es" = "2.10.2"
+"npm:@bufbuild/protoc-gen-es" = "2.11.0"
 "npm:@hey-api/openapi-ts" = "0.92.4"
 opentofu = "1.11.3"
 act = "latest"
 
 "npm:@usebruno/cli" = "3.0.3"
 flux2 = "2.7.5"
+"go:google.golang.org/open2opaque" = "0.1.7"
 
 [hooks]
 postinstall = "just e2e::install"

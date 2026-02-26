@@ -19,9 +19,9 @@ func (s *AuthnServer) GetUserInfo(
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
 
-	return connect.NewResponse(&authnv1.GetUserInfoResponse{
+	return connect.NewResponse(authnv1.GetUserInfoResponse_builder{
 		User: protoUserFromClaims(claims),
-	}), nil
+	}.Build()), nil
 }
 
 // protoUserFromClaims converts JWT claims to a proto User.
@@ -32,10 +32,10 @@ func protoUserFromClaims(claims *auth.Claims) *authnv1.User {
 		organizationIds = append(organizationIds, organizationID.String())
 	}
 
-	return &authnv1.User{
+	return authnv1.User_builder{
 		Id:              claims.UserID.String(),
 		OrganizationIds: organizationIds,
 		Name:            claims.Name,
 		Groups:          claims.Groups,
-	}
+	}.Build()
 }

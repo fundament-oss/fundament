@@ -17,7 +17,7 @@ func (s *Server) ListProjects(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListProjectsRequest],
 ) (*connect.Response[organizationv1.ListProjectsResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanListProjects(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -33,16 +33,16 @@ func (s *Server) ListProjects(
 		result = append(result, projectFromListRow(&projects[i]))
 	}
 
-	return connect.NewResponse(&organizationv1.ListProjectsResponse{
+	return connect.NewResponse(organizationv1.ListProjectsResponse_builder{
 		Projects: result,
-	}), nil
+	}.Build()), nil
 }
 
 func projectFromListRow(row *db.TenantProject) *organizationv1.Project {
-	return &organizationv1.Project{
+	return organizationv1.Project_builder{
 		Id:        row.ID.String(),
 		ClusterId: row.ClusterID.String(),
 		Name:      row.Name,
 		Created:   timestamppb.New(row.Created.Time),
-	}
+	}.Build()
 }

@@ -10,10 +10,10 @@ import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	_ "google.golang.org/protobuf/types/gofeaturespb"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
-	sync "sync"
 	unsafe "unsafe"
 )
 
@@ -69,17 +69,12 @@ func (x ProjectMemberRole) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use ProjectMemberRole.Descriptor instead.
-func (ProjectMemberRole) EnumDescriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{0}
-}
-
 // List projects request
 type ListProjectsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ClusterId     string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterId string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ListProjectsRequest) Reset() {
@@ -107,24 +102,37 @@ func (x *ListProjectsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListProjectsRequest.ProtoReflect.Descriptor instead.
-func (*ListProjectsRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{0}
-}
-
 func (x *ListProjectsRequest) GetClusterId() string {
 	if x != nil {
-		return x.ClusterId
+		return x.xxx_hidden_ClusterId
 	}
 	return ""
 }
 
+func (x *ListProjectsRequest) SetClusterId(v string) {
+	x.xxx_hidden_ClusterId = v
+}
+
+type ListProjectsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ClusterId string
+}
+
+func (b0 ListProjectsRequest_builder) Build() *ListProjectsRequest {
+	m0 := &ListProjectsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ClusterId = b.ClusterId
+	return m0
+}
+
 // List projects response
 type ListProjectsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Projects      []*Project             `protobuf:"bytes,10,rep,name=projects,proto3" json:"projects,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Projects *[]*Project            `protobuf:"bytes,10,rep,name=projects"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ListProjectsResponse) Reset() {
@@ -152,24 +160,39 @@ func (x *ListProjectsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListProjectsResponse.ProtoReflect.Descriptor instead.
-func (*ListProjectsResponse) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{1}
-}
-
 func (x *ListProjectsResponse) GetProjects() []*Project {
 	if x != nil {
-		return x.Projects
+		if x.xxx_hidden_Projects != nil {
+			return *x.xxx_hidden_Projects
+		}
 	}
 	return nil
 }
 
+func (x *ListProjectsResponse) SetProjects(v []*Project) {
+	x.xxx_hidden_Projects = &v
+}
+
+type ListProjectsResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Projects []*Project
+}
+
+func (b0 ListProjectsResponse_builder) Build() *ListProjectsResponse {
+	m0 := &ListProjectsResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Projects = &b.Projects
+	return m0
+}
+
 // Get project request
 type GetProjectRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ProjectId string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GetProjectRequest) Reset() {
@@ -197,24 +220,37 @@ func (x *GetProjectRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetProjectRequest.ProtoReflect.Descriptor instead.
-func (*GetProjectRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{2}
-}
-
 func (x *GetProjectRequest) GetProjectId() string {
 	if x != nil {
-		return x.ProjectId
+		return x.xxx_hidden_ProjectId
 	}
 	return ""
 }
 
+func (x *GetProjectRequest) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+type GetProjectRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ProjectId string
+}
+
+func (b0 GetProjectRequest_builder) Build() *GetProjectRequest {
+	m0 := &GetProjectRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ProjectId = b.ProjectId
+	return m0
+}
+
 // Get project by name request
 type GetProjectByNameRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,10,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name string                 `protobuf:"bytes,10,opt,name=name"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetProjectByNameRequest) Reset() {
@@ -242,24 +278,37 @@ func (x *GetProjectByNameRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetProjectByNameRequest.ProtoReflect.Descriptor instead.
-func (*GetProjectByNameRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{3}
-}
-
 func (x *GetProjectByNameRequest) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
+func (x *GetProjectByNameRequest) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+type GetProjectByNameRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name string
+}
+
+func (b0 GetProjectByNameRequest_builder) Build() *GetProjectByNameRequest {
+	m0 := &GetProjectByNameRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Name = b.Name
+	return m0
+}
+
 // Get project response
 type GetProjectResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Project       *Project               `protobuf:"bytes,10,opt,name=project,proto3" json:"project,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Project *Project               `protobuf:"bytes,10,opt,name=project"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *GetProjectResponse) Reset() {
@@ -287,27 +336,51 @@ func (x *GetProjectResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetProjectResponse.ProtoReflect.Descriptor instead.
-func (*GetProjectResponse) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{4}
-}
-
 func (x *GetProjectResponse) GetProject() *Project {
 	if x != nil {
-		return x.Project
+		return x.xxx_hidden_Project
 	}
 	return nil
 }
 
+func (x *GetProjectResponse) SetProject(v *Project) {
+	x.xxx_hidden_Project = v
+}
+
+func (x *GetProjectResponse) HasProject() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Project != nil
+}
+
+func (x *GetProjectResponse) ClearProject() {
+	x.xxx_hidden_Project = nil
+}
+
+type GetProjectResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Project *Project
+}
+
+func (b0 GetProjectResponse_builder) Build() *GetProjectResponse {
+	m0 := &GetProjectResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Project = b.Project
+	return m0
+}
+
 // Project information
 type Project struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	ClusterId     string                 `protobuf:"bytes,15,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
-	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	Created       *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created,proto3" json:"created,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id        string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_ClusterId string                 `protobuf:"bytes,15,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_Name      string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_Created   *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *Project) Reset() {
@@ -335,46 +408,88 @@ func (x *Project) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Project.ProtoReflect.Descriptor instead.
-func (*Project) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{5}
-}
-
 func (x *Project) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *Project) GetClusterId() string {
 	if x != nil {
-		return x.ClusterId
+		return x.xxx_hidden_ClusterId
 	}
 	return ""
 }
 
 func (x *Project) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
 func (x *Project) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Created
+		return x.xxx_hidden_Created
 	}
 	return nil
 }
 
+func (x *Project) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *Project) SetClusterId(v string) {
+	x.xxx_hidden_ClusterId = v
+}
+
+func (x *Project) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *Project) SetCreated(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Created = v
+}
+
+func (x *Project) HasCreated() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Created != nil
+}
+
+func (x *Project) ClearCreated() {
+	x.xxx_hidden_Created = nil
+}
+
+type Project_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id        string
+	ClusterId string
+	Name      string
+	Created   *timestamppb.Timestamp
+}
+
+func (b0 Project_builder) Build() *Project {
+	m0 := &Project{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_ClusterId = b.ClusterId
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Created = b.Created
+	return m0
+}
+
 // Create project request
 type CreateProjectRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ClusterId     string                 `protobuf:"bytes,5,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
-	Name          string                 `protobuf:"bytes,10,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterId string                 `protobuf:"bytes,5,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_Name      string                 `protobuf:"bytes,10,opt,name=name"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *CreateProjectRequest) Reset() {
@@ -402,31 +517,50 @@ func (x *CreateProjectRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateProjectRequest.ProtoReflect.Descriptor instead.
-func (*CreateProjectRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{6}
-}
-
 func (x *CreateProjectRequest) GetClusterId() string {
 	if x != nil {
-		return x.ClusterId
+		return x.xxx_hidden_ClusterId
 	}
 	return ""
 }
 
 func (x *CreateProjectRequest) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
+func (x *CreateProjectRequest) SetClusterId(v string) {
+	x.xxx_hidden_ClusterId = v
+}
+
+func (x *CreateProjectRequest) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+type CreateProjectRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ClusterId string
+	Name      string
+}
+
+func (b0 CreateProjectRequest_builder) Build() *CreateProjectRequest {
+	m0 := &CreateProjectRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ClusterId = b.ClusterId
+	x.xxx_hidden_Name = b.Name
+	return m0
+}
+
 // Create project response
 type CreateProjectResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ProjectId string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *CreateProjectResponse) Reset() {
@@ -454,25 +588,40 @@ func (x *CreateProjectResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateProjectResponse.ProtoReflect.Descriptor instead.
-func (*CreateProjectResponse) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{7}
-}
-
 func (x *CreateProjectResponse) GetProjectId() string {
 	if x != nil {
-		return x.ProjectId
+		return x.xxx_hidden_ProjectId
 	}
 	return ""
 }
 
+func (x *CreateProjectResponse) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+type CreateProjectResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ProjectId string
+}
+
+func (b0 CreateProjectResponse_builder) Build() *CreateProjectResponse {
+	m0 := &CreateProjectResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ProjectId = b.ProjectId
+	return m0
+}
+
 // Update project request
 type UpdateProjectRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Name          *string                `protobuf:"bytes,20,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ProjectId   string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
+	xxx_hidden_Name        *string                `protobuf:"bytes,20,opt,name=name"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *UpdateProjectRequest) Reset() {
@@ -500,31 +649,69 @@ func (x *UpdateProjectRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateProjectRequest.ProtoReflect.Descriptor instead.
-func (*UpdateProjectRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{8}
-}
-
 func (x *UpdateProjectRequest) GetProjectId() string {
 	if x != nil {
-		return x.ProjectId
+		return x.xxx_hidden_ProjectId
 	}
 	return ""
 }
 
 func (x *UpdateProjectRequest) GetName() string {
-	if x != nil && x.Name != nil {
-		return *x.Name
+	if x != nil {
+		if x.xxx_hidden_Name != nil {
+			return *x.xxx_hidden_Name
+		}
+		return ""
 	}
 	return ""
 }
 
+func (x *UpdateProjectRequest) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+func (x *UpdateProjectRequest) SetName(v string) {
+	x.xxx_hidden_Name = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+}
+
+func (x *UpdateProjectRequest) HasName() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *UpdateProjectRequest) ClearName() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Name = nil
+}
+
+type UpdateProjectRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ProjectId string
+	Name      *string
+}
+
+func (b0 UpdateProjectRequest_builder) Build() *UpdateProjectRequest {
+	m0 := &UpdateProjectRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ProjectId = b.ProjectId
+	if b.Name != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_Name = b.Name
+	}
+	return m0
+}
+
 // Delete project request
 type DeleteProjectRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ProjectId string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *DeleteProjectRequest) Reset() {
@@ -552,29 +739,42 @@ func (x *DeleteProjectRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteProjectRequest.ProtoReflect.Descriptor instead.
-func (*DeleteProjectRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{9}
-}
-
 func (x *DeleteProjectRequest) GetProjectId() string {
 	if x != nil {
-		return x.ProjectId
+		return x.xxx_hidden_ProjectId
 	}
 	return ""
 }
 
+func (x *DeleteProjectRequest) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+type DeleteProjectRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ProjectId string
+}
+
+func (b0 DeleteProjectRequest_builder) Build() *DeleteProjectRequest {
+	m0 := &DeleteProjectRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ProjectId = b.ProjectId
+	return m0
+}
+
 // Project member information
 type ProjectMember struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,20,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	UserId        string                 `protobuf:"bytes,30,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	UserName      string                 `protobuf:"bytes,40,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
-	Role          ProjectMemberRole      `protobuf:"varint,50,opt,name=role,proto3,enum=organization.v1.ProjectMemberRole" json:"role,omitempty"`
-	Created       *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created,proto3" json:"created,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id        string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_ProjectId string                 `protobuf:"bytes,20,opt,name=project_id,json=projectId"`
+	xxx_hidden_UserId    string                 `protobuf:"bytes,30,opt,name=user_id,json=userId"`
+	xxx_hidden_UserName  string                 `protobuf:"bytes,40,opt,name=user_name,json=userName"`
+	xxx_hidden_Role      ProjectMemberRole      `protobuf:"varint,50,opt,name=role,enum=organization.v1.ProjectMemberRole"`
+	xxx_hidden_Created   *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ProjectMember) Reset() {
@@ -602,59 +802,113 @@ func (x *ProjectMember) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ProjectMember.ProtoReflect.Descriptor instead.
-func (*ProjectMember) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{10}
-}
-
 func (x *ProjectMember) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *ProjectMember) GetProjectId() string {
 	if x != nil {
-		return x.ProjectId
+		return x.xxx_hidden_ProjectId
 	}
 	return ""
 }
 
 func (x *ProjectMember) GetUserId() string {
 	if x != nil {
-		return x.UserId
+		return x.xxx_hidden_UserId
 	}
 	return ""
 }
 
 func (x *ProjectMember) GetUserName() string {
 	if x != nil {
-		return x.UserName
+		return x.xxx_hidden_UserName
 	}
 	return ""
 }
 
 func (x *ProjectMember) GetRole() ProjectMemberRole {
 	if x != nil {
-		return x.Role
+		return x.xxx_hidden_Role
 	}
 	return ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED
 }
 
 func (x *ProjectMember) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Created
+		return x.xxx_hidden_Created
 	}
 	return nil
 }
 
+func (x *ProjectMember) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *ProjectMember) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+func (x *ProjectMember) SetUserId(v string) {
+	x.xxx_hidden_UserId = v
+}
+
+func (x *ProjectMember) SetUserName(v string) {
+	x.xxx_hidden_UserName = v
+}
+
+func (x *ProjectMember) SetRole(v ProjectMemberRole) {
+	x.xxx_hidden_Role = v
+}
+
+func (x *ProjectMember) SetCreated(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Created = v
+}
+
+func (x *ProjectMember) HasCreated() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Created != nil
+}
+
+func (x *ProjectMember) ClearCreated() {
+	x.xxx_hidden_Created = nil
+}
+
+type ProjectMember_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id        string
+	ProjectId string
+	UserId    string
+	UserName  string
+	Role      ProjectMemberRole
+	Created   *timestamppb.Timestamp
+}
+
+func (b0 ProjectMember_builder) Build() *ProjectMember {
+	m0 := &ProjectMember{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_ProjectId = b.ProjectId
+	x.xxx_hidden_UserId = b.UserId
+	x.xxx_hidden_UserName = b.UserName
+	x.xxx_hidden_Role = b.Role
+	x.xxx_hidden_Created = b.Created
+	return m0
+}
+
 // List project members request
 type ListProjectMembersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ProjectId string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ListProjectMembersRequest) Reset() {
@@ -682,24 +936,37 @@ func (x *ListProjectMembersRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListProjectMembersRequest.ProtoReflect.Descriptor instead.
-func (*ListProjectMembersRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{11}
-}
-
 func (x *ListProjectMembersRequest) GetProjectId() string {
 	if x != nil {
-		return x.ProjectId
+		return x.xxx_hidden_ProjectId
 	}
 	return ""
 }
 
+func (x *ListProjectMembersRequest) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+type ListProjectMembersRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ProjectId string
+}
+
+func (b0 ListProjectMembersRequest_builder) Build() *ListProjectMembersRequest {
+	m0 := &ListProjectMembersRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ProjectId = b.ProjectId
+	return m0
+}
+
 // List project members response
 type ListProjectMembersResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Members       []*ProjectMember       `protobuf:"bytes,10,rep,name=members,proto3" json:"members,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Members *[]*ProjectMember      `protobuf:"bytes,10,rep,name=members"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ListProjectMembersResponse) Reset() {
@@ -727,24 +994,39 @@ func (x *ListProjectMembersResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListProjectMembersResponse.ProtoReflect.Descriptor instead.
-func (*ListProjectMembersResponse) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{12}
-}
-
 func (x *ListProjectMembersResponse) GetMembers() []*ProjectMember {
 	if x != nil {
-		return x.Members
+		if x.xxx_hidden_Members != nil {
+			return *x.xxx_hidden_Members
+		}
 	}
 	return nil
 }
 
+func (x *ListProjectMembersResponse) SetMembers(v []*ProjectMember) {
+	x.xxx_hidden_Members = &v
+}
+
+type ListProjectMembersResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Members []*ProjectMember
+}
+
+func (b0 ListProjectMembersResponse_builder) Build() *ListProjectMembersResponse {
+	m0 := &ListProjectMembersResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Members = &b.Members
+	return m0
+}
+
 // Get project member request
 type GetProjectMemberRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MemberId      string                 `protobuf:"bytes,10,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_MemberId string                 `protobuf:"bytes,10,opt,name=member_id,json=memberId"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *GetProjectMemberRequest) Reset() {
@@ -772,24 +1054,37 @@ func (x *GetProjectMemberRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetProjectMemberRequest.ProtoReflect.Descriptor instead.
-func (*GetProjectMemberRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{13}
-}
-
 func (x *GetProjectMemberRequest) GetMemberId() string {
 	if x != nil {
-		return x.MemberId
+		return x.xxx_hidden_MemberId
 	}
 	return ""
 }
 
+func (x *GetProjectMemberRequest) SetMemberId(v string) {
+	x.xxx_hidden_MemberId = v
+}
+
+type GetProjectMemberRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	MemberId string
+}
+
+func (b0 GetProjectMemberRequest_builder) Build() *GetProjectMemberRequest {
+	m0 := &GetProjectMemberRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_MemberId = b.MemberId
+	return m0
+}
+
 // Get project member response
 type GetProjectMemberResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Member        *ProjectMember         `protobuf:"bytes,10,opt,name=member,proto3" json:"member,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Member *ProjectMember         `protobuf:"bytes,10,opt,name=member"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *GetProjectMemberResponse) Reset() {
@@ -817,26 +1112,50 @@ func (x *GetProjectMemberResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetProjectMemberResponse.ProtoReflect.Descriptor instead.
-func (*GetProjectMemberResponse) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{14}
-}
-
 func (x *GetProjectMemberResponse) GetMember() *ProjectMember {
 	if x != nil {
-		return x.Member
+		return x.xxx_hidden_Member
 	}
 	return nil
 }
 
+func (x *GetProjectMemberResponse) SetMember(v *ProjectMember) {
+	x.xxx_hidden_Member = v
+}
+
+func (x *GetProjectMemberResponse) HasMember() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Member != nil
+}
+
+func (x *GetProjectMemberResponse) ClearMember() {
+	x.xxx_hidden_Member = nil
+}
+
+type GetProjectMemberResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Member *ProjectMember
+}
+
+func (b0 GetProjectMemberResponse_builder) Build() *GetProjectMemberResponse {
+	m0 := &GetProjectMemberResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Member = b.Member
+	return m0
+}
+
 // Add project member request
 type AddProjectMemberRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	UserId        string                 `protobuf:"bytes,20,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Role          ProjectMemberRole      `protobuf:"varint,30,opt,name=role,proto3,enum=organization.v1.ProjectMemberRole" json:"role,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ProjectId string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
+	xxx_hidden_UserId    string                 `protobuf:"bytes,20,opt,name=user_id,json=userId"`
+	xxx_hidden_Role      ProjectMemberRole      `protobuf:"varint,30,opt,name=role,enum=organization.v1.ProjectMemberRole"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *AddProjectMemberRequest) Reset() {
@@ -864,38 +1183,63 @@ func (x *AddProjectMemberRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use AddProjectMemberRequest.ProtoReflect.Descriptor instead.
-func (*AddProjectMemberRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{15}
-}
-
 func (x *AddProjectMemberRequest) GetProjectId() string {
 	if x != nil {
-		return x.ProjectId
+		return x.xxx_hidden_ProjectId
 	}
 	return ""
 }
 
 func (x *AddProjectMemberRequest) GetUserId() string {
 	if x != nil {
-		return x.UserId
+		return x.xxx_hidden_UserId
 	}
 	return ""
 }
 
 func (x *AddProjectMemberRequest) GetRole() ProjectMemberRole {
 	if x != nil {
-		return x.Role
+		return x.xxx_hidden_Role
 	}
 	return ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED
 }
 
+func (x *AddProjectMemberRequest) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+func (x *AddProjectMemberRequest) SetUserId(v string) {
+	x.xxx_hidden_UserId = v
+}
+
+func (x *AddProjectMemberRequest) SetRole(v ProjectMemberRole) {
+	x.xxx_hidden_Role = v
+}
+
+type AddProjectMemberRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ProjectId string
+	UserId    string
+	Role      ProjectMemberRole
+}
+
+func (b0 AddProjectMemberRequest_builder) Build() *AddProjectMemberRequest {
+	m0 := &AddProjectMemberRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ProjectId = b.ProjectId
+	x.xxx_hidden_UserId = b.UserId
+	x.xxx_hidden_Role = b.Role
+	return m0
+}
+
 // Add project member response
 type AddProjectMemberResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MemberId      string                 `protobuf:"bytes,10,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_MemberId string                 `protobuf:"bytes,10,opt,name=member_id,json=memberId"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *AddProjectMemberResponse) Reset() {
@@ -923,25 +1267,38 @@ func (x *AddProjectMemberResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use AddProjectMemberResponse.ProtoReflect.Descriptor instead.
-func (*AddProjectMemberResponse) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{16}
-}
-
 func (x *AddProjectMemberResponse) GetMemberId() string {
 	if x != nil {
-		return x.MemberId
+		return x.xxx_hidden_MemberId
 	}
 	return ""
 }
 
+func (x *AddProjectMemberResponse) SetMemberId(v string) {
+	x.xxx_hidden_MemberId = v
+}
+
+type AddProjectMemberResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	MemberId string
+}
+
+func (b0 AddProjectMemberResponse_builder) Build() *AddProjectMemberResponse {
+	m0 := &AddProjectMemberResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_MemberId = b.MemberId
+	return m0
+}
+
 // Update project member role request
 type UpdateProjectMemberRoleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MemberId      string                 `protobuf:"bytes,10,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
-	Role          ProjectMemberRole      `protobuf:"varint,20,opt,name=role,proto3,enum=organization.v1.ProjectMemberRole" json:"role,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_MemberId string                 `protobuf:"bytes,10,opt,name=member_id,json=memberId"`
+	xxx_hidden_Role     ProjectMemberRole      `protobuf:"varint,20,opt,name=role,enum=organization.v1.ProjectMemberRole"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *UpdateProjectMemberRoleRequest) Reset() {
@@ -969,31 +1326,50 @@ func (x *UpdateProjectMemberRoleRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateProjectMemberRoleRequest.ProtoReflect.Descriptor instead.
-func (*UpdateProjectMemberRoleRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{17}
-}
-
 func (x *UpdateProjectMemberRoleRequest) GetMemberId() string {
 	if x != nil {
-		return x.MemberId
+		return x.xxx_hidden_MemberId
 	}
 	return ""
 }
 
 func (x *UpdateProjectMemberRoleRequest) GetRole() ProjectMemberRole {
 	if x != nil {
-		return x.Role
+		return x.xxx_hidden_Role
 	}
 	return ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED
 }
 
+func (x *UpdateProjectMemberRoleRequest) SetMemberId(v string) {
+	x.xxx_hidden_MemberId = v
+}
+
+func (x *UpdateProjectMemberRoleRequest) SetRole(v ProjectMemberRole) {
+	x.xxx_hidden_Role = v
+}
+
+type UpdateProjectMemberRoleRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	MemberId string
+	Role     ProjectMemberRole
+}
+
+func (b0 UpdateProjectMemberRoleRequest_builder) Build() *UpdateProjectMemberRoleRequest {
+	m0 := &UpdateProjectMemberRoleRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_MemberId = b.MemberId
+	x.xxx_hidden_Role = b.Role
+	return m0
+}
+
 // Remove project member request
 type RemoveProjectMemberRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MemberId      string                 `protobuf:"bytes,10,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_MemberId string                 `protobuf:"bytes,10,opt,name=member_id,json=memberId"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *RemoveProjectMemberRequest) Reset() {
@@ -1021,23 +1397,36 @@ func (x *RemoveProjectMemberRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RemoveProjectMemberRequest.ProtoReflect.Descriptor instead.
-func (*RemoveProjectMemberRequest) Descriptor() ([]byte, []int) {
-	return file_v1_project_proto_rawDescGZIP(), []int{18}
-}
-
 func (x *RemoveProjectMemberRequest) GetMemberId() string {
 	if x != nil {
-		return x.MemberId
+		return x.xxx_hidden_MemberId
 	}
 	return ""
+}
+
+func (x *RemoveProjectMemberRequest) SetMemberId(v string) {
+	x.xxx_hidden_MemberId = v
+}
+
+type RemoveProjectMemberRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	MemberId string
+}
+
+func (b0 RemoveProjectMemberRequest_builder) Build() *RemoveProjectMemberRequest {
+	m0 := &RemoveProjectMemberRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_MemberId = b.MemberId
+	return m0
 }
 
 var File_v1_project_proto protoreflect.FileDescriptor
 
 const file_v1_project_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/project.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\">\n" +
+	"\x10v1/project.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\">\n" +
 	"\x13ListProjectsRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -1072,14 +1461,12 @@ const file_v1_project_proto_rawDesc = "" +
 	"\x15CreateProjectResponse\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\"m\n" +
+	" \x01(\tR\tprojectId\"d\n" +
 	"\x14UpdateProjectRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\x12#\n" +
-	"\x04name\x18\x14 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01H\x00R\x04name\x88\x01\x01B\a\n" +
-	"\x05_name\"?\n" +
+	"\x04name\x18\x14 \x01(\tB\x0f\xbaH\ar\x05\x10\x01\x18\xff\x01\xaa\x01\x02\b\x01R\x04name\"?\n" +
 	"\x14DeleteProjectRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
@@ -1138,19 +1525,7 @@ const file_v1_project_proto_rawDesc = "" +
 	"\x10GetProjectMember\x12(.organization.v1.GetProjectMemberRequest\x1a).organization.v1.GetProjectMemberResponse\x12g\n" +
 	"\x10AddProjectMember\x12(.organization.v1.AddProjectMemberRequest\x1a).organization.v1.AddProjectMemberResponse\x12b\n" +
 	"\x17UpdateProjectMemberRole\x12/.organization.v1.UpdateProjectMemberRoleRequest\x1a\x16.google.protobuf.Empty\x12Z\n" +
-	"\x13RemoveProjectMember\x12+.organization.v1.RemoveProjectMemberRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
-
-var (
-	file_v1_project_proto_rawDescOnce sync.Once
-	file_v1_project_proto_rawDescData []byte
-)
-
-func file_v1_project_proto_rawDescGZIP() []byte {
-	file_v1_project_proto_rawDescOnce.Do(func() {
-		file_v1_project_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_v1_project_proto_rawDesc), len(file_v1_project_proto_rawDesc)))
-	})
-	return file_v1_project_proto_rawDescData
-}
+	"\x13RemoveProjectMember\x12+.organization.v1.RemoveProjectMemberRequest\x1a\x16.google.protobuf.EmptyB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_project_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
@@ -1223,7 +1598,6 @@ func file_v1_project_proto_init() {
 		return
 	}
 	file_v1_common_proto_init()
-	file_v1_project_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

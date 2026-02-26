@@ -116,10 +116,10 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		"permission": plan.Permission.ValueString(),
 	})
 
-	inviteReq := connect.NewRequest(&organizationv1.InviteMemberRequest{
+	inviteReq := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
 		Email:      plan.Email.ValueString(),
 		Permission: plan.Permission.ValueString(),
-	})
+	}.Build())
 
 	inviteResp, err := r.client.InviteService.InviteMember(ctx, inviteReq)
 	if err != nil {
@@ -143,26 +143,26 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	member := inviteResp.Msg.Member
-	plan.ID = types.StringValue(member.Id)
-	plan.Name = types.StringValue(member.Name)
+	member := inviteResp.Msg.GetMember()
+	plan.ID = types.StringValue(member.GetId())
+	plan.Name = types.StringValue(member.GetName())
 
-	if member.ExternalRef != nil {
-		plan.ExternalID = types.StringValue(*member.ExternalRef)
+	if member.HasExternalRef() {
+		plan.ExternalID = types.StringValue(member.GetExternalRef())
 	} else {
 		plan.ExternalID = types.StringNull()
 	}
 
-	if member.Email != nil {
-		plan.Email = types.StringValue(*member.Email)
+	if member.HasEmail() {
+		plan.Email = types.StringValue(member.GetEmail())
 	} else {
 		plan.Email = types.StringNull()
 	}
 
-	plan.Permission = types.StringValue(member.Permission)
+	plan.Permission = types.StringValue(member.GetPermission())
 
-	if member.Created.CheckValid() == nil {
-		plan.Created = types.StringValue(member.Created.String())
+	if member.GetCreated().CheckValid() == nil {
+		plan.Created = types.StringValue(member.GetCreated().String())
 	} else {
 		plan.Created = types.StringNull()
 	}
@@ -212,24 +212,24 @@ func (r *OrganizationMemberResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	state.ID = types.StringValue(member.Id)
-	state.Name = types.StringValue(member.Name)
-	state.Permission = types.StringValue(member.Permission)
+	state.ID = types.StringValue(member.GetId())
+	state.Name = types.StringValue(member.GetName())
+	state.Permission = types.StringValue(member.GetPermission())
 
-	if member.ExternalRef != nil {
-		state.ExternalID = types.StringValue(*member.ExternalRef)
+	if member.HasExternalRef() {
+		state.ExternalID = types.StringValue(member.GetExternalRef())
 	} else {
 		state.ExternalID = types.StringNull()
 	}
 
-	if member.Email != nil {
-		state.Email = types.StringValue(*member.Email)
+	if member.HasEmail() {
+		state.Email = types.StringValue(member.GetEmail())
 	} else {
 		state.Email = types.StringNull()
 	}
 
-	if member.Created.CheckValid() == nil {
-		state.Created = types.StringValue(member.Created.String())
+	if member.GetCreated().CheckValid() == nil {
+		state.Created = types.StringValue(member.GetCreated().String())
 	} else {
 		state.Created = types.StringNull()
 	}
@@ -261,10 +261,10 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 		"permission_new": plan.Permission.ValueString(),
 	})
 
-	updateReq := connect.NewRequest(&organizationv1.UpdateMemberPermissionRequest{
+	updateReq := connect.NewRequest(organizationv1.UpdateMemberPermissionRequest_builder{
 		Id:         state.ID.ValueString(),
 		Permission: plan.Permission.ValueString(),
-	})
+	}.Build())
 
 	_, err := r.client.MemberService.UpdateMemberPermission(ctx, updateReq)
 	if err != nil {
@@ -311,24 +311,24 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	plan.ID = types.StringValue(member.Id)
-	plan.Name = types.StringValue(member.Name)
-	plan.Permission = types.StringValue(member.Permission)
+	plan.ID = types.StringValue(member.GetId())
+	plan.Name = types.StringValue(member.GetName())
+	plan.Permission = types.StringValue(member.GetPermission())
 
-	if member.ExternalRef != nil {
-		plan.ExternalID = types.StringValue(*member.ExternalRef)
+	if member.HasExternalRef() {
+		plan.ExternalID = types.StringValue(member.GetExternalRef())
 	} else {
 		plan.ExternalID = types.StringNull()
 	}
 
-	if member.Email != nil {
-		plan.Email = types.StringValue(*member.Email)
+	if member.HasEmail() {
+		plan.Email = types.StringValue(member.GetEmail())
 	} else {
 		plan.Email = types.StringNull()
 	}
 
-	if member.Created.CheckValid() == nil {
-		plan.Created = types.StringValue(member.Created.String())
+	if member.GetCreated().CheckValid() == nil {
+		plan.Created = types.StringValue(member.GetCreated().String())
 	} else {
 		plan.Created = types.StringNull()
 	}
@@ -361,9 +361,9 @@ func (r *OrganizationMemberResource) Delete(ctx context.Context, req resource.De
 		"id": state.ID.ValueString(),
 	})
 
-	deleteReq := connect.NewRequest(&organizationv1.DeleteMemberRequest{
+	deleteReq := connect.NewRequest(organizationv1.DeleteMemberRequest_builder{
 		Id: state.ID.ValueString(),
-	})
+	}.Build())
 
 	_, err := r.client.MemberService.DeleteMember(ctx, deleteReq)
 	if err != nil {
@@ -400,9 +400,9 @@ func (r *OrganizationMemberResource) ImportState(ctx context.Context, req resour
 // findMemberByID fetches a single member by membership ID.
 // Returns the member if found, nil if not found, or an error on API failure.
 func (r *OrganizationMemberResource) findMemberByID(ctx context.Context, id string) (*organizationv1.Member, error) {
-	getReq := connect.NewRequest(&organizationv1.GetMemberRequest{
-		Lookup: &organizationv1.GetMemberRequest_Id{Id: id},
-	})
+	getReq := connect.NewRequest(organizationv1.GetMemberRequest_builder{
+		Id: &id,
+	}.Build())
 
 	getResp, err := r.client.MemberService.GetMember(ctx, getReq)
 	if err != nil {
@@ -412,5 +412,5 @@ func (r *OrganizationMemberResource) findMemberByID(ctx context.Context, id stri
 		return nil, fmt.Errorf("failed to get member: %w", err)
 	}
 
-	return getResp.Msg.Member, nil
+	return getResp.Msg.GetMember(), nil
 }

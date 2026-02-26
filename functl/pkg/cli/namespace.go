@@ -32,14 +32,14 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 	}
 
 	if c.Cluster != "" {
-		resp, err := apiClient.Namespaces().ListClusterNamespaces(context.Background(), connect.NewRequest(&organizationv1.ListClusterNamespacesRequest{
+		resp, err := apiClient.Namespaces().ListClusterNamespaces(context.Background(), connect.NewRequest(organizationv1.ListClusterNamespacesRequest_builder{
 			ClusterId: c.Cluster,
-		}))
+		}.Build()))
 		if err != nil {
 			return fmt.Errorf("failed to list namespaces: %w", err)
 		}
 
-		namespaces := resp.Msg.Namespaces
+		namespaces := resp.Msg.GetNamespaces()
 
 		if ctx.Output == OutputJSON {
 			return PrintJSON(namespaces)
@@ -54,14 +54,14 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 		fmt.Fprintln(w, "ID\tNAME\tPROJECT_ID\tCREATED")
 		for _, ns := range namespaces {
 			created := ""
-			if ns.Created.IsValid() {
-				created = ns.Created.AsTime().Format(TimeFormat)
+			if ns.GetCreated().IsValid() {
+				created = ns.GetCreated().AsTime().Format(TimeFormat)
 			}
 
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-				ns.Id,
-				ns.Name,
-				ns.ProjectId,
+				ns.GetId(),
+				ns.GetName(),
+				ns.GetProjectId(),
 				created,
 			)
 		}
@@ -69,14 +69,14 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 	}
 
 	// List by project
-	resp, err := apiClient.Namespaces().ListProjectNamespaces(context.Background(), connect.NewRequest(&organizationv1.ListProjectNamespacesRequest{
+	resp, err := apiClient.Namespaces().ListProjectNamespaces(context.Background(), connect.NewRequest(organizationv1.ListProjectNamespacesRequest_builder{
 		ProjectId: c.Project,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to list namespaces: %w", err)
 	}
 
-	namespaces := resp.Msg.Namespaces
+	namespaces := resp.Msg.GetNamespaces()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(namespaces)
@@ -91,13 +91,13 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 	fmt.Fprintln(w, "ID\tNAME\tCREATED")
 	for _, ns := range namespaces {
 		created := ""
-		if ns.Created.IsValid() {
-			created = ns.Created.AsTime().Format(TimeFormat)
+		if ns.GetCreated().IsValid() {
+			created = ns.GetCreated().AsTime().Format(TimeFormat)
 		}
 
 		fmt.Fprintf(w, "%s\t%s\t%s\n",
-			ns.Id,
-			ns.Name,
+			ns.GetId(),
+			ns.GetName(),
 			created,
 		)
 	}
@@ -117,15 +117,15 @@ func (c *NamespaceCreateCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Namespaces().CreateNamespace(context.Background(), connect.NewRequest(&organizationv1.CreateNamespaceRequest{
+	resp, err := apiClient.Namespaces().CreateNamespace(context.Background(), connect.NewRequest(organizationv1.CreateNamespaceRequest_builder{
 		ProjectId: c.Project,
 		Name:      c.Name,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to create namespace: %w", err)
 	}
 
-	namespaceID := resp.Msg.NamespaceId
+	namespaceID := resp.Msg.GetNamespaceId()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]string{
@@ -151,9 +151,9 @@ func (c *NamespaceDeleteCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	_, err = apiClient.Namespaces().DeleteNamespace(context.Background(), connect.NewRequest(&organizationv1.DeleteNamespaceRequest{
+	_, err = apiClient.Namespaces().DeleteNamespace(context.Background(), connect.NewRequest(organizationv1.DeleteNamespaceRequest_builder{
 		NamespaceId: c.NamespaceID,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to delete namespace: %w", err)
 	}

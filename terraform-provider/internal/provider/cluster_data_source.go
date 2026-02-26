@@ -108,9 +108,9 @@ func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		"name": config.Name.ValueString(),
 	})
 
-	getReq := connect.NewRequest(&organizationv1.GetClusterByNameRequest{
+	getReq := connect.NewRequest(organizationv1.GetClusterByNameRequest_builder{
 		Name: config.Name.ValueString(),
-	})
+	}.Build())
 
 	getResp, err := d.client.ClusterService.GetClusterByName(ctx, getReq)
 	if err != nil {
@@ -139,14 +139,14 @@ func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	cluster := getResp.Msg.Cluster
+	cluster := getResp.Msg.GetCluster()
 
 	// Map response to state
-	config.ID = types.StringValue(cluster.Id)
-	config.Name = types.StringValue(cluster.Name)
-	config.Region = types.StringValue(cluster.Region)
-	config.KubernetesVersion = types.StringValue(cluster.KubernetesVersion)
-	config.Status = types.StringValue(clusterStatusToString(cluster.Status))
+	config.ID = types.StringValue(cluster.GetId())
+	config.Name = types.StringValue(cluster.GetName())
+	config.Region = types.StringValue(cluster.GetRegion())
+	config.KubernetesVersion = types.StringValue(cluster.GetKubernetesVersion())
+	config.Status = types.StringValue(clusterStatusToString(cluster.GetStatus()))
 
 	tflog.Debug(ctx, "Read cluster successfully", map[string]any{
 		"id":     config.ID.ValueString(),

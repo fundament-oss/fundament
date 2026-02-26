@@ -17,7 +17,7 @@ func (s *Server) DeleteNodePool(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteNodePoolRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	nodePoolID := uuid.MustParse(req.Msg.NodePoolId)
+	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.NodePool(nodePoolID)); err != nil {
 		return nil, err

@@ -18,7 +18,7 @@ func (s *Server) GetAPIKey(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetAPIKeyRequest],
 ) (*connect.Response[organizationv1.GetAPIKeyResponse], error) {
-	apiKeyID := uuid.MustParse(req.Msg.ApiKeyId)
+	apiKeyID := uuid.MustParse(req.Msg.GetApiKeyId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.ApiKey(apiKeyID)); err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func (s *Server) GetAPIKey(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get api key: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.GetAPIKeyResponse{
+	return connect.NewResponse(organizationv1.GetAPIKeyResponse_builder{
 		ApiKey: apiKeyFromGetRow(&key),
-	}), nil
+	}.Build()), nil
 }

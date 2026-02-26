@@ -18,7 +18,7 @@ func (s *Server) UpdateNodePool(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateNodePoolRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	nodePoolID := uuid.MustParse(req.Msg.NodePoolId)
+	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.NodePool(nodePoolID)); err != nil {
 		return nil, err
@@ -26,8 +26,8 @@ func (s *Server) UpdateNodePool(
 
 	params := db.NodePoolUpdateParams{
 		ID:           nodePoolID,
-		AutoscaleMin: pgtype.Int4{Int32: req.Msg.AutoscaleMin, Valid: true},
-		AutoscaleMax: pgtype.Int4{Int32: req.Msg.AutoscaleMax, Valid: true},
+		AutoscaleMin: pgtype.Int4{Int32: req.Msg.GetAutoscaleMin(), Valid: true},
+		AutoscaleMax: pgtype.Int4{Int32: req.Msg.GetAutoscaleMax(), Valid: true},
 	}
 
 	rowsAffected, err := s.queries.NodePoolUpdate(ctx, params)

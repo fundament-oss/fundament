@@ -30,7 +30,7 @@ func (s *Server) DeleteMember(
 		return nil, err
 	}
 
-	id := uuid.MustParse(req.Msg.Id)
+	id := uuid.MustParse(req.Msg.GetId())
 
 	member, err := s.queries.MemberGetByID(ctx, db.MemberGetByIDParams{ID: id})
 	if err != nil {
@@ -45,5 +45,5 @@ func (s *Server) DeleteMember(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete member: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.DeleteMemberResponse{}), nil
+	return connect.NewResponse(organizationv1.DeleteMemberResponse_builder{}.Build()), nil
 }

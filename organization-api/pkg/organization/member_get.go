@@ -22,9 +22,9 @@ func (s *Server) GetMember(
 ) (*connect.Response[organizationv1.GetMemberResponse], error) {
 	var member *organizationv1.Member
 
-	switch lookup := req.Msg.Lookup.(type) {
-	case *organizationv1.GetMemberRequest_Id:
-		id := uuid.MustParse(lookup.Id)
+	switch req.Msg.WhichLookup() {
+	case organizationv1.GetMemberRequest_Id_case:
+		id := uuid.MustParse(req.Msg.GetId())
 		row, err := s.queries.MemberGetByID(ctx, db.MemberGetByIDParams{ID: id})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -34,8 +34,8 @@ func (s *Server) GetMember(
 		}
 		member = buildMember(row.ID, row.UserID, row.Name, row.ExternalRef, row.Email, row.Permission, row.Status, row.Created)
 
-	case *organizationv1.GetMemberRequest_UserId:
-		userID := uuid.MustParse(lookup.UserId)
+	case organizationv1.GetMemberRequest_UserId_case:
+		userID := uuid.MustParse(req.Msg.GetUserId())
 		row, err := s.queries.MemberGetByUserID(ctx, db.MemberGetByUserIDParams{UserID: userID})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -49,9 +49,9 @@ func (s *Server) GetMember(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("either id or user_id must be provided"))
 	}
 
-	return connect.NewResponse(&organizationv1.GetMemberResponse{
+	return connect.NewResponse(organizationv1.GetMemberResponse_builder{
 		Member: member,
-	}), nil
+	}.Build()), nil
 }
 
 func buildMember(
@@ -62,21 +62,21 @@ func buildMember(
 	status dbconst.OrganizationsUserStatus,
 	created pgtype.Timestamptz,
 ) *organizationv1.Member {
-	member := &organizationv1.Member{
+	member := organizationv1.Member_builder{
 		Id:         id.String(),
 		UserId:     userID.String(),
 		Name:       name,
 		Permission: string(permission),
 		Status:     string(status),
 		Created:    timestamppb.New(created.Time),
-	}
+	}.Build()
 
 	if externalRef.Valid {
-		member.ExternalRef = &externalRef.String
+		member.SetExternalRef(externalRef.String)
 	}
 
 	if email.Valid {
-		member.Email = &email.String
+		member.SetEmail(email.String)
 	}
 
 	return member
