@@ -144,7 +144,7 @@ import { resolveStatusBadge, formatDate } from '../../plugin-resources/crd-schem
                 type="button"
                 title="Copy image"
                 (click)="copyToClipboard(app.spec['image'])"
-                class="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                class="shrink-0 cursor-pointer text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               >
                 <ng-icon name="tablerCopy" />
               </button>
