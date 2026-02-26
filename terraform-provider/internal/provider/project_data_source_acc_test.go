@@ -16,11 +16,18 @@ func TestAccProjectDataSource(t *testing.T) {
 	}
 
 	// Ensure required environment variables are set
-	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
-		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
-	}
 	if os.Getenv("FUNDAMENT_API_KEY") == "" {
 		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
+	}
+
+	endpoint := os.Getenv("FUNDAMENT_ENDPOINT")
+	if endpoint == "" {
+		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
+	}
+
+	organizationID := os.Getenv("FUNDAMENT_ORGANIZATION_ID")
+	if organizationID == "" {
+		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
 	projectName := os.Getenv("FUNDAMENT_TEST_PROJECT_NAME")
@@ -32,7 +39,7 @@ func TestAccProjectDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectDataSourceConfig(projectName),
+				Config: testAccProjectDataSourceConfig(projectName, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.fundament_project.test", "name", projectName),
 					resource.TestCheckResourceAttrSet("data.fundament_project.test", "id"),
@@ -43,14 +50,16 @@ func TestAccProjectDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectDataSourceConfig(projectName string) string {
+func testAccProjectDataSourceConfig(projectName, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_API_KEY from environment
+  endpoint        = %[2]q
+  organization_id = %[3]q
+  # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
 data "fundament_project" "test" {
   name = %[1]q
 }
-`, projectName)
+`, projectName, endpoint, organizationID)
 }

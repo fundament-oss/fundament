@@ -13,11 +13,18 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 		t.Skip("Acceptance tests skipped unless TF_ACC=1 is set")
 	}
 
-	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
-		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
-	}
 	if os.Getenv("FUNDAMENT_API_KEY") == "" {
 		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
+	}
+
+	endpoint := os.Getenv("FUNDAMENT_ENDPOINT")
+	if endpoint == "" {
+		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
+	}
+
+	organizationID := os.Getenv("FUNDAMENT_ORGANIZATION_ID")
+	if organizationID == "" {
+		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
 	testEmail := os.Getenv("FUNDAMENT_TEST_MEMBER_EMAIL")
@@ -32,7 +39,7 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create with viewer permission
 			{
-				Config: testAccOrganizationMemberResourceConfig(testEmail, "viewer"),
+				Config: testAccOrganizationMemberResourceConfig(testEmail, "viewer", endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "email", testEmail),
 					resource.TestCheckResourceAttr(resourceName, "permission", "viewer"),
@@ -49,7 +56,7 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 			},
 			// Update permission to admin (in-place)
 			{
-				Config: testAccOrganizationMemberResourceConfig(testEmail, "admin"),
+				Config: testAccOrganizationMemberResourceConfig(testEmail, "admin", endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "email", testEmail),
 					resource.TestCheckResourceAttr(resourceName, "permission", "admin"),
@@ -61,15 +68,17 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 	})
 }
 
-func testAccOrganizationMemberResourceConfig(email, permission string) string {
+func testAccOrganizationMemberResourceConfig(email, permission, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_API_KEY from environment
+  endpoint        = %[3]q
+  organization_id = %[4]q
+  # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
 resource "fundament_organization_member" "test" {
   email      = %[1]q
   permission = %[2]q
 }
-`, email, permission)
+`, email, permission, endpoint, organizationID)
 }

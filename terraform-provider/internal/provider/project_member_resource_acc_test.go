@@ -17,11 +17,18 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 	}
 
 	// Ensure required environment variables are set
-	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
-		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
-	}
 	if os.Getenv("FUNDAMENT_API_KEY") == "" {
 		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
+	}
+
+	endpoint := os.Getenv("FUNDAMENT_ENDPOINT")
+	if endpoint == "" {
+		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
+	}
+
+	organizationID := os.Getenv("FUNDAMENT_ORGANIZATION_ID")
+	if organizationID == "" {
+		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
 	userID := os.Getenv("FUNDAMENT_TEST_USER_ID")
@@ -36,7 +43,7 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccProjectMemberResourceConfig(userID, "viewer"),
+				Config: testAccProjectMemberResourceConfig(userID, "viewer", endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "project_id"),
@@ -63,7 +70,7 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 			},
 			// Update permission
 			{
-				Config: testAccProjectMemberResourceConfig(userID, "admin"),
+				Config: testAccProjectMemberResourceConfig(userID, "admin", endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "permission", "admin"),
@@ -74,10 +81,12 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 	})
 }
 
-func testAccProjectMemberResourceConfig(userID, permission string) string {
+func testAccProjectMemberResourceConfig(userID, permission, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_API_KEY or FUNDAMENT_API_KEY from environment
+  endpoint        = %[3]q
+  organization_id = %[4]q
+  # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
 resource "fundament_project" "test" {
@@ -89,5 +98,5 @@ resource "fundament_project_member" "test" {
   user_id    = %[1]q
   permission = %[2]q
 }
-`, userID, permission)
+`, userID, permission, endpoint, organizationID)
 }

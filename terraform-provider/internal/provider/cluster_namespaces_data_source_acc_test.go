@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -15,18 +16,25 @@ func TestAccClusterNamespacesDataSource(t *testing.T) {
 	}
 
 	// Ensure required environment variables are set
-	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
-		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
-	}
 	if os.Getenv("FUNDAMENT_API_KEY") == "" {
 		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
+	}
+
+	endpoint := os.Getenv("FUNDAMENT_ENDPOINT")
+	if endpoint == "" {
+		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
+	}
+
+	organizationID := os.Getenv("FUNDAMENT_ORGANIZATION_ID")
+	if organizationID == "" {
+		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccClusterNamespacesDataSourceConfig,
+				Config: testAccClusterNamespacesDataSourceConfig(endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Verify the data source ID is set correctly
 					resource.TestCheckResourceAttrPair(
@@ -51,9 +59,12 @@ func TestAccClusterNamespacesDataSource(t *testing.T) {
 	})
 }
 
-const testAccClusterNamespacesDataSourceConfig = `
+func testAccClusterNamespacesDataSourceConfig(endpoint, organizationID string) string {
+	return fmt.Sprintf(`
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_API_KEY from environment
+  endpoint        = %[1]q
+  organization_id = %[2]q
+  # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
 resource "fundament_project" "test" {
@@ -82,4 +93,5 @@ data "fundament_cluster_namespaces" "test" {
   cluster_id = fundament_cluster.test.id
   depends_on = [fundament_namespace.test1, fundament_namespace.test2]
 }
-`
+`, endpoint, organizationID)
+}

@@ -16,11 +16,18 @@ func TestAccProjectResource_basic(t *testing.T) {
 	}
 
 	// Ensure required environment variables are set
-	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
-		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
-	}
 	if os.Getenv("FUNDAMENT_API_KEY") == "" {
 		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
+	}
+
+	endpoint := os.Getenv("FUNDAMENT_ENDPOINT")
+	if endpoint == "" {
+		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
+	}
+
+	organizationID := os.Getenv("FUNDAMENT_ORGANIZATION_ID")
+	if organizationID == "" {
+		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
 	resourceName := "fundament_project.test"
@@ -30,7 +37,7 @@ func TestAccProjectResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccProjectResourceConfig("tf-acc-test-project"),
+				Config: testAccProjectResourceConfig("tf-acc-test-project", endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", "tf-acc-test-project"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
@@ -45,7 +52,7 @@ func TestAccProjectResource_basic(t *testing.T) {
 			},
 			// Update name
 			{
-				Config: testAccProjectResourceConfig("tf-acc-test-project-updated"),
+				Config: testAccProjectResourceConfig("tf-acc-test-project-updated", endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", "tf-acc-test-project-updated"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
@@ -57,14 +64,16 @@ func TestAccProjectResource_basic(t *testing.T) {
 	})
 }
 
-func testAccProjectResourceConfig(name string) string {
+func testAccProjectResourceConfig(name, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_API_KEY from environment
+  endpoint        = %[2]q
+  organization_id = %[3]q
+  # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
 resource "fundament_project" "test" {
   name = %[1]q
 }
-`, name)
+`, name, endpoint, organizationID)
 }
