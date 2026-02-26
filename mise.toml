@@ -7,9 +7,7 @@ SKAFFOLD_DEFAULT_REPO = "k3d-registry.localhost:5111"
 # Scripting & Meta
 just = "1.42.4"
 
-# Documentation
-"aqua:terrastruct/d2" = "0.7.1"
-
+# Database
 "go:github.com/printeers/trek" = "0.12.1"
 
 # Kubernetes & Deployment

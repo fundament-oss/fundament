@@ -5,14 +5,9 @@ mod cluster-worker
 _default:
     @just --list
 
-# Watch for changes to .d2 files and re-generate .svgs
-watch-d2:
-    d2 --theme=0 --dark-theme=200 --watch docs/assets/*.d2
-
 # Format all code and text in this repo
 fmt:
-    @find . -type f \( -name "*.md" -o -name "*.adoc" -o -name "*.d2" \) -exec perl -pi -e 's/enterprise/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
-    d2 fmt docs/assets/*.d2
+    @find . -type f \( -name "*.md" -o -name "*.adoc" -o -name "*.drawio.svg" \) -exec perl -pi -e 's/enterprise/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
     go fmt ./...
     # TODO md fmt
 
