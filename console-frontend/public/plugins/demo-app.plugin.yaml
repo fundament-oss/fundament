@@ -1,0 +1,114 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+
+metadata:
+  name: demo-app
+  displayName: Demo App
+  version: v1.0.0
+  description: Sample plugin showing how to replace the auto-generated UI with a custom Angular component.
+  author: Fundament
+  tags:
+    - demo
+
+menu:
+  organization:
+    - crd: DemoApp
+      list: true
+      detail: true
+      create: true
+      icon: tablerApps
+  project:
+    - crd: DemoApp
+      list: true
+      detail: true
+      create: true
+      icon: tablerApps
+
+# customComponents maps CRD kind → view type → component name registered in
+# src/app/plugins/index.ts. Views without an entry fall back to the auto-generated UI.
+customComponents:
+  DemoApp:
+    list: DemoAppListComponent
+    detail: DemoAppDetailComponent
+
+uiHints:
+  DemoApp:
+    formGroups:
+      - name: Application
+        fields: [image, replicas, port]
+    statusMapping:
+      jsonPath: .status.phase
+      values:
+        'Running':
+          badge: badge badge-sm badge-emerald
+          label: Running
+        'Pending':
+          badge: badge badge-sm badge-yellow
+          label: Pending
+        'Failed':
+          badge: badge badge-sm badge-rose
+          label: Failed
+
+crds:
+  - |
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      name: demoapps.demo.fundament.io
+    spec:
+      group: demo.fundament.io
+      names:
+        kind: DemoApp
+        plural: demoapps
+        singular: demoapp
+      scope: Namespaced
+      versions:
+        - name: v1
+          served: true
+          storage: true
+          additionalPrinterColumns:
+            - jsonPath: .spec.image
+              name: Image
+              type: string
+            - jsonPath: .spec.replicas
+              name: Replicas
+              type: integer
+            - jsonPath: .status.phase
+              name: Status
+              type: string
+          schema:
+            openAPIV3Schema:
+              description: A DemoApp represents a sample deployed application.
+              type: object
+              properties:
+                apiVersion:
+                  type: string
+                kind:
+                  type: string
+                metadata:
+                  type: object
+                spec:
+                  type: object
+                  required:
+                    - image
+                  properties:
+                    image:
+                      description: Container image to run (e.g. nginx:latest).
+                      type: string
+                    replicas:
+                      description: Desired number of replicas.
+                      type: integer
+                      default: 1
+                    port:
+                      description: Port the container exposes.
+                      type: integer
+                status:
+                  type: object
+                  properties:
+                    phase:
+                      description: Current lifecycle phase of the application.
+                      type: string
+                      enum:
+                        - Pending
+                        - Running
+                        - Failed

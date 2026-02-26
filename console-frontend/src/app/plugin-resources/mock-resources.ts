@@ -233,6 +233,63 @@ export const MOCK_RESOURCES: MockResourceMap = {
       },
     ],
   },
+  'demo-app': {
+    DemoApp: [
+      {
+        apiVersion: 'demo.fundament.io/v1',
+        kind: 'DemoApp',
+        metadata: {
+          name: 'frontend',
+          namespace: 'default',
+          uid: 'demo-1',
+          creationTimestamp: '2026-02-20T09:00:00Z',
+        },
+        spec: {
+          image: 'nginx:1.27',
+          replicas: 3,
+          port: 80,
+        },
+        status: {
+          phase: 'Running',
+        },
+      },
+      {
+        apiVersion: 'demo.fundament.io/v1',
+        kind: 'DemoApp',
+        metadata: {
+          name: 'backend-api',
+          namespace: 'default',
+          uid: 'demo-2',
+          creationTimestamp: '2026-02-21T14:30:00Z',
+        },
+        spec: {
+          image: 'myregistry.io/api:v2.3.1',
+          replicas: 2,
+          port: 8080,
+        },
+        status: {
+          phase: 'Running',
+        },
+      },
+      {
+        apiVersion: 'demo.fundament.io/v1',
+        kind: 'DemoApp',
+        metadata: {
+          name: 'worker',
+          namespace: 'jobs',
+          uid: 'demo-3',
+          creationTimestamp: '2026-02-25T07:15:00Z',
+        },
+        spec: {
+          image: 'myregistry.io/worker:latest',
+          replicas: 1,
+        },
+        status: {
+          phase: 'Pending',
+        },
+      },
+    ],
+  },
   cnpg: {
     Database: [
       {

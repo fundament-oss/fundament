@@ -52,6 +52,7 @@ function parsePluginYaml(yamlText: string): PluginDefinition {
     metadata: raw.metadata,
     menu: raw.menu,
     uiHints: raw.uiHints,
+    customComponents: raw.customComponents,
     crds: parsedCrds,
   };
 }
@@ -62,7 +63,11 @@ export default class PluginRegistryService {
 
   private loaded = signal(false);
 
-  private readonly pluginFiles = ['/plugins/cert-manager.plugin.yaml', '/plugins/cnpg.plugin.yaml'];
+  private readonly pluginFiles = [
+    '/plugins/cert-manager.plugin.yaml',
+    '/plugins/cnpg.plugin.yaml',
+    '/plugins/demo-app.plugin.yaml',
+  ];
 
   async loadPlugins(): Promise<void> {
     if (this.loaded()) return;

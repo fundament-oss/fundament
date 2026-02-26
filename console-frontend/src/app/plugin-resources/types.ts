@@ -6,8 +6,20 @@ export interface PluginDefinition {
   metadata: PluginMetadata;
   menu: PluginMenu;
   uiHints?: Record<string, CrdUiHints>;
+  customComponents?: PluginCustomComponents;
   crds: ParsedCrd[];
 }
+
+// Maps CRD kind → view type → registered component name
+export type PluginCustomComponents = Record<
+  string,
+  {
+    list?: string;
+    detail?: string;
+    create?: string;
+    edit?: string;
+  }
+>;
 
 export interface PluginMetadata {
   name: string;
@@ -127,6 +139,7 @@ export interface RawPluginYaml {
   metadata: PluginMetadata;
   menu: PluginMenu;
   uiHints?: Record<string, CrdUiHints>;
+  customComponents?: PluginCustomComponents;
   crds: string[];
 }
 
