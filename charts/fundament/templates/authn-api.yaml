@@ -1,4 +1,5 @@
 {{- if $.Values.authnApi.enabled }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -51,6 +52,7 @@ spec:
               value: {{ .Values.authnApi.logLevel }}
             - name: CORS_ALLOWED_ORIGINS
               value: {{ .Values.externalUrls.corsAllowedOrigins | default .Values.externalUrls.console }}
+
 ---
 apiVersion: v1
 kind: Service
@@ -67,8 +69,9 @@ spec:
       name: http
   selector:
     app.kubernetes.io/component: authn-api
----
+
 {{- if $.Values.ingress.enabled }}
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -101,4 +104,5 @@ spec:
                 port:
                   name: http
 {{- end }}
+
 {{- end }}
