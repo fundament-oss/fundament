@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -30,11 +31,13 @@ func TestAccNamespaceDataSource(t *testing.T) {
 		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
+	suffix := acctest.RandString(6)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccNamespaceDataSourceConfig(endpoint, organizationID),
+				Config: testAccNamespaceDataSourceConfig(endpoint, organizationID, suffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Verify the namespace attributes from the data source match the resource
 					resource.TestCheckResourceAttrPair(
@@ -60,7 +63,7 @@ func TestAccNamespaceDataSource(t *testing.T) {
 	})
 }
 
-func testAccNamespaceDataSourceConfig(endpoint, organizationID string) string {
+func testAccNamespaceDataSourceConfig(endpoint, organizationID, suffix string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
   endpoint        = %[1]q
@@ -69,17 +72,17 @@ provider "fundament" {
 }
 
 resource "fundament_project" "test" {
-  name = "tf-acc-test-ns-ds-project"
+  name = "tf-acc-nsds-p-%[3]s"
 }
 
 resource "fundament_cluster" "test" {
-  name               = "tf-acc-test-ns-ds-cluster"
+  name               = "tf-acc-nsds-c-%[3]s"
   region             = "eu-west-1"
   kubernetes_version = "1.28"
 }
 
 resource "fundament_namespace" "test" {
-  name       = "tf-acc-test-ns-ds"
+  name       = "tf-acc-nsds-%[3]s"
   project_id = fundament_project.test.id
   cluster_id = fundament_cluster.test.id
 }
@@ -89,5 +92,5 @@ data "fundament_namespace" "test" {
   project_name = fundament_project.test.name
   name         = fundament_namespace.test.name
 }
-`, endpoint, organizationID)
+`, endpoint, organizationID, suffix)
 }

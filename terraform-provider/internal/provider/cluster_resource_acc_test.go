@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -30,6 +31,8 @@ func TestAccClusterResource_basic(t *testing.T) {
 		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
+	suffix := acctest.RandString(6)
+	clusterName := "tf-acc-" + suffix
 	resourceName := "fundament_cluster.test"
 
 	resource.Test(t, resource.TestCase{
@@ -37,9 +40,9 @@ func TestAccClusterResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccClusterResourceConfig("tf-acc-test-cluster", "eu-west-1", "1.28", endpoint, organizationID),
+				Config: testAccClusterResourceConfig(clusterName, "eu-west-1", "1.28", endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", "tf-acc-test-cluster"),
+					resource.TestCheckResourceAttr(resourceName, "name", clusterName),
 					resource.TestCheckResourceAttr(resourceName, "region", "eu-west-1"),
 					resource.TestCheckResourceAttr(resourceName, "kubernetes_version", "1.28"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
@@ -54,9 +57,9 @@ func TestAccClusterResource_basic(t *testing.T) {
 			},
 			// Update kubernetes_version
 			{
-				Config: testAccClusterResourceConfig("tf-acc-test-cluster", "eu-west-1", "1.29", endpoint, organizationID),
+				Config: testAccClusterResourceConfig(clusterName, "eu-west-1", "1.29", endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", "tf-acc-test-cluster"),
+					resource.TestCheckResourceAttr(resourceName, "name", clusterName),
 					resource.TestCheckResourceAttr(resourceName, "region", "eu-west-1"),
 					resource.TestCheckResourceAttr(resourceName, "kubernetes_version", "1.29"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),

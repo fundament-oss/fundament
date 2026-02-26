@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -30,6 +31,8 @@ func TestAccProjectResource_basic(t *testing.T) {
 		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
+	suffix := acctest.RandString(6)
+	projectName := "tf-acc-" + suffix
 	resourceName := "fundament_project.test"
 
 	resource.Test(t, resource.TestCase{
@@ -37,9 +40,9 @@ func TestAccProjectResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccProjectResourceConfig("tf-acc-test-project", endpoint, organizationID),
+				Config: testAccProjectResourceConfig(projectName, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", "tf-acc-test-project"),
+					resource.TestCheckResourceAttr(resourceName, "name", projectName),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "created"),
 				),
@@ -52,9 +55,9 @@ func TestAccProjectResource_basic(t *testing.T) {
 			},
 			// Update name
 			{
-				Config: testAccProjectResourceConfig("tf-acc-test-project-updated", endpoint, organizationID),
+				Config: testAccProjectResourceConfig(projectName+"-upd", endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", "tf-acc-test-project-updated"),
+					resource.TestCheckResourceAttr(resourceName, "name", projectName+"-upd"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "created"),
 				),

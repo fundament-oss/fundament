@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
@@ -36,6 +37,7 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 		t.Fatal("FUNDAMENT_TEST_USER_ID must be set for project member acceptance tests")
 	}
 
+	suffix := acctest.RandString(6)
 	resourceName := "fundament_project_member.test"
 
 	resource.Test(t, resource.TestCase{
@@ -43,7 +45,7 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccProjectMemberResourceConfig(userID, "viewer", endpoint, organizationID),
+				Config: testAccProjectMemberResourceConfig(userID, "viewer", suffix, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "project_id"),
@@ -70,7 +72,7 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 			},
 			// Update permission
 			{
-				Config: testAccProjectMemberResourceConfig(userID, "admin", endpoint, organizationID),
+				Config: testAccProjectMemberResourceConfig(userID, "admin", suffix, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "permission", "admin"),
@@ -81,16 +83,16 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 	})
 }
 
-func testAccProjectMemberResourceConfig(userID, permission, endpoint, organizationID string) string {
+func testAccProjectMemberResourceConfig(userID, permission, suffix, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  endpoint        = %[3]q
-  organization_id = %[4]q
+  endpoint        = %[4]q
+  organization_id = %[5]q
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
 resource "fundament_project" "test" {
-  name = "tf-acc-test-member-project"
+  name = "tf-acc-pm-%[3]s"
 }
 
 resource "fundament_project_member" "test" {
@@ -98,5 +100,5 @@ resource "fundament_project_member" "test" {
   user_id    = %[1]q
   permission = %[2]q
 }
-`, userID, permission, endpoint, organizationID)
+`, userID, permission, suffix, endpoint, organizationID)
 }

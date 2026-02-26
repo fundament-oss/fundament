@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
@@ -31,6 +32,8 @@ func TestAccNamespaceResource_basic(t *testing.T) {
 		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
+	suffix := acctest.RandString(6)
+	nsName := "tf-acc-ns-" + suffix
 	resourceName := "fundament_namespace.test"
 
 	resource.Test(t, resource.TestCase{
@@ -38,9 +41,9 @@ func TestAccNamespaceResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccNamespaceResourceConfig("tf-acc-test-namespace", endpoint, organizationID),
+				Config: testAccNamespaceResourceConfig(nsName, suffix, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", "tf-acc-test-namespace"),
+					resource.TestCheckResourceAttr(resourceName, "name", nsName),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "project_id"),
 					resource.TestCheckResourceAttrSet(resourceName, "cluster_id"),
@@ -67,20 +70,20 @@ func TestAccNamespaceResource_basic(t *testing.T) {
 	})
 }
 
-func testAccNamespaceResourceConfig(name, endpoint, organizationID string) string {
+func testAccNamespaceResourceConfig(name, suffix, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  endpoint        = %[2]q
-  organization_id = %[3]q
+  endpoint        = %[3]q
+  organization_id = %[4]q
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
 resource "fundament_project" "test" {
-  name = "tf-acc-test-namespace-project"
+  name = "tf-acc-ns-p-%[2]s"
 }
 
 resource "fundament_cluster" "test" {
-  name               = "tf-acc-test-namespace-cluster"
+  name               = "tf-acc-ns-c-%[2]s"
   region             = "eu-west-1"
   kubernetes_version = "1.28"
 }
@@ -90,5 +93,5 @@ resource "fundament_namespace" "test" {
   project_id = fundament_project.test.id
   cluster_id = fundament_cluster.test.id
 }
-`, name, endpoint, organizationID)
+`, name, suffix, endpoint, organizationID)
 }

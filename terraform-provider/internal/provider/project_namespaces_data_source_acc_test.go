@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -30,11 +31,13 @@ func TestAccProjectNamespacesDataSource(t *testing.T) {
 		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
+	suffix := acctest.RandString(6)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectNamespacesDataSourceConfig(endpoint, organizationID),
+				Config: testAccProjectNamespacesDataSourceConfig(endpoint, organizationID, suffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Verify the data source ID is set correctly
 					resource.TestCheckResourceAttrPair(
@@ -59,7 +62,7 @@ func TestAccProjectNamespacesDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectNamespacesDataSourceConfig(endpoint, organizationID string) string {
+func testAccProjectNamespacesDataSourceConfig(endpoint, organizationID, suffix string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
   endpoint        = %[1]q
@@ -68,29 +71,29 @@ provider "fundament" {
 }
 
 resource "fundament_project" "test" {
-  name = "tf-acc-test-project-ns"
+  name = "tf-acc-pns-%[3]s"
 }
 
 resource "fundament_cluster" "test1" {
-  name               = "tf-acc-test-project-ns-cluster-1"
+  name               = "tf-acc-pns-c1-%[3]s"
   region             = "eu-west-1"
   kubernetes_version = "1.28"
 }
 
 resource "fundament_cluster" "test2" {
-  name               = "tf-acc-test-project-ns-cluster-2"
+  name               = "tf-acc-pns-c2-%[3]s"
   region             = "eu-west-1"
   kubernetes_version = "1.28"
 }
 
 resource "fundament_namespace" "test1" {
-  name       = "tf-acc-test-project-ns-1"
+  name       = "tf-acc-pns-1-%[3]s"
   project_id = fundament_project.test.id
   cluster_id = fundament_cluster.test1.id
 }
 
 resource "fundament_namespace" "test2" {
-  name       = "tf-acc-test-project-ns-2"
+  name       = "tf-acc-pns-2-%[3]s"
   project_id = fundament_project.test.id
   cluster_id = fundament_cluster.test2.id
 }
@@ -99,5 +102,5 @@ data "fundament_project_namespaces" "test" {
   project_id = fundament_project.test.id
   depends_on = [fundament_namespace.test1, fundament_namespace.test2]
 }
-`, endpoint, organizationID)
+`, endpoint, organizationID, suffix)
 }

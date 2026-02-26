@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -34,11 +35,13 @@ func TestAccProjectMembersDataSource(t *testing.T) {
 		t.Fatal("FUNDAMENT_TEST_USER_ID must be set for project member acceptance tests")
 	}
 
+	suffix := acctest.RandString(6)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectMembersDataSourceConfig(userID, endpoint, organizationID),
+				Config: testAccProjectMembersDataSourceConfig(userID, suffix, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.fundament_project_members.test", "project_id"),
 					resource.TestCheckResourceAttrSet("data.fundament_project_members.test", "members.#"),
@@ -48,16 +51,16 @@ func TestAccProjectMembersDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectMembersDataSourceConfig(userID, endpoint, organizationID string) string {
+func testAccProjectMembersDataSourceConfig(userID, suffix, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  endpoint        = %[2]q
-  organization_id = %[3]q
+  endpoint        = %[3]q
+  organization_id = %[4]q
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
 resource "fundament_project" "test" {
-  name = "tf-acc-test-members-ds-project"
+  name = "tf-acc-pmds-%[2]s"
 }
 
 resource "fundament_project_member" "test" {
@@ -71,5 +74,5 @@ data "fundament_project_members" "test" {
 
   depends_on = [fundament_project_member.test]
 }
-`, userID, endpoint, organizationID)
+`, userID, suffix, endpoint, organizationID)
 }
