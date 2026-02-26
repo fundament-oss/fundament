@@ -6,8 +6,8 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import { file_v1_common } from "./common_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/apikey.proto.
  */
 export const file_v1_apikey: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9hcGlrZXkucHJvdG8SD29yZ2FuaXphdGlvbi52MSLuAQoGQVBJS2V5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJEisKB2V4cGlyZXMYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCWxhc3RfdXNlZBgyIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHY3JlYXRlZBg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHcmV2b2tlZBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiQwoTQ3JlYXRlQVBJS2V5UmVxdWVzdBIYCgRuYW1lGAogASgJQgq6SAdyBRABGP8BEhIKCmV4cGlyZXNfaW4YFCABKAkiRwoUQ3JlYXRlQVBJS2V5UmVzcG9uc2USCgoCaWQYCiABKAkSDQoFdG9rZW4YFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJIhQKEkxpc3RBUElLZXlzUmVxdWVzdCJAChNMaXN0QVBJS2V5c1Jlc3BvbnNlEikKCGFwaV9rZXlzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLkFQSUtleSIwChBHZXRBUElLZXlSZXF1ZXN0EhwKCmFwaV9rZXlfaWQYCiABKAlCCLpIBXIDsAEBIj0KEUdldEFQSUtleVJlc3BvbnNlEigKB2FwaV9rZXkYCiABKAsyFy5vcmdhbml6YXRpb24udjEuQVBJS2V5IjMKE1Jldm9rZUFQSUtleVJlcXVlc3QSHAoKYXBpX2tleV9pZBgKIAEoCUIIukgFcgOwAQEiMwoTRGVsZXRlQVBJS2V5UmVxdWVzdBIcCgphcGlfa2V5X2lkGAogASgJQgi6SAVyA7ABATK2AwoNQVBJS2V5U2VydmljZRJbCgxDcmVhdGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuQ3JlYXRlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVBUElLZXlSZXNwb25zZRJYCgtMaXN0QVBJS2V5cxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0QVBJS2V5c1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdEFQSUtleXNSZXNwb25zZRJSCglHZXRBUElLZXkSIS5vcmdhbml6YXRpb24udjEuR2V0QVBJS2V5UmVxdWVzdBoiLm9yZ2FuaXphdGlvbi52MS5HZXRBUElLZXlSZXNwb25zZRJMCgxSZXZva2VBUElLZXkSJC5vcmdhbml6YXRpb24udjEuUmV2b2tlQVBJS2V5UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJMCgxEZWxldGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuRGVsZXRlQVBJS2V5UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("Cg92MS9hcGlrZXkucHJvdG8SD29yZ2FuaXphdGlvbi52MSLuAQoGQVBJS2V5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJEisKB2V4cGlyZXMYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCWxhc3RfdXNlZBgyIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHY3JlYXRlZBg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHcmV2b2tlZBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiQwoTQ3JlYXRlQVBJS2V5UmVxdWVzdBIYCgRuYW1lGAogASgJQgq6SAdyBRABGP8BEhIKCmV4cGlyZXNfaW4YFCABKAkiRwoUQ3JlYXRlQVBJS2V5UmVzcG9uc2USCgoCaWQYCiABKAkSDQoFdG9rZW4YFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJIhQKEkxpc3RBUElLZXlzUmVxdWVzdCJAChNMaXN0QVBJS2V5c1Jlc3BvbnNlEikKCGFwaV9rZXlzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLkFQSUtleSIwChBHZXRBUElLZXlSZXF1ZXN0EhwKCmFwaV9rZXlfaWQYCiABKAlCCLpIBXIDsAEBIj0KEUdldEFQSUtleVJlc3BvbnNlEigKB2FwaV9rZXkYCiABKAsyFy5vcmdhbml6YXRpb24udjEuQVBJS2V5IjMKE1Jldm9rZUFQSUtleVJlcXVlc3QSHAoKYXBpX2tleV9pZBgKIAEoCUIIukgFcgOwAQEiFgoUUmV2b2tlQVBJS2V5UmVzcG9uc2UiMwoTRGVsZXRlQVBJS2V5UmVxdWVzdBIcCgphcGlfa2V5X2lkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVBUElLZXlSZXNwb25zZTLUAwoNQVBJS2V5U2VydmljZRJbCgxDcmVhdGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuQ3JlYXRlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVBUElLZXlSZXNwb25zZRJYCgtMaXN0QVBJS2V5cxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0QVBJS2V5c1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdEFQSUtleXNSZXNwb25zZRJSCglHZXRBUElLZXkSIS5vcmdhbml6YXRpb24udjEuR2V0QVBJS2V5UmVxdWVzdBoiLm9yZ2FuaXphdGlvbi52MS5HZXRBUElLZXlSZXNwb25zZRJbCgxSZXZva2VBUElLZXkSJC5vcmdhbml6YXRpb24udjEuUmV2b2tlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5SZXZva2VBUElLZXlSZXNwb25zZRJbCgxEZWxldGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuRGVsZXRlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5EZWxldGVBUElLZXlSZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * API key information (without sensitive data)
@@ -221,6 +221,21 @@ export const RevokeAPIKeyRequestSchema: GenMessage<RevokeAPIKeyRequest> = /*@__P
   messageDesc(file_v1_apikey, 7);
 
 /**
+ * Revoke API key response
+ *
+ * @generated from message organization.v1.RevokeAPIKeyResponse
+ */
+export type RevokeAPIKeyResponse = Message<"organization.v1.RevokeAPIKeyResponse"> & {
+};
+
+/**
+ * Describes the message organization.v1.RevokeAPIKeyResponse.
+ * Use `create(RevokeAPIKeyResponseSchema)` to create a new message.
+ */
+export const RevokeAPIKeyResponseSchema: GenMessage<RevokeAPIKeyResponse> = /*@__PURE__*/
+  messageDesc(file_v1_apikey, 8);
+
+/**
  * Delete API key request
  *
  * @generated from message organization.v1.DeleteAPIKeyRequest
@@ -237,7 +252,22 @@ export type DeleteAPIKeyRequest = Message<"organization.v1.DeleteAPIKeyRequest">
  * Use `create(DeleteAPIKeyRequestSchema)` to create a new message.
  */
 export const DeleteAPIKeyRequestSchema: GenMessage<DeleteAPIKeyRequest> = /*@__PURE__*/
-  messageDesc(file_v1_apikey, 8);
+  messageDesc(file_v1_apikey, 9);
+
+/**
+ * Delete API key response
+ *
+ * @generated from message organization.v1.DeleteAPIKeyResponse
+ */
+export type DeleteAPIKeyResponse = Message<"organization.v1.DeleteAPIKeyResponse"> & {
+};
+
+/**
+ * Describes the message organization.v1.DeleteAPIKeyResponse.
+ * Use `create(DeleteAPIKeyResponseSchema)` to create a new message.
+ */
+export const DeleteAPIKeyResponseSchema: GenMessage<DeleteAPIKeyResponse> = /*@__PURE__*/
+  messageDesc(file_v1_apikey, 10);
 
 /**
  * APIKeyService manages API keys for programmatic access
@@ -283,7 +313,7 @@ export const APIKeyService: GenService<{
   revokeAPIKey: {
     methodKind: "unary";
     input: typeof RevokeAPIKeyRequestSchema;
-    output: typeof EmptySchema;
+    output: typeof RevokeAPIKeyResponseSchema;
   },
   /**
    * Delete an API key
@@ -293,7 +323,7 @@ export const APIKeyService: GenService<{
   deleteAPIKey: {
     methodKind: "unary";
     input: typeof DeleteAPIKeyRequestSchema;
-    output: typeof EmptySchema;
+    output: typeof DeleteAPIKeyResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_apikey, 0);

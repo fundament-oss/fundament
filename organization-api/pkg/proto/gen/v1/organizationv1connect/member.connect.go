@@ -9,7 +9,6 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -56,7 +55,7 @@ type MemberServiceClient interface {
 	// Delete a member from the organization
 	DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error)
 	// Update a member's permission
-	UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[emptypb.Empty], error)
+	UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[v1.UpdateMemberPermissionResponse], error)
 }
 
 // NewMemberServiceClient constructs a client for the organization.v1.MemberService service. By
@@ -88,7 +87,7 @@ func NewMemberServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(memberServiceMethods.ByName("DeleteMember")),
 			connect.WithClientOptions(opts...),
 		),
-		updateMemberPermission: connect.NewClient[v1.UpdateMemberPermissionRequest, emptypb.Empty](
+		updateMemberPermission: connect.NewClient[v1.UpdateMemberPermissionRequest, v1.UpdateMemberPermissionResponse](
 			httpClient,
 			baseURL+MemberServiceUpdateMemberPermissionProcedure,
 			connect.WithSchema(memberServiceMethods.ByName("UpdateMemberPermission")),
@@ -102,7 +101,7 @@ type memberServiceClient struct {
 	listMembers            *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
 	getMember              *connect.Client[v1.GetMemberRequest, v1.GetMemberResponse]
 	deleteMember           *connect.Client[v1.DeleteMemberRequest, v1.DeleteMemberResponse]
-	updateMemberPermission *connect.Client[v1.UpdateMemberPermissionRequest, emptypb.Empty]
+	updateMemberPermission *connect.Client[v1.UpdateMemberPermissionRequest, v1.UpdateMemberPermissionResponse]
 }
 
 // ListMembers calls organization.v1.MemberService.ListMembers.
@@ -121,7 +120,7 @@ func (c *memberServiceClient) DeleteMember(ctx context.Context, req *connect.Req
 }
 
 // UpdateMemberPermission calls organization.v1.MemberService.UpdateMemberPermission.
-func (c *memberServiceClient) UpdateMemberPermission(ctx context.Context, req *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[emptypb.Empty], error) {
+func (c *memberServiceClient) UpdateMemberPermission(ctx context.Context, req *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[v1.UpdateMemberPermissionResponse], error) {
 	return c.updateMemberPermission.CallUnary(ctx, req)
 }
 
@@ -134,7 +133,7 @@ type MemberServiceHandler interface {
 	// Delete a member from the organization
 	DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error)
 	// Update a member's permission
-	UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[emptypb.Empty], error)
+	UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[v1.UpdateMemberPermissionResponse], error)
 }
 
 // NewMemberServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -199,6 +198,6 @@ func (UnimplementedMemberServiceHandler) DeleteMember(context.Context, *connect.
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MemberService.DeleteMember is not implemented"))
 }
 
-func (UnimplementedMemberServiceHandler) UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedMemberServiceHandler) UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[v1.UpdateMemberPermissionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MemberService.UpdateMemberPermission is not implemented"))
 }

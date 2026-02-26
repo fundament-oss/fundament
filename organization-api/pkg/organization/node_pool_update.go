@@ -7,7 +7,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -17,7 +16,7 @@ import (
 func (s *Server) UpdateNodePool(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateNodePoolRequest],
-) (*connect.Response[emptypb.Empty], error) {
+) (*connect.Response[organizationv1.UpdateNodePoolResponse], error) {
 	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.NodePool(nodePoolID)); err != nil {
@@ -41,5 +40,5 @@ func (s *Server) UpdateNodePool(
 
 	s.logger.InfoContext(ctx, "node pool updated", "node_pool_id", nodePoolID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.UpdateNodePoolResponse_builder{}.Build()), nil
 }

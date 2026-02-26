@@ -3,7 +3,6 @@ edition = "2023";
 package organization.v1;
 
 import "buf/validate/validate.proto";
-import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -29,7 +28,7 @@ service NamespaceService {
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse);
 
   // Delete a namespace
-  rpc DeleteNamespace(DeleteNamespaceRequest) returns (google.protobuf.Empty);
+  rpc DeleteNamespace(DeleteNamespaceRequest) returns (DeleteNamespaceResponse);
 }
 
 // List cluster namespaces request
@@ -81,6 +80,9 @@ message CreateNamespaceRequest {
 message CreateNamespaceResponse {
   string namespace_id = 10;
 }
+
+// Delete namespace response
+message DeleteNamespaceResponse {}
 
 // Delete namespace request
 message DeleteNamespaceRequest {

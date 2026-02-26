@@ -3,7 +3,6 @@ edition = "2023";
 package organization.v1; // TODO: Should maybe be renamed to `fundament.v1`?
 
 import "buf/validate/validate.proto";
-import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
@@ -37,10 +36,10 @@ service ClusterService {
   rpc CreateCluster(CreateClusterRequest) returns (CreateClusterResponse);
 
   // Update cluster configuration
-  rpc UpdateCluster(UpdateClusterRequest) returns (google.protobuf.Empty);
+  rpc UpdateCluster(UpdateClusterRequest) returns (UpdateClusterResponse);
 
   // Delete a cluster
-  rpc DeleteCluster(DeleteClusterRequest) returns (google.protobuf.Empty);
+  rpc DeleteCluster(DeleteClusterRequest) returns (DeleteClusterResponse);
 
   // Get cluster activity log
   rpc GetClusterActivity(GetClusterActivityRequest) returns (GetClusterActivityResponse);
@@ -58,10 +57,10 @@ service ClusterService {
   rpc CreateNodePool(CreateNodePoolRequest) returns (CreateNodePoolResponse);
 
   // Update a node pool
-  rpc UpdateNodePool(UpdateNodePoolRequest) returns (google.protobuf.Empty);
+  rpc UpdateNodePool(UpdateNodePoolRequest) returns (UpdateNodePoolResponse);
 
   // Delete a node pool
-  rpc DeleteNodePool(DeleteNodePoolRequest) returns (google.protobuf.Empty);
+  rpc DeleteNodePool(DeleteNodePoolRequest) returns (DeleteNodePoolResponse);
 
   // List installs for a cluster
   rpc ListInstalls(ListInstallsRequest) returns (ListInstallsResponse);
@@ -70,7 +69,7 @@ service ClusterService {
   rpc AddInstall(AddInstallRequest) returns (AddInstallResponse);
 
   // Remove an install from a cluster
-  rpc RemoveInstall(RemoveInstallRequest) returns (google.protobuf.Empty);
+  rpc RemoveInstall(RemoveInstallRequest) returns (RemoveInstallResponse);
 }
 
 // List clusters request
@@ -170,10 +169,16 @@ message UpdateClusterRequest {
   string kubernetes_version = 20 [features.field_presence = EXPLICIT];
 }
 
+// Update cluster response
+message UpdateClusterResponse {}
+
 // Delete cluster request
 message DeleteClusterRequest {
   string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
+
+// Delete cluster response
+message DeleteClusterResponse {}
 
 // Get cluster activity request
 message GetClusterActivityRequest {
@@ -242,10 +247,16 @@ message UpdateNodePoolRequest {
   int32 autoscale_max = 30 [(buf.validate.field).int32 = {gte: 0}];
 }
 
+// Update node pool response
+message UpdateNodePoolResponse {}
+
 // Delete node pool request
 message DeleteNodePoolRequest {
   string node_pool_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
+
+// Delete node pool response
+message DeleteNodePoolResponse {}
 
 // List node pools request
 message ListNodePoolsRequest {
@@ -294,6 +305,9 @@ message AddInstallRequest {
 message AddInstallResponse {
   string install_id = 10;
 }
+
+// Remove install response
+message RemoveInstallResponse {}
 
 // Remove install request
 message RemoveInstallRequest {

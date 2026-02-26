@@ -9,7 +9,6 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -59,9 +58,9 @@ type APIKeyServiceClient interface {
 	// Get a specific API key by ID
 	GetAPIKey(context.Context, *connect.Request[v1.GetAPIKeyRequest]) (*connect.Response[v1.GetAPIKeyResponse], error)
 	// Revoke an API key
-	RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[emptypb.Empty], error)
+	RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[v1.RevokeAPIKeyResponse], error)
 	// Delete an API key
-	DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error)
 }
 
 // NewAPIKeyServiceClient constructs a client for the organization.v1.APIKeyService service. By
@@ -93,13 +92,13 @@ func NewAPIKeyServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(aPIKeyServiceMethods.ByName("GetAPIKey")),
 			connect.WithClientOptions(opts...),
 		),
-		revokeAPIKey: connect.NewClient[v1.RevokeAPIKeyRequest, emptypb.Empty](
+		revokeAPIKey: connect.NewClient[v1.RevokeAPIKeyRequest, v1.RevokeAPIKeyResponse](
 			httpClient,
 			baseURL+APIKeyServiceRevokeAPIKeyProcedure,
 			connect.WithSchema(aPIKeyServiceMethods.ByName("RevokeAPIKey")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteAPIKey: connect.NewClient[v1.DeleteAPIKeyRequest, emptypb.Empty](
+		deleteAPIKey: connect.NewClient[v1.DeleteAPIKeyRequest, v1.DeleteAPIKeyResponse](
 			httpClient,
 			baseURL+APIKeyServiceDeleteAPIKeyProcedure,
 			connect.WithSchema(aPIKeyServiceMethods.ByName("DeleteAPIKey")),
@@ -113,8 +112,8 @@ type aPIKeyServiceClient struct {
 	createAPIKey *connect.Client[v1.CreateAPIKeyRequest, v1.CreateAPIKeyResponse]
 	listAPIKeys  *connect.Client[v1.ListAPIKeysRequest, v1.ListAPIKeysResponse]
 	getAPIKey    *connect.Client[v1.GetAPIKeyRequest, v1.GetAPIKeyResponse]
-	revokeAPIKey *connect.Client[v1.RevokeAPIKeyRequest, emptypb.Empty]
-	deleteAPIKey *connect.Client[v1.DeleteAPIKeyRequest, emptypb.Empty]
+	revokeAPIKey *connect.Client[v1.RevokeAPIKeyRequest, v1.RevokeAPIKeyResponse]
+	deleteAPIKey *connect.Client[v1.DeleteAPIKeyRequest, v1.DeleteAPIKeyResponse]
 }
 
 // CreateAPIKey calls organization.v1.APIKeyService.CreateAPIKey.
@@ -133,12 +132,12 @@ func (c *aPIKeyServiceClient) GetAPIKey(ctx context.Context, req *connect.Reques
 }
 
 // RevokeAPIKey calls organization.v1.APIKeyService.RevokeAPIKey.
-func (c *aPIKeyServiceClient) RevokeAPIKey(ctx context.Context, req *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[emptypb.Empty], error) {
+func (c *aPIKeyServiceClient) RevokeAPIKey(ctx context.Context, req *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[v1.RevokeAPIKeyResponse], error) {
 	return c.revokeAPIKey.CallUnary(ctx, req)
 }
 
 // DeleteAPIKey calls organization.v1.APIKeyService.DeleteAPIKey.
-func (c *aPIKeyServiceClient) DeleteAPIKey(ctx context.Context, req *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[emptypb.Empty], error) {
+func (c *aPIKeyServiceClient) DeleteAPIKey(ctx context.Context, req *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error) {
 	return c.deleteAPIKey.CallUnary(ctx, req)
 }
 
@@ -151,9 +150,9 @@ type APIKeyServiceHandler interface {
 	// Get a specific API key by ID
 	GetAPIKey(context.Context, *connect.Request[v1.GetAPIKeyRequest]) (*connect.Response[v1.GetAPIKeyResponse], error)
 	// Revoke an API key
-	RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[emptypb.Empty], error)
+	RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[v1.RevokeAPIKeyResponse], error)
 	// Delete an API key
-	DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error)
 }
 
 // NewAPIKeyServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -226,10 +225,10 @@ func (UnimplementedAPIKeyServiceHandler) GetAPIKey(context.Context, *connect.Req
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.APIKeyService.GetAPIKey is not implemented"))
 }
 
-func (UnimplementedAPIKeyServiceHandler) RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedAPIKeyServiceHandler) RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[v1.RevokeAPIKeyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.APIKeyService.RevokeAPIKey is not implemented"))
 }
 
-func (UnimplementedAPIKeyServiceHandler) DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedAPIKeyServiceHandler) DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.APIKeyService.DeleteAPIKey is not implemented"))
 }

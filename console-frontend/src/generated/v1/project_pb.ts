@@ -6,8 +6,8 @@
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import { file_v1_common } from "./common_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/project.proto.
  */
 export const file_v1_project: GenFile = /*@__PURE__*/
-  fileDesc("ChB2MS9wcm9qZWN0LnByb3RvEg9vcmdhbml6YXRpb24udjEiMwoTTGlzdFByb2plY3RzUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASJCChRMaXN0UHJvamVjdHNSZXNwb25zZRIqCghwcm9qZWN0cxgKIAMoCzIYLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0IjEKEUdldFByb2plY3RSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBIpABChdHZXRQcm9qZWN0QnlOYW1lUmVxdWVzdBJ1CgRuYW1lGAogASgJQme6SGS6AWEKDGRuczExMjNsYWJlbBIebXVzdCBiZSBhIHZhbGlkIEROUy0xMTIzIGxhYmVsGjF0aGlzLm1hdGNoZXMoJ15bYS16XShbLWEtejAtOV17MCw2MX1bYS16MC05XSk/JCcpIj8KEkdldFByb2plY3RSZXNwb25zZRIpCgdwcm9qZWN0GAogASgLMhgub3JnYW5pemF0aW9uLnYxLlByb2plY3QiZAoHUHJvamVjdBIKCgJpZBgKIAEoCRISCgpjbHVzdGVyX2lkGA8gASgJEgwKBG5hbWUYFCABKAkSKwoHY3JlYXRlZBgeIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiqwEKFENyZWF0ZVByb2plY3RSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYBSABKAlCCLpIBXIDsAEBEnUKBG5hbWUYCiABKAlCZ7pIZLoBYQoMZG5zMTEyM2xhYmVsEh5tdXN0IGJlIGEgdmFsaWQgRE5TLTExMjMgbGFiZWwaMXRoaXMubWF0Y2hlcygnXlthLXpdKFstYS16MC05XXswLDYxfVthLXowLTldKT8kJykiKwoVQ3JlYXRlUHJvamVjdFJlc3BvbnNlEhIKCnByb2plY3RfaWQYCiABKAkiUwoUVXBkYXRlUHJvamVjdFJlcXVlc3QSHAoKcHJvamVjdF9pZBgKIAEoCUIIukgFcgOwAQESHQoEbmFtZRgUIAEoCUIPqgECCAG6SAdyBRABGP8BIjQKFERlbGV0ZVByb2plY3RSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBIrIBCg1Qcm9qZWN0TWVtYmVyEgoKAmlkGAogASgJEhIKCnByb2plY3RfaWQYFCABKAkSDwoHdXNlcl9pZBgeIAEoCRIRCgl1c2VyX25hbWUYKCABKAkSMAoEcm9sZRgyIAEoDjIiLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0TWVtYmVyUm9sZRIrCgdjcmVhdGVkGDwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCI5ChlMaXN0UHJvamVjdE1lbWJlcnNSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBIk0KGkxpc3RQcm9qZWN0TWVtYmVyc1Jlc3BvbnNlEi8KB21lbWJlcnMYCiADKAsyHi5vcmdhbml6YXRpb24udjEuUHJvamVjdE1lbWJlciI2ChdHZXRQcm9qZWN0TWVtYmVyUmVxdWVzdBIbCgltZW1iZXJfaWQYCiABKAlCCLpIBXIDsAEBIkoKGEdldFByb2plY3RNZW1iZXJSZXNwb25zZRIuCgZtZW1iZXIYCiABKAsyHi5vcmdhbml6YXRpb24udjEuUHJvamVjdE1lbWJlciKOAQoXQWRkUHJvamVjdE1lbWJlclJlcXVlc3QSHAoKcHJvamVjdF9pZBgKIAEoCUIIukgFcgOwAQESGQoHdXNlcl9pZBgUIAEoCUIIukgFcgOwAQESOgoEcm9sZRgeIAEoDjIiLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0TWVtYmVyUm9sZUIIukgFggECIAAiLQoYQWRkUHJvamVjdE1lbWJlclJlc3BvbnNlEhEKCW1lbWJlcl9pZBgKIAEoCSJ5Ch5VcGRhdGVQcm9qZWN0TWVtYmVyUm9sZVJlcXVlc3QSGwoJbWVtYmVyX2lkGAogASgJQgi6SAVyA7ABARI6CgRyb2xlGBQgASgOMiIub3JnYW5pemF0aW9uLnYxLlByb2plY3RNZW1iZXJSb2xlQgi6SAWCAQIgACI5ChpSZW1vdmVQcm9qZWN0TWVtYmVyUmVxdWVzdBIbCgltZW1iZXJfaWQYCiABKAlCCLpIBXIDsAEBKncKEVByb2plY3RNZW1iZXJSb2xlEiMKH1BST0pFQ1RfTUVNQkVSX1JPTEVfVU5TUEVDSUZJRUQQABIdChlQUk9KRUNUX01FTUJFUl9ST0xFX0FETUlOEAESHgoaUFJPSkVDVF9NRU1CRVJfUk9MRV9WSUVXRVIQAjKoCAoOUHJvamVjdFNlcnZpY2USWwoMTGlzdFByb2plY3RzEiQub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0c1JlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3RzUmVzcG9uc2USVQoKR2V0UHJvamVjdBIiLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0UmVxdWVzdBojLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0UmVzcG9uc2USYQoQR2V0UHJvamVjdEJ5TmFtZRIoLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0QnlOYW1lUmVxdWVzdBojLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0UmVzcG9uc2USXgoNQ3JlYXRlUHJvamVjdBIlLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVQcm9qZWN0UmVxdWVzdBomLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVQcm9qZWN0UmVzcG9uc2USTgoNVXBkYXRlUHJvamVjdBIlLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVQcm9qZWN0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJOCg1EZWxldGVQcm9qZWN0EiUub3JnYW5pemF0aW9uLnYxLkRlbGV0ZVByb2plY3RSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Em0KEkxpc3RQcm9qZWN0TWVtYmVycxIqLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE1lbWJlcnNSZXF1ZXN0Gisub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0TWVtYmVyc1Jlc3BvbnNlEmcKEEdldFByb2plY3RNZW1iZXISKC5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdE1lbWJlclJlcXVlc3QaKS5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdE1lbWJlclJlc3BvbnNlEmcKEEFkZFByb2plY3RNZW1iZXISKC5vcmdhbml6YXRpb24udjEuQWRkUHJvamVjdE1lbWJlclJlcXVlc3QaKS5vcmdhbml6YXRpb24udjEuQWRkUHJvamVjdE1lbWJlclJlc3BvbnNlEmIKF1VwZGF0ZVByb2plY3RNZW1iZXJSb2xlEi8ub3JnYW5pemF0aW9uLnYxLlVwZGF0ZVByb2plY3RNZW1iZXJSb2xlUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJaChNSZW1vdmVQcm9qZWN0TWVtYmVyEisub3JnYW5pemF0aW9uLnYxLlJlbW92ZVByb2plY3RNZW1iZXJSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Ql9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("ChB2MS9wcm9qZWN0LnByb3RvEg9vcmdhbml6YXRpb24udjEiMwoTTGlzdFByb2plY3RzUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASJCChRMaXN0UHJvamVjdHNSZXNwb25zZRIqCghwcm9qZWN0cxgKIAMoCzIYLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0IjEKEUdldFByb2plY3RSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBIpABChdHZXRQcm9qZWN0QnlOYW1lUmVxdWVzdBJ1CgRuYW1lGAogASgJQme6SGS6AWEKDGRuczExMjNsYWJlbBIebXVzdCBiZSBhIHZhbGlkIEROUy0xMTIzIGxhYmVsGjF0aGlzLm1hdGNoZXMoJ15bYS16XShbLWEtejAtOV17MCw2MX1bYS16MC05XSk/JCcpIj8KEkdldFByb2plY3RSZXNwb25zZRIpCgdwcm9qZWN0GAogASgLMhgub3JnYW5pemF0aW9uLnYxLlByb2plY3QiZAoHUHJvamVjdBIKCgJpZBgKIAEoCRISCgpjbHVzdGVyX2lkGA8gASgJEgwKBG5hbWUYFCABKAkSKwoHY3JlYXRlZBgeIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiqwEKFENyZWF0ZVByb2plY3RSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYBSABKAlCCLpIBXIDsAEBEnUKBG5hbWUYCiABKAlCZ7pIZLoBYQoMZG5zMTEyM2xhYmVsEh5tdXN0IGJlIGEgdmFsaWQgRE5TLTExMjMgbGFiZWwaMXRoaXMubWF0Y2hlcygnXlthLXpdKFstYS16MC05XXswLDYxfVthLXowLTldKT8kJykiKwoVQ3JlYXRlUHJvamVjdFJlc3BvbnNlEhIKCnByb2plY3RfaWQYCiABKAkiUwoUVXBkYXRlUHJvamVjdFJlcXVlc3QSHAoKcHJvamVjdF9pZBgKIAEoCUIIukgFcgOwAQESHQoEbmFtZRgUIAEoCUIPqgECCAG6SAdyBRABGP8BIhcKFVVwZGF0ZVByb2plY3RSZXNwb25zZSI0ChREZWxldGVQcm9qZWN0UmVxdWVzdBIcCgpwcm9qZWN0X2lkGAogASgJQgi6SAVyA7ABASIXChVEZWxldGVQcm9qZWN0UmVzcG9uc2UisgEKDVByb2plY3RNZW1iZXISCgoCaWQYCiABKAkSEgoKcHJvamVjdF9pZBgUIAEoCRIPCgd1c2VyX2lkGB4gASgJEhEKCXVzZXJfbmFtZRgoIAEoCRIwCgRyb2xlGDIgASgOMiIub3JnYW5pemF0aW9uLnYxLlByb2plY3RNZW1iZXJSb2xlEisKB2NyZWF0ZWQYPCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIjkKGUxpc3RQcm9qZWN0TWVtYmVyc1JlcXVlc3QSHAoKcHJvamVjdF9pZBgKIAEoCUIIukgFcgOwAQEiTQoaTGlzdFByb2plY3RNZW1iZXJzUmVzcG9uc2USLwoHbWVtYmVycxgKIAMoCzIeLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0TWVtYmVyIjYKF0dldFByb2plY3RNZW1iZXJSZXF1ZXN0EhsKCW1lbWJlcl9pZBgKIAEoCUIIukgFcgOwAQEiSgoYR2V0UHJvamVjdE1lbWJlclJlc3BvbnNlEi4KBm1lbWJlchgKIAEoCzIeLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0TWVtYmVyIo4BChdBZGRQcm9qZWN0TWVtYmVyUmVxdWVzdBIcCgpwcm9qZWN0X2lkGAogASgJQgi6SAVyA7ABARIZCgd1c2VyX2lkGBQgASgJQgi6SAVyA7ABARI6CgRyb2xlGB4gASgOMiIub3JnYW5pemF0aW9uLnYxLlByb2plY3RNZW1iZXJSb2xlQgi6SAWCAQIgACItChhBZGRQcm9qZWN0TWVtYmVyUmVzcG9uc2USEQoJbWVtYmVyX2lkGAogASgJInkKHlVwZGF0ZVByb2plY3RNZW1iZXJSb2xlUmVxdWVzdBIbCgltZW1iZXJfaWQYCiABKAlCCLpIBXIDsAEBEjoKBHJvbGUYFCABKA4yIi5vcmdhbml6YXRpb24udjEuUHJvamVjdE1lbWJlclJvbGVCCLpIBYIBAiAAIiEKH1VwZGF0ZVByb2plY3RNZW1iZXJSb2xlUmVzcG9uc2UiOQoaUmVtb3ZlUHJvamVjdE1lbWJlclJlcXVlc3QSGwoJbWVtYmVyX2lkGAogASgJQgi6SAVyA7ABASIdChtSZW1vdmVQcm9qZWN0TWVtYmVyUmVzcG9uc2UqdwoRUHJvamVjdE1lbWJlclJvbGUSIwofUFJPSkVDVF9NRU1CRVJfUk9MRV9VTlNQRUNJRklFRBAAEh0KGVBST0pFQ1RfTUVNQkVSX1JPTEVfQURNSU4QARIeChpQUk9KRUNUX01FTUJFUl9ST0xFX1ZJRVdFUhACMvgICg5Qcm9qZWN0U2VydmljZRJbCgxMaXN0UHJvamVjdHMSJC5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3RzUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdHNSZXNwb25zZRJVCgpHZXRQcm9qZWN0EiIub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RSZXF1ZXN0GiMub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RSZXNwb25zZRJhChBHZXRQcm9qZWN0QnlOYW1lEigub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RCeU5hbWVSZXF1ZXN0GiMub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RSZXNwb25zZRJeCg1DcmVhdGVQcm9qZWN0EiUub3JnYW5pemF0aW9uLnYxLkNyZWF0ZVByb2plY3RSZXF1ZXN0GiYub3JnYW5pemF0aW9uLnYxLkNyZWF0ZVByb2plY3RSZXNwb25zZRJeCg1VcGRhdGVQcm9qZWN0EiUub3JnYW5pemF0aW9uLnYxLlVwZGF0ZVByb2plY3RSZXF1ZXN0GiYub3JnYW5pemF0aW9uLnYxLlVwZGF0ZVByb2plY3RSZXNwb25zZRJeCg1EZWxldGVQcm9qZWN0EiUub3JnYW5pemF0aW9uLnYxLkRlbGV0ZVByb2plY3RSZXF1ZXN0GiYub3JnYW5pemF0aW9uLnYxLkRlbGV0ZVByb2plY3RSZXNwb25zZRJtChJMaXN0UHJvamVjdE1lbWJlcnMSKi5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3RNZW1iZXJzUmVxdWVzdBorLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE1lbWJlcnNSZXNwb25zZRJnChBHZXRQcm9qZWN0TWVtYmVyEigub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RNZW1iZXJSZXF1ZXN0Gikub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RNZW1iZXJSZXNwb25zZRJnChBBZGRQcm9qZWN0TWVtYmVyEigub3JnYW5pemF0aW9uLnYxLkFkZFByb2plY3RNZW1iZXJSZXF1ZXN0Gikub3JnYW5pemF0aW9uLnYxLkFkZFByb2plY3RNZW1iZXJSZXNwb25zZRJ8ChdVcGRhdGVQcm9qZWN0TWVtYmVyUm9sZRIvLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVQcm9qZWN0TWVtYmVyUm9sZVJlcXVlc3QaMC5vcmdhbml6YXRpb24udjEuVXBkYXRlUHJvamVjdE1lbWJlclJvbGVSZXNwb25zZRJwChNSZW1vdmVQcm9qZWN0TWVtYmVyEisub3JnYW5pemF0aW9uLnYxLlJlbW92ZVByb2plY3RNZW1iZXJSZXF1ZXN0Giwub3JnYW5pemF0aW9uLnYxLlJlbW92ZVByb2plY3RNZW1iZXJSZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * List projects request
@@ -214,6 +214,21 @@ export const UpdateProjectRequestSchema: GenMessage<UpdateProjectRequest> = /*@_
   messageDesc(file_v1_project, 8);
 
 /**
+ * Update project response
+ *
+ * @generated from message organization.v1.UpdateProjectResponse
+ */
+export type UpdateProjectResponse = Message<"organization.v1.UpdateProjectResponse"> & {
+};
+
+/**
+ * Describes the message organization.v1.UpdateProjectResponse.
+ * Use `create(UpdateProjectResponseSchema)` to create a new message.
+ */
+export const UpdateProjectResponseSchema: GenMessage<UpdateProjectResponse> = /*@__PURE__*/
+  messageDesc(file_v1_project, 9);
+
+/**
  * Delete project request
  *
  * @generated from message organization.v1.DeleteProjectRequest
@@ -230,7 +245,22 @@ export type DeleteProjectRequest = Message<"organization.v1.DeleteProjectRequest
  * Use `create(DeleteProjectRequestSchema)` to create a new message.
  */
 export const DeleteProjectRequestSchema: GenMessage<DeleteProjectRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 9);
+  messageDesc(file_v1_project, 10);
+
+/**
+ * Delete project response
+ *
+ * @generated from message organization.v1.DeleteProjectResponse
+ */
+export type DeleteProjectResponse = Message<"organization.v1.DeleteProjectResponse"> & {
+};
+
+/**
+ * Describes the message organization.v1.DeleteProjectResponse.
+ * Use `create(DeleteProjectResponseSchema)` to create a new message.
+ */
+export const DeleteProjectResponseSchema: GenMessage<DeleteProjectResponse> = /*@__PURE__*/
+  messageDesc(file_v1_project, 11);
 
 /**
  * Project member information
@@ -274,7 +304,7 @@ export type ProjectMember = Message<"organization.v1.ProjectMember"> & {
  * Use `create(ProjectMemberSchema)` to create a new message.
  */
 export const ProjectMemberSchema: GenMessage<ProjectMember> = /*@__PURE__*/
-  messageDesc(file_v1_project, 10);
+  messageDesc(file_v1_project, 12);
 
 /**
  * List project members request
@@ -293,7 +323,7 @@ export type ListProjectMembersRequest = Message<"organization.v1.ListProjectMemb
  * Use `create(ListProjectMembersRequestSchema)` to create a new message.
  */
 export const ListProjectMembersRequestSchema: GenMessage<ListProjectMembersRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 11);
+  messageDesc(file_v1_project, 13);
 
 /**
  * List project members response
@@ -312,7 +342,7 @@ export type ListProjectMembersResponse = Message<"organization.v1.ListProjectMem
  * Use `create(ListProjectMembersResponseSchema)` to create a new message.
  */
 export const ListProjectMembersResponseSchema: GenMessage<ListProjectMembersResponse> = /*@__PURE__*/
-  messageDesc(file_v1_project, 12);
+  messageDesc(file_v1_project, 14);
 
 /**
  * Get project member request
@@ -331,7 +361,7 @@ export type GetProjectMemberRequest = Message<"organization.v1.GetProjectMemberR
  * Use `create(GetProjectMemberRequestSchema)` to create a new message.
  */
 export const GetProjectMemberRequestSchema: GenMessage<GetProjectMemberRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 13);
+  messageDesc(file_v1_project, 15);
 
 /**
  * Get project member response
@@ -350,7 +380,7 @@ export type GetProjectMemberResponse = Message<"organization.v1.GetProjectMember
  * Use `create(GetProjectMemberResponseSchema)` to create a new message.
  */
 export const GetProjectMemberResponseSchema: GenMessage<GetProjectMemberResponse> = /*@__PURE__*/
-  messageDesc(file_v1_project, 14);
+  messageDesc(file_v1_project, 16);
 
 /**
  * Add project member request
@@ -379,7 +409,7 @@ export type AddProjectMemberRequest = Message<"organization.v1.AddProjectMemberR
  * Use `create(AddProjectMemberRequestSchema)` to create a new message.
  */
 export const AddProjectMemberRequestSchema: GenMessage<AddProjectMemberRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 15);
+  messageDesc(file_v1_project, 17);
 
 /**
  * Add project member response
@@ -398,7 +428,7 @@ export type AddProjectMemberResponse = Message<"organization.v1.AddProjectMember
  * Use `create(AddProjectMemberResponseSchema)` to create a new message.
  */
 export const AddProjectMemberResponseSchema: GenMessage<AddProjectMemberResponse> = /*@__PURE__*/
-  messageDesc(file_v1_project, 16);
+  messageDesc(file_v1_project, 18);
 
 /**
  * Update project member role request
@@ -422,7 +452,22 @@ export type UpdateProjectMemberRoleRequest = Message<"organization.v1.UpdateProj
  * Use `create(UpdateProjectMemberRoleRequestSchema)` to create a new message.
  */
 export const UpdateProjectMemberRoleRequestSchema: GenMessage<UpdateProjectMemberRoleRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 17);
+  messageDesc(file_v1_project, 19);
+
+/**
+ * Update project member role response
+ *
+ * @generated from message organization.v1.UpdateProjectMemberRoleResponse
+ */
+export type UpdateProjectMemberRoleResponse = Message<"organization.v1.UpdateProjectMemberRoleResponse"> & {
+};
+
+/**
+ * Describes the message organization.v1.UpdateProjectMemberRoleResponse.
+ * Use `create(UpdateProjectMemberRoleResponseSchema)` to create a new message.
+ */
+export const UpdateProjectMemberRoleResponseSchema: GenMessage<UpdateProjectMemberRoleResponse> = /*@__PURE__*/
+  messageDesc(file_v1_project, 20);
 
 /**
  * Remove project member request
@@ -441,7 +486,22 @@ export type RemoveProjectMemberRequest = Message<"organization.v1.RemoveProjectM
  * Use `create(RemoveProjectMemberRequestSchema)` to create a new message.
  */
 export const RemoveProjectMemberRequestSchema: GenMessage<RemoveProjectMemberRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 18);
+  messageDesc(file_v1_project, 21);
+
+/**
+ * Remove project member response
+ *
+ * @generated from message organization.v1.RemoveProjectMemberResponse
+ */
+export type RemoveProjectMemberResponse = Message<"organization.v1.RemoveProjectMemberResponse"> & {
+};
+
+/**
+ * Describes the message organization.v1.RemoveProjectMemberResponse.
+ * Use `create(RemoveProjectMemberResponseSchema)` to create a new message.
+ */
+export const RemoveProjectMemberResponseSchema: GenMessage<RemoveProjectMemberResponse> = /*@__PURE__*/
+  messageDesc(file_v1_project, 22);
 
 /**
  * Project member role
@@ -525,7 +585,7 @@ export const ProjectService: GenService<{
   updateProject: {
     methodKind: "unary";
     input: typeof UpdateProjectRequestSchema;
-    output: typeof EmptySchema;
+    output: typeof UpdateProjectResponseSchema;
   },
   /**
    * Delete a project
@@ -535,7 +595,7 @@ export const ProjectService: GenService<{
   deleteProject: {
     methodKind: "unary";
     input: typeof DeleteProjectRequestSchema;
-    output: typeof EmptySchema;
+    output: typeof DeleteProjectResponseSchema;
   },
   /**
    * List all members of a project
@@ -575,7 +635,7 @@ export const ProjectService: GenService<{
   updateProjectMemberRole: {
     methodKind: "unary";
     input: typeof UpdateProjectMemberRoleRequestSchema;
-    output: typeof EmptySchema;
+    output: typeof UpdateProjectMemberRoleResponseSchema;
   },
   /**
    * Remove a member from a project (requires admin role)
@@ -585,7 +645,7 @@ export const ProjectService: GenService<{
   removeProjectMember: {
     methodKind: "unary";
     input: typeof RemoveProjectMemberRequestSchema;
-    output: typeof EmptySchema;
+    output: typeof RemoveProjectMemberResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_project, 0);
