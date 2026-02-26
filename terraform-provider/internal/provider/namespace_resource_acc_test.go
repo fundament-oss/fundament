@@ -80,6 +80,7 @@ provider "fundament" {
 
 resource "fundament_project" "test" {
   name = "tf-acc-ns-p-%[2]s"
+  cluster_id = fundament_cluster.test.id
 }
 
 resource "fundament_cluster" "test" {
