@@ -76,8 +76,8 @@ resource "fundament_cluster" "test" {
 }
 
 resource "fundament_project" "test" {
-  name         = "tf-acc-cn-p-%[3]s"
-  cluster_name = "tf-acc-cn-%[3]s"
+  name       = "tf-acc-cn-p-%[3]s"
+  cluster_id = fundament_cluster.test.id
 }
 
 resource "fundament_namespace" "test1" {
