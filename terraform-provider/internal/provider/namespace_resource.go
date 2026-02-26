@@ -263,18 +263,30 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	// Set the ID from the response
 	plan.ID = types.StringValue(createResp.Msg.GetNamespaceId())
 
-	// Read back the namespace to get created and other computed fields
+	// Read back the namespace to get created and other computed fields.
+	//	// Retry on permission_denied, OpenFGA needs time to sync
 	getReq := connect.NewRequest(organizationv1.GetNamespaceRequest_builder{
 		NamespaceId: plan.ID.ValueString(),
 	}.Build())
 
-	getResp, err := r.client.NamespaceService.GetNamespace(ctx, getReq)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Created Namespace",
-			fmt.Sprintf("Namespace was created but unable to read its details: %s", err.Error()),
-		)
-		return
+	var getResp *connect.Response[organizationv1.GetNamespaceResponse]
+	for attempt := range 5 {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * time.Second)
+		}
+
+		getResp, err = r.client.NamespaceService.GetNamespace(ctx, getReq)
+		if err == nil {
+			break
+		}
+
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 4 {
+			resp.Diagnostics.AddError(
+				"Unable to Read Created Namespace",
+				fmt.Sprintf("Namespace was created but unable to read its details: %s", err.Error()),
+			)
+			return
+		}
 	}
 
 	plan.Created = types.StringValue(getResp.Msg.GetNamespace().GetCreated().AsTime().Format(time.RFC3339))

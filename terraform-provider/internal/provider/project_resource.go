@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -197,18 +198,31 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	// Set the ID from the response
 	state.ID = types.StringValue(createResp.Msg.GetProjectId())
 
-	// Read the project to get the full state including created
+	// Read the project to get the full state including created.
+	// Retry on permission_denied, OpenFGA needs time to sync
 	getReq := connect.NewRequest(organizationv1.GetProjectRequest_builder{
 		ProjectId: createResp.Msg.GetProjectId(),
 	}.Build())
 
-	getResp, err := r.client.ProjectService.GetProject(ctx, getReq)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Created Project",
-			fmt.Sprintf("Unable to read created project: %s", err.Error()),
-		)
-		return
+	var getResp *connect.Response[organizationv1.GetProjectResponse]
+
+	for attempt := range 5 {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * time.Second)
+		}
+
+		getResp, err = r.client.ProjectService.GetProject(ctx, getReq)
+		if err == nil {
+			break
+		}
+
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 4 {
+			resp.Diagnostics.AddError(
+				"Unable to Read Created Project",
+				fmt.Sprintf("Unable to read created project: %s", err.Error()),
+			)
+			return
+		}
 	}
 
 	// Populate cluster fields (both ID and name)

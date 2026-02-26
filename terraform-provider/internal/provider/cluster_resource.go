@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -142,18 +143,30 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	// Set the ID from the response
 	plan.ID = types.StringValue(createResp.Msg.GetClusterId())
 
-	// Read the cluster to get the full state including status
+	// Read the cluster to get the full state including status.
+	// Retry on permission_denied, OpenFGA needs time to sync
 	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
 		ClusterId: createResp.Msg.GetClusterId(),
 	}.Build())
 
-	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Created Cluster",
-			fmt.Sprintf("Unable to read created cluster: %s", err.Error()),
-		)
-		return
+	var getResp *connect.Response[organizationv1.GetClusterResponse]
+	for attempt := range 5 {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * time.Second)
+		}
+
+		getResp, err = r.client.ClusterService.GetCluster(ctx, getReq)
+		if err == nil {
+			break
+		}
+
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 4 {
+			resp.Diagnostics.AddError(
+				"Unable to Read Created Cluster",
+				fmt.Sprintf("Unable to read created cluster: %s", err.Error()),
+			)
+			return
+		}
 	}
 
 	// Map response to state
