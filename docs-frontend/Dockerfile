@@ -18,9 +18,9 @@ COPY funs/ ./src/content/docs/funs/
 RUN mkdir -p ./src/content/docs/docs
 COPY docs/ ./src/content/docs/docs/
 
-# Draw.io SVGs must be served statically to avoid Astro image processing
-RUN mv ./src/content/docs/docs/assets/*.drawio.svg ./public/img/ 2>/dev/null || true
-RUN find ./src/content/docs/docs -name '*.md' -exec sed -i 's|(assets/\(.*\.drawio\.svg\))|(/img/\1)|g' {} +
+# Serve docs assets statically to avoid Astro/Vite processing large SVGs
+COPY docs/assets/ ./public/assets/
+RUN find ./src/content/docs/docs -name '*.md' -exec sed -i 's|(assets/|(/assets/|g' {} +
 
 # Build the application
 RUN bun run build

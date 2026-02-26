@@ -5,27 +5,11 @@ mod cluster-worker
 _default:
     @just --list
 
-# Watch for changes to .d2 files and re-generate .svgs
-watch-d2:
-    d2 --theme=0 --dark-theme=200 --watch docs/assets/*.d2
-
 # Format all code and text in this repo
 fmt:
-    @find . -type f \( -name "*.md" -o -name "*.adoc" -o -name "*.d2" \) -exec perl -pi -e 's/enterprise/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
-    d2 fmt docs/assets/*.d2
+    @find . -type f \( -name "*.md" -o -name "*.adoc" -o -name "*.drawio.svg" \) -exec perl -pi -e 's/enterprise/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
     go fmt ./...
     # TODO md fmt
-
-# Prepare and start the docs-frontend for local development
-docs-dev:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd docs-frontend
-    mkdir -p src/content/docs/docs
-    cp -r ../docs/* src/content/docs/docs/
-    mv src/content/docs/docs/assets/*.drawio.svg public/img/ 2>/dev/null || true
-    find src/content/docs/docs -name '*.md' -exec {{ if os() == "macos" { "sed -i ''" } else { "sed -i" } }} 's|(assets/\(.*\.drawio\.svg\))|(/img/\1)|g' {} +
-    bun dev
 
 # --- Cluster commands ---
 
