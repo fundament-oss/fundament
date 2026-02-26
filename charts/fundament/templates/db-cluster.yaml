@@ -6,8 +6,7 @@ kind: Cluster
 metadata:
   name: {{ include "fundament.db.name" . }}
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: database
+    {{- include "fundament.labels" (dict "root" $ "name" "db" "component" "database") | nindent 4 }}
 spec:
   instances: {{ $.Values.db.instances }}
   imageName: ghcr.io/cloudnative-pg/postgresql:18
@@ -28,21 +27,21 @@ spec:
       - name: fun_authn_api
         login: true
         passwordSecret:
-          name: {{ $.Release.Name }}-db-fun-authn-api
+          name: db-fun-authn-api
       - name: fun_fundament_api
         login: true
         passwordSecret:
-          name: {{ $.Release.Name }}-db-fun-fundament-api
+          name: db-fun-fundament-api
       - name: fun_cluster_worker
         login: true
         passwordSecret:
-          name: {{ $.Release.Name }}-db-fun-cluster-worker
+          name: db-fun-cluster-worker
       - name: fun_operator
         login: true
         superuser: true
         bypassrls: true
         passwordSecret:
-          name: {{ $.Release.Name }}-db-fun-operator
+          name: db-fun-operator
       - name: fun_owner
         login: false
       - name: fun_authz
@@ -52,13 +51,13 @@ spec:
         login: true
         bypassrls: true
         passwordSecret:
-          name: {{ $.Release.Name }}-db-fun-authz-worker
+          name: db-fun-authz-worker
 {{- if $.Values.openfga.enabled }}
       - name: fun_openfga
         login: true
         createdb: true
         passwordSecret:
-          name: {{ $.Release.Name }}-db-fun-openfga
+          name: db-fun-openfga
 {{- end }}
 
 {{- if gt (int $.Values.db.exposePort) 0 }}
@@ -68,8 +67,7 @@ kind: Service
 metadata:
   name: {{ include "fundament.db.name" . }}-external
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: database
+    {{- include "fundament.labels" (dict "root" $ "name" "db" "component" "database") | nindent 4 }}
 spec:
   type: LoadBalancer
   selector:
