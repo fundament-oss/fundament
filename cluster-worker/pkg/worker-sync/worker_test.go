@@ -17,6 +17,95 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
 )
 
+func TestMockClient_ApplyShootWithNodePools(t *testing.T) {
+	logger := common.TestLogger()
+	mock := gardener.NewMockInstant(logger)
+
+	ctx := context.Background()
+	cluster := common.TestCluster("test-cluster", "test-tenant")
+	cluster.NodePools = []gardener.NodePool{
+		{Name: "pool-a", MachineType: "local", AutoscaleMin: 1, AutoscaleMax: 5},
+		{Name: "pool-b", MachineType: "local", AutoscaleMin: 2, AutoscaleMax: 10},
+	}
+
+	err := mock.ApplyShoot(ctx, &cluster)
+	if err != nil {
+		t.Fatalf("ApplyShoot with node pools failed: %v", err)
+	}
+
+	if !mock.HasShootForCluster(cluster.ID) {
+		t.Errorf("expected shoot for cluster %s to exist", cluster.ID)
+	}
+}
+
+func TestMockClient_ApplyShootWithoutNodePools(t *testing.T) {
+	logger := common.TestLogger()
+	mock := gardener.NewMockInstant(logger)
+
+	ctx := context.Background()
+	cluster := common.TestClusterWithoutNodePools("test-cluster", "test-tenant")
+
+	err := mock.ApplyShoot(ctx, &cluster)
+	if err != nil {
+		t.Fatalf("ApplyShoot without node pools failed: %v", err)
+	}
+
+	if !mock.HasShootForCluster(cluster.ID) {
+		t.Errorf("expected shoot for cluster %s to exist", cluster.ID)
+	}
+}
+
+func TestMockClient_NodePoolValidation(t *testing.T) {
+	logger := common.TestLogger()
+	mock := gardener.NewMockInstant(logger)
+
+	ctx := context.Background()
+
+	t.Run("empty node pool name", func(t *testing.T) {
+		cluster := common.TestCluster("test-cluster", "test-tenant")
+		cluster.NodePools = []gardener.NodePool{
+			{Name: "", MachineType: "local", AutoscaleMin: 1, AutoscaleMax: 3},
+		}
+		err := mock.ApplyShoot(ctx, &cluster)
+		if err == nil {
+			t.Error("expected error for empty node pool name")
+		}
+	})
+
+	t.Run("max less than min", func(t *testing.T) {
+		cluster := common.TestCluster("test-cluster2", "test-tenant")
+		cluster.NodePools = []gardener.NodePool{
+			{Name: "pool", MachineType: "local", AutoscaleMin: 5, AutoscaleMax: 2},
+		}
+		err := mock.ApplyShoot(ctx, &cluster)
+		if err == nil {
+			t.Error("expected error for max < min")
+		}
+	})
+
+	t.Run("max is zero", func(t *testing.T) {
+		cluster := common.TestCluster("test-cluster3", "test-tenant")
+		cluster.NodePools = []gardener.NodePool{
+			{Name: "pool", MachineType: "local", AutoscaleMin: 0, AutoscaleMax: 0},
+		}
+		err := mock.ApplyShoot(ctx, &cluster)
+		if err == nil {
+			t.Error("expected error for max == 0")
+		}
+	})
+
+	t.Run("empty machine type", func(t *testing.T) {
+		cluster := common.TestCluster("test-cluster4", "test-tenant")
+		cluster.NodePools = []gardener.NodePool{
+			{Name: "pool", MachineType: "", AutoscaleMin: 1, AutoscaleMax: 3},
+		}
+		err := mock.ApplyShoot(ctx, &cluster)
+		if err == nil {
+			t.Error("expected error for empty machine type")
+		}
+	})
+}
+
 func TestMockClient_ApplyShoot(t *testing.T) {
 	logger := common.TestLogger()
 	mock := gardener.NewMockInstant(logger)
@@ -467,6 +556,30 @@ func TestStatusPoller_Timing(t *testing.T) {
 // Helper to convert time to pgtype.Timestamptz
 func toPgTimestamp(t time.Time) pgtype.Timestamptz {
 	return pgtype.Timestamptz{Time: t, Valid: true}
+}
+
+// TestNodePoolConversion verifies the DB row → gardener.NodePool mapping
+// produced by toGardenerNodePools.
+func TestNodePoolConversion(t *testing.T) {
+	rows := []db.NodePoolListByClusterIDRow{
+		{Name: "pool-a", MachineType: "n1-standard-4", AutoscaleMin: 1, AutoscaleMax: 5},
+		{Name: "pool-b", MachineType: "n1-standard-2", AutoscaleMin: 0, AutoscaleMax: 3},
+	}
+
+	nodePools := toGardenerNodePools(rows)
+
+	if len(nodePools) != 2 {
+		t.Fatalf("expected 2 node pools, got %d", len(nodePools))
+	}
+	if nodePools[0].Name != "pool-a" || nodePools[0].MachineType != "n1-standard-4" {
+		t.Errorf("pool-a mismatch: %+v", nodePools[0])
+	}
+	if nodePools[0].AutoscaleMin != 1 || nodePools[0].AutoscaleMax != 5 {
+		t.Errorf("pool-a autoscale mismatch: min=%d max=%d", nodePools[0].AutoscaleMin, nodePools[0].AutoscaleMax)
+	}
+	if nodePools[1].Name != "pool-b" || nodePools[1].AutoscaleMin != 0 {
+		t.Errorf("pool-b mismatch: %+v", nodePools[1])
+	}
 }
 
 // Test conversion functions used by the worker

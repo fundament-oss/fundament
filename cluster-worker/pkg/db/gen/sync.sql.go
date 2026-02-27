@@ -256,6 +256,8 @@ FROM
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
     tenant.clusters.deleted IS NULL
+ORDER BY
+    tenant.clusters.id
 `
 
 type ClusterListActiveRow struct {
@@ -307,6 +309,9 @@ FROM
 WHERE
     tenant.clusters.synced IS NULL
     AND tenant.clusters.sync_attempts >= $1
+ORDER BY
+    tenant.clusters.sync_claimed_at DESC,
+    tenant.clusters.id
 `
 
 type ClusterListExhaustedParams struct {
@@ -363,6 +368,9 @@ FROM
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
     tenant.clusters.sync_attempts >= $1
+ORDER BY
+    tenant.clusters.sync_attempts DESC,
+    tenant.clusters.id
 `
 
 type ClusterListFailingParams struct {
@@ -485,4 +493,64 @@ type ClusterSyncResetAttemptsParams struct {
 func (q *Queries) ClusterSyncResetAttempts(ctx context.Context, arg ClusterSyncResetAttemptsParams) error {
 	_, err := q.db.Exec(ctx, clusterSyncResetAttempts, arg.ClusterID)
 	return err
+}
+
+const nodePoolListByClusterID = `-- name: NodePoolListByClusterID :many
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.name,
+    tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.autoscale_max,
+    tenant.node_pools.created
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.cluster_id = $1
+    AND tenant.node_pools.deleted IS NULL
+ORDER BY
+    tenant.node_pools.created,
+    tenant.node_pools.id
+`
+
+type NodePoolListByClusterIDParams struct {
+	ClusterID uuid.UUID
+}
+
+type NodePoolListByClusterIDRow struct {
+	ID           uuid.UUID
+	Name         string
+	MachineType  string
+	AutoscaleMin int32
+	AutoscaleMax int32
+	Created      pgtype.Timestamptz
+}
+
+// Fetch active (non-deleted) node pools for a cluster.
+// Used by the sync worker to build Gardener worker groups.
+func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListByClusterIDParams) ([]NodePoolListByClusterIDRow, error) {
+	rows, err := q.db.Query(ctx, nodePoolListByClusterID, arg.ClusterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NodePoolListByClusterIDRow
+	for rows.Next() {
+		var i NodePoolListByClusterIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.MachineType,
+			&i.AutoscaleMin,
+			&i.AutoscaleMax,
+			&i.Created,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

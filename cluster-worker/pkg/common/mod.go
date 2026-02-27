@@ -18,6 +18,7 @@ func TestLogger() *slog.Logger {
 
 // TestCluster creates a valid ClusterToSync for testing.
 // Uses the new naming scheme with deterministic project names and random shoot names.
+// Includes a default node pool.
 func TestCluster(name, org string) gardener.ClusterToSync {
 	orgID := uuid.New()
 	projectName := gardener.ProjectName(org)
@@ -32,5 +33,21 @@ func TestCluster(name, org string) gardener.ClusterToSync {
 		Namespace:         namespace,
 		Region:            "local",
 		KubernetesVersion: "1.31.1",
+		NodePools: []gardener.NodePool{
+			{
+				Name:         "default",
+				MachineType:  "local",
+				AutoscaleMin: 1,
+				AutoscaleMax: 3,
+			},
+		},
 	}
+}
+
+// TestClusterWithoutNodePools creates a test cluster with zero node pools
+// to test the fallback behavior.
+func TestClusterWithoutNodePools(name, org string) gardener.ClusterToSync {
+	cluster := TestCluster(name, org)
+	cluster.NodePools = nil
+	return cluster
 }

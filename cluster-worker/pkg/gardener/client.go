@@ -57,6 +57,18 @@ type Client interface {
 	GetShootStatus(ctx context.Context, cluster *ClusterToSync) (*ShootStatus, error)
 }
 
+// NodePool represents a node pool configuration from the database.
+type NodePool struct {
+	Name         string
+	MachineType  string
+	AutoscaleMin int32
+	AutoscaleMax int32
+	// Zone is the availability zone for this worker pool (e.g., "eu-central-1a").
+	// Empty string means no zone constraint, which is required for the local provider.
+	// TODO: populate from tenant.node_pools once a zone column is added to the schema.
+	Zone string
+}
+
 // ClusterToSync contains all the information needed to sync a cluster to Gardener.
 type ClusterToSync struct {
 	ID                uuid.UUID
@@ -69,6 +81,7 @@ type ClusterToSync struct {
 	KubernetesVersion string
 	Deleted           *time.Time
 	SyncAttempts      int
+	NodePools         []NodePool // Node pool configurations for Gardener worker groups
 }
 
 // ShootInfo contains information about a Shoot retrieved from Gardener.
