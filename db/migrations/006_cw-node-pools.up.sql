@@ -35,6 +35,8 @@ CREATE POLICY "node_pools_cluster_worker_read" ON "tenant"."node_pools"
 */
 GRANT SELECT ON "tenant"."node_pools" TO "fun_cluster_worker";
 
+-- Fires on INSERT and relevant UPDATE columns, including `deleted` for soft-deletes
+-- (there is no hard DELETE on node_pools; removal is done by setting deleted IS NOT NULL).
 CREATE TRIGGER node_pool_reset_cluster_synced AFTER INSERT OR UPDATE OF name, machine_type, autoscale_min, autoscale_max, deleted ON tenant.node_pools FOR EACH ROW EXECUTE FUNCTION tenant.node_pool_reset_cluster_synced();
 
 

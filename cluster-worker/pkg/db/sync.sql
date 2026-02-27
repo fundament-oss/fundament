@@ -219,8 +219,8 @@ WHERE
     tenant.node_pools.cluster_id = @cluster_id
     AND tenant.node_pools.deleted IS NULL
 ORDER BY
-    created,
-    id;
+    tenant.node_pools.created,
+    tenant.node_pools.id;
 
 -- name: ClusterHasActiveWithSameName :one
 -- Check if there's an active (non-deleted) cluster with the same name in the same organization.

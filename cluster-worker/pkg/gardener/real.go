@@ -516,8 +516,11 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 
 // buildWorkers converts node pools to Gardener worker groups.
 // If the cluster has no node pools, a default worker group is created.
+// All workers share the same machine image from ProviderConfig.
+// TODO: support per-pool machine image once tenant.node_pools gains an image column.
 func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Worker {
 	if len(cluster.NodePools) == 0 {
+		// Declare separately per iteration to avoid pointer aliasing.
 		maxSurge := intstr.FromInt32(1)
 		maxUnavailable := intstr.FromInt32(0)
 		imageVersion := r.provider.MachineImageVersion
@@ -541,10 +544,12 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 
 	workers := make([]gardencorev1beta1.Worker, len(cluster.NodePools))
 	for i, np := range cluster.NodePools {
+		// Declare per iteration to avoid pointer aliasing: each worker gets its own
+		// maxSurge/maxUnavailable/imageVersion address, not a shared loop variable.
 		maxSurge := intstr.FromInt32(1)
 		maxUnavailable := intstr.FromInt32(0)
 		imageVersion := r.provider.MachineImageVersion
-		w := gardencorev1beta1.Worker{
+		workers[i] = gardencorev1beta1.Worker{
 			Name: np.Name,
 			Machine: gardencorev1beta1.Machine{
 				Type: np.MachineType,
@@ -558,10 +563,6 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 			MaxSurge:       &maxSurge,
 			MaxUnavailable: &maxUnavailable,
 		}
-		if len(np.Zones) > 0 {
-			w.Zones = np.Zones
-		}
-		workers[i] = w
 	}
 	return workers
 }

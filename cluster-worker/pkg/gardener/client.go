@@ -63,10 +63,6 @@ type NodePool struct {
 	MachineType  string
 	AutoscaleMin int32
 	AutoscaleMax int32
-	// Zones lists the availability zones for this pool (e.g. ["eu-central-1a"]).
-	// Empty for providers that don't require zones (e.g. local).
-	// TODO: populate from DB once a zones column is added to tenant.node_pools.
-	Zones []string
 }
 
 // ClusterToSync contains all the information needed to sync a cluster to Gardener.

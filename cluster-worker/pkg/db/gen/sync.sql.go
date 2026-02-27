@@ -509,8 +509,8 @@ WHERE
     tenant.node_pools.cluster_id = $1
     AND tenant.node_pools.deleted IS NULL
 ORDER BY
-    created,
-    id
+    tenant.node_pools.created,
+    tenant.node_pools.id
 `
 
 type NodePoolListByClusterIDParams struct {
