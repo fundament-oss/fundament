@@ -50,6 +50,10 @@ func (d *OrganizationMembersDataSource) Schema(ctx context.Context, req datasour
 							Description: "The unique identifier of the member.",
 							Computed:    true,
 						},
+						"user_id": schema.StringAttribute{
+							Description: "The user ID (users.id) of the member.",
+							Computed:    true,
+						},
 						"email": schema.StringAttribute{
 							Description: "The email address of the member.",
 							Computed:    true,
@@ -135,6 +139,7 @@ func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource
 	for i, member := range rpcResp.Msg.GetMembers() {
 		m := OrganizationMemberModel{
 			ID:         types.StringValue(member.GetId()),
+			UserID:     types.StringValue(member.UserId),
 			Name:       types.StringValue(member.GetName()),
 			Permission: types.StringValue(member.GetPermission()),
 		}
