@@ -233,11 +233,11 @@ export const MOCK_RESOURCES: MockResourceMap = {
       },
     ],
   },
-  'demo-app': {
-    DemoApp: [
+  'sample-plugin': {
+    SampleItem: [
       {
-        apiVersion: 'demo.fundament.io/v1',
-        kind: 'DemoApp',
+        apiVersion: 'sample.fundament.io/v1',
+        kind: 'SampleItem',
         metadata: {
           name: 'frontend',
           namespace: 'default',
@@ -254,8 +254,8 @@ export const MOCK_RESOURCES: MockResourceMap = {
         },
       },
       {
-        apiVersion: 'demo.fundament.io/v1',
-        kind: 'DemoApp',
+        apiVersion: 'sample.fundament.io/v1',
+        kind: 'SampleItem',
         metadata: {
           name: 'backend-api',
           namespace: 'default',
@@ -272,8 +272,8 @@ export const MOCK_RESOURCES: MockResourceMap = {
         },
       },
       {
-        apiVersion: 'demo.fundament.io/v1',
-        kind: 'DemoApp',
+        apiVersion: 'sample.fundament.io/v1',
+        kind: 'SampleItem',
         metadata: {
           name: 'worker',
           namespace: 'jobs',

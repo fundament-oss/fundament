@@ -13,10 +13,10 @@ import PluginComponentRegistryService from '../plugin-resources/plugin-component
  * No eval() or new Function() is used; all code is compiled TypeScript.
  */
 export default function registerPluginComponents(registry: PluginComponentRegistryService): void {
-  registry.register('DemoAppListComponent', () =>
-    import('./demo-app/demo-app-list.component').then((m) => m.default),
+  registry.register('SamplePluginListComponent', () =>
+    import('./sample-plugin/sample-plugin-list.component').then((m) => m.default),
   );
-  registry.register('DemoAppDetailComponent', () =>
-    import('./demo-app/demo-app-detail.component').then((m) => m.default),
+  registry.register('SamplePluginDetailComponent', () =>
+    import('./sample-plugin/sample-plugin-detail.component').then((m) => m.default),
   );
 }

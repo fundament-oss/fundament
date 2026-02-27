@@ -25,7 +25,7 @@ import type { KubeResource } from '../../plugin-resources/types';
 import { resolveStatusBadge, kindToSingularLabel } from '../../plugin-resources/crd-schema.utils';
 
 /**
- * Custom list view for DemoApp resources.
+ * Custom list view for SamplePlugin resources.
  *
  * Shows resources as a responsive card grid instead of the default table layout.
  * This component demonstrates how plugin authors can replace the auto-generated UI
@@ -33,7 +33,7 @@ import { resolveStatusBadge, kindToSingularLabel } from '../../plugin-resources/
  * in the plugin YAML's `customComponents` section.
  */
 @Component({
-  selector: 'app-demo-app-list',
+  selector: 'app-sample-plugin-list',
   standalone: true,
   imports: [RouterLink, NgIcon, ModalComponent],
   viewProviders: [
@@ -42,9 +42,9 @@ import { resolveStatusBadge, kindToSingularLabel } from '../../plugin-resources/
   template: `
     <div class="card">
       <div class="card-header">
-        <h1 class="text-2xl font-bold dark:text-white">Demo Apps</h1>
+        <h1 class="text-2xl font-bold dark:text-white">Sample Plugins</h1>
         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          Sample plugin with a custom card-grid list view instead of the default table.
+          Sample plugin with a custom list view and custom detail view.
         </p>
       </div>
 
@@ -53,7 +53,7 @@ import { resolveStatusBadge, kindToSingularLabel } from '../../plugin-resources/
           <div class="mb-6">
             <a [routerLink]="['.', 'create']" class="btn-primary inline-flex items-center">
               <ng-icon name="tablerPlus" class="mr-1.5" />
-              Create demo app
+              Create sample item
             </a>
           </div>
         }
@@ -153,11 +153,11 @@ import { resolveStatusBadge, kindToSingularLabel } from '../../plugin-resources/
 
         @if (resources().length === 0) {
           <div class="py-12 text-center">
-            <p class="text-gray-600 dark:text-gray-300">No demo apps found</p>
+            <p class="text-gray-600 dark:text-gray-300">No sample items found</p>
             @if (menuItem()?.create) {
               <a [routerLink]="['.', 'create']" class="btn-primary mt-4 inline-flex items-center">
                 <ng-icon name="tablerPlus" class="mr-1.5" />
-                Create demo app
+                Create sample item
               </a>
             }
           </div>
@@ -168,7 +168,7 @@ import { resolveStatusBadge, kindToSingularLabel } from '../../plugin-resources/
     <!-- Delete Modal -->
     <app-modal
       [show]="showDeleteModal()"
-      title="Delete demo app"
+      title="Delete sample plugin"
       [maxWidth]="'max-w-lg'"
       (modalClose)="showDeleteModal.set(false)"
     >
@@ -210,7 +210,7 @@ import { resolveStatusBadge, kindToSingularLabel } from '../../plugin-resources/
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class DemoAppListComponent {
+export default class SamplePluginListComponent {
   private route = inject(ActivatedRoute);
 
   private registry = inject(PluginRegistryService);
@@ -229,7 +229,7 @@ export default class DemoAppListComponent {
 
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
-  private crdDef = computed(() => this.registry.getCrdByPlural(this.pluginName(), 'demoapps'));
+  private crdDef = computed(() => this.registry.getCrdByPlural(this.pluginName(), 'sampleitems'));
 
   menuItem = computed(() => {
     const p = this.plugin();
@@ -253,7 +253,7 @@ export default class DemoAppListComponent {
 
   constructor() {
     effect(() => {
-      this.titleService.setTitle('Demo Apps');
+      this.titleService.setTitle('Sample Plugins');
     });
   }
 

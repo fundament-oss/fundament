@@ -25,12 +25,12 @@ import { TitleService } from '../../title.service';
 import { resolveStatusBadge, formatDate } from '../../plugin-resources/crd-schema.utils';
 
 /**
- * Custom detail view for a single DemoApp resource.
+ * Custom detail view for a single SamplePlugin resource.
  *
  * Demonstrates a more visually rich layout compared to the auto-generated detail view.
  */
 @Component({
-  selector: 'app-demo-app-detail',
+  selector: 'app-sample-plugin-detail',
   standalone: true,
   imports: [RouterLink, NgIcon, ModalComponent],
   viewProviders: [
@@ -52,7 +52,7 @@ import { resolveStatusBadge, formatDate } from '../../plugin-resources/crd-schem
           class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
         >
           <ng-icon name="tablerArrowLeft" />
-          Back to Demo Apps
+          Back to list
         </a>
       </div>
 
@@ -184,7 +184,7 @@ import { resolveStatusBadge, formatDate } from '../../plugin-resources/crd-schem
     <!-- Delete Modal -->
     <app-modal
       [show]="showDeleteModal()"
-      title="Delete demo app"
+      title="Delete sample plugin"
       [maxWidth]="'max-w-lg'"
       (modalClose)="showDeleteModal.set(false)"
     >
@@ -226,7 +226,7 @@ import { resolveStatusBadge, formatDate } from '../../plugin-resources/crd-schem
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class DemoAppDetailComponent {
+export default class SamplePluginDetailComponent {
   private route = inject(ActivatedRoute);
 
   private router = inject(Router);
@@ -249,7 +249,7 @@ export default class DemoAppDetailComponent {
 
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
-  private crdDef = computed(() => this.registry.getCrdByPlural(this.pluginName(), 'demoapps'));
+  private crdDef = computed(() => this.registry.getCrdByPlural(this.pluginName(), 'sampleitems'));
 
   resource = computed(() => {
     const crd = this.crdDef();
@@ -294,7 +294,7 @@ export default class DemoAppDetailComponent {
     if (!crd) return;
     this.store.deleteResource(this.pluginName(), crd.kind, this.resourceId());
     this.showDeleteModal.set(false);
-    this.toastService.show('Demo app deleted', 'success');
+    this.toastService.show('Sample plugin deleted', 'success');
     this.router.navigate(['..'], { relativeTo: this.route });
   }
 }

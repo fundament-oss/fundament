@@ -66,7 +66,7 @@ export default class PluginRegistryService {
   private readonly pluginFiles = [
     '/plugins/cert-manager.plugin.yaml',
     '/plugins/cnpg.plugin.yaml',
-    '/plugins/demo-app.plugin.yaml',
+    '/plugins/sample-plugin.plugin.yaml',
   ];
 
   async loadPlugins(): Promise<void> {

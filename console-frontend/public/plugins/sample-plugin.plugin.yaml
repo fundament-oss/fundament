@@ -2,23 +2,23 @@ apiVersion: fundament.io/v1
 kind: PluginDefinition
 
 metadata:
-  name: demo-app
-  displayName: Demo App
+  name: sample-plugin
+  displayName: Sample Plugin
   version: v1.0.0
   description: Sample plugin showing how to replace the auto-generated UI with a custom Angular component.
   author: Fundament
   tags:
-    - demo
+    - sample
 
 menu:
   organization:
-    - crd: DemoApp
+    - crd: SampleItem
       list: true
       detail: true
       create: true
       icon: tablerApps
   project:
-    - crd: DemoApp
+    - crd: SampleItem
       list: true
       detail: true
       create: true
@@ -27,12 +27,12 @@ menu:
 # customComponents maps CRD kind → view type → component name registered in
 # src/app/plugins/index.ts. Views without an entry fall back to the auto-generated UI.
 customComponents:
-  DemoApp:
-    list: DemoAppListComponent
-    detail: DemoAppDetailComponent
+  SampleItem:
+    list: SamplePluginListComponent
+    detail: SamplePluginDetailComponent
 
 uiHints:
-  DemoApp:
+  SampleItem:
     formGroups:
       - name: Application
         fields: [image, replicas, port]
@@ -54,13 +54,13 @@ crds:
     apiVersion: apiextensions.k8s.io/v1
     kind: CustomResourceDefinition
     metadata:
-      name: demoapps.demo.fundament.io
+      name: sampleitems.sample.fundament.io
     spec:
-      group: demo.fundament.io
+      group: sample.fundament.io
       names:
-        kind: DemoApp
-        plural: demoapps
-        singular: demoapp
+        kind: SampleItem
+        plural: sampleitems
+        singular: sampleitem
       scope: Namespaced
       versions:
         - name: v1
@@ -78,7 +78,7 @@ crds:
               type: string
           schema:
             openAPIV3Schema:
-              description: A DemoApp represents a sample deployed application.
+              description: A SampleItem represents a sample deployed application.
               type: object
               properties:
                 apiVersion:
