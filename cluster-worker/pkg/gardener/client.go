@@ -63,6 +63,10 @@ type NodePool struct {
 	MachineType  string
 	AutoscaleMin int32
 	AutoscaleMax int32
+	// Zone is the availability zone for this worker pool (e.g., "eu-central-1a").
+	// Empty string means no zone constraint, which is required for the local provider.
+	// TODO: populate from tenant.node_pools once a zone column is added to the schema.
+	Zone string
 }
 
 // ClusterToSync contains all the information needed to sync a cluster to Gardener.

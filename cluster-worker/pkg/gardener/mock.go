@@ -507,6 +507,9 @@ func (m *MockClient) validateClusterSpec(cluster *ClusterToSync) error {
 		if np.AutoscaleMin < 0 {
 			return fmt.Errorf("shoot.core.gardener.cloud is invalid: worker %q minimum must be >= 0", np.Name)
 		}
+		if np.AutoscaleMax < 1 {
+			return fmt.Errorf("shoot.core.gardener.cloud is invalid: worker %q maximum must be >= 1", np.Name)
+		}
 		if np.AutoscaleMax < np.AutoscaleMin {
 			return fmt.Errorf("shoot.core.gardener.cloud is invalid: worker %q maximum must be >= minimum", np.Name)
 		}

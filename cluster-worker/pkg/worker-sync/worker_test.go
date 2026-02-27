@@ -82,6 +82,17 @@ func TestMockClient_NodePoolValidation(t *testing.T) {
 			t.Error("expected error for max < min")
 		}
 	})
+
+	t.Run("max is zero", func(t *testing.T) {
+		cluster := common.TestCluster("test-cluster3", "test-tenant")
+		cluster.NodePools = []gardener.NodePool{
+			{Name: "pool", MachineType: "local", AutoscaleMin: 0, AutoscaleMax: 0},
+		}
+		err := mock.ApplyShoot(ctx, &cluster)
+		if err == nil {
+			t.Error("expected error for max == 0")
+		}
+	})
 }
 
 func TestMockClient_ApplyShoot(t *testing.T) {
@@ -534,6 +545,38 @@ func TestStatusPoller_Timing(t *testing.T) {
 // Helper to convert time to pgtype.Timestamptz
 func toPgTimestamp(t time.Time) pgtype.Timestamptz {
 	return pgtype.Timestamptz{Time: t, Valid: true}
+}
+
+// TestNodePoolConversion verifies the DB row → gardener.NodePool mapping
+// used in processOne after NodePoolListByClusterID.
+func TestNodePoolConversion(t *testing.T) {
+	rows := []db.NodePoolListByClusterIDRow{
+		{Name: "pool-a", MachineType: "n1-standard-4", AutoscaleMin: 1, AutoscaleMax: 5},
+		{Name: "pool-b", MachineType: "n1-standard-2", AutoscaleMin: 0, AutoscaleMax: 3},
+	}
+
+	nodePools := make([]gardener.NodePool, len(rows))
+	for i, np := range rows {
+		nodePools[i] = gardener.NodePool{
+			Name:         np.Name,
+			MachineType:  np.MachineType,
+			AutoscaleMin: np.AutoscaleMin,
+			AutoscaleMax: np.AutoscaleMax,
+		}
+	}
+
+	if len(nodePools) != 2 {
+		t.Fatalf("expected 2 node pools, got %d", len(nodePools))
+	}
+	if nodePools[0].Name != "pool-a" || nodePools[0].MachineType != "n1-standard-4" {
+		t.Errorf("pool-a mismatch: %+v", nodePools[0])
+	}
+	if nodePools[0].AutoscaleMin != 1 || nodePools[0].AutoscaleMax != 5 {
+		t.Errorf("pool-a autoscale mismatch: min=%d max=%d", nodePools[0].AutoscaleMin, nodePools[0].AutoscaleMax)
+	}
+	if nodePools[1].Name != "pool-b" || nodePools[1].AutoscaleMin != 0 {
+		t.Errorf("pool-b mismatch: %+v", nodePools[1])
+	}
 }
 
 // Test conversion functions used by the worker

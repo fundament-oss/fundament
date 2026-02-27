@@ -743,6 +743,9 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
+<!-- USING (true) is intentional: fun_cluster_worker needs unrestricted SELECT on all
+     node pools across all organizations to build Gardener worker specs during sync.
+     The API-facing policy node_pools_organization_policy restricts by organization instead. -->
 <policy name="node_pools_cluster_worker_read" table="tenant.node_pools" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>

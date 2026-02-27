@@ -518,6 +518,7 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 // If the cluster has no node pools, a default worker group is created.
 // All workers share the same machine image from ProviderConfig.
 // TODO: support per-pool machine image once tenant.node_pools gains an image column.
+// TODO: populate NodePool.Zone from tenant.node_pools once a zone column is added.
 func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Worker {
 	if len(cluster.NodePools) == 0 {
 		// Declare separately per iteration to avoid pointer aliasing.
@@ -562,6 +563,9 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 			Maximum:        np.AutoscaleMax,
 			MaxSurge:       &maxSurge,
 			MaxUnavailable: &maxUnavailable,
+		}
+		if np.Zone != "" {
+			workers[i].Zones = []string{np.Zone}
 		}
 	}
 	return workers
