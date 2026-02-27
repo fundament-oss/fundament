@@ -198,7 +198,10 @@ export default class UsageComponent implements OnInit, AfterViewInit {
       this.selectedProjectId = projectId;
       // Find the actual project name from organization data
       const orgs = this.organizationDataService.organizations();
-      const project = orgs.flatMap((org) => org.projects).find((p) => p.id === projectId);
+      const project = orgs
+        .flatMap((org) => org.clusters)
+        .flatMap((c) => c.projects)
+        .find((p) => p.id === projectId);
       if (project) {
         this.projectName.set(project.name);
       }
@@ -208,7 +211,8 @@ export default class UsageComponent implements OnInit, AfterViewInit {
       // Find the actual namespace name from organization data
       const orgs = this.organizationDataService.organizations();
       const namespace = orgs
-        .flatMap((org) => org.projects)
+        .flatMap((org) => org.clusters)
+        .flatMap((c) => c.projects)
         .flatMap((p) => p.namespaces)
         .find((ns) => ns.id === namespaceId);
       if (namespace) {

@@ -24,8 +24,9 @@ type ProjectsDataSource struct {
 
 // ProjectsDataSourceModel describes the data source data model.
 type ProjectsDataSourceModel struct {
-	ID       types.String   `tfsdk:"id"`
-	Projects []ProjectModel `tfsdk:"projects"`
+	ID        types.String   `tfsdk:"id"`
+	ClusterID types.String   `tfsdk:"cluster_id"`
+	Projects  []ProjectModel `tfsdk:"projects"`
 }
 
 // NewProjectsDataSource creates a new ProjectsDataSource.
@@ -47,6 +48,10 @@ func (d *ProjectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 				Description: "Identifier for this data source.",
 				Computed:    true,
 			},
+			"cluster_id": schema.StringAttribute{
+				Description: "The cluster ID to list projects for.",
+				Required:    true,
+			},
 			"projects": schema.ListNestedAttribute{
 				Description: "List of projects.",
 				Computed:    true,
@@ -54,6 +59,14 @@ func (d *ProjectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							Description: "The unique identifier of the project.",
+							Computed:    true,
+						},
+						"cluster_id": schema.StringAttribute{
+							Description: "The ID of the cluster this project belongs to.",
+							Computed:    true,
+						},
+						"cluster_name": schema.StringAttribute{
+							Description: "The name of the cluster this project belongs to.",
 							Computed:    true,
 						},
 						"name": schema.StringAttribute{
@@ -108,7 +121,8 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	tflog.Debug(ctx, "Fetching projects")
 
-	rpcReq := connect.NewRequest(&organizationv1.ListProjectsRequest{})
+	listReq := organizationv1.ListProjectsRequest_builder{ClusterId: state.ClusterID.ValueString()}.Build()
+	rpcReq := connect.NewRequest(listReq)
 
 	// Call the API
 	rpcResp, err := d.client.ProjectService.ListProjects(ctx, rpcReq)
@@ -133,20 +147,41 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
+	// Build cluster name cache to avoid redundant API calls
+	clusterNames := make(map[string]string)
+	for _, project := range rpcResp.Msg.GetProjects() {
+		if _, ok := clusterNames[project.GetClusterId()]; !ok {
+			clusterReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+				ClusterId: project.GetClusterId(),
+			}.Build())
+			clusterResp, err := d.client.ClusterService.GetCluster(ctx, clusterReq)
+			if err == nil {
+				clusterNames[project.GetClusterId()] = clusterResp.Msg.GetCluster().GetName()
+			}
+		}
+	}
+
 	// Map response to state
-	state.Projects = make([]ProjectModel, len(rpcResp.Msg.Projects))
-	for i, project := range rpcResp.Msg.Projects {
+	state.Projects = make([]ProjectModel, len(rpcResp.Msg.GetProjects()))
+	for i, project := range rpcResp.Msg.GetProjects() {
 		var created basetypes.StringValue
 
-		if project.Created.CheckValid() == nil {
-			created = types.StringValue(project.Created.String())
+		if project.GetCreated().CheckValid() == nil {
+			created = types.StringValue(project.GetCreated().String())
 		}
 
-		state.Projects[i] = ProjectModel{
-			ID:      types.StringValue(project.Id),
-			Name:    types.StringValue(project.Name),
-			Created: created,
+		pm := ProjectModel{
+			ID:        types.StringValue(project.GetId()),
+			ClusterID: types.StringValue(project.GetClusterId()),
+			Name:      types.StringValue(project.GetName()),
+			Created:   created,
 		}
+
+		if name, ok := clusterNames[project.GetClusterId()]; ok {
+			pm.ClusterName = types.StringValue(name)
+		}
+
+		state.Projects[i] = pm
 	}
 
 	// Set the data source ID

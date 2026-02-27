@@ -7,8 +7,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -16,13 +16,17 @@ import (
 func (s *Server) UpdateNodePool(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateNodePoolRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	nodePoolID := uuid.MustParse(req.Msg.NodePoolId)
+) (*connect.Response[organizationv1.UpdateNodePoolResponse], error) {
+	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
+
+	if err := s.checkPermission(ctx, authz.CanEdit(), authz.NodePool(nodePoolID)); err != nil {
+		return nil, err
+	}
 
 	params := db.NodePoolUpdateParams{
 		ID:           nodePoolID,
-		AutoscaleMin: pgtype.Int4{Int32: req.Msg.AutoscaleMin, Valid: true},
-		AutoscaleMax: pgtype.Int4{Int32: req.Msg.AutoscaleMax, Valid: true},
+		AutoscaleMin: pgtype.Int4{Int32: req.Msg.GetAutoscaleMin(), Valid: true},
+		AutoscaleMax: pgtype.Int4{Int32: req.Msg.GetAutoscaleMax(), Valid: true},
 	}
 
 	rowsAffected, err := s.queries.NodePoolUpdate(ctx, params)
@@ -36,5 +40,5 @@ func (s *Server) UpdateNodePool(
 
 	s.logger.InfoContext(ctx, "node pool updated", "node_pool_id", nodePoolID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.UpdateNodePoolResponse_builder{}.Build()), nil
 }

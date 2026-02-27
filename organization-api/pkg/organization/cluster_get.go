@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -19,7 +20,7 @@ func (s *Server) GetClusterByName(
 	req *connect.Request[organizationv1.GetClusterByNameRequest],
 ) (*connect.Response[organizationv1.GetClusterResponse], error) {
 	cluster, err := s.queries.ClusterGetByName(ctx, db.ClusterGetByNameParams{
-		Name: req.Msg.Name,
+		Name: req.Msg.GetName(),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -28,7 +29,14 @@ func (s *Server) GetClusterByName(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.GetClusterResponse{
+	// Auth is done after the DB call because we dont know the cluster ID yet.
+	// This does leave us open for enumerate attackes because attackers can distinguise between not found and permission denied.
+	// We could always return cluster not found instead of permission errors.
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(cluster.ID)); err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(organizationv1.GetClusterResponse_builder{
 		Cluster: clusterDetailsFromRow(&db.ClusterGetByIDRow{
 			ID:                 cluster.ID,
 			OrganizationID:     cluster.OrganizationID,
@@ -44,14 +52,18 @@ func (s *Server) GetClusterByName(
 			ShootStatusMessage: cluster.ShootStatusMessage,
 			ShootStatusUpdated: cluster.ShootStatusUpdated,
 		}),
-	}), nil
+	}.Build()), nil
 }
 
 func (s *Server) GetCluster(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetClusterRequest],
 ) (*connect.Response[organizationv1.GetClusterResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
 
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,
@@ -63,16 +75,20 @@ func (s *Server) GetCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.GetClusterResponse{
+	return connect.NewResponse(organizationv1.GetClusterResponse_builder{
 		Cluster: clusterDetailsFromRow(&cluster),
-	}), nil
+	}.Build()), nil
 }
 
 func (s *Server) GetClusterActivity(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetClusterActivityRequest],
 ) (*connect.Response[organizationv1.GetClusterActivityResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
 
 	_, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,
@@ -84,7 +100,7 @@ func (s *Server) GetClusterActivity(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	limit := req.Msg.Limit
+	limit := req.Msg.GetLimit()
 	if limit <= 0 {
 		limit = 50
 	}
@@ -97,16 +113,20 @@ func (s *Server) GetClusterActivity(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster events: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.GetClusterActivityResponse{
+	return connect.NewResponse(organizationv1.GetClusterActivityResponse_builder{
 		Events: clusterEventsFromRows(events),
-	}), nil
+	}.Build()), nil
 }
 
 func (s *Server) GetKubeconfig(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetKubeconfigRequest],
 ) (*connect.Response[organizationv1.GetKubeconfigResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
 
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,
@@ -120,13 +140,13 @@ func (s *Server) GetKubeconfig(
 
 	kubeconfig := buildKubeconfig(&cluster)
 
-	return connect.NewResponse(&organizationv1.GetKubeconfigResponse{
+	return connect.NewResponse(organizationv1.GetKubeconfigResponse_builder{
 		KubeconfigContent: kubeconfig,
-	}), nil
+	}.Build()), nil
 }
 
 func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
-	return &organizationv1.ClusterDetails{
+	return organizationv1.ClusterDetails_builder{
 		Id:                row.ID.String(),
 		Name:              row.Name,
 		Region:            row.Region,
@@ -142,7 +162,7 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
 		),
-	}
+	}.Build()
 }
 
 func buildKubeconfig(cluster *db.ClusterGetByIDRow) string {

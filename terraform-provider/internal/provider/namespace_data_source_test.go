@@ -8,7 +8,7 @@ import (
 
 func TestNamespaceModel_DataSource(t *testing.T) {
 	// Test that the model can be created with expected values
-	model := NamespaceModel{
+	model := NamespaceDataSourceModel{
 		ID:          types.StringValue("test-namespace-id"),
 		Name:        types.StringValue("test-namespace"),
 		ClusterName: types.StringValue("test-cluster"),

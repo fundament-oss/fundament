@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -16,67 +17,58 @@ func (s *Server) ListClusterNamespaces(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListClusterNamespacesRequest],
 ) (*connect.Response[organizationv1.ListClusterNamespacesResponse], error) {
-	if _, ok := OrganizationIDFromContext(ctx); !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 
-	clusterID := uuid.MustParse(req.Msg.ClusterId)
+	if err := s.checkPermission(ctx, authz.CanListNamespaces(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
 
 	namespaces, err := s.queries.NamespaceListByClusterID(ctx, db.NamespaceListByClusterIDParams{ClusterID: clusterID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list namespaces: %w", err))
 	}
 
-	result := make([]*organizationv1.ClusterNamespace, 0, len(namespaces))
+	result := make([]*organizationv1.Namespace, 0, len(namespaces))
 	for i := range namespaces {
-		result = append(result, clusterNamespaceFromRow(&namespaces[i]))
+		result = append(result, namespaceFromRow(namespaces[i]))
 	}
 
-	return connect.NewResponse(&organizationv1.ListClusterNamespacesResponse{
+	return connect.NewResponse(organizationv1.ListClusterNamespacesResponse_builder{
 		Namespaces: result,
-	}), nil
+	}.Build()), nil
 }
 
 func (s *Server) ListProjectNamespaces(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListProjectNamespacesRequest],
 ) (*connect.Response[organizationv1.ListProjectNamespacesResponse], error) {
-	if _, ok := OrganizationIDFromContext(ctx); !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
-	}
+	projectID := uuid.MustParse(req.Msg.GetProjectId())
 
-	projectID := uuid.MustParse(req.Msg.ProjectId)
+	if err := s.checkPermission(ctx, authz.CanListNamespaces(), authz.Project(projectID)); err != nil {
+		return nil, err
+	}
 
 	namespaces, err := s.queries.NamespaceListByProjectID(ctx, db.NamespaceListByProjectIDParams{ProjectID: projectID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list namespaces: %w", err))
 	}
 
-	result := make([]*organizationv1.ProjectNamespace, 0, len(namespaces))
+	result := make([]*organizationv1.Namespace, 0, len(namespaces))
 	for i := range namespaces {
-		result = append(result, projectNamespaceFromRow(&namespaces[i]))
+		result = append(result, namespaceFromRow((db.NamespaceListByClusterIDRow)(namespaces[i])))
 	}
 
-	return connect.NewResponse(&organizationv1.ListProjectNamespacesResponse{
+	return connect.NewResponse(organizationv1.ListProjectNamespacesResponse_builder{
 		Namespaces: result,
-	}), nil
+	}.Build()), nil
 }
 
-func clusterNamespaceFromRow(row *db.TenantNamespace) *organizationv1.ClusterNamespace {
-	return &organizationv1.ClusterNamespace{
+func namespaceFromRow(row db.NamespaceListByClusterIDRow) *organizationv1.Namespace {
+	return organizationv1.Namespace_builder{
 		Id:        row.ID.String(),
 		Name:      row.Name,
 		ProjectId: row.ProjectID.String(),
 		ClusterId: row.ClusterID.String(),
 		Created:   timestamppb.New(row.Created.Time),
-	}
-}
-
-func projectNamespaceFromRow(row *db.TenantNamespace) *organizationv1.ProjectNamespace {
-	return &organizationv1.ProjectNamespace{
-		Id:        row.ID.String(),
-		Name:      row.Name,
-		ClusterId: row.ClusterID.String(),
-		Created:   timestamppb.New(row.Created.Time),
-	}
+	}.Build()
 }

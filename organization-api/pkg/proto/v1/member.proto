@@ -1,12 +1,14 @@
-syntax = "proto3";
+edition = "2023";
 
 package organization.v1;
 
 import "buf/validate/validate.proto";
-import "google/protobuf/empty.proto";
+import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
 
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
 // MemberService manages organization members
@@ -18,7 +20,7 @@ service MemberService {
   // Delete a member from the organization
   rpc DeleteMember(DeleteMemberRequest) returns (DeleteMemberResponse);
   // Update a member's permission
-  rpc UpdateMemberPermission(UpdateMemberPermissionRequest) returns (google.protobuf.Empty);
+  rpc UpdateMemberPermission(UpdateMemberPermissionRequest) returns (UpdateMemberPermissionResponse);
 }
 
 // List members request
@@ -61,6 +63,9 @@ message UpdateMemberPermissionRequest {
   }];
 }
 
+// Update member permission response
+message UpdateMemberPermissionResponse {}
+
 // Member information
 message Member {
   string id = 10;
@@ -68,9 +73,9 @@ message Member {
   string user_id = 80;
   string name = 20;
   // external_ref is empty for pending invitations
-  optional string external_ref = 30;
+  string external_ref = 30 [features.field_presence = EXPLICIT];
   // email is set for invited members
-  optional string email = 50;
+  string email = 50 [features.field_presence = EXPLICIT];
   // permission is "viewer" or "admin"
   string permission = 60;
   // status is "pending", "accepted", "declined", or "revoked"

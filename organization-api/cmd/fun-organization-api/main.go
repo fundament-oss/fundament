@@ -16,6 +16,7 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -24,6 +25,7 @@ import (
 
 type config struct {
 	Database           psqldb.Config
+	OpenFGA            authz.Config
 	JWTSecret          string     `env:"JWT_SECRET,required,notEmpty" `
 	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
 	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
@@ -62,7 +64,6 @@ func run() error {
 				queries := db.New(conn)
 
 				// Extract organization_id from context and set it in PostgreSQL session for RLS
-
 				if organizationID, ok := organization.OrganizationIDFromContext(ctx); ok {
 					logger.Debug("setting organization context for RLS", "organization_id", organizationID.String())
 
@@ -141,11 +142,23 @@ func run() error {
 
 	logger.Debug("database connected")
 
+	logger.Debug("connecting to OpenFGA",
+		"api_url", cfg.OpenFGA.APIURL,
+		"store_id", cfg.OpenFGA.StoreID,
+	)
+
+	authzClient, err := authz.New(cfg.OpenFGA)
+	if err != nil {
+		return fmt.Errorf("failed to create OpenFGA client: %w", err)
+	}
+
+	logger.Debug("OpenFGA client connected")
+
 	server, err := organization.New(logger, &organization.Config{
 		JWTSecret:          []byte(cfg.JWTSecret),
 		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
 		Clock:              clock.New(),
-	}, db)
+	}, db, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)
 	}

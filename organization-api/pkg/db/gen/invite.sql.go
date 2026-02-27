@@ -95,7 +95,7 @@ const inviteList = `-- name: InviteList :many
 SELECT
     organizations_users.id,
     organizations_users.organization_id,
-    organizations.name,
+    organizations.display_name,
     organizations_users.permission,
     organizations_users.status,
     organizations_users.created
@@ -116,7 +116,7 @@ type InviteListParams struct {
 type InviteListRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
-	Name           string
+	DisplayName    string
 	Permission     dbconst.OrganizationsUserPermission
 	Status         dbconst.OrganizationsUserStatus
 	Created        pgtype.Timestamptz
@@ -135,7 +135,7 @@ func (q *Queries) InviteList(ctx context.Context, arg InviteListParams) ([]Invit
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
-			&i.Name,
+			&i.DisplayName,
 			&i.Permission,
 			&i.Status,
 			&i.Created,

@@ -127,9 +127,9 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 		"project_id": state.ProjectID.ValueString(),
 	})
 
-	rpcReq := connect.NewRequest(&organizationv1.ListProjectMembersRequest{
+	rpcReq := connect.NewRequest(organizationv1.ListProjectMembersRequest_builder{
 		ProjectId: state.ProjectID.ValueString(),
-	})
+	}.Build())
 
 	rpcResp, err := d.client.ProjectService.ListProjectMembers(ctx, rpcReq)
 	if err != nil {
@@ -154,30 +154,30 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	// Map response to state
-	members := rpcResp.Msg.Members
+	members := rpcResp.Msg.GetMembers()
 	state.Members = make([]ProjectMemberModel, len(members))
 	for i, member := range members {
 		var created types.String
-		if member.Created != nil {
-			created = types.StringValue(member.Created.AsTime().Format(time.RFC3339))
+		if member.HasCreated() {
+			created = types.StringValue(member.GetCreated().AsTime().Format(time.RFC3339))
 		} else {
 			created = types.StringNull()
 		}
 
-		permissionStr, err := projectMemberPermissionFromProto(member.Role)
+		permissionStr, err := projectMemberPermissionFromProto(member.GetRole())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Invalid Project Member Permission",
-				fmt.Sprintf("Unable to convert permission for member %q: %s", member.Id, err.Error()),
+				fmt.Sprintf("Unable to convert permission for member %q: %s", member.GetId(), err.Error()),
 			)
 			return
 		}
 
 		state.Members[i] = ProjectMemberModel{
-			ID:         types.StringValue(member.Id),
-			ProjectID:  types.StringValue(member.ProjectId),
-			UserID:     types.StringValue(member.UserId),
-			UserName:   types.StringValue(member.UserName),
+			ID:         types.StringValue(member.GetId()),
+			ProjectID:  types.StringValue(member.GetProjectId()),
+			UserID:     types.StringValue(member.GetUserId()),
+			UserName:   types.StringValue(member.GetUserName()),
 			Permission: types.StringValue(permissionStr),
 			Created:    created,
 		}

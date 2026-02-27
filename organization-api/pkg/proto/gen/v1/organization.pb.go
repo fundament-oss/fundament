@@ -10,10 +10,9 @@ import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	_ "google.golang.org/protobuf/types/gofeaturespb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
-	sync "sync"
 	unsafe "unsafe"
 )
 
@@ -26,15 +25,13 @@ const (
 
 // Organization information
 type Organization struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Organization ID (UUID)
-	Id string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	// Organization name
-	Name string `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	// Creation timestamp (RFC3339)
-	Created       *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created,proto3" json:"created,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_DisplayName string                 `protobuf:"bytes,30,opt,name=display_name,json=displayName"`
+	xxx_hidden_Created     *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *Organization) Reset() {
@@ -62,37 +59,89 @@ func (x *Organization) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Organization.ProtoReflect.Descriptor instead.
-func (*Organization) Descriptor() ([]byte, []int) {
-	return file_v1_organization_proto_rawDescGZIP(), []int{0}
-}
-
 func (x *Organization) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *Organization) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
+	}
+	return ""
+}
+
+func (x *Organization) GetDisplayName() string {
+	if x != nil {
+		return x.xxx_hidden_DisplayName
 	}
 	return ""
 }
 
 func (x *Organization) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Created
+		return x.xxx_hidden_Created
 	}
 	return nil
 }
 
+func (x *Organization) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *Organization) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *Organization) SetDisplayName(v string) {
+	x.xxx_hidden_DisplayName = v
+}
+
+func (x *Organization) SetCreated(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Created = v
+}
+
+func (x *Organization) HasCreated() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Created != nil
+}
+
+func (x *Organization) ClearCreated() {
+	x.xxx_hidden_Created = nil
+}
+
+type Organization_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Organization ID (UUID)
+	Id string
+	// Organization name (immutable, machine-readable identifier)
+	Name string
+	// Organization display name (human-readable label)
+	DisplayName string
+	// Creation timestamp (RFC3339)
+	Created *timestamppb.Timestamp
+}
+
+func (b0 Organization_builder) Build() *Organization {
+	m0 := &Organization{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_DisplayName = b.DisplayName
+	x.xxx_hidden_Created = b.Created
+	return m0
+}
+
 // GetOrganization request
 type GetOrganizationRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// ID of the organization to retrieve
-	Id            string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -122,25 +171,38 @@ func (x *GetOrganizationRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetOrganizationRequest.ProtoReflect.Descriptor instead.
-func (*GetOrganizationRequest) Descriptor() ([]byte, []int) {
-	return file_v1_organization_proto_rawDescGZIP(), []int{1}
-}
-
 func (x *GetOrganizationRequest) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
+func (x *GetOrganizationRequest) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+type GetOrganizationRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// ID of the organization to retrieve
+	Id string
+}
+
+func (b0 GetOrganizationRequest_builder) Build() *GetOrganizationRequest {
+	m0 := &GetOrganizationRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	return m0
+}
+
 // GetOrganization response
 type GetOrganizationResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The requested organization
-	Organization  *Organization `protobuf:"bytes,10,opt,name=organization,proto3" json:"organization,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Organization *Organization          `protobuf:"bytes,10,opt,name=organization"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *GetOrganizationResponse) Reset() {
@@ -168,27 +230,50 @@ func (x *GetOrganizationResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetOrganizationResponse.ProtoReflect.Descriptor instead.
-func (*GetOrganizationResponse) Descriptor() ([]byte, []int) {
-	return file_v1_organization_proto_rawDescGZIP(), []int{2}
-}
-
 func (x *GetOrganizationResponse) GetOrganization() *Organization {
 	if x != nil {
-		return x.Organization
+		return x.xxx_hidden_Organization
 	}
 	return nil
 }
 
+func (x *GetOrganizationResponse) SetOrganization(v *Organization) {
+	x.xxx_hidden_Organization = v
+}
+
+func (x *GetOrganizationResponse) HasOrganization() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Organization != nil
+}
+
+func (x *GetOrganizationResponse) ClearOrganization() {
+	x.xxx_hidden_Organization = nil
+}
+
+type GetOrganizationResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// The requested organization
+	Organization *Organization
+}
+
+func (b0 GetOrganizationResponse_builder) Build() *GetOrganizationResponse {
+	m0 := &GetOrganizationResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Organization = b.Organization
+	return m0
+}
+
 // UpdateOrganization request
 type UpdateOrganizationRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// ID of the organization to update
-	Id string `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	// New name for the organization
-	Name          string `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_DisplayName string                 `protobuf:"bytes,20,opt,name=display_name,json=displayName"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *UpdateOrganizationRequest) Reset() {
@@ -216,35 +301,100 @@ func (x *UpdateOrganizationRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateOrganizationRequest.ProtoReflect.Descriptor instead.
-func (*UpdateOrganizationRequest) Descriptor() ([]byte, []int) {
-	return file_v1_organization_proto_rawDescGZIP(), []int{3}
-}
-
 func (x *UpdateOrganizationRequest) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
-func (x *UpdateOrganizationRequest) GetName() string {
+func (x *UpdateOrganizationRequest) GetDisplayName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_DisplayName
 	}
 	return ""
+}
+
+func (x *UpdateOrganizationRequest) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *UpdateOrganizationRequest) SetDisplayName(v string) {
+	x.xxx_hidden_DisplayName = v
+}
+
+type UpdateOrganizationRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// ID of the organization to update
+	Id string
+	// New display name for the organization
+	DisplayName string
+}
+
+func (b0 UpdateOrganizationRequest_builder) Build() *UpdateOrganizationRequest {
+	m0 := &UpdateOrganizationRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_DisplayName = b.DisplayName
+	return m0
+}
+
+// UpdateOrganization response
+type UpdateOrganizationResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateOrganizationResponse) Reset() {
+	*x = UpdateOrganizationResponse{}
+	mi := &file_v1_organization_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateOrganizationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateOrganizationResponse) ProtoMessage() {}
+
+func (x *UpdateOrganizationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_organization_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type UpdateOrganizationResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 UpdateOrganizationResponse_builder) Build() *UpdateOrganizationResponse {
+	m0 := &UpdateOrganizationResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
 }
 
 // ListOrganizations request
 type ListOrganizationsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListOrganizationsRequest) Reset() {
 	*x = ListOrganizationsRequest{}
-	mi := &file_v1_organization_proto_msgTypes[4]
+	mi := &file_v1_organization_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -256,7 +406,7 @@ func (x *ListOrganizationsRequest) String() string {
 func (*ListOrganizationsRequest) ProtoMessage() {}
 
 func (x *ListOrganizationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_organization_proto_msgTypes[4]
+	mi := &file_v1_organization_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -267,23 +417,29 @@ func (x *ListOrganizationsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListOrganizationsRequest.ProtoReflect.Descriptor instead.
-func (*ListOrganizationsRequest) Descriptor() ([]byte, []int) {
-	return file_v1_organization_proto_rawDescGZIP(), []int{4}
+type ListOrganizationsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 ListOrganizationsRequest_builder) Build() *ListOrganizationsRequest {
+	m0 := &ListOrganizationsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
 }
 
 // ListOrganizations response
 type ListOrganizationsResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// List of organizations the user belongs to
-	Organizations []*Organization `protobuf:"bytes,10,rep,name=organizations,proto3" json:"organizations,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Organizations *[]*Organization       `protobuf:"bytes,10,rep,name=organizations"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *ListOrganizationsResponse) Reset() {
 	*x = ListOrganizationsResponse{}
-	mi := &file_v1_organization_proto_msgTypes[5]
+	mi := &file_v1_organization_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -295,7 +451,7 @@ func (x *ListOrganizationsResponse) String() string {
 func (*ListOrganizationsResponse) ProtoMessage() {}
 
 func (x *ListOrganizationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_organization_proto_msgTypes[5]
+	mi := &file_v1_organization_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -306,81 +462,87 @@ func (x *ListOrganizationsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListOrganizationsResponse.ProtoReflect.Descriptor instead.
-func (*ListOrganizationsResponse) Descriptor() ([]byte, []int) {
-	return file_v1_organization_proto_rawDescGZIP(), []int{5}
-}
-
 func (x *ListOrganizationsResponse) GetOrganizations() []*Organization {
 	if x != nil {
-		return x.Organizations
+		if x.xxx_hidden_Organizations != nil {
+			return *x.xxx_hidden_Organizations
+		}
 	}
 	return nil
+}
+
+func (x *ListOrganizationsResponse) SetOrganizations(v []*Organization) {
+	x.xxx_hidden_Organizations = &v
+}
+
+type ListOrganizationsResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// List of organizations the user belongs to
+	Organizations []*Organization
+}
+
+func (b0 ListOrganizationsResponse_builder) Build() *ListOrganizationsResponse {
+	m0 := &ListOrganizationsResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Organizations = &b.Organizations
+	return m0
 }
 
 var File_v1_organization_proto protoreflect.FileDescriptor
 
 const file_v1_organization_proto_rawDesc = "" +
 	"\n" +
-	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"h\n" +
+	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8b\x01\n" +
 	"\fOrganization\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x124\n" +
-	"\acreated\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"2\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x1e \x01(\tR\vdisplayName\x124\n" +
+	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"2\n" +
 	"\x16GetOrganizationRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\\\n" +
 	"\x17GetOrganizationResponse\x12A\n" +
 	"\forganization\x18\n" +
-	" \x01(\v2\x1d.organization.v1.OrganizationR\forganization\"U\n" +
+	" \x01(\v2\x1d.organization.v1.OrganizationR\forganization\"d\n" +
 	"\x19UpdateOrganizationRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1e\n" +
-	"\x04name\x18\x14 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\"\x1a\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12-\n" +
+	"\fdisplay_name\x18\x14 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\vdisplayName\"\x1c\n" +
+	"\x1aUpdateOrganizationResponse\"\x1a\n" +
 	"\x18ListOrganizationsRequest\"`\n" +
 	"\x19ListOrganizationsResponse\x12C\n" +
 	"\rorganizations\x18\n" +
-	" \x03(\v2\x1d.organization.v1.OrganizationR\rorganizations2\xc1\x02\n" +
+	" \x03(\v2\x1d.organization.v1.OrganizationR\rorganizations2\xd6\x02\n" +
 	"\x13OrganizationService\x12j\n" +
 	"\x11ListOrganizations\x12).organization.v1.ListOrganizationsRequest\x1a*.organization.v1.ListOrganizationsResponse\x12d\n" +
-	"\x0fGetOrganization\x12'.organization.v1.GetOrganizationRequest\x1a(.organization.v1.GetOrganizationResponse\x12X\n" +
-	"\x12UpdateOrganization\x12*.organization.v1.UpdateOrganizationRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
+	"\x0fGetOrganization\x12'.organization.v1.GetOrganizationRequest\x1a(.organization.v1.GetOrganizationResponse\x12m\n" +
+	"\x12UpdateOrganization\x12*.organization.v1.UpdateOrganizationRequest\x1a+.organization.v1.UpdateOrganizationResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var (
-	file_v1_organization_proto_rawDescOnce sync.Once
-	file_v1_organization_proto_rawDescData []byte
-)
-
-func file_v1_organization_proto_rawDescGZIP() []byte {
-	file_v1_organization_proto_rawDescOnce.Do(func() {
-		file_v1_organization_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_v1_organization_proto_rawDesc), len(file_v1_organization_proto_rawDesc)))
-	})
-	return file_v1_organization_proto_rawDescData
-}
-
-var file_v1_organization_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_v1_organization_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_v1_organization_proto_goTypes = []any{
-	(*Organization)(nil),              // 0: organization.v1.Organization
-	(*GetOrganizationRequest)(nil),    // 1: organization.v1.GetOrganizationRequest
-	(*GetOrganizationResponse)(nil),   // 2: organization.v1.GetOrganizationResponse
-	(*UpdateOrganizationRequest)(nil), // 3: organization.v1.UpdateOrganizationRequest
-	(*ListOrganizationsRequest)(nil),  // 4: organization.v1.ListOrganizationsRequest
-	(*ListOrganizationsResponse)(nil), // 5: organization.v1.ListOrganizationsResponse
-	(*timestamppb.Timestamp)(nil),     // 6: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),             // 7: google.protobuf.Empty
+	(*Organization)(nil),               // 0: organization.v1.Organization
+	(*GetOrganizationRequest)(nil),     // 1: organization.v1.GetOrganizationRequest
+	(*GetOrganizationResponse)(nil),    // 2: organization.v1.GetOrganizationResponse
+	(*UpdateOrganizationRequest)(nil),  // 3: organization.v1.UpdateOrganizationRequest
+	(*UpdateOrganizationResponse)(nil), // 4: organization.v1.UpdateOrganizationResponse
+	(*ListOrganizationsRequest)(nil),   // 5: organization.v1.ListOrganizationsRequest
+	(*ListOrganizationsResponse)(nil),  // 6: organization.v1.ListOrganizationsResponse
+	(*timestamppb.Timestamp)(nil),      // 7: google.protobuf.Timestamp
 }
 var file_v1_organization_proto_depIdxs = []int32{
-	6, // 0: organization.v1.Organization.created:type_name -> google.protobuf.Timestamp
+	7, // 0: organization.v1.Organization.created:type_name -> google.protobuf.Timestamp
 	0, // 1: organization.v1.GetOrganizationResponse.organization:type_name -> organization.v1.Organization
 	0, // 2: organization.v1.ListOrganizationsResponse.organizations:type_name -> organization.v1.Organization
-	4, // 3: organization.v1.OrganizationService.ListOrganizations:input_type -> organization.v1.ListOrganizationsRequest
+	5, // 3: organization.v1.OrganizationService.ListOrganizations:input_type -> organization.v1.ListOrganizationsRequest
 	1, // 4: organization.v1.OrganizationService.GetOrganization:input_type -> organization.v1.GetOrganizationRequest
 	3, // 5: organization.v1.OrganizationService.UpdateOrganization:input_type -> organization.v1.UpdateOrganizationRequest
-	5, // 6: organization.v1.OrganizationService.ListOrganizations:output_type -> organization.v1.ListOrganizationsResponse
+	6, // 6: organization.v1.OrganizationService.ListOrganizations:output_type -> organization.v1.ListOrganizationsResponse
 	2, // 7: organization.v1.OrganizationService.GetOrganization:output_type -> organization.v1.GetOrganizationResponse
-	7, // 8: organization.v1.OrganizationService.UpdateOrganization:output_type -> google.protobuf.Empty
+	4, // 8: organization.v1.OrganizationService.UpdateOrganization:output_type -> organization.v1.UpdateOrganizationResponse
 	6, // [6:9] is the sub-list for method output_type
 	3, // [3:6] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -399,7 +561,7 @@ func file_v1_organization_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_organization_proto_rawDesc), len(file_v1_organization_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

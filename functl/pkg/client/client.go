@@ -15,11 +15,15 @@ import (
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
+// OrganizationHeader is the header name for selecting the active organization.
+const OrganizationHeader = "Fun-Organization"
+
 // Client provides authenticated access to Fundament APIs.
 type Client struct {
-	apiKey      string
-	apiEndpoint string
-	authnURL    string
+	apiKey         string
+	apiEndpoint    string
+	authnURL       string
+	organizationID string
 
 	mu     sync.Mutex
 	jwt    string
@@ -30,16 +34,17 @@ type Client struct {
 }
 
 // New creates a new API client.
-func New(apiKey, apiEndpoint, authnURL string) *Client {
+func New(apiKey, apiEndpoint, authnURL, organizationID string) *Client {
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 	}
 
 	c := &Client{
-		apiKey:      apiKey,
-		apiEndpoint: apiEndpoint,
-		authnURL:    authnURL,
-		httpClient:  httpClient,
+		apiKey:         apiKey,
+		apiEndpoint:    apiEndpoint,
+		authnURL:       authnURL,
+		organizationID: organizationID,
+		httpClient:     httpClient,
 	}
 
 	// Create the token client without auth (we'll add the API key manually)
@@ -67,8 +72,8 @@ func (c *Client) ensureToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to exchange API key for token: %w", err)
 	}
 
-	c.jwt = resp.Msg.AccessToken
-	c.expiry = time.Now().Add(time.Duration(resp.Msg.ExpiresIn) * time.Second)
+	c.jwt = resp.Msg.GetAccessToken()
+	c.expiry = time.Now().Add(time.Duration(resp.Msg.GetExpiresIn()) * time.Second)
 
 	return c.jwt, nil
 }
@@ -87,18 +92,39 @@ func (c *Client) authInterceptor() connect.UnaryInterceptorFunc {
 	}
 }
 
+// orgInterceptor returns a connect interceptor that adds the organization header.
+func (c *Client) orgInterceptor() connect.UnaryInterceptorFunc {
+	return func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			if c.organizationID != "" {
+				req.Header().Set(OrganizationHeader, c.organizationID)
+			}
+			return next(ctx, req)
+		}
+	}
+}
+
 // Clusters returns the cluster service client.
 func (c *Client) Clusters() organizationv1connect.ClusterServiceClient {
 	return organizationv1connect.NewClusterServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor()),
+		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
 // Projects returns the project service client.
 func (c *Client) Projects() organizationv1connect.ProjectServiceClient {
 	return organizationv1connect.NewProjectServiceClient(
+		c.httpClient,
+		c.apiEndpoint,
+		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
+	)
+}
+
+// Namespaces returns the namespace service client.
+func (c *Client) Namespaces() organizationv1connect.NamespaceServiceClient {
+	return organizationv1connect.NewNamespaceServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
 		connect.WithInterceptors(c.authInterceptor()),
@@ -110,7 +136,25 @@ func (c *Client) APIKeys() organizationv1connect.APIKeyServiceClient {
 	return organizationv1connect.NewAPIKeyServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor()),
+		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
+	)
+}
+
+// Members returns the member service client.
+func (c *Client) Members() organizationv1connect.MemberServiceClient {
+	return organizationv1connect.NewMemberServiceClient(
+		c.httpClient,
+		c.apiEndpoint,
+		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
+	)
+}
+
+// Invites returns the invite service client.
+func (c *Client) Invites() organizationv1connect.InviteServiceClient {
+	return organizationv1connect.NewInviteServiceClient(
+		c.httpClient,
+		c.apiEndpoint,
+		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 

@@ -1,6 +1,12 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  OnDestroy,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -10,34 +16,28 @@ import {
   tablerArrowUp,
   tablerCaretRight,
   tablerPencil,
-  tablerPlus,
-  tablerTrash,
   tablerAlertTriangle,
 } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { OrganizationDataService } from '../organization-data.service';
-import { CLUSTER, PROJECT, PLUGIN } from '../../connect/tokens';
+import { CLUSTER, NAMESPACE, PROJECT, PLUGIN } from '../../connect/tokens';
 import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
   DeleteClusterRequestSchema,
-  ListClusterNamespacesRequestSchema,
-  CreateNamespaceRequestSchema,
-  DeleteNamespaceRequestSchema,
   ListInstallsRequestSchema,
   GetClusterActivityRequestSchema,
   NodePool,
-  ClusterNamespace,
   type ClusterEvent,
   type SyncState,
 } from '../../generated/v1/cluster_pb';
+import { ListClusterNamespacesRequestSchema, Namespace } from '../../generated/v1/namespace_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { LoadingIndicatorComponent } from '../icons';
-import { getStatusColor, getStatusLabel } from '../utils/cluster-status';
+import { getStatusColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
 import ModalComponent from '../modal/modal.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
@@ -122,7 +122,7 @@ const getEventDetails = (event: ClusterEvent): string => {
 
 @Component({
   selector: 'app-cluster-details',
-  imports: [RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent, ModalComponent],
+  imports: [RouterLink, NgIcon, LoadingIndicatorComponent, ModalComponent],
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
@@ -131,15 +131,13 @@ const getEventDetails = (event: ClusterEvent): string => {
       tablerArrowUp,
       tablerCaretRight,
       tablerPencil,
-      tablerPlus,
-      tablerTrash,
       tablerAlertTriangle,
     }),
   ],
   templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class ClusterDetailsComponent implements OnInit {
+export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);
@@ -148,15 +146,15 @@ export default class ClusterDetailsComponent implements OnInit {
 
   private client = inject(CLUSTER);
 
+  private namespaceClient = inject(NAMESPACE);
+
   private projectClient = inject(PROJECT);
 
   private pluginClient = inject(PLUGIN);
 
   private toastService = inject(ToastService);
 
-  private organizationDataService = inject(OrganizationDataService);
-
-  private fb = inject(FormBuilder);
+  private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
   // Expose enum for use in template
   NodePoolStatus = NodePoolStatus;
@@ -173,21 +171,9 @@ export default class ClusterDetailsComponent implements OnInit {
   showDeleteModal = signal<boolean>(false);
 
   // Namespace management
-  namespaces = signal<ClusterNamespace[]>([]);
+  namespaces = signal<Namespace[]>([]);
 
   projects = signal<Project[]>([]);
-
-  showAddNamespaceModal = signal<boolean>(false);
-
-  isLoadingProjects = signal<boolean>(false);
-
-  isCreatingNamespace = signal<boolean>(false);
-
-  showDeleteNamespaceModal = signal<boolean>(false);
-
-  pendingNamespaceId = signal<string | null>(null);
-
-  pendingNamespaceName = signal<string | null>(null);
 
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
@@ -198,19 +184,6 @@ export default class ClusterDetailsComponent implements OnInit {
   clusterEvents = signal<ClusterEvent[]>([]);
 
   isLoadingEvents = signal<boolean>(true);
-
-  namespaceForm = this.fb.group({
-    projectId: ['', Validators.required],
-    name: [
-      '',
-      [
-        Validators.required,
-        Validators.minLength(1),
-        Validators.maxLength(63),
-        Validators.pattern(/^[a-z]([-a-z0-9]*[a-z0-9])?$/),
-      ],
-    ],
-  });
 
   // Cluster data with API-fetched and mock data
   clusterData = {
@@ -275,6 +248,10 @@ export default class ClusterDetailsComponent implements OnInit {
     },
   };
 
+  ngOnDestroy() {
+    this.stopPolling();
+  }
+
   async ngOnInit() {
     const clusterId = this.route.snapshot.params['id'];
 
@@ -315,6 +292,8 @@ export default class ClusterDetailsComponent implements OnInit {
         this.loadInstalledPlugins(clusterId),
         this.loadClusterEvents(clusterId),
       ]);
+
+      this.updatePolling();
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error
@@ -323,6 +302,47 @@ export default class ClusterDetailsComponent implements OnInit {
       );
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  private async pollClusterStatus() {
+    const clusterId = this.clusterData.basics.id;
+    try {
+      const request = create(GetClusterRequestSchema, { clusterId });
+      const response = await firstValueFrom(this.client.getCluster(request));
+
+      if (!response.cluster) {
+        // Cluster has been deleted
+        this.stopPolling();
+        this.toastService.info(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+        this.router.navigate(['/']);
+        return;
+      }
+
+      this.clusterData.status = response.cluster.status;
+      this.clusterData.syncState = response.cluster.syncState ?? null;
+      this.updatePolling();
+    } catch {
+      // If the request fails with a not-found-like error, the cluster was deleted
+      this.stopPolling();
+      this.toastService.info(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+      this.router.navigate(['/']);
+    }
+  }
+
+  private updatePolling() {
+    const needsPolling = isTransitionalStatus(this.clusterData.status);
+    if (needsPolling && !this.pollingTimer) {
+      this.pollingTimer = setInterval(() => this.pollClusterStatus(), 5000);
+    } else if (!needsPolling && this.pollingTimer) {
+      this.stopPolling();
+    }
+  }
+
+  private stopPolling() {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+      this.pollingTimer = null;
     }
   }
 
@@ -371,7 +391,7 @@ export default class ClusterDetailsComponent implements OnInit {
   async loadNamespaces(clusterId: string): Promise<void> {
     try {
       const request = create(ListClusterNamespacesRequestSchema, { clusterId });
-      const response = await firstValueFrom(this.client.listClusterNamespaces(request));
+      const response = await firstValueFrom(this.namespaceClient.listClusterNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
       this.toastService.error(
@@ -384,116 +404,21 @@ export default class ClusterDetailsComponent implements OnInit {
 
   async loadProjects(): Promise<void> {
     try {
-      this.isLoadingProjects.set(true);
-      const request = create(ListProjectsRequestSchema, {});
+      const request = create(ListProjectsRequestSchema, { clusterId: this.clusterData.basics.id });
       const response = await firstValueFrom(this.projectClient.listProjects(request));
       this.projects.set(response.projects);
-      if (response.projects.length > 0) {
-        this.namespaceForm.patchValue({ projectId: response.projects[0].id });
-      }
     } catch (error) {
       this.toastService.error(
         error instanceof Error
           ? `Failed to load projects: ${error.message}`
           : 'Failed to load projects',
       );
-    } finally {
-      this.isLoadingProjects.set(false);
     }
   }
 
   getProjectName(projectId: string): string {
     const project = this.projects().find((p) => p.id === projectId);
     return project?.name || projectId;
-  }
-
-  openAddNamespaceModal(): void {
-    this.namespaceForm.reset();
-    this.showAddNamespaceModal.set(true);
-    this.loadProjects();
-  }
-
-  async createNamespace(): Promise<void> {
-    if (this.namespaceForm.invalid) {
-      this.namespaceForm.markAllAsTouched();
-      return;
-    }
-
-    try {
-      this.isCreatingNamespace.set(true);
-
-      const request = create(CreateNamespaceRequestSchema, {
-        projectId: this.namespaceForm.value.projectId!,
-        clusterId: this.clusterData.basics.id,
-        name: this.namespaceForm.value.name!,
-      });
-
-      await firstValueFrom(this.client.createNamespace(request));
-
-      this.showAddNamespaceModal.set(false);
-      this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
-
-      // Reload organization data to update the selector modal
-      await Promise.all([
-        this.loadNamespaces(this.clusterData.basics.id),
-        this.organizationDataService.loadOrganizationData(),
-      ]);
-    } catch (error) {
-      this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to create namespace: ${error.message}`
-          : 'Failed to create namespace',
-      );
-    } finally {
-      this.isCreatingNamespace.set(false);
-    }
-  }
-
-  openDeleteNamespaceModal(namespaceId: string, namespaceName: string): void {
-    this.pendingNamespaceId.set(namespaceId);
-    this.pendingNamespaceName.set(namespaceName);
-    this.showDeleteNamespaceModal.set(true);
-  }
-
-  async confirmDeleteNamespace(): Promise<void> {
-    const namespaceId = this.pendingNamespaceId();
-    const namespaceName = this.pendingNamespaceName();
-    if (!namespaceId) return;
-
-    this.showDeleteNamespaceModal.set(false);
-
-    try {
-      const request = create(DeleteNamespaceRequestSchema, { namespaceId });
-      await firstValueFrom(this.client.deleteNamespace(request));
-
-      this.toastService.info(`Namespace '${namespaceName}' deleted`);
-
-      // Reload organization data to update the selector modal
-      await Promise.all([
-        this.loadNamespaces(this.clusterData.basics.id),
-        this.organizationDataService.loadOrganizationData(),
-      ]);
-    } catch (error) {
-      this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to delete namespace: ${error.message}`
-          : 'Failed to delete namespace',
-      );
-    }
-  }
-
-  getNamespaceNameError(): string {
-    const nameControl = this.namespaceForm.get('name');
-    if (nameControl?.hasError('required')) {
-      return 'Namespace name is required.';
-    }
-    if (nameControl?.hasError('maxlength')) {
-      return 'Namespace name must not exceed 63 characters.';
-    }
-    if (nameControl?.hasError('pattern')) {
-      return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
-    }
-    return '';
   }
 
   // Load installed plugins for the cluster

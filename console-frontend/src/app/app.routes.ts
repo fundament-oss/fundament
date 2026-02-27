@@ -12,7 +12,7 @@ const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
-        path: 'add-cluster',
+        path: 'clusters/add',
         loadComponent: () =>
           import('./add-cluster-wizard-layout/add-cluster-wizard-layout.component').then(
             (m) => m.default,
@@ -20,7 +20,7 @@ const routes: Routes = [
         data: {
           breadcrumbs: [
             { label: 'Clusters', route: '/' },
-            { label: 'Add cluster', route: '/add-cluster' },
+            { label: 'Add cluster', route: '/clusters/add' },
           ],
         },
         children: [
@@ -69,7 +69,7 @@ const routes: Routes = [
         data: {
           breadcrumbs: [
             { label: 'Clusters', route: '/' },
-            { label: 'Cluster details' },
+            { label: ':clusterName', route: '/clusters/:id' },
             { label: 'Nodes' },
           ],
         },
@@ -81,8 +81,20 @@ const routes: Routes = [
         data: {
           breadcrumbs: [
             { label: 'Clusters', route: '/' },
-            { label: 'Cluster details' },
+            { label: ':clusterName', route: '/clusters/:id' },
             { label: 'Plugins' },
+          ],
+        },
+      },
+      {
+        path: 'clusters/:id/namespaces',
+        loadComponent: () =>
+          import('./cluster-namespaces/cluster-namespaces.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [
+            { label: 'Clusters', route: '/' },
+            { label: ':clusterName', route: '/clusters/:id' },
+            { label: 'Namespaces' },
           ],
         },
       },
@@ -121,7 +133,7 @@ const routes: Routes = [
         loadComponent: () =>
           import('./cluster-details/cluster-details.component').then((m) => m.default),
         data: {
-          breadcrumbs: [{ label: 'Clusters', route: '/' }, { label: 'Cluster details' }],
+          breadcrumbs: [{ label: 'Clusters', route: '/' }, { label: ':clusterName' }],
         },
       },
       {

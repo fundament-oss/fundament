@@ -40,7 +40,7 @@ export default class ProfileComponent implements OnInit {
   organizationNames = computed(() => {
     const orgs = this.organizations();
     if (orgs.length === 0) return '';
-    return orgs.map((o) => o.name).join(', ');
+    return orgs.map((o) => o.displayName).join(', ');
   });
 
   constructor() {

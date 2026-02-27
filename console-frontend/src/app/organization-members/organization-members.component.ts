@@ -1,4 +1,11 @@
-import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  signal,
+  computed,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
@@ -19,6 +26,7 @@ import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
 import ModalComponent from '../modal/modal.component';
+import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatTimeAgo } from '../utils/date-format';
 
 const getInitials = (name: string): string =>
@@ -55,7 +63,7 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [FormsModule, NgIcon, ModalComponent],
+  imports: [FormsModule, NgIcon, ModalComponent, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
       tablerPlus,
@@ -109,20 +117,12 @@ export default class OrganizationMembersComponent implements OnInit {
 
   editPermission = signal('viewer');
 
-  isUpdating = signal(false);
-
   // All members loaded from API (includes pending, active, declined and revoked)
   allMembers = signal<OrganizationMember[]>([]);
 
-  // Computed: active members (have status accepted)
-  get activeMembers(): OrganizationMember[] {
-    return this.allMembers().filter((m) => m.status === 'accepted');
-  }
+  activeMembers = computed(() => this.allMembers().filter((m) => m.status === 'accepted'));
 
-  // Computed: pending invitations (have status pending)
-  get pendingInvitations(): OrganizationMember[] {
-    return this.allMembers().filter((m) => m.status === 'pending');
-  }
+  pendingInvitations = computed(() => this.allMembers().filter((m) => m.status === 'pending'));
 
   constructor() {
     this.titleService.setTitle('Organization members');
@@ -147,7 +147,7 @@ export default class OrganizationMembersComponent implements OnInit {
         externalRef: member.externalRef,
         permission: member.permission,
         status: member.status,
-        isCurrentUser: currentUser?.id === member.id,
+        isCurrentUser: currentUser?.id === member.userId,
         created: member.created ? timestampDate(member.created) : undefined,
       }));
 
@@ -258,13 +258,12 @@ export default class OrganizationMembersComponent implements OnInit {
       return;
     }
 
-    this.isUpdating.set(true);
+    this.isSubmitting.set(true);
 
     try {
-      // Re-invite with the new permission (delete + invite)
-      await firstValueFrom(this.memberClient.deleteMember({ id: member.id }));
-      const email = member.email || member.name;
-      await firstValueFrom(this.inviteClient.inviteMember({ email, permission: newPermission }));
+      await firstValueFrom(
+        this.memberClient.updateMemberPermission({ id: member.id, permission: newPermission }),
+      );
       this.showEditModal.set(false);
       this.editingMember.set(null);
       await this.loadMembers();
@@ -276,7 +275,7 @@ export default class OrganizationMembersComponent implements OnInit {
       );
       this.showEditModal.set(false);
     } finally {
-      this.isUpdating.set(false);
+      this.isSubmitting.set(false);
     }
   }
 

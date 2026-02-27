@@ -11,7 +11,7 @@ import { createConnectTransport } from '@connectrpc/connect-web';
 import { BehaviorSubject } from 'rxjs';
 import { provideNgIconsConfig } from '@ng-icons/core';
 import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
-import EXPECTED_API_VERSION from '../proto-version';
+import EXPECTED_API_VERSION from '../proto-version.gen';
 import routes from './app.routes';
 import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';

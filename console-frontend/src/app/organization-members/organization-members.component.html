@@ -48,12 +48,15 @@
 
       @if (isLoading()) {
         <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
-          <div
-            class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"
-          ></div>
-          <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading...</p>
+          <div role="status" class="flex justify-center">
+            <app-loading-indicator
+              class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+            />
+            <span class="sr-only">Loading...</span>
+          </div>
+          <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading invitations...</p>
         </div>
-      } @else if (pendingInvitations.length > 0) {
+      } @else if (pendingInvitations().length > 0) {
         <div class="table-container">
           <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-800">
@@ -64,7 +67,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
-              @for (invitation of pendingInvitations; track invitation.id) {
+              @for (invitation of pendingInvitations(); track invitation.id) {
                 <tr>
                   <td>
                     <div>
@@ -120,10 +123,13 @@
 
       @if (isLoading()) {
         <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
-          <div
-            class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600"
-          ></div>
-          <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading members...</p>
+          <div role="status" class="flex justify-center">
+            <app-loading-indicator
+              class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+            />
+            <span class="sr-only">Loading...</span>
+          </div>
+          <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading members...</p>
         </div>
       } @else if (error()) {
         <div
@@ -139,7 +145,7 @@
             Try again
           </button>
         </div>
-      } @else if (activeMembers.length === 0) {
+      } @else if (activeMembers().length === 0) {
         <div
           class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700"
         >
@@ -161,7 +167,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
-              @for (member of activeMembers; track member.id) {
+              @for (member of activeMembers(); track member.id) {
                 <tr>
                   <td>
                     <div class="flex items-center gap-3">
@@ -333,7 +339,7 @@
       type="button"
       (click)="showEditModal.set(false)"
       class="btn-secondary"
-      [disabled]="isUpdating()"
+      [disabled]="isSubmitting()"
     >
       Cancel
     </button>
@@ -341,9 +347,9 @@
       type="button"
       (click)="confirmEditMember()"
       class="btn-primary"
-      [disabled]="isUpdating()"
+      [disabled]="isSubmitting()"
     >
-      @if (isUpdating()) {
+      @if (isSubmitting()) {
         Saving...
       } @else {
         Save changes
@@ -374,7 +380,6 @@
         name="email"
         placeholder="user@example.com"
         [disabled]="isSubmitting()"
-        class="disabled:opacity-50"
         [class]="
           inviteError() || (emailModel.invalid && emailModel.touched)
             ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'

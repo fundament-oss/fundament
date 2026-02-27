@@ -1,12 +1,14 @@
-syntax = "proto3";
+edition = "2023";
 
 package organization.v1;
 
 import "buf/validate/validate.proto";
-import "google/protobuf/empty.proto";
+import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
 
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
 // APIKeyService manages API keys for programmatic access
@@ -21,10 +23,10 @@ service APIKeyService {
   rpc GetAPIKey(GetAPIKeyRequest) returns (GetAPIKeyResponse);
 
   // Revoke an API key
-  rpc RevokeAPIKey(RevokeAPIKeyRequest) returns (google.protobuf.Empty);
+  rpc RevokeAPIKey(RevokeAPIKeyRequest) returns (RevokeAPIKeyResponse);
 
   // Delete an API key
-  rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (google.protobuf.Empty);
+  rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse);
 }
 
 // API key information (without sensitive data)
@@ -77,7 +79,13 @@ message RevokeAPIKeyRequest {
   string api_key_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
+// Revoke API key response
+message RevokeAPIKeyResponse {}
+
 // Delete API key request
 message DeleteAPIKeyRequest {
   string api_key_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
+
+// Delete API key response
+message DeleteAPIKeyResponse {}

@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
-	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -19,8 +19,12 @@ import (
 func (s *Server) RemoveProjectMember(
 	ctx context.Context,
 	req *connect.Request[organizationv1.RemoveProjectMemberRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	memberID := uuid.MustParse(req.Msg.MemberId)
+) (*connect.Response[organizationv1.RemoveProjectMemberResponse], error) {
+	memberID := uuid.MustParse(req.Msg.GetMemberId())
+
+	if err := s.checkPermission(ctx, authz.CanDelete(), authz.ProjectMember(memberID)); err != nil {
+		return nil, err
+	}
 
 	rowsAffected, err := s.queries.ProjectMemberDelete(ctx, db.ProjectMemberDeleteParams{ID: memberID})
 	if err != nil {
@@ -43,5 +47,5 @@ func (s *Server) RemoveProjectMember(
 		"member_id", memberID,
 	)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.RemoveProjectMemberResponse_builder{}.Build()), nil
 }

@@ -18,7 +18,7 @@ interface Project {
 
 interface Organization {
   id: string;
-  name: string;
+  displayName: string;
   projects: Project[];
 }
 
@@ -71,7 +71,7 @@ export default class SelectorModalComponent {
 
     return orgs
       .map((org) => {
-        const orgMatches = org.name.toLowerCase().includes(filterText);
+        const orgMatches = org.displayName.toLowerCase().includes(filterText);
         const filteredProjects = org.projects.filter((project) =>
           project.name.toLowerCase().includes(filterText),
         );

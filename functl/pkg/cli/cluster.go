@@ -25,12 +25,12 @@ func (c *ClusterListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Clusters().ListClusters(context.Background(), connect.NewRequest(&organizationv1.ListClustersRequest{}))
+	resp, err := apiClient.Clusters().ListClusters(context.Background(), connect.NewRequest(organizationv1.ListClustersRequest_builder{}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to list clusters: %w", err)
 	}
 
-	clusters := resp.Msg.Clusters
+	clusters := resp.Msg.GetClusters()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(clusters)
@@ -45,10 +45,10 @@ func (c *ClusterListCmd) Run(ctx *Context) error {
 	fmt.Fprintln(w, "ID\tNAME\tSTATUS\tREGION")
 	for _, cluster := range clusters {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-			cluster.Id,
-			cluster.Name,
-			formatClusterStatus(cluster.Status),
-			cluster.Region,
+			cluster.GetId(),
+			cluster.GetName(),
+			formatClusterStatus(cluster.GetStatus()),
+			cluster.GetRegion(),
 		)
 	}
 	return w.Flush()
@@ -66,27 +66,27 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Clusters().GetCluster(context.Background(), connect.NewRequest(&organizationv1.GetClusterRequest{
+	resp, err := apiClient.Clusters().GetCluster(context.Background(), connect.NewRequest(organizationv1.GetClusterRequest_builder{
 		ClusterId: c.ClusterID,
-	}))
+	}.Build()))
 	if err != nil {
 		return fmt.Errorf("failed to get cluster: %w", err)
 	}
 
-	cluster := resp.Msg.Cluster
+	cluster := resp.Msg.GetCluster()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(cluster)
 	}
 
 	w := NewTableWriter()
-	PrintKeyValue(w, "ID", cluster.Id)
-	PrintKeyValue(w, "Name", cluster.Name)
-	PrintKeyValue(w, "Region", cluster.Region)
-	PrintKeyValue(w, "Kubernetes Version", cluster.KubernetesVersion)
-	PrintKeyValue(w, "Status", formatClusterStatus(cluster.Status))
-	if cluster.Created != nil {
-		PrintKeyValue(w, "Created", cluster.Created.AsTime().Format(TimeFormat))
+	PrintKeyValue(w, "ID", cluster.GetId())
+	PrintKeyValue(w, "Name", cluster.GetName())
+	PrintKeyValue(w, "Region", cluster.GetRegion())
+	PrintKeyValue(w, "Kubernetes Version", cluster.GetKubernetesVersion())
+	PrintKeyValue(w, "Status", formatClusterStatus(cluster.GetStatus()))
+	if cluster.GetCreated() != nil {
+		PrintKeyValue(w, "Created", cluster.GetCreated().AsTime().Format(TimeFormat))
 	}
 	return w.Flush()
 }

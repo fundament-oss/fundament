@@ -28,11 +28,13 @@ func (h *Handler) ProjectMember(ctx context.Context, qtx *db.Queries, memberID u
 
 	user := authz.User(member.UserID)
 	project := authz.Project(member.ProjectID)
+	projectMember := authz.ProjectMember(member.ID)
 
 	// Remove conflicting role tuples first
 	if err := h.deleteTuplesIfExist(ctx,
 		tupleDelete(user, authz.ActionProjectAdmin, project),
 		tupleDelete(user, authz.ActionProjectViewer, project),
+		tupleDelete(project, authz.ActionParent, projectMember),
 	); err != nil {
 		return err
 	}
@@ -52,5 +54,8 @@ func (h *Handler) ProjectMember(ctx context.Context, qtx *db.Queries, memberID u
 		panic(fmt.Sprintf("unknown project member role: %s", member.Role))
 	}
 
-	return h.writeTuples(ctx, tuple(user, action, project))
+	return h.writeTuples(ctx,
+		tuple(user, action, project),
+		tuple(project, authz.ActionParent, projectMember),
+	)
 }

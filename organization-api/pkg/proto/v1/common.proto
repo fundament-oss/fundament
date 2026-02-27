@@ -1,7 +1,11 @@
-syntax = "proto3";
+edition = "2023";
 
 package organization.v1;
 
+import "google/protobuf/go_features.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
 // Resource usage information
@@ -21,7 +25,7 @@ enum ClusterStatus {
   CLUSTER_STATUS_ERROR = 5;
   CLUSTER_STATUS_STOPPING = 6;
   CLUSTER_STATUS_STOPPED = 7;
-  CLUSTER_STATUS_DELETING = 8;  // Cluster deletion in progress
+  CLUSTER_STATUS_DELETING = 8; // Cluster deletion in progress
 }
 
 // Node pool status

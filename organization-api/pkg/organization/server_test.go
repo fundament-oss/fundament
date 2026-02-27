@@ -83,7 +83,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		Clock:              opts.Clock,
 	}
 
-	organizationServer, err := organization.New(testLogger, organizationCfg, testDb)
+	organizationServer, err := organization.New(testLogger, organizationCfg, testDb, nil)
 	require.NoError(t, err)
 
 	ts := httptest.NewServer(organizationServer.Handler())
@@ -91,8 +91,8 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 
 	for id, name := range opts.Organizations {
 		_, err = testDb.Pool.Exec(t.Context(),
-			"INSERT INTO tenant.organizations (id, name) VALUES ($1, $2)",
-			id, name,
+			"INSERT INTO tenant.organizations (id, name, display_name) VALUES ($1, $2, $3)",
+			id, name, name,
 		)
 		require.NoError(t, err)
 	}

@@ -14,7 +14,7 @@ const clusterWizardGuard: CanActivateFn = (route) => {
   // For other steps, check if first step is completed
   if (!stateService.isFirstStepCompleted()) {
     // Redirect to first step if first step not completed
-    return router.createUrlTree(['/add-cluster']);
+    return router.createUrlTree(['/clusters/add']);
   }
 
   return true;

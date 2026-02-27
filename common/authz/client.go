@@ -69,9 +69,9 @@ func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision,
 
 	// Construct the OpenFGA check request, including context if any was provided.
 	checkReq := client.ClientCheckRequest{
-		User:     string(req.Subject.Type) + ":" + req.Subject.ID,
+		User:     req.Subject.String(),
 		Relation: string(req.Action.Name),
-		Object:   string(req.Resource.Type) + ":" + req.Resource.ID,
+		Object:   req.Resource.String(),
 	}
 
 	if len(checkContext) > 0 {

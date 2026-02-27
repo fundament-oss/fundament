@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -16,7 +17,11 @@ func (s *Server) ListProjectMembers(
 	ctx context.Context,
 	req *connect.Request[organizationv1.ListProjectMembersRequest],
 ) (*connect.Response[organizationv1.ListProjectMembersResponse], error) {
-	projectID := uuid.MustParse(req.Msg.ProjectId)
+	projectID := uuid.MustParse(req.Msg.GetProjectId())
+
+	if err := s.checkPermission(ctx, authz.CanListMembers(), authz.Project(projectID)); err != nil {
+		return nil, err
+	}
 
 	members, err := s.queries.ProjectMemberList(ctx, db.ProjectMemberListParams{ProjectID: projectID})
 	if err != nil {
@@ -28,18 +33,18 @@ func (s *Server) ListProjectMembers(
 		result = append(result, projectMemberFromListRow(&members[i]))
 	}
 
-	return connect.NewResponse(&organizationv1.ListProjectMembersResponse{
+	return connect.NewResponse(organizationv1.ListProjectMembersResponse_builder{
 		Members: result,
-	}), nil
+	}.Build()), nil
 }
 
 func projectMemberFromListRow(row *db.ProjectMemberListRow) *organizationv1.ProjectMember {
-	return &organizationv1.ProjectMember{
+	return organizationv1.ProjectMember_builder{
 		Id:        row.ID.String(),
 		ProjectId: row.ProjectID.String(),
 		UserId:    row.UserID.String(),
 		UserName:  row.UserName,
 		Role:      projectMemberRoleFromDB(row.Role),
 		Created:   timestamppb.New(row.Created.Time),
-	}
+	}.Build()
 }

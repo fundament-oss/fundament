@@ -6,6 +6,8 @@ metadata:
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
     app.kubernetes.io/component: organization-api
+  annotations:
+    reloader.stakater.com/auto: "true"
 spec:
   replicas: {{ $.Values.organizationApi.replicas }}
   selector:
@@ -34,6 +36,20 @@ spec:
             {{- if $.Values.externalUrls.corsAllowedOrigins }}
             - name: CORS_ALLOWED_ORIGINS
               value: {{ $.Values.externalUrls.corsAllowedOrigins }}
+            {{- end }}
+            {{- if $.Values.openfga.enabled }}
+            - name: OPENFGA_API_URL
+              value: http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.apiPort | default 8080 }}
+            - name: OPENFGA_STORE_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $.Release.Name }}-openfga-config
+                  key: store-id
+            - name: OPENFGA_AUTHORIZATION_MODEL_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $.Release.Name }}-openfga-config
+                  key: authorization-model-id
             {{- end }}
 ---
 apiVersion: v1

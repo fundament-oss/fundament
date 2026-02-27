@@ -23,9 +23,8 @@ type ClustersDataSource struct {
 
 // ClustersDataSourceModel describes the data source data model.
 type ClustersDataSourceModel struct {
-	ID        types.String   `tfsdk:"id"`
-	ProjectID types.String   `tfsdk:"project_id"`
-	Clusters  []ClusterModel `tfsdk:"clusters"`
+	ID       types.String   `tfsdk:"id"`
+	Clusters []ClusterModel `tfsdk:"clusters"`
 }
 
 // ClusterModel describes a single cluster in the data source.
@@ -54,10 +53,6 @@ func (d *ClustersDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 			"id": schema.StringAttribute{
 				Description: "Identifier for this data source.",
 				Computed:    true,
-			},
-			"project_id": schema.StringAttribute{
-				Description: "Filter clusters by project ID.",
-				Optional:    true,
 			},
 			"clusters": schema.ListNestedAttribute{
 				Description: "List of clusters.",
@@ -122,15 +117,9 @@ func (d *ClustersDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	// Build the request
-	projectID := state.ProjectID.ValueString()
-	tflog.Debug(ctx, "Fetching clusters", map[string]any{
-		"project_id": projectID,
-	})
+	tflog.Debug(ctx, "Fetching clusters")
 
-	rpcReq := connect.NewRequest(&organizationv1.ListClustersRequest{
-		ProjectId: projectID,
-	})
+	rpcReq := connect.NewRequest(organizationv1.ListClustersRequest_builder{}.Build())
 
 	// Call the API
 	rpcResp, err := d.client.ClusterService.ListClusters(ctx, rpcReq)
@@ -147,17 +136,10 @@ func (d *ClustersDataSource) Read(ctx context.Context, req datasource.ReadReques
 				"You do not have permission to list clusters in this organization.",
 			)
 		case connect.CodeNotFound:
-			if projectID != "" {
-				resp.Diagnostics.AddError(
-					"Project Not Found",
-					fmt.Sprintf("Project with ID %q does not exist.", projectID),
-				)
-			} else {
-				resp.Diagnostics.AddError(
-					"Not Found",
-					fmt.Sprintf("Unable to list clusters: %s", err.Error()),
-				)
-			}
+			resp.Diagnostics.AddError(
+				"Not Found",
+				fmt.Sprintf("Unable to list clusters: %s", err.Error()),
+			)
 		default:
 			resp.Diagnostics.AddError(
 				"Unable to List Clusters",
@@ -168,21 +150,18 @@ func (d *ClustersDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	// Map response to state
-	state.Clusters = make([]ClusterModel, len(rpcResp.Msg.Clusters))
-	for i, cluster := range rpcResp.Msg.Clusters {
+	state.Clusters = make([]ClusterModel, len(rpcResp.Msg.GetClusters()))
+	for i, cluster := range rpcResp.Msg.GetClusters() {
 		state.Clusters[i] = ClusterModel{
-			ID:     types.StringValue(cluster.Id),
-			Name:   types.StringValue(cluster.Name),
-			Status: types.StringValue(clusterStatusToString(cluster.Status)),
-			Region: types.StringValue(cluster.Region),
+			ID:     types.StringValue(cluster.GetId()),
+			Name:   types.StringValue(cluster.GetName()),
+			Status: types.StringValue(clusterStatusToString(cluster.GetStatus())),
+			Region: types.StringValue(cluster.GetRegion()),
 		}
 	}
 
 	// Set the data source ID
 	state.ID = types.StringValue("clusters")
-	if !state.ProjectID.IsNull() && state.ProjectID.ValueString() != "" {
-		state.ID = types.StringValue("clusters-" + state.ProjectID.ValueString())
-	}
 
 	tflog.Debug(ctx, "Fetched clusters successfully", map[string]any{
 		"cluster_count": len(state.Clusters),

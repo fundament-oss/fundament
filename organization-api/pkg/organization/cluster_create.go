@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -19,11 +20,15 @@ func (s *Server) CreateCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
+	if err := s.checkPermission(ctx, authz.CanCreateCluster(), authz.Organization(organizationID)); err != nil {
+		return nil, err
+	}
+
 	params := db.ClusterCreateParams{
 		OrganizationID:    organizationID,
-		Name:              req.Msg.Name,
-		Region:            req.Msg.Region,
-		KubernetesVersion: req.Msg.KubernetesVersion,
+		Name:              req.Msg.GetName(),
+		Region:            req.Msg.GetRegion(),
+		KubernetesVersion: req.Msg.GetKubernetesVersion(),
 	}
 
 	clusterID, err := s.queries.ClusterCreate(ctx, params)
@@ -34,11 +39,11 @@ func (s *Server) CreateCluster(
 	s.logger.InfoContext(ctx, "cluster created",
 		"cluster_id", clusterID,
 		"organization_id", organizationID,
-		"name", req.Msg.Name,
-		"region", req.Msg.Region,
+		"name", req.Msg.GetName(),
+		"region", req.Msg.GetRegion(),
 	)
 
-	return connect.NewResponse(&organizationv1.CreateClusterResponse{
+	return connect.NewResponse(organizationv1.CreateClusterResponse_builder{
 		ClusterId: clusterID.String(),
-	}), nil
+	}.Build()), nil
 }

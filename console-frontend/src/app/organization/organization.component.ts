@@ -101,7 +101,7 @@ export default class OrganizationComponent implements OnInit {
     const currentOrganization = this.organization();
     if (currentOrganization) {
       this.isEditing.set(true);
-      this.editingName.set(currentOrganization.name);
+      this.editingName.set(currentOrganization.displayName);
 
       // Focus the input field after Angular updates the view
       setTimeout(() => {
@@ -129,17 +129,17 @@ export default class OrganizationComponent implements OnInit {
     try {
       const request = create(UpdateOrganizationRequestSchema, {
         id: currentOrganization.id,
-        name: nameToSave.trim(),
+        displayName: nameToSave.trim(),
       });
 
       await firstValueFrom(this.organizationClient.updateOrganization(request));
 
-      // Update the local organization with the new name
+      // Update the local organization with the new display name
       this.organization.set({
         ...currentOrganization,
-        name: nameToSave.trim(),
+        displayName: nameToSave.trim(),
       });
-      this.organizationDataService.updateOrganizationName(
+      this.organizationDataService.updateOrganizationDisplayName(
         currentOrganization.id,
         nameToSave.trim(),
       );

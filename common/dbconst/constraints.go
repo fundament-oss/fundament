@@ -31,8 +31,6 @@ const (
 	ConstraintInstallsUq = "installs_uq"
 	// ConstraintNamespacesCkName is defined on tenant.namespaces.
 	ConstraintNamespacesCkName = "namespaces_ck_name"
-	// ConstraintNamespacesFkCluster is defined on tenant.namespaces.
-	ConstraintNamespacesFkCluster = "namespaces_fk_cluster"
 	// ConstraintNamespacesFkProject is defined on tenant.namespaces.
 	ConstraintNamespacesFkProject = "namespaces_fk_project"
 	// ConstraintNamespacesUqName is defined on tenant.namespaces.
@@ -41,6 +39,10 @@ const (
 	ConstraintNodePoolsFkCluster = "node_pools_fk_cluster"
 	// ConstraintNodePoolsUqName is defined on tenant.node_pools.
 	ConstraintNodePoolsUqName = "node_pools_uq_name"
+	// ConstraintOrganizationsCkDisplayName is defined on tenant.organizations.
+	ConstraintOrganizationsCkDisplayName = "organizations_ck_display_name"
+	// ConstraintOrganizationsCkName is defined on tenant.organizations.
+	ConstraintOrganizationsCkName = "organizations_ck_name"
 	// ConstraintOrganizationsUqName is defined on tenant.organizations.
 	ConstraintOrganizationsUqName = "organizations_uq_name"
 	// ConstraintOrganizationsUsersCkPermission is defined on tenant.organizations_users.
@@ -99,10 +101,10 @@ const (
 	ConstraintProjectMembersFkUser = "project_members_fk_user"
 	// ConstraintProjectMembersUqProjectUser is defined on tenant.project_members.
 	ConstraintProjectMembersUqProjectUser = "project_members_uq_project_user"
-	// ConstraintProjectsFkOrganization is defined on tenant.projects.
-	ConstraintProjectsFkOrganization = "projects_fk_organization"
-	// ConstraintProjectsUqOrganizationName is defined on tenant.projects.
-	ConstraintProjectsUqOrganizationName = "projects_uq_organization_name"
+	// ConstraintProjectsFkCluster is defined on tenant.projects.
+	ConstraintProjectsFkCluster = "projects_fk_cluster"
+	// ConstraintProjectsUqClusterName is defined on tenant.projects.
+	ConstraintProjectsUqClusterName = "projects_uq_cluster_name"
 	// ConstraintRequireAdmin is defined on (constraint trigger).
 	ConstraintRequireAdmin = "require_admin"
 	// ConstraintTagsUqName is defined on appstore.tags.

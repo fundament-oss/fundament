@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -19,12 +20,16 @@ func (s *Server) AddProjectMember(
 	ctx context.Context,
 	req *connect.Request[organizationv1.AddProjectMemberRequest],
 ) (*connect.Response[organizationv1.AddProjectMemberResponse], error) {
-	projectID := uuid.MustParse(req.Msg.ProjectId)
-	userID := uuid.MustParse(req.Msg.UserId)
+	projectID := uuid.MustParse(req.Msg.GetProjectId())
+	userID := uuid.MustParse(req.Msg.GetUserId())
 
-	role := projectMemberRoleToDB(req.Msg.Role)
+	role := projectMemberRoleToDB(req.Msg.GetRole())
 	if role == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid role"))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanManageMembers(), authz.Project(projectID)); err != nil {
+		return nil, err
 	}
 
 	memberID, err := s.queries.ProjectMemberCreate(ctx, db.ProjectMemberCreateParams{
@@ -50,7 +55,7 @@ func (s *Server) AddProjectMember(
 		"role", role,
 	)
 
-	return connect.NewResponse(&organizationv1.AddProjectMemberResponse{
+	return connect.NewResponse(organizationv1.AddProjectMemberResponse_builder{
 		MemberId: memberID.String(),
-	}), nil
+	}.Build()), nil
 }

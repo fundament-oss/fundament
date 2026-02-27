@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -16,9 +18,9 @@ func (s *Server) CreateProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.CreateProjectRequest],
 ) (*connect.Response[organizationv1.CreateProjectResponse], error) {
-	organizationID, ok := OrganizationIDFromContext(ctx)
-	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	if err := s.checkPermission(ctx, authz.CanCreateProject(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
 	}
 
 	userID, ok := UserIDFromContext(ctx)
@@ -27,9 +29,9 @@ func (s *Server) CreateProject(
 	}
 
 	s.logger.DebugContext(ctx, "creating project with member",
-		"organization_id", organizationID,
+		"cluster_id", clusterID,
 		"user_id", userID,
-		"name", req.Msg.Name,
+		"name", req.Msg.GetName(),
 	)
 
 	tx, err := s.db.Pool.Begin(ctx)
@@ -41,8 +43,8 @@ func (s *Server) CreateProject(
 	qtx := s.queries.WithTx(tx)
 
 	projectID, err := qtx.ProjectCreate(ctx, db.ProjectCreateParams{
-		OrganizationID: organizationID,
-		Name:           req.Msg.Name,
+		ClusterID: clusterID,
+		Name:      req.Msg.GetName(),
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create project: %w", err))
@@ -63,12 +65,12 @@ func (s *Server) CreateProject(
 
 	s.logger.DebugContext(ctx, "project created",
 		"project_id", projectID,
-		"organization_id", organizationID,
+		"cluster_id", clusterID,
 		"user_id", userID,
-		"name", req.Msg.Name,
+		"name", req.Msg.GetName(),
 	)
 
-	return connect.NewResponse(&organizationv1.CreateProjectResponse{
+	return connect.NewResponse(organizationv1.CreateProjectResponse_builder{
 		ProjectId: projectID.String(),
-	}), nil
+	}.Build()), nil
 }

@@ -35,7 +35,8 @@ func (c *OrganizationCreateCmd) Run(ctx *Context) error {
 	ctx.Logger.Debug("creating organization", "name", c.Name)
 
 	org, err := ctx.Queries.OrganizationCreate(context.Background(), db.OrganizationCreateParams{
-		Name: c.Name,
+		Name:        c.Name,
+		DisplayName: c.Name,
 	})
 	if err != nil {
 		// Check for unique constraint violation
@@ -85,9 +86,10 @@ func (c *OrganizationDeleteCmd) Run(ctx *Context) error {
 
 // organizationOutput is the JSON output structure for an organization.
 type organizationOutput struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Created string `json:"created"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	DisplayName string `json:"display_name"`
+	Created     string `json:"created"`
 }
 
 // organizationCreateOutput is the JSON output structure for organization create.
@@ -115,19 +117,21 @@ func outputOrganizationList(format OutputFormat, orgs []db.OrganizationListRow) 
 		output := make([]organizationOutput, len(orgs))
 		for i, org := range orgs {
 			output[i] = organizationOutput{
-				ID:      org.ID.String(),
-				Name:    org.Name,
-				Created: org.Created.Time.Format(TimeFormat),
+				ID:          org.ID.String(),
+				Name:        org.Name,
+				DisplayName: org.DisplayName,
+				Created:     org.Created.Time.Format(TimeFormat),
 			}
 		}
 		return PrintJSON(output)
 	case OutputTable:
 		w := NewTableWriter()
-		fmt.Fprintln(w, "ID\tNAME\tCREATED")
+		fmt.Fprintln(w, "ID\tNAME\tDISPLAY_NAME\tCREATED")
 		for _, org := range orgs {
-			fmt.Fprintf(w, "%s\t%s\t%s\n",
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 				org.ID.String(),
 				org.Name,
+				org.DisplayName,
 				org.Created.Time.Format(TimeFormat),
 			)
 		}

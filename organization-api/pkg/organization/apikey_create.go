@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/apitoken"
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -20,6 +21,10 @@ func (s *Server) CreateAPIKey(
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanCreateApikey(), authz.Organization(organizationID)); err != nil {
+		return nil, err
 	}
 
 	claims, ok := ClaimsFromContext(ctx)
@@ -34,8 +39,8 @@ func (s *Server) CreateAPIKey(
 
 	expires := pgtype.Timestamptz{Valid: false}
 
-	if req.Msg.ExpiresIn != "" {
-		expiresIn, err := time.ParseDuration(req.Msg.ExpiresIn)
+	if req.Msg.GetExpiresIn() != "" {
+		expiresIn, err := time.ParseDuration(req.Msg.GetExpiresIn())
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse expires_in: %w", err))
 		}
@@ -51,7 +56,7 @@ func (s *Server) CreateAPIKey(
 	params := db.APIKeyCreateParams{
 		OrganizationID: organizationID,
 		UserID:         claims.UserID,
-		Name:           req.Msg.Name,
+		Name:           req.Msg.GetName(),
 		TokenHash:      hash,
 		TokenPrefix:    prefix,
 		Expires:        expires,
@@ -66,12 +71,12 @@ func (s *Server) CreateAPIKey(
 		"api_key_id", id,
 		"organization_id", organizationID,
 		"user_id", claims.UserID,
-		"name", req.Msg.Name,
+		"name", req.Msg.GetName(),
 	)
 
-	return connect.NewResponse(&organizationv1.CreateAPIKeyResponse{
+	return connect.NewResponse(organizationv1.CreateAPIKeyResponse_builder{
 		Id:          id.String(),
 		Token:       token,
 		TokenPrefix: prefix,
-	}), nil
+	}.Build()), nil
 }

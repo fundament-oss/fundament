@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
-	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -19,12 +19,16 @@ import (
 func (s *Server) UpdateProjectMemberRole(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateProjectMemberRoleRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	memberID := uuid.MustParse(req.Msg.MemberId)
+) (*connect.Response[organizationv1.UpdateProjectMemberRoleResponse], error) {
+	memberID := uuid.MustParse(req.Msg.GetMemberId())
 
-	role := projectMemberRoleToDB(req.Msg.Role)
+	role := projectMemberRoleToDB(req.Msg.GetRole())
 	if role == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid role"))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanEdit(), authz.ProjectMember(memberID)); err != nil {
+		return nil, err
 	}
 
 	rowsAffected, err := s.queries.ProjectMemberUpdateRole(ctx, db.ProjectMemberUpdateRoleParams{
@@ -50,5 +54,5 @@ func (s *Server) UpdateProjectMemberRole(
 		"role", role,
 	)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.UpdateProjectMemberRoleResponse_builder{}.Build()), nil
 }

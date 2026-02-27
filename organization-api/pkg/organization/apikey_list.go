@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -17,6 +18,10 @@ func (s *Server) ListAPIKeys(
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanListApikeys(), authz.Organization(organizationID)); err != nil {
+		return nil, err
 	}
 
 	claims, ok := ClaimsFromContext(ctx)
@@ -37,7 +42,7 @@ func (s *Server) ListAPIKeys(
 		result = append(result, apiKeyFromListRow(&keys[idx]))
 	}
 
-	return connect.NewResponse(&organizationv1.ListAPIKeysResponse{
+	return connect.NewResponse(organizationv1.ListAPIKeysResponse_builder{
 		ApiKeys: result,
-	}), nil
+	}.Build()), nil
 }

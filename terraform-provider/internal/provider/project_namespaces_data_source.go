@@ -70,7 +70,7 @@ func (d *ProjectNamespacesDataSource) Schema(ctx context.Context, req datasource
 							Computed:    true,
 						},
 						"cluster_id": schema.StringAttribute{
-							Description: "The ID of the cluster where this namespace is deployed.",
+							Description: "The ID of the cluster containing this namespace.",
 							Computed:    true,
 						},
 						"created": schema.StringAttribute{
@@ -124,12 +124,12 @@ func (d *ProjectNamespacesDataSource) Read(ctx context.Context, req datasource.R
 		"project_id": projectID,
 	})
 
-	rpcReq := connect.NewRequest(&organizationv1.ListProjectNamespacesRequest{
+	rpcReq := connect.NewRequest(organizationv1.ListProjectNamespacesRequest_builder{
 		ProjectId: projectID,
-	})
+	}.Build())
 
 	// Call the API
-	rpcResp, err := d.client.ProjectService.ListProjectNamespaces(ctx, rpcReq)
+	rpcResp, err := d.client.NamespaceService.ListProjectNamespaces(ctx, rpcReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeInvalidArgument:
@@ -157,14 +157,14 @@ func (d *ProjectNamespacesDataSource) Read(ctx context.Context, req datasource.R
 	}
 
 	// Map response to state
-	state.Namespaces = make([]NamespaceModel, len(rpcResp.Msg.Namespaces))
-	for i, ns := range rpcResp.Msg.Namespaces {
+	state.Namespaces = make([]NamespaceModel, len(rpcResp.Msg.GetNamespaces()))
+	for i, ns := range rpcResp.Msg.GetNamespaces() {
 		state.Namespaces[i] = NamespaceModel{
-			ID:        types.StringValue(ns.Id),
-			Name:      types.StringValue(ns.Name),
-			ProjectID: types.StringValue(projectID), // Set from request context
-			ClusterID: types.StringValue(ns.ClusterId),
-			Created:   types.StringValue(ns.Created.AsTime().Format(time.RFC3339)),
+			ID:        types.StringValue(ns.GetId()),
+			Name:      types.StringValue(ns.GetName()),
+			ProjectID: types.StringValue(projectID),
+			ClusterID: types.StringValue(ns.GetClusterId()),
+			Created:   types.StringValue(ns.GetCreated().AsTime().Format(time.RFC3339)),
 		}
 	}
 

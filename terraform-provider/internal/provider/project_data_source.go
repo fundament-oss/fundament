@@ -40,6 +40,14 @@ func (d *ProjectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				Description: "The unique identifier of the project.",
 				Computed:    true,
 			},
+			"cluster_id": schema.StringAttribute{
+				Description: "The ID of the cluster this project belongs to.",
+				Computed:    true,
+			},
+			"cluster_name": schema.StringAttribute{
+				Description: "The name of the cluster this project belongs to.",
+				Computed:    true,
+			},
 			"name": schema.StringAttribute{
 				Description: "The name of the project to look up.",
 				Required:    true,
@@ -91,9 +99,9 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		"name": config.Name.ValueString(),
 	})
 
-	getReq := connect.NewRequest(&organizationv1.GetProjectByNameRequest{
+	getReq := connect.NewRequest(organizationv1.GetProjectByNameRequest_builder{
 		Name: config.Name.ValueString(),
-	})
+	}.Build())
 
 	getResp, err := d.client.ProjectService.GetProjectByName(ctx, getReq)
 	if err != nil {
@@ -122,14 +130,31 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	project := getResp.Msg.Project
+	project := getResp.Msg.GetProject()
 
 	// Map response to state
-	config.ID = types.StringValue(project.Id)
-	config.Name = types.StringValue(project.Name)
+	config.ID = types.StringValue(project.GetId())
+	config.Name = types.StringValue(project.GetName())
+	config.ClusterID = types.StringValue(project.GetClusterId())
 
-	if project.Created.CheckValid() == nil {
-		config.Created = types.StringValue(project.Created.String())
+	// Resolve cluster name
+	clusterReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+		ClusterId: project.GetClusterId(),
+	}.Build())
+
+	clusterResp, err := d.client.ClusterService.GetCluster(ctx, clusterReq)
+	if err != nil {
+		tflog.Error(ctx, "Unable to resolve cluster name", map[string]any{
+			"cluster_id": project.GetClusterId(),
+			"error":      err.Error(),
+		})
+		return
+	} else {
+		config.ClusterName = types.StringValue(clusterResp.Msg.GetCluster().GetName())
+	}
+
+	if project.GetCreated().CheckValid() == nil {
+		config.Created = types.StringValue(project.GetCreated().String())
 	}
 
 	tflog.Debug(ctx, "Read project successfully", map[string]any{

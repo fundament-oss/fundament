@@ -12,7 +12,7 @@ import (
 	"github.com/fundament-oss/fundament/common/authz"
 )
 
-// Project syncs a project's organization relationship to OpenFGA.
+// Project syncs a project's cluster relationship to OpenFGA.
 func (h *Handler) Project(ctx context.Context, qtx *db.Queries, projectID uuid.UUID) error {
 	project, err := qtx.GetProjectByID(ctx, db.GetProjectByIDParams{ID: projectID})
 	if err != nil {
@@ -25,14 +25,14 @@ func (h *Handler) Project(ctx context.Context, qtx *db.Queries, projectID uuid.U
 
 	h.logger.DebugContext(ctx, "handle project", "project", project)
 
-	orgObj := authz.Organization(project.OrganizationID)
+	clusterObj := authz.Cluster(project.ClusterID)
 	projectObj := authz.Project(project.ID)
 
 	if project.Deleted.Valid {
 		return h.deleteTuplesIfExist(ctx,
-			tupleDelete(orgObj, authz.ActionOwner, projectObj),
+			tupleDelete(clusterObj, authz.ActionParent, projectObj),
 		)
 	}
 
-	return h.writeTuples(ctx, tuple(orgObj, authz.ActionOwner, projectObj))
+	return h.writeTuples(ctx, tuple(clusterObj, authz.ActionParent, projectObj))
 }

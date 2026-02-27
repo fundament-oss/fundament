@@ -20,7 +20,7 @@
 
     <!-- Create Cluster Button -->
     <div>
-      <a routerLink="/add-cluster" class="btn-primary inline-flex items-center">
+      <a routerLink="/clusters/add" class="btn-primary inline-flex items-center">
         <ng-icon name="tablerPlus" class="mr-1.5" />
         Add a Kubernetes cluster
       </a>
@@ -52,7 +52,7 @@
                   Number of node pools
                 </dt>
                 <dd class="mt-0.5 mb-4 text-sm dark:text-white">
-                  {{ getNodePoolCount(cluster.id) }}
+                  {{ cluster.nodePoolCount }}
                 </dd>
               </dl>
 

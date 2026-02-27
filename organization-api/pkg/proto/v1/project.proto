@@ -1,12 +1,14 @@
-syntax = "proto3";
+edition = "2023";
 
 package organization.v1;
 
 import "buf/validate/validate.proto";
-import "google/protobuf/empty.proto";
+import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
 
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
 // ProjectService manages projects within an organization
@@ -24,13 +26,10 @@ service ProjectService {
   rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
 
   // Update project configuration
-  rpc UpdateProject(UpdateProjectRequest) returns (google.protobuf.Empty);
+  rpc UpdateProject(UpdateProjectRequest) returns (UpdateProjectResponse);
 
   // Delete a project
-  rpc DeleteProject(DeleteProjectRequest) returns (google.protobuf.Empty);
-
-  // List all namespaces belonging to a project
-  rpc ListProjectNamespaces(ListProjectNamespacesRequest) returns (ListProjectNamespacesResponse);
+  rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
 
   // List all members of a project
   rpc ListProjectMembers(ListProjectMembersRequest) returns (ListProjectMembersResponse);
@@ -42,14 +41,16 @@ service ProjectService {
   rpc AddProjectMember(AddProjectMemberRequest) returns (AddProjectMemberResponse);
 
   // Update a member's role (requires admin role)
-  rpc UpdateProjectMemberRole(UpdateProjectMemberRoleRequest) returns (google.protobuf.Empty);
+  rpc UpdateProjectMemberRole(UpdateProjectMemberRoleRequest) returns (UpdateProjectMemberRoleResponse);
 
   // Remove a member from a project (requires admin role)
-  rpc RemoveProjectMember(RemoveProjectMemberRequest) returns (google.protobuf.Empty);
+  rpc RemoveProjectMember(RemoveProjectMemberRequest) returns (RemoveProjectMemberResponse);
 }
 
 // List projects request
-message ListProjectsRequest {}
+message ListProjectsRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
 
 // List projects response
 message ListProjectsResponse {
@@ -78,12 +79,14 @@ message GetProjectResponse {
 // Project information
 message Project {
   string id = 10;
+  string cluster_id = 15;
   string name = 20;
   google.protobuf.Timestamp created = 30;
 }
 
 // Create project request
 message CreateProjectRequest {
+  string cluster_id = 5 [(buf.validate.field).string = {uuid: true}];
   string name = 10 [(buf.validate.field).cel = {
     id: "dns1123label"
     message: "must be a valid DNS-1123 label"
@@ -99,34 +102,25 @@ message CreateProjectResponse {
 // Update project request
 message UpdateProjectRequest {
   string project_id = 10 [(buf.validate.field).string = {uuid: true}];
-  optional string name = 20 [(buf.validate.field).string = {
-    min_len: 1
-    max_len: 255
-  }];
+  string name = 20 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 255
+    }
+  ];
 }
+
+// Update project response
+message UpdateProjectResponse {}
 
 // Delete project request
 message DeleteProjectRequest {
   string project_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
 
-// List project namespaces request
-message ListProjectNamespacesRequest {
-  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
-}
-
-// List project namespaces response
-message ListProjectNamespacesResponse {
-  repeated ProjectNamespace namespaces = 10;
-}
-
-// Project namespace information
-message ProjectNamespace {
-  string id = 10;
-  string name = 20;
-  string cluster_id = 30;
-  google.protobuf.Timestamp created = 40;
-}
+// Delete project response
+message DeleteProjectResponse {}
 
 // Project member role
 enum ProjectMemberRole {
@@ -187,7 +181,13 @@ message UpdateProjectMemberRoleRequest {
   }];
 }
 
+// Update project member role response
+message UpdateProjectMemberRoleResponse {}
+
 // Remove project member request
 message RemoveProjectMemberRequest {
   string member_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
+
+// Remove project member response
+message RemoveProjectMemberResponse {}

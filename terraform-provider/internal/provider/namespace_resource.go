@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -57,17 +56,39 @@ func (r *NamespaceResource) Schema(ctx context.Context, req resource.SchemaReque
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Description: "The ID of the project that owns this namespace.",
-				Required:    true,
+				Description: "The ID of the project that owns this namespace. Either project_id or project_name must be specified, but not both.",
+				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"project_name": schema.StringAttribute{
+				Description: "The name of the project that owns this namespace. Either project_id or project_name must be specified, but not both.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"cluster_id": schema.StringAttribute{
-				Description: "The ID of the cluster where this namespace will be created.",
-				Required:    true,
+				Description: "The ID of the cluster where this namespace is deployed. Derived from the project.",
+				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"cluster_name": schema.StringAttribute{
+				Description: "The name of the cluster where this namespace is deployed. Derived from the project.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"created": schema.StringAttribute{
@@ -99,9 +120,80 @@ func (r *NamespaceResource) Configure(ctx context.Context, req resource.Configur
 	r.client = client
 }
 
+// resolveProjectID resolves a project_id from the state, using project_name if project_id is not provided.
+func (r *NamespaceResource) resolveProjectID(ctx context.Context, state *NamespaceResourceModel) (string, error) {
+	hasProjectID := !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown()
+	hasProjectName := !state.ProjectName.IsNull() && !state.ProjectName.IsUnknown()
+
+	if !hasProjectID && !hasProjectName {
+		return "", fmt.Errorf("either 'project_id' or 'project_name' must be specified")
+	}
+
+	// Prefer project_id when both are present (UseStateForUnknown may populate both from state)
+	if hasProjectID {
+		return state.ProjectID.ValueString(), nil
+	}
+
+	// Resolve project_name to project_id
+	getReq := connect.NewRequest(organizationv1.GetProjectByNameRequest_builder{
+		Name: state.ProjectName.ValueString(),
+	}.Build())
+
+	getResp, err := r.client.ProjectService.GetProjectByName(ctx, getReq)
+	if err != nil {
+		return "", fmt.Errorf("unable to find project with name %q: %s", state.ProjectName.ValueString(), err.Error())
+	}
+
+	return getResp.Msg.GetProject().GetId(), nil
+}
+
+// populateClusterFields populates both cluster_id and cluster_name on the state from the given cluster_id.
+func (r *NamespaceResource) populateClusterFields(ctx context.Context, state *NamespaceResourceModel, clusterID string) {
+	state.ClusterID = types.StringValue(clusterID)
+
+	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+		ClusterId: clusterID,
+	}.Build())
+
+	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
+	if err != nil {
+		tflog.Warn(ctx, "Unable to resolve cluster name", map[string]any{
+			"cluster_id": clusterID,
+			"error":      err.Error(),
+		})
+
+		state.ClusterName = types.StringNull()
+		return
+	}
+
+	state.ClusterName = types.StringValue(getResp.Msg.GetCluster().GetName())
+}
+
+// populateProjectFields populates both project_id and project_name on the state from the given project_id.
+func (r *NamespaceResource) populateProjectFields(ctx context.Context, state *NamespaceResourceModel, projectID string) {
+	state.ProjectID = types.StringValue(projectID)
+
+	getReq := connect.NewRequest(organizationv1.GetProjectRequest_builder{
+		ProjectId: projectID,
+	}.Build())
+
+	getResp, err := r.client.ProjectService.GetProject(ctx, getReq)
+	if err != nil {
+		tflog.Warn(ctx, "Unable to resolve project name", map[string]any{
+			"project_id": projectID,
+			"error":      err.Error(),
+		})
+
+		state.ProjectName = types.StringNull()
+		return
+	}
+
+	state.ProjectName = types.StringValue(getResp.Msg.GetProject().GetName())
+}
+
 // Create creates a new namespace.
 func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan NamespaceModel
+	var plan NamespaceResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
@@ -116,20 +208,27 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
+	projectID, err := r.resolveProjectID(ctx, &plan)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Resolve Project",
+			err.Error(),
+		)
+		return
+	}
+
 	tflog.Debug(ctx, "Creating namespace", map[string]any{
 		"name":       plan.Name.ValueString(),
-		"project_id": plan.ProjectID.ValueString(),
-		"cluster_id": plan.ClusterID.ValueString(),
+		"project_id": projectID,
 	})
 
 	// Create the namespace
-	createReq := connect.NewRequest(&organizationv1.CreateNamespaceRequest{
-		ProjectId: plan.ProjectID.ValueString(),
-		ClusterId: plan.ClusterID.ValueString(),
+	createReq := connect.NewRequest(organizationv1.CreateNamespaceRequest_builder{
+		ProjectId: projectID,
 		Name:      plan.Name.ValueString(),
-	})
+	}.Build())
 
-	createResp, err := r.client.ClusterService.CreateNamespace(ctx, createReq)
+	createResp, err := r.client.NamespaceService.CreateNamespace(ctx, createReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeNotFound:
@@ -162,15 +261,14 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Set the ID from the response
-	plan.ID = types.StringValue(createResp.Msg.NamespaceId)
+	plan.ID = types.StringValue(createResp.Msg.GetNamespaceId())
 
 	// Read back the namespace to get created and other computed fields
-	// We need to list namespaces in the cluster to get the full details
-	listReq := connect.NewRequest(&organizationv1.ListClusterNamespacesRequest{
-		ClusterId: plan.ClusterID.ValueString(),
-	})
+	getReq := connect.NewRequest(organizationv1.GetNamespaceRequest_builder{
+		NamespaceId: plan.ID.ValueString(),
+	}.Build())
 
-	listResp, err := r.client.ClusterService.ListClusterNamespaces(ctx, listReq)
+	getResp, err := r.client.NamespaceService.GetNamespace(ctx, getReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Created Namespace",
@@ -179,23 +277,9 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	// Find the created namespace in the list
-	var found bool
-	for _, ns := range listResp.Msg.Namespaces {
-		if ns.Id == plan.ID.ValueString() {
-			plan.Created = types.StringValue(ns.Created.AsTime().Format(time.RFC3339))
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		resp.Diagnostics.AddError(
-			"Unable to Find Created Namespace",
-			fmt.Sprintf("Namespace was created with ID %q but could not be found in the cluster.", plan.ID.ValueString()),
-		)
-		return
-	}
+	plan.Created = types.StringValue(getResp.Msg.GetNamespace().GetCreated().AsTime().Format(time.RFC3339))
+	r.populateClusterFields(ctx, &plan, getResp.Msg.GetNamespace().GetClusterId())
+	r.populateProjectFields(ctx, &plan, getResp.Msg.GetNamespace().GetProjectId())
 
 	tflog.Info(ctx, "Created namespace", map[string]any{
 		"id":      plan.ID.ValueString(),
@@ -207,7 +291,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 
 // Read refreshes the Terraform state with the latest data.
 func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state NamespaceModel
+	var state NamespaceResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -223,53 +307,36 @@ func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	tflog.Debug(ctx, "Reading namespace", map[string]any{
-		"id":         state.ID.ValueString(),
-		"cluster_id": state.ClusterID.ValueString(),
+		"id": state.ID.ValueString(),
 	})
 
-	// List namespaces in the cluster and find this one
-	listReq := connect.NewRequest(&organizationv1.ListClusterNamespacesRequest{
-		ClusterId: state.ClusterID.ValueString(),
-	})
+	getReq := connect.NewRequest(organizationv1.GetNamespaceRequest_builder{
+		NamespaceId: state.ID.ValueString(),
+	}.Build())
 
-	listResp, err := r.client.ClusterService.ListClusterNamespaces(ctx, listReq)
+	getResp, err := r.client.NamespaceService.GetNamespace(ctx, getReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeNotFound:
-			tflog.Info(ctx, "Cluster not found, removing namespace from state", map[string]any{
-				"id":         state.ID.ValueString(),
-				"cluster_id": state.ClusterID.ValueString(),
+			tflog.Info(ctx, "Namespace not found, removing from state", map[string]any{
+				"id": state.ID.ValueString(),
 			})
 			resp.State.RemoveResource(ctx)
 			return
 		default:
 			resp.Diagnostics.AddError(
 				"Unable to Read Namespace",
-				fmt.Sprintf("Unable to list namespaces in cluster: %s", err.Error()),
+				fmt.Sprintf("Unable to read namespace: %s", err.Error()),
 			)
 			return
 		}
 	}
 
-	// Find this namespace in the list
-	var found bool
-	for _, ns := range listResp.Msg.Namespaces {
-		if ns.Id == state.ID.ValueString() {
-			state.Name = types.StringValue(ns.Name)
-			state.ProjectID = types.StringValue(ns.ProjectId)
-			state.Created = types.StringValue(ns.Created.AsTime().Format(time.RFC3339))
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		tflog.Info(ctx, "Namespace not found, removing from state", map[string]any{
-			"id": state.ID.ValueString(),
-		})
-		resp.State.RemoveResource(ctx)
-		return
-	}
+	ns := getResp.Msg.GetNamespace()
+	state.Name = types.StringValue(ns.GetName())
+	state.Created = types.StringValue(ns.GetCreated().AsTime().Format(time.RFC3339))
+	r.populateClusterFields(ctx, &state, ns.GetClusterId())
+	r.populateProjectFields(ctx, &state, ns.GetProjectId())
 
 	tflog.Debug(ctx, "Read namespace successfully", map[string]any{
 		"id":   state.ID.ValueString(),
@@ -289,7 +356,7 @@ func (r *NamespaceResource) Update(ctx context.Context, req resource.UpdateReque
 
 // Delete deletes the namespace.
 func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state NamespaceModel
+	var state NamespaceResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -308,11 +375,11 @@ func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteReque
 		"id": state.ID.ValueString(),
 	})
 
-	deleteReq := connect.NewRequest(&organizationv1.DeleteNamespaceRequest{
+	deleteReq := connect.NewRequest(organizationv1.DeleteNamespaceRequest_builder{
 		NamespaceId: state.ID.ValueString(),
-	})
+	}.Build())
 
-	_, err := r.client.ClusterService.DeleteNamespace(ctx, deleteReq)
+	_, err := r.client.NamespaceService.DeleteNamespace(ctx, deleteReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeNotFound:
@@ -343,30 +410,5 @@ func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteReque
 
 // ImportState imports an existing namespace into Terraform state.
 func (r *NamespaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// The import ID should be in the format "cluster_id:namespace_id"
-	// We need cluster_id to be able to read the namespace details
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		resp.Diagnostics.AddError(
-			"Invalid Import ID Format",
-			fmt.Sprintf(
-				"Expected import ID in format 'cluster_id:namespace_id', got: %q\n\n"+
-					"Example: terraform import fundament_namespace.example 01234567-89ab-cdef-0123-456789abcdef:fedcba98-7654-3210-fedc-ba9876543210",
-				req.ID,
-			),
-		)
-		return
-	}
-
-	clusterID := parts[0]
-	namespaceID := parts[1]
-
-	tflog.Debug(ctx, "Importing namespace", map[string]any{
-		"cluster_id":   clusterID,
-		"namespace_id": namespaceID,
-	})
-
-	// Set the cluster_id and id in state
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cluster_id"), clusterID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), namespaceID)...)
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

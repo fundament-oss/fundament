@@ -112,7 +112,7 @@ func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource
 
 	tflog.Debug(ctx, "Fetching organization members")
 
-	rpcReq := connect.NewRequest(&organizationv1.ListMembersRequest{})
+	rpcReq := connect.NewRequest(organizationv1.ListMembersRequest_builder{}.Build())
 
 	rpcResp, err := d.client.MemberService.ListMembers(ctx, rpcReq)
 	if err != nil {
@@ -131,28 +131,28 @@ func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
-	state.Members = make([]OrganizationMemberModel, len(rpcResp.Msg.Members))
-	for i, member := range rpcResp.Msg.Members {
+	state.Members = make([]OrganizationMemberModel, len(rpcResp.Msg.GetMembers()))
+	for i, member := range rpcResp.Msg.GetMembers() {
 		m := OrganizationMemberModel{
-			ID:         types.StringValue(member.Id),
-			Name:       types.StringValue(member.Name),
-			Permission: types.StringValue(member.Permission),
+			ID:         types.StringValue(member.GetId()),
+			Name:       types.StringValue(member.GetName()),
+			Permission: types.StringValue(member.GetPermission()),
 		}
 
-		if member.Email != nil {
-			m.Email = types.StringValue(*member.Email)
+		if member.HasEmail() {
+			m.Email = types.StringValue(member.GetEmail())
 		} else {
 			m.Email = types.StringNull()
 		}
 
-		if member.ExternalRef != nil {
-			m.ExternalID = types.StringValue(*member.ExternalRef)
+		if member.HasExternalRef() {
+			m.ExternalID = types.StringValue(member.GetExternalRef())
 		} else {
 			m.ExternalID = types.StringNull()
 		}
 
-		if member.Created.CheckValid() == nil {
-			m.Created = types.StringValue(member.Created.String())
+		if member.GetCreated().CheckValid() == nil {
+			m.Created = types.StringValue(member.GetCreated().String())
 		} else {
 			m.Created = types.StringNull()
 		}

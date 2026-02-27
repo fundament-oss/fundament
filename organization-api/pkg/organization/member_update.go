@@ -6,8 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -16,10 +16,10 @@ import (
 func (s *Server) UpdateMemberPermission(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateMemberPermissionRequest],
-) (*connect.Response[emptypb.Empty], error) {
+) (*connect.Response[organizationv1.UpdateMemberPermissionResponse], error) {
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
 	}
 
 	userID, ok := UserIDFromContext(ctx)
@@ -27,7 +27,10 @@ func (s *Server) UpdateMemberPermission(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
 	}
 
-	memberID := uuid.MustParse(req.Msg.Id)
+	memberID := uuid.MustParse(req.Msg.GetId())
+	if err := s.checkPermission(ctx, authz.CanEditMember(), authz.Organization(organizationID)); err != nil {
+		return nil, err
+	}
 
 	member, err := s.queries.MemberGetByID(ctx, db.MemberGetByIDParams{ID: memberID})
 	if err != nil {
@@ -39,9 +42,8 @@ func (s *Server) UpdateMemberPermission(
 	}
 
 	rowsAffected, err := s.queries.MemberUpdatePermission(ctx, db.MemberUpdatePermissionParams{
-		ID:             memberID,
-		Permission:     dbconst.OrganizationsUserPermission(req.Msg.Permission),
-		OrganizationID: organizationID,
+		ID:         memberID,
+		Permission: dbconst.OrganizationsUserPermission(req.Msg.GetPermission()),
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update member permission: %w", err))
@@ -53,8 +55,8 @@ func (s *Server) UpdateMemberPermission(
 
 	s.logger.InfoContext(ctx, "organization member permission updated",
 		"member_id", memberID,
-		"permission", req.Msg.Permission,
+		"permission", req.Msg.GetPermission(),
 	)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.UpdateMemberPermissionResponse_builder{}.Build()), nil
 }

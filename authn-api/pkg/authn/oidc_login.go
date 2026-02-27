@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
@@ -173,12 +175,61 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 	return u, accessToken, nil
 }
 
+// toName converts a display name into a valid organization name.
+// Rules: lowercase, replace non-alphanumeric with hyphens, collapse consecutive hyphens,
+// strip leading/trailing hyphens, prepend "org-" if starts with digit, ensure min 2 chars.
+func toName(name string) string {
+	// Lowercase
+	s := strings.ToLower(name)
+
+	// Replace non-alphanumeric with hyphens
+	var result strings.Builder
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			result.WriteRune(r)
+		} else {
+			result.WriteRune('-')
+		}
+	}
+	s = result.String()
+
+	// Collapse consecutive hyphens
+	for strings.Contains(s, "--") {
+		s = strings.ReplaceAll(s, "--", "-")
+	}
+
+	// Strip leading/trailing hyphens
+	s = strings.Trim(s, "-")
+
+	// Prepend "org-" if starts with digit
+	if len(s) > 0 && s[0] >= '0' && s[0] <= '9' {
+		s = "org-" + s
+	}
+
+	// Ensure minimum 2 chars (constraint requires at least 2: start [a-z] + end [a-z0-9])
+	if len(s) < 2 {
+		s = "org-x"
+	}
+
+	// Truncate to reasonable max (63 chars, common DNS label limit)
+	if len(s) > 63 {
+		s = s[:63]
+	}
+
+	// Don't end with hyphen (violates constraint ^[a-z][a-z0-9-]*[a-z0-9]$)
+	s = strings.TrimRight(s, "-")
+
+	return s
+}
+
 // handleNewUser creates a new organization and user for first-time registration.
 func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
-	organizationName := claims.Name
-	if organizationName == "" {
-		organizationName = claims.Email
+	displayName := claims.Name
+	if displayName == "" {
+		displayName = claims.Email
 	}
+
+	orgName := toName(displayName)
 
 	tx, err := s.db.Pool.Begin(ctx)
 	if err != nil {
@@ -189,12 +240,34 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 
 	qtx := s.queries.WithTx(tx)
 
-	organization, err := qtx.OrganizationCreate(ctx, db.OrganizationCreateParams{
-		Name: organizationName,
-	})
-	if err != nil {
+	// Try creating organization with name, retry with suffix on conflict
+	var organization db.OrganizationCreateRow
+	for attempt := 0; attempt < 10; attempt++ {
+		candidateName := orgName
+		if attempt > 0 {
+			suffix := fmt.Sprintf("-%d", attempt+1)
+			base := orgName
+			if len(base)+len(suffix) > 63 {
+				base = strings.TrimRight(base[:63-len(suffix)], "-")
+			}
+			candidateName = base + suffix
+		}
+		organization, err = qtx.OrganizationCreate(ctx, db.OrganizationCreateParams{
+			Name:        candidateName,
+			DisplayName: displayName,
+		})
+		if err == nil {
+			break
+		}
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.ConstraintName == dbconst.ConstraintOrganizationsUqName {
+			continue
+		}
 		s.logger.Error("failed to create organization", "error", err)
 		return nil, "", fmt.Errorf("creating organization: %w", err)
+	}
+	if err != nil {
+		s.logger.Error("failed to create organization after retries", "error", err)
+		return nil, "", fmt.Errorf("creating organization: name conflict after retries: %w", err)
 	}
 
 	params := db.UserUpsertParams{

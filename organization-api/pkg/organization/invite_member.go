@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -25,8 +26,12 @@ func (s *Server) InviteMember(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	email := req.Msg.Email
-	permission := req.Msg.Permission
+	if err := s.checkPermission(ctx, authz.CanInviteMember(), authz.Organization(organizationID)); err != nil {
+		return nil, err
+	}
+
+	email := req.Msg.GetEmail()
+	permission := req.Msg.GetPermission()
 
 	// Find existing user by email, or create a new one
 	var userID uuid.UUID
@@ -61,13 +66,13 @@ func (s *Server) InviteMember(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create membership: %w", err))
 	}
 
-	return connect.NewResponse(&organizationv1.InviteMemberResponse{
+	return connect.NewResponse(organizationv1.InviteMemberResponse_builder{
 		Member: memberFromInviteRow(email, &membershipRow),
-	}), nil
+	}.Build()), nil
 }
 
 func memberFromInviteRow(email string, m *db.InviteCreateMembershipRow) *organizationv1.Member {
-	return &organizationv1.Member{
+	member := organizationv1.Member_builder{
 		Id:         m.ID.String(),
 		UserId:     m.UserID.String(),
 		Name:       email,
@@ -75,5 +80,6 @@ func memberFromInviteRow(email string, m *db.InviteCreateMembershipRow) *organiz
 		Permission: string(m.Permission),
 		Status:     string(m.Status),
 		Created:    timestamppb.New(m.Created.Time),
-	}
+	}.Build()
+	return member
 }

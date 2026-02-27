@@ -10,10 +10,9 @@ import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	_ "google.golang.org/protobuf/types/gofeaturespb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
-	sync "sync"
 	unsafe "unsafe"
 )
 
@@ -26,16 +25,16 @@ const (
 
 // API key information (without sensitive data)
 type APIKey struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,20,opt,name=name,proto3" json:"name,omitempty"`
-	TokenPrefix   string                 `protobuf:"bytes,30,opt,name=token_prefix,json=tokenPrefix,proto3" json:"token_prefix,omitempty"` // First 8 chars for display (fun_XXXX)
-	Expires       *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=expires,proto3" json:"expires,omitempty"`                            // null if never expires
-	LastUsed      *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=last_used,json=lastUsed,proto3" json:"last_used,omitempty"`
-	Created       *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created,proto3" json:"created,omitempty"`
-	Revoked       *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=revoked,proto3" json:"revoked,omitempty"` // null if not revoked
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_TokenPrefix string                 `protobuf:"bytes,30,opt,name=token_prefix,json=tokenPrefix"`
+	xxx_hidden_Expires     *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=expires"`
+	xxx_hidden_LastUsed    *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=last_used,json=lastUsed"`
+	xxx_hidden_Created     *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created"`
+	xxx_hidden_Revoked     *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=revoked"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *APIKey) Reset() {
@@ -63,67 +62,160 @@ func (x *APIKey) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use APIKey.ProtoReflect.Descriptor instead.
-func (*APIKey) Descriptor() ([]byte, []int) {
-	return file_v1_apikey_proto_rawDescGZIP(), []int{0}
-}
-
 func (x *APIKey) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *APIKey) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
 func (x *APIKey) GetTokenPrefix() string {
 	if x != nil {
-		return x.TokenPrefix
+		return x.xxx_hidden_TokenPrefix
 	}
 	return ""
 }
 
 func (x *APIKey) GetExpires() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Expires
+		return x.xxx_hidden_Expires
 	}
 	return nil
 }
 
 func (x *APIKey) GetLastUsed() *timestamppb.Timestamp {
 	if x != nil {
-		return x.LastUsed
+		return x.xxx_hidden_LastUsed
 	}
 	return nil
 }
 
 func (x *APIKey) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Created
+		return x.xxx_hidden_Created
 	}
 	return nil
 }
 
 func (x *APIKey) GetRevoked() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Revoked
+		return x.xxx_hidden_Revoked
 	}
 	return nil
 }
 
+func (x *APIKey) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *APIKey) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *APIKey) SetTokenPrefix(v string) {
+	x.xxx_hidden_TokenPrefix = v
+}
+
+func (x *APIKey) SetExpires(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Expires = v
+}
+
+func (x *APIKey) SetLastUsed(v *timestamppb.Timestamp) {
+	x.xxx_hidden_LastUsed = v
+}
+
+func (x *APIKey) SetCreated(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Created = v
+}
+
+func (x *APIKey) SetRevoked(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Revoked = v
+}
+
+func (x *APIKey) HasExpires() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Expires != nil
+}
+
+func (x *APIKey) HasLastUsed() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_LastUsed != nil
+}
+
+func (x *APIKey) HasCreated() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Created != nil
+}
+
+func (x *APIKey) HasRevoked() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Revoked != nil
+}
+
+func (x *APIKey) ClearExpires() {
+	x.xxx_hidden_Expires = nil
+}
+
+func (x *APIKey) ClearLastUsed() {
+	x.xxx_hidden_LastUsed = nil
+}
+
+func (x *APIKey) ClearCreated() {
+	x.xxx_hidden_Created = nil
+}
+
+func (x *APIKey) ClearRevoked() {
+	x.xxx_hidden_Revoked = nil
+}
+
+type APIKey_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id          string
+	Name        string
+	TokenPrefix string
+	Expires     *timestamppb.Timestamp
+	LastUsed    *timestamppb.Timestamp
+	Created     *timestamppb.Timestamp
+	Revoked     *timestamppb.Timestamp
+}
+
+func (b0 APIKey_builder) Build() *APIKey {
+	m0 := &APIKey{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_TokenPrefix = b.TokenPrefix
+	x.xxx_hidden_Expires = b.Expires
+	x.xxx_hidden_LastUsed = b.LastUsed
+	x.xxx_hidden_Created = b.Created
+	x.xxx_hidden_Revoked = b.Revoked
+	return m0
+}
+
 // Create API key request
 type CreateAPIKeyRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,10,opt,name=name,proto3" json:"name,omitempty"`
-	ExpiresIn     string                 `protobuf:"bytes,20,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"` // Time until expiry, empty = never
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name      string                 `protobuf:"bytes,10,opt,name=name"`
+	xxx_hidden_ExpiresIn string                 `protobuf:"bytes,20,opt,name=expires_in,json=expiresIn"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *CreateAPIKeyRequest) Reset() {
@@ -151,33 +243,52 @@ func (x *CreateAPIKeyRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateAPIKeyRequest.ProtoReflect.Descriptor instead.
-func (*CreateAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_v1_apikey_proto_rawDescGZIP(), []int{1}
-}
-
 func (x *CreateAPIKeyRequest) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
 func (x *CreateAPIKeyRequest) GetExpiresIn() string {
 	if x != nil {
-		return x.ExpiresIn
+		return x.xxx_hidden_ExpiresIn
 	}
 	return ""
 }
 
+func (x *CreateAPIKeyRequest) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *CreateAPIKeyRequest) SetExpiresIn(v string) {
+	x.xxx_hidden_ExpiresIn = v
+}
+
+type CreateAPIKeyRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name      string
+	ExpiresIn string
+}
+
+func (b0 CreateAPIKeyRequest_builder) Build() *CreateAPIKeyRequest {
+	m0 := &CreateAPIKeyRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_ExpiresIn = b.ExpiresIn
+	return m0
+}
+
 // Create API key response (only time the full token is returned)
 type CreateAPIKeyResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,10,opt,name=id,proto3" json:"id,omitempty"`
-	Token         string                 `protobuf:"bytes,20,opt,name=token,proto3" json:"token,omitempty"` // IMPORTANT: Only returned once, must be copied by user
-	TokenPrefix   string                 `protobuf:"bytes,30,opt,name=token_prefix,json=tokenPrefix,proto3" json:"token_prefix,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Token       string                 `protobuf:"bytes,20,opt,name=token"`
+	xxx_hidden_TokenPrefix string                 `protobuf:"bytes,30,opt,name=token_prefix,json=tokenPrefix"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *CreateAPIKeyResponse) Reset() {
@@ -205,35 +316,60 @@ func (x *CreateAPIKeyResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateAPIKeyResponse.ProtoReflect.Descriptor instead.
-func (*CreateAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_v1_apikey_proto_rawDescGZIP(), []int{2}
-}
-
 func (x *CreateAPIKeyResponse) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *CreateAPIKeyResponse) GetToken() string {
 	if x != nil {
-		return x.Token
+		return x.xxx_hidden_Token
 	}
 	return ""
 }
 
 func (x *CreateAPIKeyResponse) GetTokenPrefix() string {
 	if x != nil {
-		return x.TokenPrefix
+		return x.xxx_hidden_TokenPrefix
 	}
 	return ""
 }
 
+func (x *CreateAPIKeyResponse) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *CreateAPIKeyResponse) SetToken(v string) {
+	x.xxx_hidden_Token = v
+}
+
+func (x *CreateAPIKeyResponse) SetTokenPrefix(v string) {
+	x.xxx_hidden_TokenPrefix = v
+}
+
+type CreateAPIKeyResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id          string
+	Token       string
+	TokenPrefix string
+}
+
+func (b0 CreateAPIKeyResponse_builder) Build() *CreateAPIKeyResponse {
+	m0 := &CreateAPIKeyResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Token = b.Token
+	x.xxx_hidden_TokenPrefix = b.TokenPrefix
+	return m0
+}
+
 // List API keys request
 type ListAPIKeysRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -263,17 +399,24 @@ func (x *ListAPIKeysRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListAPIKeysRequest.ProtoReflect.Descriptor instead.
-func (*ListAPIKeysRequest) Descriptor() ([]byte, []int) {
-	return file_v1_apikey_proto_rawDescGZIP(), []int{3}
+type ListAPIKeysRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 ListAPIKeysRequest_builder) Build() *ListAPIKeysRequest {
+	m0 := &ListAPIKeysRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
 }
 
 // List API keys response
 type ListAPIKeysResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ApiKeys       []*APIKey              `protobuf:"bytes,10,rep,name=api_keys,json=apiKeys,proto3" json:"api_keys,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ApiKeys *[]*APIKey             `protobuf:"bytes,10,rep,name=api_keys,json=apiKeys"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ListAPIKeysResponse) Reset() {
@@ -301,24 +444,39 @@ func (x *ListAPIKeysResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListAPIKeysResponse.ProtoReflect.Descriptor instead.
-func (*ListAPIKeysResponse) Descriptor() ([]byte, []int) {
-	return file_v1_apikey_proto_rawDescGZIP(), []int{4}
-}
-
 func (x *ListAPIKeysResponse) GetApiKeys() []*APIKey {
 	if x != nil {
-		return x.ApiKeys
+		if x.xxx_hidden_ApiKeys != nil {
+			return *x.xxx_hidden_ApiKeys
+		}
 	}
 	return nil
 }
 
+func (x *ListAPIKeysResponse) SetApiKeys(v []*APIKey) {
+	x.xxx_hidden_ApiKeys = &v
+}
+
+type ListAPIKeysResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ApiKeys []*APIKey
+}
+
+func (b0 ListAPIKeysResponse_builder) Build() *ListAPIKeysResponse {
+	m0 := &ListAPIKeysResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ApiKeys = &b.ApiKeys
+	return m0
+}
+
 // Get API key request
 type GetAPIKeyRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ApiKeyId      string                 `protobuf:"bytes,10,opt,name=api_key_id,json=apiKeyId,proto3" json:"api_key_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ApiKeyId string                 `protobuf:"bytes,10,opt,name=api_key_id,json=apiKeyId"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *GetAPIKeyRequest) Reset() {
@@ -346,24 +504,37 @@ func (x *GetAPIKeyRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetAPIKeyRequest.ProtoReflect.Descriptor instead.
-func (*GetAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_v1_apikey_proto_rawDescGZIP(), []int{5}
-}
-
 func (x *GetAPIKeyRequest) GetApiKeyId() string {
 	if x != nil {
-		return x.ApiKeyId
+		return x.xxx_hidden_ApiKeyId
 	}
 	return ""
 }
 
+func (x *GetAPIKeyRequest) SetApiKeyId(v string) {
+	x.xxx_hidden_ApiKeyId = v
+}
+
+type GetAPIKeyRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ApiKeyId string
+}
+
+func (b0 GetAPIKeyRequest_builder) Build() *GetAPIKeyRequest {
+	m0 := &GetAPIKeyRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ApiKeyId = b.ApiKeyId
+	return m0
+}
+
 // Get API key response
 type GetAPIKeyResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ApiKey        *APIKey                `protobuf:"bytes,10,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ApiKey *APIKey                `protobuf:"bytes,10,opt,name=api_key,json=apiKey"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *GetAPIKeyResponse) Reset() {
@@ -391,24 +562,48 @@ func (x *GetAPIKeyResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetAPIKeyResponse.ProtoReflect.Descriptor instead.
-func (*GetAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_v1_apikey_proto_rawDescGZIP(), []int{6}
-}
-
 func (x *GetAPIKeyResponse) GetApiKey() *APIKey {
 	if x != nil {
-		return x.ApiKey
+		return x.xxx_hidden_ApiKey
 	}
 	return nil
 }
 
+func (x *GetAPIKeyResponse) SetApiKey(v *APIKey) {
+	x.xxx_hidden_ApiKey = v
+}
+
+func (x *GetAPIKeyResponse) HasApiKey() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_ApiKey != nil
+}
+
+func (x *GetAPIKeyResponse) ClearApiKey() {
+	x.xxx_hidden_ApiKey = nil
+}
+
+type GetAPIKeyResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ApiKey *APIKey
+}
+
+func (b0 GetAPIKeyResponse_builder) Build() *GetAPIKeyResponse {
+	m0 := &GetAPIKeyResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ApiKey = b.ApiKey
+	return m0
+}
+
 // Revoke API key request
 type RevokeAPIKeyRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ApiKeyId      string                 `protobuf:"bytes,10,opt,name=api_key_id,json=apiKeyId,proto3" json:"api_key_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ApiKeyId string                 `protobuf:"bytes,10,opt,name=api_key_id,json=apiKeyId"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *RevokeAPIKeyRequest) Reset() {
@@ -436,40 +631,52 @@ func (x *RevokeAPIKeyRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RevokeAPIKeyRequest.ProtoReflect.Descriptor instead.
-func (*RevokeAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_v1_apikey_proto_rawDescGZIP(), []int{7}
-}
-
 func (x *RevokeAPIKeyRequest) GetApiKeyId() string {
 	if x != nil {
-		return x.ApiKeyId
+		return x.xxx_hidden_ApiKeyId
 	}
 	return ""
 }
 
-// Delete API key request
-type DeleteAPIKeyRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ApiKeyId      string                 `protobuf:"bytes,10,opt,name=api_key_id,json=apiKeyId,proto3" json:"api_key_id,omitempty"`
+func (x *RevokeAPIKeyRequest) SetApiKeyId(v string) {
+	x.xxx_hidden_ApiKeyId = v
+}
+
+type RevokeAPIKeyRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ApiKeyId string
+}
+
+func (b0 RevokeAPIKeyRequest_builder) Build() *RevokeAPIKeyRequest {
+	m0 := &RevokeAPIKeyRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ApiKeyId = b.ApiKeyId
+	return m0
+}
+
+// Revoke API key response
+type RevokeAPIKeyResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DeleteAPIKeyRequest) Reset() {
-	*x = DeleteAPIKeyRequest{}
+func (x *RevokeAPIKeyResponse) Reset() {
+	*x = RevokeAPIKeyResponse{}
 	mi := &file_v1_apikey_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DeleteAPIKeyRequest) String() string {
+func (x *RevokeAPIKeyResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeleteAPIKeyRequest) ProtoMessage() {}
+func (*RevokeAPIKeyResponse) ProtoMessage() {}
 
-func (x *DeleteAPIKeyRequest) ProtoReflect() protoreflect.Message {
+func (x *RevokeAPIKeyResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_v1_apikey_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -481,23 +688,125 @@ func (x *DeleteAPIKeyRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteAPIKeyRequest.ProtoReflect.Descriptor instead.
-func (*DeleteAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_v1_apikey_proto_rawDescGZIP(), []int{8}
+type RevokeAPIKeyResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 RevokeAPIKeyResponse_builder) Build() *RevokeAPIKeyResponse {
+	m0 := &RevokeAPIKeyResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
+// Delete API key request
+type DeleteAPIKeyRequest struct {
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ApiKeyId string                 `protobuf:"bytes,10,opt,name=api_key_id,json=apiKeyId"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *DeleteAPIKeyRequest) Reset() {
+	*x = DeleteAPIKeyRequest{}
+	mi := &file_v1_apikey_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAPIKeyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAPIKeyRequest) ProtoMessage() {}
+
+func (x *DeleteAPIKeyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_apikey_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
 }
 
 func (x *DeleteAPIKeyRequest) GetApiKeyId() string {
 	if x != nil {
-		return x.ApiKeyId
+		return x.xxx_hidden_ApiKeyId
 	}
 	return ""
+}
+
+func (x *DeleteAPIKeyRequest) SetApiKeyId(v string) {
+	x.xxx_hidden_ApiKeyId = v
+}
+
+type DeleteAPIKeyRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ApiKeyId string
+}
+
+func (b0 DeleteAPIKeyRequest_builder) Build() *DeleteAPIKeyRequest {
+	m0 := &DeleteAPIKeyRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ApiKeyId = b.ApiKeyId
+	return m0
+}
+
+// Delete API key response
+type DeleteAPIKeyResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAPIKeyResponse) Reset() {
+	*x = DeleteAPIKeyResponse{}
+	mi := &file_v1_apikey_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAPIKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAPIKeyResponse) ProtoMessage() {}
+
+func (x *DeleteAPIKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_apikey_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type DeleteAPIKeyResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 DeleteAPIKeyResponse_builder) Build() *DeleteAPIKeyResponse {
+	m0 := &DeleteAPIKeyResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
 }
 
 var File_v1_apikey_proto protoreflect.FileDescriptor
 
 const file_v1_apikey_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/apikey.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xaa\x02\n" +
+	"\x0fv1/apikey.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xaa\x02\n" +
 	"\x06APIKey\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -532,31 +841,21 @@ const file_v1_apikey_proto_rawDesc = "" +
 	"\x13RevokeAPIKeyRequest\x12&\n" +
 	"\n" +
 	"api_key_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId\"=\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId\"\x16\n" +
+	"\x14RevokeAPIKeyResponse\"=\n" +
 	"\x13DeleteAPIKeyRequest\x12&\n" +
 	"\n" +
 	"api_key_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId2\xb6\x03\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bapiKeyId\"\x16\n" +
+	"\x14DeleteAPIKeyResponse2\xd4\x03\n" +
 	"\rAPIKeyService\x12[\n" +
 	"\fCreateAPIKey\x12$.organization.v1.CreateAPIKeyRequest\x1a%.organization.v1.CreateAPIKeyResponse\x12X\n" +
 	"\vListAPIKeys\x12#.organization.v1.ListAPIKeysRequest\x1a$.organization.v1.ListAPIKeysResponse\x12R\n" +
-	"\tGetAPIKey\x12!.organization.v1.GetAPIKeyRequest\x1a\".organization.v1.GetAPIKeyResponse\x12L\n" +
-	"\fRevokeAPIKey\x12$.organization.v1.RevokeAPIKeyRequest\x1a\x16.google.protobuf.Empty\x12L\n" +
-	"\fDeleteAPIKey\x12$.organization.v1.DeleteAPIKeyRequest\x1a\x16.google.protobuf.EmptyBUZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1b\x06proto3"
+	"\tGetAPIKey\x12!.organization.v1.GetAPIKeyRequest\x1a\".organization.v1.GetAPIKeyResponse\x12[\n" +
+	"\fRevokeAPIKey\x12$.organization.v1.RevokeAPIKeyRequest\x1a%.organization.v1.RevokeAPIKeyResponse\x12[\n" +
+	"\fDeleteAPIKey\x12$.organization.v1.DeleteAPIKeyRequest\x1a%.organization.v1.DeleteAPIKeyResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var (
-	file_v1_apikey_proto_rawDescOnce sync.Once
-	file_v1_apikey_proto_rawDescData []byte
-)
-
-func file_v1_apikey_proto_rawDescGZIP() []byte {
-	file_v1_apikey_proto_rawDescOnce.Do(func() {
-		file_v1_apikey_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_v1_apikey_proto_rawDesc), len(file_v1_apikey_proto_rawDesc)))
-	})
-	return file_v1_apikey_proto_rawDescData
-}
-
-var file_v1_apikey_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_v1_apikey_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_v1_apikey_proto_goTypes = []any{
 	(*APIKey)(nil),                // 0: organization.v1.APIKey
 	(*CreateAPIKeyRequest)(nil),   // 1: organization.v1.CreateAPIKeyRequest
@@ -566,27 +865,28 @@ var file_v1_apikey_proto_goTypes = []any{
 	(*GetAPIKeyRequest)(nil),      // 5: organization.v1.GetAPIKeyRequest
 	(*GetAPIKeyResponse)(nil),     // 6: organization.v1.GetAPIKeyResponse
 	(*RevokeAPIKeyRequest)(nil),   // 7: organization.v1.RevokeAPIKeyRequest
-	(*DeleteAPIKeyRequest)(nil),   // 8: organization.v1.DeleteAPIKeyRequest
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 10: google.protobuf.Empty
+	(*RevokeAPIKeyResponse)(nil),  // 8: organization.v1.RevokeAPIKeyResponse
+	(*DeleteAPIKeyRequest)(nil),   // 9: organization.v1.DeleteAPIKeyRequest
+	(*DeleteAPIKeyResponse)(nil),  // 10: organization.v1.DeleteAPIKeyResponse
+	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
 }
 var file_v1_apikey_proto_depIdxs = []int32{
-	9,  // 0: organization.v1.APIKey.expires:type_name -> google.protobuf.Timestamp
-	9,  // 1: organization.v1.APIKey.last_used:type_name -> google.protobuf.Timestamp
-	9,  // 2: organization.v1.APIKey.created:type_name -> google.protobuf.Timestamp
-	9,  // 3: organization.v1.APIKey.revoked:type_name -> google.protobuf.Timestamp
+	11, // 0: organization.v1.APIKey.expires:type_name -> google.protobuf.Timestamp
+	11, // 1: organization.v1.APIKey.last_used:type_name -> google.protobuf.Timestamp
+	11, // 2: organization.v1.APIKey.created:type_name -> google.protobuf.Timestamp
+	11, // 3: organization.v1.APIKey.revoked:type_name -> google.protobuf.Timestamp
 	0,  // 4: organization.v1.ListAPIKeysResponse.api_keys:type_name -> organization.v1.APIKey
 	0,  // 5: organization.v1.GetAPIKeyResponse.api_key:type_name -> organization.v1.APIKey
 	1,  // 6: organization.v1.APIKeyService.CreateAPIKey:input_type -> organization.v1.CreateAPIKeyRequest
 	3,  // 7: organization.v1.APIKeyService.ListAPIKeys:input_type -> organization.v1.ListAPIKeysRequest
 	5,  // 8: organization.v1.APIKeyService.GetAPIKey:input_type -> organization.v1.GetAPIKeyRequest
 	7,  // 9: organization.v1.APIKeyService.RevokeAPIKey:input_type -> organization.v1.RevokeAPIKeyRequest
-	8,  // 10: organization.v1.APIKeyService.DeleteAPIKey:input_type -> organization.v1.DeleteAPIKeyRequest
+	9,  // 10: organization.v1.APIKeyService.DeleteAPIKey:input_type -> organization.v1.DeleteAPIKeyRequest
 	2,  // 11: organization.v1.APIKeyService.CreateAPIKey:output_type -> organization.v1.CreateAPIKeyResponse
 	4,  // 12: organization.v1.APIKeyService.ListAPIKeys:output_type -> organization.v1.ListAPIKeysResponse
 	6,  // 13: organization.v1.APIKeyService.GetAPIKey:output_type -> organization.v1.GetAPIKeyResponse
-	10, // 14: organization.v1.APIKeyService.RevokeAPIKey:output_type -> google.protobuf.Empty
-	10, // 15: organization.v1.APIKeyService.DeleteAPIKey:output_type -> google.protobuf.Empty
+	8,  // 14: organization.v1.APIKeyService.RevokeAPIKey:output_type -> organization.v1.RevokeAPIKeyResponse
+	10, // 15: organization.v1.APIKeyService.DeleteAPIKey:output_type -> organization.v1.DeleteAPIKeyResponse
 	11, // [11:16] is the sub-list for method output_type
 	6,  // [6:11] is the sub-list for method input_type
 	6,  // [6:6] is the sub-list for extension type_name
@@ -606,7 +906,7 @@ func file_v1_apikey_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_apikey_proto_rawDesc), len(file_v1_apikey_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
