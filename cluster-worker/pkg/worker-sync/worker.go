@@ -237,23 +237,25 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
-	// 3. Load node pools for this cluster
-	nodePoolRows, err := w.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{
-		ClusterID: cluster.ID,
-	})
-	if err != nil {
-		w.logger.Error("failed to load node pools",
-			"cluster_id", cluster.ID,
-			"error", err)
-		w.markSyncFailed(ctx, cluster.ID, "load node pools: "+err.Error(), &syncFailedEvent{
-			syncAction: syncAction,
-			message:    "Failed to load node pools: " + err.Error(),
-			attempt:    attempt,
+	// 3. Load node pools for this cluster (not needed for delete: only cluster ID is used)
+	var nodePools []gardener.NodePool
+	if syncAction != dbconst.ClusterEventSyncAction_Delete {
+		nodePoolRows, err := w.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{
+			ClusterID: cluster.ID,
 		})
-		return true, nil
+		if err != nil {
+			w.logger.Error("failed to load node pools",
+				"cluster_id", cluster.ID,
+				"error", err)
+			w.markSyncFailed(ctx, cluster.ID, "load node pools: "+err.Error(), &syncFailedEvent{
+				syncAction: syncAction,
+				message:    "Failed to load node pools: " + err.Error(),
+				attempt:    attempt,
+			})
+			return true, nil
+		}
+		nodePools = toGardenerNodePools(nodePoolRows)
 	}
-
-	nodePools := toGardenerNodePools(nodePoolRows)
 
 	// 4. Generate shoot name (used only for creation, existing shoots are looked up by label)
 	shootName := gardener.GenerateShootName(cluster.Name)

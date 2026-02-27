@@ -504,6 +504,9 @@ func (m *MockClient) validateClusterSpec(cluster *ClusterToSync) error {
 		if np.Name == "" {
 			return fmt.Errorf("shoot.core.gardener.cloud is invalid: worker name must not be empty")
 		}
+		if np.MachineType == "" {
+			return fmt.Errorf("shoot.core.gardener.cloud is invalid: worker %q machine type must not be empty", np.Name)
+		}
 		if np.AutoscaleMin < 0 {
 			return fmt.Errorf("shoot.core.gardener.cloud is invalid: worker %q minimum must be >= 0", np.Name)
 		}

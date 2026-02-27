@@ -16,7 +16,7 @@ BEGIN
         sync_attempts = 0,
         sync_error = NULL
     WHERE id = COALESCE(NEW.cluster_id, OLD.cluster_id);
-    RETURN COALESCE(NEW, OLD);
+    RETURN NULL;
 END;
 $function$
 ;

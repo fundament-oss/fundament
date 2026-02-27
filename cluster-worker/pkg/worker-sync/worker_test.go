@@ -93,6 +93,17 @@ func TestMockClient_NodePoolValidation(t *testing.T) {
 			t.Error("expected error for max == 0")
 		}
 	})
+
+	t.Run("empty machine type", func(t *testing.T) {
+		cluster := common.TestCluster("test-cluster4", "test-tenant")
+		cluster.NodePools = []gardener.NodePool{
+			{Name: "pool", MachineType: "", AutoscaleMin: 1, AutoscaleMax: 3},
+		}
+		err := mock.ApplyShoot(ctx, &cluster)
+		if err == nil {
+			t.Error("expected error for empty machine type")
+		}
+	})
 }
 
 func TestMockClient_ApplyShoot(t *testing.T) {
