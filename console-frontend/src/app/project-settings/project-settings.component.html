@@ -41,6 +41,7 @@
           @if (isEditing()) {
             <div class="flex gap-2">
               <input
+                #nameInput
                 type="text"
                 [ngModel]="editingName()"
                 (ngModelChange)="editingName.set($event)"
@@ -66,7 +67,7 @@
               </button>
             </div>
           } @else {
-            <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
               <p class="text-sm text-gray-900 dark:text-white">{{ project()!.name }}</p>
               <button
                 type="button"
