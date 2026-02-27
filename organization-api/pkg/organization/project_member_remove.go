@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -20,7 +19,7 @@ import (
 func (s *Server) RemoveProjectMember(
 	ctx context.Context,
 	req *connect.Request[organizationv1.RemoveProjectMemberRequest],
-) (*connect.Response[emptypb.Empty], error) {
+) (*connect.Response[organizationv1.RemoveProjectMemberResponse], error) {
 	memberID := uuid.MustParse(req.Msg.GetMemberId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.ProjectMember(memberID)); err != nil {
@@ -48,5 +47,5 @@ func (s *Server) RemoveProjectMember(
 		"member_id", memberID,
 	)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.RemoveProjectMemberResponse_builder{}.Build()), nil
 }

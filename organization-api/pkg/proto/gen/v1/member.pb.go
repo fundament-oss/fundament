@@ -11,7 +11,6 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -535,6 +534,50 @@ func (b0 UpdateMemberPermissionRequest_builder) Build() *UpdateMemberPermissionR
 	return m0
 }
 
+// Update member permission response
+type UpdateMemberPermissionResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMemberPermissionResponse) Reset() {
+	*x = UpdateMemberPermissionResponse{}
+	mi := &file_v1_member_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMemberPermissionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMemberPermissionResponse) ProtoMessage() {}
+
+func (x *UpdateMemberPermissionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_member_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type UpdateMemberPermissionResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 UpdateMemberPermissionResponse_builder) Build() *UpdateMemberPermissionResponse {
+	m0 := &UpdateMemberPermissionResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
 // Member information
 type Member struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
@@ -554,7 +597,7 @@ type Member struct {
 
 func (x *Member) Reset() {
 	*x = Member{}
-	mi := &file_v1_member_proto_msgTypes[7]
+	mi := &file_v1_member_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -566,7 +609,7 @@ func (x *Member) String() string {
 func (*Member) ProtoMessage() {}
 
 func (x *Member) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_member_proto_msgTypes[7]
+	mi := &file_v1_member_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -751,7 +794,7 @@ var File_v1_member_proto protoreflect.FileDescriptor
 
 const file_v1_member_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/member.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x14\n" +
+	"\x0fv1/member.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x14\n" +
 	"\x12ListMembersRequest\"]\n" +
 	"\x10GetMemberRequest\x12\x1a\n" +
 	"\x02id\x18\n" +
@@ -773,7 +816,8 @@ const file_v1_member_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x124\n" +
 	"\n" +
 	"permission\x18\x14 \x01(\tB\x14\xbaH\x11r\x0fR\x06viewerR\x05adminR\n" +
-	"permission\"\xfa\x01\n" +
+	"permission\" \n" +
+	"\x1eUpdateMemberPermissionResponse\"\xfa\x01\n" +
 	"\x06Member\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x17\n" +
@@ -785,30 +829,30 @@ const file_v1_member_proto_rawDesc = "" +
 	"permission\x18< \x01(\tR\n" +
 	"permission\x12\x16\n" +
 	"\x06status\x18F \x01(\tR\x06status\x124\n" +
-	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreated2\xfc\x02\n" +
+	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreated2\x95\x03\n" +
 	"\rMemberService\x12X\n" +
 	"\vListMembers\x12#.organization.v1.ListMembersRequest\x1a$.organization.v1.ListMembersResponse\x12R\n" +
 	"\tGetMember\x12!.organization.v1.GetMemberRequest\x1a\".organization.v1.GetMemberResponse\x12[\n" +
-	"\fDeleteMember\x12$.organization.v1.DeleteMemberRequest\x1a%.organization.v1.DeleteMemberResponse\x12`\n" +
-	"\x16UpdateMemberPermission\x12..organization.v1.UpdateMemberPermissionRequest\x1a\x16.google.protobuf.EmptyB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\fDeleteMember\x12$.organization.v1.DeleteMemberRequest\x1a%.organization.v1.DeleteMemberResponse\x12y\n" +
+	"\x16UpdateMemberPermission\x12..organization.v1.UpdateMemberPermissionRequest\x1a/.organization.v1.UpdateMemberPermissionResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_member_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_v1_member_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_v1_member_proto_goTypes = []any{
-	(*ListMembersRequest)(nil),            // 0: organization.v1.ListMembersRequest
-	(*GetMemberRequest)(nil),              // 1: organization.v1.GetMemberRequest
-	(*GetMemberResponse)(nil),             // 2: organization.v1.GetMemberResponse
-	(*ListMembersResponse)(nil),           // 3: organization.v1.ListMembersResponse
-	(*DeleteMemberRequest)(nil),           // 4: organization.v1.DeleteMemberRequest
-	(*DeleteMemberResponse)(nil),          // 5: organization.v1.DeleteMemberResponse
-	(*UpdateMemberPermissionRequest)(nil), // 6: organization.v1.UpdateMemberPermissionRequest
-	(*Member)(nil),                        // 7: organization.v1.Member
-	(*timestamppb.Timestamp)(nil),         // 8: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                 // 9: google.protobuf.Empty
+	(*ListMembersRequest)(nil),             // 0: organization.v1.ListMembersRequest
+	(*GetMemberRequest)(nil),               // 1: organization.v1.GetMemberRequest
+	(*GetMemberResponse)(nil),              // 2: organization.v1.GetMemberResponse
+	(*ListMembersResponse)(nil),            // 3: organization.v1.ListMembersResponse
+	(*DeleteMemberRequest)(nil),            // 4: organization.v1.DeleteMemberRequest
+	(*DeleteMemberResponse)(nil),           // 5: organization.v1.DeleteMemberResponse
+	(*UpdateMemberPermissionRequest)(nil),  // 6: organization.v1.UpdateMemberPermissionRequest
+	(*UpdateMemberPermissionResponse)(nil), // 7: organization.v1.UpdateMemberPermissionResponse
+	(*Member)(nil),                         // 8: organization.v1.Member
+	(*timestamppb.Timestamp)(nil),          // 9: google.protobuf.Timestamp
 }
 var file_v1_member_proto_depIdxs = []int32{
-	7, // 0: organization.v1.GetMemberResponse.member:type_name -> organization.v1.Member
-	7, // 1: organization.v1.ListMembersResponse.members:type_name -> organization.v1.Member
-	8, // 2: organization.v1.Member.created:type_name -> google.protobuf.Timestamp
+	8, // 0: organization.v1.GetMemberResponse.member:type_name -> organization.v1.Member
+	8, // 1: organization.v1.ListMembersResponse.members:type_name -> organization.v1.Member
+	9, // 2: organization.v1.Member.created:type_name -> google.protobuf.Timestamp
 	0, // 3: organization.v1.MemberService.ListMembers:input_type -> organization.v1.ListMembersRequest
 	1, // 4: organization.v1.MemberService.GetMember:input_type -> organization.v1.GetMemberRequest
 	4, // 5: organization.v1.MemberService.DeleteMember:input_type -> organization.v1.DeleteMemberRequest
@@ -816,7 +860,7 @@ var file_v1_member_proto_depIdxs = []int32{
 	3, // 7: organization.v1.MemberService.ListMembers:output_type -> organization.v1.ListMembersResponse
 	2, // 8: organization.v1.MemberService.GetMember:output_type -> organization.v1.GetMemberResponse
 	5, // 9: organization.v1.MemberService.DeleteMember:output_type -> organization.v1.DeleteMemberResponse
-	9, // 10: organization.v1.MemberService.UpdateMemberPermission:output_type -> google.protobuf.Empty
+	7, // 10: organization.v1.MemberService.UpdateMemberPermission:output_type -> organization.v1.UpdateMemberPermissionResponse
 	7, // [7:11] is the sub-list for method output_type
 	3, // [3:7] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -840,7 +884,7 @@ func file_v1_member_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_member_proto_rawDesc), len(file_v1_member_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

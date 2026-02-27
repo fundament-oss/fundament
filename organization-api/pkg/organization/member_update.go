@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -17,7 +16,7 @@ import (
 func (s *Server) UpdateMemberPermission(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateMemberPermissionRequest],
-) (*connect.Response[emptypb.Empty], error) {
+) (*connect.Response[organizationv1.UpdateMemberPermissionResponse], error) {
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
@@ -59,5 +58,5 @@ func (s *Server) UpdateMemberPermission(
 		"permission", req.Msg.GetPermission(),
 	)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.UpdateMemberPermissionResponse_builder{}.Build()), nil
 }

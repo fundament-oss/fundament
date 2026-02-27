@@ -11,7 +11,6 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -342,6 +341,50 @@ func (b0 UpdateOrganizationRequest_builder) Build() *UpdateOrganizationRequest {
 	return m0
 }
 
+// UpdateOrganization response
+type UpdateOrganizationResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateOrganizationResponse) Reset() {
+	*x = UpdateOrganizationResponse{}
+	mi := &file_v1_organization_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateOrganizationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateOrganizationResponse) ProtoMessage() {}
+
+func (x *UpdateOrganizationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_organization_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type UpdateOrganizationResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 UpdateOrganizationResponse_builder) Build() *UpdateOrganizationResponse {
+	m0 := &UpdateOrganizationResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
 // ListOrganizations request
 type ListOrganizationsRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
@@ -351,7 +394,7 @@ type ListOrganizationsRequest struct {
 
 func (x *ListOrganizationsRequest) Reset() {
 	*x = ListOrganizationsRequest{}
-	mi := &file_v1_organization_proto_msgTypes[4]
+	mi := &file_v1_organization_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -363,7 +406,7 @@ func (x *ListOrganizationsRequest) String() string {
 func (*ListOrganizationsRequest) ProtoMessage() {}
 
 func (x *ListOrganizationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_organization_proto_msgTypes[4]
+	mi := &file_v1_organization_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -396,7 +439,7 @@ type ListOrganizationsResponse struct {
 
 func (x *ListOrganizationsResponse) Reset() {
 	*x = ListOrganizationsResponse{}
-	mi := &file_v1_organization_proto_msgTypes[5]
+	mi := &file_v1_organization_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -408,7 +451,7 @@ func (x *ListOrganizationsResponse) String() string {
 func (*ListOrganizationsResponse) ProtoMessage() {}
 
 func (x *ListOrganizationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_organization_proto_msgTypes[5]
+	mi := &file_v1_organization_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -451,7 +494,7 @@ var File_v1_organization_proto protoreflect.FileDescriptor
 
 const file_v1_organization_proto_rawDesc = "" +
 	"\n" +
-	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8b\x01\n" +
+	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8b\x01\n" +
 	"\fOrganization\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -468,37 +511,38 @@ const file_v1_organization_proto_rawDesc = "" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12-\n" +
 	"\fdisplay_name\x18\x14 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\vdisplayName\"\x1a\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\vdisplayName\"\x1c\n" +
+	"\x1aUpdateOrganizationResponse\"\x1a\n" +
 	"\x18ListOrganizationsRequest\"`\n" +
 	"\x19ListOrganizationsResponse\x12C\n" +
 	"\rorganizations\x18\n" +
-	" \x03(\v2\x1d.organization.v1.OrganizationR\rorganizations2\xc1\x02\n" +
+	" \x03(\v2\x1d.organization.v1.OrganizationR\rorganizations2\xd6\x02\n" +
 	"\x13OrganizationService\x12j\n" +
 	"\x11ListOrganizations\x12).organization.v1.ListOrganizationsRequest\x1a*.organization.v1.ListOrganizationsResponse\x12d\n" +
-	"\x0fGetOrganization\x12'.organization.v1.GetOrganizationRequest\x1a(.organization.v1.GetOrganizationResponse\x12X\n" +
-	"\x12UpdateOrganization\x12*.organization.v1.UpdateOrganizationRequest\x1a\x16.google.protobuf.EmptyB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x0fGetOrganization\x12'.organization.v1.GetOrganizationRequest\x1a(.organization.v1.GetOrganizationResponse\x12m\n" +
+	"\x12UpdateOrganization\x12*.organization.v1.UpdateOrganizationRequest\x1a+.organization.v1.UpdateOrganizationResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_organization_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_v1_organization_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_v1_organization_proto_goTypes = []any{
-	(*Organization)(nil),              // 0: organization.v1.Organization
-	(*GetOrganizationRequest)(nil),    // 1: organization.v1.GetOrganizationRequest
-	(*GetOrganizationResponse)(nil),   // 2: organization.v1.GetOrganizationResponse
-	(*UpdateOrganizationRequest)(nil), // 3: organization.v1.UpdateOrganizationRequest
-	(*ListOrganizationsRequest)(nil),  // 4: organization.v1.ListOrganizationsRequest
-	(*ListOrganizationsResponse)(nil), // 5: organization.v1.ListOrganizationsResponse
-	(*timestamppb.Timestamp)(nil),     // 6: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),             // 7: google.protobuf.Empty
+	(*Organization)(nil),               // 0: organization.v1.Organization
+	(*GetOrganizationRequest)(nil),     // 1: organization.v1.GetOrganizationRequest
+	(*GetOrganizationResponse)(nil),    // 2: organization.v1.GetOrganizationResponse
+	(*UpdateOrganizationRequest)(nil),  // 3: organization.v1.UpdateOrganizationRequest
+	(*UpdateOrganizationResponse)(nil), // 4: organization.v1.UpdateOrganizationResponse
+	(*ListOrganizationsRequest)(nil),   // 5: organization.v1.ListOrganizationsRequest
+	(*ListOrganizationsResponse)(nil),  // 6: organization.v1.ListOrganizationsResponse
+	(*timestamppb.Timestamp)(nil),      // 7: google.protobuf.Timestamp
 }
 var file_v1_organization_proto_depIdxs = []int32{
-	6, // 0: organization.v1.Organization.created:type_name -> google.protobuf.Timestamp
+	7, // 0: organization.v1.Organization.created:type_name -> google.protobuf.Timestamp
 	0, // 1: organization.v1.GetOrganizationResponse.organization:type_name -> organization.v1.Organization
 	0, // 2: organization.v1.ListOrganizationsResponse.organizations:type_name -> organization.v1.Organization
-	4, // 3: organization.v1.OrganizationService.ListOrganizations:input_type -> organization.v1.ListOrganizationsRequest
+	5, // 3: organization.v1.OrganizationService.ListOrganizations:input_type -> organization.v1.ListOrganizationsRequest
 	1, // 4: organization.v1.OrganizationService.GetOrganization:input_type -> organization.v1.GetOrganizationRequest
 	3, // 5: organization.v1.OrganizationService.UpdateOrganization:input_type -> organization.v1.UpdateOrganizationRequest
-	5, // 6: organization.v1.OrganizationService.ListOrganizations:output_type -> organization.v1.ListOrganizationsResponse
+	6, // 6: organization.v1.OrganizationService.ListOrganizations:output_type -> organization.v1.ListOrganizationsResponse
 	2, // 7: organization.v1.OrganizationService.GetOrganization:output_type -> organization.v1.GetOrganizationResponse
-	7, // 8: organization.v1.OrganizationService.UpdateOrganization:output_type -> google.protobuf.Empty
+	4, // 8: organization.v1.OrganizationService.UpdateOrganization:output_type -> organization.v1.UpdateOrganizationResponse
 	6, // [6:9] is the sub-list for method output_type
 	3, // [3:6] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -517,7 +561,7 @@ func file_v1_organization_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_organization_proto_rawDesc), len(file_v1_organization_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

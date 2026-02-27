@@ -7,7 +7,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -17,7 +16,7 @@ import (
 func (s *Server) UpdateProject(
 	ctx context.Context,
 	req *connect.Request[organizationv1.UpdateProjectRequest],
-) (*connect.Response[emptypb.Empty], error) {
+) (*connect.Response[organizationv1.UpdateProjectResponse], error) {
 	projectID := uuid.MustParse(req.Msg.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Project(projectID)); err != nil {
@@ -43,5 +42,5 @@ func (s *Server) UpdateProject(
 
 	s.logger.InfoContext(ctx, "project updated", "project_id", projectID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.UpdateProjectResponse_builder{}.Build()), nil
 }

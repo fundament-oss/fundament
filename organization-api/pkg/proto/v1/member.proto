@@ -3,7 +3,6 @@ edition = "2023";
 package organization.v1;
 
 import "buf/validate/validate.proto";
-import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
@@ -21,7 +20,7 @@ service MemberService {
   // Delete a member from the organization
   rpc DeleteMember(DeleteMemberRequest) returns (DeleteMemberResponse);
   // Update a member's permission
-  rpc UpdateMemberPermission(UpdateMemberPermissionRequest) returns (google.protobuf.Empty);
+  rpc UpdateMemberPermission(UpdateMemberPermissionRequest) returns (UpdateMemberPermissionResponse);
 }
 
 // List members request
@@ -63,6 +62,9 @@ message UpdateMemberPermissionRequest {
     ]
   }];
 }
+
+// Update member permission response
+message UpdateMemberPermissionResponse {}
 
 // Member information
 message Member {

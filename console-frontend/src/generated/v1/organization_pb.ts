@@ -6,15 +6,15 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/organization.proto.
  */
 export const file_v1_organization: GenFile = /*@__PURE__*/
-  fileDesc("ChV2MS9vcmdhbml6YXRpb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSJrCgxPcmdhbml6YXRpb24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkSKwoHY3JlYXRlZBgoIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiLgoWR2V0T3JnYW5pemF0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiTgoXR2V0T3JnYW5pemF0aW9uUmVzcG9uc2USMwoMb3JnYW5pemF0aW9uGAogASgLMh0ub3JnYW5pemF0aW9uLnYxLk9yZ2FuaXphdGlvbiJTChlVcGRhdGVPcmdhbml6YXRpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABARIgCgxkaXNwbGF5X25hbWUYFCABKAlCCrpIB3IFEAEY/wEiGgoYTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0IlEKGUxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USNAoNb3JnYW5pemF0aW9ucxgKIAMoCzIdLm9yZ2FuaXphdGlvbi52MS5Pcmdhbml6YXRpb24ywQIKE09yZ2FuaXphdGlvblNlcnZpY2USagoRTGlzdE9yZ2FuaXphdGlvbnMSKS5vcmdhbml6YXRpb24udjEuTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0Gioub3JnYW5pemF0aW9uLnYxLkxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USZAoPR2V0T3JnYW5pemF0aW9uEicub3JnYW5pemF0aW9uLnYxLkdldE9yZ2FuaXphdGlvblJlcXVlc3QaKC5vcmdhbml6YXRpb24udjEuR2V0T3JnYW5pemF0aW9uUmVzcG9uc2USWAoSVXBkYXRlT3JnYW5pemF0aW9uEioub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU9yZ2FuaXphdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCX1pTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("ChV2MS9vcmdhbml6YXRpb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSJrCgxPcmdhbml6YXRpb24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkSKwoHY3JlYXRlZBgoIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiLgoWR2V0T3JnYW5pemF0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiTgoXR2V0T3JnYW5pemF0aW9uUmVzcG9uc2USMwoMb3JnYW5pemF0aW9uGAogASgLMh0ub3JnYW5pemF0aW9uLnYxLk9yZ2FuaXphdGlvbiJTChlVcGRhdGVPcmdhbml6YXRpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABARIgCgxkaXNwbGF5X25hbWUYFCABKAlCCrpIB3IFEAEY/wEiHAoaVXBkYXRlT3JnYW5pemF0aW9uUmVzcG9uc2UiGgoYTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0IlEKGUxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USNAoNb3JnYW5pemF0aW9ucxgKIAMoCzIdLm9yZ2FuaXphdGlvbi52MS5Pcmdhbml6YXRpb24y1gIKE09yZ2FuaXphdGlvblNlcnZpY2USagoRTGlzdE9yZ2FuaXphdGlvbnMSKS5vcmdhbml6YXRpb24udjEuTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0Gioub3JnYW5pemF0aW9uLnYxLkxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USZAoPR2V0T3JnYW5pemF0aW9uEicub3JnYW5pemF0aW9uLnYxLkdldE9yZ2FuaXphdGlvblJlcXVlc3QaKC5vcmdhbml6YXRpb24udjEuR2V0T3JnYW5pemF0aW9uUmVzcG9uc2USbQoSVXBkYXRlT3JnYW5pemF0aW9uEioub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU9yZ2FuaXphdGlvblJlcXVlc3QaKy5vcmdhbml6YXRpb24udjEuVXBkYXRlT3JnYW5pemF0aW9uUmVzcG9uc2VCX1pTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * Organization information
@@ -129,6 +129,21 @@ export const UpdateOrganizationRequestSchema: GenMessage<UpdateOrganizationReque
   messageDesc(file_v1_organization, 3);
 
 /**
+ * UpdateOrganization response
+ *
+ * @generated from message organization.v1.UpdateOrganizationResponse
+ */
+export type UpdateOrganizationResponse = Message<"organization.v1.UpdateOrganizationResponse"> & {
+};
+
+/**
+ * Describes the message organization.v1.UpdateOrganizationResponse.
+ * Use `create(UpdateOrganizationResponseSchema)` to create a new message.
+ */
+export const UpdateOrganizationResponseSchema: GenMessage<UpdateOrganizationResponse> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 4);
+
+/**
  * ListOrganizations request
  *
  * @generated from message organization.v1.ListOrganizationsRequest
@@ -141,7 +156,7 @@ export type ListOrganizationsRequest = Message<"organization.v1.ListOrganization
  * Use `create(ListOrganizationsRequestSchema)` to create a new message.
  */
 export const ListOrganizationsRequestSchema: GenMessage<ListOrganizationsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_organization, 4);
+  messageDesc(file_v1_organization, 5);
 
 /**
  * ListOrganizations response
@@ -162,7 +177,7 @@ export type ListOrganizationsResponse = Message<"organization.v1.ListOrganizatio
  * Use `create(ListOrganizationsResponseSchema)` to create a new message.
  */
 export const ListOrganizationsResponseSchema: GenMessage<ListOrganizationsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_organization, 5);
+  messageDesc(file_v1_organization, 6);
 
 /**
  * OrganizationService manages organizations
@@ -198,7 +213,7 @@ export const OrganizationService: GenService<{
   updateOrganization: {
     methodKind: "unary";
     input: typeof UpdateOrganizationRequestSchema;
-    output: typeof EmptySchema;
+    output: typeof UpdateOrganizationResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_organization, 0);

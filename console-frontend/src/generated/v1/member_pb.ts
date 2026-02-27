@@ -6,8 +6,8 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import { file_v1_common } from "./common_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/member.proto.
  */
 export const file_v1_member: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiUQoQR2V0TWVtYmVyUmVxdWVzdBIWCgJpZBgKIAEoCUIIukgFcgOwAQFIABIbCgd1c2VyX2lkGBQgASgJQgi6SAVyA7ABAUgAQggKBmxvb2t1cCI8ChFHZXRNZW1iZXJSZXNwb25zZRInCgZtZW1iZXIYCiABKAsyFy5vcmdhbml6YXRpb24udjEuTWVtYmVyIj8KE0xpc3RNZW1iZXJzUmVzcG9uc2USKAoHbWVtYmVycxgKIAMoCzIXLm9yZ2FuaXphdGlvbi52MS5NZW1iZXIiKwoTRGVsZXRlTWVtYmVyUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiFgoURGVsZXRlTWVtYmVyUmVzcG9uc2UiXwodVXBkYXRlTWVtYmVyUGVybWlzc2lvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEigKCnBlcm1pc3Npb24YFCABKAlCFLpIEXIPUgZ2aWV3ZXJSBWFkbWluIrcBCgZNZW1iZXISCgoCaWQYCiABKAkSDwoHdXNlcl9pZBhQIAEoCRIMCgRuYW1lGBQgASgJEhsKDGV4dGVybmFsX3JlZhgeIAEoCUIFqgECCAESFAoFZW1haWwYMiABKAlCBaoBAggBEhIKCnBlcm1pc3Npb24YPCABKAkSDgoGc3RhdHVzGEYgASgJEisKB2NyZWF0ZWQYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wMvwCCg1NZW1iZXJTZXJ2aWNlElgKC0xpc3RNZW1iZXJzEiMub3JnYW5pemF0aW9uLnYxLkxpc3RNZW1iZXJzUmVxdWVzdBokLm9yZ2FuaXphdGlvbi52MS5MaXN0TWVtYmVyc1Jlc3BvbnNlElIKCUdldE1lbWJlchIhLm9yZ2FuaXphdGlvbi52MS5HZXRNZW1iZXJSZXF1ZXN0GiIub3JnYW5pemF0aW9uLnYxLkdldE1lbWJlclJlc3BvbnNlElsKDERlbGV0ZU1lbWJlchIkLm9yZ2FuaXphdGlvbi52MS5EZWxldGVNZW1iZXJSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkRlbGV0ZU1lbWJlclJlc3BvbnNlEmAKFlVwZGF0ZU1lbWJlclBlcm1pc3Npb24SLi5vcmdhbml6YXRpb24udjEuVXBkYXRlTWVtYmVyUGVybWlzc2lvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCX1pTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiUQoQR2V0TWVtYmVyUmVxdWVzdBIWCgJpZBgKIAEoCUIIukgFcgOwAQFIABIbCgd1c2VyX2lkGBQgASgJQgi6SAVyA7ABAUgAQggKBmxvb2t1cCI8ChFHZXRNZW1iZXJSZXNwb25zZRInCgZtZW1iZXIYCiABKAsyFy5vcmdhbml6YXRpb24udjEuTWVtYmVyIj8KE0xpc3RNZW1iZXJzUmVzcG9uc2USKAoHbWVtYmVycxgKIAMoCzIXLm9yZ2FuaXphdGlvbi52MS5NZW1iZXIiKwoTRGVsZXRlTWVtYmVyUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiFgoURGVsZXRlTWVtYmVyUmVzcG9uc2UiXwodVXBkYXRlTWVtYmVyUGVybWlzc2lvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEigKCnBlcm1pc3Npb24YFCABKAlCFLpIEXIPUgZ2aWV3ZXJSBWFkbWluIiAKHlVwZGF0ZU1lbWJlclBlcm1pc3Npb25SZXNwb25zZSK3AQoGTWVtYmVyEgoKAmlkGAogASgJEg8KB3VzZXJfaWQYUCABKAkSDAoEbmFtZRgUIAEoCRIbCgxleHRlcm5hbF9yZWYYHiABKAlCBaoBAggBEhQKBWVtYWlsGDIgASgJQgWqAQIIARISCgpwZXJtaXNzaW9uGDwgASgJEg4KBnN0YXR1cxhGIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDKVAwoNTWVtYmVyU2VydmljZRJYCgtMaXN0TWVtYmVycxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0TWVtYmVyc1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdE1lbWJlcnNSZXNwb25zZRJSCglHZXRNZW1iZXISIS5vcmdhbml6YXRpb24udjEuR2V0TWVtYmVyUmVxdWVzdBoiLm9yZ2FuaXphdGlvbi52MS5HZXRNZW1iZXJSZXNwb25zZRJbCgxEZWxldGVNZW1iZXISJC5vcmdhbml6YXRpb24udjEuRGVsZXRlTWVtYmVyUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5EZWxldGVNZW1iZXJSZXNwb25zZRJ5ChZVcGRhdGVNZW1iZXJQZXJtaXNzaW9uEi4ub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU1lbWJlclBlcm1pc3Npb25SZXF1ZXN0Gi8ub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU1lbWJlclBlcm1pc3Npb25SZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * List members request
@@ -160,6 +160,21 @@ export const UpdateMemberPermissionRequestSchema: GenMessage<UpdateMemberPermiss
   messageDesc(file_v1_member, 6);
 
 /**
+ * Update member permission response
+ *
+ * @generated from message organization.v1.UpdateMemberPermissionResponse
+ */
+export type UpdateMemberPermissionResponse = Message<"organization.v1.UpdateMemberPermissionResponse"> & {
+};
+
+/**
+ * Describes the message organization.v1.UpdateMemberPermissionResponse.
+ * Use `create(UpdateMemberPermissionResponseSchema)` to create a new message.
+ */
+export const UpdateMemberPermissionResponseSchema: GenMessage<UpdateMemberPermissionResponse> = /*@__PURE__*/
+  messageDesc(file_v1_member, 7);
+
+/**
  * Member information
  *
  * @generated from message organization.v1.Member
@@ -221,7 +236,7 @@ export type Member = Message<"organization.v1.Member"> & {
  * Use `create(MemberSchema)` to create a new message.
  */
 export const MemberSchema: GenMessage<Member> = /*@__PURE__*/
-  messageDesc(file_v1_member, 7);
+  messageDesc(file_v1_member, 8);
 
 /**
  * MemberService manages organization members
@@ -267,7 +282,7 @@ export const MemberService: GenService<{
   updateMemberPermission: {
     methodKind: "unary";
     input: typeof UpdateMemberPermissionRequestSchema;
-    output: typeof EmptySchema;
+    output: typeof UpdateMemberPermissionResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_member, 0);

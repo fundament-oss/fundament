@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -16,7 +15,7 @@ import (
 func (s *Server) RevokeAPIKey(
 	ctx context.Context,
 	req *connect.Request[organizationv1.RevokeAPIKeyRequest],
-) (*connect.Response[emptypb.Empty], error) {
+) (*connect.Response[organizationv1.RevokeAPIKeyResponse], error) {
 	apiKeyID := uuid.MustParse(req.Msg.GetApiKeyId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.ApiKey(apiKeyID)); err != nil {
@@ -34,5 +33,5 @@ func (s *Server) RevokeAPIKey(
 
 	s.logger.InfoContext(ctx, "api key revoked", "api_key_id", apiKeyID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.RevokeAPIKeyResponse_builder{}.Build()), nil
 }

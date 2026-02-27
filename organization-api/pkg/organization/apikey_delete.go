@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -16,7 +15,7 @@ import (
 func (s *Server) DeleteAPIKey(
 	ctx context.Context,
 	req *connect.Request[organizationv1.DeleteAPIKeyRequest],
-) (*connect.Response[emptypb.Empty], error) {
+) (*connect.Response[organizationv1.DeleteAPIKeyResponse], error) {
 	apiKeyID := uuid.MustParse(req.Msg.GetApiKeyId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.ApiKey(apiKeyID)); err != nil {
@@ -34,5 +33,5 @@ func (s *Server) DeleteAPIKey(
 
 	s.logger.InfoContext(ctx, "api key deleted", "api_key_id", apiKeyID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(organizationv1.DeleteAPIKeyResponse_builder{}.Build()), nil
 }
