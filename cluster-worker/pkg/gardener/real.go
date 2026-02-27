@@ -517,11 +517,10 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 // buildWorkers converts node pools to Gardener worker groups.
 // If the cluster has no node pools, a default worker group is created.
 func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Worker {
-	maxSurge := intstr.FromInt32(1)
-	maxUnavailable := intstr.FromInt32(0)
-	imageVersion := r.provider.MachineImageVersion
-
 	if len(cluster.NodePools) == 0 {
+		maxSurge := intstr.FromInt32(1)
+		maxUnavailable := intstr.FromInt32(0)
+		imageVersion := r.provider.MachineImageVersion
 		return []gardencorev1beta1.Worker{
 			{
 				Name: "default",
@@ -542,7 +541,10 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 
 	workers := make([]gardencorev1beta1.Worker, len(cluster.NodePools))
 	for i, np := range cluster.NodePools {
-		workers[i] = gardencorev1beta1.Worker{
+		maxSurge := intstr.FromInt32(1)
+		maxUnavailable := intstr.FromInt32(0)
+		imageVersion := r.provider.MachineImageVersion
+		w := gardencorev1beta1.Worker{
 			Name: np.Name,
 			Machine: gardencorev1beta1.Machine{
 				Type: np.MachineType,
@@ -556,6 +558,10 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 			MaxSurge:       &maxSurge,
 			MaxUnavailable: &maxUnavailable,
 		}
+		if len(np.Zones) > 0 {
+			w.Zones = np.Zones
+		}
+		workers[i] = w
 	}
 	return workers
 }

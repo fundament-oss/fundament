@@ -151,7 +151,9 @@ FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
-    tenant.clusters.deleted IS NULL;
+    tenant.clusters.deleted IS NULL
+ORDER BY
+    tenant.clusters.id;
 
 -- name: ClusterListFailing :many
 -- Used for alerting - clusters that have failed multiple times.
@@ -165,7 +167,10 @@ FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
-    tenant.clusters.sync_attempts >= @min_attempts;
+    tenant.clusters.sync_attempts >= @min_attempts
+ORDER BY
+    tenant.clusters.sync_attempts DESC,
+    tenant.clusters.id;
 
 -- name: ClusterListExhausted :many
 -- Lists clusters that have exceeded max sync attempts.
@@ -182,7 +187,10 @@ FROM
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
     tenant.clusters.synced IS NULL
-    AND tenant.clusters.sync_attempts >= @max_attempts;
+    AND tenant.clusters.sync_attempts >= @max_attempts
+ORDER BY
+    tenant.clusters.sync_claimed_at DESC,
+    tenant.clusters.id;
 
 -- name: ClusterSyncResetAttempts :exec
 -- Resets sync attempts for a cluster, allowing it to be retried.
@@ -211,7 +219,8 @@ WHERE
     tenant.node_pools.cluster_id = @cluster_id
     AND tenant.node_pools.deleted IS NULL
 ORDER BY
-    tenant.node_pools.created;
+    created,
+    id;
 
 -- name: ClusterHasActiveWithSameName :one
 -- Check if there's an active (non-deleted) cluster with the same name in the same organization.

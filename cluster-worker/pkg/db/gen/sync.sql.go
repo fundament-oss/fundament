@@ -256,6 +256,8 @@ FROM
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
     tenant.clusters.deleted IS NULL
+ORDER BY
+    tenant.clusters.id
 `
 
 type ClusterListActiveRow struct {
@@ -307,6 +309,9 @@ FROM
 WHERE
     tenant.clusters.synced IS NULL
     AND tenant.clusters.sync_attempts >= $1
+ORDER BY
+    tenant.clusters.sync_claimed_at DESC,
+    tenant.clusters.id
 `
 
 type ClusterListExhaustedParams struct {
@@ -363,6 +368,9 @@ FROM
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
     tenant.clusters.sync_attempts >= $1
+ORDER BY
+    tenant.clusters.sync_attempts DESC,
+    tenant.clusters.id
 `
 
 type ClusterListFailingParams struct {
@@ -501,7 +509,8 @@ WHERE
     tenant.node_pools.cluster_id = $1
     AND tenant.node_pools.deleted IS NULL
 ORDER BY
-    tenant.node_pools.created
+    created,
+    id
 `
 
 type NodePoolListByClusterIDParams struct {
