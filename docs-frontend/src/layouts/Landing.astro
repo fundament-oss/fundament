@@ -11,8 +11,10 @@ const { title = 'Fundament', heroClass = '' } = Astro.props;
 const pathname = Astro.url.pathname;
 const isActive = (path: string) => pathname === path || pathname === path + '/';
 
-const navLinkClass = 'text-gray-700 no-underline transition-colors duration-200 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100';
-const navLinkActiveClass = 'font-medium text-gray-900 no-underline transition-colors duration-200 dark:text-gray-100';
+const navLinkClass =
+  'text-gray-700 no-underline transition-colors duration-200 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100';
+const navLinkActiveClass =
+  'font-medium text-gray-900 no-underline transition-colors duration-200 dark:text-gray-100';
 ---
 
 <!doctype html>
@@ -46,15 +48,15 @@ const navLinkActiveClass = 'font-medium text-gray-900 no-underline transition-co
                 d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
               ></path>
             </svg>
-            <a href="/" class="text-2xl font-bold text-gray-800 no-underline dark:text-gray-100">Fundament</a>
+            <a href="/" class="text-2xl font-bold text-gray-800 no-underline dark:text-gray-100"
+              >Fundament</a
+            >
           </div>
           <nav class="flex items-center gap-6">
             <a href="/about" class={isActive('/about') ? navLinkActiveClass : navLinkClass}>
               About
             </a>
-            <a href="/docs" class={isActive('/docs') ? navLinkActiveClass : navLinkClass}>
-              Docs
-            </a>
+            <a href="/docs" class={isActive('/docs') ? navLinkActiveClass : navLinkClass}> Docs </a>
 
             <!-- Theme (dark/light mode) Switcher -->
             <button
