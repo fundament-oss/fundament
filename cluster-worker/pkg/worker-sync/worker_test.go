@@ -548,22 +548,14 @@ func toPgTimestamp(t time.Time) pgtype.Timestamptz {
 }
 
 // TestNodePoolConversion verifies the DB row → gardener.NodePool mapping
-// used in processOne after NodePoolListByClusterID.
+// produced by toGardenerNodePools.
 func TestNodePoolConversion(t *testing.T) {
 	rows := []db.NodePoolListByClusterIDRow{
 		{Name: "pool-a", MachineType: "n1-standard-4", AutoscaleMin: 1, AutoscaleMax: 5},
 		{Name: "pool-b", MachineType: "n1-standard-2", AutoscaleMin: 0, AutoscaleMax: 3},
 	}
 
-	nodePools := make([]gardener.NodePool, len(rows))
-	for i, np := range rows {
-		nodePools[i] = gardener.NodePool{
-			Name:         np.Name,
-			MachineType:  np.MachineType,
-			AutoscaleMin: np.AutoscaleMin,
-			AutoscaleMax: np.AutoscaleMax,
-		}
-	}
+	nodePools := toGardenerNodePools(rows)
 
 	if len(nodePools) != 2 {
 		t.Fatalf("expected 2 node pools, got %d", len(nodePools))

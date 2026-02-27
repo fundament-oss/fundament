@@ -521,7 +521,8 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 // TODO: populate NodePool.Zone from tenant.node_pools once a zone column is added.
 func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Worker {
 	if len(cluster.NodePools) == 0 {
-		// Declare separately per iteration to avoid pointer aliasing.
+		// Declare separately to avoid taking the address of a local variable that
+		// would be shared if this were a loop (consistent with the loop below).
 		maxSurge := intstr.FromInt32(1)
 		maxUnavailable := intstr.FromInt32(0)
 		imageVersion := r.provider.MachineImageVersion
@@ -535,6 +536,8 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 						Version: &imageVersion,
 					},
 				},
+				// TODO: make these configurable via env vars once different environments need
+				// different defaults (e.g., GARDENER_DEFAULT_MIN_WORKERS / GARDENER_DEFAULT_MAX_WORKERS).
 				Minimum:        1,
 				Maximum:        3,
 				MaxSurge:       &maxSurge,
