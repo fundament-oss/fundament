@@ -1,0 +1,201 @@
+@if (resource()) {
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="card">
+      <div class="card-header flex items-center justify-between">
+        <div>
+          <a
+            [routerLink]="listLink()"
+            class="mb-1 inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+            ><ng-icon name="tablerArrowLeft" class="mr-1" /> Back to list</a
+          >
+          <h1 class="text-2xl font-bold dark:text-white">{{ resource()!.metadata.name }}</h1>
+          @if (resource()!.metadata.namespace) {
+            <p class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
+              Namespace: {{ resource()!.metadata.namespace }}
+            </p>
+          }
+        </div>
+        <div class="flex gap-2">
+          @if (menuItem()?.create) {
+            <a [routerLink]="editLink()" class="btn-light inline-flex items-center"
+              ><ng-icon name="tablerPencil" class="mr-2" /> Edit</a
+            >
+          }
+          <button type="button" (click)="openDeleteModal()" class="btn-remove">
+            <ng-icon name="tablerTrash" class="mr-2" />Delete
+          </button>
+        </div>
+      </div>
+
+      <!-- Metadata -->
+      <div class="card-body">
+        <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Kind</dt>
+            <dd class="mt-1 text-sm dark:text-white">{{ resource()!.kind }}</dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">API Version</dt>
+            <dd class="mt-1 font-mono text-sm dark:text-white">{{ resource()!.apiVersion }}</dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Created</dt>
+            <dd class="mt-1 text-sm dark:text-white">
+              {{ formatDateValue(resource()!.metadata.creationTimestamp) }}
+            </dd>
+          </div>
+          @if (statusBadge()) {
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
+              <dd class="mt-1">
+                <span [class]="statusBadge()!.badge">{{ statusBadge()!.label }}</span>
+              </dd>
+            </div>
+          }
+        </dl>
+      </div>
+    </div>
+
+    <!-- Spec sections -->
+    @for (group of fieldGroups(); track group.name) {
+      <div class="card">
+        <div class="card-header">
+          <h2 class="text-lg font-semibold dark:text-white">{{ group.name }}</h2>
+        </div>
+        <div class="card-body">
+          <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            @for (field of group.fields; track field[0]) {
+              <div [class.sm:col-span-2]="isWideField(field[1])">
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ formatLabel(field[0]) }}
+                </dt>
+                <dd class="mt-1 text-sm dark:text-white">
+                  <app-field-renderer [schema]="field[1]" [value]="getSpecValue(field[0])" />
+                </dd>
+              </div>
+            }
+          </dl>
+        </div>
+      </div>
+    }
+
+    <!-- Status section -->
+    @if (resource()!.status && statusFields().length > 0) {
+      <div class="card">
+        <div class="card-header">
+          <h2 class="text-lg font-semibold dark:text-white">Status</h2>
+        </div>
+        <div class="card-body">
+          <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            @for (entry of statusFields(); track entry[0]) {
+              <div [class.sm:col-span-2]="isWideStatusField(entry[0], entry[1])">
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ formatLabel(entry[0]) }}
+                </dt>
+                <dd class="mt-1 text-sm dark:text-white">
+                  @if (isConditionsField(entry[0], entry[1])) {
+                    <!-- Conditions table -->
+                    @if (asArray(entry[1]).length > 0) {
+                      <div class="table-container">
+                        <table class="table">
+                          <thead>
+                            <tr>
+                              <th>Type</th>
+                              <th>Status</th>
+                              <th>Message</th>
+                              <th>Last transition</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (cond of asArray(entry[1]); track $index) {
+                              <tr>
+                                <td class="font-medium">{{ asRecord(cond)['type'] }}</td>
+                                <td>
+                                  @if (asRecord(cond)['status'] === 'True') {
+                                    <span class="badge badge-sm badge-emerald">True</span>
+                                  } @else if (asRecord(cond)['status'] === 'False') {
+                                    <span class="badge badge-sm badge-yellow">False</span>
+                                  } @else {
+                                    <span class="badge badge-sm badge-gray">{{
+                                      asRecord(cond)['status']
+                                    }}</span>
+                                  }
+                                </td>
+                                <td
+                                  class="max-w-xs text-sm whitespace-normal text-gray-600 dark:text-gray-400"
+                                >
+                                  {{ asRecord(cond)['message'] || '\u2014' }}
+                                </td>
+                                <td class="text-sm">
+                                  {{ formatDateValue(asRecord(cond)['lastTransitionTime']) }}
+                                </td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    } @else {
+                      <span class="text-gray-500 dark:text-gray-400">&mdash;</span>
+                    }
+                  } @else {
+                    {{ formatSimpleValue(entry[1]) }}
+                  }
+                </dd>
+              </div>
+            }
+          </dl>
+        </div>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="card">
+    <div class="card-body text-center">
+      <p class="text-gray-600 dark:text-gray-300">Resource not found</p>
+      <a [routerLink]="listLink()" class="btn-primary mt-4 inline-block">Back to list</a>
+    </div>
+  </div>
+}
+
+<!-- Delete Modal -->
+<app-modal
+  [show]="showDeleteModal()"
+  title="Delete {{ singularLabel() }}"
+  [maxWidth]="'max-w-lg'"
+  (modalClose)="showDeleteModal.set(false)"
+>
+  <div class="sm:flex sm:items-start">
+    <div
+      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
+    >
+      <ng-icon
+        name="tablerAlertTriangle"
+        size="1.5rem"
+        class="text-rose-600! dark:text-rose-400!"
+      />
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+      <div class="mt-2">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          Are you sure you want to delete
+          <span class="font-semibold text-gray-800 dark:text-white">{{
+            resource()?.metadata?.name
+          }}</span
+          >?
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer">
+    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <button
+      type="button"
+      (click)="confirmDelete()"
+      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
+    >
+      Yes, delete
+    </button>
+  </div>
+</app-modal>

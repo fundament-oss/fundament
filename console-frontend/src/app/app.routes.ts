@@ -217,6 +217,159 @@ const routes: Routes = [
           breadcrumbs: [{ label: 'API keys' }],
         },
       },
+      // Plugin resource routes (organization-level)
+      {
+        path: 'plugin-resources/:pluginName',
+        loadComponent: () =>
+          import('./plugin-resources/plugin-layout/plugin-layout.component').then((m) => m.default),
+        children: [
+          {
+            path: ':resourceKind',
+            loadComponent: () =>
+              import('./plugin-resources/dispatchers/plugin-list-dispatcher.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [{ label: ':pluginDisplayName' }, { label: ':resourceKindLabel' }],
+            },
+          },
+          {
+            path: ':resourceKind/create',
+            loadComponent: () =>
+              import('./plugin-resources/dispatchers/plugin-create-dispatcher.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: 'Create' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/:resourceId',
+            loadComponent: () =>
+              import('./plugin-resources/dispatchers/plugin-detail-dispatcher.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: ':resourceName' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/:resourceId/edit',
+            loadComponent: () =>
+              import('./plugin-resources/dispatchers/plugin-edit-dispatcher.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/plugin-resources/:pluginName/:resourceKind',
+                },
+                {
+                  label: ':resourceName',
+                  route: '/plugin-resources/:pluginName/:resourceKind/:resourceId',
+                },
+                { label: 'Edit' },
+              ],
+            },
+          },
+        ],
+      },
+      // Plugin resource routes (project-level)
+      {
+        path: 'projects/:id/plugin-resources/:pluginName',
+        loadComponent: () =>
+          import('./plugin-resources/plugin-layout/plugin-layout.component').then((m) => m.default),
+        children: [
+          {
+            path: ':resourceKind',
+            loadComponent: () =>
+              import('./plugin-resources/dispatchers/plugin-list-dispatcher.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                { label: ':resourceKindLabel' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/create',
+            loadComponent: () =>
+              import('./plugin-resources/dispatchers/plugin-create-dispatcher.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: 'Create' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/:resourceId',
+            loadComponent: () =>
+              import('./plugin-resources/dispatchers/plugin-detail-dispatcher.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: ':resourceName' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/:resourceId/edit',
+            loadComponent: () =>
+              import('./plugin-resources/dispatchers/plugin-edit-dispatcher.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
+                },
+                {
+                  label: ':resourceName',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind/:resourceId',
+                },
+                { label: 'Edit' },
+              ],
+            },
+          },
+        ],
+      },
       {
         path: '',
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),

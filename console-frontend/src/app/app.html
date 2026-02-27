@@ -310,6 +310,34 @@
                     Settings
                   </a>
                 </li>
+
+                <!-- Plugin navigation groups (organization-level) -->
+                @for (group of pluginNavService.organizationNav(); track group.pluginName) {
+                  <li class="mt-2">
+                    <p
+                      class="px-3 pt-3 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                    >
+                      {{ group.displayName }}
+                    </p>
+                    <ul class="mt-1 space-y-1">
+                      @for (item of group.items; track item.crdPlural) {
+                        <li>
+                          <a
+                            [routerLink]="item.routerLink"
+                            routerLinkActive="active"
+                            class="nav-link"
+                            (click)="closeSidebar()"
+                          >
+                            @if (item.icon) {
+                              <ng-icon [name]="item.icon" class="mr-3" size="1.25rem" />
+                            }
+                            {{ item.label }}
+                          </a>
+                        </li>
+                      }
+                    </ul>
+                  </li>
+                }
               } @else if (selectedType() === 'project') {
                 <li>
                   <a
@@ -378,6 +406,40 @@
                     Settings
                   </a>
                 </li>
+
+                <!-- Plugin navigation groups (project-level) -->
+                @for (group of pluginNavService.projectNav(); track group.pluginName) {
+                  <li class="mt-2">
+                    <p
+                      class="px-3 pt-3 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                    >
+                      {{ group.displayName }}
+                    </p>
+                    <ul class="mt-1 space-y-1">
+                      @for (item of group.items; track item.crdPlural) {
+                        <li>
+                          <a
+                            [routerLink]="[
+                              '/projects',
+                              selectedProjectId(),
+                              'plugin-resources',
+                              group.pluginName,
+                              item.crdPlural,
+                            ]"
+                            routerLinkActive="active"
+                            class="nav-link"
+                            (click)="closeSidebar()"
+                          >
+                            @if (item.icon) {
+                              <ng-icon [name]="item.icon" class="mr-3" size="1.25rem" />
+                            }
+                            {{ item.label }}
+                          </a>
+                        </li>
+                      }
+                    </ul>
+                  </li>
+                }
               }
             </ul>
           </nav>

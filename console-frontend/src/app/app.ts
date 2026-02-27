@@ -27,9 +27,7 @@ import {
   tablerMenu2,
   tablerMoon,
   tablerSun,
-  tablerChevronDown,
   tablerUserCircle,
-  tablerLayoutDashboard,
   tablerFolder,
   tablerFolders,
   tablerPuzzle,
@@ -55,6 +53,10 @@ import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
+import PluginNavService from './plugin-resources/plugin-nav.service';
+import PluginRegistryService from './plugin-resources/plugin-registry.service';
+import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
+import { kindToLabel } from './plugin-resources/crd-schema.utils';
 
 const reloadApp = () => {
   window.location.reload();
@@ -83,9 +85,7 @@ const reloadApp = () => {
       tablerMenu2,
       tablerMoon,
       tablerSun,
-      tablerChevronDown,
       tablerUserCircle,
-      tablerLayoutDashboard,
       tablerFolder,
       tablerFolders,
       tablerPuzzle,
@@ -116,6 +116,12 @@ export default class App implements OnInit {
   protected organizationDataService = inject(OrganizationDataService);
 
   private organizationContextService = inject(OrganizationContextService);
+
+  protected pluginNavService = inject(PluginNavService);
+
+  private pluginRegistry = inject(PluginRegistryService);
+
+  private pluginStore = inject(PluginResourceStoreService);
 
   private organizationClient = inject(ORGANIZATION);
 
@@ -368,6 +374,32 @@ export default class App implements OnInit {
     if (label === ':projectName') {
       const projectData = this.organizationDataService.getProjectById(params['id']);
       label = projectData?.project.name || 'Project';
+    }
+
+    if (label === ':pluginDisplayName') {
+      const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
+      label = plugin?.metadata.displayName ?? params['pluginName'] ?? 'Plugin';
+    }
+
+    if (label === ':resourceKindLabel') {
+      const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
+      const crd = plugin?.crds.find((c) => c.plural === params['resourceKind']);
+      label = crd ? kindToLabel(crd.kind) : (params['resourceKind'] ?? 'Resources');
+    }
+
+    if (label === ':resourceName') {
+      const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
+      const crd = plugin?.crds.find((c) => c.plural === params['resourceKind']);
+      if (crd && params['resourceId']) {
+        const resource = this.pluginStore.getResource(
+          params['pluginName'],
+          crd.kind,
+          params['resourceId'],
+        );
+        label = resource?.metadata.name ?? params['resourceId'] ?? 'Resource';
+      } else {
+        label = params['resourceId'] ?? 'Resource';
+      }
     }
 
     if (label === ':clusterName') {

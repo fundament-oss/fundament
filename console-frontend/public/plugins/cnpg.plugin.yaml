@@ -1,0 +1,900 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+
+metadata:
+  name: cnpg
+  displayName: CNPG Databases
+  version: v1.25.1
+  description: Manage PostgreSQL databases via CloudNativePG.
+  author: CloudNativePG / EDB
+  tags:
+    - database
+    - postgresql
+
+menu:
+  organization:
+    - crd: Database
+      list: true
+      detail: true
+      create: true
+      icon: tablerDatabase
+    - crd: Backup
+      list: true
+      detail: true
+      create: true
+      icon: tablerCloudUpload
+    - crd: Subscription
+      list: true
+      detail: true
+      create: true
+      icon: tablerRefresh
+  project:
+    - crd: Database
+      list: true
+      detail: true
+      create: true
+      icon: tablerDatabase
+
+uiHints:
+  Database:
+    formGroups:
+      - name: Basic information
+        fields: [name, cluster, owner]
+      - name: Encoding & locale
+        fields: [encoding, locale, localeCollate, localeCType, localeProvider]
+      - name: Permissions
+        fields: [allowConnections, connectionLimit, isTemplate]
+      - name: Extensions
+        fields: [extensions]
+      - name: Lifecycle
+        fields: [ensure, databaseReclaimPolicy]
+    editableFields:
+      - owner
+      - encoding
+      - locale
+      - localeCollate
+      - localeCType
+      - localeProvider
+      - allowConnections
+      - connectionLimit
+      - isTemplate
+      - ensure
+      - databaseReclaimPolicy
+      - extensions
+    hiddenFields:
+      - builtinLocale
+      - icuLocale
+      - icuRules
+      - collationVersion
+      - fdws
+      - schemas
+      - servers
+      - tablespace
+      - template
+    statusMapping:
+      jsonPath: .status.applied
+      values:
+        'true':
+          badge: badge badge-sm badge-emerald
+          label: Applied
+        'false':
+          badge: badge badge-sm badge-yellow
+          label: Pending
+
+crds:
+  - |
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      annotations:
+        controller-gen.kubebuilder.io/version: v0.20.0
+        helm.sh/resource-policy: keep
+        meta.helm.sh/release-name: cloudnative-pg
+        meta.helm.sh/release-namespace: cnpg-system
+      creationTimestamp: "2026-02-24T16:25:42Z"
+      generation: 1
+      labels:
+        app.kubernetes.io/managed-by: Helm
+      name: subscriptions.postgresql.cnpg.io
+      resourceVersion: "668"
+      uid: ecf38899-d555-4222-9498-6df7b0a1c25a
+    spec:
+      conversion:
+        strategy: None
+      group: postgresql.cnpg.io
+      names:
+        kind: Subscription
+        listKind: SubscriptionList
+        plural: subscriptions
+        singular: subscription
+      scope: Namespaced
+      versions:
+      - additionalPrinterColumns:
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+        - jsonPath: .spec.cluster.name
+          name: Cluster
+          type: string
+        - jsonPath: .spec.name
+          name: PG Name
+          type: string
+        - jsonPath: .status.applied
+          name: Applied
+          type: boolean
+        - description: Latest reconciliation message
+          jsonPath: .status.message
+          name: Message
+          type: string
+        name: v1
+        schema:
+          openAPIV3Schema:
+            description: Subscription is the Schema for the subscriptions API
+            properties:
+              apiVersion:
+                description: |-
+                  APIVersion defines the versioned schema of this representation of an object.
+                  Servers should convert recognized schemas to the latest internal value, and
+                  may reject unrecognized values.
+                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+                type: string
+              kind:
+                description: |-
+                  Kind is a string value representing the REST resource this object represents.
+                  Servers may infer this from the endpoint the client submits requests to.
+                  Cannot be updated.
+                  In CamelCase.
+                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                type: string
+              metadata:
+                type: object
+              spec:
+                description: SubscriptionSpec defines the desired state of Subscription
+                properties:
+                  cluster:
+                    description: The name of the PostgreSQL cluster that identifies the
+                      "subscriber"
+                    properties:
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  dbname:
+                    description: |-
+                      The name of the database where the publication will be installed in
+                      the "subscriber" cluster
+                    type: string
+                    x-kubernetes-validations:
+                    - message: dbname is immutable
+                      rule: self == oldSelf
+                  externalClusterName:
+                    description: The name of the external cluster with the publication
+                      ("publisher")
+                    type: string
+                  name:
+                    description: The name of the subscription inside PostgreSQL
+                    type: string
+                    x-kubernetes-validations:
+                    - message: name is immutable
+                      rule: self == oldSelf
+                  parameters:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Subscription parameters included in the `WITH` clause of the PostgreSQL
+                      `CREATE SUBSCRIPTION` command. Most parameters cannot be changed
+                      after the subscription is created and will be ignored if modified
+                      later, except for a limited set documented at:
+                      https://www.postgresql.org/docs/current/sql-altersubscription.html#SQL-ALTERSUBSCRIPTION-PARAMS-SET
+                    type: object
+                  publicationDBName:
+                    description: |-
+                      The name of the database containing the publication on the external
+                      cluster. Defaults to the one in the external cluster definition.
+                    type: string
+                  publicationName:
+                    description: |-
+                      The name of the publication inside the PostgreSQL database in the
+                      "publisher"
+                    type: string
+                  subscriptionReclaimPolicy:
+                    default: retain
+                    description: The policy for end-of-life maintenance of this subscription
+                    enum:
+                    - delete
+                    - retain
+                    type: string
+                required:
+                - cluster
+                - dbname
+                - externalClusterName
+                - name
+                - publicationName
+                type: object
+              status:
+                description: SubscriptionStatus defines the observed state of Subscription
+                properties:
+                  applied:
+                    description: Applied is true if the subscription was reconciled correctly
+                    type: boolean
+                  message:
+                    description: Message is the reconciliation output message
+                    type: string
+                  observedGeneration:
+                    description: |-
+                      A sequence number representing the latest
+                      desired state that was synchronized
+                    format: int64
+                    type: integer
+                type: object
+            required:
+            - metadata
+            - spec
+            type: object
+        served: true
+        storage: true
+        subresources:
+          status: {}
+    status:
+      acceptedNames:
+        kind: Subscription
+        listKind: SubscriptionList
+        plural: subscriptions
+        singular: subscription
+      conditions:
+      - lastTransitionTime: "2026-02-24T16:25:42Z"
+        message: no conflicts found
+        reason: NoConflicts
+        status: "True"
+        type: NamesAccepted
+      - lastTransitionTime: "2026-02-24T16:25:42Z"
+        message: the initial names have been accepted
+        reason: InitialNamesAccepted
+        status: "True"
+        type: Established
+      storedVersions:
+      - v1
+  - |
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      annotations:
+        controller-gen.kubebuilder.io/version: v0.20.0
+        helm.sh/resource-policy: keep
+        meta.helm.sh/release-name: cloudnative-pg
+        meta.helm.sh/release-namespace: cnpg-system
+      creationTimestamp: "2026-02-24T16:25:42Z"
+      generation: 1
+      labels:
+        app.kubernetes.io/managed-by: Helm
+      name: backups.postgresql.cnpg.io
+      resourceVersion: "687"
+      uid: a53edb2d-4ddd-49b8-a45b-b2b90d556909
+    spec:
+      conversion:
+        strategy: None
+      group: postgresql.cnpg.io
+      names:
+        kind: Backup
+        listKind: BackupList
+        plural: backups
+        singular: backup
+      scope: Namespaced
+      versions:
+      - additionalPrinterColumns:
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+        - jsonPath: .spec.cluster.name
+          name: Cluster
+          type: string
+        - jsonPath: .spec.method
+          name: Method
+          type: string
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+        - jsonPath: .status.error
+          name: Error
+          type: string
+        name: v1
+        schema:
+          openAPIV3Schema:
+            description: A Backup resource is a request for a PostgreSQL backup by the
+              user.
+            properties:
+              apiVersion:
+                description: |-
+                  APIVersion defines the versioned schema of this representation of an object.
+                  Servers should convert recognized schemas to the latest internal value, and
+                  may reject unrecognized values.
+                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+                type: string
+              kind:
+                description: |-
+                  Kind is a string value representing the REST resource this object represents.
+                  Servers may infer this from the endpoint the client submits requests to.
+                  Cannot be updated.
+                  In CamelCase.
+                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                type: string
+              metadata:
+                type: object
+              spec:
+                description: |-
+                  Specification of the desired behavior of the backup.
+                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+                properties:
+                  cluster:
+                    description: The cluster to backup
+                    properties:
+                      name:
+                        description: Name of the referent.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  method:
+                    default: barmanObjectStore
+                    description: |-
+                      The backup method to be used, possible options are `barmanObjectStore`,
+                      `volumeSnapshot` or `plugin`. Defaults to: `barmanObjectStore`.
+                    enum:
+                    - barmanObjectStore
+                    - volumeSnapshot
+                    - plugin
+                    type: string
+                  online:
+                    description: |-
+                      Whether the default type of backup with volume snapshots is
+                      online/hot (`true`, default) or offline/cold (`false`)
+                      Overrides the default setting specified in the cluster field '.spec.backup.volumeSnapshot.online'
+                    type: boolean
+                  onlineConfiguration:
+                    description: |-
+                      Configuration parameters to control the online/hot backup with volume snapshots
+                      Overrides the default settings specified in the cluster '.backup.volumeSnapshot.onlineConfiguration' stanza
+                    properties:
+                      immediateCheckpoint:
+                        description: |-
+                          Control whether the I/O workload for the backup initial checkpoint will
+                          be limited, according to the `checkpoint_completion_target` setting on
+                          the PostgreSQL server. If set to true, an immediate checkpoint will be
+                          used, meaning PostgreSQL will complete the checkpoint as soon as
+                          possible. `false` by default.
+                        type: boolean
+                      waitForArchive:
+                        default: true
+                        description: |-
+                          If false, the function will return immediately after the backup is completed,
+                          without waiting for WAL to be archived.
+                          This behavior is only useful with backup software that independently monitors WAL archiving.
+                          Otherwise, WAL required to make the backup consistent might be missing and make the backup useless.
+                          By default, or when this parameter is true, pg_backup_stop will wait for WAL to be archived when archiving is
+                          enabled.
+                          On a standby, this means that it will wait only when archive_mode = always.
+                          If write activity on the primary is low, it may be useful to run pg_switch_wal on the primary in order to trigger
+                          an immediate segment switch.
+                        type: boolean
+                    type: object
+                  pluginConfiguration:
+                    description: Configuration parameters passed to the plugin managing
+                      this backup
+                    properties:
+                      name:
+                        description: Name is the name of the plugin managing this backup
+                        type: string
+                      parameters:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Parameters are the configuration parameters passed to the backup
+                          plugin for this backup
+                        type: object
+                    required:
+                    - name
+                    type: object
+                  target:
+                    description: |-
+                      The policy to decide which instance should perform this backup. If empty,
+                      it defaults to `cluster.spec.backup.target`.
+                      Available options are empty string, `primary` and `prefer-standby`.
+                      `primary` to have backups run always on primary instances,
+                      `prefer-standby` to have backups run preferably on the most updated
+                      standby, if available.
+                    enum:
+                    - primary
+                    - prefer-standby
+                    type: string
+                required:
+                - cluster
+                type: object
+                x-kubernetes-validations:
+                - message: BackupSpec is immutable once set
+                  rule: oldSelf == self
+              status:
+                description: |-
+                  Most recently observed status of the backup. This data may not be up to
+                  date. Populated by the system. Read-only.
+                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+                properties:
+                  azureCredentials:
+                    description: The credentials to use to upload data to Azure Blob Storage
+                    properties:
+                      connectionString:
+                        description: The connection string to be used
+                        properties:
+                          key:
+                            description: The key to select
+                            type: string
+                          name:
+                            description: Name of the referent.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      inheritFromAzureAD:
+                        description: Use the Azure AD based authentication without providing
+                          explicitly the keys.
+                        type: boolean
+                      storageAccount:
+                        description: The storage account where to upload data
+                        properties:
+                          key:
+                            description: The key to select
+                            type: string
+                          name:
+                            description: Name of the referent.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      storageKey:
+                        description: |-
+                          The storage account key to be used in conjunction
+                          with the storage account name
+                        properties:
+                          key:
+                            description: The key to select
+                            type: string
+                          name:
+                            description: Name of the referent.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      storageSasToken:
+                        description: |-
+                          A shared-access-signature to be used in conjunction with
+                          the storage account name
+                        properties:
+                          key:
+                            description: The key to select
+                            type: string
+                          name:
+                            description: Name of the referent.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      useDefaultAzureCredentials:
+                        description: |-
+                          Use the default Azure authentication flow, which includes DefaultAzureCredential.
+                          This allows authentication using environment variables and managed identities.
+                        type: boolean
+                    type: object
+                  backupId:
+                    description: The ID of the Barman backup
+                    type: string
+                  backupLabelFile:
+                    description: Backup label file content as returned by Postgres in
+                      case of online (hot) backups
+                    format: byte
+                    type: string
+                  backupName:
+                    description: The Name of the Barman backup
+                    type: string
+                  beginLSN:
+                    description: The starting xlog
+                    type: string
+                  beginWal:
+                    description: The starting WAL
+                    type: string
+                  commandError:
+                    description: The backup command output in case of error
+                    type: string
+                  commandOutput:
+                    description: Unused. Retained for compatibility with old versions.
+                    type: string
+                  destinationPath:
+                    description: |-
+                      The path where to store the backup (i.e. s3://bucket/path/to/folder)
+                      this path, with different destination folders, will be used for WALs
+                      and for data. This may not be populated in case of errors.
+                    type: string
+                  encryption:
+                    description: Encryption method required to S3 API
+                    type: string
+                  endLSN:
+                    description: The ending xlog
+                    type: string
+                  endWal:
+                    description: The ending WAL
+                    type: string
+                  endpointCA:
+                    description: |-
+                      EndpointCA store the CA bundle of the barman endpoint.
+                      Useful when using self-signed certificates to avoid
+                      errors with certificate issuer and barman-cloud-wal-archive.
+                    properties:
+                      key:
+                        description: The key to select
+                        type: string
+                      name:
+                        description: Name of the referent.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  endpointURL:
+                    description: |-
+                      Endpoint to be used to upload data to the cloud,
+                      overriding the automatic endpoint discovery
+                    type: string
+                  error:
+                    description: The detected error
+                    type: string
+                  googleCredentials:
+                    description: The credentials to use to upload data to Google Cloud
+                      Storage
+                    properties:
+                      applicationCredentials:
+                        description: The secret containing the Google Cloud Storage JSON
+                          file with the credentials
+                        properties:
+                          key:
+                            description: The key to select
+                            type: string
+                          name:
+                            description: Name of the referent.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      gkeEnvironment:
+                        description: |-
+                          If set to true, will presume that it's running inside a GKE environment,
+                          default to false.
+                        type: boolean
+                    type: object
+                  instanceID:
+                    description: Information to identify the instance where the backup
+                      has been taken from
+                    properties:
+                      ContainerID:
+                        description: The container ID
+                        type: string
+                      podName:
+                        description: The pod name
+                        type: string
+                      sessionID:
+                        description: |-
+                          The instance manager session ID. This is a unique identifier generated at instance manager
+                          startup and changes on every restart (including container reboots). Used to detect if
+                          the instance manager was restarted during long-running operations like backups, which
+                          would terminate any running backup process.
+                        type: string
+                    type: object
+                  majorVersion:
+                    description: |-
+                      The PostgreSQL major version that was running when the
+                      backup was taken.
+                    type: integer
+                  method:
+                    description: The backup method being used
+                    type: string
+                  online:
+                    description: Whether the backup was online/hot (`true`) or offline/cold
+                      (`false`)
+                    type: boolean
+                  phase:
+                    description: The last backup status
+                    type: string
+                  pluginMetadata:
+                    additionalProperties:
+                      type: string
+                    description: A map containing the plugin metadata
+                    type: object
+                  s3Credentials:
+                    description: The credentials to use to upload data to S3
+                    properties:
+                      accessKeyId:
+                        description: The reference to the access key id
+                        properties:
+                          key:
+                            description: The key to select
+                            type: string
+                          name:
+                            description: Name of the referent.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      inheritFromIAMRole:
+                        description: Use the role based authentication without providing
+                          explicitly the keys.
+                        type: boolean
+                      region:
+                        description: The reference to the secret containing the region
+                          name
+                        properties:
+                          key:
+                            description: The key to select
+                            type: string
+                          name:
+                            description: Name of the referent.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      secretAccessKey:
+                        description: The reference to the secret access key
+                        properties:
+                          key:
+                            description: The key to select
+                            type: string
+                          name:
+                            description: Name of the referent.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      sessionToken:
+                        description: The references to the session key
+                        properties:
+                          key:
+                            description: The key to select
+                            type: string
+                          name:
+                            description: Name of the referent.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                    type: object
+                  serverName:
+                    description: |-
+                      The server name on S3, the cluster name is used if this
+                      parameter is omitted
+                    type: string
+                  snapshotBackupStatus:
+                    description: Status of the volumeSnapshot backup
+                    properties:
+                      elements:
+                        description: The elements list, populated with the gathered volume
+                          snapshots
+                        items:
+                          description: BackupSnapshotElementStatus is a volume snapshot
+                            that is part of a volume snapshot method backup
+                          properties:
+                            name:
+                              description: Name is the snapshot resource name
+                              type: string
+                            tablespaceName:
+                              description: |-
+                                TablespaceName is the name of the snapshotted tablespace. Only set
+                                when type is PG_TABLESPACE
+                              type: string
+                            type:
+                              description: Type is tho role of the snapshot in the cluster,
+                                such as PG_DATA, PG_WAL and PG_TABLESPACE
+                              type: string
+                          required:
+                          - name
+                          - type
+                          type: object
+                        type: array
+                    type: object
+                  startedAt:
+                    description: When the backup was started
+                    format: date-time
+                    type: string
+                  stoppedAt:
+                    description: When the backup was terminated
+                    format: date-time
+                    type: string
+                  tablespaceMapFile:
+                    description: Tablespace map file content as returned by Postgres in
+                      case of online (hot) backups
+                    format: byte
+                    type: string
+                type: object
+            required:
+            - metadata
+            - spec
+            type: object
+        served: true
+        storage: true
+        subresources:
+          status: {}
+    status:
+      acceptedNames:
+        kind: Backup
+        listKind: BackupList
+        plural: backups
+        singular: backup
+      conditions:
+      - lastTransitionTime: "2026-02-24T16:25:42Z"
+        message: no conflicts found
+        reason: NoConflicts
+        status: "True"
+        type: NamesAccepted
+      - lastTransitionTime: "2026-02-24T16:25:42Z"
+        message: the initial names have been accepted
+        reason: InitialNamesAccepted
+        status: "True"
+        type: Established
+      storedVersions:
+      - v1
+
+  - |
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      name: databases.postgresql.cnpg.io
+    spec:
+      group: postgresql.cnpg.io
+      names:
+        kind: Database
+        plural: databases
+        singular: database
+      scope: Namespaced
+      versions:
+        - name: v1
+          served: true
+          storage: true
+          additionalPrinterColumns:
+            - jsonPath: .metadata.creationTimestamp
+              name: Age
+              type: date
+            - jsonPath: .spec.cluster.name
+              name: Cluster
+              type: string
+            - jsonPath: .spec.name
+              name: PG Name
+              type: string
+            - jsonPath: .status.applied
+              name: Applied
+              type: boolean
+            - jsonPath: .status.message
+              name: Message
+              type: string
+              description: Latest reconciliation message
+          schema:
+            openAPIV3Schema:
+              description: Database is the Schema for the databases API
+              type: object
+              required:
+                - metadata
+                - spec
+              properties:
+                apiVersion:
+                  type: string
+                kind:
+                  type: string
+                metadata:
+                  type: object
+                spec:
+                  description: Specification of the desired Database.
+                  type: object
+                  required:
+                    - cluster
+                    - name
+                    - owner
+                  properties:
+                    name:
+                      description: The name of the database to create inside PostgreSQL.
+                      type: string
+                    cluster:
+                      description: The name of the PostgreSQL cluster hosting the database.
+                      type: object
+                      properties:
+                        name:
+                          description: Name of the cluster.
+                          type: string
+                    owner:
+                      description: The role name of the user who owns the database.
+                      type: string
+                    encoding:
+                      description: Character set encoding to use in the database.
+                      type: string
+                    locale:
+                      description: Sets the default collation order and character classification.
+                      type: string
+                    localeCollate:
+                      description: Maps to the LC_COLLATE parameter.
+                      type: string
+                    localeCType:
+                      description: Maps to the LC_CTYPE parameter.
+                      type: string
+                    localeProvider:
+                      description: Maps to the LOCALE_PROVIDER parameter. Available from PostgreSQL 16.
+                      type: string
+                    allowConnections:
+                      description: If false then no one can connect to this database.
+                      type: boolean
+                    connectionLimit:
+                      description: "How many concurrent connections can be made. -1 means no limit."
+                      type: integer
+                    isTemplate:
+                      description: If true, this database can be cloned by any user with CREATEDB privileges.
+                      type: boolean
+                    ensure:
+                      description: "Ensure the database is present or absent. Defaults to present."
+                      type: string
+                      default: present
+                      enum:
+                        - present
+                        - absent
+                    databaseReclaimPolicy:
+                      description: The policy for end-of-life maintenance of this database.
+                      type: string
+                      default: retain
+                      enum:
+                        - delete
+                        - retain
+                    extensions:
+                      description: The list of extensions to be managed in the database.
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - name
+                        properties:
+                          name:
+                            description: Name of the extension.
+                            type: string
+                          ensure:
+                            description: Whether the extension should be present or absent.
+                            type: string
+                            default: present
+                            enum:
+                              - present
+                              - absent
+                          version:
+                            description: The version of the extension to install.
+                            type: string
+                          schema:
+                            description: The schema in which to install the extension.
+                            type: string
+                status:
+                  description: Most recently observed status of the Database.
+                  type: object
+                  properties:
+                    applied:
+                      description: Applied is true if the database was reconciled correctly.
+                      type: boolean
+                    message:
+                      description: Message is the reconciliation output message.
+                      type: string
+                    observedGeneration:
+                      description: A sequence number representing the latest desired state that was synchronized.
+                      type: integer
+                      format: int64

@@ -6,15 +6,19 @@ import {
   Injector,
   runInInjectionContext,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withRouterConfig } from '@angular/router';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { BehaviorSubject } from 'rxjs';
-import { provideNgIconsConfig } from '@ng-icons/core';
+import { provideNgIconsConfig, provideIcons } from '@ng-icons/core';
+import pluginIcons from './plugin-resources/generated-plugin-icons';
 import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
 import EXPECTED_API_VERSION from '../proto-version.gen';
 import routes from './app.routes';
 import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';
+import PluginRegistryService from './plugin-resources/plugin-registry.service';
+import PluginComponentRegistryService from './plugin-resources/plugin-component-registry.service';
+import registerPluginComponents from './plugins';
 
 // Global version mismatch observable
 export const versionMismatch$ = new BehaviorSubject<boolean>(false);
@@ -31,15 +35,26 @@ const handleVersionMismatch = (serverVersion: string) => {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter(routes, withRouterConfig({ paramsInheritanceStrategy: 'always' })),
     // Initialize configuration before app starts
     provideAppInitializer(() => {
       const configService = inject(ConfigService);
       return configService.loadConfig();
     }),
+    // Load plugin definitions from YAML files
+    provideAppInitializer(() => {
+      const pluginRegistry = inject(PluginRegistryService);
+      return pluginRegistry.loadPlugins();
+    }),
+    // Register compiled custom plugin components
+    provideAppInitializer(() => {
+      const componentRegistry = inject(PluginComponentRegistryService);
+      registerPluginComponents(componentRegistry);
+    }),
     provideNgIconsConfig({
       size: '1rem', // Default icon size
     }),
+    provideIcons(pluginIcons),
     // Provide the Authn transport
     {
       provide: AUTHN_TRANSPORT,
