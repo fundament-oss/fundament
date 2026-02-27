@@ -40,7 +40,7 @@ func TestAccProjectResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccProjectResourceConfig(projectName, endpoint, organizationID),
+				Config: testAccProjectResourceConfig(projectName, suffix, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", projectName),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
@@ -55,7 +55,7 @@ func TestAccProjectResource_basic(t *testing.T) {
 			},
 			// Update name
 			{
-				Config: testAccProjectResourceConfig(projectName+"-upd", endpoint, organizationID),
+				Config: testAccProjectResourceConfig(projectName+"-upd", suffix, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", projectName+"-upd"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
@@ -67,16 +67,23 @@ func TestAccProjectResource_basic(t *testing.T) {
 	})
 }
 
-func testAccProjectResourceConfig(name, endpoint, organizationID string) string {
+func testAccProjectResourceConfig(name, suffix, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  endpoint        = %[2]q
-  organization_id = %[3]q
+  endpoint        = %[3]q
+  organization_id = %[4]q
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
-resource "fundament_project" "test" {
-  name = %[1]q
+resource "fundament_cluster" "test" {
+  name               = "tf-acc-prc-%[2]s"
+  region             = "eu-west-1"
+  kubernetes_version = "1.28"
 }
-`, name, endpoint, organizationID)
+
+resource "fundament_project" "test" {
+  name       = %[1]q
+  cluster_id = fundament_cluster.test.id
+}
+`, name, suffix, endpoint, organizationID)
 }

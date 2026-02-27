@@ -7,10 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
-// TestAccNamespaceResource_basic tests basic namespace CRUD operations.
 func TestAccNamespaceResource_basic(t *testing.T) {
 	// Skip if not running acceptance tests
 	if os.Getenv("TF_ACC") == "" {
@@ -55,15 +53,6 @@ func TestAccNamespaceResource_basic(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources[resourceName]
-					if !ok {
-						return "", fmt.Errorf("Resource not found: %s", resourceName)
-					}
-					clusterID := rs.Primary.Attributes["cluster_id"]
-					namespaceID := rs.Primary.ID
-					return fmt.Sprintf("%s:%s", clusterID, namespaceID), nil
-				},
 			},
 			// Delete testing automatically occurs in TestCase
 		},
@@ -78,21 +67,20 @@ provider "fundament" {
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
-resource "fundament_project" "test" {
-  name = "tf-acc-ns-p-%[2]s"
-  cluster_id = fundament_cluster.test.id
-}
-
 resource "fundament_cluster" "test" {
   name               = "tf-acc-ns-c-%[2]s"
   region             = "eu-west-1"
   kubernetes_version = "1.28"
 }
 
+resource "fundament_project" "test" {
+  name       = "tf-acc-ns-p-%[2]s"
+  cluster_id = fundament_cluster.test.id
+}
+
 resource "fundament_namespace" "test" {
   name       = %[1]q
   project_id = fundament_project.test.id
-  cluster_id = fundament_cluster.test.id
 }
 `, name, suffix, endpoint, organizationID)
 }

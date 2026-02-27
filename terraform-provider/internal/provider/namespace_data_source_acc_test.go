@@ -71,14 +71,15 @@ provider "fundament" {
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
-resource "fundament_project" "test" {
-  name = "tf-acc-nsds-p-%[3]s"
-}
-
 resource "fundament_cluster" "test" {
   name               = "tf-acc-nsds-c-%[3]s"
   region             = "eu-west-1"
   kubernetes_version = "1.28"
+}
+
+resource "fundament_project" "test" {
+  name       = "tf-acc-nsds-p-%[3]s"
+  cluster_id = fundament_cluster.test.id
 }
 
 resource "fundament_namespace" "test" {

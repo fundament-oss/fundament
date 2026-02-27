@@ -270,7 +270,8 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	}.Build())
 
 	var getResp *connect.Response[organizationv1.GetNamespaceResponse]
-	for attempt := range 5 {
+
+	for attempt := range 10 {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -280,7 +281,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 			break
 		}
 
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 4 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
 			resp.Diagnostics.AddError(
 				"Unable to Read Created Namespace",
 				fmt.Sprintf("Namespace was created but unable to read its details: %s", err.Error()),

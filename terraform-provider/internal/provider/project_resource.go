@@ -206,7 +206,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	var getResp *connect.Response[organizationv1.GetProjectResponse]
 
-	for attempt := range 5 {
+	for attempt := range 10 {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -216,7 +216,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 			break
 		}
 
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 4 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
 			resp.Diagnostics.AddError(
 				"Unable to Read Created Project",
 				fmt.Sprintf("Unable to read created project: %s", err.Error()),

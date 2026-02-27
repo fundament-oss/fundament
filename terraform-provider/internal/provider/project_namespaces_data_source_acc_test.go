@@ -70,32 +70,25 @@ provider "fundament" {
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
+resource "fundament_cluster" "test" {
+  name               = "tf-acc-pns-%[3]s"
+  region             = "eu-west-1"
+  kubernetes_version = "1.28"
+}
+
 resource "fundament_project" "test" {
-  name = "tf-acc-pns-%[3]s"
-}
-
-resource "fundament_cluster" "test1" {
-  name               = "tf-acc-pns-c1-%[3]s"
-  region             = "eu-west-1"
-  kubernetes_version = "1.28"
-}
-
-resource "fundament_cluster" "test2" {
-  name               = "tf-acc-pns-c2-%[3]s"
-  region             = "eu-west-1"
-  kubernetes_version = "1.28"
+  name       = "tf-acc-pns-p-%[3]s"
+  cluster_id = fundament_cluster.test.id
 }
 
 resource "fundament_namespace" "test1" {
   name       = "tf-acc-pns-1-%[3]s"
   project_id = fundament_project.test.id
-  cluster_id = fundament_cluster.test1.id
 }
 
 resource "fundament_namespace" "test2" {
   name       = "tf-acc-pns-2-%[3]s"
   project_id = fundament_project.test.id
-  cluster_id = fundament_cluster.test2.id
 }
 
 data "fundament_project_namespaces" "test" {

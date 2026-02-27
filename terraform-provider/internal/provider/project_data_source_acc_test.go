@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -30,16 +31,14 @@ func TestAccProjectDataSource(t *testing.T) {
 		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
-	projectName := os.Getenv("FUNDAMENT_TEST_PROJECT_NAME")
-	if projectName == "" {
-		t.Skip("FUNDAMENT_TEST_PROJECT_NAME not set, skipping project data source test")
-	}
+	suffix := acctest.RandString(6)
+	projectName := fmt.Sprintf("tf-acc-pds-%s", suffix)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectDataSourceConfig(projectName, endpoint, organizationID),
+				Config: testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.fundament_project.test", "name", projectName),
 					resource.TestCheckResourceAttrSet("data.fundament_project.test", "id"),
@@ -50,16 +49,28 @@ func TestAccProjectDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectDataSourceConfig(projectName, endpoint, organizationID string) string {
+func testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  endpoint        = %[2]q
-  organization_id = %[3]q
+  endpoint        = %[3]q
+  organization_id = %[4]q
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
-data "fundament_project" "test" {
-  name = %[1]q
+resource "fundament_cluster" "test" {
+  name               = "tf-acc-pds-c-%[2]s"
+  region             = "eu-west-1"
+  kubernetes_version = "1.28"
 }
-`, projectName, endpoint, organizationID)
+
+resource "fundament_project" "test" {
+  name       = %[1]q
+  cluster_id = fundament_cluster.test.id
+}
+
+data "fundament_project" "test" {
+  name       = %[1]q
+  depends_on = [fundament_project.test]
+}
+`, projectName, suffix, endpoint, organizationID)
 }

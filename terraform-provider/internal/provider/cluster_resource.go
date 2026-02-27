@@ -150,7 +150,8 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}.Build())
 
 	var getResp *connect.Response[organizationv1.GetClusterResponse]
-	for attempt := range 5 {
+
+	for attempt := range 10 {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -160,13 +161,25 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 			break
 		}
 
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 4 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
 			resp.Diagnostics.AddError(
 				"Unable to Read Created Cluster",
 				fmt.Sprintf("Unable to read created cluster: %s", err.Error()),
 			)
 			return
 		}
+	}
+
+	if getResp == nil {
+		errMsg := "unknown error"
+		if err != nil {
+			errMsg = err.Error()
+		}
+		resp.Diagnostics.AddError(
+			"Unable to Read Created Cluster",
+			fmt.Sprintf("Unable to read created cluster after retries: %s", errMsg),
+		)
+		return
 	}
 
 	// Map response to state
@@ -300,25 +313,50 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	// Read the cluster to get the updated state
+	// Read the cluster to get the updated state.
+	// Retry on permission_denied, OpenFGA needs time to sync.
 	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
 		ClusterId: state.ID.ValueString(),
 	}.Build())
 
-	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
-	if err != nil {
-		switch connect.CodeOf(err) {
-		case connect.CodeNotFound:
-			resp.Diagnostics.AddError(
-				"Cluster Not Found After Update",
-				fmt.Sprintf("Cluster %q was updated but could not be read. It may have been deleted.", state.ID.ValueString()),
-			)
-		default:
-			resp.Diagnostics.AddError(
-				"Unable to Read Updated Cluster",
-				fmt.Sprintf("Unable to read updated cluster: %s", err.Error()),
-			)
+	var getResp *connect.Response[organizationv1.GetClusterResponse]
+
+	for attempt := range 10 {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * time.Second)
 		}
+
+		getResp, err = r.client.ClusterService.GetCluster(ctx, getReq)
+		if err == nil {
+			break
+		}
+
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+			switch connect.CodeOf(err) {
+			case connect.CodeNotFound:
+				resp.Diagnostics.AddError(
+					"Cluster Not Found After Update",
+					fmt.Sprintf("Cluster %q was updated but could not be read. It may have been deleted.", state.ID.ValueString()),
+				)
+			default:
+				resp.Diagnostics.AddError(
+					"Unable to Read Updated Cluster",
+					fmt.Sprintf("Unable to read updated cluster: %s", err.Error()),
+				)
+			}
+			return
+		}
+	}
+
+	if getResp == nil {
+		errMsg := "unknown error"
+		if err != nil {
+			errMsg = err.Error()
+		}
+		resp.Diagnostics.AddError(
+			"Unable to Read Updated Cluster",
+			fmt.Sprintf("Unable to read updated cluster after retries: %s", errMsg),
+		)
 		return
 	}
 
