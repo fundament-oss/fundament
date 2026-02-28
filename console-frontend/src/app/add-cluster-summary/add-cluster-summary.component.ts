@@ -159,14 +159,18 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     const wizardState = this.state();
 
     // Validate required fields
-    if (!wizardState.clusterName || !wizardState.region || !wizardState.kubernetesVersion) {
+    if (
+      !wizardState.clusterSlug ||
+      !wizardState.region ||
+      !wizardState.kubernetesVersion
+    ) {
       this.errorMessage.set('Missing required cluster information');
       return;
     }
 
     // Save cluster config for retries
     this.clusterConfig = {
-      name: wizardState.clusterName,
+      name: wizardState.clusterSlug,
       region: wizardState.region,
       kubernetesVersion: wizardState.kubernetesVersion,
     };

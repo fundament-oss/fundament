@@ -5,10 +5,12 @@ import {
   AfterViewInit,
   inject,
   OnInit,
+  OnDestroy,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 
@@ -18,7 +20,7 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster.component.html',
 })
-export default class AddClusterComponent implements AfterViewInit, OnInit {
+export default class AddClusterComponent implements AfterViewInit, OnInit, OnDestroy {
   @ViewChild('clusterNameInput') clusterNameInput!: ElementRef<HTMLInputElement>;
 
   private titleService = inject(TitleService);
@@ -38,11 +40,14 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
 
   kubernetesVersions = ['1.31.1', '1.32.0', '1.33.0', '1.34.0'];
 
+  private nameSubscription?: Subscription;
+
   constructor() {
     this.titleService.setTitle('Add a cluster');
 
     this.clusterForm = this.fb.group({
-      clusterName: [
+      clusterName: ['', [Validators.required]],
+      clusterSlug: [
         '',
         [
           Validators.required,
@@ -56,15 +61,28 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
   }
 
   ngOnInit(): void {
+    // Auto-populate slug from name
+    this.nameSubscription = this.clusterForm.get('clusterName')!.valueChanges.subscribe(
+      (name: string) => {
+        const slug = this.toSlug(name);
+        this.clusterForm.get('clusterSlug')!.setValue(slug);
+      },
+    );
+
     // Load existing state if available
     const state = this.stateService.getState();
     if (state.clusterName) {
       this.clusterForm.patchValue({
         clusterName: state.clusterName,
+        clusterSlug: state.clusterSlug,
         region: state.region,
         kubernetesVersion: state.kubernetesVersion,
       });
     }
+  }
+
+  ngOnDestroy(): void {
+    this.nameSubscription?.unsubscribe();
   }
 
   ngAfterViewInit() {
@@ -76,15 +94,36 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
     return this.clusterForm.get('clusterName');
   }
 
+  get clusterSlug() {
+    return this.clusterForm.get('clusterSlug');
+  }
+
+  private toSlug(name: string): string {
+    return name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with dashes
+      .substring(0, 253) // Truncate
+      .replace(/^-+|-+$/g, ''); // Remove leading/trailing dashes
+  }
+
   getClusterNameError(): string {
     if (this.clusterName?.hasError('required')) {
       return 'The cluster name is required.';
     }
-    if (this.clusterName?.hasError('maxlength')) {
-      return 'The cluster name must not exceed 253 characters.';
+    return '';
+  }
+
+  getClusterSlugError(): string {
+    if (this.clusterSlug?.hasError('required')) {
+      return 'The cluster slug is required.';
     }
-    if (this.clusterName?.hasError('pattern')) {
-      return `The cluster name must contain only lowercase alphanumeric characters, '-' or '.', and start and end with an alphanumeric character.`;
+    if (this.clusterSlug?.hasError('maxlength')) {
+      return 'The cluster slug must not exceed 253 characters.';
+    }
+    if (this.clusterSlug?.hasError('pattern')) {
+      return `The cluster slug must contain only lowercase alphanumeric characters, '-' or '.', and start and end with an alphanumeric character.`;
     }
     return '';
   }
@@ -101,6 +140,7 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
     // Save state
     this.stateService.updateBasicInfo({
       clusterName: clusterData.clusterName,
+      clusterSlug: clusterData.clusterSlug,
       region: clusterData.region,
       kubernetesVersion: clusterData.kubernetesVersion,
     });
