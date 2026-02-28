@@ -17,6 +17,10 @@
         <dd class="mt-1 text-sm dark:text-white">{{ state().clusterName || 'N/A' }}</dd>
       </dl>
       <dl>
+        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Cluster slug</dt>
+        <dd class="mt-1 text-sm dark:text-white">{{ state().clusterSlug || 'N/A' }}</dd>
+      </dl>
+      <dl>
         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
         <dd class="mt-1 text-sm dark:text-white">{{ state().region?.toUpperCase() || 'N/A' }}</dd>
       </dl>

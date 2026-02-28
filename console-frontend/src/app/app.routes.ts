@@ -197,9 +197,9 @@ const routes: Routes = [
       },
       {
         path: 'organization',
-        loadComponent: () => import('./organization/organization.component').then((m) => m.default),
+        loadComponent: () => import('./organization-settings/organization-settings.component').then((m) => m.default),
         data: {
-          breadcrumbs: [{ label: 'Organization' }],
+          breadcrumbs: [{ label: 'Settings' }],
         },
       },
       {

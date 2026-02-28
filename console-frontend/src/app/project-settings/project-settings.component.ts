@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy, ViewChild, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
@@ -57,6 +57,8 @@ export default class ProjectSettingsComponent implements OnInit {
 
   error = signal<string | null>(null);
 
+  @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
+
   showDeleteModal = signal<boolean>(false);
 
   constructor() {
@@ -94,6 +96,10 @@ export default class ProjectSettingsComponent implements OnInit {
     if (currentProject) {
       this.isEditing.set(true);
       this.editingName.set(currentProject.name);
+
+      setTimeout(() => {
+        this.nameInput?.nativeElement.focus();
+      });
     }
   }
 

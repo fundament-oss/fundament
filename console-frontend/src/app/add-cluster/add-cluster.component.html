@@ -8,20 +8,36 @@
 
 <!-- Form -->
 <form [formGroup]="clusterForm" (ngSubmit)="onSubmit()" class="space-y-6 px-6 py-6">
-  <!-- Cluster Name -->
+  <!-- Cluster Display Name -->
   <div>
     <label for="clusterName" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-      Cluster name
+      Cluster display name
     </label>
     <input
       #clusterNameInput
       id="clusterName"
       formControlName="clusterName"
       type="text"
-      placeholder="E.g. my-production-cluster"
+      placeholder="E.g. My Production Cluster"
     />
     @if (clusterName?.invalid && clusterName?.dirty) {
       <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getClusterNameError() }}</p>
+    }
+  </div>
+
+  <!-- Cluster Slug -->
+  <div>
+    <label for="clusterSlug" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+      Cluster slug
+    </label>
+    <input
+      id="clusterSlug"
+      formControlName="clusterSlug"
+      type="text"
+      placeholder="E.g. my-production-cluster"
+    />
+    @if (clusterSlug?.invalid && clusterSlug?.dirty) {
+      <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getClusterSlugError() }}</p>
     }
   </div>
 

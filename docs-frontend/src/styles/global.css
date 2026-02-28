@@ -5,7 +5,9 @@
 
 /* View transition styles for switching between light and dark mode, see https://theme-toggle.rdsx.dev/ */
 ::view-transition-group(root) {
-  @apply animate-[700ms_ease-out];
+  /* Note: `@apply animate-[700ms_ease-out]` will not work, since it implicitly sets `animation-name: none` */
+  animation-duration: 700ms;
+  animation-timing-function: ease-out;
 }
 
 ::view-transition-new(root) {

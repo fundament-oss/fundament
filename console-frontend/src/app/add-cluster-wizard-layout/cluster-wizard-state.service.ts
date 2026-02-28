@@ -3,6 +3,7 @@ import { Injectable, signal } from '@angular/core';
 export interface ClusterWizardState {
   // Basic cluster information (step 1)
   clusterName?: string;
+  clusterSlug?: string;
   region?: string;
   kubernetesVersion?: string;
 
@@ -34,7 +35,12 @@ export class ClusterWizardStateService {
     return this.state();
   }
 
-  updateBasicInfo(data: { clusterName?: string; region?: string; kubernetesVersion?: string }) {
+  updateBasicInfo(data: {
+    clusterName?: string;
+    clusterSlug?: string;
+    region?: string;
+    kubernetesVersion?: string;
+  }) {
     this.state.update((current) => ({
       ...current,
       ...data,
@@ -73,12 +79,12 @@ export class ClusterWizardStateService {
 
   isFirstStepCompleted(): boolean {
     const state = this.state();
-    return !!(state.clusterName && state.region && state.kubernetesVersion);
+    return !!(state.clusterName && state.clusterSlug && state.region && state.kubernetesVersion);
   }
 
   hasState(): boolean {
     const state = this.state();
-    return !!(state.clusterName || state.region || state.kubernetesVersion);
+    return !!(state.clusterName || state.clusterSlug || state.region || state.kubernetesVersion);
   }
 
   reset() {
