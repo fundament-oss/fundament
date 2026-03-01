@@ -1,6 +1,6 @@
-// Package worker_outbox implements the cluster outbox worker.
+// Package workeroutbox implements the cluster outbox worker.
 // It processes outbox rows and dispatches to entity-specific sync handlers.
-package worker_outbox
+package workeroutbox
 
 import (
 	"context"
@@ -138,9 +138,13 @@ func (w *OutboxWorker) waitForNotification(ctx context.Context, conn *pgxpool.Co
 	}
 }
 
+// processAllRows drains all processable outbox rows in a loop.
+// Row-level errors (handler failures, invalid rows) are handled inside processNextRow.
+// Infrastructure errors (connection loss, commit failure) cause a backoff to avoid a
+// tight retry loop.
 func (w *OutboxWorker) processAllRows(ctx context.Context) {
 	for {
-		found, err := w.processNextRow(ctx)
+		hasNext, err := w.processNextRow(ctx)
 		if err != nil {
 			w.logger.Error("failed to process outbox item", "error", err)
 			select {
@@ -149,20 +153,22 @@ func (w *OutboxWorker) processAllRows(ctx context.Context) {
 			}
 			return
 		}
-		if !found {
+		if !hasNext {
 			return
 		}
 	}
 }
 
-func (w *OutboxWorker) processNextRow(ctx context.Context) (found bool, err error) {
+func (w *OutboxWorker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 	if ctx.Err() != nil {
 		return false, nil
 	}
 
 	// Row lock acquired: OutboxGetAndLock uses FOR NO KEY UPDATE SKIP LOCKED,
 	// so the row is locked for the lifetime of this transaction.
-	// Row lock released: on tx.Commit() or defer rollback.Rollback().
+	// Row lock released: on tx.Commit() or deferred rollback.
+	// Error-path marks use w.queries (the pool) so they run in an independent
+	// transaction and are not coupled to the lock transaction.
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("begin transaction: %w", err)
@@ -179,7 +185,20 @@ func (w *OutboxWorker) processNextRow(ctx context.Context) (found bool, err erro
 		return false, fmt.Errorf("get next outbox row: %w", err)
 	}
 
-	entityType, entityID := entityFromRow(&row)
+	entityType, entityID, err := entityFromRow(&row)
+	if err != nil {
+		w.logger.Error("invalid outbox row, marking as failed",
+			"outbox_id", row.ID,
+			"error", err)
+		markErr := w.queries.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
+			ID:         row.ID,
+			StatusInfo: pgtype.Text{String: err.Error(), Valid: true},
+		})
+		if markErr != nil {
+			return false, fmt.Errorf("mark failed for invalid entity: %w", markErr)
+		}
+		return true, nil
+	}
 
 	w.logger.Debug("processing outbox row",
 		"outbox_id", row.ID,
@@ -194,34 +213,33 @@ func (w *OutboxWorker) processNextRow(ctx context.Context) (found bool, err erro
 			"outbox_id", row.ID,
 			"entity_type", entityType,
 			"error", err)
-		if markErr := qtx.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
+		markErr := w.queries.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
 			ID:         row.ID,
 			StatusInfo: pgtype.Text{String: err.Error(), Valid: true},
-		}); markErr != nil {
-			return true, fmt.Errorf("mark failed for unhandled entity: %w", markErr)
-		}
-		if commitErr := tx.Commit(ctx); commitErr != nil {
-			return true, fmt.Errorf("commit after marking unhandled entity failed: %w", commitErr)
+		})
+		if markErr != nil {
+			return false, fmt.Errorf("mark failed for unhandled entity: %w", markErr)
 		}
 		return true, nil
 	}
 
-	if syncErr := h.Sync(ctx, entityID); syncErr != nil {
-		if err := w.handleRowError(ctx, qtx, &row, syncErr); err != nil {
-			return true, fmt.Errorf("handle processing error: %w", err)
-		}
-		if err := tx.Commit(ctx); err != nil {
-			return true, fmt.Errorf("commit after error: %w", err)
+	err = h.Sync(ctx, entityID)
+	if err != nil {
+		markErr := w.handleRowError(ctx, w.queries, &row, err)
+		if markErr != nil {
+			return false, fmt.Errorf("handle processing error: %w", markErr)
 		}
 		return true, nil
 	}
 
-	if err := qtx.OutboxMarkProcessed(ctx, db.OutboxMarkProcessedParams{ID: row.ID}); err != nil {
-		return true, fmt.Errorf("mark as processed: %w", err)
+	err = qtx.OutboxMarkProcessed(ctx, db.OutboxMarkProcessedParams{ID: row.ID})
+	if err != nil {
+		return false, fmt.Errorf("mark as processed: %w", err)
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return true, fmt.Errorf("commit: %w", err)
+	err = tx.Commit(ctx)
+	if err != nil {
+		return false, fmt.Errorf("commit: %w", err)
 	}
 
 	w.logger.Debug("outbox row processed",
@@ -289,9 +307,15 @@ func (w *OutboxWorker) reconcileAllHandlers(ctx context.Context) {
 	w.logger.Info("outbox reconciliation complete")
 }
 
-// entityFromRow returns the entity type and ID from an outbox row.
-func entityFromRow(row *db.OutboxGetAndLockRow) (handler.EntityType, uuid.UUID) {
-	return handler.EntityType(row.EntityType), row.SubjectID
+// entityFromRow determines the entity type and ID from the outbox row's FK columns.
+// Exactly one FK column is non-null (enforced by the num_nonnulls check constraint).
+func entityFromRow(row *db.OutboxGetAndLockRow) (handler.EntityType, uuid.UUID, error) {
+	switch {
+	case row.ClusterID.Valid:
+		return handler.EntityCluster, uuid.UUID(row.ClusterID.Bytes), nil
+	default:
+		return "", uuid.Nil, fmt.Errorf("no valid entity FK in outbox row %s", row.ID)
+	}
 }
 
 func durationToInterval(d time.Duration) pgtype.Interval {

@@ -184,9 +184,8 @@ BEGIN
     IF TG_OP = 'INSERT'
        OR OLD.deleted IS DISTINCT FROM NEW.deleted
     THEN
-        INSERT INTO tenant.cluster_outbox (subject_id, entity_type, event, source)
+        INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
         VALUES (COALESCE(NEW.id, OLD.id),
-                'cluster',
                 CASE
                     WHEN TG_OP = 'INSERT' THEN 'created'
                     WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
@@ -1086,8 +1085,7 @@ USING btree
 -- DROP TABLE IF EXISTS tenant.cluster_outbox CASCADE;
 CREATE TABLE tenant.cluster_outbox (
 	id uuid NOT NULL DEFAULT uuidv7(),
-	subject_id uuid NOT NULL,
-	entity_type text NOT NULL,
+	cluster_id uuid,
 	event text NOT NULL DEFAULT 'updated',
 	source text NOT NULL DEFAULT 'trigger',
 	status text NOT NULL DEFAULT 'pending',
@@ -1098,7 +1096,7 @@ CREATE TABLE tenant.cluster_outbox (
 	status_info text,
 	created timestamptz NOT NULL DEFAULT now(),
 	CONSTRAINT cluster_outbox_pk PRIMARY KEY (id),
-	CONSTRAINT cluster_outbox_ck_entity_type CHECK (entity_type IN ('cluster')),
+	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id) = 1),
 	CONSTRAINT cluster_outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed')),
 	CONSTRAINT cluster_outbox_ck_event CHECK (event IN ('created', 'updated', 'deleted', 'reconcile')),
 	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual'))
@@ -1118,12 +1116,12 @@ USING btree
 );
 -- ddl-end --
 
--- object: cluster_outbox_idx_subject_id | type: INDEX --
--- DROP INDEX IF EXISTS tenant.cluster_outbox_idx_subject_id CASCADE;
-CREATE INDEX cluster_outbox_idx_subject_id ON tenant.cluster_outbox
+-- object: cluster_outbox_idx_cluster_id | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.cluster_outbox_idx_cluster_id CASCADE;
+CREATE INDEX cluster_outbox_idx_cluster_id ON tenant.cluster_outbox
 USING btree
 (
-	subject_id
+	cluster_id
 );
 -- ddl-end --
 
@@ -1739,6 +1737,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE tenant.cluster_events ADD CONSTRAINT cluster_events_fk_cluster FOREIGN KEY (cluster_id)
 REFERENCES tenant.clusters (id) MATCH SIMPLE
 ON DELETE CASCADE ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: cluster_outbox_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_cluster CASCADE;
+ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: outbox_fk_project | type: CONSTRAINT --

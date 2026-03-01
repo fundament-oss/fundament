@@ -278,9 +278,8 @@ END;]]> </definition>
     IF TG_OP = 'INSERT'
        OR OLD.deleted IS DISTINCT FROM NEW.deleted
     THEN
-        INSERT INTO tenant.cluster_outbox (subject_id, entity_type, event, source)
+        INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
         VALUES (COALESCE(NEW.id, OLD.id),
-                'cluster',
                 CASE
                     WHEN TG_OP = 'INSERT' THEN 'created'
                     WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
@@ -1281,11 +1280,8 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="subject_id" not-null="true">
+	<column name="cluster_id">
 		<type name="uuid" length="0"/>
-	</column>
-	<column name="entity_type" not-null="true">
-		<type name="text" length="0"/>
 	</column>
 	<column name="event" not-null="true" default-value="'updated'">
 		<type name="text" length="0"/>
@@ -1317,8 +1313,8 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 	<constraint name="cluster_outbox_pk" type="pk-constr" table="tenant.cluster_outbox">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="cluster_outbox_ck_entity_type" type="ck-constr" table="tenant.cluster_outbox">
-			<expression> <![CDATA[entity_type IN ('cluster')]]> </expression>
+	<constraint name="cluster_outbox_ck_single_fk" type="ck-constr" table="tenant.cluster_outbox">
+			<expression> <![CDATA[num_nonnulls(cluster_id) = 1]]> </expression>
 	</constraint>
 	<constraint name="cluster_outbox_ck_status" type="ck-constr" table="tenant.cluster_outbox">
 			<expression> <![CDATA[status IN ('pending', 'completed', 'retrying', 'failed')]]> </expression>
@@ -1345,11 +1341,11 @@ AND authn.is_project_member(id, authn.current_user_id(), 'admin')]]> </expressio
 		</idxelement>
 </index>
 
-<index name="cluster_outbox_idx_subject_id" table="tenant.cluster_outbox"
+<index name="cluster_outbox_idx_cluster_id" table="tenant.cluster_outbox"
 	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
 	 index-type="btree" factor="0">
 		<idxelement use-sorting="false">
-			<column name="subject_id"/>
+			<column name="cluster_id"/>
 		</idxelement>
 </index>
 
@@ -1948,6 +1944,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="cluster_outbox_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.cluster_outbox">
+	<columns names="cluster_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="outbox_fk_node_pool" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.node_pools" table="authz.outbox">
 	<columns names="node_pool_id" ref-type="src-columns"/>
@@ -2123,6 +2125,11 @@ END;]]> </definition>
 <relationship name="rel_outbox_organizations_users" type="relfk" layers="0"
 	 src-table="authz.outbox"
 	 dst-table="tenant.organizations_users" reference-fk="outbox_fk_organization_user"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_cluster_outbox_clusters" type="relfk" layers="0"
+	 src-table="tenant.cluster_outbox"
+	 dst-table="tenant.clusters" reference-fk="cluster_outbox_fk_cluster"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_organizations_users_organizations" type="relfk" layers="0"

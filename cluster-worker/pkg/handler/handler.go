@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// EntityType identifies the entity_type column value in the outbox table.
+// EntityType identifies an entity type in the outbox table via its FK column.
 type EntityType string
 
 const (

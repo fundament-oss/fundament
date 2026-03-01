@@ -1,4 +1,4 @@
-package worker_status
+package workerstatus
 
 import (
 	"context"

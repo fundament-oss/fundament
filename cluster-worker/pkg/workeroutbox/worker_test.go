@@ -1,4 +1,4 @@
-package worker_outbox
+package workeroutbox
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
@@ -59,18 +60,32 @@ func (m *mockRow) Scan(dest ...any) error {
 func TestEntityFromRow(t *testing.T) {
 	id := uuid.New()
 	row := &db.OutboxGetAndLockRow{
-		ID:         uuid.New(),
-		SubjectID:  id,
-		EntityType: string(handler.EntityCluster),
+		ID:        uuid.New(),
+		ClusterID: pgtype.UUID{Bytes: id, Valid: true},
 	}
 
-	entityType, entityID := entityFromRow(row)
+	entityType, entityID, err := entityFromRow(row)
 
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if entityType != handler.EntityCluster {
 		t.Errorf("expected EntityCluster, got %q", entityType)
 	}
 	if entityID != id {
 		t.Errorf("expected %s, got %s", id, entityID)
+	}
+}
+
+func TestEntityFromRow_NoValidFK(t *testing.T) {
+	row := &db.OutboxGetAndLockRow{
+		ID: uuid.New(),
+	}
+
+	_, _, err := entityFromRow(row)
+
+	if err == nil {
+		t.Fatal("expected error for row with no valid FK")
 	}
 }
 

@@ -1,6 +1,6 @@
-// Package worker implements the cluster sync worker.
+// Package workersync implements the cluster sync worker.
 // It listens for PostgreSQL notifications and syncs cluster state to Gardener.
-package worker_sync
+package workersync
 
 import (
 	"context"
