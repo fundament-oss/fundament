@@ -15,9 +15,6 @@ import (
 const outboxGetAndLock = `-- name: OutboxGetAndLock :one
 SELECT id,
        cluster_id,
-       namespace_id,
-       project_member_id,
-       project_id,
        event,
        source,
        status,
@@ -31,15 +28,12 @@ FOR NO KEY UPDATE SKIP LOCKED
 `
 
 type OutboxGetAndLockRow struct {
-	ID              uuid.UUID
-	ClusterID       pgtype.UUID
-	NamespaceID     pgtype.UUID
-	ProjectMemberID pgtype.UUID
-	ProjectID       pgtype.UUID
-	Event           string
-	Source          string
-	Status          string
-	Retries         int32
+	ID        uuid.UUID
+	ClusterID pgtype.UUID
+	Event     string
+	Source    string
+	Status    string
+	Retries   int32
 }
 
 // Claims the next pending/retryable outbox row.
@@ -50,9 +44,6 @@ func (q *Queries) OutboxGetAndLock(ctx context.Context) (OutboxGetAndLockRow, er
 	err := row.Scan(
 		&i.ID,
 		&i.ClusterID,
-		&i.NamespaceID,
-		&i.ProjectMemberID,
-		&i.ProjectID,
 		&i.Event,
 		&i.Source,
 		&i.Status,
@@ -80,7 +71,10 @@ func (q *Queries) OutboxMarkFailed(ctx context.Context, arg OutboxMarkFailedPara
 
 const outboxMarkProcessed = `-- name: OutboxMarkProcessed :exec
 UPDATE tenant.cluster_outbox
-SET status = 'completed', processed = now()
+SET status = 'completed',
+    processed = now(),
+    status_info = NULL,
+    retry_after = NULL
 WHERE id = $1
 `
 

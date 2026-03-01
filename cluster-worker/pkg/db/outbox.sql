@@ -3,9 +3,6 @@
 -- Uses FOR NO KEY UPDATE SKIP LOCKED for concurrent worker safety.
 SELECT id,
        cluster_id,
-       namespace_id,
-       project_member_id,
-       project_id,
        event,
        source,
        status,
@@ -19,7 +16,10 @@ FOR NO KEY UPDATE SKIP LOCKED;
 
 -- name: OutboxMarkProcessed :exec
 UPDATE tenant.cluster_outbox
-SET status = 'completed', processed = now()
+SET status = 'completed',
+    processed = now(),
+    status_info = NULL,
+    retry_after = NULL
 WHERE id = @id;
 
 -- name: OutboxMarkRetry :one

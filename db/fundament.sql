@@ -1630,6 +1630,13 @@ REFERENCES tenant.clusters (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
+-- object: cluster_outbox_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_cluster CASCADE;
+ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
 -- object: outbox_fk_project | type: CONSTRAINT --
 -- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_project CASCADE;
 ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_project FOREIGN KEY (project_id)
