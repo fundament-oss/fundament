@@ -42,9 +42,8 @@ BEGIN
     IF TG_OP = 'INSERT'
        OR OLD.deleted IS DISTINCT FROM NEW.deleted
     THEN
-        INSERT INTO tenant.cluster_outbox (subject_id, entity_type, event, source)
+        INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
         VALUES (COALESCE(NEW.id, OLD.id),
-                'cluster',
                 CASE
                     WHEN TG_OP = 'INSERT' THEN 'created'
                     WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
@@ -93,8 +92,7 @@ ALTER POLICY "api_keys_organization_policy" ON "authn"."api_keys"
 
 CREATE TABLE "tenant"."cluster_outbox" (
 	"id" uuid DEFAULT uuidv7() NOT NULL,
-	"subject_id" uuid NOT NULL,
-	"entity_type" text COLLATE "pg_catalog"."default" NOT NULL,
+	"cluster_id" uuid,
 	"event" text COLLATE "pg_catalog"."default" DEFAULT 'updated'::text NOT NULL,
 	"source" text COLLATE "pg_catalog"."default" DEFAULT 'trigger'::text NOT NULL,
 	"status" text COLLATE "pg_catalog"."default" DEFAULT 'pending'::text NOT NULL,
@@ -106,9 +104,9 @@ CREATE TABLE "tenant"."cluster_outbox" (
 	"created" timestamp with time zone DEFAULT now() NOT NULL
 );
 
-ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_ck_entity_type" CHECK((entity_type = 'cluster'::text));
-
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_ck_event" CHECK((event = ANY (ARRAY['created'::text, 'updated'::text, 'deleted'::text, 'reconcile'::text])));
+
+ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_ck_single_fk" CHECK((num_nonnulls(cluster_id) = 1));
 
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_ck_source" CHECK((source = ANY (ARRAY['trigger'::text, 'reconcile'::text, 'manual'::text])));
 
@@ -126,13 +124,17 @@ CREATE UNIQUE INDEX cluster_outbox_pk ON tenant.cluster_outbox USING btree (id);
 
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_pk" PRIMARY KEY USING INDEX "cluster_outbox_pk";
 
-CREATE INDEX cluster_outbox_idx_subject_id ON tenant.cluster_outbox USING btree (subject_id);
+CREATE INDEX cluster_outbox_idx_cluster_id ON tenant.cluster_outbox USING btree (cluster_id);
 
 CREATE INDEX cluster_outbox_status_retry_idx ON tenant.cluster_outbox USING btree (status, retry_after, id);
 
 CREATE TRIGGER cluster_outbox_notify AFTER INSERT ON tenant.cluster_outbox FOR EACH ROW EXECUTE FUNCTION tenant.cluster_outbox_notify();
 
 CREATE TRIGGER cluster_outbox_cluster AFTER INSERT OR UPDATE ON tenant.clusters FOR EACH ROW EXECUTE FUNCTION tenant.cluster_outbox_cluster_trigger();
+
+ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_fk_cluster" FOREIGN KEY (cluster_id) REFERENCES tenant.clusters(id) NOT VALID;
+
+ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_fk_cluster";
 
 /* Hazards:
  - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
