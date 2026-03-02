@@ -40,6 +40,7 @@ import {
   tablerBuilding,
   tablerBracketsContain,
   tablerUserCog,
+  tablerGauge,
 } from '@ng-icons/tabler-icons';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
@@ -96,6 +97,7 @@ const reloadApp = () => {
       tablerBuilding,
       tablerBracketsContain,
       tablerUserCog,
+      tablerGauge,
     }),
   ],
   host: {
