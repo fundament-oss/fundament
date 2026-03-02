@@ -8,7 +8,7 @@
 
 == Introduction
 
-This document defines the personas used throughout Fundament's design and development. Personas are fictional but representative users drawn from the seed data used in local development. They provide a shared vocabulary for discussions about features, access control, and user experience.
+This document defines the personas used throughout Fundament's design and development. Personas are fictional but representative users, used in the seed data for local development and testing. They provide a shared vocabulary for discussions about features, access control, and user experience.
 
 Each persona belongs to one of three fictional tenant organizations: *Acme Corp*, *Globex*, and *Initech*. Within each organization, users hold either the `admin` or `viewer` role.
 
