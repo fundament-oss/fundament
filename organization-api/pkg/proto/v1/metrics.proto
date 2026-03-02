@@ -1,0 +1,183 @@
+edition = "2023";
+
+package organization.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+import "v1/cluster.proto";
+import "v1/common.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
+
+// MetricsService provides workload and infrastructure metrics for clusters,
+// organizations, and projects. Metrics are sourced from a configured Prometheus
+// instance. When Prometheus is not configured, all RPCs return empty results.
+service MetricsService {
+  // Cluster-level workload metrics (CPU, memory, pods) for a specific cluster
+  rpc GetClusterWorkloadMetrics(GetClusterWorkloadMetricsRequest) returns (GetClusterWorkloadMetricsResponse);
+
+  // Time-series workload metrics for a specific cluster
+  rpc GetClusterWorkloadTimeSeries(GetClusterWorkloadTimeSeriesRequest) returns (GetWorkloadTimeSeriesResponse);
+
+  // metal-stack infrastructure metrics for a specific cluster's machines
+  rpc GetClusterInfraMetrics(GetClusterInfraMetricsRequest) returns (GetInfraMetricsResponse);
+
+  // Org-level workload metrics aggregated across all clusters
+  rpc GetOrgWorkloadMetrics(GetOrgWorkloadMetricsRequest) returns (GetOrgWorkloadMetricsResponse);
+
+  // Org-level time-series workload metrics aggregated across all clusters
+  rpc GetOrgWorkloadTimeSeries(GetOrgWorkloadTimeSeriesRequest) returns (GetWorkloadTimeSeriesResponse);
+
+  // metal-stack infrastructure metrics for all machines in the organization
+  rpc GetOrgInfraMetrics(GetOrgInfraMetricsRequest) returns (GetInfraMetricsResponse);
+
+  // Project-level workload metrics filtered to the project's namespaces
+  rpc GetProjectWorkloadMetrics(GetProjectWorkloadMetricsRequest) returns (GetProjectWorkloadMetricsResponse);
+
+  // Project-level time-series workload metrics filtered to the project's namespaces
+  rpc GetProjectWorkloadTimeSeries(GetProjectWorkloadTimeSeriesRequest) returns (GetWorkloadTimeSeriesResponse);
+}
+
+// -- Shared response types --
+
+// GetWorkloadTimeSeriesResponse contains time-series data for the three core
+// workload metrics. Used as the response for all *TimeSeries RPCs.
+message GetWorkloadTimeSeriesResponse {
+  repeated MetricSample cpu_cores = 10;
+  repeated MetricSample memory_gib = 20;
+  repeated MetricSample pod_count = 30;
+}
+
+// MetricSample is a single (timestamp, value) pair in a time-series.
+message MetricSample {
+  google.protobuf.Timestamp timestamp = 10;
+  double value = 20;
+}
+
+// GetInfraMetricsResponse contains metal-stack machine information.
+// Used as the response for all *InfraMetrics RPCs.
+message GetInfraMetricsResponse {
+  repeated MachineInfo machines = 10;
+  double total_power_watts = 20;
+}
+
+// MachineInfo describes a single metal-stack machine.
+message MachineInfo {
+  string id = 10;
+  string name = 20;
+  string size = 30;
+  string state = 40;
+  double power_watts = 50;
+}
+
+// NamespaceWorkloadMetrics describes workload usage for a single namespace.
+message NamespaceWorkloadMetrics {
+  string namespace = 10;
+  double cpu_cores = 20;
+  double memory_gib = 30;
+  int32 pods = 40;
+}
+
+// -- Cluster-level --
+
+// GetClusterWorkloadMetricsRequest requests workload metrics for a single cluster.
+message GetClusterWorkloadMetricsRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// GetClusterWorkloadMetricsResponse contains current workload metrics for a cluster.
+message GetClusterWorkloadMetricsResponse {
+  // Cluster-wide totals
+  ResourceUsageInfo totals = 10;
+  // Per-node breakdown
+  repeated NodeWorkloadMetrics nodes = 20;
+  // Per-namespace breakdown
+  repeated NamespaceWorkloadMetrics namespaces = 30;
+}
+
+// NodeWorkloadMetrics describes workload usage for a single Kubernetes node.
+message NodeWorkloadMetrics {
+  string node = 10;
+  ResourceUsage cpu = 20;
+  ResourceUsage memory = 30;
+  ResourceUsage pods = 40;
+}
+
+// GetClusterWorkloadTimeSeriesRequest requests time-series workload metrics for a cluster.
+message GetClusterWorkloadTimeSeriesRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Optional time range. Defaults to the last 7 days when not set.
+  google.protobuf.Timestamp start = 20 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp end = 30 [features.field_presence = EXPLICIT];
+  // Resolution in seconds. Defaults to 300 (5 minutes) when zero.
+  int32 step_seconds = 40;
+}
+
+// GetClusterInfraMetricsRequest requests infrastructure metrics for a cluster's machines.
+message GetClusterInfraMetricsRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// -- Org-level --
+
+// GetOrgWorkloadMetricsRequest requests workload metrics aggregated across all clusters.
+message GetOrgWorkloadMetricsRequest {}
+
+// GetOrgWorkloadMetricsResponse contains org-wide workload metrics.
+message GetOrgWorkloadMetricsResponse {
+  // Org-wide totals across all clusters
+  ResourceUsageInfo totals = 10;
+  // Per-cluster breakdown (requires the Prometheus to expose a "cluster" label)
+  repeated ClusterWorkloadSummary clusters = 20;
+  // Top namespaces across all clusters
+  repeated NamespaceWorkloadMetrics namespaces = 30;
+}
+
+// ClusterWorkloadSummary summarises workload usage for a single cluster within
+// an org-level view.
+message ClusterWorkloadSummary {
+  string cluster_name = 10;
+  ResourceUsage cpu = 20;
+  ResourceUsage memory = 30;
+  ResourceUsage pods = 40;
+}
+
+// GetOrgWorkloadTimeSeriesRequest requests org-wide aggregated time-series metrics.
+message GetOrgWorkloadTimeSeriesRequest {
+  // Optional time range. Defaults to the last 7 days when not set.
+  google.protobuf.Timestamp start = 10 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp end = 20 [features.field_presence = EXPLICIT];
+  // Resolution in seconds. Defaults to 300 (5 minutes) when zero.
+  int32 step_seconds = 30;
+}
+
+// GetOrgInfraMetricsRequest requests infrastructure metrics for all org machines.
+message GetOrgInfraMetricsRequest {}
+
+// -- Project-level --
+
+// GetProjectWorkloadMetricsRequest requests workload metrics for a project's namespaces.
+message GetProjectWorkloadMetricsRequest {
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// GetProjectWorkloadMetricsResponse contains workload metrics for a project.
+message GetProjectWorkloadMetricsResponse {
+  // Totals aggregated across the project's namespaces
+  ResourceUsageInfo totals = 10;
+  // Per-namespace breakdown limited to this project's namespaces
+  repeated NamespaceWorkloadMetrics namespaces = 20;
+}
+
+// GetProjectWorkloadTimeSeriesRequest requests time-series metrics for a project.
+message GetProjectWorkloadTimeSeriesRequest {
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Optional time range. Defaults to the last 7 days when not set.
+  google.protobuf.Timestamp start = 20 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp end = 30 [features.field_presence = EXPLICIT];
+  // Resolution in seconds. Defaults to 300 (5 minutes) when zero.
+  int32 step_seconds = 40;
+}

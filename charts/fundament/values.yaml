@@ -45,6 +45,8 @@ organizationApi:
   enabled: false
   replicas: 1
   logLevel: info
+  prometheusUrl: ""       # K8s workload Prometheus URL (leave empty to return stub data)
+  prometheusMetalUrl: ""  # metal-stack infra Prometheus URL (leave empty to return stub data)
 
 # Cluster Worker
 clusterWorker:

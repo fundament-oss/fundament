@@ -8,16 +8,44 @@ import {
   signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerTableDown } from '@ng-icons/tabler-icons';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';
-import { OrganizationDataService } from '../organization-data.service';
+import { CLUSTER, METRICS } from '../../connect/tokens';
+import {
+  ListClustersRequestSchema,
+  type ListClustersResponse_ClusterSummary,
+} from '../../generated/v1/cluster_pb';
+import {
+  GetClusterWorkloadMetricsRequestSchema,
+  GetClusterWorkloadTimeSeriesRequestSchema,
+  GetClusterInfraMetricsRequestSchema,
+  GetOrgWorkloadMetricsRequestSchema,
+  GetOrgWorkloadTimeSeriesRequestSchema,
+  GetOrgInfraMetricsRequestSchema,
+  GetProjectWorkloadMetricsRequestSchema,
+  GetProjectWorkloadTimeSeriesRequestSchema,
+  type GetClusterWorkloadMetricsResponse,
+  type GetOrgWorkloadMetricsResponse,
+  type GetProjectWorkloadMetricsResponse,
+  type GetWorkloadTimeSeriesResponse,
+  type GetInfraMetricsResponse,
+} from '../../generated/v1/metrics_pb';
 
 Chart.register(...registerables);
+
+interface ClusterOption {
+  id: string;
+  name: string;
+}
 
 interface ClusterUsageData {
   cpu: { used: number; total: number; unit: string };
@@ -39,19 +67,23 @@ interface NamespaceUsageData {
   pods: number;
 }
 
-interface Cluster {
-  id: string;
+interface ClusterSummaryData {
   name: string;
-  namespaces: string[];
+  cpu: { used: number; total: number };
+  memory: { used: number; total: number };
+  pods: { used: number; total: number };
 }
 
-interface Project {
+interface MachineData {
   id: string;
   name: string;
-  clusterIds: string[];
+  size: string;
+  state: string;
+  powerWatts: number;
 }
 
 function getUsagePercentage(used: number, total: number): number {
+  if (total === 0) return 0;
   return Math.round((used / total) * 100);
 }
 
@@ -61,9 +93,27 @@ function getUsageColor(percentage: number): string {
   return 'bg-green-500';
 }
 
+function getMachineStateClass(state: string): string {
+  const map: Record<string, string> = {
+    Allocated: 'badge badge-emerald',
+    Available: 'badge badge-blue',
+    Reserved: 'badge badge-yellow',
+    Failed: 'badge badge-rose',
+  };
+  return map[state] ?? 'badge';
+}
+
+function formatTimestamp(ts: Timestamp | undefined): string {
+  if (!ts) return '';
+  return timestampDate(ts).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 @Component({
   selector: 'app-usage',
-  imports: [FormsModule, DateRangePickerComponent, NgIcon],
+  imports: [FormsModule, DateRangePickerComponent, NgIcon, DecimalPipe],
   viewProviders: [
     provideIcons({
       tablerTableDown,
@@ -77,7 +127,9 @@ export default class UsageComponent implements OnInit, AfterViewInit {
 
   private route = inject(ActivatedRoute);
 
-  private organizationDataService = inject(OrganizationDataService);
+  private clusterClient = inject(CLUSTER);
+
+  private metricsClient = inject(METRICS);
 
   @ViewChild('cpuChart') cpuChartCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -91,215 +143,401 @@ export default class UsageComponent implements OnInit, AfterViewInit {
 
   private podChart?: Chart;
 
+  // View mode derived from route
+  viewMode = signal<'org' | 'project'>('org');
+
+  projectId = signal<string | null>(null);
+
   // Filter state
-  selectedProjectId = '';
-
   selectedClusterId = '';
-
-  selectedNamespace = '';
 
   dateFrom = '';
 
   dateTo = '';
 
-  // Route context for breadcrumbs
-  projectName = signal<string>('');
+  // Data signals
+  clusters = signal<ClusterOption[]>([]);
 
-  namespaceName = signal<string>('');
+  isLoading = signal(false);
 
-  // Mock data
-  projects: Project[] = [
-    { id: 'proj-1', name: 'Production Services', clusterIds: ['cluster-1', 'cluster-2'] },
-    { id: 'proj-2', name: 'Development', clusterIds: ['cluster-2', 'cluster-3'] },
-    { id: 'proj-3', name: 'Testing', clusterIds: ['cluster-1'] },
-  ];
+  errorMessage = signal<string | null>(null);
 
-  clusters: Cluster[] = [
-    {
-      id: 'cluster-1',
-      name: 'prod-cluster-nl1',
-      namespaces: ['default', 'production', 'monitoring', 'ingress'],
-    },
-    { id: 'cluster-2', name: 'prod-cluster-nl2', namespaces: ['default', 'production', 'staging'] },
-    { id: 'cluster-3', name: 'dev-cluster', namespaces: ['default', 'development', 'testing'] },
-  ];
+  // Org-level: totals + per-cluster breakdown
+  orgTotals = signal<ClusterUsageData | null>(null);
 
-  clusterUsage: ClusterUsageData = {
-    cpu: { used: 24.5, total: 48.0, unit: 'cores' },
-    memory: { used: 89.2, total: 192.0, unit: 'GB' },
-    pods: { used: 156, total: 330, unit: 'pods' },
-  };
+  clusterSummaries = signal<ClusterSummaryData[]>([]);
 
-  nodeUsage: NodeUsageData[] = [
-    {
-      name: 'node-1',
-      cpu: { used: 3.2, total: 8.0 },
-      memory: { used: 15.4, total: 32.0 },
-      pods: { used: 28, total: 110 },
-    },
-    {
-      name: 'node-2',
-      cpu: { used: 5.8, total: 8.0 },
-      memory: { used: 22.1, total: 32.0 },
-      pods: { used: 42, total: 110 },
-    },
-    {
-      name: 'node-3',
-      cpu: { used: 4.1, total: 8.0 },
-      memory: { used: 18.7, total: 32.0 },
-      pods: { used: 35, total: 110 },
-    },
-    {
-      name: 'node-4',
-      cpu: { used: 6.2, total: 8.0 },
-      memory: { used: 19.3, total: 32.0 },
-      pods: { used: 31, total: 110 },
-    },
-    {
-      name: 'node-5',
-      cpu: { used: 2.8, total: 8.0 },
-      memory: { used: 8.9, total: 32.0 },
-      pods: { used: 12, total: 110 },
-    },
-    {
-      name: 'node-6',
-      cpu: { used: 2.4, total: 8.0 },
-      memory: { used: 4.8, total: 32.0 },
-      pods: { used: 8, total: 110 },
-    },
-  ];
+  // Cluster-level: totals + per-node breakdown
+  clusterTotals = signal<ClusterUsageData | null>(null);
 
-  namespaceUsage: NamespaceUsageData[] = [
-    { name: 'production', cpu: 12.8, memory: 45.2, pods: 68 },
-    { name: 'staging', cpu: 5.3, memory: 18.7, pods: 32 },
-    { name: 'monitoring', cpu: 3.2, memory: 12.4, pods: 24 },
-    { name: 'ingress', cpu: 1.8, memory: 6.3, pods: 12 },
-    { name: 'default', cpu: 1.4, memory: 6.6, pods: 20 },
-  ];
+  nodeUsage = signal<NodeUsageData[]>([]);
+
+  // Shared: namespace breakdown
+  namespaceUsage = signal<NamespaceUsageData[]>([]);
+
+  // Infrastructure (org + cluster views)
+  machines = signal<MachineData[]>([]);
+
+  totalPowerWatts = signal(0);
+
+  // Chart data (plain arrays — updated before chart re-creation)
+  private cpuSeriesData: number[] = [];
+
+  private memorySeriesData: number[] = [];
+
+  private podSeriesData: number[] = [];
+
+  private chartLabels: string[] = [];
 
   constructor() {
     this.titleService.setTitle('Usage');
 
-    // Set default date range (last 7 days)
     const today = new Date();
     const weekAgo = new Date(today);
     weekAgo.setDate(weekAgo.getDate() - 7);
-
     this.dateTo = today.toISOString().split('T')[0];
     this.dateFrom = weekAgo.toISOString().split('T')[0];
   }
 
   ngOnInit() {
-    // Get route parameters if they exist
     const projectId = this.route.snapshot.params['id'];
-    const namespaceId = this.route.snapshot.params['namespaceId'];
-
     if (projectId) {
-      this.selectedProjectId = projectId;
-      // Find the actual project name from organization data
-      const orgs = this.organizationDataService.organizations();
-      const project = orgs
-        .flatMap((org) => org.clusters)
-        .flatMap((c) => c.projects)
-        .find((p) => p.id === projectId);
-      if (project) {
-        this.projectName.set(project.name);
-      }
-    }
-    if (namespaceId) {
-      this.selectedNamespace = namespaceId;
-      // Find the actual namespace name from organization data
-      const orgs = this.organizationDataService.organizations();
-      const namespace = orgs
-        .flatMap((org) => org.clusters)
-        .flatMap((c) => c.projects)
-        .flatMap((p) => p.namespaces)
-        .find((ns) => ns.id === namespaceId);
-      if (namespace) {
-        this.namespaceName.set(namespace.name);
-      }
+      this.viewMode.set('project');
+      this.projectId.set(projectId);
+      this.loadProjectMetrics();
+    } else {
+      this.viewMode.set('org');
+      this.loadClusters();
+      this.loadOrgMetrics();
     }
   }
 
   ngAfterViewInit(): void {
-    this.initializeCharts();
+    this.initializeCharts([], [], [], []);
   }
 
-  get availableClusters(): Cluster[] {
-    if (!this.selectedProjectId) {
-      return this.clusters;
-    }
-    const project = this.projects.find((p) => p.id === this.selectedProjectId);
-    if (!project) {
-      return [];
-    }
-    return this.clusters.filter((c) => project.clusterIds.includes(c.id));
-  }
-
-  get availableNamespaces(): string[] {
-    if (!this.selectedClusterId) {
-      return [];
-    }
-    const cluster = this.clusters.find((c) => c.id === this.selectedClusterId);
-    return cluster ? cluster.namespaces : [];
-  }
-
-  onProjectChange(): void {
-    this.selectedClusterId = '';
-    this.selectedNamespace = '';
-    this.updateCharts();
-  }
-
-  onClusterChange(): void {
-    this.selectedNamespace = '';
-    this.updateCharts();
-  }
-
-  onNamespaceChange(): void {
-    this.updateCharts();
-  }
-
-  onDateChange(): void {
-    this.updateCharts();
+  get currentTotals(): ClusterUsageData | null {
+    return this.selectedClusterId ? this.clusterTotals() : this.orgTotals();
   }
 
   getUsagePercentage = getUsagePercentage;
 
   getUsageColor = getUsageColor;
 
-  private initializeCharts(): void {
-    this.createCpuChart();
-    this.createMemoryChart();
-    this.createPodChart();
+  getMachineStateClass = getMachineStateClass;
+
+  onClusterChange(): void {
+    if (this.selectedClusterId) {
+      this.loadClusterMetrics(this.selectedClusterId);
+    } else {
+      this.clusterTotals.set(null);
+      this.nodeUsage.set([]);
+      this.loadOrgMetrics();
+    }
   }
 
-  private updateCharts(): void {
-    if (this.cpuChart) {
-      this.cpuChart.destroy();
+  onDateChange(): void {
+    if (this.viewMode() === 'project') {
+      this.loadProjectMetrics();
+    } else if (this.selectedClusterId) {
+      this.loadClusterMetrics(this.selectedClusterId);
+    } else {
+      this.loadOrgMetrics();
     }
-    if (this.memoryChart) {
-      this.memoryChart.destroy();
-    }
-    if (this.podChart) {
-      this.podChart.destroy();
-    }
-    this.initializeCharts();
   }
 
-  private createCpuChart(): void {
+  private async loadClusters(): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),
+      );
+      this.clusters.set(
+        response.clusters.map((c: ListClustersResponse_ClusterSummary) => ({
+          id: c.id,
+          name: c.name,
+        })),
+      );
+    } catch {
+      // Non-fatal — cluster dropdown will be empty
+    }
+  }
+
+  private async loadOrgMetrics(): Promise<void> {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
+    const { start, end } = this.dateRange();
+
+    try {
+      const [workload, timeSeries, infra] = await Promise.all([
+        firstValueFrom(
+          this.metricsClient.getOrgWorkloadMetrics(create(GetOrgWorkloadMetricsRequestSchema, {})),
+        ),
+        firstValueFrom(
+          this.metricsClient.getOrgWorkloadTimeSeries(
+            create(GetOrgWorkloadTimeSeriesRequestSchema, { start, end }),
+          ),
+        ),
+        firstValueFrom(
+          this.metricsClient.getOrgInfraMetrics(create(GetOrgInfraMetricsRequestSchema, {})),
+        ),
+      ]);
+
+      this.applyOrgWorkload(workload);
+      this.applyTimeSeries(timeSeries);
+      this.applyInfra(infra);
+      this.refreshCharts();
+    } catch (err) {
+      this.errorMessage.set(String(err));
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  private async loadClusterMetrics(clusterId: string): Promise<void> {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
+    const { start, end } = this.dateRange();
+
+    try {
+      const [workload, timeSeries, infra] = await Promise.all([
+        firstValueFrom(
+          this.metricsClient.getClusterWorkloadMetrics(
+            create(GetClusterWorkloadMetricsRequestSchema, { clusterId }),
+          ),
+        ),
+        firstValueFrom(
+          this.metricsClient.getClusterWorkloadTimeSeries(
+            create(GetClusterWorkloadTimeSeriesRequestSchema, {
+              clusterId,
+              start,
+              end,
+            }),
+          ),
+        ),
+        firstValueFrom(
+          this.metricsClient.getClusterInfraMetrics(
+            create(GetClusterInfraMetricsRequestSchema, { clusterId }),
+          ),
+        ),
+      ]);
+
+      this.applyClusterWorkload(workload);
+      this.applyTimeSeries(timeSeries);
+      this.applyInfra(infra);
+      this.refreshCharts();
+    } catch (err) {
+      this.errorMessage.set(String(err));
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  private async loadProjectMetrics(): Promise<void> {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
+    const pid = this.projectId();
+    if (!pid) return;
+
+    const { start, end } = this.dateRange();
+
+    try {
+      const [workload, timeSeries] = await Promise.all([
+        firstValueFrom(
+          this.metricsClient.getProjectWorkloadMetrics(
+            create(GetProjectWorkloadMetricsRequestSchema, { projectId: pid }),
+          ),
+        ),
+        firstValueFrom(
+          this.metricsClient.getProjectWorkloadTimeSeries(
+            create(GetProjectWorkloadTimeSeriesRequestSchema, {
+              projectId: pid,
+              start,
+              end,
+            }),
+          ),
+        ),
+      ]);
+
+      this.applyProjectWorkload(workload);
+      this.applyTimeSeries(timeSeries);
+      this.refreshCharts();
+    } catch (err) {
+      this.errorMessage.set(String(err));
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  // -- Response mappers --
+
+  private applyOrgWorkload(r: GetOrgWorkloadMetricsResponse): void {
+    const t = r.totals;
+    this.orgTotals.set(
+      t
+        ? {
+            cpu: { used: t.cpu?.used ?? 0, total: t.cpu?.total ?? 0, unit: t.cpu?.unit ?? 'cores' },
+            memory: {
+              used: t.memory?.used ?? 0,
+              total: t.memory?.total ?? 0,
+              unit: t.memory?.unit ?? 'GiB',
+            },
+            pods: {
+              used: t.pods?.used ?? 0,
+              total: t.pods?.total ?? 0,
+              unit: t.pods?.unit ?? 'pods',
+            },
+          }
+        : null,
+    );
+    this.clusterSummaries.set(
+      r.clusters.map((c) => ({
+        name: c.clusterName,
+        cpu: { used: c.cpu?.used ?? 0, total: c.cpu?.total ?? 0 },
+        memory: { used: c.memory?.used ?? 0, total: c.memory?.total ?? 0 },
+        pods: { used: c.pods?.used ?? 0, total: c.pods?.total ?? 0 },
+      })),
+    );
+    this.namespaceUsage.set(
+      r.namespaces.map((n) => ({
+        name: n.namespace,
+        cpu: n.cpuCores,
+        memory: n.memoryGib,
+        pods: n.pods,
+      })),
+    );
+  }
+
+  private applyClusterWorkload(r: GetClusterWorkloadMetricsResponse): void {
+    const t = r.totals;
+    this.clusterTotals.set(
+      t
+        ? {
+            cpu: { used: t.cpu?.used ?? 0, total: t.cpu?.total ?? 0, unit: t.cpu?.unit ?? 'cores' },
+            memory: {
+              used: t.memory?.used ?? 0,
+              total: t.memory?.total ?? 0,
+              unit: t.memory?.unit ?? 'GiB',
+            },
+            pods: {
+              used: t.pods?.used ?? 0,
+              total: t.pods?.total ?? 0,
+              unit: t.pods?.unit ?? 'pods',
+            },
+          }
+        : null,
+    );
+    this.nodeUsage.set(
+      r.nodes.map((n) => ({
+        name: n.node,
+        cpu: { used: n.cpu?.used ?? 0, total: n.cpu?.total ?? 0 },
+        memory: { used: n.memory?.used ?? 0, total: n.memory?.total ?? 0 },
+        pods: { used: n.pods?.used ?? 0, total: n.pods?.total ?? 0 },
+      })),
+    );
+    this.namespaceUsage.set(
+      r.namespaces.map((n) => ({
+        name: n.namespace,
+        cpu: n.cpuCores,
+        memory: n.memoryGib,
+        pods: n.pods,
+      })),
+    );
+  }
+
+  private applyProjectWorkload(r: GetProjectWorkloadMetricsResponse): void {
+    const t = r.totals;
+    this.orgTotals.set(
+      t
+        ? {
+            cpu: { used: t.cpu?.used ?? 0, total: t.cpu?.total ?? 0, unit: t.cpu?.unit ?? 'cores' },
+            memory: {
+              used: t.memory?.used ?? 0,
+              total: t.memory?.total ?? 0,
+              unit: t.memory?.unit ?? 'GiB',
+            },
+            pods: {
+              used: t.pods?.used ?? 0,
+              total: t.pods?.total ?? 0,
+              unit: t.pods?.unit ?? 'pods',
+            },
+          }
+        : null,
+    );
+    this.namespaceUsage.set(
+      r.namespaces.map((n) => ({
+        name: n.namespace,
+        cpu: n.cpuCores,
+        memory: n.memoryGib,
+        pods: n.pods,
+      })),
+    );
+  }
+
+  private applyTimeSeries(r: GetWorkloadTimeSeriesResponse): void {
+    this.chartLabels = r.cpuCores.map((s) => formatTimestamp(s.timestamp));
+    this.cpuSeriesData = r.cpuCores.map((s) => s.value);
+    this.memorySeriesData = r.memoryGib.map((s) => s.value);
+    this.podSeriesData = r.podCount.map((s) => s.value);
+  }
+
+  private applyInfra(r: GetInfraMetricsResponse): void {
+    this.machines.set(
+      r.machines.map((m) => ({
+        id: m.id,
+        name: m.name,
+        size: m.size,
+        state: m.state,
+        powerWatts: m.powerWatts,
+      })),
+    );
+    this.totalPowerWatts.set(r.totalPowerWatts);
+  }
+
+  private dateRange(): { start: Timestamp; end: Timestamp } {
+    const start = timestampFromDate(new Date(this.dateFrom));
+    const end = timestampFromDate(new Date(`${this.dateTo}T23:59:59`));
+    return { start, end };
+  }
+
+  private refreshCharts(): void {
+    this.cpuChart?.destroy();
+    this.memoryChart?.destroy();
+    this.podChart?.destroy();
+    this.initializeCharts(
+      this.chartLabels,
+      this.cpuSeriesData,
+      this.memorySeriesData,
+      this.podSeriesData,
+    );
+  }
+
+  private initializeCharts(
+    labels: string[],
+    cpu: number[],
+    memory: number[],
+    pods: number[],
+  ): void {
+    this.createCpuChart(labels, cpu);
+    this.createMemoryChart(labels, memory);
+    this.createPodChart(labels, pods);
+  }
+
+  private createCpuChart(labels: string[], data: number[]): void {
     if (!this.cpuChartCanvas) return;
-
     const ctx = this.cpuChartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
 
     const config: ChartConfiguration = {
       type: 'line',
       data: {
-        labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
+        labels: labels.length ? labels : [''],
         datasets: [
           {
             label: 'CPU Usage (cores)',
-            data: [18.5, 22.3, 28.1, 32.4, 29.7, 24.8, 20.2],
+            data: data.length ? data : [0],
             borderColor: 'rgb(99, 102, 241)',
             backgroundColor: 'rgba(99, 102, 241, 0.1)',
             tension: 0.4,
@@ -310,37 +548,27 @@ export default class UsageComponent implements OnInit, AfterViewInit {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 48,
-          },
-        },
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } },
       },
     };
 
     this.cpuChart = new Chart(ctx, config);
   }
 
-  private createMemoryChart(): void {
+  private createMemoryChart(labels: string[], data: number[]): void {
     if (!this.memoryChartCanvas) return;
-
     const ctx = this.memoryChartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
 
     const config: ChartConfiguration = {
       type: 'line',
       data: {
-        labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
+        labels: labels.length ? labels : [''],
         datasets: [
           {
-            label: 'Memory Usage (GB)',
-            data: [72.4, 78.2, 95.3, 108.7, 98.4, 89.6, 82.1],
+            label: 'Memory Usage (GiB)',
+            data: data.length ? data : [0],
             borderColor: 'rgb(16, 185, 129)',
             backgroundColor: 'rgba(16, 185, 129, 0.1)',
             tension: 0.4,
@@ -351,37 +579,27 @@ export default class UsageComponent implements OnInit, AfterViewInit {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 192,
-          },
-        },
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } },
       },
     };
 
     this.memoryChart = new Chart(ctx, config);
   }
 
-  private createPodChart(): void {
+  private createPodChart(labels: string[], data: number[]): void {
     if (!this.podChartCanvas) return;
-
     const ctx = this.podChartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
 
     const config: ChartConfiguration = {
       type: 'bar',
       data: {
-        labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
+        labels: labels.length ? labels : [''],
         datasets: [
           {
             label: 'Pod Count',
-            data: [142, 138, 165, 189, 178, 156, 149],
+            data: data.length ? data : [0],
             backgroundColor: 'rgba(245, 158, 11, 0.8)',
             borderColor: 'rgb(245, 158, 11)',
             borderWidth: 1,
@@ -391,17 +609,8 @@ export default class UsageComponent implements OnInit, AfterViewInit {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 330,
-          },
-        },
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } },
       },
     };
 

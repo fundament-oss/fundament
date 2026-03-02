@@ -21,6 +21,7 @@ import (
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
+	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 )
 
 type config struct {
@@ -30,6 +31,8 @@ type config struct {
 	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
 	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
+	PrometheusURL      string     `env:"PROMETHEUS_URL"`
+	PrometheusMetalURL string     `env:"PROMETHEUS_METAL_URL"`
 }
 
 func main() {
@@ -154,10 +157,28 @@ func run() error {
 
 	logger.Debug("OpenFGA client connected")
 
+	var k8sPromClient prom.Client = prom.StubClient{}
+	if cfg.PrometheusURL != "" {
+		k8sPromClient = prom.NewHTTPClient(cfg.PrometheusURL)
+		logger.Info("k8s Prometheus configured", "url", cfg.PrometheusURL)
+	} else {
+		logger.Info("k8s Prometheus not configured, metrics will return empty data")
+	}
+
+	var metalPromClient prom.Client = prom.StubClient{}
+	if cfg.PrometheusMetalURL != "" {
+		metalPromClient = prom.NewHTTPClient(cfg.PrometheusMetalURL)
+		logger.Info("metal-stack Prometheus configured", "url", cfg.PrometheusMetalURL)
+	} else {
+		logger.Info("metal-stack Prometheus not configured, infra metrics will return empty data")
+	}
+
 	server, err := organization.New(logger, &organization.Config{
-		JWTSecret:          []byte(cfg.JWTSecret),
-		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
-		Clock:              clock.New(),
+		JWTSecret:             []byte(cfg.JWTSecret),
+		CORSAllowedOrigins:    cfg.CORSAllowedOrigins,
+		Clock:                 clock.New(),
+		K8sPrometheusClient:   k8sPromClient,
+		MetalPrometheusClient: metalPromClient,
 	}, db, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)
