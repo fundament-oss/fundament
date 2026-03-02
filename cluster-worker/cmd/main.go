@@ -48,6 +48,16 @@ type config struct {
 	// cloud provider credentials (e.g., AWS access keys, GCP service account).
 	// Not needed for local provider. Required for real cloud providers.
 	ProviderCredentialsBindingName string `env:"GARDENER_CREDENTIALS_BINDING_NAME"`
+
+	// ProviderMachineImageName is the OS image for worker nodes (e.g., "local", "gardenlinux").
+	ProviderMachineImageName string `env:"GARDENER_MACHINE_IMAGE_NAME"`
+
+	// ProviderMachineImageVersion is the version of the OS image (e.g., "1.0.0", "1592.2.0").
+	ProviderMachineImageVersion string `env:"GARDENER_MACHINE_IMAGE_VERSION"`
+
+	// ProviderDefaultMachineType is the fallback machine type when a cluster has no node pools
+	// (e.g., "local", "n1-standard-4").
+	ProviderDefaultMachineType string `env:"GARDENER_DEFAULT_MACHINE_TYPE"`
 }
 
 func main() {
@@ -147,6 +157,15 @@ func createGardenerClient(cfg *config, logger *slog.Logger) (gardener.Client, er
 		}
 		if cfg.ProviderCredentialsBindingName != "" {
 			providerCfg.CredentialsBindingName = cfg.ProviderCredentialsBindingName
+		}
+		if cfg.ProviderMachineImageName != "" {
+			providerCfg.MachineImageName = cfg.ProviderMachineImageName
+		}
+		if cfg.ProviderMachineImageVersion != "" {
+			providerCfg.MachineImageVersion = cfg.ProviderMachineImageVersion
+		}
+		if cfg.ProviderDefaultMachineType != "" {
+			providerCfg.DefaultMachineType = cfg.ProviderDefaultMachineType
 		}
 
 		logger.Info("using real Gardener client",

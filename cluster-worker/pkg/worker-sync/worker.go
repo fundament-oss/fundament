@@ -237,7 +237,27 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
-	// 3. Generate shoot name (used only for creation, existing shoots are looked up by label)
+	// 3. Load node pools for this cluster (not needed for delete: only cluster ID is used)
+	var nodePools []gardener.NodePool
+	if syncAction != dbconst.ClusterEventSyncAction_Delete {
+		nodePoolRows, err := w.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{
+			ClusterID: cluster.ID,
+		})
+		if err != nil {
+			w.logger.Error("failed to load node pools",
+				"cluster_id", cluster.ID,
+				"error", err)
+			w.markSyncFailed(ctx, cluster.ID, "load node pools: "+err.Error(), &syncFailedEvent{
+				syncAction: syncAction,
+				message:    "Failed to load node pools: " + err.Error(),
+				attempt:    attempt,
+			})
+			return true, nil
+		}
+		nodePools = toGardenerNodePools(nodePoolRows)
+	}
+
+	// 4. Generate shoot name (used only for creation, existing shoots are looked up by label)
 	shootName := gardener.GenerateShootName(cluster.Name)
 
 	clusterToSync := gardener.ClusterToSync{
@@ -251,6 +271,7 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 		KubernetesVersion: cluster.KubernetesVersion,
 		Deleted:           cluster.Deleted,
 		SyncAttempts:      int(cluster.SyncAttempts),
+		NodePools:         nodePools,
 	}
 
 	var syncErr error
@@ -261,7 +282,7 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 		syncErr = w.gardener.ApplyShoot(ctx, &clusterToSync)
 	}
 
-	// 4. Update status and create events
+	// 5. Update status and create events
 	if syncErr != nil {
 		w.markSyncFailed(ctx, cluster.ID, syncErr.Error(), &syncFailedEvent{
 			syncAction: syncAction,
@@ -301,6 +322,20 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 		"action", syncAction)
 
 	return true, nil
+}
+
+// toGardenerNodePools converts DB rows to the gardener.NodePool slice expected by ClusterToSync.
+func toGardenerNodePools(rows []db.NodePoolListByClusterIDRow) []gardener.NodePool {
+	pools := make([]gardener.NodePool, len(rows))
+	for i, np := range rows {
+		pools[i] = gardener.NodePool{
+			Name:         np.Name,
+			MachineType:  np.MachineType,
+			AutoscaleMin: np.AutoscaleMin,
+			AutoscaleMax: np.AutoscaleMax,
+		}
+	}
+	return pools
 }
 
 // reconcileAll performs a full comparison between DB state and Gardener state

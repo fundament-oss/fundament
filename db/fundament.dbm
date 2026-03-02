@@ -210,6 +210,32 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="node_pool_reset_cluster_synced"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    UPDATE tenant.clusters
+    SET synced = NULL,
+        sync_claimed_at = NULL,
+        sync_attempts = 0,
+        sync_error = NULL
+    WHERE id = COALESCE(NEW.cluster_id, OLD.cluster_id);
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
 <function name="cluster_sync_notify"
 		window-func="false"
 		returns-setof="false"
@@ -715,6 +741,13 @@ END;]]> </definition>
 
 <policy name="node_pools_organization_policy" table="tenant.node_pools" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
+</policy>
+
+<!-- USING (true) is intentional: fun_cluster_worker needs unrestricted SELECT on all
+     node pools across all organizations to build Gardener worker specs during sync.
+     The API-facing policy node_pools_organization_policy restricts by organization instead. -->
+<policy name="node_pools_cluster_worker_read" table="tenant.node_pools" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
 <table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
@@ -1394,6 +1427,13 @@ END;]]> </definition>
 		<function signature="authz.node_pools_sync_trigger()"/>
 </trigger>
 
+<trigger name="node_pool_reset_cluster_synced" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.node_pools">
+		<function signature="tenant.node_pool_reset_cluster_synced()"/>
+		<columns names="name,machine_type,autoscale_min,autoscale_max,deleted"/>
+</trigger>
+
 <index name="namespaces_idx_project_id" table="tenant.namespaces"
 	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
 	 index-type="btree" factor="0">
@@ -1906,6 +1946,11 @@ END;]]> </definition>
 	<object name="tenant.node_pools" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.node_pools" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="appstore.installs" type="table"/>
