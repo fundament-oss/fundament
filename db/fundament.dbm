@@ -277,6 +277,9 @@ END;]]> </definition>
 	<definition> <![CDATA[BEGIN
     IF TG_OP = 'INSERT'
        OR OLD.deleted IS DISTINCT FROM NEW.deleted
+       OR OLD.region IS DISTINCT FROM NEW.region
+       OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
+       OR (OLD.synced IS NOT NULL AND NEW.synced IS NULL)
     THEN
         INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
         VALUES (COALESCE(NEW.id, OLD.id),
