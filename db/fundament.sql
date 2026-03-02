@@ -145,6 +145,32 @@ $function$;
 ALTER FUNCTION tenant.cluster_reset_synced() OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: tenant.node_pool_reset_cluster_synced | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.node_pool_reset_cluster_synced() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.node_pool_reset_cluster_synced ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    UPDATE tenant.clusters
+    SET synced = NULL,
+        sync_claimed_at = NULL,
+        sync_attempts = 0,
+        sync_error = NULL
+    WHERE id = COALESCE(NEW.cluster_id, OLD.cluster_id);
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.node_pool_reset_cluster_synced() OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: tenant.cluster_sync_notify | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.cluster_sync_notify() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.cluster_sync_notify ()
@@ -710,6 +736,15 @@ CREATE POLICY node_pools_organization_policy ON tenant.node_pools
 	FOR ALL
 	TO fun_fundament_api
 	USING (authn.is_cluster_in_organization(cluster_id));
+-- ddl-end --
+
+-- object: node_pools_cluster_worker_read | type: POLICY --
+-- DROP POLICY IF EXISTS node_pools_cluster_worker_read ON tenant.node_pools CASCADE;
+CREATE POLICY node_pools_cluster_worker_read ON tenant.node_pools
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
 -- ddl-end --
 
 -- object: appstore.installs | type: TABLE --
@@ -1428,6 +1463,15 @@ CREATE OR REPLACE TRIGGER node_pools_outbox
 	EXECUTE PROCEDURE authz.node_pools_sync_trigger();
 -- ddl-end --
 
+-- object: node_pool_reset_cluster_synced | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS node_pool_reset_cluster_synced ON tenant.node_pools CASCADE;
+CREATE OR REPLACE TRIGGER node_pool_reset_cluster_synced
+	AFTER INSERT OR UPDATE OF name,machine_type,autoscale_min,autoscale_max,deleted
+	ON tenant.node_pools
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.node_pool_reset_cluster_synced();
+-- ddl-end --
+
 -- object: namespaces_idx_project_id | type: INDEX --
 -- DROP INDEX IF EXISTS tenant.namespaces_idx_project_id CASCADE;
 CREATE INDEX namespaces_idx_project_id ON tenant.namespaces
@@ -1948,6 +1992,14 @@ GRANT SELECT
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.node_pools
    TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_428efc5f74 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.node_pools
+   TO fun_cluster_worker;
 
 -- ddl-end --
 
