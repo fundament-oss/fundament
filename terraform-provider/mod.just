@@ -35,6 +35,12 @@ install: build
 test:
     go test -v ./...
 
+# Run terraform provider acceptance tests
+test-acc:
+    FUNDAMENT_ENDPOINT=http://organization.fundament.localhost:8080 \
+    TF_ACC=1 \
+    go test -v ./... -count=1
+
 # Clean terraform provider build artifacts
 clean:
     rm -f terraform-provider-fundament

@@ -8,17 +8,22 @@ INSERT INTO tenant.organizations (id, name) VALUES
     ('019b4000-0000-7000-8000-000000000003', 'initech');
 
 -- Users for each organization
-INSERT INTO tenant.users (id, organization_id, name, external_id, role, email) VALUES
+INSERT INTO tenant.users (id, name, external_ref, email) VALUES
     -- acme-corp users
-    ('019b4000-1000-7000-8000-000000000001', '019b4000-0000-7000-8000-000000000001', 'Alice Johnson', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDESBWxvY2Fs', 'admin', 'alice@acme-corp.com'),
-    ('019b4000-1000-7000-8000-000000000002', '019b4000-0000-7000-8000-000000000001', 'Bob Smith', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDISBWxvY2Fs', 'viewer', 'bob@acme-corp.com'),
-    ('019b4000-1000-7000-8000-000000000003', '019b4000-0000-7000-8000-000000000001', 'Carol White', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDMSBWxvY2Fs', 'viewer', 'carol@acme-corp.com'),
+    ('019b4000-1000-7000-8000-000000000001', 'Alice Johnson', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDESBWxvY2Fs', 'alice@acme-corp.com'),
+    ('019b4000-1000-7000-8000-000000000002', 'Bob Smith', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDISBWxvY2Fs', 'bob@acme-corp.com'),
+    ('019b4000-1000-7000-8000-000000000003', 'Carol White', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDMSBWxvY2Fs', 'carol@acme-corp.com'),
     -- globex users
-    ('019b4000-1000-7000-8000-000000000004', '019b4000-0000-7000-8000-000000000002', 'David Brown', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDQSBWxvY2Fs', 'admin', 'david@globex.com'),
-    ('019b4000-1000-7000-8000-000000000005', '019b4000-0000-7000-8000-000000000002', 'Eve Davis', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDUSBWxvY2Fs', 'viewer', 'eve@globex.com'),
+    ('019b4000-1000-7000-8000-000000000004', 'David Brown', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDQSBWxvY2Fs', 'david@globex.com'),
+    ('019b4000-1000-7000-8000-000000000005', 'Eve Davis', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDUSBWxvY2Fs', 'eve@globex.com'),
     -- initech users
-    ('019b4000-1000-7000-8000-000000000006', '019b4000-0000-7000-8000-000000000003', 'Frank Miller', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDYSBWxvY2Fs', 'admin', 'frank@initech.com'),
-    ('019b4000-1000-7000-8000-000000000007', '019b4000-0000-7000-8000-000000000003', 'Grace Lee', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDcSBWxvY2Fs', 'viewer', 'grace@initech.com');
+    ('019b4000-1000-7000-8000-000000000006', 'Frank Miller', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDYSBWxvY2Fs', 'frank@initech.com'),
+    ('019b4000-1000-7000-8000-000000000007', 'Grace Lee', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDcSBWxvY2Fs', 'grace@initech.com');
+
+-- Organization memberships (required for JWT org ID population)
+-- Alice Johnson is an accepted admin of acme-corp (used by terraform acceptance tests)
+INSERT INTO tenant.organizations_users (id, organization_id, user_id, permission, status) VALUES
+    ('019b4000-8000-7000-8000-000000000001', '019b4000-0000-7000-8000-000000000001', '019b4000-1000-7000-8000-000000000001', 'admin', 'accepted');
 
 -- Categories
 INSERT INTO appstore.categories (id, name) VALUES
