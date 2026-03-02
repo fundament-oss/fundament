@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -128,26 +129,37 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		Permission: plan.Permission.ValueString(),
 	}.Build())
 
-	inviteResp, err := r.client.InviteService.InviteMember(ctx, inviteReq)
-	if err != nil {
-		switch connect.CodeOf(err) {
-		case connect.CodeAlreadyExists:
-			resp.Diagnostics.AddError(
-				"Member Already Exists",
-				fmt.Sprintf("A member with email %q already exists in this organization.", plan.Email.ValueString()),
-			)
-		case connect.CodePermissionDenied:
-			resp.Diagnostics.AddError(
-				"Permission Denied",
-				"You do not have permission to invite members to this organization.",
-			)
-		default:
-			resp.Diagnostics.AddError(
-				"Unable to Invite Member",
-				fmt.Sprintf("Unable to invite organization member: %s", err.Error()),
-			)
+	// Retry on permission_denied: OpenFGA needs time to sync after login.
+	var inviteResp *connect.Response[organizationv1.InviteMemberResponse]
+	var err error
+	for attempt := range 3 {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * time.Second)
 		}
-		return
+		inviteResp, err = r.client.InviteService.InviteMember(ctx, inviteReq)
+		if err == nil {
+			break
+		}
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+			switch connect.CodeOf(err) {
+			case connect.CodeAlreadyExists:
+				resp.Diagnostics.AddError(
+					"Member Already Exists",
+					fmt.Sprintf("A member with email %q already exists in this organization.", plan.Email.ValueString()),
+				)
+			case connect.CodePermissionDenied:
+				resp.Diagnostics.AddError(
+					"Permission Denied",
+					"You do not have permission to invite members to this organization.",
+				)
+			default:
+				resp.Diagnostics.AddError(
+					"Unable to Invite Member",
+					fmt.Sprintf("Unable to invite organization member: %s", err.Error()),
+				)
+			}
+			return
+		}
 	}
 
 	member := inviteResp.Msg.GetMember()

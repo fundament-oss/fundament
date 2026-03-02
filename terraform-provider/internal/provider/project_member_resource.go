@@ -182,18 +182,47 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	// Set the ID from the response
 	plan.ID = types.StringValue(createResp.Msg.GetMemberId())
 
-	// Read back the created member to get computed fields
-	found, diags := readProjectMemberIntoModel(ctx, r.client, &plan)
-	if diags.HasError() {
-		resp.Diagnostics.Append(diags...)
-		return
+	// Read back the created member to get computed fields.
+	// Retry on permission_denied: OpenFGA needs time to sync after the member is added.
+	getReq := connect.NewRequest(&organizationv1.GetProjectMemberRequest{
+		MemberId: createResp.Msg.MemberId,
+	})
+
+	var getResp *connect.Response[organizationv1.GetProjectMemberResponse]
+	for attempt := range 3 {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * time.Second)
+		}
+		getResp, err = r.client.ProjectService.GetProjectMember(ctx, getReq)
+		if err == nil {
+			break
+		}
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+			resp.Diagnostics.AddError(
+				"Unable to Read Created Project Member",
+				fmt.Sprintf("Unable to read created project member: %s", err.Error()),
+			)
+			return
+		}
 	}
-	if !found {
+
+	permissionStr, err := projectMemberPermissionFromProto(getResp.Msg.Member.Role)
+	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Find Created Project Member",
-			fmt.Sprintf("Project member was created with ID %q but could not be found.", plan.ID.ValueString()),
+			"Invalid Project Member Permission",
+			fmt.Sprintf("Unable to convert permission for member %q: %s", getResp.Msg.Member.Id, err.Error()),
 		)
 		return
+	}
+	m := getResp.Msg.Member
+	plan.ProjectID = types.StringValue(m.ProjectId)
+	plan.UserID = types.StringValue(m.UserId)
+	plan.UserName = types.StringValue(m.UserName)
+	plan.Permission = types.StringValue(permissionStr)
+	if m.Created != nil {
+		plan.Created = types.StringValue(m.Created.AsTime().Format(time.RFC3339))
+	} else {
+		plan.Created = types.StringNull()
 	}
 
 	tflog.Info(ctx, "Created project member", map[string]any{

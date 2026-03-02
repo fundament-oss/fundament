@@ -131,13 +131,26 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		KubernetesVersion: plan.KubernetesVersion.ValueString(),
 	}.Build())
 
-	createResp, err := r.client.ClusterService.CreateCluster(ctx, createReq)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Cluster",
-			fmt.Sprintf("Unable to create cluster: %s", err.Error()),
-		)
-		return
+	// Retry on permission_denied: OpenFGA needs time to sync after login.
+	var createResp *connect.Response[organizationv1.CreateClusterResponse]
+	var err error
+	for attempt := range 3 {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * time.Second)
+		}
+
+		createResp, err = r.client.ClusterService.CreateCluster(ctx, createReq)
+		if err == nil {
+			break
+		}
+
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+			resp.Diagnostics.AddError(
+				"Unable to Create Cluster",
+				fmt.Sprintf("Unable to create cluster: %s", err.Error()),
+			)
+			return
+		}
 	}
 
 	// Set the ID from the response
@@ -151,7 +164,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 
 	var getResp *connect.Response[organizationv1.GetClusterResponse]
 
-	for attempt := range 10 {
+	for attempt := range 3 {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -321,7 +334,7 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	var getResp *connect.Response[organizationv1.GetClusterResponse]
 
-	for attempt := range 10 {
+	for attempt := range 3 {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}

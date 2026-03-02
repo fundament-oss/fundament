@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -27,11 +28,8 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
-	testEmail := os.Getenv("FUNDAMENT_TEST_MEMBER_EMAIL")
-	if testEmail == "" {
-		t.Skip("FUNDAMENT_TEST_MEMBER_EMAIL not set, skipping organization member resource test")
-	}
-
+	suffix := acctest.RandString(6)
+	email := fmt.Sprintf("tf-acc-om-%s@test.example.com", suffix)
 	resourceName := "fundament_organization_member.test"
 
 	resource.Test(t, resource.TestCase{
@@ -39,9 +37,9 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create with viewer permission
 			{
-				Config: testAccOrganizationMemberResourceConfig(testEmail, "viewer", endpoint, organizationID),
+				Config: testAccOrganizationMemberResourceConfig(suffix, "viewer", endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "email", testEmail),
+					resource.TestCheckResourceAttr(resourceName, "email", email),
 					resource.TestCheckResourceAttr(resourceName, "permission", "viewer"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "name"),
@@ -56,9 +54,9 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 			},
 			// Update permission to admin (in-place)
 			{
-				Config: testAccOrganizationMemberResourceConfig(testEmail, "admin", endpoint, organizationID),
+				Config: testAccOrganizationMemberResourceConfig(suffix, "admin", endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "email", testEmail),
+					resource.TestCheckResourceAttr(resourceName, "email", email),
 					resource.TestCheckResourceAttr(resourceName, "permission", "admin"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
@@ -68,7 +66,7 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 	})
 }
 
-func testAccOrganizationMemberResourceConfig(email, permission, endpoint, organizationID string) string {
+func testAccOrganizationMemberResourceConfig(suffix, permission, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
   endpoint        = %[3]q
@@ -77,8 +75,8 @@ provider "fundament" {
 }
 
 resource "fundament_organization_member" "test" {
-  email      = %[1]q
+  email      = "tf-acc-om-%[1]s@test.example.com"
   permission = %[2]q
 }
-`, email, permission, endpoint, organizationID)
+`, suffix, permission, endpoint, organizationID)
 }
