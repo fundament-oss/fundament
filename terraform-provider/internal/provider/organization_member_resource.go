@@ -23,6 +23,8 @@ var _ resource.Resource = &OrganizationMemberResource{}
 var _ resource.ResourceWithConfigure = &OrganizationMemberResource{}
 var _ resource.ResourceWithImportState = &OrganizationMemberResource{}
 
+const orgMemberMaxAttempts = 3
+
 type OrganizationMemberResource struct {
 	client *FundamentClient
 }
@@ -132,7 +134,7 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 	// Retry on permission_denied: OpenFGA needs time to sync after login.
 	var inviteResp *connect.Response[organizationv1.InviteMemberResponse]
 	var err error
-	for attempt := range 3 {
+	for attempt := range orgMemberMaxAttempts {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -140,7 +142,7 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		if err == nil {
 			break
 		}
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == orgMemberMaxAttempts-1 {
 			switch connect.CodeOf(err) {
 			case connect.CodeAlreadyExists:
 				resp.Diagnostics.AddError(

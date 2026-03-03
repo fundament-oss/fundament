@@ -21,6 +21,8 @@ var _ resource.Resource = &ProjectResource{}
 var _ resource.ResourceWithConfigure = &ProjectResource{}
 var _ resource.ResourceWithImportState = &ProjectResource{}
 
+const projectMaxAttempts = 3
+
 // ProjectResource defines the resource implementation.
 type ProjectResource struct {
 	client *FundamentClient
@@ -188,7 +190,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Retry on permission_denied: OpenFGA needs time to sync after login.
 	var createResp *connect.Response[organizationv1.CreateProjectResponse]
-	for attempt := range 3 {
+	for attempt := range projectMaxAttempts {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -196,7 +198,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		if err == nil {
 			break
 		}
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == projectMaxAttempts-1 {
 			resp.Diagnostics.AddError(
 				"Unable to Create Project",
 				fmt.Sprintf("Unable to create project: %s", err.Error()),
@@ -216,7 +218,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	var getResp *connect.Response[organizationv1.GetProjectResponse]
 
-	for attempt := range 3 {
+	for attempt := range projectMaxAttempts {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -226,7 +228,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 			break
 		}
 
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == projectMaxAttempts-1 {
 			resp.Diagnostics.AddError(
 				"Unable to Read Created Project",
 				fmt.Sprintf("Unable to read created project: %s", err.Error()),

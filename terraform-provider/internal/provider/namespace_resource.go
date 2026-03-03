@@ -21,6 +21,8 @@ var _ resource.Resource = &NamespaceResource{}
 var _ resource.ResourceWithConfigure = &NamespaceResource{}
 var _ resource.ResourceWithImportState = &NamespaceResource{}
 
+const namespaceMaxAttempts = 3
+
 // NamespaceResource defines the resource implementation.
 type NamespaceResource struct {
 	client *FundamentClient
@@ -230,7 +232,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 
 	// Retry on permission_denied: OpenFGA needs time to sync after login.
 	var createResp *connect.Response[organizationv1.CreateNamespaceResponse]
-	for attempt := range 3 {
+	for attempt := range namespaceMaxAttempts {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -238,7 +240,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		if err == nil {
 			break
 		}
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == namespaceMaxAttempts-1 {
 			switch connect.CodeOf(err) {
 			case connect.CodeNotFound:
 				resp.Diagnostics.AddError(
@@ -281,7 +283,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 
 	var getResp *connect.Response[organizationv1.GetNamespaceResponse]
 
-	for attempt := range 3 {
+	for attempt := range namespaceMaxAttempts {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -291,7 +293,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 			break
 		}
 
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == namespaceMaxAttempts-1 {
 			resp.Diagnostics.AddError(
 				"Unable to Read Created Namespace",
 				fmt.Sprintf("Namespace was created but unable to read its details: %s", err.Error()),

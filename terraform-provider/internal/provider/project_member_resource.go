@@ -26,6 +26,8 @@ var _ resource.Resource = &ProjectMemberResource{}
 var _ resource.ResourceWithConfigure = &ProjectMemberResource{}
 var _ resource.ResourceWithImportState = &ProjectMemberResource{}
 
+const projectMemberMaxAttempts = 3
+
 // ProjectMemberResource defines the resource implementation.
 type ProjectMemberResource struct {
 	client *FundamentClient
@@ -189,7 +191,7 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	}.Build())
 
 	var getResp *connect.Response[organizationv1.GetProjectMemberResponse]
-	for attempt := range 3 {
+	for attempt := range projectMemberMaxAttempts {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -197,7 +199,7 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 		if err == nil {
 			break
 		}
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == projectMemberMaxAttempts-1 {
 			resp.Diagnostics.AddError(
 				"Unable to Read Created Project Member",
 				fmt.Sprintf("Unable to read created project member: %s", err.Error()),
