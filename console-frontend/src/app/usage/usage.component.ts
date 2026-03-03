@@ -65,6 +65,12 @@ interface NamespaceUsageData {
   cpu: number;
   memory: number;
   pods: number;
+  cpuRequests: number;
+  cpuLimits: number;
+  memoryRequests: number;
+  memoryLimits: number;
+  networkReceiveMbs: number;
+  networkTransmitMbs: number;
 }
 
 interface ClusterSummaryData {
@@ -137,11 +143,15 @@ export default class UsageComponent implements OnInit, AfterViewInit {
 
   @ViewChild('podChart') podChartCanvas!: ElementRef<HTMLCanvasElement>;
 
+  @ViewChild('networkChart') networkChartCanvas!: ElementRef<HTMLCanvasElement>;
+
   private cpuChart?: Chart;
 
   private memoryChart?: Chart;
 
   private podChart?: Chart;
+
+  private networkChart?: Chart;
 
   // View mode derived from route
   viewMode = signal<'org' | 'project'>('org');
@@ -187,6 +197,10 @@ export default class UsageComponent implements OnInit, AfterViewInit {
 
   private podSeriesData: number[] = [];
 
+  private networkRxSeriesData: number[] = [];
+
+  private networkTxSeriesData: number[] = [];
+
   private chartLabels: string[] = [];
 
   constructor() {
@@ -213,11 +227,15 @@ export default class UsageComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.initializeCharts([], [], [], []);
+    this.initializeCharts([], [], [], [], [], []);
   }
 
   get currentTotals(): ClusterUsageData | null {
     return this.selectedClusterId ? this.clusterTotals() : this.orgTotals();
+  }
+
+  get hasTimeSeriesData(): boolean {
+    return this.cpuSeriesData.length > 0;
   }
 
   getUsagePercentage = getUsagePercentage;
@@ -406,6 +424,12 @@ export default class UsageComponent implements OnInit, AfterViewInit {
         cpu: n.cpuCores,
         memory: n.memoryGib,
         pods: n.pods,
+        cpuRequests: n.cpuRequests,
+        cpuLimits: n.cpuLimits,
+        memoryRequests: n.memoryRequestsGib,
+        memoryLimits: n.memoryLimitsGib,
+        networkReceiveMbs: n.networkReceiveMbS,
+        networkTransmitMbs: n.networkTransmitMbS,
       })),
     );
   }
@@ -443,6 +467,12 @@ export default class UsageComponent implements OnInit, AfterViewInit {
         cpu: n.cpuCores,
         memory: n.memoryGib,
         pods: n.pods,
+        cpuRequests: n.cpuRequests,
+        cpuLimits: n.cpuLimits,
+        memoryRequests: n.memoryRequestsGib,
+        memoryLimits: n.memoryLimitsGib,
+        networkReceiveMbs: n.networkReceiveMbS,
+        networkTransmitMbs: n.networkTransmitMbS,
       })),
     );
   }
@@ -472,6 +502,12 @@ export default class UsageComponent implements OnInit, AfterViewInit {
         cpu: n.cpuCores,
         memory: n.memoryGib,
         pods: n.pods,
+        cpuRequests: n.cpuRequests,
+        cpuLimits: n.cpuLimits,
+        memoryRequests: n.memoryRequestsGib,
+        memoryLimits: n.memoryLimitsGib,
+        networkReceiveMbs: n.networkReceiveMbS,
+        networkTransmitMbs: n.networkTransmitMbS,
       })),
     );
   }
@@ -481,6 +517,8 @@ export default class UsageComponent implements OnInit, AfterViewInit {
     this.cpuSeriesData = r.cpuCores.map((s) => s.value);
     this.memorySeriesData = r.memoryGib.map((s) => s.value);
     this.podSeriesData = r.podCount.map((s) => s.value);
+    this.networkRxSeriesData = r.networkReceiveMbS.map((s) => s.value);
+    this.networkTxSeriesData = r.networkTransmitMbS.map((s) => s.value);
   }
 
   private applyInfra(r: GetInfraMetricsResponse): void {
@@ -506,11 +544,14 @@ export default class UsageComponent implements OnInit, AfterViewInit {
     this.cpuChart?.destroy();
     this.memoryChart?.destroy();
     this.podChart?.destroy();
+    this.networkChart?.destroy();
     this.initializeCharts(
       this.chartLabels,
       this.cpuSeriesData,
       this.memorySeriesData,
       this.podSeriesData,
+      this.networkRxSeriesData,
+      this.networkTxSeriesData,
     );
   }
 
@@ -519,10 +560,13 @@ export default class UsageComponent implements OnInit, AfterViewInit {
     cpu: number[],
     memory: number[],
     pods: number[],
+    networkRx: number[],
+    networkTx: number[],
   ): void {
     this.createCpuChart(labels, cpu);
     this.createMemoryChart(labels, memory);
     this.createPodChart(labels, pods);
+    this.createNetworkChart(labels, networkRx, networkTx);
   }
 
   private createCpuChart(labels: string[], data: number[]): void {
@@ -615,5 +659,44 @@ export default class UsageComponent implements OnInit, AfterViewInit {
     };
 
     this.podChart = new Chart(ctx, config);
+  }
+
+  private createNetworkChart(labels: string[], rx: number[], tx: number[]): void {
+    if (!this.networkChartCanvas) return;
+    const ctx = this.networkChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
+
+    const config: ChartConfiguration = {
+      type: 'line',
+      data: {
+        labels: labels.length ? labels : [''],
+        datasets: [
+          {
+            label: 'Receive (MB/s)',
+            data: rx.length ? rx : [0],
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.4,
+            fill: true,
+          },
+          {
+            label: 'Transmit (MB/s)',
+            data: tx.length ? tx : [0],
+            borderColor: 'rgb(168, 85, 247)',
+            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+            tension: 0.4,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: true, position: 'top' } },
+        scales: { y: { beginAtZero: true } },
+      },
+    };
+
+    this.networkChart = new Chart(ctx, config);
   }
 }

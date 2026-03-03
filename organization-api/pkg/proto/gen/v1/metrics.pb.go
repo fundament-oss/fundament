@@ -23,15 +23,17 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// GetWorkloadTimeSeriesResponse contains time-series data for the three core
-// workload metrics. Used as the response for all *TimeSeries RPCs.
+// GetWorkloadTimeSeriesResponse contains time-series data for workload metrics.
+// Used as the response for all *TimeSeries RPCs.
 type GetWorkloadTimeSeriesResponse struct {
-	state                protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_CpuCores  *[]*MetricSample       `protobuf:"bytes,10,rep,name=cpu_cores,json=cpuCores"`
-	xxx_hidden_MemoryGib *[]*MetricSample       `protobuf:"bytes,20,rep,name=memory_gib,json=memoryGib"`
-	xxx_hidden_PodCount  *[]*MetricSample       `protobuf:"bytes,30,rep,name=pod_count,json=podCount"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_CpuCores           *[]*MetricSample       `protobuf:"bytes,10,rep,name=cpu_cores,json=cpuCores"`
+	xxx_hidden_MemoryGib          *[]*MetricSample       `protobuf:"bytes,20,rep,name=memory_gib,json=memoryGib"`
+	xxx_hidden_PodCount           *[]*MetricSample       `protobuf:"bytes,30,rep,name=pod_count,json=podCount"`
+	xxx_hidden_NetworkReceiveMbS  *[]*MetricSample       `protobuf:"bytes,40,rep,name=network_receive_mb_s,json=networkReceiveMbS"`
+	xxx_hidden_NetworkTransmitMbS *[]*MetricSample       `protobuf:"bytes,50,rep,name=network_transmit_mb_s,json=networkTransmitMbS"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *GetWorkloadTimeSeriesResponse) Reset() {
@@ -86,6 +88,24 @@ func (x *GetWorkloadTimeSeriesResponse) GetPodCount() []*MetricSample {
 	return nil
 }
 
+func (x *GetWorkloadTimeSeriesResponse) GetNetworkReceiveMbS() []*MetricSample {
+	if x != nil {
+		if x.xxx_hidden_NetworkReceiveMbS != nil {
+			return *x.xxx_hidden_NetworkReceiveMbS
+		}
+	}
+	return nil
+}
+
+func (x *GetWorkloadTimeSeriesResponse) GetNetworkTransmitMbS() []*MetricSample {
+	if x != nil {
+		if x.xxx_hidden_NetworkTransmitMbS != nil {
+			return *x.xxx_hidden_NetworkTransmitMbS
+		}
+	}
+	return nil
+}
+
 func (x *GetWorkloadTimeSeriesResponse) SetCpuCores(v []*MetricSample) {
 	x.xxx_hidden_CpuCores = &v
 }
@@ -98,12 +118,23 @@ func (x *GetWorkloadTimeSeriesResponse) SetPodCount(v []*MetricSample) {
 	x.xxx_hidden_PodCount = &v
 }
 
+func (x *GetWorkloadTimeSeriesResponse) SetNetworkReceiveMbS(v []*MetricSample) {
+	x.xxx_hidden_NetworkReceiveMbS = &v
+}
+
+func (x *GetWorkloadTimeSeriesResponse) SetNetworkTransmitMbS(v []*MetricSample) {
+	x.xxx_hidden_NetworkTransmitMbS = &v
+}
+
 type GetWorkloadTimeSeriesResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	CpuCores  []*MetricSample
 	MemoryGib []*MetricSample
 	PodCount  []*MetricSample
+	// Network I/O rates in MB/s (megabytes per second)
+	NetworkReceiveMbS  []*MetricSample
+	NetworkTransmitMbS []*MetricSample
 }
 
 func (b0 GetWorkloadTimeSeriesResponse_builder) Build() *GetWorkloadTimeSeriesResponse {
@@ -113,6 +144,8 @@ func (b0 GetWorkloadTimeSeriesResponse_builder) Build() *GetWorkloadTimeSeriesRe
 	x.xxx_hidden_CpuCores = &b.CpuCores
 	x.xxx_hidden_MemoryGib = &b.MemoryGib
 	x.xxx_hidden_PodCount = &b.PodCount
+	x.xxx_hidden_NetworkReceiveMbS = &b.NetworkReceiveMbS
+	x.xxx_hidden_NetworkTransmitMbS = &b.NetworkTransmitMbS
 	return m0
 }
 
@@ -390,13 +423,19 @@ func (b0 MachineInfo_builder) Build() *MachineInfo {
 
 // NamespaceWorkloadMetrics describes workload usage for a single namespace.
 type NamespaceWorkloadMetrics struct {
-	state                protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Namespace string                 `protobuf:"bytes,10,opt,name=namespace"`
-	xxx_hidden_CpuCores  float64                `protobuf:"fixed64,20,opt,name=cpu_cores,json=cpuCores"`
-	xxx_hidden_MemoryGib float64                `protobuf:"fixed64,30,opt,name=memory_gib,json=memoryGib"`
-	xxx_hidden_Pods      int32                  `protobuf:"varint,40,opt,name=pods"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Namespace          string                 `protobuf:"bytes,10,opt,name=namespace"`
+	xxx_hidden_CpuCores           float64                `protobuf:"fixed64,20,opt,name=cpu_cores,json=cpuCores"`
+	xxx_hidden_MemoryGib          float64                `protobuf:"fixed64,30,opt,name=memory_gib,json=memoryGib"`
+	xxx_hidden_Pods               int32                  `protobuf:"varint,40,opt,name=pods"`
+	xxx_hidden_CpuRequests        float64                `protobuf:"fixed64,50,opt,name=cpu_requests,json=cpuRequests"`
+	xxx_hidden_CpuLimits          float64                `protobuf:"fixed64,60,opt,name=cpu_limits,json=cpuLimits"`
+	xxx_hidden_MemoryRequestsGib  float64                `protobuf:"fixed64,70,opt,name=memory_requests_gib,json=memoryRequestsGib"`
+	xxx_hidden_MemoryLimitsGib    float64                `protobuf:"fixed64,80,opt,name=memory_limits_gib,json=memoryLimitsGib"`
+	xxx_hidden_NetworkReceiveMbS  float64                `protobuf:"fixed64,90,opt,name=network_receive_mb_s,json=networkReceiveMbS"`
+	xxx_hidden_NetworkTransmitMbS float64                `protobuf:"fixed64,100,opt,name=network_transmit_mb_s,json=networkTransmitMbS"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *NamespaceWorkloadMetrics) Reset() {
@@ -452,6 +491,48 @@ func (x *NamespaceWorkloadMetrics) GetPods() int32 {
 	return 0
 }
 
+func (x *NamespaceWorkloadMetrics) GetCpuRequests() float64 {
+	if x != nil {
+		return x.xxx_hidden_CpuRequests
+	}
+	return 0
+}
+
+func (x *NamespaceWorkloadMetrics) GetCpuLimits() float64 {
+	if x != nil {
+		return x.xxx_hidden_CpuLimits
+	}
+	return 0
+}
+
+func (x *NamespaceWorkloadMetrics) GetMemoryRequestsGib() float64 {
+	if x != nil {
+		return x.xxx_hidden_MemoryRequestsGib
+	}
+	return 0
+}
+
+func (x *NamespaceWorkloadMetrics) GetMemoryLimitsGib() float64 {
+	if x != nil {
+		return x.xxx_hidden_MemoryLimitsGib
+	}
+	return 0
+}
+
+func (x *NamespaceWorkloadMetrics) GetNetworkReceiveMbS() float64 {
+	if x != nil {
+		return x.xxx_hidden_NetworkReceiveMbS
+	}
+	return 0
+}
+
+func (x *NamespaceWorkloadMetrics) GetNetworkTransmitMbS() float64 {
+	if x != nil {
+		return x.xxx_hidden_NetworkTransmitMbS
+	}
+	return 0
+}
+
 func (x *NamespaceWorkloadMetrics) SetNamespace(v string) {
 	x.xxx_hidden_Namespace = v
 }
@@ -468,6 +549,30 @@ func (x *NamespaceWorkloadMetrics) SetPods(v int32) {
 	x.xxx_hidden_Pods = v
 }
 
+func (x *NamespaceWorkloadMetrics) SetCpuRequests(v float64) {
+	x.xxx_hidden_CpuRequests = v
+}
+
+func (x *NamespaceWorkloadMetrics) SetCpuLimits(v float64) {
+	x.xxx_hidden_CpuLimits = v
+}
+
+func (x *NamespaceWorkloadMetrics) SetMemoryRequestsGib(v float64) {
+	x.xxx_hidden_MemoryRequestsGib = v
+}
+
+func (x *NamespaceWorkloadMetrics) SetMemoryLimitsGib(v float64) {
+	x.xxx_hidden_MemoryLimitsGib = v
+}
+
+func (x *NamespaceWorkloadMetrics) SetNetworkReceiveMbS(v float64) {
+	x.xxx_hidden_NetworkReceiveMbS = v
+}
+
+func (x *NamespaceWorkloadMetrics) SetNetworkTransmitMbS(v float64) {
+	x.xxx_hidden_NetworkTransmitMbS = v
+}
+
 type NamespaceWorkloadMetrics_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -475,6 +580,14 @@ type NamespaceWorkloadMetrics_builder struct {
 	CpuCores  float64
 	MemoryGib float64
 	Pods      int32
+	// Requested and limited resources (from kube_pod_container_resource_requests/limits)
+	CpuRequests       float64
+	CpuLimits         float64
+	MemoryRequestsGib float64
+	MemoryLimitsGib   float64
+	// Network I/O rates in MB/s
+	NetworkReceiveMbS  float64
+	NetworkTransmitMbS float64
 }
 
 func (b0 NamespaceWorkloadMetrics_builder) Build() *NamespaceWorkloadMetrics {
@@ -485,6 +598,12 @@ func (b0 NamespaceWorkloadMetrics_builder) Build() *NamespaceWorkloadMetrics {
 	x.xxx_hidden_CpuCores = b.CpuCores
 	x.xxx_hidden_MemoryGib = b.MemoryGib
 	x.xxx_hidden_Pods = b.Pods
+	x.xxx_hidden_CpuRequests = b.CpuRequests
+	x.xxx_hidden_CpuLimits = b.CpuLimits
+	x.xxx_hidden_MemoryRequestsGib = b.MemoryRequestsGib
+	x.xxx_hidden_MemoryLimitsGib = b.MemoryLimitsGib
+	x.xxx_hidden_NetworkReceiveMbS = b.NetworkReceiveMbS
+	x.xxx_hidden_NetworkTransmitMbS = b.NetworkTransmitMbS
 	return m0
 }
 
@@ -1674,13 +1793,15 @@ var File_v1_metrics_proto protoreflect.FileDescriptor
 
 const file_v1_metrics_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/metrics.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x10v1/cluster.proto\x1a\x0fv1/common.proto\"\xd5\x01\n" +
+	"\x10v1/metrics.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x10v1/cluster.proto\x1a\x0fv1/common.proto\"\xf7\x02\n" +
 	"\x1dGetWorkloadTimeSeriesResponse\x12:\n" +
 	"\tcpu_cores\x18\n" +
 	" \x03(\v2\x1d.organization.v1.MetricSampleR\bcpuCores\x12<\n" +
 	"\n" +
 	"memory_gib\x18\x14 \x03(\v2\x1d.organization.v1.MetricSampleR\tmemoryGib\x12:\n" +
-	"\tpod_count\x18\x1e \x03(\v2\x1d.organization.v1.MetricSampleR\bpodCount\"^\n" +
+	"\tpod_count\x18\x1e \x03(\v2\x1d.organization.v1.MetricSampleR\bpodCount\x12N\n" +
+	"\x14network_receive_mb_s\x18( \x03(\v2\x1d.organization.v1.MetricSampleR\x11networkReceiveMbS\x12P\n" +
+	"\x15network_transmit_mb_s\x182 \x03(\v2\x1d.organization.v1.MetricSampleR\x12networkTransmitMbS\"^\n" +
 	"\fMetricSample\x128\n" +
 	"\ttimestamp\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x14\n" +
@@ -1696,14 +1817,21 @@ const file_v1_metrics_proto_rawDesc = "" +
 	"\x04size\x18\x1e \x01(\tR\x04size\x12\x14\n" +
 	"\x05state\x18( \x01(\tR\x05state\x12\x1f\n" +
 	"\vpower_watts\x182 \x01(\x01R\n" +
-	"powerWatts\"\x88\x01\n" +
+	"powerWatts\"\x8a\x03\n" +
 	"\x18NamespaceWorkloadMetrics\x12\x1c\n" +
 	"\tnamespace\x18\n" +
 	" \x01(\tR\tnamespace\x12\x1b\n" +
 	"\tcpu_cores\x18\x14 \x01(\x01R\bcpuCores\x12\x1d\n" +
 	"\n" +
 	"memory_gib\x18\x1e \x01(\x01R\tmemoryGib\x12\x12\n" +
-	"\x04pods\x18( \x01(\x05R\x04pods\"K\n" +
+	"\x04pods\x18( \x01(\x05R\x04pods\x12!\n" +
+	"\fcpu_requests\x182 \x01(\x01R\vcpuRequests\x12\x1d\n" +
+	"\n" +
+	"cpu_limits\x18< \x01(\x01R\tcpuLimits\x12.\n" +
+	"\x13memory_requests_gib\x18F \x01(\x01R\x11memoryRequestsGib\x12*\n" +
+	"\x11memory_limits_gib\x18P \x01(\x01R\x0fmemoryLimitsGib\x12/\n" +
+	"\x14network_receive_mb_s\x18Z \x01(\x01R\x11networkReceiveMbS\x121\n" +
+	"\x15network_transmit_mb_s\x18d \x01(\x01R\x12networkTransmitMbS\"K\n" +
 	" GetClusterWorkloadMetricsRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -1807,49 +1935,51 @@ var file_v1_metrics_proto_depIdxs = []int32{
 	1,  // 0: organization.v1.GetWorkloadTimeSeriesResponse.cpu_cores:type_name -> organization.v1.MetricSample
 	1,  // 1: organization.v1.GetWorkloadTimeSeriesResponse.memory_gib:type_name -> organization.v1.MetricSample
 	1,  // 2: organization.v1.GetWorkloadTimeSeriesResponse.pod_count:type_name -> organization.v1.MetricSample
-	18, // 3: organization.v1.MetricSample.timestamp:type_name -> google.protobuf.Timestamp
-	3,  // 4: organization.v1.GetInfraMetricsResponse.machines:type_name -> organization.v1.MachineInfo
-	19, // 5: organization.v1.GetClusterWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
-	7,  // 6: organization.v1.GetClusterWorkloadMetricsResponse.nodes:type_name -> organization.v1.NodeWorkloadMetrics
-	4,  // 7: organization.v1.GetClusterWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
-	20, // 8: organization.v1.NodeWorkloadMetrics.cpu:type_name -> organization.v1.ResourceUsage
-	20, // 9: organization.v1.NodeWorkloadMetrics.memory:type_name -> organization.v1.ResourceUsage
-	20, // 10: organization.v1.NodeWorkloadMetrics.pods:type_name -> organization.v1.ResourceUsage
-	18, // 11: organization.v1.GetClusterWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 12: organization.v1.GetClusterWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	19, // 13: organization.v1.GetOrgWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
-	12, // 14: organization.v1.GetOrgWorkloadMetricsResponse.clusters:type_name -> organization.v1.ClusterWorkloadSummary
-	4,  // 15: organization.v1.GetOrgWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
-	20, // 16: organization.v1.ClusterWorkloadSummary.cpu:type_name -> organization.v1.ResourceUsage
-	20, // 17: organization.v1.ClusterWorkloadSummary.memory:type_name -> organization.v1.ResourceUsage
-	20, // 18: organization.v1.ClusterWorkloadSummary.pods:type_name -> organization.v1.ResourceUsage
-	18, // 19: organization.v1.GetOrgWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 20: organization.v1.GetOrgWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	19, // 21: organization.v1.GetProjectWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
-	4,  // 22: organization.v1.GetProjectWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
-	18, // 23: organization.v1.GetProjectWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 24: organization.v1.GetProjectWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	5,  // 25: organization.v1.MetricsService.GetClusterWorkloadMetrics:input_type -> organization.v1.GetClusterWorkloadMetricsRequest
-	8,  // 26: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:input_type -> organization.v1.GetClusterWorkloadTimeSeriesRequest
-	9,  // 27: organization.v1.MetricsService.GetClusterInfraMetrics:input_type -> organization.v1.GetClusterInfraMetricsRequest
-	10, // 28: organization.v1.MetricsService.GetOrgWorkloadMetrics:input_type -> organization.v1.GetOrgWorkloadMetricsRequest
-	13, // 29: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:input_type -> organization.v1.GetOrgWorkloadTimeSeriesRequest
-	14, // 30: organization.v1.MetricsService.GetOrgInfraMetrics:input_type -> organization.v1.GetOrgInfraMetricsRequest
-	15, // 31: organization.v1.MetricsService.GetProjectWorkloadMetrics:input_type -> organization.v1.GetProjectWorkloadMetricsRequest
-	17, // 32: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:input_type -> organization.v1.GetProjectWorkloadTimeSeriesRequest
-	6,  // 33: organization.v1.MetricsService.GetClusterWorkloadMetrics:output_type -> organization.v1.GetClusterWorkloadMetricsResponse
-	0,  // 34: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	2,  // 35: organization.v1.MetricsService.GetClusterInfraMetrics:output_type -> organization.v1.GetInfraMetricsResponse
-	11, // 36: organization.v1.MetricsService.GetOrgWorkloadMetrics:output_type -> organization.v1.GetOrgWorkloadMetricsResponse
-	0,  // 37: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	2,  // 38: organization.v1.MetricsService.GetOrgInfraMetrics:output_type -> organization.v1.GetInfraMetricsResponse
-	16, // 39: organization.v1.MetricsService.GetProjectWorkloadMetrics:output_type -> organization.v1.GetProjectWorkloadMetricsResponse
-	0,  // 40: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	33, // [33:41] is the sub-list for method output_type
-	25, // [25:33] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	1,  // 3: organization.v1.GetWorkloadTimeSeriesResponse.network_receive_mb_s:type_name -> organization.v1.MetricSample
+	1,  // 4: organization.v1.GetWorkloadTimeSeriesResponse.network_transmit_mb_s:type_name -> organization.v1.MetricSample
+	18, // 5: organization.v1.MetricSample.timestamp:type_name -> google.protobuf.Timestamp
+	3,  // 6: organization.v1.GetInfraMetricsResponse.machines:type_name -> organization.v1.MachineInfo
+	19, // 7: organization.v1.GetClusterWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	7,  // 8: organization.v1.GetClusterWorkloadMetricsResponse.nodes:type_name -> organization.v1.NodeWorkloadMetrics
+	4,  // 9: organization.v1.GetClusterWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
+	20, // 10: organization.v1.NodeWorkloadMetrics.cpu:type_name -> organization.v1.ResourceUsage
+	20, // 11: organization.v1.NodeWorkloadMetrics.memory:type_name -> organization.v1.ResourceUsage
+	20, // 12: organization.v1.NodeWorkloadMetrics.pods:type_name -> organization.v1.ResourceUsage
+	18, // 13: organization.v1.GetClusterWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 14: organization.v1.GetClusterWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	19, // 15: organization.v1.GetOrgWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	12, // 16: organization.v1.GetOrgWorkloadMetricsResponse.clusters:type_name -> organization.v1.ClusterWorkloadSummary
+	4,  // 17: organization.v1.GetOrgWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
+	20, // 18: organization.v1.ClusterWorkloadSummary.cpu:type_name -> organization.v1.ResourceUsage
+	20, // 19: organization.v1.ClusterWorkloadSummary.memory:type_name -> organization.v1.ResourceUsage
+	20, // 20: organization.v1.ClusterWorkloadSummary.pods:type_name -> organization.v1.ResourceUsage
+	18, // 21: organization.v1.GetOrgWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 22: organization.v1.GetOrgWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	19, // 23: organization.v1.GetProjectWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	4,  // 24: organization.v1.GetProjectWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
+	18, // 25: organization.v1.GetProjectWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 26: organization.v1.GetProjectWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	5,  // 27: organization.v1.MetricsService.GetClusterWorkloadMetrics:input_type -> organization.v1.GetClusterWorkloadMetricsRequest
+	8,  // 28: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:input_type -> organization.v1.GetClusterWorkloadTimeSeriesRequest
+	9,  // 29: organization.v1.MetricsService.GetClusterInfraMetrics:input_type -> organization.v1.GetClusterInfraMetricsRequest
+	10, // 30: organization.v1.MetricsService.GetOrgWorkloadMetrics:input_type -> organization.v1.GetOrgWorkloadMetricsRequest
+	13, // 31: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:input_type -> organization.v1.GetOrgWorkloadTimeSeriesRequest
+	14, // 32: organization.v1.MetricsService.GetOrgInfraMetrics:input_type -> organization.v1.GetOrgInfraMetricsRequest
+	15, // 33: organization.v1.MetricsService.GetProjectWorkloadMetrics:input_type -> organization.v1.GetProjectWorkloadMetricsRequest
+	17, // 34: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:input_type -> organization.v1.GetProjectWorkloadTimeSeriesRequest
+	6,  // 35: organization.v1.MetricsService.GetClusterWorkloadMetrics:output_type -> organization.v1.GetClusterWorkloadMetricsResponse
+	0,  // 36: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	2,  // 37: organization.v1.MetricsService.GetClusterInfraMetrics:output_type -> organization.v1.GetInfraMetricsResponse
+	11, // 38: organization.v1.MetricsService.GetOrgWorkloadMetrics:output_type -> organization.v1.GetOrgWorkloadMetricsResponse
+	0,  // 39: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	2,  // 40: organization.v1.MetricsService.GetOrgInfraMetrics:output_type -> organization.v1.GetInfraMetricsResponse
+	16, // 41: organization.v1.MetricsService.GetProjectWorkloadMetrics:output_type -> organization.v1.GetProjectWorkloadMetricsResponse
+	0,  // 42: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	35, // [35:43] is the sub-list for method output_type
+	27, // [27:35] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
 func init() { file_v1_metrics_proto_init() }

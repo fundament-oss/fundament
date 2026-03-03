@@ -18,7 +18,10 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-const bytesPerGiB = 1073741824.0
+const (
+	bytesPerGiB = 1073741824.0
+	bytesPerMB  = 1_000_000.0
+)
 
 // -- Cluster-level RPCs --
 
@@ -113,11 +116,35 @@ func (s *Server) GetClusterWorkloadMetrics(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace pods: %w", err))
 	}
+	nsCPUReq, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="cpu",%s}) by (namespace)`, cf), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu requests: %w", err))
+	}
+	nsCPULim, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="cpu",%s}) by (namespace)`, cf), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu limits: %w", err))
+	}
+	nsMemReq, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="memory",%s}) by (namespace)`, cf), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem requests: %w", err))
+	}
+	nsMemLim, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="memory",%s}) by (namespace)`, cf), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem limits: %w", err))
+	}
+	nsNetRx, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m])) by (namespace)`, cf), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net rx: %w", err))
+	}
+	nsNetTx, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m])) by (namespace)`, cf), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net tx: %w", err))
+	}
 
 	return connect.NewResponse(organizationv1.GetClusterWorkloadMetricsResponse_builder{
 		Totals:     totals,
 		Nodes:      buildNodeMetrics(nodeCPUUsed, nodeCPUTotal, nodeMemUsed, nodeMemTotal, nodePodsUsed, nodePodsTotal),
-		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods),
+		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods, nsCPUReq, nsCPULim, nsMemReq, nsMemLim, nsNetRx, nsNetTx),
 	}.Build()), nil
 }
 
@@ -154,11 +181,21 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pod time-series: %w", err))
 	}
+	netRxSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m]))`, cf), start, end, step)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net rx time-series: %w", err))
+	}
+	netTxSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m]))`, cf), start, end, step)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net tx time-series: %w", err))
+	}
 
 	return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{
-		CpuCores:  timeSeriesFirstToProto(cpuSeries, 1),
-		MemoryGib: timeSeriesFirstToProto(memSeries, 1.0/bytesPerGiB),
-		PodCount:  timeSeriesFirstToProto(podSeries, 1),
+		CpuCores:           timeSeriesFirstToProto(cpuSeries, 1),
+		MemoryGib:          timeSeriesFirstToProto(memSeries, 1.0/bytesPerGiB),
+		PodCount:           timeSeriesFirstToProto(podSeries, 1),
+		NetworkReceiveMbS:  timeSeriesFirstToProto(netRxSeries, 1.0/bytesPerMB),
+		NetworkTransmitMbS: timeSeriesFirstToProto(netTxSeries, 1.0/bytesPerMB),
 	}.Build()), nil
 }
 
@@ -262,11 +299,35 @@ func (s *Server) GetOrgWorkloadMetrics(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace pods: %w", err))
 	}
+	nsCPUReq, err := s.k8sPromClient.Query(ctx, `sum(kube_pod_container_resource_requests{resource="cpu"}) by (namespace)`, now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu requests: %w", err))
+	}
+	nsCPULim, err := s.k8sPromClient.Query(ctx, `sum(kube_pod_container_resource_limits{resource="cpu"}) by (namespace)`, now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu limits: %w", err))
+	}
+	nsMemReq, err := s.k8sPromClient.Query(ctx, `sum(kube_pod_container_resource_requests{resource="memory"}) by (namespace)`, now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem requests: %w", err))
+	}
+	nsMemLim, err := s.k8sPromClient.Query(ctx, `sum(kube_pod_container_resource_limits{resource="memory"}) by (namespace)`, now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem limits: %w", err))
+	}
+	nsNetRx, err := s.k8sPromClient.Query(ctx, `sum(rate(container_network_receive_bytes_total[5m])) by (namespace)`, now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net rx: %w", err))
+	}
+	nsNetTx, err := s.k8sPromClient.Query(ctx, `sum(rate(container_network_transmit_bytes_total[5m])) by (namespace)`, now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net tx: %w", err))
+	}
 
 	return connect.NewResponse(organizationv1.GetOrgWorkloadMetricsResponse_builder{
 		Totals:     totals,
 		Clusters:   buildClusterSummaries(clusterCPU, clusterCPUTotal, clusterMem, clusterMemTotal, clusterPods, clusterPodsTotal),
-		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods),
+		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods, nsCPUReq, nsCPULim, nsMemReq, nsMemLim, nsNetRx, nsNetTx),
 	}.Build()), nil
 }
 
@@ -288,11 +349,21 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pod time-series: %w", err))
 	}
+	netRxSeries, err := s.k8sPromClient.QueryRange(ctx, `sum(rate(container_network_receive_bytes_total[5m]))`, start, end, step)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net rx time-series: %w", err))
+	}
+	netTxSeries, err := s.k8sPromClient.QueryRange(ctx, `sum(rate(container_network_transmit_bytes_total[5m]))`, start, end, step)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net tx time-series: %w", err))
+	}
 
 	return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{
-		CpuCores:  timeSeriesFirstToProto(cpuSeries, 1),
-		MemoryGib: timeSeriesFirstToProto(memSeries, 1.0/bytesPerGiB),
-		PodCount:  timeSeriesFirstToProto(podSeries, 1),
+		CpuCores:           timeSeriesFirstToProto(cpuSeries, 1),
+		MemoryGib:          timeSeriesFirstToProto(memSeries, 1.0/bytesPerGiB),
+		PodCount:           timeSeriesFirstToProto(podSeries, 1),
+		NetworkReceiveMbS:  timeSeriesFirstToProto(netRxSeries, 1.0/bytesPerMB),
+		NetworkTransmitMbS: timeSeriesFirstToProto(netTxSeries, 1.0/bytesPerMB),
 	}.Build()), nil
 }
 
@@ -368,6 +439,30 @@ func (s *Server) GetProjectWorkloadMetrics(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace pods: %w", err))
 	}
+	nsCPUReq, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="cpu",%s}) by (namespace)`, nsFilter), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu requests: %w", err))
+	}
+	nsCPULim, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="cpu",%s}) by (namespace)`, nsFilter), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu limits: %w", err))
+	}
+	nsMemReq, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="memory",%s}) by (namespace)`, nsFilter), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem requests: %w", err))
+	}
+	nsMemLim, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="memory",%s}) by (namespace)`, nsFilter), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem limits: %w", err))
+	}
+	nsNetRx, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m])) by (namespace)`, nsFilter), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net rx: %w", err))
+	}
+	nsNetTx, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m])) by (namespace)`, nsFilter), now)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net tx: %w", err))
+	}
 
 	return connect.NewResponse(organizationv1.GetProjectWorkloadMetricsResponse_builder{
 		Totals: organizationv1.ResourceUsageInfo_builder{
@@ -375,7 +470,7 @@ func (s *Server) GetProjectWorkloadMetrics(
 			Memory: makeResourceUsage(memUsed/bytesPerGiB, memTotal/bytesPerGiB, "GiB"),
 			Pods:   makeResourceUsage(podsUsed, podsTotal, "pods"),
 		}.Build(),
-		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods),
+		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods, nsCPUReq, nsCPULim, nsMemReq, nsMemLim, nsNetRx, nsNetTx),
 	}.Build()), nil
 }
 
@@ -413,11 +508,21 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pod time-series: %w", err))
 	}
+	netRxSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m]))`, nsFilter), start, end, step)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net rx time-series: %w", err))
+	}
+	netTxSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m]))`, nsFilter), start, end, step)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net tx time-series: %w", err))
+	}
 
 	return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{
-		CpuCores:  timeSeriesFirstToProto(cpuSeries, 1),
-		MemoryGib: timeSeriesFirstToProto(memSeries, 1.0/bytesPerGiB),
-		PodCount:  timeSeriesFirstToProto(podSeries, 1),
+		CpuCores:           timeSeriesFirstToProto(cpuSeries, 1),
+		MemoryGib:          timeSeriesFirstToProto(memSeries, 1.0/bytesPerGiB),
+		PodCount:           timeSeriesFirstToProto(podSeries, 1),
+		NetworkReceiveMbS:  timeSeriesFirstToProto(netRxSeries, 1.0/bytesPerMB),
+		NetworkTransmitMbS: timeSeriesFirstToProto(netTxSeries, 1.0/bytesPerMB),
 	}.Build()), nil
 }
 
@@ -555,13 +660,19 @@ func buildNodeMetrics(
 	return result
 }
 
-// buildNamespaceMetrics combines per-namespace CPU, memory, and pod samples into
-// NamespaceWorkloadMetrics messages.
-func buildNamespaceMetrics(cpuSamples, memSamples, podSamples []prom.Sample) []*organizationv1.NamespaceWorkloadMetrics {
+// buildNamespaceMetrics combines per-namespace samples into NamespaceWorkloadMetrics
+// messages. cpuReq/cpuLim/memReq/memLim come from kube_pod_container_resource_requests/limits;
+// netRx/netTx come from container_network_*_bytes_total rates.
+func buildNamespaceMetrics(
+	cpuSamples, memSamples, podSamples,
+	cpuReqSamples, cpuLimSamples, memReqSamples, memLimSamples,
+	netRxSamples, netTxSamples []prom.Sample,
+) []*organizationv1.NamespaceWorkloadMetrics {
 	type nsData struct {
-		cpu  float64
-		mem  float64
-		pods float64
+		cpu, mem, pods float64
+		cpuReq, cpuLim float64
+		memReq, memLim float64
+		netRx, netTx   float64
 	}
 	namespaces := make(map[string]*nsData)
 
@@ -581,14 +692,38 @@ func buildNamespaceMetrics(cpuSamples, memSamples, podSamples []prom.Sample) []*
 	for _, s := range podSamples {
 		ensureNS(s.Labels["namespace"]).pods = s.Value
 	}
+	for _, s := range cpuReqSamples {
+		ensureNS(s.Labels["namespace"]).cpuReq = s.Value
+	}
+	for _, s := range cpuLimSamples {
+		ensureNS(s.Labels["namespace"]).cpuLim = s.Value
+	}
+	for _, s := range memReqSamples {
+		ensureNS(s.Labels["namespace"]).memReq = s.Value
+	}
+	for _, s := range memLimSamples {
+		ensureNS(s.Labels["namespace"]).memLim = s.Value
+	}
+	for _, s := range netRxSamples {
+		ensureNS(s.Labels["namespace"]).netRx = s.Value
+	}
+	for _, s := range netTxSamples {
+		ensureNS(s.Labels["namespace"]).netTx = s.Value
+	}
 
 	result := make([]*organizationv1.NamespaceWorkloadMetrics, 0, len(namespaces))
 	for name, d := range namespaces {
 		result = append(result, organizationv1.NamespaceWorkloadMetrics_builder{
-			Namespace: name,
-			CpuCores:  d.cpu,
-			MemoryGib: d.mem / bytesPerGiB,
-			Pods:      int32(d.pods),
+			Namespace:          name,
+			CpuCores:           d.cpu,
+			MemoryGib:          d.mem / bytesPerGiB,
+			Pods:               int32(d.pods),
+			CpuRequests:        d.cpuReq,
+			CpuLimits:          d.cpuLim,
+			MemoryRequestsGib:  d.memReq / bytesPerGiB,
+			MemoryLimitsGib:    d.memLim / bytesPerGiB,
+			NetworkReceiveMbS:  d.netRx / bytesPerMB,
+			NetworkTransmitMbS: d.netTx / bytesPerMB,
 		}.Build())
 	}
 	return result

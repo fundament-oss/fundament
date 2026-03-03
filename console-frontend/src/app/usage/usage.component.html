@@ -168,23 +168,49 @@
       <!-- ======================================================= -->
       <!-- Time-series charts (all views)                          -->
       <!-- ======================================================= -->
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">CPU usage over time</h3>
-          <div class="h-64">
+          <div class="relative h-64">
             <canvas #cpuChart></canvas>
+            @if (!hasTimeSeriesData) {
+              <div class="absolute inset-0 flex items-center justify-center">
+                <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
+              </div>
+            }
           </div>
         </div>
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Memory usage over time</h3>
-          <div class="h-64">
+          <div class="relative h-64">
             <canvas #memoryChart></canvas>
+            @if (!hasTimeSeriesData) {
+              <div class="absolute inset-0 flex items-center justify-center">
+                <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
+              </div>
+            }
           </div>
         </div>
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Pod count over time</h3>
-          <div class="h-64">
+          <div class="relative h-64">
             <canvas #podChart></canvas>
+            @if (!hasTimeSeriesData) {
+              <div class="absolute inset-0 flex items-center justify-center">
+                <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+          <h3 class="mb-4 text-lg font-medium dark:text-white">Network I/O over time</h3>
+          <div class="relative h-64">
+            <canvas #networkChart></canvas>
+            @if (!hasTimeSeriesData) {
+              <div class="absolute inset-0 flex items-center justify-center">
+                <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -251,101 +277,125 @@
       <!-- ======================================================= -->
       <!-- Per-node breakdown — cluster-level only                 -->
       <!-- ======================================================= -->
-      @if (selectedClusterId && nodeUsage().length > 0) {
+      @if (selectedClusterId) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Per node</h3>
-          <div class="space-y-4">
-            @for (node of nodeUsage(); track node.name) {
-              <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800">
-                <h4 class="mb-3 font-mono text-sm font-medium dark:text-white">{{ node.name }}</h4>
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div>
-                    <div class="mb-1 flex justify-between text-xs">
-                      <span class="text-gray-600 dark:text-gray-300">CPU</span>
-                      <span class="text-gray-500 dark:text-gray-400">
-                        {{ node.cpu.used | number: '1.1-1' }} /
-                        {{ node.cpu.total | number: '1.0-0' }} cores
-                      </span>
+          @if (nodeUsage().length > 0) {
+            <div class="space-y-4">
+              @for (node of nodeUsage(); track node.name) {
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800">
+                  <h4 class="mb-3 font-mono text-sm font-medium dark:text-white">
+                    {{ node.name }}
+                  </h4>
+                  <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div>
+                      <div class="mb-1 flex justify-between text-xs">
+                        <span class="text-gray-600 dark:text-gray-300">CPU</span>
+                        <span class="text-gray-500 dark:text-gray-400">
+                          {{ node.cpu.used | number: '1.1-1' }} /
+                          {{ node.cpu.total | number: '1.0-0' }} cores
+                        </span>
+                      </div>
+                      <div class="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div
+                          class="h-1.5 rounded-full transition-all"
+                          [class]="getUsageColor(getUsagePercentage(node.cpu.used, node.cpu.total))"
+                          [style.width.%]="getUsagePercentage(node.cpu.used, node.cpu.total)"
+                        ></div>
+                      </div>
                     </div>
-                    <div class="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
-                      <div
-                        class="h-1.5 rounded-full transition-all"
-                        [class]="getUsageColor(getUsagePercentage(node.cpu.used, node.cpu.total))"
-                        [style.width.%]="getUsagePercentage(node.cpu.used, node.cpu.total)"
-                      ></div>
+                    <div>
+                      <div class="mb-1 flex justify-between text-xs">
+                        <span class="text-gray-600 dark:text-gray-300">Memory</span>
+                        <span class="text-gray-500 dark:text-gray-400">
+                          {{ node.memory.used | number: '1.1-1' }} /
+                          {{ node.memory.total | number: '1.0-0' }} GiB
+                        </span>
+                      </div>
+                      <div class="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div
+                          class="h-1.5 rounded-full transition-all"
+                          [class]="
+                            getUsageColor(getUsagePercentage(node.memory.used, node.memory.total))
+                          "
+                          [style.width.%]="getUsagePercentage(node.memory.used, node.memory.total)"
+                        ></div>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div class="mb-1 flex justify-between text-xs">
-                      <span class="text-gray-600 dark:text-gray-300">Memory</span>
-                      <span class="text-gray-500 dark:text-gray-400">
-                        {{ node.memory.used | number: '1.1-1' }} /
-                        {{ node.memory.total | number: '1.0-0' }} GiB
-                      </span>
-                    </div>
-                    <div class="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
-                      <div
-                        class="h-1.5 rounded-full transition-all"
-                        [class]="
-                          getUsageColor(getUsagePercentage(node.memory.used, node.memory.total))
-                        "
-                        [style.width.%]="getUsagePercentage(node.memory.used, node.memory.total)"
-                      ></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div class="mb-1 flex justify-between text-xs">
-                      <span class="text-gray-600 dark:text-gray-300">Pods</span>
-                      <span class="text-gray-500 dark:text-gray-400">
-                        {{ node.pods.used | number: '1.0-0' }} /
-                        {{ node.pods.total | number: '1.0-0' }}
-                      </span>
-                    </div>
-                    <div class="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
-                      <div
-                        class="h-1.5 rounded-full transition-all"
-                        [class]="getUsageColor(getUsagePercentage(node.pods.used, node.pods.total))"
-                        [style.width.%]="getUsagePercentage(node.pods.used, node.pods.total)"
-                      ></div>
+                    <div>
+                      <div class="mb-1 flex justify-between text-xs">
+                        <span class="text-gray-600 dark:text-gray-300">Pods</span>
+                        <span class="text-gray-500 dark:text-gray-400">
+                          {{ node.pods.used | number: '1.0-0' }} /
+                          {{ node.pods.total | number: '1.0-0' }}
+                        </span>
+                      </div>
+                      <div class="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div
+                          class="h-1.5 rounded-full transition-all"
+                          [class]="
+                            getUsageColor(getUsagePercentage(node.pods.used, node.pods.total))
+                          "
+                          [style.width.%]="getUsagePercentage(node.pods.used, node.pods.total)"
+                        ></div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            }
-          </div>
+              }
+            </div>
+          } @else {
+            <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
+          }
         </div>
       }
 
       <!-- ======================================================= -->
       <!-- Per-namespace breakdown (all views)                     -->
       <!-- ======================================================= -->
-      @if (namespaceUsage().length > 0) {
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Per namespace</h3>
+      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+        <h3 class="mb-4 text-lg font-medium dark:text-white">Per namespace</h3>
+        @if (namespaceUsage().length > 0) {
           <div class="overflow-x-auto">
             <table class="table">
               <thead>
                 <tr>
                   <th scope="col">Namespace</th>
-                  <th scope="col">CPU (cores)</th>
-                  <th scope="col">Memory (GiB)</th>
+                  <th scope="col">CPU used</th>
+                  <th scope="col">CPU req / lim</th>
+                  <th scope="col">Mem used</th>
+                  <th scope="col">Mem req / lim</th>
                   <th scope="col">Pods</th>
+                  <th scope="col">Net Rx</th>
+                  <th scope="col">Net Tx</th>
                 </tr>
               </thead>
               <tbody>
                 @for (ns of namespaceUsage(); track ns.name) {
                   <tr>
                     <td class="font-medium dark:text-white">{{ ns.name }}</td>
-                    <td>{{ ns.cpu | number: '1.2-2' }}</td>
-                    <td>{{ ns.memory | number: '1.1-1' }}</td>
+                    <td>{{ ns.cpu | number: '1.2-2' }} cores</td>
+                    <td class="text-gray-500 dark:text-gray-400">
+                      {{ ns.cpuRequests | number: '1.1-1' }} /
+                      {{ ns.cpuLimits | number: '1.1-1' }}
+                    </td>
+                    <td>{{ ns.memory | number: '1.1-1' }} GiB</td>
+                    <td class="text-gray-500 dark:text-gray-400">
+                      {{ ns.memoryRequests | number: '1.1-1' }} /
+                      {{ ns.memoryLimits | number: '1.1-1' }} GiB
+                    </td>
                     <td>{{ ns.pods }}</td>
+                    <td>{{ ns.networkReceiveMbs | number: '1.2-2' }} MB/s</td>
+                    <td>{{ ns.networkTransmitMbs | number: '1.2-2' }} MB/s</td>
                   </tr>
                 }
               </tbody>
             </table>
           </div>
-        </div>
-      }
+        } @else {
+          <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
+        }
+      </div>
 
       <!-- ======================================================= -->
       <!-- Infrastructure — org and cluster views only             -->

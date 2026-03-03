@@ -43,12 +43,15 @@ service MetricsService {
 
 // -- Shared response types --
 
-// GetWorkloadTimeSeriesResponse contains time-series data for the three core
-// workload metrics. Used as the response for all *TimeSeries RPCs.
+// GetWorkloadTimeSeriesResponse contains time-series data for workload metrics.
+// Used as the response for all *TimeSeries RPCs.
 message GetWorkloadTimeSeriesResponse {
   repeated MetricSample cpu_cores = 10;
   repeated MetricSample memory_gib = 20;
   repeated MetricSample pod_count = 30;
+  // Network I/O rates in MB/s (megabytes per second)
+  repeated MetricSample network_receive_mb_s = 40;
+  repeated MetricSample network_transmit_mb_s = 50;
 }
 
 // MetricSample is a single (timestamp, value) pair in a time-series.
@@ -79,6 +82,14 @@ message NamespaceWorkloadMetrics {
   double cpu_cores = 20;
   double memory_gib = 30;
   int32 pods = 40;
+  // Requested and limited resources (from kube_pod_container_resource_requests/limits)
+  double cpu_requests = 50;
+  double cpu_limits = 60;
+  double memory_requests_gib = 70;
+  double memory_limits_gib = 80;
+  // Network I/O rates in MB/s
+  double network_receive_mb_s = 90;
+  double network_transmit_mb_s = 100;
 }
 
 // -- Cluster-level --
