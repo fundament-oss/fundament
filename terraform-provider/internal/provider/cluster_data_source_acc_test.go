@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -30,10 +31,8 @@ func TestAccClusterDataSource(t *testing.T) {
 		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
-	clusterName := os.Getenv("FUNDAMENT_TEST_CLUSTER_NAME")
-	if clusterName == "" {
-		t.Skip("FUNDAMENT_TEST_CLUSTER_NAME not set, skipping cluster data source test")
-	}
+	suffix := acctest.RandString(6)
+	clusterName := "tf-acc-" + suffix
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -60,8 +59,14 @@ provider "fundament" {
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
+resource "fundament_cluster" "test" {
+  name               = %[1]q
+  region             = "eu-west-1"
+  kubernetes_version = "1.28"
+}
+
 data "fundament_cluster" "test" {
-  name = %[1]q
+  name = fundament_cluster.test.name
 }
 `, clusterName, endpoint, organizationID)
 }
