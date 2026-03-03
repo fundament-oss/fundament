@@ -132,6 +132,8 @@ spec:
               echo "OpenFGA database reset complete."
               {{- end }}
           env:
+            - name: PGCONNECT_TIMEOUT
+              value: "5"
             - name: OPENFGA_DATASTORE_URI
               valueFrom:
                 secretKeyRef:
