@@ -10,6 +10,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -46,29 +47,70 @@ func (s *Server) GetClusterWorkloadMetrics(
 	now := time.Now()
 	cf := clusterFilter(cluster.Name)
 
-	cpuUsed, err := querySingleValue(ctx, s.k8sPromClient, fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query cpu used: %w", err))
+	var (
+		cpuUsed, cpuTotal   float64
+		memUsed, memTotal   float64
+		podsUsed, podsTotal float64
+
+		nodeCPUUsed, nodeCPUTotal   []prom.Sample
+		nodeMemUsed, nodeMemTotal   []prom.Sample
+		nodePodsUsed, nodePodsTotal []prom.Sample
+
+		nsCPU, nsMem, nsPods []prom.Sample
+		nsCPUReq, nsCPULim   []prom.Sample
+		nsMemReq, nsMemLim   []prom.Sample
+		nsNetRx, nsNetTx     []prom.Sample
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	qi := func(dst *float64, label, query string) {
+		g.Go(func() error {
+			v, err := querySingleValue(gctx, s.k8sPromClient, query, now)
+			if err != nil {
+				return fmt.Errorf("%s: %w", label, err)
+			}
+			*dst = v
+			return nil
+		})
 	}
-	cpuTotal, err := querySingleValue(ctx, s.k8sPromClient, fmt.Sprintf(`sum(kube_node_status_capacity{resource="cpu",%s})`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query cpu total: %w", err))
+	qs := func(dst *[]prom.Sample, label, query string) {
+		g.Go(func() error {
+			samples, err := s.k8sPromClient.Query(gctx, query, now)
+			if err != nil {
+				return fmt.Errorf("%s: %w", label, err)
+			}
+			*dst = samples
+			return nil
+		})
 	}
-	memUsed, err := querySingleValue(ctx, s.k8sPromClient, fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query mem used: %w", err))
-	}
-	memTotal, err := querySingleValue(ctx, s.k8sPromClient, fmt.Sprintf(`sum(kube_node_status_capacity{resource="memory",%s})`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query mem total: %w", err))
-	}
-	podsUsed, err := querySingleValue(ctx, s.k8sPromClient, fmt.Sprintf(`count(kube_pod_info{%s})`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pods used: %w", err))
-	}
-	podsTotal, err := querySingleValue(ctx, s.k8sPromClient, fmt.Sprintf(`sum(kube_node_status_capacity{resource="pods",%s})`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pods total: %w", err))
+
+	qi(&cpuUsed, "query cpu used", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, cf))
+	qi(&cpuTotal, "query cpu total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="cpu",%s})`, cf))
+	qi(&memUsed, "query mem used", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, cf))
+	qi(&memTotal, "query mem total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="memory",%s})`, cf))
+	qi(&podsUsed, "query pods used", fmt.Sprintf(`count(kube_pod_info{%s})`, cf))
+	qi(&podsTotal, "query pods total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="pods",%s})`, cf))
+
+	qs(&nodeCPUUsed, "query per-node cpu used", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m])) by (node)`, cf))
+	qs(&nodeCPUTotal, "query per-node cpu total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="cpu",%s}) by (node)`, cf))
+	qs(&nodeMemUsed, "query per-node mem used", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s}) by (node)`, cf))
+	qs(&nodeMemTotal, "query per-node mem total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="memory",%s}) by (node)`, cf))
+	qs(&nodePodsUsed, "query per-node pods used", fmt.Sprintf(`count(kube_pod_info{%s}) by (node)`, cf))
+	qs(&nodePodsTotal, "query per-node pods total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="pods",%s}) by (node)`, cf))
+
+	qs(&nsCPU, "query per-namespace cpu", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m])) by (namespace)`, cf))
+	qs(&nsMem, "query per-namespace mem", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s}) by (namespace)`, cf))
+	qs(&nsPods, "query per-namespace pods", fmt.Sprintf(`count(kube_pod_info{%s}) by (namespace)`, cf))
+	qs(&nsCPUReq, "query per-namespace cpu requests", fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="cpu",%s}) by (namespace)`, cf))
+	qs(&nsCPULim, "query per-namespace cpu limits", fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="cpu",%s}) by (namespace)`, cf))
+	qs(&nsMemReq, "query per-namespace mem requests", fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="memory",%s}) by (namespace)`, cf))
+	qs(&nsMemLim, "query per-namespace mem limits", fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="memory",%s}) by (namespace)`, cf))
+	qs(&nsNetRx, "query per-namespace net rx", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m])) by (namespace)`, cf))
+	qs(&nsNetTx, "query per-namespace net tx", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m])) by (namespace)`, cf))
+
+	if err := g.Wait(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	totals := organizationv1.ResourceUsageInfo_builder{
@@ -76,70 +118,6 @@ func (s *Server) GetClusterWorkloadMetrics(
 		Memory: makeResourceUsage(memUsed/bytesPerGiB, memTotal/bytesPerGiB, "GiB"),
 		Pods:   makeResourceUsage(podsUsed, podsTotal, "pods"),
 	}.Build()
-
-	// Per-node breakdown
-	nodeCPUUsed, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m])) by (node)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-node cpu used: %w", err))
-	}
-	nodeCPUTotal, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_node_status_capacity{resource="cpu",%s}) by (node)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-node cpu total: %w", err))
-	}
-	nodeMemUsed, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s}) by (node)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-node mem used: %w", err))
-	}
-	nodeMemTotal, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_node_status_capacity{resource="memory",%s}) by (node)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-node mem total: %w", err))
-	}
-	nodePodsUsed, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`count(kube_pod_info{%s}) by (node)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-node pods used: %w", err))
-	}
-	nodePodsTotal, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_node_status_capacity{resource="pods",%s}) by (node)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-node pods total: %w", err))
-	}
-
-	// Per-namespace breakdown
-	nsCPU, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m])) by (namespace)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu: %w", err))
-	}
-	nsMem, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s}) by (namespace)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem: %w", err))
-	}
-	nsPods, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`count(kube_pod_info{%s}) by (namespace)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace pods: %w", err))
-	}
-	nsCPUReq, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="cpu",%s}) by (namespace)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu requests: %w", err))
-	}
-	nsCPULim, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="cpu",%s}) by (namespace)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu limits: %w", err))
-	}
-	nsMemReq, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="memory",%s}) by (namespace)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem requests: %w", err))
-	}
-	nsMemLim, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="memory",%s}) by (namespace)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem limits: %w", err))
-	}
-	nsNetRx, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m])) by (namespace)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net rx: %w", err))
-	}
-	nsNetTx, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m])) by (namespace)`, cf), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net tx: %w", err))
-	}
 
 	return connect.NewResponse(organizationv1.GetClusterWorkloadMetricsResponse_builder{
 		Totals:     totals,
@@ -169,25 +147,32 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
 	cf := clusterFilter(cluster.Name)
 
-	cpuSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, cf), start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query cpu time-series: %w", err))
+	var (
+		cpuSeries, memSeries, podSeries []prom.TimeSeries
+		netRxSeries, netTxSeries        []prom.TimeSeries
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	qr := func(dst *[]prom.TimeSeries, label, query string) {
+		g.Go(func() error {
+			ts, err := s.k8sPromClient.QueryRange(gctx, query, start, end, step)
+			if err != nil {
+				return fmt.Errorf("%s: %w", label, err)
+			}
+			*dst = ts
+			return nil
+		})
 	}
-	memSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, cf), start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query mem time-series: %w", err))
-	}
-	podSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`count(kube_pod_info{%s})`, cf), start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pod time-series: %w", err))
-	}
-	netRxSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m]))`, cf), start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net rx time-series: %w", err))
-	}
-	netTxSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m]))`, cf), start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net tx time-series: %w", err))
+
+	qr(&cpuSeries, "query cpu time-series", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, cf))
+	qr(&memSeries, "query mem time-series", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, cf))
+	qr(&podSeries, "query pod time-series", fmt.Sprintf(`count(kube_pod_info{%s})`, cf))
+	qr(&netRxSeries, "query net rx time-series", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m]))`, cf))
+	qr(&netTxSeries, "query net tx time-series", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m]))`, cf))
+
+	if err := g.Wait(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{
@@ -217,7 +202,7 @@ func (s *Server) GetClusterInfraMetrics(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	return s.infraMetrics(ctx, fmt.Sprintf(`metal_machine_allocation_info{clusterTag=~"shoot--.*--%s"}`, cluster.Name))
+	return s.infraMetrics(ctx, fmt.Sprintf(`metal_machine_allocation_info{clusterTag=~"shoot--.*--%s"}`, promEscapeLabelValue(cluster.Name)))
 }
 
 // -- Org-level RPCs --
@@ -228,29 +213,70 @@ func (s *Server) GetOrgWorkloadMetrics(
 ) (*connect.Response[organizationv1.GetOrgWorkloadMetricsResponse], error) {
 	now := time.Now()
 
-	cpuUsed, err := querySingleValue(ctx, s.k8sPromClient, `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query cpu used: %w", err))
+	var (
+		cpuUsed, cpuTotal   float64
+		memUsed, memTotal   float64
+		podsUsed, podsTotal float64
+
+		clusterCPU, clusterCPUTotal   []prom.Sample
+		clusterMem, clusterMemTotal   []prom.Sample
+		clusterPods, clusterPodsTotal []prom.Sample
+
+		nsCPU, nsMem, nsPods []prom.Sample
+		nsCPUReq, nsCPULim   []prom.Sample
+		nsMemReq, nsMemLim   []prom.Sample
+		nsNetRx, nsNetTx     []prom.Sample
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	qi := func(dst *float64, label, query string) {
+		g.Go(func() error {
+			v, err := querySingleValue(gctx, s.k8sPromClient, query, now)
+			if err != nil {
+				return fmt.Errorf("%s: %w", label, err)
+			}
+			*dst = v
+			return nil
+		})
 	}
-	cpuTotal, err := querySingleValue(ctx, s.k8sPromClient, `sum(kube_node_status_capacity{resource="cpu"})`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query cpu total: %w", err))
+	qs := func(dst *[]prom.Sample, label, query string) {
+		g.Go(func() error {
+			samples, err := s.k8sPromClient.Query(gctx, query, now)
+			if err != nil {
+				return fmt.Errorf("%s: %w", label, err)
+			}
+			*dst = samples
+			return nil
+		})
 	}
-	memUsed, err := querySingleValue(ctx, s.k8sPromClient, `sum(container_memory_working_set_bytes{container!=""})`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query mem used: %w", err))
-	}
-	memTotal, err := querySingleValue(ctx, s.k8sPromClient, `sum(kube_node_status_capacity{resource="memory"})`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query mem total: %w", err))
-	}
-	podsUsed, err := querySingleValue(ctx, s.k8sPromClient, `count(kube_pod_info)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pods used: %w", err))
-	}
-	podsTotal, err := querySingleValue(ctx, s.k8sPromClient, `sum(kube_node_status_capacity{resource="pods"})`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pods total: %w", err))
+
+	qi(&cpuUsed, "query cpu used", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`)
+	qi(&cpuTotal, "query cpu total", `sum(kube_node_status_capacity{resource="cpu"})`)
+	qi(&memUsed, "query mem used", `sum(container_memory_working_set_bytes{container!=""})`)
+	qi(&memTotal, "query mem total", `sum(kube_node_status_capacity{resource="memory"})`)
+	qi(&podsUsed, "query pods used", `count(kube_pod_info)`)
+	qi(&podsTotal, "query pods total", `sum(kube_node_status_capacity{resource="pods"})`)
+
+	qs(&clusterCPU, "query per-cluster cpu", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (cluster)`)
+	qs(&clusterCPUTotal, "query per-cluster cpu total", `sum(kube_node_status_capacity{resource="cpu"}) by (cluster)`)
+	qs(&clusterMem, "query per-cluster mem", `sum(container_memory_working_set_bytes{container!=""}) by (cluster)`)
+	qs(&clusterMemTotal, "query per-cluster mem total", `sum(kube_node_status_capacity{resource="memory"}) by (cluster)`)
+	qs(&clusterPods, "query per-cluster pods", `count(kube_pod_info) by (cluster)`)
+	qs(&clusterPodsTotal, "query per-cluster pods total", `sum(kube_node_status_capacity{resource="pods"}) by (cluster)`)
+
+	qs(&nsCPU, "query per-namespace cpu", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (namespace)`)
+	qs(&nsMem, "query per-namespace mem", `sum(container_memory_working_set_bytes{container!=""}) by (namespace)`)
+	qs(&nsPods, "query per-namespace pods", `count(kube_pod_info) by (namespace)`)
+	qs(&nsCPUReq, "query per-namespace cpu requests", `sum(kube_pod_container_resource_requests{resource="cpu"}) by (namespace)`)
+	qs(&nsCPULim, "query per-namespace cpu limits", `sum(kube_pod_container_resource_limits{resource="cpu"}) by (namespace)`)
+	qs(&nsMemReq, "query per-namespace mem requests", `sum(kube_pod_container_resource_requests{resource="memory"}) by (namespace)`)
+	qs(&nsMemLim, "query per-namespace mem limits", `sum(kube_pod_container_resource_limits{resource="memory"}) by (namespace)`)
+	qs(&nsNetRx, "query per-namespace net rx", `sum(rate(container_network_receive_bytes_total[5m])) by (namespace)`)
+	qs(&nsNetTx, "query per-namespace net tx", `sum(rate(container_network_transmit_bytes_total[5m])) by (namespace)`)
+
+	if err := g.Wait(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	totals := organizationv1.ResourceUsageInfo_builder{
@@ -258,71 +284,6 @@ func (s *Server) GetOrgWorkloadMetrics(
 		Memory: makeResourceUsage(memUsed/bytesPerGiB, memTotal/bytesPerGiB, "GiB"),
 		Pods:   makeResourceUsage(podsUsed, podsTotal, "pods"),
 	}.Build()
-
-	// Per-cluster breakdown requires a "cluster" label in Prometheus (standard in
-	// federated setups). Returns empty list when label is absent.
-	clusterCPU, err := s.k8sPromClient.Query(ctx, `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (cluster)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-cluster cpu: %w", err))
-	}
-	clusterMem, err := s.k8sPromClient.Query(ctx, `sum(container_memory_working_set_bytes{container!=""}) by (cluster)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-cluster mem: %w", err))
-	}
-	clusterPods, err := s.k8sPromClient.Query(ctx, `count(kube_pod_info) by (cluster)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-cluster pods: %w", err))
-	}
-	clusterCPUTotal, err := s.k8sPromClient.Query(ctx, `sum(kube_node_status_capacity{resource="cpu"}) by (cluster)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-cluster cpu total: %w", err))
-	}
-	clusterMemTotal, err := s.k8sPromClient.Query(ctx, `sum(kube_node_status_capacity{resource="memory"}) by (cluster)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-cluster mem total: %w", err))
-	}
-	clusterPodsTotal, err := s.k8sPromClient.Query(ctx, `sum(kube_node_status_capacity{resource="pods"}) by (cluster)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-cluster pods total: %w", err))
-	}
-
-	// Per-namespace breakdown across all clusters
-	nsCPU, err := s.k8sPromClient.Query(ctx, `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (namespace)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu: %w", err))
-	}
-	nsMem, err := s.k8sPromClient.Query(ctx, `sum(container_memory_working_set_bytes{container!=""}) by (namespace)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem: %w", err))
-	}
-	nsPods, err := s.k8sPromClient.Query(ctx, `count(kube_pod_info) by (namespace)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace pods: %w", err))
-	}
-	nsCPUReq, err := s.k8sPromClient.Query(ctx, `sum(kube_pod_container_resource_requests{resource="cpu"}) by (namespace)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu requests: %w", err))
-	}
-	nsCPULim, err := s.k8sPromClient.Query(ctx, `sum(kube_pod_container_resource_limits{resource="cpu"}) by (namespace)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu limits: %w", err))
-	}
-	nsMemReq, err := s.k8sPromClient.Query(ctx, `sum(kube_pod_container_resource_requests{resource="memory"}) by (namespace)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem requests: %w", err))
-	}
-	nsMemLim, err := s.k8sPromClient.Query(ctx, `sum(kube_pod_container_resource_limits{resource="memory"}) by (namespace)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem limits: %w", err))
-	}
-	nsNetRx, err := s.k8sPromClient.Query(ctx, `sum(rate(container_network_receive_bytes_total[5m])) by (namespace)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net rx: %w", err))
-	}
-	nsNetTx, err := s.k8sPromClient.Query(ctx, `sum(rate(container_network_transmit_bytes_total[5m])) by (namespace)`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net tx: %w", err))
-	}
 
 	return connect.NewResponse(organizationv1.GetOrgWorkloadMetricsResponse_builder{
 		Totals:     totals,
@@ -337,25 +298,32 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 ) (*connect.Response[organizationv1.GetWorkloadTimeSeriesResponse], error) {
 	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
 
-	cpuSeries, err := s.k8sPromClient.QueryRange(ctx, `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`, start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query cpu time-series: %w", err))
+	var (
+		cpuSeries, memSeries, podSeries []prom.TimeSeries
+		netRxSeries, netTxSeries        []prom.TimeSeries
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	qr := func(dst *[]prom.TimeSeries, label, query string) {
+		g.Go(func() error {
+			ts, err := s.k8sPromClient.QueryRange(gctx, query, start, end, step)
+			if err != nil {
+				return fmt.Errorf("%s: %w", label, err)
+			}
+			*dst = ts
+			return nil
+		})
 	}
-	memSeries, err := s.k8sPromClient.QueryRange(ctx, `sum(container_memory_working_set_bytes{container!=""})`, start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query mem time-series: %w", err))
-	}
-	podSeries, err := s.k8sPromClient.QueryRange(ctx, `count(kube_pod_info)`, start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pod time-series: %w", err))
-	}
-	netRxSeries, err := s.k8sPromClient.QueryRange(ctx, `sum(rate(container_network_receive_bytes_total[5m]))`, start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net rx time-series: %w", err))
-	}
-	netTxSeries, err := s.k8sPromClient.QueryRange(ctx, `sum(rate(container_network_transmit_bytes_total[5m]))`, start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net tx time-series: %w", err))
+
+	qr(&cpuSeries, "query cpu time-series", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`)
+	qr(&memSeries, "query mem time-series", `sum(container_memory_working_set_bytes{container!=""})`)
+	qr(&podSeries, "query pod time-series", `count(kube_pod_info)`)
+	qr(&netRxSeries, "query net rx time-series", `sum(rate(container_network_receive_bytes_total[5m]))`)
+	qr(&netTxSeries, "query net tx time-series", `sum(rate(container_network_transmit_bytes_total[5m]))`)
+
+	if err := g.Wait(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{
@@ -402,66 +370,59 @@ func (s *Server) GetProjectWorkloadMetrics(
 	nsFilter := buildNamespaceFilter(namespaceNames(namespaces))
 	now := time.Now()
 
-	cpuUsed, err := querySingleValue(ctx, s.k8sPromClient, fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query cpu used: %w", err))
+	var (
+		cpuUsed, cpuTotal   float64
+		memUsed, memTotal   float64
+		podsUsed, podsTotal float64
+
+		nsCPU, nsMem, nsPods []prom.Sample
+		nsCPUReq, nsCPULim   []prom.Sample
+		nsMemReq, nsMemLim   []prom.Sample
+		nsNetRx, nsNetTx     []prom.Sample
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	qi := func(dst *float64, label, query string) {
+		g.Go(func() error {
+			v, err := querySingleValue(gctx, s.k8sPromClient, query, now)
+			if err != nil {
+				return fmt.Errorf("%s: %w", label, err)
+			}
+			*dst = v
+			return nil
+		})
 	}
-	cpuTotal, err := querySingleValue(ctx, s.k8sPromClient, `sum(kube_node_status_capacity{resource="cpu"})`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query cpu total: %w", err))
-	}
-	memUsed, err := querySingleValue(ctx, s.k8sPromClient, fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query mem used: %w", err))
-	}
-	memTotal, err := querySingleValue(ctx, s.k8sPromClient, `sum(kube_node_status_capacity{resource="memory"})`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query mem total: %w", err))
-	}
-	podsUsed, err := querySingleValue(ctx, s.k8sPromClient, fmt.Sprintf(`count(kube_pod_info{%s})`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pods used: %w", err))
-	}
-	podsTotal, err := querySingleValue(ctx, s.k8sPromClient, `sum(kube_node_status_capacity{resource="pods"})`, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pods total: %w", err))
+	qs := func(dst *[]prom.Sample, label, query string) {
+		g.Go(func() error {
+			samples, err := s.k8sPromClient.Query(gctx, query, now)
+			if err != nil {
+				return fmt.Errorf("%s: %w", label, err)
+			}
+			*dst = samples
+			return nil
+		})
 	}
 
-	nsCPU, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m])) by (namespace)`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu: %w", err))
-	}
-	nsMem, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s}) by (namespace)`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem: %w", err))
-	}
-	nsPods, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`count(kube_pod_info{%s}) by (namespace)`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace pods: %w", err))
-	}
-	nsCPUReq, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="cpu",%s}) by (namespace)`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu requests: %w", err))
-	}
-	nsCPULim, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="cpu",%s}) by (namespace)`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace cpu limits: %w", err))
-	}
-	nsMemReq, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="memory",%s}) by (namespace)`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem requests: %w", err))
-	}
-	nsMemLim, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="memory",%s}) by (namespace)`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace mem limits: %w", err))
-	}
-	nsNetRx, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m])) by (namespace)`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net rx: %w", err))
-	}
-	nsNetTx, err := s.k8sPromClient.Query(ctx, fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m])) by (namespace)`, nsFilter), now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query per-namespace net tx: %w", err))
+	qi(&cpuUsed, "query cpu used", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, nsFilter))
+	qi(&cpuTotal, "query cpu total", `sum(kube_node_status_capacity{resource="cpu"})`)
+	qi(&memUsed, "query mem used", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, nsFilter))
+	qi(&memTotal, "query mem total", `sum(kube_node_status_capacity{resource="memory"})`)
+	qi(&podsUsed, "query pods used", fmt.Sprintf(`count(kube_pod_info{%s})`, nsFilter))
+	qi(&podsTotal, "query pods total", `sum(kube_node_status_capacity{resource="pods"})`)
+
+	qs(&nsCPU, "query per-namespace cpu", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m])) by (namespace)`, nsFilter))
+	qs(&nsMem, "query per-namespace mem", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s}) by (namespace)`, nsFilter))
+	qs(&nsPods, "query per-namespace pods", fmt.Sprintf(`count(kube_pod_info{%s}) by (namespace)`, nsFilter))
+	qs(&nsCPUReq, "query per-namespace cpu requests", fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="cpu",%s}) by (namespace)`, nsFilter))
+	qs(&nsCPULim, "query per-namespace cpu limits", fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="cpu",%s}) by (namespace)`, nsFilter))
+	qs(&nsMemReq, "query per-namespace mem requests", fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="memory",%s}) by (namespace)`, nsFilter))
+	qs(&nsMemLim, "query per-namespace mem limits", fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="memory",%s}) by (namespace)`, nsFilter))
+	qs(&nsNetRx, "query per-namespace net rx", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m])) by (namespace)`, nsFilter))
+	qs(&nsNetTx, "query per-namespace net tx", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m])) by (namespace)`, nsFilter))
+
+	if err := g.Wait(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	return connect.NewResponse(organizationv1.GetProjectWorkloadMetricsResponse_builder{
@@ -496,25 +457,32 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 	nsFilter := buildNamespaceFilter(namespaceNames(namespaces))
 	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
 
-	cpuSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, nsFilter), start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query cpu time-series: %w", err))
+	var (
+		cpuSeries, memSeries, podSeries []prom.TimeSeries
+		netRxSeries, netTxSeries        []prom.TimeSeries
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	qr := func(dst *[]prom.TimeSeries, label, query string) {
+		g.Go(func() error {
+			ts, err := s.k8sPromClient.QueryRange(gctx, query, start, end, step)
+			if err != nil {
+				return fmt.Errorf("%s: %w", label, err)
+			}
+			*dst = ts
+			return nil
+		})
 	}
-	memSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, nsFilter), start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query mem time-series: %w", err))
-	}
-	podSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`count(kube_pod_info{%s})`, nsFilter), start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query pod time-series: %w", err))
-	}
-	netRxSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m]))`, nsFilter), start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net rx time-series: %w", err))
-	}
-	netTxSeries, err := s.k8sPromClient.QueryRange(ctx, fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m]))`, nsFilter), start, end, step)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query net tx time-series: %w", err))
+
+	qr(&cpuSeries, "query cpu time-series", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, nsFilter))
+	qr(&memSeries, "query mem time-series", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, nsFilter))
+	qr(&podSeries, "query pod time-series", fmt.Sprintf(`count(kube_pod_info{%s})`, nsFilter))
+	qr(&netRxSeries, "query net rx time-series", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m]))`, nsFilter))
+	qr(&netTxSeries, "query net tx time-series", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m]))`, nsFilter))
+
+	if err := g.Wait(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{
@@ -796,15 +764,28 @@ func timeSeriesFirstToProto(series []prom.TimeSeries, scale float64) []*organiza
 	return result
 }
 
+// promEscapeLabelValue escapes backslashes and double-quotes in a PromQL label value.
+func promEscapeLabelValue(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	return s
+}
+
 // clusterFilter returns a PromQL label selector fragment for the given cluster name.
 // Assumes a "cluster" label is present in the Prometheus time-series.
 func clusterFilter(clusterName string) string {
-	return fmt.Sprintf(`cluster="%s"`, clusterName)
+	return fmt.Sprintf(`cluster="%s"`, promEscapeLabelValue(clusterName))
 }
 
 // buildNamespaceFilter returns a PromQL label selector fragment that matches any
 // of the given namespace names: namespace=~"ns1|ns2|ns3".
+// names must be non-empty; callers are responsible for guarding against empty slices.
 func buildNamespaceFilter(names []string) string {
+	if len(names) == 0 {
+		// Callers must guard against this. Return a filter that matches nothing:
+		// Kubernetes namespace names must be valid DNS labels, so "_" is impossible.
+		return `namespace="_"`
+	}
 	return fmt.Sprintf(`namespace=~"%s"`, strings.Join(names, "|"))
 }
 

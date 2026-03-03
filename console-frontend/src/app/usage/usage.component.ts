@@ -38,6 +38,7 @@ import {
   type GetProjectWorkloadMetricsResponse,
   type GetWorkloadTimeSeriesResponse,
   type GetInfraMetricsResponse,
+  type NamespaceWorkloadMetrics,
 } from '../../generated/v1/metrics_pb';
 
 Chart.register(...registerables);
@@ -74,6 +75,7 @@ interface NamespaceUsageData {
 }
 
 interface ClusterSummaryData {
+  id: string;
   name: string;
   cpu: { used: number; total: number };
   memory: { used: number; total: number };
@@ -177,6 +179,9 @@ export default class UsageComponent implements OnInit, AfterViewInit {
   // Org-level: totals + per-cluster breakdown
   orgTotals = signal<ClusterUsageData | null>(null);
 
+  // Project-level totals (separate from orgTotals to avoid stale data on view switch)
+  projectTotals = signal<ClusterUsageData | null>(null);
+
   clusterSummaries = signal<ClusterSummaryData[]>([]);
 
   // Cluster-level: totals + per-node breakdown
@@ -233,6 +238,7 @@ export default class UsageComponent implements OnInit, AfterViewInit {
   }
 
   get currentTotals(): ClusterUsageData | null {
+    if (this.viewMode() === 'project') return this.projectTotals();
     return this.selectedClusterId ? this.clusterTotals() : this.orgTotals();
   }
 
@@ -360,11 +366,11 @@ export default class UsageComponent implements OnInit, AfterViewInit {
   }
 
   private async loadProjectMetrics(): Promise<void> {
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
-
     const pid = this.projectId();
     if (!pid) return;
+
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
 
     const { start, end } = this.dateRange();
 
@@ -398,6 +404,21 @@ export default class UsageComponent implements OnInit, AfterViewInit {
 
   // -- Response mappers --
 
+  private mapNamespaceUsage(namespaces: NamespaceWorkloadMetrics[]): NamespaceUsageData[] {
+    return namespaces.map((n) => ({
+      name: n.namespace,
+      cpu: n.cpuCores,
+      memory: n.memoryGib,
+      pods: n.pods,
+      cpuRequests: n.cpuRequests,
+      cpuLimits: n.cpuLimits,
+      memoryRequests: n.memoryRequestsGib,
+      memoryLimits: n.memoryLimitsGib,
+      networkReceiveMbs: n.networkReceiveMbS,
+      networkTransmitMbs: n.networkTransmitMbS,
+    }));
+  }
+
   private applyOrgWorkload(r: GetOrgWorkloadMetricsResponse): void {
     const t = r.totals;
     this.orgTotals.set(
@@ -418,27 +439,18 @@ export default class UsageComponent implements OnInit, AfterViewInit {
         : null,
     );
     this.clusterSummaries.set(
-      r.clusters.map((c) => ({
-        name: c.clusterName,
-        cpu: { used: c.cpu?.used ?? 0, total: c.cpu?.total ?? 0 },
-        memory: { used: c.memory?.used ?? 0, total: c.memory?.total ?? 0 },
-        pods: { used: c.pods?.used ?? 0, total: c.pods?.total ?? 0 },
-      })),
+      r.clusters.map((c) => {
+        const match = this.clusters().find((cl) => cl.name === c.clusterName);
+        return {
+          id: match?.id ?? c.clusterName,
+          name: c.clusterName,
+          cpu: { used: c.cpu?.used ?? 0, total: c.cpu?.total ?? 0 },
+          memory: { used: c.memory?.used ?? 0, total: c.memory?.total ?? 0 },
+          pods: { used: c.pods?.used ?? 0, total: c.pods?.total ?? 0 },
+        };
+      }),
     );
-    this.namespaceUsage.set(
-      r.namespaces.map((n) => ({
-        name: n.namespace,
-        cpu: n.cpuCores,
-        memory: n.memoryGib,
-        pods: n.pods,
-        cpuRequests: n.cpuRequests,
-        cpuLimits: n.cpuLimits,
-        memoryRequests: n.memoryRequestsGib,
-        memoryLimits: n.memoryLimitsGib,
-        networkReceiveMbs: n.networkReceiveMbS,
-        networkTransmitMbs: n.networkTransmitMbS,
-      })),
-    );
+    this.namespaceUsage.set(this.mapNamespaceUsage(r.namespaces));
   }
 
   private applyClusterWorkload(r: GetClusterWorkloadMetricsResponse): void {
@@ -468,25 +480,12 @@ export default class UsageComponent implements OnInit, AfterViewInit {
         pods: { used: n.pods?.used ?? 0, total: n.pods?.total ?? 0 },
       })),
     );
-    this.namespaceUsage.set(
-      r.namespaces.map((n) => ({
-        name: n.namespace,
-        cpu: n.cpuCores,
-        memory: n.memoryGib,
-        pods: n.pods,
-        cpuRequests: n.cpuRequests,
-        cpuLimits: n.cpuLimits,
-        memoryRequests: n.memoryRequestsGib,
-        memoryLimits: n.memoryLimitsGib,
-        networkReceiveMbs: n.networkReceiveMbS,
-        networkTransmitMbs: n.networkTransmitMbS,
-      })),
-    );
+    this.namespaceUsage.set(this.mapNamespaceUsage(r.namespaces));
   }
 
   private applyProjectWorkload(r: GetProjectWorkloadMetricsResponse): void {
     const t = r.totals;
-    this.orgTotals.set(
+    this.projectTotals.set(
       t
         ? {
             cpu: { used: t.cpu?.used ?? 0, total: t.cpu?.total ?? 0, unit: t.cpu?.unit ?? 'cores' },
@@ -503,20 +502,7 @@ export default class UsageComponent implements OnInit, AfterViewInit {
           }
         : null,
     );
-    this.namespaceUsage.set(
-      r.namespaces.map((n) => ({
-        name: n.namespace,
-        cpu: n.cpuCores,
-        memory: n.memoryGib,
-        pods: n.pods,
-        cpuRequests: n.cpuRequests,
-        cpuLimits: n.cpuLimits,
-        memoryRequests: n.memoryRequestsGib,
-        memoryLimits: n.memoryLimitsGib,
-        networkReceiveMbs: n.networkReceiveMbS,
-        networkTransmitMbs: n.networkTransmitMbS,
-      })),
-    );
+    this.namespaceUsage.set(this.mapNamespaceUsage(r.namespaces));
   }
 
   private applyTimeSeries(r: GetWorkloadTimeSeriesResponse): void {

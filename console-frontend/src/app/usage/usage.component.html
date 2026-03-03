@@ -243,7 +243,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (c of clusterSummaries(); track c.name) {
+                @for (c of clusterSummaries(); track c.id) {
                   <tr>
                     <td class="font-mono font-medium dark:text-white">{{ c.name }}</td>
                     <td>

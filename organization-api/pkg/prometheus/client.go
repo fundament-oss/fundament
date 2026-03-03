@@ -72,6 +72,10 @@ func (c *HTTPClient) Query(ctx context.Context, query string, t time.Time) ([]Sa
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("http error: status %d", resp.StatusCode)
+	}
+
 	var result apiResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("decode response: %w", err)
@@ -105,6 +109,10 @@ func (c *HTTPClient) QueryRange(ctx context.Context, query string, start, end ti
 		return nil, fmt.Errorf("http get: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("http error: status %d", resp.StatusCode)
+	}
 
 	var result apiResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
