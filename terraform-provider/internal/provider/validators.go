@@ -105,4 +105,3 @@ func (v httpURLValidator) ValidateString(_ context.Context, req validator.String
 		)
 	}
 }
-
