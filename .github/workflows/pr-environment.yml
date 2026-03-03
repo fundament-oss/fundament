@@ -99,8 +99,8 @@ jobs:
           apiVersion: source.toolkit.fluxcd.io/v1
           kind: GitRepository
           metadata:
-            name: fundament-pr-${PR_NUM}
-            namespace: tn-fundament-pr
+            name: fundament
+            namespace: tn-fundament-pr-${PR_NUM}
           spec:
             interval: 1m
             url: https://github.com/fundament-oss/fundament
@@ -110,11 +110,10 @@ jobs:
           apiVersion: helm.toolkit.fluxcd.io/v2
           kind: HelmRelease
           metadata:
-            name: fundament-pr-${PR_NUM}
-            namespace: tn-fundament-pr
+            name: fundament
+            namespace: tn-fundament-pr-${PR_NUM}
           spec:
             releaseName: fundament
-            targetNamespace: tn-fundament-pr-${PR_NUM}
             timeout: 15m
             install:
               createNamespace: true
@@ -127,7 +126,7 @@ jobs:
                 chart: charts/fundament
                 sourceRef:
                   kind: GitRepository
-                  name: fundament-pr-${PR_NUM}
+                  name: fundament
                 reconcileStrategy: Revision
                 interval: 1m
             values:
