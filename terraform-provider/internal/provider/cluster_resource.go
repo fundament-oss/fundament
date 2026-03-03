@@ -21,6 +21,8 @@ var _ resource.Resource = &ClusterResource{}
 var _ resource.ResourceWithConfigure = &ClusterResource{}
 var _ resource.ResourceWithImportState = &ClusterResource{}
 
+const clusterMaxAttempts = 3
+
 // ClusterResource defines the resource implementation.
 type ClusterResource struct {
 	client *FundamentClient
@@ -134,7 +136,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	// Retry on permission_denied: OpenFGA needs time to sync after login.
 	var createResp *connect.Response[organizationv1.CreateClusterResponse]
 	var err error
-	for attempt := range 3 {
+	for attempt := range clusterMaxAttempts {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -144,7 +146,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 			break
 		}
 
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == clusterMaxAttempts-1 {
 			resp.Diagnostics.AddError(
 				"Unable to Create Cluster",
 				fmt.Sprintf("Unable to create cluster: %s", err.Error()),
@@ -164,7 +166,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 
 	var getResp *connect.Response[organizationv1.GetClusterResponse]
 
-	for attempt := range 3 {
+	for attempt := range clusterMaxAttempts {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -174,7 +176,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 			break
 		}
 
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == clusterMaxAttempts-1 {
 			resp.Diagnostics.AddError(
 				"Unable to Read Created Cluster",
 				fmt.Sprintf("Unable to read created cluster: %s", err.Error()),
@@ -334,7 +336,7 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	var getResp *connect.Response[organizationv1.GetClusterResponse]
 
-	for attempt := range 3 {
+	for attempt := range clusterMaxAttempts {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -344,7 +346,7 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 			break
 		}
 
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == 9 {
+		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == clusterMaxAttempts-1 {
 			switch connect.CodeOf(err) {
 			case connect.CodeNotFound:
 				resp.Diagnostics.AddError(
