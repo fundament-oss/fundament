@@ -111,6 +111,7 @@ jobs:
           metadata:
             name: fundament-pr-${PR_NUM}
           spec:
+            releaseName: fundament
             targetNamespace: tn-fundament-pr-${PR_NUM}
             timeout: 15m
             install:
@@ -189,7 +190,7 @@ jobs:
               dex:
                 enabled: true
                 issuer: https://pr-${PR_NUM}-dex.${DOMAIN}
-                discoveryUrl: http://fundament-pr-${PR_NUM}-dex:5556
+                discoveryUrl: http://fundament-dex:5556
                 staticClients:
                   - id: fundament
                     name: Fundament
