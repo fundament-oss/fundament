@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -20,8 +19,6 @@ import (
 var _ resource.Resource = &ClusterResource{}
 var _ resource.ResourceWithConfigure = &ClusterResource{}
 var _ resource.ResourceWithImportState = &ClusterResource{}
-
-const clusterMaxAttempts = 3
 
 // ClusterResource defines the resource implementation.
 type ClusterResource struct {
@@ -134,25 +131,15 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}.Build())
 
 	// Retry on permission_denied: OpenFGA needs time to sync after login.
-	var createResp *connect.Response[organizationv1.CreateClusterResponse]
-	var err error
-	for attempt := range clusterMaxAttempts {
-		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * time.Second)
-		}
-
-		createResp, err = r.client.ClusterService.CreateCluster(ctx, createReq)
-		if err == nil {
-			break
-		}
-
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == clusterMaxAttempts-1 {
-			resp.Diagnostics.AddError(
-				"Unable to Create Cluster",
-				fmt.Sprintf("Unable to create cluster: %s", err.Error()),
-			)
-			return
-		}
+	createResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.CreateClusterResponse], error) {
+		return r.client.ClusterService.CreateCluster(ctx, createReq)
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Create Cluster",
+			fmt.Sprintf("Unable to create cluster: %s", err.Error()),
+		)
+		return
 	}
 
 	// Set the ID from the response
@@ -164,35 +151,13 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		ClusterId: createResp.Msg.GetClusterId(),
 	}.Build())
 
-	var getResp *connect.Response[organizationv1.GetClusterResponse]
-
-	for attempt := range clusterMaxAttempts {
-		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * time.Second)
-		}
-
-		getResp, err = r.client.ClusterService.GetCluster(ctx, getReq)
-		if err == nil {
-			break
-		}
-
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == clusterMaxAttempts-1 {
-			resp.Diagnostics.AddError(
-				"Unable to Read Created Cluster",
-				fmt.Sprintf("Unable to read created cluster: %s", err.Error()),
-			)
-			return
-		}
-	}
-
-	if getResp == nil {
-		errMsg := "unknown error"
-		if err != nil {
-			errMsg = err.Error()
-		}
+	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetClusterResponse], error) {
+		return r.client.ClusterService.GetCluster(ctx, getReq)
+	})
+	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Created Cluster",
-			fmt.Sprintf("Unable to read created cluster after retries: %s", errMsg),
+			fmt.Sprintf("Unable to read created cluster: %s", err.Error()),
 		)
 		return
 	}
@@ -334,44 +299,22 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		ClusterId: state.ID.ValueString(),
 	}.Build())
 
-	var getResp *connect.Response[organizationv1.GetClusterResponse]
-
-	for attempt := range clusterMaxAttempts {
-		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * time.Second)
+	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetClusterResponse], error) {
+		return r.client.ClusterService.GetCluster(ctx, getReq)
+	})
+	if err != nil {
+		switch connect.CodeOf(err) {
+		case connect.CodeNotFound:
+			resp.Diagnostics.AddError(
+				"Cluster Not Found After Update",
+				fmt.Sprintf("Cluster %q was updated but could not be read. It may have been deleted.", state.ID.ValueString()),
+			)
+		default:
+			resp.Diagnostics.AddError(
+				"Unable to Read Updated Cluster",
+				fmt.Sprintf("Unable to read updated cluster: %s", err.Error()),
+			)
 		}
-
-		getResp, err = r.client.ClusterService.GetCluster(ctx, getReq)
-		if err == nil {
-			break
-		}
-
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == clusterMaxAttempts-1 {
-			switch connect.CodeOf(err) {
-			case connect.CodeNotFound:
-				resp.Diagnostics.AddError(
-					"Cluster Not Found After Update",
-					fmt.Sprintf("Cluster %q was updated but could not be read. It may have been deleted.", state.ID.ValueString()),
-				)
-			default:
-				resp.Diagnostics.AddError(
-					"Unable to Read Updated Cluster",
-					fmt.Sprintf("Unable to read updated cluster: %s", err.Error()),
-				)
-			}
-			return
-		}
-	}
-
-	if getResp == nil {
-		errMsg := "unknown error"
-		if err != nil {
-			errMsg = err.Error()
-		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Updated Cluster",
-			fmt.Sprintf("Unable to read updated cluster after retries: %s", errMsg),
-		)
 		return
 	}
 

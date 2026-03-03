@@ -21,8 +21,6 @@ var _ resource.Resource = &NamespaceResource{}
 var _ resource.ResourceWithConfigure = &NamespaceResource{}
 var _ resource.ResourceWithImportState = &NamespaceResource{}
 
-const namespaceMaxAttempts = 3
-
 // NamespaceResource defines the resource implementation.
 type NamespaceResource struct {
 	client *FundamentClient
@@ -231,45 +229,38 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	}.Build())
 
 	// Retry on permission_denied: OpenFGA needs time to sync after login.
-	var createResp *connect.Response[organizationv1.CreateNamespaceResponse]
-	for attempt := range namespaceMaxAttempts {
-		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * time.Second)
+	createResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.CreateNamespaceResponse], error) {
+		return r.client.NamespaceService.CreateNamespace(ctx, createReq)
+	})
+	if err != nil {
+		switch connect.CodeOf(err) {
+		case connect.CodeNotFound:
+			resp.Diagnostics.AddError(
+				"Project or Cluster Not Found",
+				fmt.Sprintf("The specified project or cluster does not exist: %s", err.Error()),
+			)
+		case connect.CodeInvalidArgument:
+			resp.Diagnostics.AddError(
+				"Invalid Namespace Configuration",
+				fmt.Sprintf("Invalid namespace parameters: %s", err.Error()),
+			)
+		case connect.CodeAlreadyExists:
+			resp.Diagnostics.AddError(
+				"Namespace Already Exists",
+				fmt.Sprintf("A namespace with name %q already exists in this cluster.", plan.Name.ValueString()),
+			)
+		case connect.CodePermissionDenied:
+			resp.Diagnostics.AddError(
+				"Permission Denied",
+				"You do not have permission to create namespaces in this cluster.",
+			)
+		default:
+			resp.Diagnostics.AddError(
+				"Unable to Create Namespace",
+				fmt.Sprintf("Unable to create namespace: %s", err.Error()),
+			)
 		}
-		createResp, err = r.client.NamespaceService.CreateNamespace(ctx, createReq)
-		if err == nil {
-			break
-		}
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == namespaceMaxAttempts-1 {
-			switch connect.CodeOf(err) {
-			case connect.CodeNotFound:
-				resp.Diagnostics.AddError(
-					"Project or Cluster Not Found",
-					fmt.Sprintf("The specified project or cluster does not exist: %s", err.Error()),
-				)
-			case connect.CodeInvalidArgument:
-				resp.Diagnostics.AddError(
-					"Invalid Namespace Configuration",
-					fmt.Sprintf("Invalid namespace parameters: %s", err.Error()),
-				)
-			case connect.CodeAlreadyExists:
-				resp.Diagnostics.AddError(
-					"Namespace Already Exists",
-					fmt.Sprintf("A namespace with name %q already exists in this cluster.", plan.Name.ValueString()),
-				)
-			case connect.CodePermissionDenied:
-				resp.Diagnostics.AddError(
-					"Permission Denied",
-					"You do not have permission to create namespaces in this cluster.",
-				)
-			default:
-				resp.Diagnostics.AddError(
-					"Unable to Create Namespace",
-					fmt.Sprintf("Unable to create namespace: %s", err.Error()),
-				)
-			}
-			return
-		}
+		return
 	}
 
 	// Set the ID from the response
@@ -281,25 +272,15 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		NamespaceId: plan.ID.ValueString(),
 	}.Build())
 
-	var getResp *connect.Response[organizationv1.GetNamespaceResponse]
-
-	for attempt := range namespaceMaxAttempts {
-		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * time.Second)
-		}
-
-		getResp, err = r.client.NamespaceService.GetNamespace(ctx, getReq)
-		if err == nil {
-			break
-		}
-
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == namespaceMaxAttempts-1 {
-			resp.Diagnostics.AddError(
-				"Unable to Read Created Namespace",
-				fmt.Sprintf("Namespace was created but unable to read its details: %s", err.Error()),
-			)
-			return
-		}
+	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetNamespaceResponse], error) {
+		return r.client.NamespaceService.GetNamespace(ctx, getReq)
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Read Created Namespace",
+			fmt.Sprintf("Namespace was created but unable to read its details: %s", err.Error()),
+		)
+		return
 	}
 
 	plan.Created = types.StringValue(getResp.Msg.GetNamespace().GetCreated().AsTime().Format(time.RFC3339))

@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -22,8 +21,6 @@ import (
 var _ resource.Resource = &OrganizationMemberResource{}
 var _ resource.ResourceWithConfigure = &OrganizationMemberResource{}
 var _ resource.ResourceWithImportState = &OrganizationMemberResource{}
-
-const orgMemberMaxAttempts = 3
 
 type OrganizationMemberResource struct {
 	client *FundamentClient
@@ -132,36 +129,28 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 	}.Build())
 
 	// Retry on permission_denied: OpenFGA needs time to sync after login.
-	var inviteResp *connect.Response[organizationv1.InviteMemberResponse]
-	var err error
-	for attempt := range orgMemberMaxAttempts {
-		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * time.Second)
+	inviteResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.InviteMemberResponse], error) {
+		return r.client.InviteService.InviteMember(ctx, inviteReq)
+	})
+	if err != nil {
+		switch connect.CodeOf(err) {
+		case connect.CodeAlreadyExists:
+			resp.Diagnostics.AddError(
+				"Member Already Exists",
+				fmt.Sprintf("A member with email %q already exists in this organization.", plan.Email.ValueString()),
+			)
+		case connect.CodePermissionDenied:
+			resp.Diagnostics.AddError(
+				"Permission Denied",
+				"You do not have permission to invite members to this organization.",
+			)
+		default:
+			resp.Diagnostics.AddError(
+				"Unable to Invite Member",
+				fmt.Sprintf("Unable to invite organization member: %s", err.Error()),
+			)
 		}
-		inviteResp, err = r.client.InviteService.InviteMember(ctx, inviteReq)
-		if err == nil {
-			break
-		}
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == orgMemberMaxAttempts-1 {
-			switch connect.CodeOf(err) {
-			case connect.CodeAlreadyExists:
-				resp.Diagnostics.AddError(
-					"Member Already Exists",
-					fmt.Sprintf("A member with email %q already exists in this organization.", plan.Email.ValueString()),
-				)
-			case connect.CodePermissionDenied:
-				resp.Diagnostics.AddError(
-					"Permission Denied",
-					"You do not have permission to invite members to this organization.",
-				)
-			default:
-				resp.Diagnostics.AddError(
-					"Unable to Invite Member",
-					fmt.Sprintf("Unable to invite organization member: %s", err.Error()),
-				)
-			}
-			return
-		}
+		return
 	}
 
 	member := inviteResp.Msg.GetMember()

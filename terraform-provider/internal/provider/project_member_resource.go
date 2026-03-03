@@ -26,8 +26,6 @@ var _ resource.Resource = &ProjectMemberResource{}
 var _ resource.ResourceWithConfigure = &ProjectMemberResource{}
 var _ resource.ResourceWithImportState = &ProjectMemberResource{}
 
-const projectMemberMaxAttempts = 3
-
 // ProjectMemberResource defines the resource implementation.
 type ProjectMemberResource struct {
 	client *FundamentClient
@@ -190,22 +188,15 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 		MemberId: createResp.Msg.GetMemberId(),
 	}.Build())
 
-	var getResp *connect.Response[organizationv1.GetProjectMemberResponse]
-	for attempt := range projectMemberMaxAttempts {
-		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * time.Second)
-		}
-		getResp, err = r.client.ProjectService.GetProjectMember(ctx, getReq)
-		if err == nil {
-			break
-		}
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == projectMemberMaxAttempts-1 {
-			resp.Diagnostics.AddError(
-				"Unable to Read Created Project Member",
-				fmt.Sprintf("Unable to read created project member: %s", err.Error()),
-			)
-			return
-		}
+	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetProjectMemberResponse], error) {
+		return r.client.ProjectService.GetProjectMember(ctx, getReq)
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Read Created Project Member",
+			fmt.Sprintf("Unable to read created project member: %s", err.Error()),
+		)
+		return
 	}
 
 	permissionStr, err := projectMemberPermissionFromProto(getResp.Msg.GetMember().GetRole())

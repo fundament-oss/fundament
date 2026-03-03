@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -20,8 +19,6 @@ import (
 var _ resource.Resource = &ProjectResource{}
 var _ resource.ResourceWithConfigure = &ProjectResource{}
 var _ resource.ResourceWithImportState = &ProjectResource{}
-
-const projectMaxAttempts = 3
 
 // ProjectResource defines the resource implementation.
 type ProjectResource struct {
@@ -189,22 +186,15 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	}.Build())
 
 	// Retry on permission_denied: OpenFGA needs time to sync after login.
-	var createResp *connect.Response[organizationv1.CreateProjectResponse]
-	for attempt := range projectMaxAttempts {
-		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * time.Second)
-		}
-		createResp, err = r.client.ProjectService.CreateProject(ctx, createReq)
-		if err == nil {
-			break
-		}
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == projectMaxAttempts-1 {
-			resp.Diagnostics.AddError(
-				"Unable to Create Project",
-				fmt.Sprintf("Unable to create project: %s", err.Error()),
-			)
-			return
-		}
+	createResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.CreateProjectResponse], error) {
+		return r.client.ProjectService.CreateProject(ctx, createReq)
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Create Project",
+			fmt.Sprintf("Unable to create project: %s", err.Error()),
+		)
+		return
 	}
 
 	// Set the ID from the response
@@ -216,25 +206,15 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		ProjectId: createResp.Msg.GetProjectId(),
 	}.Build())
 
-	var getResp *connect.Response[organizationv1.GetProjectResponse]
-
-	for attempt := range projectMaxAttempts {
-		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * time.Second)
-		}
-
-		getResp, err = r.client.ProjectService.GetProject(ctx, getReq)
-		if err == nil {
-			break
-		}
-
-		if connect.CodeOf(err) != connect.CodePermissionDenied || attempt == projectMaxAttempts-1 {
-			resp.Diagnostics.AddError(
-				"Unable to Read Created Project",
-				fmt.Sprintf("Unable to read created project: %s", err.Error()),
-			)
-			return
-		}
+	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetProjectResponse], error) {
+		return r.client.ProjectService.GetProject(ctx, getReq)
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Read Created Project",
+			fmt.Sprintf("Unable to read created project: %s", err.Error()),
+		)
+		return
 	}
 
 	// Populate cluster fields (both ID and name)
