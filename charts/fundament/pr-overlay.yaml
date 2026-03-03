@@ -24,9 +24,6 @@ spec:
   timeout: 15m
   install:
     createNamespace: true
-    disableWait: true
-  upgrade:
-    disableWait: true
   interval: 5m
   chart:
     spec:
@@ -47,12 +44,12 @@ spec:
     jwtSecret: ${JWT_SECRET}
 
     externalUrls:
-      authn: https://authn.pr${PR_NUM}.${DOMAIN}
-      organization: https://organization.pr${PR_NUM}.${DOMAIN}
-      console: https://console.pr${PR_NUM}.${DOMAIN}
-      docs: https://docs.pr${PR_NUM}.${DOMAIN}
-      cookieDomain: pr${PR_NUM}.${DOMAIN}
-      corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN}"
+      authn: https://authn.pr${PR_NUM}-${DOMAIN}
+      organization: https://organization.pr${PR_NUM}-${DOMAIN}
+      console: https://console.pr${PR_NUM}-${DOMAIN}
+      docs: https://docs.pr${PR_NUM}-${DOMAIN}
+      cookieDomain: pr${PR_NUM}-${DOMAIN}
+      corsAllowedOrigins: "https://console.pr${PR_NUM}-${DOMAIN}"
 
     images:
       dbMigrations: ${IMAGE_PREFIX}/db-migrations:${IMAGE_TAG}
@@ -64,7 +61,20 @@ spec:
       authzWorker: ${IMAGE_PREFIX}/authz-worker:${IMAGE_TAG}
       openfgaSetup: ${IMAGE_PREFIX}/openfga-setup:${IMAGE_TAG}
 
+    authnApi:
+      replicas: 1
+
+    organizationApi:
+      replicas: 1
+
+    consoleFrontend:
+      replicas: 1
+
+    docsFrontend:
+      replicas: 1
+
     db:
+      instances: 1
       storageSize: 1Gi
       reset: true
 
@@ -74,18 +84,22 @@ spec:
       logLevel: debug
       gardenerMode: mock
 
+    authzWorker:
+      replicas: 1
+
     openfga:
+      replicas: 1
       playground:
         enabled: false
 
     dex:
-      issuer: https://dex.pr${PR_NUM}.${DOMAIN}
+      issuer: https://dex.pr${PR_NUM}-${DOMAIN}
       staticClients:
         - id: fundament
           name: Fundament
           redirectURIs:
-            - https://authn.pr${PR_NUM}.${DOMAIN}/callback
+            - https://authn.pr${PR_NUM}-${DOMAIN}/callback
           public: true
 
     ingress:
-      subdomainInfix: "pr${PR_NUM}."
+      subdomainInfix: "pr${PR_NUM}-"

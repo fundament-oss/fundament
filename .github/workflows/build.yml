@@ -55,7 +55,6 @@ jobs:
       dockerfile: ${{ matrix.dockerfile }}
       context: ${{ matrix.context }}
 
-  # Deploy PR environment
   deploy:
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
     needs: build
@@ -68,7 +67,7 @@ jobs:
       PR_BRANCH: ${{ github.event.pull_request.head.ref }}
       JWT_SECRET: ${{ secrets.PR_JWT_SECRET }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Compute image tag
         run: |
@@ -144,10 +143,10 @@ jobs:
 
             | Service | URL |
             |---------|-----|
-            | Console | https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
-            | Authn API | https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
-            | Organization API | https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
-            | Docs | https://docs.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Console | https://console.pr${{ env.PR_NUMBER }}-${{ env.DOMAIN }} |
+            | Authn API | https://authn.pr${{ env.PR_NUMBER }}-${{ env.DOMAIN }} |
+            | Organization API | https://organization.pr${{ env.PR_NUMBER }}-${{ env.DOMAIN }} |
+            | Docs | https://docs.pr${{ env.PR_NUMBER }}-${{ env.DOMAIN }} |
 
             **Commit:** `${{ env.IMAGE_TAG }}`
             **Namespace:** `tn-fundament-pr-${{ env.PR_NUMBER }}`
