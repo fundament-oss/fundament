@@ -139,7 +139,7 @@ func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource
 	for i, member := range rpcResp.Msg.GetMembers() {
 		m := OrganizationMemberModel{
 			ID:         types.StringValue(member.GetId()),
-			UserID:     types.StringValue(member.UserId),
+			UserID:     types.StringValue(member.GetUserId()),
 			Name:       types.StringValue(member.GetName()),
 			Permission: types.StringValue(member.GetPermission()),
 		}

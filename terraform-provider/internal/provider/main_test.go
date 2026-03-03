@@ -16,6 +16,7 @@ import (
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	organizationv1connect "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 )
 
 const (
@@ -67,9 +68,9 @@ func TestMain(m *testing.M) {
 	fmt.Println("TestMain: creating dynamic test API key")
 	var apiKeyToken, apiKeyID string
 	for i := range maxRetries {
-		createReq := connect.NewRequest(&organizationv1.CreateAPIKeyRequest{
-			Name: "terraform-acc-test-dynamic",
-		})
+		createReq := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+			Name: "terraform-acc-test-" + acctest.RandString(6),
+		}.Build())
 		createReq.Header().Set("Authorization", "Bearer "+login.accessToken)
 		createReq.Header().Set(organization.OrganizationHeader, orgID)
 
@@ -144,9 +145,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "TestMain: failed to get cleanup JWT (best-effort): %v\n", err)
 	} else {
-		deleteReq := connect.NewRequest(&organizationv1.DeleteAPIKeyRequest{
+		deleteReq := connect.NewRequest(organizationv1.DeleteAPIKeyRequest_builder{
 			ApiKeyId: apiKeyID,
-		})
+		}.Build())
 		deleteReq.Header().Set("Authorization", "Bearer "+cleanupLogin.accessToken)
 		deleteReq.Header().Set(organization.OrganizationHeader, orgID)
 		if _, err := apiKeyClient.DeleteAPIKey(ctx, deleteReq); err != nil {

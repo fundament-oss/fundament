@@ -184,9 +184,9 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 
 	// Read back the created member to get computed fields.
 	// Retry on permission_denied: OpenFGA needs time to sync after the member is added.
-	getReq := connect.NewRequest(&organizationv1.GetProjectMemberRequest{
-		MemberId: createResp.Msg.MemberId,
-	})
+	getReq := connect.NewRequest(organizationv1.GetProjectMemberRequest_builder{
+		MemberId: createResp.Msg.GetMemberId(),
+	}.Build())
 
 	var getResp *connect.Response[organizationv1.GetProjectMemberResponse]
 	for attempt := range 3 {
@@ -206,21 +206,21 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 		}
 	}
 
-	permissionStr, err := projectMemberPermissionFromProto(getResp.Msg.Member.Role)
+	permissionStr, err := projectMemberPermissionFromProto(getResp.Msg.GetMember().GetRole())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Project Member Permission",
-			fmt.Sprintf("Unable to convert permission for member %q: %s", getResp.Msg.Member.Id, err.Error()),
+			fmt.Sprintf("Unable to convert permission for member %q: %s", getResp.Msg.GetMember().GetId(), err.Error()),
 		)
 		return
 	}
-	m := getResp.Msg.Member
-	plan.ProjectID = types.StringValue(m.ProjectId)
-	plan.UserID = types.StringValue(m.UserId)
-	plan.UserName = types.StringValue(m.UserName)
+	m := getResp.Msg.GetMember()
+	plan.ProjectID = types.StringValue(m.GetProjectId())
+	plan.UserID = types.StringValue(m.GetUserId())
+	plan.UserName = types.StringValue(m.GetUserName())
 	plan.Permission = types.StringValue(permissionStr)
-	if m.Created != nil {
-		plan.Created = types.StringValue(m.Created.AsTime().Format(time.RFC3339))
+	if m.GetCreated() != nil {
+		plan.Created = types.StringValue(m.GetCreated().AsTime().Format(time.RFC3339))
 	} else {
 		plan.Created = types.StringNull()
 	}

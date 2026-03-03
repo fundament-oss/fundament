@@ -164,7 +164,7 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 
 	member := inviteResp.Msg.GetMember()
 	plan.ID = types.StringValue(member.GetId())
-	plan.UserID = types.StringValue(member.UserId)
+	plan.UserID = types.StringValue(member.GetUserId())
 	plan.Name = types.StringValue(member.GetName())
 
 	if member.HasExternalRef() {
@@ -233,7 +233,7 @@ func (r *OrganizationMemberResource) Read(ctx context.Context, req resource.Read
 	}
 
 	state.ID = types.StringValue(member.GetId())
-	state.UserID = types.StringValue(member.UserId)
+	state.UserID = types.StringValue(member.GetUserId())
 	state.Name = types.StringValue(member.GetName())
 	state.Permission = types.StringValue(member.GetPermission())
 
@@ -333,7 +333,7 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 	}
 
 	plan.ID = types.StringValue(member.GetId())
-	plan.UserID = types.StringValue(member.UserId)
+	plan.UserID = types.StringValue(member.GetUserId())
 	plan.Name = types.StringValue(member.GetName())
 	plan.Permission = types.StringValue(member.GetPermission())
 
