@@ -52,10 +52,11 @@ JWT Secret environment variable - supports both direct value and secretRef
 {{- end }}
 
 {{/*
-Subdomain prefix for ingress hostnames (e.g., "pr-123-" for PR environments)
+Subdomain infix for ingress hostnames (e.g., "pr-123." for PR environments)
+Inserted between service name and domain: service.{{ infix }}domain
 */}}
-{{- define "fundament.ingress.subdomain" -}}
-{{ $.Values.ingress.subdomainPrefix | default "" }}
+{{- define "fundament.ingress.infix" -}}
+{{ $.Values.ingress.subdomainInfix | default "" }}
 {{- end }}
 
 {{/*

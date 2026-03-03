@@ -132,12 +132,12 @@ jobs:
               jwtSecret: ${JWT_SECRET}
 
               externalUrls:
-                authn: https://pr-${PR_NUM}-authn.${DOMAIN}
-                organization: https://pr-${PR_NUM}-organization.${DOMAIN}
-                console: https://pr-${PR_NUM}-console.${DOMAIN}
-                docs: https://pr-${PR_NUM}-docs.${DOMAIN}
-                cookieDomain: ${DOMAIN}
-                corsAllowedOrigins: "https://pr-${PR_NUM}-console.${DOMAIN}"
+                authn: https://authn.pr${PR_NUM}.${DOMAIN}
+                organization: https://organization.pr${PR_NUM}.${DOMAIN}
+                console: https://console.pr${PR_NUM}.${DOMAIN}
+                docs: https://docs.pr${PR_NUM}.${DOMAIN}
+                cookieDomain: pr${PR_NUM}.${DOMAIN}
+                corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN}"
 
               images:
                 dbMigrations: ${IMAGE_PREFIX}/db-migrations:${IMAGE_TAG}
@@ -189,13 +189,13 @@ jobs:
 
               dex:
                 enabled: true
-                issuer: https://pr-${PR_NUM}-dex.${DOMAIN}
+                issuer: https://dex.pr${PR_NUM}.${DOMAIN}
                 discoveryUrl: http://fundament-dex:5556
                 staticClients:
                   - id: fundament
                     name: Fundament
                     redirectURIs:
-                      - https://pr-${PR_NUM}-authn.${DOMAIN}/callback
+                      - https://authn.pr${PR_NUM}.${DOMAIN}/callback
                     public: true
                 staticPasswords:
                   - email: alice@acme-corp.com
@@ -215,7 +215,7 @@ jobs:
                 enabled: true
                 className: nginx
                 domain: ${DOMAIN}
-                subdomainPrefix: "pr-${PR_NUM}-"
+                subdomainInfix: "pr${PR_NUM}."
                 tls:
                   clusterIssuer: letsencrypt-prod
           TEMPLATE
@@ -265,10 +265,10 @@ jobs:
 
             | Service | URL |
             |---------|-----|
-            | Console | https://pr-${{ env.PR_NUMBER }}-console.${{ env.DOMAIN }} |
-            | Authn API | https://pr-${{ env.PR_NUMBER }}-authn.${{ env.DOMAIN }} |
-            | Organization API | https://pr-${{ env.PR_NUMBER }}-organization.${{ env.DOMAIN }} |
-            | Docs | https://pr-${{ env.PR_NUMBER }}-docs.${{ env.DOMAIN }} |
+            | Console | https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Authn API | https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Organization API | https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Docs | https://docs.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
             **Commit:** `${{ env.IMAGE_TAG }}`
             **Namespace:** `tn-fundament-pr-${{ env.PR_NUMBER }}`
