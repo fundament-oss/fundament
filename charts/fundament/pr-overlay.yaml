@@ -37,8 +37,8 @@ spec:
       reconcileStrategy: Revision
       interval: 1m
       valuesFiles:
-        - values.yaml
-        - values-sandbox.yaml
+        - charts/fundament/values.yaml
+        - charts/fundament/values-sandbox.yaml
   values:
     # Override sandbox's jwtSecretRef with direct value
     jwtSecretRef:
