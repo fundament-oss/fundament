@@ -276,7 +276,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	plan.ID = types.StringValue(createResp.Msg.GetNamespaceId())
 
 	// Read back the namespace to get created and other computed fields.
-	//	// Retry on permission_denied, OpenFGA needs time to sync
+	// Retry on permission_denied, OpenFGA needs time to sync
 	getReq := connect.NewRequest(organizationv1.GetNamespaceRequest_builder{
 		NamespaceId: plan.ID.ValueString(),
 	}.Build())
