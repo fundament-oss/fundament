@@ -115,6 +115,9 @@ jobs:
             timeout: 15m
             install:
               createNamespace: true
+              disableWait: true
+            upgrade:
+              disableWait: true
             interval: 5m
             chart:
               spec:
