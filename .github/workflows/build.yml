@@ -4,10 +4,20 @@ on:
   push:
     branches: [master]
   pull_request:
+    types: [opened, synchronize, reopened, closed]
     branches: [master]
+
+concurrency:
+  group: build-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
+
+env:
+  DOMAIN: fundament.apps.digilab.network
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/fundament
 
 jobs:
   build:
+    if: github.event.action != 'closed'
     strategy:
       matrix:
         include:
@@ -44,3 +54,156 @@ jobs:
       image-name: ${{ matrix.image-name }}
       dockerfile: ${{ matrix.dockerfile }}
       context: ${{ matrix.context }}
+
+  # Deploy PR environment
+  deploy:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      PR_NUMBER: ${{ github.event.number }}
+      IMAGE_TAG: ${{ github.sha }}-${{ github.event.number }}-merge-${{ github.run_number }}
+      PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+      JWT_SECRET: ${{ secrets.PR_JWT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone Flux repo
+        run: |
+          git clone --depth 1 "https://oauth2:${{ secrets.GITLAB_TOKEN }}@${{ vars.GITLAB_REPO_HOST }}/${{ vars.GITLAB_REPO_PATH }}.git" flux-repo
+          cd flux-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Generate PR overlay
+        run: |
+          PR_DIR="flux-repo/apps/fundament/overlays/pr/pr-${PR_NUMBER}"
+          mkdir -p "$PR_DIR"
+
+          export PR_NUM="$PR_NUMBER"
+          export PR_BRANCH="$PR_BRANCH"
+          export DOMAIN="$DOMAIN"
+          export IMAGE_PREFIX="$IMAGE_PREFIX"
+          export IMAGE_TAG="$IMAGE_TAG"
+          export JWT_SECRET="$JWT_SECRET"
+
+          # Generate resources.yaml from the template in the repo.
+          # Only the listed variables are substituted; dollar signs in bcrypt hashes are left intact.
+          envsubst '${PR_NUM} ${PR_BRANCH} ${DOMAIN} ${IMAGE_PREFIX} ${IMAGE_TAG} ${JWT_SECRET}' \
+            < charts/fundament/pr-overlay.yaml \
+            > "$PR_DIR/resources.yaml"
+
+      - name: Update kustomization.yaml
+        run: |
+          cd flux-repo
+          KUSTOMIZATION="apps/fundament/overlays/pr/kustomization.yaml"
+
+          # Create base kustomization if it doesn't exist
+          if [ ! -f "$KUSTOMIZATION" ]; then
+            mkdir -p "$(dirname "$KUSTOMIZATION")"
+            cat > "$KUSTOMIZATION" << 'EOF'
+          apiVersion: kustomize.config.k8s.io/v1beta1
+          kind: Kustomization
+          resources:
+          EOF
+          fi
+
+          # Add PR resource entry if not already present
+          PR_ENTRY="pr-${PR_NUMBER}/resources.yaml"
+          if ! grep -q "$PR_ENTRY" "$KUSTOMIZATION"; then
+            echo "  - $PR_ENTRY" >> "$KUSTOMIZATION"
+          fi
+
+      - name: Commit and push
+        run: |
+          cd flux-repo
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "deploy: PR #${PR_NUMBER} environment
+
+          Commit: ${IMAGE_TAG}
+          Branch: ${PR_BRANCH}"
+            git push
+          fi
+
+      - name: Post PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-environment
+          message: |
+            ## PR Environment
+
+            | Service | URL |
+            |---------|-----|
+            | Console | https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Authn API | https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Organization API | https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Docs | https://docs.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+
+            **Commit:** `${{ env.IMAGE_TAG }}`
+            **Namespace:** `tn-fundament-pr-${{ env.PR_NUMBER }}`
+
+            > Environment will be ready once Flux reconciles (~5 min after images are built).
+
+            <details>
+            <summary>Test credentials (all passwords: <code>password</code>)</summary>
+
+            - alice@acme-corp.com
+            - bob@acme-corp.com
+            - david@globex.com
+            </details>
+
+  # Teardown: remove PR overlay from GitLab Flux repo
+  teardown:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    env:
+      PR_NUMBER: ${{ github.event.number }}
+    steps:
+      - name: Clone Flux repo
+        run: |
+          git clone --depth 1 "https://oauth2:${{ secrets.GITLAB_TOKEN }}@${{ vars.GITLAB_REPO_HOST }}/${{ vars.GITLAB_REPO_PATH }}.git" flux-repo
+          cd flux-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Remove PR overlay
+        run: |
+          cd flux-repo
+          PR_DIR="apps/fundament/overlays/pr/pr-${PR_NUMBER}"
+
+          # Remove PR directory
+          rm -rf "$PR_DIR"
+
+          # Remove entry from kustomization.yaml
+          KUSTOMIZATION="apps/fundament/overlays/pr/kustomization.yaml"
+          if [ -f "$KUSTOMIZATION" ]; then
+            sed -i "\|pr-${PR_NUMBER}/resources.yaml|d" "$KUSTOMIZATION"
+          fi
+
+      - name: Commit and push
+        run: |
+          cd flux-repo
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "teardown: PR #${PR_NUMBER} environment"
+            git push
+          fi
+
+      - name: Update PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-environment
+          message: |
+            ## PR Environment - Torn Down
+
+            The environment for this PR has been removed.
