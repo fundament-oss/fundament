@@ -58,6 +58,23 @@
           </select>
         </div>
       }
+
+      <!-- Namespace filter — only shown in project-level view -->
+      @if (viewMode() === 'project' && namespaceUsage().length > 0) {
+        <div>
+          <label
+            for="namespace"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >Namespace</label
+          >
+          <select id="namespace" [(ngModel)]="selectedNamespace" class="w-full">
+            <option value="">All namespaces</option>
+            @for (ns of namespaceUsage(); track ns.name) {
+              <option [value]="ns.name">{{ ns.name }}</option>
+            }
+          </select>
+        </div>
+      }
     </div>
   </div>
 
@@ -80,9 +97,7 @@
     }
 
     @if (!isLoading()) {
-      <!-- ======================================================= -->
       <!-- Totals summary cards (all views)                        -->
-      <!-- ======================================================= -->
       @if (currentTotals; as totals) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
@@ -165,9 +180,7 @@
         </div>
       }
 
-      <!-- ======================================================= -->
       <!-- Time-series charts (all views)                          -->
-      <!-- ======================================================= -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">CPU usage over time</h3>
@@ -215,9 +228,7 @@
         </div>
       </div>
 
-      <!-- ======================================================= -->
       <!-- Per-cluster breakdown — org-level, no cluster selected  -->
-      <!-- ======================================================= -->
       @if (viewMode() === 'org' && !selectedClusterId && clusterSummaries().length > 0) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Per cluster</h3>
@@ -274,9 +285,7 @@
         </div>
       }
 
-      <!-- ======================================================= -->
       <!-- Per-node breakdown — cluster-level only                 -->
-      <!-- ======================================================= -->
       @if (selectedClusterId) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Per node</h3>
@@ -350,9 +359,7 @@
         </div>
       }
 
-      <!-- ======================================================= -->
       <!-- Per-namespace breakdown (all views)                     -->
-      <!-- ======================================================= -->
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
         <h3 class="mb-4 text-lg font-medium dark:text-white">Per namespace</h3>
         @if (namespaceUsage().length > 0) {
@@ -371,7 +378,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (ns of namespaceUsage(); track ns.name) {
+                @for (ns of filteredNamespaceUsage; track ns.name) {
                   <tr>
                     <td class="font-medium dark:text-white">{{ ns.name }}</td>
                     <td>{{ ns.cpu | number: '1.2-2' }} cores</td>
@@ -397,9 +404,7 @@
         }
       </div>
 
-      <!-- ======================================================= -->
       <!-- Infrastructure — org and cluster views only             -->
-      <!-- ======================================================= -->
       @if (viewMode() === 'org' && machines().length > 0) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <div class="mb-4 flex items-center justify-between">

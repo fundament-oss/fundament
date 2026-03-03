@@ -161,6 +161,8 @@ export default class UsageComponent implements OnInit, AfterViewInit {
   // Filter state
   selectedClusterId = '';
 
+  selectedNamespace = '';
+
   dateFrom = '';
 
   dateTo = '';
@@ -236,6 +238,11 @@ export default class UsageComponent implements OnInit, AfterViewInit {
 
   get hasTimeSeriesData(): boolean {
     return this.cpuSeriesData.length > 0;
+  }
+
+  get filteredNamespaceUsage(): NamespaceUsageData[] {
+    if (!this.selectedNamespace) return this.namespaceUsage();
+    return this.namespaceUsage().filter((ns) => ns.name === this.selectedNamespace);
   }
 
   getUsagePercentage = getUsagePercentage;
