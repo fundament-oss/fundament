@@ -32,6 +32,22 @@ func (h *Handler) writeTuples(ctx context.Context, tuples ...openfga.TupleKey) e
 	return nil
 }
 
+// writeTuplesIfNotExist writes tuples, ignoring errors if the tuples already exist.
+func (h *Handler) writeTuplesIfNotExist(ctx context.Context, tuples ...openfga.TupleKey) error {
+	if len(tuples) == 0 {
+		return nil
+	}
+	opts := client.ClientWriteOptions{
+		Conflict: client.ClientWriteConflictOptions{
+			OnDuplicateWrites: client.CLIENT_WRITE_REQUEST_ON_DUPLICATE_WRITES_IGNORE,
+		},
+	}
+	if _, err := h.fga.WriteTuples(ctx).Body(tuples).Options(opts).Execute(); err != nil {
+		return fmt.Errorf("write tuples: %w", err)
+	}
+	return nil
+}
+
 func (h *Handler) deleteTuples(ctx context.Context, tuples ...openfga.TupleKeyWithoutCondition) error {
 	if len(tuples) == 0 {
 		return nil

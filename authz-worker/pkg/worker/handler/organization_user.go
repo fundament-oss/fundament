@@ -57,5 +57,5 @@ func (h *Handler) OrganizationUser(ctx context.Context, qtx *db.Queries, organiz
 		panic(fmt.Sprintf("unknown organization user permission: %s", orgUser.Permission))
 	}
 
-	return h.writeTuples(ctx, tuple(user, action, org))
+	return h.writeTuplesIfNotExist(ctx, tuple(user, action, org))
 }

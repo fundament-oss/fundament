@@ -53,15 +53,6 @@ func (t *AuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return transport.RoundTrip(reqClone)
 }
 
-// NewFundamentClient creates a new FundamentClient with static token authentication.
-func NewFundamentClient(endpoint, token, organizationID string) *FundamentClient {
-	return newFundamentClientWithTransport(endpoint, &AuthTransport{
-		TokenSource:    StaticTokenSource(token),
-		OrganizationID: organizationID,
-		Transport:      http.DefaultTransport,
-	})
-}
-
 // NewFundamentClientWithTokenManager creates a new FundamentClient with API key authentication.
 func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organizationID string) *FundamentClient {
 	return newFundamentClientWithTransport(endpoint, &AuthTransport{

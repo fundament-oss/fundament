@@ -50,7 +50,7 @@ func (h *Handler) ApiKey(ctx context.Context, qtx *db.Queries, apiKeyID uuid.UUI
 		}
 	}
 
-	return h.writeTuples(ctx,
+	return h.writeTuplesIfNotExist(ctx,
 		tuple(orgObj, authz.ActionOwner, apiKeyObj),
 		tupleCreator,
 	)
