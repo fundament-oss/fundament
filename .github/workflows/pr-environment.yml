@@ -112,6 +112,7 @@ jobs:
             name: fundament-pr-${PR_NUM}
           spec:
             targetNamespace: tn-fundament-pr-${PR_NUM}
+            timeout: 15m
             install:
               createNamespace: true
             interval: 5m
