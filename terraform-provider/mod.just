@@ -39,7 +39,9 @@ test:
 test-acc:
     FUNDAMENT_ENDPOINT=http://organization.fundament.localhost:8080 \
     TF_ACC=1 \
-    go test -v ./... -count=1
+    TF_ACC_TERRAFORM_PATH=$(which tofu) \
+    TF_ACC_PROVIDER_HOST=registry.opentofu.org \
+    go test -v ./...
 
 # Clean terraform provider build artifacts
 clean:
