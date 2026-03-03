@@ -6,9 +6,6 @@ metadata:
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
     app.kubernetes.io/component: db-migrations
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation
 spec:
   backoffLimit: 3
   ttlSecondsAfterFinished: 300

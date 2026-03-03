@@ -97,6 +97,6 @@ ingress:
   enabled: false
   className: nginx
   domain: ""
-  subdomainInfix: "" # e.g., "pr123." for PR environments → console.pr123.domain
+  subdomainInfix: "" # e.g., "pr123-" for PR environments → console.pr123-domain
   tls:
     clusterIssuer: ""
