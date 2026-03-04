@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
@@ -103,33 +102,6 @@ func (v httpURLValidator) ValidateString(_ context.Context, req validator.String
 			req.Path,
 			"Invalid URL",
 			fmt.Sprintf("URL %q is missing a host", raw),
-		)
-	}
-}
-
-// jwtValidator validates that a string is a well-formed JWT token.
-type jwtValidator struct{}
-
-func (v jwtValidator) Description(_ context.Context) string {
-	return "value must be a valid JWT token"
-}
-
-func (v jwtValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v jwtValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-
-	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
-	_, _, err := parser.ParseUnverified(req.ConfigValue.ValueString(), jwt.MapClaims{})
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Invalid JWT Token",
-			fmt.Sprintf("Value is not a valid JWT token: %s", err),
 		)
 	}
 }

@@ -35,6 +35,14 @@ install: build
 test:
     go test -v ./...
 
+# Run terraform provider acceptance tests
+test-acc:
+    FUNDAMENT_ENDPOINT=http://organization.fundament.localhost:8080 \
+    TF_ACC=1 \
+    TF_ACC_TERRAFORM_PATH=$(which tofu) \
+    TF_ACC_PROVIDER_HOST=registry.opentofu.org \
+    go test -v ./...
+
 # Clean terraform provider build artifacts
 clean:
     rm -f terraform-provider-fundament

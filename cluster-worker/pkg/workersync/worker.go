@@ -1,6 +1,6 @@
-// Package worker implements the cluster sync worker.
+// Package workersync implements the cluster sync worker.
 // It listens for PostgreSQL notifications and syncs cluster state to Gardener.
-package worker_sync
+package workersync
 
 import (
 	"context"
@@ -15,8 +15,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
 	"github.com/fundament-oss/fundament/common/dbconst"
 )
 

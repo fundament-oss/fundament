@@ -59,6 +59,13 @@ func (r *OrganizationMemberResource) Schema(ctx context.Context, req resource.Sc
 					stringvalidator.OneOf("admin", "viewer"),
 				},
 			},
+			"user_id": schema.StringAttribute{
+				Description: "The user ID (users.id) of the member.",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"name": schema.StringAttribute{
 				Description: "The display name of the member. Initially set to the email, changes when the user accepts the invite.",
 				Computed:    true,
@@ -121,7 +128,10 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		Permission: plan.Permission.ValueString(),
 	}.Build())
 
-	inviteResp, err := r.client.InviteService.InviteMember(ctx, inviteReq)
+	// Retry on permission_denied: OpenFGA needs time to sync after login.
+	inviteResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.InviteMemberResponse], error) {
+		return r.client.InviteService.InviteMember(ctx, inviteReq)
+	})
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeAlreadyExists:
@@ -145,6 +155,7 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 
 	member := inviteResp.Msg.GetMember()
 	plan.ID = types.StringValue(member.GetId())
+	plan.UserID = types.StringValue(member.GetUserId())
 	plan.Name = types.StringValue(member.GetName())
 
 	if member.HasExternalRef() {
@@ -213,6 +224,7 @@ func (r *OrganizationMemberResource) Read(ctx context.Context, req resource.Read
 	}
 
 	state.ID = types.StringValue(member.GetId())
+	state.UserID = types.StringValue(member.GetUserId())
 	state.Name = types.StringValue(member.GetName())
 	state.Permission = types.StringValue(member.GetPermission())
 
@@ -312,6 +324,7 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 	}
 
 	plan.ID = types.StringValue(member.GetId())
+	plan.UserID = types.StringValue(member.GetUserId())
 	plan.Name = types.StringValue(member.GetName())
 	plan.Permission = types.StringValue(member.GetPermission())
 

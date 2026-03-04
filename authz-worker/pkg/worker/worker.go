@@ -85,6 +85,13 @@ func (w *Worker) Run(ctx context.Context) error {
 
 	defer conn.Release()
 
+	// Reset permanently-failed items so they are retried after a worker restart.
+	if err := w.queries.ResetFailedOutboxItems(ctx); err != nil {
+		return fmt.Errorf("reset failed outbox items: %w", err)
+	}
+
+	w.logger.Info("reset failed outbox items to pending")
+
 	w.processBatch(ctx)
 
 	return w.runLoop(ctx, conn.Conn())
