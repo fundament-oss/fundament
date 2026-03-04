@@ -21,11 +21,11 @@ import (
 )
 
 type Config struct {
-	JWTSecret             []byte
-	CORSAllowedOrigins    []string
-	Clock                 clock.Clock
-	K8sPrometheusClient   prom.Client
-	MetalPrometheusClient prom.Client
+	JWTSecret              []byte
+	CORSAllowedOrigins     []string
+	Clock                  clock.Clock
+	MockPrometheusClient   *prom.MockClient
+	MetalPrometheusClient  prom.Client
 }
 
 type Server struct {
@@ -37,7 +37,7 @@ type Server struct {
 	authz           *authz.Client
 	clock           clock.Clock
 	handler         http.Handler
-	k8sPromClient   prom.Client
+	mockPromClient  *prom.MockClient
 	metalPromClient prom.Client
 }
 
@@ -47,10 +47,6 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		clk = clock.New()
 	}
 
-	k8sPromClient := cfg.K8sPrometheusClient
-	if k8sPromClient == nil {
-		k8sPromClient = prom.StubClient{}
-	}
 	metalPromClient := cfg.MetalPrometheusClient
 	if metalPromClient == nil {
 		metalPromClient = prom.StubClient{}
@@ -64,7 +60,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		authValidator:   auth.NewValidator(cfg.JWTSecret, logger),
 		authz:           authzClient,
 		clock:           clk,
-		k8sPromClient:   k8sPromClient,
+		mockPromClient:  cfg.MockPrometheusClient,
 		metalPromClient: metalPromClient,
 	}
 

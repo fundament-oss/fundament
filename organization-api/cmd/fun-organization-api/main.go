@@ -19,7 +19,7 @@ import (
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
-	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
+	dbgen "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 )
@@ -31,7 +31,6 @@ type config struct {
 	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
 	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
-	PrometheusURL      string     `env:"PROMETHEUS_URL"`
 	PrometheusMetalURL string     `env:"PROMETHEUS_METAL_URL"`
 }
 
@@ -64,13 +63,13 @@ func run() error {
 	options := []psqldb.Option{
 		func(ctx context.Context, config *pgxpool.Config) {
 			config.PrepareConn = func(ctx context.Context, conn *pgx.Conn) (bool, error) {
-				queries := db.New(conn)
+				queries := dbgen.New(conn)
 
 				// Extract organization_id from context and set it in PostgreSQL session for RLS
 				if organizationID, ok := organization.OrganizationIDFromContext(ctx); ok {
 					logger.Debug("setting organization context for RLS", "organization_id", organizationID.String())
 
-					params := db.SetOrganizationContextParams{
+					params := dbgen.SetOrganizationContextParams{
 						SetConfig: organizationID.String(),
 					}
 
@@ -86,7 +85,7 @@ func run() error {
 				if userID, ok := organization.UserIDFromContext(ctx); ok {
 					logger.Debug("setting user context for RLS", "user_id", userID.String())
 
-					params := db.SetUserContextParams{
+					params := dbgen.SetUserContextParams{
 						SetConfig: userID.String(),
 					}
 
@@ -100,7 +99,7 @@ func run() error {
 				// Extract user_id from claims and set it in PostgreSQL session for RLS
 				claims, ok := organization.ClaimsFromContext(ctx)
 				if ok {
-					err := queries.SetUserContext(ctx, db.SetUserContextParams{
+					err := queries.SetUserContext(ctx, dbgen.SetUserContextParams{
 						SetConfig: claims.UserID.String(),
 					})
 					if err != nil {
@@ -111,7 +110,7 @@ func run() error {
 				return true, nil
 			}
 			config.AfterRelease = func(c *pgx.Conn) bool {
-				queries := db.New(c)
+				queries := dbgen.New(c)
 
 				if err := queries.ResetOrganizationContext(ctx); err != nil {
 					logger.Warn("failed to reset organization context on connection release, destroying connection", "error", err)
@@ -157,27 +156,43 @@ func run() error {
 
 	logger.Debug("OpenFGA client connected")
 
-	var k8sPromClient prom.Client = prom.StubClient{}
-	if cfg.PrometheusURL != "" {
-		k8sPromClient = prom.NewHTTPClient(cfg.PrometheusURL)
-		logger.Info("k8s Prometheus configured", "url", cfg.PrometheusURL)
-	} else {
-		logger.Info("k8s Prometheus not configured, metrics will return empty data")
-	}
+	mockClient := prom.NewMockClient(func(ctx context.Context) ([]prom.ClusterInfo, error) {
+		q := dbgen.New(db.Pool)
+		rows, err := q.ClusterList(ctx)
+		if err != nil {
+			return nil, err
+		}
+		clusters := make([]prom.ClusterInfo, 0, len(rows))
+		for _, row := range rows {
+			pools, err := q.NodePoolListByClusterID(ctx, dbgen.NodePoolListByClusterIDParams{ClusterID: row.ID})
+			if err != nil {
+				return nil, err
+			}
+			nodePools := make([]prom.NodePoolInfo, 0, len(pools))
+			for _, p := range pools {
+				nodePools = append(nodePools, prom.NodePoolInfo{
+					Name:         p.Name,
+					MachineType:  p.MachineType,
+					AutoscaleMin: p.AutoscaleMin,
+					AutoscaleMax: p.AutoscaleMax,
+				})
+			}
+			clusters = append(clusters, prom.ClusterInfo{
+				ID:        row.ID.String(),
+				Name:      row.Name,
+				NodePools: nodePools,
+			})
+		}
+		return clusters, nil
+	})
 
-	var metalPromClient prom.Client = prom.StubClient{}
-	if cfg.PrometheusMetalURL != "" {
-		metalPromClient = prom.NewHTTPClient(cfg.PrometheusMetalURL)
-		logger.Info("metal-stack Prometheus configured", "url", cfg.PrometheusMetalURL)
-	} else {
-		logger.Info("metal-stack Prometheus not configured, infra metrics will return empty data")
-	}
+	metalPromClient := promClient("metal-stack", cfg.PrometheusMetalURL, mockClient, logger)
 
 	server, err := organization.New(logger, &organization.Config{
 		JWTSecret:             []byte(cfg.JWTSecret),
 		CORSAllowedOrigins:    cfg.CORSAllowedOrigins,
 		Clock:                 clock.New(),
-		K8sPrometheusClient:   k8sPromClient,
+		MockPrometheusClient:  mockClient,
 		MetalPrometheusClient: metalPromClient,
 	}, db, authzClient)
 	if err != nil {
@@ -196,4 +211,22 @@ func run() error {
 	}
 
 	return nil
+}
+
+// promClient selects the appropriate Prometheus client based on the URL value:
+//   - ""     → StubClient (returns empty data, no metrics configured)
+//   - "mock" → MockClient (in-process generated data, no real Prometheus needed)
+//   - other  → HTTPClient targeting the given URL
+func promClient(name, url string, mock *prom.MockClient, logger *slog.Logger) prom.Client {
+	switch url {
+	case "":
+		logger.Info("Prometheus not configured, metrics will return empty data", "client", name)
+		return prom.StubClient{}
+	case "mock":
+		logger.Info("Prometheus mock mode enabled", "client", name)
+		return mock
+	default:
+		logger.Info("Prometheus configured", "client", name, "url", url)
+		return prom.NewHTTPClient(url)
+	}
 }

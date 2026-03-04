@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -23,6 +24,22 @@ const (
 	bytesPerGiB = 1073741824.0
 	bytesPerMB  = 1_000_000.0
 )
+
+// k8sClientForCluster returns the appropriate Prometheus client for a cluster's
+// prometheus_url: empty → StubClient, "mock" → MockClient, otherwise HTTPClient.
+func (s *Server) k8sClientForCluster(prometheusURL string) prom.Client {
+	switch prometheusURL {
+	case "":
+		return prom.StubClient{}
+	case "mock":
+		if s.mockPromClient != nil {
+			return s.mockPromClient
+		}
+		return prom.StubClient{}
+	default:
+		return prom.NewHTTPClient(prometheusURL)
+	}
+}
 
 // -- Cluster-level RPCs --
 
@@ -44,8 +61,8 @@ func (s *Server) GetClusterWorkloadMetrics(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
+	client := s.k8sClientForCluster(cluster.PrometheusURL)
 	now := time.Now()
-	cf := clusterFilter(cluster.Name)
 
 	var (
 		cpuUsed, cpuTotal   float64
@@ -66,7 +83,7 @@ func (s *Server) GetClusterWorkloadMetrics(
 
 	qi := func(dst *float64, label, query string) {
 		g.Go(func() error {
-			v, err := querySingleValue(gctx, s.k8sPromClient, query, now)
+			v, err := querySingleValue(gctx, client, query, now)
 			if err != nil {
 				return fmt.Errorf("%s: %w", label, err)
 			}
@@ -76,7 +93,7 @@ func (s *Server) GetClusterWorkloadMetrics(
 	}
 	qs := func(dst *[]prom.Sample, label, query string) {
 		g.Go(func() error {
-			samples, err := s.k8sPromClient.Query(gctx, query, now)
+			samples, err := client.Query(gctx, query, now)
 			if err != nil {
 				return fmt.Errorf("%s: %w", label, err)
 			}
@@ -85,29 +102,29 @@ func (s *Server) GetClusterWorkloadMetrics(
 		})
 	}
 
-	qi(&cpuUsed, "query cpu used", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, cf))
-	qi(&cpuTotal, "query cpu total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="cpu",%s})`, cf))
-	qi(&memUsed, "query mem used", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, cf))
-	qi(&memTotal, "query mem total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="memory",%s})`, cf))
-	qi(&podsUsed, "query pods used", fmt.Sprintf(`count(kube_pod_info{%s})`, cf))
-	qi(&podsTotal, "query pods total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="pods",%s})`, cf))
+	qi(&cpuUsed, "query cpu used", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`)
+	qi(&cpuTotal, "query cpu total", `sum(kube_node_status_capacity{resource="cpu"})`)
+	qi(&memUsed, "query mem used", `sum(container_memory_working_set_bytes{container!=""})`)
+	qi(&memTotal, "query mem total", `sum(kube_node_status_capacity{resource="memory"})`)
+	qi(&podsUsed, "query pods used", `count(kube_pod_info)`)
+	qi(&podsTotal, "query pods total", `sum(kube_node_status_capacity{resource="pods"})`)
 
-	qs(&nodeCPUUsed, "query per-node cpu used", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m])) by (node)`, cf))
-	qs(&nodeCPUTotal, "query per-node cpu total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="cpu",%s}) by (node)`, cf))
-	qs(&nodeMemUsed, "query per-node mem used", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s}) by (node)`, cf))
-	qs(&nodeMemTotal, "query per-node mem total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="memory",%s}) by (node)`, cf))
-	qs(&nodePodsUsed, "query per-node pods used", fmt.Sprintf(`count(kube_pod_info{%s}) by (node)`, cf))
-	qs(&nodePodsTotal, "query per-node pods total", fmt.Sprintf(`sum(kube_node_status_capacity{resource="pods",%s}) by (node)`, cf))
+	qs(&nodeCPUUsed, "query per-node cpu used", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (node)`)
+	qs(&nodeCPUTotal, "query per-node cpu total", `sum(kube_node_status_capacity{resource="cpu"}) by (node)`)
+	qs(&nodeMemUsed, "query per-node mem used", `sum(container_memory_working_set_bytes{container!=""}) by (node)`)
+	qs(&nodeMemTotal, "query per-node mem total", `sum(kube_node_status_capacity{resource="memory"}) by (node)`)
+	qs(&nodePodsUsed, "query per-node pods used", `count(kube_pod_info) by (node)`)
+	qs(&nodePodsTotal, "query per-node pods total", `sum(kube_node_status_capacity{resource="pods"}) by (node)`)
 
-	qs(&nsCPU, "query per-namespace cpu", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m])) by (namespace)`, cf))
-	qs(&nsMem, "query per-namespace mem", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s}) by (namespace)`, cf))
-	qs(&nsPods, "query per-namespace pods", fmt.Sprintf(`count(kube_pod_info{%s}) by (namespace)`, cf))
-	qs(&nsCPUReq, "query per-namespace cpu requests", fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="cpu",%s}) by (namespace)`, cf))
-	qs(&nsCPULim, "query per-namespace cpu limits", fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="cpu",%s}) by (namespace)`, cf))
-	qs(&nsMemReq, "query per-namespace mem requests", fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="memory",%s}) by (namespace)`, cf))
-	qs(&nsMemLim, "query per-namespace mem limits", fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="memory",%s}) by (namespace)`, cf))
-	qs(&nsNetRx, "query per-namespace net rx", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m])) by (namespace)`, cf))
-	qs(&nsNetTx, "query per-namespace net tx", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m])) by (namespace)`, cf))
+	qs(&nsCPU, "query per-namespace cpu", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (namespace)`)
+	qs(&nsMem, "query per-namespace mem", `sum(container_memory_working_set_bytes{container!=""}) by (namespace)`)
+	qs(&nsPods, "query per-namespace pods", `count(kube_pod_info) by (namespace)`)
+	qs(&nsCPUReq, "query per-namespace cpu requests", `sum(kube_pod_container_resource_requests{resource="cpu"}) by (namespace)`)
+	qs(&nsCPULim, "query per-namespace cpu limits", `sum(kube_pod_container_resource_limits{resource="cpu"}) by (namespace)`)
+	qs(&nsMemReq, "query per-namespace mem requests", `sum(kube_pod_container_resource_requests{resource="memory"}) by (namespace)`)
+	qs(&nsMemLim, "query per-namespace mem limits", `sum(kube_pod_container_resource_limits{resource="memory"}) by (namespace)`)
+	qs(&nsNetRx, "query per-namespace net rx", `sum(rate(container_network_receive_bytes_total[5m])) by (namespace)`)
+	qs(&nsNetTx, "query per-namespace net tx", `sum(rate(container_network_transmit_bytes_total[5m])) by (namespace)`)
 
 	if err := g.Wait(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -144,8 +161,8 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
+	client := s.k8sClientForCluster(cluster.PrometheusURL)
 	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
-	cf := clusterFilter(cluster.Name)
 
 	var (
 		cpuSeries, memSeries, podSeries []prom.TimeSeries
@@ -156,7 +173,7 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 
 	qr := func(dst *[]prom.TimeSeries, label, query string) {
 		g.Go(func() error {
-			ts, err := s.k8sPromClient.QueryRange(gctx, query, start, end, step)
+			ts, err := client.QueryRange(gctx, query, start, end, step)
 			if err != nil {
 				return fmt.Errorf("%s: %w", label, err)
 			}
@@ -165,11 +182,11 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 		})
 	}
 
-	qr(&cpuSeries, "query cpu time-series", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, cf))
-	qr(&memSeries, "query mem time-series", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, cf))
-	qr(&podSeries, "query pod time-series", fmt.Sprintf(`count(kube_pod_info{%s})`, cf))
-	qr(&netRxSeries, "query net rx time-series", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m]))`, cf))
-	qr(&netTxSeries, "query net tx time-series", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m]))`, cf))
+	qr(&cpuSeries, "query cpu time-series", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`)
+	qr(&memSeries, "query mem time-series", `sum(container_memory_working_set_bytes{container!=""})`)
+	qr(&podSeries, "query pod time-series", `count(kube_pod_info)`)
+	qr(&netRxSeries, "query net rx time-series", `sum(rate(container_network_receive_bytes_total[5m]))`)
+	qr(&netTxSeries, "query net tx time-series", `sum(rate(container_network_transmit_bytes_total[5m]))`)
 
 	if err := g.Wait(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -211,72 +228,119 @@ func (s *Server) GetOrgWorkloadMetrics(
 	ctx context.Context,
 	_ *connect.Request[organizationv1.GetOrgWorkloadMetricsRequest],
 ) (*connect.Response[organizationv1.GetOrgWorkloadMetricsResponse], error) {
+	clusters, err := s.queries.ClusterList(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list clusters: %w", err))
+	}
+
 	now := time.Now()
 
-	var (
+	type clusterResult struct {
+		name                string
 		cpuUsed, cpuTotal   float64
 		memUsed, memTotal   float64
 		podsUsed, podsTotal float64
-
-		clusterCPU, clusterCPUTotal   []prom.Sample
-		clusterMem, clusterMemTotal   []prom.Sample
-		clusterPods, clusterPodsTotal []prom.Sample
-
 		nsCPU, nsMem, nsPods []prom.Sample
 		nsCPUReq, nsCPULim   []prom.Sample
 		nsMemReq, nsMemLim   []prom.Sample
 		nsNetRx, nsNetTx     []prom.Sample
-	)
+	}
 
+	results := make([]clusterResult, len(clusters))
 	g, gctx := errgroup.WithContext(ctx)
 
-	qi := func(dst *float64, label, query string) {
+	for i, cl := range clusters {
+		i, cl := i, cl
 		g.Go(func() error {
-			v, err := querySingleValue(gctx, s.k8sPromClient, query, now)
-			if err != nil {
-				return fmt.Errorf("%s: %w", label, err)
+			client := s.k8sClientForCluster(cl.PrometheusURL)
+			r := &results[i]
+			r.name = cl.Name
+
+			sub, subCtx := errgroup.WithContext(gctx)
+
+			qi := func(dst *float64, label, query string) {
+				sub.Go(func() error {
+					v, err := querySingleValue(subCtx, client, query, now)
+					if err != nil {
+						return fmt.Errorf("%s [%s]: %w", label, cl.Name, err)
+					}
+					*dst = v
+					return nil
+				})
 			}
-			*dst = v
-			return nil
+			qs := func(dst *[]prom.Sample, label, query string) {
+				sub.Go(func() error {
+					samples, err := client.Query(subCtx, query, now)
+					if err != nil {
+						return fmt.Errorf("%s [%s]: %w", label, cl.Name, err)
+					}
+					*dst = samples
+					return nil
+				})
+			}
+
+			qi(&r.cpuUsed, "query cpu used", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`)
+			qi(&r.cpuTotal, "query cpu total", `sum(kube_node_status_capacity{resource="cpu"})`)
+			qi(&r.memUsed, "query mem used", `sum(container_memory_working_set_bytes{container!=""})`)
+			qi(&r.memTotal, "query mem total", `sum(kube_node_status_capacity{resource="memory"})`)
+			qi(&r.podsUsed, "query pods used", `count(kube_pod_info)`)
+			qi(&r.podsTotal, "query pods total", `sum(kube_node_status_capacity{resource="pods"})`)
+
+			qs(&r.nsCPU, "query per-namespace cpu", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (namespace)`)
+			qs(&r.nsMem, "query per-namespace mem", `sum(container_memory_working_set_bytes{container!=""}) by (namespace)`)
+			qs(&r.nsPods, "query per-namespace pods", `count(kube_pod_info) by (namespace)`)
+			qs(&r.nsCPUReq, "query per-namespace cpu requests", `sum(kube_pod_container_resource_requests{resource="cpu"}) by (namespace)`)
+			qs(&r.nsCPULim, "query per-namespace cpu limits", `sum(kube_pod_container_resource_limits{resource="cpu"}) by (namespace)`)
+			qs(&r.nsMemReq, "query per-namespace mem requests", `sum(kube_pod_container_resource_requests{resource="memory"}) by (namespace)`)
+			qs(&r.nsMemLim, "query per-namespace mem limits", `sum(kube_pod_container_resource_limits{resource="memory"}) by (namespace)`)
+			qs(&r.nsNetRx, "query per-namespace net rx", `sum(rate(container_network_receive_bytes_total[5m])) by (namespace)`)
+			qs(&r.nsNetTx, "query per-namespace net tx", `sum(rate(container_network_transmit_bytes_total[5m])) by (namespace)`)
+
+			return sub.Wait()
 		})
 	}
-	qs := func(dst *[]prom.Sample, label, query string) {
-		g.Go(func() error {
-			samples, err := s.k8sPromClient.Query(gctx, query, now)
-			if err != nil {
-				return fmt.Errorf("%s: %w", label, err)
-			}
-			*dst = samples
-			return nil
-		})
-	}
-
-	qi(&cpuUsed, "query cpu used", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`)
-	qi(&cpuTotal, "query cpu total", `sum(kube_node_status_capacity{resource="cpu"})`)
-	qi(&memUsed, "query mem used", `sum(container_memory_working_set_bytes{container!=""})`)
-	qi(&memTotal, "query mem total", `sum(kube_node_status_capacity{resource="memory"})`)
-	qi(&podsUsed, "query pods used", `count(kube_pod_info)`)
-	qi(&podsTotal, "query pods total", `sum(kube_node_status_capacity{resource="pods"})`)
-
-	qs(&clusterCPU, "query per-cluster cpu", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (cluster)`)
-	qs(&clusterCPUTotal, "query per-cluster cpu total", `sum(kube_node_status_capacity{resource="cpu"}) by (cluster)`)
-	qs(&clusterMem, "query per-cluster mem", `sum(container_memory_working_set_bytes{container!=""}) by (cluster)`)
-	qs(&clusterMemTotal, "query per-cluster mem total", `sum(kube_node_status_capacity{resource="memory"}) by (cluster)`)
-	qs(&clusterPods, "query per-cluster pods", `count(kube_pod_info) by (cluster)`)
-	qs(&clusterPodsTotal, "query per-cluster pods total", `sum(kube_node_status_capacity{resource="pods"}) by (cluster)`)
-
-	qs(&nsCPU, "query per-namespace cpu", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (namespace)`)
-	qs(&nsMem, "query per-namespace mem", `sum(container_memory_working_set_bytes{container!=""}) by (namespace)`)
-	qs(&nsPods, "query per-namespace pods", `count(kube_pod_info) by (namespace)`)
-	qs(&nsCPUReq, "query per-namespace cpu requests", `sum(kube_pod_container_resource_requests{resource="cpu"}) by (namespace)`)
-	qs(&nsCPULim, "query per-namespace cpu limits", `sum(kube_pod_container_resource_limits{resource="cpu"}) by (namespace)`)
-	qs(&nsMemReq, "query per-namespace mem requests", `sum(kube_pod_container_resource_requests{resource="memory"}) by (namespace)`)
-	qs(&nsMemLim, "query per-namespace mem limits", `sum(kube_pod_container_resource_limits{resource="memory"}) by (namespace)`)
-	qs(&nsNetRx, "query per-namespace net rx", `sum(rate(container_network_receive_bytes_total[5m])) by (namespace)`)
-	qs(&nsNetTx, "query per-namespace net tx", `sum(rate(container_network_transmit_bytes_total[5m])) by (namespace)`)
 
 	if err := g.Wait(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Aggregate across clusters.
+	var cpuUsed, cpuTotal, memUsed, memTotal, podsUsed, podsTotal float64
+	clusterSummaries := make([]*organizationv1.ClusterWorkloadSummary, 0, len(results))
+	allNsCPU := make([][]prom.Sample, len(results))
+	allNsMem := make([][]prom.Sample, len(results))
+	allNsPods := make([][]prom.Sample, len(results))
+	allNsCPUReq := make([][]prom.Sample, len(results))
+	allNsCPULim := make([][]prom.Sample, len(results))
+	allNsMemReq := make([][]prom.Sample, len(results))
+	allNsMemLim := make([][]prom.Sample, len(results))
+	allNsNetRx := make([][]prom.Sample, len(results))
+	allNsNetTx := make([][]prom.Sample, len(results))
+
+	for i, r := range results {
+		cpuUsed += r.cpuUsed
+		cpuTotal += r.cpuTotal
+		memUsed += r.memUsed
+		memTotal += r.memTotal
+		podsUsed += r.podsUsed
+		podsTotal += r.podsTotal
+
+		clusterSummaries = append(clusterSummaries, organizationv1.ClusterWorkloadSummary_builder{
+			ClusterName: r.name,
+			Cpu:         makeResourceUsage(r.cpuUsed, r.cpuTotal, "cores"),
+			Memory:      makeResourceUsage(r.memUsed/bytesPerGiB, r.memTotal/bytesPerGiB, "GiB"),
+			Pods:        makeResourceUsage(r.podsUsed, r.podsTotal, "pods"),
+		}.Build())
+
+		allNsCPU[i] = r.nsCPU
+		allNsMem[i] = r.nsMem
+		allNsPods[i] = r.nsPods
+		allNsCPUReq[i] = r.nsCPUReq
+		allNsCPULim[i] = r.nsCPULim
+		allNsMemReq[i] = r.nsMemReq
+		allNsMemLim[i] = r.nsMemLim
+		allNsNetRx[i] = r.nsNetRx
+		allNsNetTx[i] = r.nsNetTx
 	}
 
 	totals := organizationv1.ResourceUsageInfo_builder{
@@ -285,9 +349,19 @@ func (s *Server) GetOrgWorkloadMetrics(
 		Pods:   makeResourceUsage(podsUsed, podsTotal, "pods"),
 	}.Build()
 
+	nsCPU := mergeSamples(allNsCPU, "namespace")
+	nsMem := mergeSamples(allNsMem, "namespace")
+	nsPods := mergeSamples(allNsPods, "namespace")
+	nsCPUReq := mergeSamples(allNsCPUReq, "namespace")
+	nsCPULim := mergeSamples(allNsCPULim, "namespace")
+	nsMemReq := mergeSamples(allNsMemReq, "namespace")
+	nsMemLim := mergeSamples(allNsMemLim, "namespace")
+	nsNetRx := mergeSamples(allNsNetRx, "namespace")
+	nsNetTx := mergeSamples(allNsNetTx, "namespace")
+
 	return connect.NewResponse(organizationv1.GetOrgWorkloadMetricsResponse_builder{
 		Totals:     totals,
-		Clusters:   buildClusterSummaries(clusterCPU, clusterCPUTotal, clusterMem, clusterMemTotal, clusterPods, clusterPodsTotal),
+		Clusters:   clusterSummaries,
 		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods, nsCPUReq, nsCPULim, nsMemReq, nsMemLim, nsNetRx, nsNetTx),
 	}.Build()), nil
 }
@@ -296,42 +370,72 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetOrgWorkloadTimeSeriesRequest],
 ) (*connect.Response[organizationv1.GetWorkloadTimeSeriesResponse], error) {
-	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
-
-	var (
-		cpuSeries, memSeries, podSeries []prom.TimeSeries
-		netRxSeries, netTxSeries        []prom.TimeSeries
-	)
-
-	g, gctx := errgroup.WithContext(ctx)
-
-	qr := func(dst *[]prom.TimeSeries, label, query string) {
-		g.Go(func() error {
-			ts, err := s.k8sPromClient.QueryRange(gctx, query, start, end, step)
-			if err != nil {
-				return fmt.Errorf("%s: %w", label, err)
-			}
-			*dst = ts
-			return nil
-		})
+	clusters, err := s.queries.ClusterList(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list clusters: %w", err))
 	}
 
-	qr(&cpuSeries, "query cpu time-series", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`)
-	qr(&memSeries, "query mem time-series", `sum(container_memory_working_set_bytes{container!=""})`)
-	qr(&podSeries, "query pod time-series", `count(kube_pod_info)`)
-	qr(&netRxSeries, "query net rx time-series", `sum(rate(container_network_receive_bytes_total[5m]))`)
-	qr(&netTxSeries, "query net tx time-series", `sum(rate(container_network_transmit_bytes_total[5m]))`)
+	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
+
+	type clusterTSResult struct {
+		cpu, mem, pods, netRx, netTx []prom.TimeSeries
+	}
+
+	results := make([]clusterTSResult, len(clusters))
+	g, gctx := errgroup.WithContext(ctx)
+
+	for i, cl := range clusters {
+		i, cl := i, cl
+		g.Go(func() error {
+			client := s.k8sClientForCluster(cl.PrometheusURL)
+			r := &results[i]
+
+			sub, subCtx := errgroup.WithContext(gctx)
+
+			qr := func(dst *[]prom.TimeSeries, label, query string) {
+				sub.Go(func() error {
+					ts, err := client.QueryRange(subCtx, query, start, end, step)
+					if err != nil {
+						return fmt.Errorf("%s [%s]: %w", label, cl.Name, err)
+					}
+					*dst = ts
+					return nil
+				})
+			}
+
+			qr(&r.cpu, "query cpu time-series", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`)
+			qr(&r.mem, "query mem time-series", `sum(container_memory_working_set_bytes{container!=""})`)
+			qr(&r.pods, "query pod time-series", `count(kube_pod_info)`)
+			qr(&r.netRx, "query net rx time-series", `sum(rate(container_network_receive_bytes_total[5m]))`)
+			qr(&r.netTx, "query net tx time-series", `sum(rate(container_network_transmit_bytes_total[5m]))`)
+
+			return sub.Wait()
+		})
+	}
 
 	if err := g.Wait(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
+	allCPU := make([][]prom.TimeSeries, len(results))
+	allMem := make([][]prom.TimeSeries, len(results))
+	allPods := make([][]prom.TimeSeries, len(results))
+	allNetRx := make([][]prom.TimeSeries, len(results))
+	allNetTx := make([][]prom.TimeSeries, len(results))
+	for i, r := range results {
+		allCPU[i] = r.cpu
+		allMem[i] = r.mem
+		allPods[i] = r.pods
+		allNetRx[i] = r.netRx
+		allNetTx[i] = r.netTx
+	}
+
 	return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{
-		CpuCores:           timeSeriesFirstToProto(cpuSeries, 1),
-		MemoryGib:          timeSeriesFirstToProto(memSeries, 1.0/bytesPerGiB),
-		PodCount:           timeSeriesFirstToProto(podSeries, 1),
-		NetworkReceiveMbS:  timeSeriesFirstToProto(netRxSeries, 1.0/bytesPerMB),
-		NetworkTransmitMbS: timeSeriesFirstToProto(netTxSeries, 1.0/bytesPerMB),
+		CpuCores:           timeSeriesFirstToProto(sumTimeSeries(allCPU), 1),
+		MemoryGib:          timeSeriesFirstToProto(sumTimeSeries(allMem), 1.0/bytesPerGiB),
+		PodCount:           timeSeriesFirstToProto(sumTimeSeries(allPods), 1),
+		NetworkReceiveMbS:  timeSeriesFirstToProto(sumTimeSeries(allNetRx), 1.0/bytesPerMB),
+		NetworkTransmitMbS: timeSeriesFirstToProto(sumTimeSeries(allNetTx), 1.0/bytesPerMB),
 	}.Build()), nil
 }
 
@@ -367,6 +471,12 @@ func (s *Server) GetProjectWorkloadMetrics(
 		}.Build()), nil
 	}
 
+	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: namespaces[0].ClusterID})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
+	}
+
+	client := s.k8sClientForCluster(cluster.PrometheusURL)
 	nsFilter := buildNamespaceFilter(namespaceNames(namespaces))
 	now := time.Now()
 
@@ -385,7 +495,7 @@ func (s *Server) GetProjectWorkloadMetrics(
 
 	qi := func(dst *float64, label, query string) {
 		g.Go(func() error {
-			v, err := querySingleValue(gctx, s.k8sPromClient, query, now)
+			v, err := querySingleValue(gctx, client, query, now)
 			if err != nil {
 				return fmt.Errorf("%s: %w", label, err)
 			}
@@ -395,7 +505,7 @@ func (s *Server) GetProjectWorkloadMetrics(
 	}
 	qs := func(dst *[]prom.Sample, label, query string) {
 		g.Go(func() error {
-			samples, err := s.k8sPromClient.Query(gctx, query, now)
+			samples, err := client.Query(gctx, query, now)
 			if err != nil {
 				return fmt.Errorf("%s: %w", label, err)
 			}
@@ -454,6 +564,12 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 		return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{}.Build()), nil
 	}
 
+	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: namespaces[0].ClusterID})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
+	}
+
+	client := s.k8sClientForCluster(cluster.PrometheusURL)
 	nsFilter := buildNamespaceFilter(namespaceNames(namespaces))
 	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
 
@@ -466,7 +582,7 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 
 	qr := func(dst *[]prom.TimeSeries, label, query string) {
 		g.Go(func() error {
-			ts, err := s.k8sPromClient.QueryRange(gctx, query, start, end, step)
+			ts, err := client.QueryRange(gctx, query, start, end, step)
 			if err != nil {
 				return fmt.Errorf("%s: %w", label, err)
 			}
@@ -697,56 +813,6 @@ func buildNamespaceMetrics(
 	return result
 }
 
-// buildClusterSummaries combines per-cluster CPU/memory/pod samples into
-// ClusterWorkloadSummary messages. Requires a "cluster" label in Prometheus.
-func buildClusterSummaries(
-	cpuUsed, cpuTotal, memUsed, memTotal, podsUsed, podsTotal []prom.Sample,
-) []*organizationv1.ClusterWorkloadSummary {
-	type clusterData struct {
-		cpuUsed, cpuTotal   float64
-		memUsed, memTotal   float64
-		podsUsed, podsTotal float64
-	}
-	clusters := make(map[string]*clusterData)
-
-	ensureCluster := func(name string) *clusterData {
-		if clusters[name] == nil {
-			clusters[name] = &clusterData{}
-		}
-		return clusters[name]
-	}
-
-	for _, s := range cpuUsed {
-		ensureCluster(s.Labels["cluster"]).cpuUsed = s.Value
-	}
-	for _, s := range cpuTotal {
-		ensureCluster(s.Labels["cluster"]).cpuTotal = s.Value
-	}
-	for _, s := range memUsed {
-		ensureCluster(s.Labels["cluster"]).memUsed = s.Value
-	}
-	for _, s := range memTotal {
-		ensureCluster(s.Labels["cluster"]).memTotal = s.Value
-	}
-	for _, s := range podsUsed {
-		ensureCluster(s.Labels["cluster"]).podsUsed = s.Value
-	}
-	for _, s := range podsTotal {
-		ensureCluster(s.Labels["cluster"]).podsTotal = s.Value
-	}
-
-	result := make([]*organizationv1.ClusterWorkloadSummary, 0, len(clusters))
-	for name, d := range clusters {
-		result = append(result, organizationv1.ClusterWorkloadSummary_builder{
-			ClusterName: name,
-			Cpu:         makeResourceUsage(d.cpuUsed, d.cpuTotal, "cores"),
-			Memory:      makeResourceUsage(d.memUsed/bytesPerGiB, d.memTotal/bytesPerGiB, "GiB"),
-			Pods:        makeResourceUsage(d.podsUsed, d.podsTotal, "pods"),
-		}.Build())
-	}
-	return result
-}
-
 // timeSeriesFirstToProto converts the first TimeSeries result to proto MetricSample
 // messages, applying an optional scale factor (e.g. bytes→GiB).
 func timeSeriesFirstToProto(series []prom.TimeSeries, scale float64) []*organizationv1.MetricSample {
@@ -764,17 +830,57 @@ func timeSeriesFirstToProto(series []prom.TimeSeries, scale float64) []*organiza
 	return result
 }
 
+// mergeSamples merges per-cluster sample sets by summing values with the same
+// label value (e.g. namespace name) across clusters.
+func mergeSamples(allSamples [][]prom.Sample, labelKey string) []prom.Sample {
+	sums := make(map[string]float64)
+	for _, samples := range allSamples {
+		for _, s := range samples {
+			sums[s.Labels[labelKey]] += s.Value
+		}
+	}
+	result := make([]prom.Sample, 0, len(sums))
+	for name, val := range sums {
+		result = append(result, prom.Sample{
+			Labels: map[string]string{labelKey: name},
+			Value:  val,
+		})
+	}
+	return result
+}
+
+// sumTimeSeries sums multiple single-TimeSeries results (one per cluster) into
+// a single TimeSeries by adding values at matching timestamps.
+func sumTimeSeries(allSeries [][]prom.TimeSeries) []prom.TimeSeries {
+	sums := make(map[time.Time]float64)
+	for _, ts := range allSeries {
+		if len(ts) == 0 {
+			continue
+		}
+		for _, dp := range ts[0].Samples {
+			sums[dp.Time] += dp.Value
+		}
+	}
+	if len(sums) == 0 {
+		return nil
+	}
+	times := make([]time.Time, 0, len(sums))
+	for t := range sums {
+		times = append(times, t)
+	}
+	sort.Slice(times, func(i, j int) bool { return times[i].Before(times[j]) })
+	points := make([]prom.DataPoint, len(times))
+	for i, t := range times {
+		points[i] = prom.DataPoint{Time: t, Value: sums[t]}
+	}
+	return []prom.TimeSeries{{Labels: map[string]string{}, Samples: points}}
+}
+
 // promEscapeLabelValue escapes backslashes and double-quotes in a PromQL label value.
 func promEscapeLabelValue(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `"`, `\"`)
 	return s
-}
-
-// clusterFilter returns a PromQL label selector fragment for the given cluster name.
-// Assumes a "cluster" label is present in the Prometheus time-series.
-func clusterFilter(clusterName string) string {
-	return fmt.Sprintf(`cluster="%s"`, promEscapeLabelValue(clusterName))
 }
 
 // buildNamespaceFilter returns a PromQL label selector fragment that matches any

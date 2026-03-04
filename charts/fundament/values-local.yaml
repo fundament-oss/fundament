@@ -33,6 +33,7 @@ organizationApi:
   enabled: true
   replicas: 1
   logLevel: debug
+  prometheusMetalUrl: mock
 
 consoleFrontend:
   enabled: true
