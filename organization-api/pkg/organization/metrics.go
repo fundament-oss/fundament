@@ -26,12 +26,11 @@ const (
 )
 
 // k8sClientForCluster returns the appropriate Prometheus client for a cluster's
-// prometheus_url: empty → StubClient, "mock" → MockClient, otherwise HTTPClient.
+// prometheus_url: empty or "mock" → MockClient (if configured) or StubClient,
+// otherwise HTTPClient targeting the given URL.
 func (s *Server) k8sClientForCluster(prometheusURL string) prom.Client {
 	switch prometheusURL {
-	case "":
-		return prom.StubClient{}
-	case "mock":
+	case "", "mock":
 		if s.mockPromClient != nil {
 			return s.mockPromClient
 		}

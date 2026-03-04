@@ -113,10 +113,8 @@ function getMachineStateClass(state: string): string {
 
 function formatTimestamp(ts: Timestamp | undefined): string {
   if (!ts) return '';
-  return timestampDate(ts).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const d = timestampDate(ts);
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
 @Component({
@@ -233,9 +231,7 @@ export default class UsageComponent implements OnInit, AfterViewInit {
     }
   }
 
-  ngAfterViewInit(): void {
-    this.initializeCharts([], [], [], [], [], []);
-  }
+  ngAfterViewInit(): void {}
 
   get currentTotals(): ClusterUsageData | null {
     if (this.viewMode() === 'project') return this.projectTotals();
@@ -317,11 +313,11 @@ export default class UsageComponent implements OnInit, AfterViewInit {
       this.applyOrgWorkload(workload);
       this.applyTimeSeries(timeSeries);
       this.applyInfra(infra);
-      this.refreshCharts();
     } catch (err) {
       this.errorMessage.set(String(err));
     } finally {
       this.isLoading.set(false);
+      setTimeout(() => this.refreshCharts());
     }
   }
 
@@ -357,11 +353,11 @@ export default class UsageComponent implements OnInit, AfterViewInit {
       this.applyClusterWorkload(workload);
       this.applyTimeSeries(timeSeries);
       this.applyInfra(infra);
-      this.refreshCharts();
     } catch (err) {
       this.errorMessage.set(String(err));
     } finally {
       this.isLoading.set(false);
+      setTimeout(() => this.refreshCharts());
     }
   }
 
@@ -394,11 +390,11 @@ export default class UsageComponent implements OnInit, AfterViewInit {
 
       this.applyProjectWorkload(workload);
       this.applyTimeSeries(timeSeries);
-      this.refreshCharts();
     } catch (err) {
       this.errorMessage.set(String(err));
     } finally {
       this.isLoading.set(false);
+      setTimeout(() => this.refreshCharts());
     }
   }
 

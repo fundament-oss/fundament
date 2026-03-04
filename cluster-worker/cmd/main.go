@@ -94,8 +94,14 @@ func run() error {
 		return err
 	}
 
+	// In mock mode, set prometheus_url to "mock" so the organization-api serves mock metrics.
+	var prometheusURL string
+	if cfg.GardenerMode == "mock" {
+		prometheusURL = "mock"
+	}
+
 	// SyncWorker (syncs manifests to Gardener)
-	syncWorker := workersync.New(db.Pool, gardenerClient, logger, cfg.Sync)
+	syncWorker := workersync.New(db.Pool, gardenerClient, prometheusURL, logger, cfg.Sync)
 
 	// StatusWorker (monitors Gardener reconciliation)
 	statusWorker := workerstatus.New(db.Pool, gardenerClient, logger, cfg.Status)

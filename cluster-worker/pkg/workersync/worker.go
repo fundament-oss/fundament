@@ -22,12 +22,13 @@ import (
 
 // SyncWorker syncs cluster state from PostgreSQL to Gardener.
 type SyncWorker struct {
-	pool     *pgxpool.Pool
-	queries  *db.Queries
-	gardener gardener.Client
-	logger   *slog.Logger
-	cfg      Config
-	workerID string // Unique identifier for this worker instance (for debugging)
+	pool          *pgxpool.Pool
+	queries       *db.Queries
+	gardener      gardener.Client
+	logger        *slog.Logger
+	cfg           Config
+	workerID      string // Unique identifier for this worker instance (for debugging)
+	prometheusURL string // If non-empty, set on clusters after successful sync
 
 	ready atomic.Bool // For health checks
 }
@@ -46,18 +47,19 @@ const (
 	triggerTimeout
 )
 
-func New(pool *pgxpool.Pool, gardenerClient gardener.Client, logger *slog.Logger, cfg Config) *SyncWorker {
+func New(pool *pgxpool.Pool, gardenerClient gardener.Client, prometheusURL string, logger *slog.Logger, cfg Config) *SyncWorker {
 	// Generate a unique worker ID for debugging (hostname-pid)
 	hostname, _ := os.Hostname()
 	workerID := fmt.Sprintf("%s-%d", hostname, os.Getpid())
 
 	return &SyncWorker{
-		pool:     pool,
-		queries:  db.New(pool),
-		gardener: gardenerClient,
-		logger:   logger.With("worker_id", workerID),
-		cfg:      cfg,
-		workerID: workerID,
+		pool:          pool,
+		queries:       db.New(pool),
+		gardener:      gardenerClient,
+		logger:        logger.With("worker_id", workerID),
+		cfg:           cfg,
+		workerID:      workerID,
+		prometheusURL: prometheusURL,
 	}
 }
 
@@ -305,6 +307,15 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 	})
 	if err != nil {
 		return false, fmt.Errorf("mark synced: %w", err)
+	}
+
+	if syncAction != dbconst.ClusterEventSyncAction_Delete && w.prometheusURL != "" {
+		if err := w.queries.ClusterSetPrometheusUrl(ctx, db.ClusterSetPrometheusUrlParams{
+			ClusterID:     cluster.ID,
+			PrometheusUrl: w.prometheusURL,
+		}); err != nil {
+			w.logger.Warn("failed to set prometheus_url", "cluster_id", cluster.ID, "error", err)
+		}
 	}
 
 	// Create sync_succeeded event (Gardener accepted the manifest)
