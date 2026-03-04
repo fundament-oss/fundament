@@ -107,7 +107,7 @@
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Gardener status</dt>
             <dd class="mt-1">
               <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+                class="badge capitalize"
                 [class]="getSyncStatusColor(clusterData.syncState?.shootStatus)"
               >
                 {{ getSyncStatusLabel(clusterData.syncState) }}
