@@ -77,6 +77,7 @@ func TestMain(m *testing.M) {
 	adminPool := newAdminPool()
 	defer adminPool.Close()
 
+	useGlobalTrustAuth(dataDir, adminPool)
 	createRoles(adminPool)
 
 	err = setupTemplateDatabaseWithMigrations(adminPool)
@@ -286,6 +287,25 @@ func createRoles(pool *pgxpool.Pool) {
 		if err != nil {
 			log.Fatalf("failed to alter role %s: %v", role.name, err)
 		}
+	}
+}
+
+// The embedded-postgres library hardcodes `initdb -A password`, so `pg_hba.conf` requires                                                                                                   │
+// password auth for every connection. In this function we reconfigure PostgreSQL
+// to use 'trust', which means it will accept connections without any credential check.
+// By doing this, we don't have to set passwords and use the password when connecting.
+func useGlobalTrustAuth(dataDir string, pool *pgxpool.Pool) {
+	pgHBAPath := filepath.Join(dataDir, "pg_hba.conf")
+	content, err := os.ReadFile(pgHBAPath)
+	if err != nil {
+		log.Fatalf("failed to read pg_hba.conf: %v", err)
+	}
+	updated := strings.ReplaceAll(string(content), " password\n", " trust\n")
+	if err := os.WriteFile(pgHBAPath, []byte(updated), 0o600); err != nil {
+		log.Fatalf("failed to write pg_hba.conf: %v", err)
+	}
+	if _, err := pool.Exec(context.Background(), "SELECT pg_reload_conf()"); err != nil {
+		log.Fatalf("failed to reload pg_hba.conf: %v", err)
 	}
 }
 
