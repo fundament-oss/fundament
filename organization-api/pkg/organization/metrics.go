@@ -61,7 +61,7 @@ func (s *Server) GetClusterWorkloadMetrics(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.k8sClientForCluster(cluster.PrometheusURL)
+	client := s.k8sClientForCluster(cluster.PrometheusUrl)
 	now := time.Now()
 
 	var (
@@ -161,7 +161,7 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.k8sClientForCluster(cluster.PrometheusURL)
+	client := s.k8sClientForCluster(cluster.PrometheusUrl)
 	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
 
 	var (
@@ -236,10 +236,10 @@ func (s *Server) GetOrgWorkloadMetrics(
 	now := time.Now()
 
 	type clusterResult struct {
-		name                string
-		cpuUsed, cpuTotal   float64
-		memUsed, memTotal   float64
-		podsUsed, podsTotal float64
+		name                 string
+		cpuUsed, cpuTotal    float64
+		memUsed, memTotal    float64
+		podsUsed, podsTotal  float64
 		nsCPU, nsMem, nsPods []prom.Sample
 		nsCPUReq, nsCPULim   []prom.Sample
 		nsMemReq, nsMemLim   []prom.Sample
@@ -252,7 +252,7 @@ func (s *Server) GetOrgWorkloadMetrics(
 	for i, cl := range clusters {
 		i, cl := i, cl
 		g.Go(func() error {
-			client := s.k8sClientForCluster(cl.PrometheusURL)
+			client := s.k8sClientForCluster(cl.PrometheusUrl)
 			r := &results[i]
 			r.name = cl.Name
 
@@ -387,7 +387,7 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 	for i, cl := range clusters {
 		i, cl := i, cl
 		g.Go(func() error {
-			client := s.k8sClientForCluster(cl.PrometheusURL)
+			client := s.k8sClientForCluster(cl.PrometheusUrl)
 			r := &results[i]
 
 			sub, subCtx := errgroup.WithContext(gctx)
@@ -476,7 +476,7 @@ func (s *Server) GetProjectWorkloadMetrics(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.k8sClientForCluster(cluster.PrometheusURL)
+	client := s.k8sClientForCluster(cluster.PrometheusUrl)
 	nsFilter := buildNamespaceFilter(namespaceNames(namespaces))
 	now := time.Now()
 
@@ -569,7 +569,7 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.k8sClientForCluster(cluster.PrometheusURL)
+	client := s.k8sClientForCluster(cluster.PrometheusUrl)
 	nsFilter := buildNamespaceFilter(namespaceNames(namespaces))
 	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
 

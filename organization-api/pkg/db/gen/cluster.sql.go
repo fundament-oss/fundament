@@ -107,7 +107,7 @@ type ClusterGetByIDRow struct {
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
-	PrometheusURL      string
+	PrometheusUrl      string
 }
 
 // Get cluster by ID, including deleted clusters for direct access.
@@ -128,7 +128,7 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
-		&i.PrometheusURL,
+		&i.PrometheusUrl,
 	)
 	return i, err
 }
@@ -159,7 +159,7 @@ type ClusterGetByNameRow struct {
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
-	PrometheusURL      string
+	PrometheusUrl      string
 }
 
 func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (ClusterGetByNameRow, error) {
@@ -179,7 +179,7 @@ func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNamePara
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
-		&i.PrometheusURL,
+		&i.PrometheusUrl,
 	)
 	return i, err
 }
@@ -249,7 +249,7 @@ type ClusterListRow struct {
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
-	PrometheusURL      string
+	PrometheusUrl      string
 }
 
 // List active clusters and clusters being deleted (not yet confirmed deleted in Gardener).
@@ -277,7 +277,7 @@ func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
 			&i.ShootStatus,
 			&i.ShootStatusMessage,
 			&i.ShootStatusUpdated,
-			&i.PrometheusURL,
+			&i.PrometheusUrl,
 		); err != nil {
 			return nil, err
 		}

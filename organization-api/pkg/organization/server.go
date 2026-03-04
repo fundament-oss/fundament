@@ -21,11 +21,11 @@ import (
 )
 
 type Config struct {
-	JWTSecret              []byte
-	CORSAllowedOrigins     []string
-	Clock                  clock.Clock
-	MockPrometheusClient   *prom.MockClient
-	MetalPrometheusClient  prom.Client
+	JWTSecret             []byte
+	CORSAllowedOrigins    []string
+	Clock                 clock.Clock
+	MockPrometheusClient  *prom.MockClient
+	MetalPrometheusClient prom.Client
 }
 
 type Server struct {
