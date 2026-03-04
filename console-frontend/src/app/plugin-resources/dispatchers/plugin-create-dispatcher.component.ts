@@ -6,7 +6,9 @@ import {
   ChangeDetectionStrategy,
   inject,
   signal,
+  DestroyRef,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import PluginRegistryService from '../plugin-registry.service';
 import PluginComponentRegistryService from '../plugin-component-registry.service';
@@ -31,29 +33,35 @@ export default class PluginCreateDispatcherComponent implements AfterViewInit {
 
   private componentRegistry = inject(PluginComponentRegistryService);
 
+  private destroyRef = inject(DestroyRef);
+
   loading = signal(true);
 
-  async ngAfterViewInit(): Promise<void> {
-    const params = this.route.snapshot.paramMap;
-    const pluginName = params.get('pluginName') ?? '';
-    const resourceKind = params.get('resourceKind') ?? '';
+  ngAfterViewInit(): void {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(async (params) => {
+      const pluginName = params.get('pluginName') ?? '';
+      const resourceKind = params.get('resourceKind') ?? '';
 
-    const plugin = this.pluginRegistry.getPlugin(pluginName);
-    const crd = this.pluginRegistry.getCrdByPlural(pluginName, resourceKind);
-    const customName = crd ? plugin?.customComponents?.[crd.kind]?.create : undefined;
+      this.outlet.clear();
+      this.loading.set(true);
 
-    if (customName && this.componentRegistry.hasComponent(customName)) {
-      const type = await this.componentRegistry.load(customName);
-      if (type) {
-        this.outlet.createComponent(type);
-        this.loading.set(false);
-        return;
+      const plugin = this.pluginRegistry.getPlugin(pluginName);
+      const crd = this.pluginRegistry.getCrdByPlural(pluginName, resourceKind);
+      const customName = crd ? plugin?.customComponents?.[crd.kind]?.create : undefined;
+
+      if (customName && this.componentRegistry.hasComponent(customName)) {
+        const type = await this.componentRegistry.load(customName);
+        if (type) {
+          this.outlet.createComponent(type);
+          this.loading.set(false);
+          return;
+        }
       }
-    }
 
-    const { default: DefaultComponent } =
-      await import('../resource-create/resource-create.component');
-    this.outlet.createComponent(DefaultComponent);
-    this.loading.set(false);
+      const { default: DefaultComponent } =
+        await import('../resource-create/resource-create.component');
+      this.outlet.createComponent(DefaultComponent);
+      this.loading.set(false);
+    });
   }
 }
