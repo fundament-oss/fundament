@@ -153,10 +153,21 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	member := inviteResp.Msg.GetMember()
-	plan.ID = types.StringValue(member.GetId())
+	invitationID := inviteResp.Msg.GetInvitationId()
+	plan.ID = types.StringValue(invitationID)
+
+	member, err := r.findMemberByID(ctx, invitationID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Read Invited Member",
+			fmt.Sprintf("Member was invited but could not be read: %s", err.Error()),
+		)
+		return
+	}
+
 	plan.UserID = types.StringValue(member.GetUserId())
 	plan.Name = types.StringValue(member.GetName())
+	plan.Permission = types.StringValue(member.GetPermission())
 
 	if member.HasExternalRef() {
 		plan.ExternalID = types.StringValue(member.GetExternalRef())
@@ -169,8 +180,6 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 	} else {
 		plan.Email = types.StringNull()
 	}
-
-	plan.Permission = types.StringValue(member.GetPermission())
 
 	if member.GetCreated().CheckValid() == nil {
 		plan.Created = types.StringValue(member.GetCreated().String())
