@@ -211,6 +211,9 @@ export class OrganizationDataService {
     this.organizations.update((orgs) =>
       orgs.map((org) => (org.id === organizationId ? { ...org, displayName } : org)),
     );
+    this.userOrganizations.update((orgs) =>
+      orgs.map((org) => (org.id === organizationId ? { ...org, displayName } : org)),
+    );
   }
 
   /**
