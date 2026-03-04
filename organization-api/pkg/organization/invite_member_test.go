@@ -20,10 +20,10 @@ func Test_InviteMember_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.InviteMember(context.Background(), connect.NewRequest(&organizationv1.InviteMemberRequest{
+	_, err := client.InviteMember(context.Background(), connect.NewRequest(organizationv1.InviteMemberRequest_builder{
 		Email:      "arbitrary",
 		Permission: "arbitrary",
-	}))
+	}.Build()))
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -49,10 +49,10 @@ func Test_InviteMember_NewUser(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(&organizationv1.InviteMemberRequest{
+	req := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
 		Email:      "foo@bar.baz",
 		Permission: "viewer",
-	})
+	}.Build())
 	req.Header().Set("Authorization", "Bearer "+token)
 	req.Header().Set("Fun-Organization", orgID.String())
 
@@ -60,7 +60,7 @@ func Test_InviteMember_NewUser(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotNil(t, res.Msg)
-	assert.NotEqual(t, "", res.Msg.InvitationId)
+	assert.NotEqual(t, "", res.Msg.GetInvitationId())
 }
 
 func Test_InviteMember_ExistingUser(t *testing.T) {
@@ -93,18 +93,18 @@ func Test_InviteMember_ExistingUser(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(&organizationv1.InviteMemberRequest{
+	req := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
 		Email:      "foo@bar.baz",
 		Permission: "viewer",
-	})
+	}.Build())
 	req.Header().Set("Authorization", "Bearer "+token)
 	req.Header().Set("Fun-Organization", orgAID.String())
 
 	res, err := client.InviteMember(context.Background(), req)
 	require.NoError(t, err)
 
-	require.NotNil(t, res.Msg.InvitationId)
-	assert.NotEqual(t, "", res.Msg.InvitationId)
+	require.NotNil(t, res.Msg.GetInvitationId())
+	assert.NotEqual(t, "", res.Msg.GetInvitationId())
 }
 
 func Test_InviteMember_ExistingUser_AlreadyMember(t *testing.T) {
@@ -137,10 +137,10 @@ func Test_InviteMember_ExistingUser_AlreadyMember(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(&organizationv1.InviteMemberRequest{
+	req := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
 		Email:      "foo@bar.baz",
 		Permission: "viewer",
-	})
+	}.Build())
 	req.Header().Set("Authorization", "Bearer "+token)
 	req.Header().Set("Fun-Organization", orgAID.String())
 

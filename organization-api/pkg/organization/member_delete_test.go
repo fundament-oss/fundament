@@ -19,9 +19,9 @@ func Test_MemberDelete_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.DeleteMember(context.Background(), connect.NewRequest(&organizationv1.DeleteMemberRequest{
+	_, err := client.DeleteMember(context.Background(), connect.NewRequest(organizationv1.DeleteMemberRequest_builder{
 		Id: "arbitrary",
-	}))
+	}.Build()))
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -62,9 +62,9 @@ func Test_MemberDelete(t *testing.T) {
 	require.NoError(t, err)
 
 	var targetMemberID string
-	for _, m := range listRes.Msg.Members {
-		if m.UserId == targetUserID.String() {
-			targetMemberID = m.Id
+	for _, m := range listRes.Msg.GetMembers() {
+		if m.GetUserId() == targetUserID.String() {
+			targetMemberID = m.GetId()
 			break
 		}
 	}
@@ -76,16 +76,16 @@ func Test_MemberDelete(t *testing.T) {
 		WantErr  bool
 	}{
 		"not_found": {
-			Request: &organizationv1.DeleteMemberRequest{
+			Request: organizationv1.DeleteMemberRequest_builder{
 				Id: uuid.New().String(),
-			},
+			}.Build(),
 			WantCode: connect.CodeNotFound,
 			WantErr:  true,
 		},
 		"happy_flow": {
-			Request: &organizationv1.DeleteMemberRequest{
+			Request: organizationv1.DeleteMemberRequest_builder{
 				Id: targetMemberID,
-			},
+			}.Build(),
 		},
 	}
 
@@ -109,9 +109,9 @@ func Test_MemberDelete(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, "", res.Msg.String())
 
-			getReq := connect.NewRequest(&organizationv1.GetMemberRequest{
-				Lookup: &organizationv1.GetMemberRequest_UserId{UserId: targetUserID.String()},
-			})
+			getReq := connect.NewRequest(organizationv1.GetMemberRequest_builder{
+				UserId: new(targetUserID.String()),
+			}.Build())
 			getReq.Header().Set("Authorization", "Bearer "+token)
 			getReq.Header().Set("Fun-Organization", orgID.String())
 

@@ -98,11 +98,10 @@ func (b0 InviteMemberRequest_builder) Build() *InviteMemberRequest {
 
 // Invite member response
 type InviteMemberResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	InvitationId  string                 `protobuf:"bytes,10,opt,name=invitation_id,json=invitationId,proto3" json:"invitation_id,omitempty"`
-	xxx_hidden_Member *Member                `protobuf:"bytes,10,opt,name=member"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_InvitationId string                 `protobuf:"bytes,10,opt,name=invitation_id,json=invitationId"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *InviteMemberResponse) Reset() {
@@ -132,37 +131,26 @@ func (x *InviteMemberResponse) ProtoReflect() protoreflect.Message {
 
 func (x *InviteMemberResponse) GetInvitationId() string {
 	if x != nil {
-		return x.InvitationId
+		return x.xxx_hidden_InvitationId
 	}
 	return ""
 }
 
-func (x *InviteMemberResponse) SetMember(v *Member) {
-	x.xxx_hidden_Member = v
-}
-
-func (x *InviteMemberResponse) HasMember() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Member != nil
-}
-
-func (x *InviteMemberResponse) ClearMember() {
-	x.xxx_hidden_Member = nil
+func (x *InviteMemberResponse) SetInvitationId(v string) {
+	x.xxx_hidden_InvitationId = v
 }
 
 type InviteMemberResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Member *Member
+	InvitationId string
 }
 
 func (b0 InviteMemberResponse_builder) Build() *InviteMemberResponse {
 	m0 := &InviteMemberResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Member = b.Member
+	x.xxx_hidden_InvitationId = b.InvitationId
 	return m0
 }
 

@@ -19,9 +19,9 @@ func Test_AcceptInvitation_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.AcceptInvitation(context.Background(), connect.NewRequest(&organizationv1.AcceptInvitationRequest{
+	_, err := client.AcceptInvitation(context.Background(), connect.NewRequest(organizationv1.AcceptInvitationRequest_builder{
 		Id: "arbitrary",
-	}))
+	}.Build()))
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -47,9 +47,9 @@ func Test_AcceptInvitation_DoesNotExist(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(&organizationv1.AcceptInvitationRequest{
+	req := connect.NewRequest(organizationv1.AcceptInvitationRequest_builder{
 		Id: uuid.New().String(),
-	})
+	}.Build())
 	req.Header().Set("Authorization", "Bearer "+token)
 	req.Header().Set("Fun-Organization", orgID.String())
 
@@ -85,10 +85,10 @@ func Test_AcceptInvitation_HappyFlow(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(&organizationv1.InviteMemberRequest{
+	req := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
 		Email:      "foo@bar.baz",
 		Permission: "viewer",
-	})
+	}.Build())
 	req.Header().Set("Authorization", "Bearer "+token)
 	req.Header().Set("Fun-Organization", orgID.String())
 
@@ -105,11 +105,11 @@ func Test_AcceptInvitation_HappyFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotNil(t, invitationsRes)
-	require.Len(t, invitationsRes.Msg.Invitations, 1)
+	require.Len(t, invitationsRes.Msg.GetInvitations(), 1)
 
-	acceptInvitationReq := connect.NewRequest(&organizationv1.AcceptInvitationRequest{
-		Id: invitationsRes.Msg.Invitations[0].Id,
-	})
+	acceptInvitationReq := connect.NewRequest(organizationv1.AcceptInvitationRequest_builder{
+		Id: invitationsRes.Msg.GetInvitations()[0].GetId(),
+	}.Build())
 	acceptInvitationReq.Header().Set("Authorization", "Bearer "+userToInviteToken)
 	acceptInvitationReq.Header().Set("Fun-Organization", orgID.String())
 
@@ -121,5 +121,5 @@ func Test_AcceptInvitation_HappyFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotNil(t, invitationsRes)
-	require.Len(t, invitationsRes.Msg.Invitations, 0)
+	require.Len(t, invitationsRes.Msg.GetInvitations(), 0)
 }

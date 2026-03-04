@@ -19,9 +19,9 @@ func Test_DeclineInvitation_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.DeclineInvitation(context.Background(), connect.NewRequest(&organizationv1.DeclineInvitationRequest{
+	_, err := client.DeclineInvitation(context.Background(), connect.NewRequest(organizationv1.DeclineInvitationRequest_builder{
 		Id: "arbitrary",
-	}))
+	}.Build()))
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -47,9 +47,9 @@ func Test_DeclineInvitation_DoesNotExist(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(&organizationv1.DeclineInvitationRequest{
+	req := connect.NewRequest(organizationv1.DeclineInvitationRequest_builder{
 		Id: uuid.New().String(),
-	})
+	}.Build())
 	req.Header().Set("Authorization", "Bearer "+token)
 	req.Header().Set("Fun-Organization", orgID.String())
 
@@ -85,10 +85,10 @@ func Test_DeclineInvitation_HappyFlow(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(&organizationv1.InviteMemberRequest{
+	req := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
 		Email:      "foo@bar.baz",
 		Permission: "viewer",
-	})
+	}.Build())
 	req.Header().Set("Authorization", "Bearer "+token)
 	req.Header().Set("Fun-Organization", orgID.String())
 
@@ -105,11 +105,11 @@ func Test_DeclineInvitation_HappyFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotNil(t, invitationsRes)
-	require.Len(t, invitationsRes.Msg.Invitations, 1)
+	require.Len(t, invitationsRes.Msg.GetInvitations(), 1)
 
-	declineInvitationReq := connect.NewRequest(&organizationv1.DeclineInvitationRequest{
-		Id: invitationsRes.Msg.Invitations[0].Id,
-	})
+	declineInvitationReq := connect.NewRequest(organizationv1.DeclineInvitationRequest_builder{
+		Id: invitationsRes.Msg.GetInvitations()[0].GetId(),
+	}.Build())
 	declineInvitationReq.Header().Set("Authorization", "Bearer "+userToInviteToken)
 	declineInvitationReq.Header().Set("Fun-Organization", orgID.String())
 
@@ -121,5 +121,5 @@ func Test_DeclineInvitation_HappyFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotNil(t, invitationsRes)
-	require.Len(t, invitationsRes.Msg.Invitations, 0)
+	require.Len(t, invitationsRes.Msg.GetInvitations(), 0)
 }

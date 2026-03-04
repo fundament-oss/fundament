@@ -67,5 +67,5 @@ func Test_Member_List(t *testing.T) {
 	listRes, err := client.ListMembers(context.Background(), listReq)
 	require.NoError(t, err)
 
-	require.Len(t, listRes.Msg.Members, 3)
+	require.Len(t, listRes.Msg.GetMembers(), 3)
 }

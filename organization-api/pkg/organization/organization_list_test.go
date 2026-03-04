@@ -55,5 +55,5 @@ func Test_Organization_List(t *testing.T) {
 	listRes, err := client.ListOrganizations(context.Background(), listReq)
 	require.NoError(t, err)
 
-	require.Len(t, listRes.Msg.Organizations, 2)
+	require.Len(t, listRes.Msg.GetOrganizations(), 2)
 }

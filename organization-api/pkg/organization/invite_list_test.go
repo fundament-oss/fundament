@@ -50,10 +50,10 @@ func Test_ListInvitations_HappyFlow(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(&organizationv1.InviteMemberRequest{
+	req := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
 		Email:      "foo@bar.baz",
 		Permission: "viewer",
-	})
+	}.Build())
 	req.Header().Set("Authorization", "Bearer "+token)
 	req.Header().Set("Fun-Organization", orgID.String())
 
@@ -70,9 +70,9 @@ func Test_ListInvitations_HappyFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotNil(t, invitationsRes)
-	require.Len(t, invitationsRes.Msg.Invitations, 1)
-	require.NotNil(t, invitationsRes.Msg.Invitations[0].Created.AsTime())
-	require.Equal(t, "viewer", invitationsRes.Msg.Invitations[0].Permission)
-	require.Equal(t, orgID.String(), invitationsRes.Msg.Invitations[0].OrganizationId)
-	require.Equal(t, "test-org", invitationsRes.Msg.Invitations[0].OrganizationName)
+	require.Len(t, invitationsRes.Msg.GetInvitations(), 1)
+	require.NotNil(t, invitationsRes.Msg.GetInvitations()[0].GetCreated().AsTime())
+	require.Equal(t, "viewer", invitationsRes.Msg.GetInvitations()[0].GetPermission())
+	require.Equal(t, orgID.String(), invitationsRes.Msg.GetInvitations()[0].GetOrganizationId())
+	require.Equal(t, "test-org", invitationsRes.Msg.GetInvitations()[0].GetOrganizationDisplayName())
 }
