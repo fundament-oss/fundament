@@ -146,8 +146,16 @@ func mockNodeMachineID(clusterID, poolName string, index int) string {
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", h[0:4], h[4:6], h[6:8], h[8:10], h[10:16])
 }
 
+// mockSinFactor returns a high-amplitude factor (0.10–0.90) with a 2-day period.
+// Used for CPU, memory, and network to produce visible swings over a 7-day window.
 func mockSinFactor(t time.Time) float64 {
-	return 0.35 + 0.15*math.Sin(2*math.Pi*float64(t.Unix())/3600)
+	return 0.5 + 0.4*math.Sin(2*math.Pi*float64(t.Unix())/172800)
+}
+
+// mockPodSinFactor returns a low-amplitude factor (0.32–0.38) with a 2-day period.
+// Pod counts are relatively stable, so only a small variation is applied.
+func mockPodSinFactor(t time.Time) float64 {
+	return 0.35 + 0.03*math.Sin(2*math.Pi*float64(t.Unix())/172800)
 }
 
 // mockGenerate produces Prometheus samples for the given PromQL query at time t.
@@ -340,7 +348,7 @@ func mockMemCapacity(clusters []ClusterInfo, byNode, byCluster bool) []Sample {
 }
 
 func mockPodCount(clusters []ClusterInfo, t time.Time, byNode, byNamespace, byCluster bool, nsFilter []string) []Sample {
-	podsPerNode := math.Round(10 + 10*mockSinFactor(t))
+	podsPerNode := math.Round(10 + 10*mockPodSinFactor(t))
 	switch {
 	case byNode:
 		var result []Sample

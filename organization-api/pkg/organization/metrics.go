@@ -910,7 +910,7 @@ func resolveTimeRange(hasStart bool, start time.Time, hasEnd bool, end time.Time
 	if !hasStart {
 		start = end.Add(-7 * 24 * time.Hour)
 	}
-	step := 5 * time.Minute
+	step := end.Sub(start) / 9
 	if stepSeconds > 0 {
 		step = time.Duration(stepSeconds) * time.Second
 	}

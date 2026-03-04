@@ -1,7 +1,6 @@
 import {
   Component,
   inject,
-  AfterViewInit,
   OnInit,
   ElementRef,
   ViewChild,
@@ -128,7 +127,7 @@ function formatTimestamp(ts: Timestamp | undefined): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './usage.component.html',
 })
-export default class UsageComponent implements OnInit, AfterViewInit {
+export default class UsageComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);
@@ -230,8 +229,6 @@ export default class UsageComponent implements OnInit, AfterViewInit {
       this.loadOrgMetrics();
     }
   }
-
-  ngAfterViewInit(): void {}
 
   get currentTotals(): ClusterUsageData | null {
     if (this.viewMode() === 'project') return this.projectTotals();
@@ -400,7 +397,7 @@ export default class UsageComponent implements OnInit, AfterViewInit {
 
   // -- Response mappers --
 
-  private mapNamespaceUsage(namespaces: NamespaceWorkloadMetrics[]): NamespaceUsageData[] {
+  private static mapNamespaceUsage(namespaces: NamespaceWorkloadMetrics[]): NamespaceUsageData[] {
     return namespaces.map((n) => ({
       name: n.namespace,
       cpu: n.cpuCores,
@@ -446,7 +443,7 @@ export default class UsageComponent implements OnInit, AfterViewInit {
         };
       }),
     );
-    this.namespaceUsage.set(this.mapNamespaceUsage(r.namespaces));
+    this.namespaceUsage.set(UsageComponent.mapNamespaceUsage(r.namespaces));
   }
 
   private applyClusterWorkload(r: GetClusterWorkloadMetricsResponse): void {
@@ -476,7 +473,7 @@ export default class UsageComponent implements OnInit, AfterViewInit {
         pods: { used: n.pods?.used ?? 0, total: n.pods?.total ?? 0 },
       })),
     );
-    this.namespaceUsage.set(this.mapNamespaceUsage(r.namespaces));
+    this.namespaceUsage.set(UsageComponent.mapNamespaceUsage(r.namespaces));
   }
 
   private applyProjectWorkload(r: GetProjectWorkloadMetricsResponse): void {
@@ -498,7 +495,7 @@ export default class UsageComponent implements OnInit, AfterViewInit {
           }
         : null,
     );
-    this.namespaceUsage.set(this.mapNamespaceUsage(r.namespaces));
+    this.namespaceUsage.set(UsageComponent.mapNamespaceUsage(r.namespaces));
   }
 
   private applyTimeSeries(r: GetWorkloadTimeSeriesResponse): void {
