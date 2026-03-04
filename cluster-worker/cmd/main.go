@@ -15,9 +15,9 @@ import (
 	"github.com/caarlos0/env/v11"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/gardener"
-	worker_status "github.com/fundament-oss/fundament/cluster-worker/pkg/worker-status"
-	worker_sync "github.com/fundament-oss/fundament/cluster-worker/pkg/worker-sync"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/workerstatus"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/workersync"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )
 
@@ -30,8 +30,8 @@ type config struct {
 	ShutdownTimeout    time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 
 	// Worker configs (env tags defined in worker package)
-	Sync   worker_sync.Config   `envPrefix:"SYNC_"`
-	Status worker_status.Config `envPrefix:"STATUS_"`
+	Sync   workersync.Config   `envPrefix:"SYNC_"`
+	Status workerstatus.Config `envPrefix:"STATUS_"`
 
 	// Provider configuration for real Gardener mode.
 	// These configure how Shoots are created in Gardener and depend on the target infrastructure.
@@ -48,6 +48,16 @@ type config struct {
 	// cloud provider credentials (e.g., AWS access keys, GCP service account).
 	// Not needed for local provider. Required for real cloud providers.
 	ProviderCredentialsBindingName string `env:"GARDENER_CREDENTIALS_BINDING_NAME"`
+
+	// ProviderMachineImageName is the OS image for worker nodes (e.g., "local", "gardenlinux").
+	ProviderMachineImageName string `env:"GARDENER_MACHINE_IMAGE_NAME"`
+
+	// ProviderMachineImageVersion is the version of the OS image (e.g., "1.0.0", "1592.2.0").
+	ProviderMachineImageVersion string `env:"GARDENER_MACHINE_IMAGE_VERSION"`
+
+	// ProviderDefaultMachineType is the fallback machine type when a cluster has no node pools
+	// (e.g., "local", "n1-standard-4").
+	ProviderDefaultMachineType string `env:"GARDENER_DEFAULT_MACHINE_TYPE"`
 }
 
 func main() {
@@ -85,10 +95,10 @@ func run() error {
 	}
 
 	// SyncWorker (syncs manifests to Gardener)
-	syncWorker := worker_sync.New(db.Pool, gardenerClient, logger, cfg.Sync)
+	syncWorker := workersync.New(db.Pool, gardenerClient, logger, cfg.Sync)
 
 	// StatusWorker (monitors Gardener reconciliation)
-	statusWorker := worker_status.New(db.Pool, gardenerClient, logger, cfg.Status)
+	statusWorker := workerstatus.New(db.Pool, gardenerClient, logger, cfg.Status)
 
 	// Health check server
 	healthServer := startHealthServer(&cfg, syncWorker, logger)
@@ -148,6 +158,15 @@ func createGardenerClient(cfg *config, logger *slog.Logger) (gardener.Client, er
 		if cfg.ProviderCredentialsBindingName != "" {
 			providerCfg.CredentialsBindingName = cfg.ProviderCredentialsBindingName
 		}
+		if cfg.ProviderMachineImageName != "" {
+			providerCfg.MachineImageName = cfg.ProviderMachineImageName
+		}
+		if cfg.ProviderMachineImageVersion != "" {
+			providerCfg.MachineImageVersion = cfg.ProviderMachineImageVersion
+		}
+		if cfg.ProviderDefaultMachineType != "" {
+			providerCfg.DefaultMachineType = cfg.ProviderDefaultMachineType
+		}
 
 		logger.Info("using real Gardener client",
 			"kubeconfig", cfg.GardenerKubeconfig,
@@ -164,7 +183,7 @@ func createGardenerClient(cfg *config, logger *slog.Logger) (gardener.Client, er
 	}
 }
 
-func startHealthServer(cfg *config, w *worker_sync.SyncWorker, logger *slog.Logger) *http.Server {
+func startHealthServer(cfg *config, w *workersync.SyncWorker, logger *slog.Logger) *http.Server {
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/healthz", func(resp http.ResponseWriter, _ *http.Request) {
 		resp.WriteHeader(http.StatusOK)

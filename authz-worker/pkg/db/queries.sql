@@ -49,6 +49,11 @@ SET status = 'failed',
     status_info = @status_info
 WHERE id = @id;
 
+-- name: ResetFailedOutboxItems :exec
+UPDATE authz.outbox
+SET status = 'pending', retries = 0, retry_after = NULL
+WHERE status = 'failed';
+
 -- name: GetOrganizationUserByID :one
 SELECT id, organization_id, user_id, permission, status, deleted
 FROM tenant.organizations_users

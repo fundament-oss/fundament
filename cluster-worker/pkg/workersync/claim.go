@@ -1,4 +1,4 @@
-package worker_sync
+package workersync
 
 import (
 	"context"

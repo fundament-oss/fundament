@@ -26,7 +26,6 @@ type FundamentProvider struct {
 // FundamentProviderModel describes the provider data model.
 type FundamentProviderModel struct {
 	Endpoint       types.String `tfsdk:"endpoint"`
-	Token          types.String `tfsdk:"token"`
 	ApiKey         types.String `tfsdk:"api_key"`
 	AuthnEndpoint  types.String `tfsdk:"authn_endpoint"`
 	OrganizationID types.String `tfsdk:"organization_id"`
@@ -35,7 +34,6 @@ type FundamentProviderModel struct {
 // FundamentEnvConfig describes the environment variable configuration.
 type FundamentEnvConfig struct {
 	Endpoint       string `env:"FUNDAMENT_ENDPOINT"`
-	Token          string `env:"FUNDAMENT_TOKEN"`
 	ApiKey         string `env:"FUNDAMENT_API_KEY"`
 	AuthnEndpoint  string `env:"FUNDAMENT_AUTHN_ENDPOINT"`
 	OrganizationID string `env:"FUNDAMENT_ORGANIZATION_ID"`
@@ -68,16 +66,8 @@ func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaReque
 					httpURLValidator{},
 				},
 			},
-			"token": schema.StringAttribute{
-				Description: "The JWT token for authenticating with the Fundament API. Can also be set via the FUNDAMENT_TOKEN environment variable. Mutually exclusive with api_key.",
-				Optional:    true,
-				Sensitive:   true,
-				Validators: []validator.String{
-					jwtValidator{},
-				},
-			},
 			"api_key": schema.StringAttribute{
-				Description: "API key for authenticating with the Fundament API. Can also be set via the FUNDAMENT_API_KEY environment variable. Mutually exclusive with token.",
+				Description: "API key for authenticating with the Fundament API. Can also be set via the FUNDAMENT_API_KEY environment variable.",
 				Optional:    true,
 				Sensitive:   true,
 				Validators: []validator.String{
@@ -136,12 +126,6 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	// Get authentication credentials: config takes precedence over environment variable
-	token := config.Token.ValueString()
-	if token == "" {
-		token = envConfig.Token
-	}
-
 	apiKey := config.ApiKey.ValueString()
 	if apiKey == "" {
 		apiKey = envConfig.ApiKey
@@ -167,56 +151,39 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	// Validate mutual exclusivity of token and api_key
-	if token != "" && apiKey != "" {
-		resp.Diagnostics.AddError(
-			"Invalid Authentication Configuration",
-			"Both 'token' and 'api_key' are provided. Please provide only one authentication method.",
-		)
-		return
-	}
-
-	if token == "" && apiKey == "" {
+	if apiKey == "" {
 		resp.Diagnostics.AddError(
 			"Missing Authentication",
-			"Either 'token' (FUNDAMENT_TOKEN) or 'api_key' (FUNDAMENT_API_KEY) must be provided.",
+			"The 'api_key' (FUNDAMENT_API_KEY) must be provided.",
 		)
 		return
 	}
 
 	var client *FundamentClient
 
-	if apiKey != "" {
-		// API key authentication - derive authn_endpoint if not provided
-		if authnEndpoint == "" {
-			authnEndpoint = deriveAuthnEndpoint(endpoint)
-		}
-
-		tflog.Debug(ctx, "Using API key authentication", map[string]any{
-			"endpoint":       endpoint,
-			"authn_endpoint": authnEndpoint,
-		})
-
-		tm := NewTokenManager(apiKey, authnEndpoint)
-
-		// Validate API key by doing initial token exchange
-		_, err := tm.GetToken(ctx)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"API Key Authentication Failed",
-				"Failed to exchange API key for token: "+err.Error(),
-			)
-			return
-		}
-
-		client = NewFundamentClientWithTokenManager(endpoint, tm, organizationID)
-	} else {
-		// Direct token authentication
-		tflog.Debug(ctx, "Using token authentication", map[string]any{
-			"endpoint": endpoint,
-		})
-		client = NewFundamentClient(endpoint, token, organizationID)
+	// Derive authn_endpoint if not provided
+	if authnEndpoint == "" {
+		authnEndpoint = deriveAuthnEndpoint(endpoint)
 	}
+
+	tflog.Debug(ctx, "Using API key authentication", map[string]any{
+		"endpoint":       endpoint,
+		"authn_endpoint": authnEndpoint,
+	})
+
+	tm := NewTokenManager(apiKey, authnEndpoint)
+
+	// Validate API key by doing initial token exchange
+	_, err = tm.GetToken(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"API Key Authentication Failed",
+			"Failed to exchange API key for token: "+err.Error(),
+		)
+		return
+	}
+
+	client = NewFundamentClientWithTokenManager(endpoint, tm, organizationID)
 
 	tflog.Info(ctx, "Fundament provider configured successfully")
 

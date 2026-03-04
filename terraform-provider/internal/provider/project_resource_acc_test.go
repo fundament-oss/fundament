@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -16,13 +17,22 @@ func TestAccProjectResource_basic(t *testing.T) {
 	}
 
 	// Ensure required environment variables are set
-	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
-		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
-	}
-	if os.Getenv("FUNDAMENT_TOKEN") == "" {
-		t.Fatal("FUNDAMENT_TOKEN must be set for acceptance tests")
+	if os.Getenv("FUNDAMENT_API_KEY") == "" {
+		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
 	}
 
+	endpoint := os.Getenv("FUNDAMENT_ENDPOINT")
+	if endpoint == "" {
+		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
+	}
+
+	organizationID := os.Getenv("FUNDAMENT_ORGANIZATION_ID")
+	if organizationID == "" {
+		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
+	}
+
+	suffix := acctest.RandString(6)
+	projectName := "tf-acc-" + suffix
 	resourceName := "fundament_project.test"
 
 	resource.Test(t, resource.TestCase{
@@ -30,9 +40,9 @@ func TestAccProjectResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccProjectResourceConfig("tf-acc-test-project"),
+				Config: testAccProjectResourceConfig(projectName, suffix, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", "tf-acc-test-project"),
+					resource.TestCheckResourceAttr(resourceName, "name", projectName),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "created"),
 				),
@@ -45,9 +55,9 @@ func TestAccProjectResource_basic(t *testing.T) {
 			},
 			// Update name
 			{
-				Config: testAccProjectResourceConfig("tf-acc-test-project-updated"),
+				Config: testAccProjectResourceConfig(projectName+"-upd", suffix, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", "tf-acc-test-project-updated"),
+					resource.TestCheckResourceAttr(resourceName, "name", projectName+"-upd"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "created"),
 				),
@@ -57,14 +67,23 @@ func TestAccProjectResource_basic(t *testing.T) {
 	})
 }
 
-func testAccProjectResourceConfig(name string) string {
+func testAccProjectResourceConfig(name, suffix, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN from environment
+  endpoint        = %[3]q
+  organization_id = %[4]q
+  # api_key read from environment variable FUNDAMENT_API_KEY
+}
+
+resource "fundament_cluster" "test" {
+  name               = "tf-acc-prc-%[2]s"
+  region             = "eu-west-1"
+  kubernetes_version = "1.28"
 }
 
 resource "fundament_project" "test" {
-  name = %[1]q
+  name       = %[1]q
+  cluster_id = fundament_cluster.test.id
 }
-`, name)
+`, name, suffix, endpoint, organizationID)
 }

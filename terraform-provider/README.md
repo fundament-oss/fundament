@@ -39,19 +39,14 @@ provider "fundament" {
 | Name | Description | Required |
 |------|-------------|----------|
 | `endpoint` | The URL of the Fundament organization API | Yes |
-| `api_key` | API key for authentication. Can also be set via `FUNDAMENT_API_KEY` environment variable. Mutually exclusive with `token`. | No* |
-| `token` | JWT token for authentication. Can also be set via `FUNDAMENT_TOKEN` environment variable. Mutually exclusive with `api_key`. | No* |
+| `api_key` | API key for authentication. Can also be set via `FUNDAMENT_API_KEY` environment variable. | Yes |
 | `authn_endpoint` | The URL of the Fundament authentication API (for API key exchange). Can also be set via `FUNDAMENT_AUTHN_ENDPOINT` environment variable. If not provided, it's automatically derived from the organization endpoint. | No |
-
-\* Either `api_key` or `token` must be provided.
 
 ### Authentication
 
-The provider supports two authentication methods:
+#### API Key
 
-#### API Key (Recommended)
-
-API keys provide a more convenient authentication method that automatically handles token exchange and refresh:
+API keys provide a convenient authentication method that automatically handles token exchange and refresh:
 
 ```hcl
 provider "fundament" {
@@ -67,24 +62,6 @@ export FUNDAMENT_API_KEY="your-api-key"
 ```
 
 The provider automatically exchanges the API key for a JWT token and refreshes it as needed.
-
-#### JWT Token
-
-You can also authenticate directly with a JWT token:
-
-```hcl
-provider "fundament" {
-  endpoint = "http://organization.fundament.localhost:8080"
-  token    = var.fundament_token
-}
-```
-
-You can obtain a token by:
-
-1. Logging into the Fundament console and extracting the token from the `fundament_auth` cookie
-2. Using the authn-api's password grant flow
-
-The token contains your organization ID and is used for all API requests.
 
 ## Data Sources
 
@@ -324,7 +301,7 @@ Acceptance tests run against a real Fundament API. To run them:
 ```bash
 export TF_ACC=1
 export FUNDAMENT_ENDPOINT="http://organization.fundament.localhost:8080"
-export FUNDAMENT_API_KEY="your-api-key"  # Or use FUNDAMENT_TOKEN instead
+export FUNDAMENT_API_KEY="your-api-key"
 # Optional: for project filter tests
 export FUNDAMENT_TEST_PROJECT_ID="your-project-uuid"
 # Optional: for cluster data source tests

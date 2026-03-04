@@ -3,6 +3,10 @@ sql:
   - engine: "postgresql"
     queries: "*.sql"
     schema: "../../../db/fundament.sql"
+    # strict_order_by is disabled because sqlc's strict mode rejects ORDER BY on columns
+    # that are not part of the SELECT list in certain JOIN queries (e.g. ordering by id
+    # as a tiebreaker when the primary sort column comes from a joined table).
+    strict_order_by: false
     gen:
       go:
         package: "db"

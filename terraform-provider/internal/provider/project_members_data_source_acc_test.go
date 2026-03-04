@@ -5,11 +5,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-// TestAccProjectMembersDataSource tests the fundament_project_members data source against a real API.
-// Set TF_ACC=1 and configure FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN or FUNDAMENT_API_KEY to run.
 func TestAccProjectMembersDataSource(t *testing.T) {
 	// Skip if not running acceptance tests
 	if os.Getenv("TF_ACC") == "" {
@@ -17,23 +16,27 @@ func TestAccProjectMembersDataSource(t *testing.T) {
 	}
 
 	// Ensure required environment variables are set
-	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
-		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
-	}
-	if os.Getenv("FUNDAMENT_TOKEN") == "" && os.Getenv("FUNDAMENT_API_KEY") == "" {
-		t.Fatal("FUNDAMENT_TOKEN or FUNDAMENT_API_KEY must be set for acceptance tests")
+	if os.Getenv("FUNDAMENT_API_KEY") == "" {
+		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
 	}
 
-	userID := os.Getenv("FUNDAMENT_TEST_USER_ID")
-	if userID == "" {
-		t.Fatal("FUNDAMENT_TEST_USER_ID must be set for project member acceptance tests")
+	endpoint := os.Getenv("FUNDAMENT_ENDPOINT")
+	if endpoint == "" {
+		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
 	}
+
+	organizationID := os.Getenv("FUNDAMENT_ORGANIZATION_ID")
+	if organizationID == "" {
+		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
+	}
+
+	suffix := acctest.RandString(6)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectMembersDataSourceConfig(userID),
+				Config: testAccProjectMembersDataSourceConfig(suffix, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.fundament_project_members.test", "project_id"),
 					resource.TestCheckResourceAttrSet("data.fundament_project_members.test", "members.#"),
@@ -43,19 +46,33 @@ func TestAccProjectMembersDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectMembersDataSourceConfig(userID string) string {
+func testAccProjectMembersDataSourceConfig(suffix, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN or FUNDAMENT_API_KEY from environment
+  endpoint        = %[2]q
+  organization_id = %[3]q
+  # api_key read from environment variable FUNDAMENT_API_KEY
+}
+
+resource "fundament_cluster" "test" {
+  name               = "tf-acc-pmds-c-%[1]s"
+  region             = "eu-west-1"
+  kubernetes_version = "1.28"
 }
 
 resource "fundament_project" "test" {
-  name = "tf-acc-test-members-ds-project"
+  name       = "tf-acc-pmds-%[1]s"
+  cluster_id = fundament_cluster.test.id
+}
+
+resource "fundament_organization_member" "test" {
+  email      = "tf-acc-pmds-%[1]s@test.example.com"
+  permission = "viewer"
 }
 
 resource "fundament_project_member" "test" {
   project_id = fundament_project.test.id
-  user_id    = %[1]q
+  user_id    = fundament_organization_member.test.user_id
   permission = "viewer"
 }
 
@@ -64,5 +81,5 @@ data "fundament_project_members" "test" {
 
   depends_on = [fundament_project_member.test]
 }
-`, userID)
+`, suffix, endpoint, organizationID)
 }

@@ -185,7 +185,10 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		Name:      state.Name.ValueString(),
 	}.Build())
 
-	createResp, err := r.client.ProjectService.CreateProject(ctx, createReq)
+	// Retry on permission_denied: OpenFGA needs time to sync after login.
+	createResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.CreateProjectResponse], error) {
+		return r.client.ProjectService.CreateProject(ctx, createReq)
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Project",
@@ -197,12 +200,15 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	// Set the ID from the response
 	state.ID = types.StringValue(createResp.Msg.GetProjectId())
 
-	// Read the project to get the full state including created
+	// Read the project to get the full state including created.
+	// Retry on permission_denied, OpenFGA needs time to sync
 	getReq := connect.NewRequest(organizationv1.GetProjectRequest_builder{
 		ProjectId: createResp.Msg.GetProjectId(),
 	}.Build())
 
-	getResp, err := r.client.ProjectService.GetProject(ctx, getReq)
+	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetProjectResponse], error) {
+		return r.client.ProjectService.GetProject(ctx, getReq)
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Created Project",
