@@ -211,7 +211,6 @@ BEGIN
        OR OLD.deleted IS DISTINCT FROM NEW.deleted
        OR OLD.region IS DISTINCT FROM NEW.region
        OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
-       OR (OLD.synced IS NOT NULL AND NEW.synced IS NULL)
     THEN
         INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
         VALUES (COALESCE(NEW.id, OLD.id),
@@ -1624,13 +1623,6 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE tenant.cluster_events ADD CONSTRAINT cluster_events_fk_cluster FOREIGN KEY (cluster_id)
 REFERENCES tenant.clusters (id) MATCH SIMPLE
 ON DELETE CASCADE ON UPDATE NO ACTION;
--- ddl-end --
-
--- object: cluster_outbox_fk_cluster | type: CONSTRAINT --
--- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_cluster CASCADE;
-ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_cluster FOREIGN KEY (cluster_id)
-REFERENCES tenant.clusters (id) MATCH SIMPLE
-ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
 -- object: cluster_outbox_fk_cluster | type: CONSTRAINT --
