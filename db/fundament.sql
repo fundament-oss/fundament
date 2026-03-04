@@ -145,6 +145,32 @@ $function$;
 ALTER FUNCTION tenant.cluster_reset_synced() OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: tenant.node_pool_reset_cluster_synced | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.node_pool_reset_cluster_synced() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.node_pool_reset_cluster_synced ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    UPDATE tenant.clusters
+    SET synced = NULL,
+        sync_claimed_at = NULL,
+        sync_attempts = 0,
+        sync_error = NULL
+    WHERE id = COALESCE(NEW.cluster_id, OLD.cluster_id);
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.node_pool_reset_cluster_synced() OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: tenant.cluster_sync_notify | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.cluster_sync_notify() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.cluster_sync_notify ()
@@ -166,6 +192,59 @@ END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION tenant.cluster_sync_notify() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.cluster_outbox_cluster_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_outbox_cluster_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_outbox_cluster_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    IF TG_OP = 'INSERT'
+       OR OLD.deleted IS DISTINCT FROM NEW.deleted
+    THEN
+        INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+        VALUES (COALESCE(NEW.id, OLD.id),
+                CASE
+                    WHEN TG_OP = 'INSERT' THEN 'created'
+                    WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                    ELSE 'updated'
+                END,
+                'trigger');
+    END IF;
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_outbox_cluster_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.cluster_outbox_notify | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_outbox_notify() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_outbox_notify ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    PERFORM pg_notify('cluster_outbox', '');
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_outbox_notify() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: authn.current_user_id | type: FUNCTION --
@@ -590,6 +669,15 @@ CREATE POLICY node_pools_organization_policy ON tenant.node_pools
 	USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
+-- object: node_pools_cluster_worker_read | type: POLICY --
+-- DROP POLICY IF EXISTS node_pools_cluster_worker_read ON tenant.node_pools CASCADE;
+CREATE POLICY node_pools_cluster_worker_read ON tenant.node_pools
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
 -- object: appstore.installs | type: TABLE --
 -- DROP TABLE IF EXISTS appstore.installs CASCADE;
 CREATE TABLE appstore.installs (
@@ -883,6 +971,50 @@ USING btree
 (
 	cluster_id DESC NULLS LAST,
 	created DESC NULLS LAST
+);
+-- ddl-end --
+
+-- object: tenant.cluster_outbox | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.cluster_outbox CASCADE;
+CREATE TABLE tenant.cluster_outbox (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	cluster_id uuid,
+	event text NOT NULL DEFAULT 'updated',
+	source text NOT NULL DEFAULT 'trigger',
+	status text NOT NULL DEFAULT 'pending',
+	retries integer NOT NULL DEFAULT 0,
+	retry_after timestamptz,
+	processed timestamptz,
+	failed timestamptz,
+	status_info text,
+	created timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT cluster_outbox_pk PRIMARY KEY (id),
+	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id) = 1),
+	CONSTRAINT cluster_outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed')),
+	CONSTRAINT cluster_outbox_ck_event CHECK (event IN ('created', 'updated', 'deleted', 'reconcile')),
+	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual'))
+);
+-- ddl-end --
+ALTER TABLE tenant.cluster_outbox OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: cluster_outbox_status_retry_idx | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.cluster_outbox_status_retry_idx CASCADE;
+CREATE INDEX cluster_outbox_status_retry_idx ON tenant.cluster_outbox
+USING btree
+(
+	status,
+	retry_after,
+	id
+);
+-- ddl-end --
+
+-- object: cluster_outbox_idx_cluster_id | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.cluster_outbox_idx_cluster_id CASCADE;
+CREATE INDEX cluster_outbox_idx_cluster_id ON tenant.cluster_outbox
+USING btree
+(
+	cluster_id
 );
 -- ddl-end --
 
@@ -1189,6 +1321,15 @@ CREATE OR REPLACE TRIGGER node_pools_outbox
 	EXECUTE PROCEDURE authz.node_pools_sync_trigger();
 -- ddl-end --
 
+-- object: node_pool_reset_cluster_synced | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS node_pool_reset_cluster_synced ON tenant.node_pools CASCADE;
+CREATE OR REPLACE TRIGGER node_pool_reset_cluster_synced
+	AFTER INSERT OR UPDATE OF name,machine_type,autoscale_min,autoscale_max,deleted
+	ON tenant.node_pools
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.node_pool_reset_cluster_synced();
+-- ddl-end --
+
 -- object: namespaces_idx_project_id | type: INDEX --
 -- DROP INDEX IF EXISTS tenant.namespaces_idx_project_id CASCADE;
 CREATE INDEX namespaces_idx_project_id ON tenant.namespaces
@@ -1233,6 +1374,24 @@ CREATE OR REPLACE TRIGGER outbox_notify
 	ON authz.outbox
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.outbox_notify_trigger();
+-- ddl-end --
+
+-- object: cluster_outbox_cluster | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS cluster_outbox_cluster ON tenant.clusters CASCADE;
+CREATE OR REPLACE TRIGGER cluster_outbox_cluster
+	AFTER INSERT OR UPDATE
+	ON tenant.clusters
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.cluster_outbox_cluster_trigger();
+-- ddl-end --
+
+-- object: cluster_outbox_notify | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS cluster_outbox_notify ON tenant.cluster_outbox CASCADE;
+CREATE OR REPLACE TRIGGER cluster_outbox_notify
+	AFTER INSERT 
+	ON tenant.cluster_outbox
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.cluster_outbox_notify();
 -- ddl-end --
 
 -- object: tenant.organizations_users | type: TABLE --
@@ -1464,6 +1623,13 @@ REFERENCES tenant.clusters (id) MATCH SIMPLE
 ON DELETE CASCADE ON UPDATE NO ACTION;
 -- ddl-end --
 
+-- object: cluster_outbox_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_cluster CASCADE;
+ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
 -- object: outbox_fk_project | type: CONSTRAINT --
 -- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_project CASCADE;
 ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_project FOREIGN KEY (project_id)
@@ -1666,6 +1832,14 @@ GRANT SELECT
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.node_pools
    TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_428efc5f74 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.node_pools
+   TO fun_cluster_worker;
 
 -- ddl-end --
 
@@ -2018,6 +2192,22 @@ GRANT SELECT,INSERT,UPDATE
 GRANT SELECT
    ON TABLE tenant.organizations_users
    TO fun_authz;
+
+-- ddl-end --
+
+
+-- object: grant_raw_5b30964106 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.cluster_outbox
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_a_aa475c9278 | type: PERMISSION --
+GRANT INSERT
+   ON TABLE tenant.cluster_outbox
+   TO fun_fundament_api;
 
 -- ddl-end --
 
