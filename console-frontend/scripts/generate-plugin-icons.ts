@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Reads all public/plugins/*.plugin.yaml files, collects every referenced icon
+ * Reads all src/app/plugins/.../*.plugin.yaml files, collects every referenced icon
  * name (from metadata.icon and menu[].icon), and generates a TypeScript file
  * that re-exports only those icons from @ng-icons/tabler-icons.
  *
@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { load } from 'js-yaml';
 
-const pluginsDir = join(import.meta.dirname, '../public/plugins');
+const pluginsDir = join(import.meta.dirname, '../src/app/plugins');
 const outputFile = join(
   import.meta.dirname,
   '../src/app/plugin-resources/generated-plugin-icons.ts',
@@ -26,10 +26,15 @@ interface RawPlugin {
 
 const icons = new Set<string>();
 
-readdirSync(pluginsDir)
-  .filter((f: string) => f.endsWith('.plugin.yaml'))
-  .forEach((file) => {
-    const raw = load(readFileSync(join(pluginsDir, file), 'utf-8')) as RawPlugin;
+readdirSync(pluginsDir, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .flatMap((entry) =>
+    readdirSync(join(pluginsDir, entry.name))
+      .filter((f) => f.endsWith('.plugin.yaml'))
+      .map((f) => join(pluginsDir, entry.name, f)),
+  )
+  .forEach((filePath) => {
+    const raw = load(readFileSync(filePath, 'utf-8')) as RawPlugin;
 
     (['organization', 'project'] as const).forEach((section) => {
       (raw?.menu?.[section] ?? []).forEach((item) => {

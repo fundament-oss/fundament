@@ -58,7 +58,8 @@ export default class PluginEditDispatcherComponent implements AfterViewInit {
         }
       }
 
-      const { default: DefaultComponent } = await import('../resource-edit/resource-edit.component');
+      const { default: DefaultComponent } =
+        await import('../resource-edit/resource-edit.component');
       this.outlet.createComponent(DefaultComponent);
       this.loading.set(false);
     });

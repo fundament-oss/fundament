@@ -65,7 +65,8 @@ export default class PluginListDispatcherComponent implements AfterViewInit {
         }
       }
 
-      const { default: DefaultComponent } = await import('../resource-list/resource-list.component');
+      const { default: DefaultComponent } =
+        await import('../resource-list/resource-list.component');
       this.outlet.createComponent(DefaultComponent);
       this.loading.set(false);
     });
