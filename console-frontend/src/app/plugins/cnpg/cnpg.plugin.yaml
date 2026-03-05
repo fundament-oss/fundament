@@ -5,7 +5,7 @@ name: cnpg
 displayName: CNPG Databases
 version: v1.25.1
 description: Manage PostgreSQL databases via CloudNativePG.
-author: CloudNativePG / EDB
+author: Fundament Team
 
 menu:
   organization:

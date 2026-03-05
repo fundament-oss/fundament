@@ -5,12 +5,16 @@ name: cert-manager
 displayName: Cert Manager
 version: v1.19.3
 description: Automatic TLS certificate management using cert-manager. Supports ACME, CA, and self-signed issuers.
-author: Jetstack / CNCF
+author: Fundament Team
 
 menu:
   organization:
     - crd: ClusterIssuer
       icon: tablerShieldCheck
+    - crd: Certificate
+      icon: tablerCertificate
+    - crd: Issuer
+      icon: tablerUserCircle
   project:
     - crd: Certificate
       icon: tablerCertificate
