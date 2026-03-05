@@ -165,6 +165,51 @@ jobs:
             - grace@initech.com (Initech)
             </details>
 
+  terraform-acc:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      PR_NUMBER: ${{ github.event.number }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install tofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_wrapper: false
+
+      - name: Wait for organization-api
+        run: |
+          URL="https://organization.pr${PR_NUMBER}-${{ env.DOMAIN }}"
+          echo "Waiting for ${URL} to be ready..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
+            if [ "${STATUS}" != "000" ]; then
+              echo "Organization API responded (HTTP ${STATUS})"
+              exit 0
+            fi
+            echo "Attempt ${i}/30, retrying in 30s..."
+            sleep 30
+          done
+          echo "Timed out waiting for environment to be ready"
+          exit 1
+
+      - name: Run Terraform acceptance tests
+        run: |
+          cd terraform-provider
+          FUNDAMENT_ENDPOINT="https://organization.pr${PR_NUMBER}-${{ env.DOMAIN }}" \
+          TF_ACC=1 \
+          TF_ACC_TERRAFORM_PATH="$(which tofu)" \
+          TF_ACC_PROVIDER_HOST=registry.opentofu.org \
+          go test -v ./...
+
   # Teardown: remove PR overlay from GitLab Flux repo
   teardown:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
