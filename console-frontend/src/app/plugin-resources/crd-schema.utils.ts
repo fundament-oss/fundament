@@ -57,13 +57,16 @@ function resolveSimplePath(obj: Record<string, unknown>, path: string): unknown 
 export function resolveJsonPath(obj: Record<string, unknown>, jsonPath: string): unknown {
   const path = jsonPath.startsWith('.') ? jsonPath.substring(1) : jsonPath;
 
-  const filterMatch = path.match(/^(.+?)\[\?\(@\.(\w+)\s*==\s*"([^"]+)"\)\](?:\.(.+))?$/);
+  // Matches: path[?(@.key == "value")], path[?(@.key == 'value')], path[?(@.key == 42)]
+  const filterMatch = path.match(
+    /^(.+?)\[\?\(@\.(\w+)\s*==\s*(?:"([^"]*)"|'([^']*)'|(-?\d+(?:\.\d+)?))\)\](?:\.(.+))?$/,
+  );
 
   if (filterMatch) {
     const arrayPath = filterMatch[1];
     const filterKey = filterMatch[2];
-    const filterValue = filterMatch[3];
-    const remainingPath = filterMatch[4];
+    const filterValue = filterMatch[3] ?? filterMatch[4] ?? filterMatch[5];
+    const remainingPath = filterMatch[6];
 
     const array = resolveSimplePath(obj, arrayPath);
     if (!Array.isArray(array)) return undefined;
@@ -96,6 +99,22 @@ export function formatDate(isoString: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+/**
+ * Format an unknown value as an ISO date string for display.
+ */
+export function toDateValue(val: unknown): string {
+  return formatDate(String(val ?? ''));
+}
+
+/**
+ * Format an unknown value as a simple string for display.
+ */
+export function toSimpleValue(val: unknown): string {
+  if (val === null || val === undefined) return '\u2014';
+  if (typeof val === 'object') return JSON.stringify(val);
+  return String(val);
 }
 
 /**
@@ -137,7 +156,13 @@ function pluralize(word: string): string {
   if (word.endsWith('y') && !'aeiou'.includes(word[word.length - 2])) {
     return `${word.slice(0, -1)}ies`;
   }
-  if (word.endsWith('s') || word.endsWith('x') || word.endsWith('z')) {
+  if (
+    word.endsWith('s') ||
+    word.endsWith('x') ||
+    word.endsWith('z') ||
+    word.endsWith('ch') ||
+    word.endsWith('sh')
+  ) {
     return `${word}es`;
   }
   return `${word}s`;

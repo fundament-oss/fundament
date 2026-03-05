@@ -3,7 +3,6 @@ import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-plugin-layout',
-  standalone: true,
   imports: [RouterOutlet],
   template: `<router-outlet />`,
   changeDetection: ChangeDetectionStrategy.OnPush,

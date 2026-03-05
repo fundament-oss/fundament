@@ -1,16 +1,6 @@
 import { Component, ChangeDetectionStrategy, input } from '@angular/core';
 import type { CrdPropertySchema } from '../types';
-import { formatDate, fieldNameToLabel } from '../crd-schema.utils';
-
-function toDateValue(val: unknown): string {
-  return formatDate(String(val ?? ''));
-}
-
-function toSimpleValue(val: unknown): string {
-  if (val === null || val === undefined) return '\u2014';
-  if (typeof val === 'object') return JSON.stringify(val);
-  return String(val);
-}
+import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
 
 function toArray(val: unknown): unknown[] {
   return Array.isArray(val) ? val : [];
@@ -23,7 +13,6 @@ function toObjectEntries(val: unknown): [string, unknown][] {
 
 @Component({
   selector: 'app-field-renderer',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @switch (effectiveType()) {

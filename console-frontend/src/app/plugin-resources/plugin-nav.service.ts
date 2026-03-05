@@ -7,22 +7,11 @@ import { kindToLabel } from './crd-schema.utils';
 export default class PluginNavService {
   private registry = inject(PluginRegistryService);
 
-  organizationNav = computed<PluginNavGroup[]>(() =>
-    this.buildNavGroups('organization', (plugin, crd) => [
-      '/plugin-resources',
-      plugin.name,
-      crd.plural,
-    ]),
-  );
+  organizationNav = computed<PluginNavGroup[]>(() => this.buildNavGroups('organization'));
 
-  projectNav = computed<PluginNavGroup[]>(() =>
-    this.buildNavGroups('project', (_plugin, crd) => [crd.plural]),
-  );
+  projectNav = computed<PluginNavGroup[]>(() => this.buildNavGroups('project'));
 
-  private buildNavGroups(
-    section: 'organization' | 'project',
-    routerLink: (plugin: { name: string }, crd: { kind: string; plural: string }) => string[],
-  ): PluginNavGroup[] {
+  private buildNavGroups(section: 'organization' | 'project'): PluginNavGroup[] {
     return this.registry
       .allPlugins()
       .filter((plugin) => plugin.menu[section] && plugin.menu[section]!.length > 0)
@@ -35,7 +24,6 @@ export default class PluginNavService {
               label: kindToLabel(crd.kind),
               crdKind: crd.kind,
               crdPlural: crd.plural,
-              routerLink: routerLink(plugin, crd),
               icon: menuItem.icon,
             };
           });

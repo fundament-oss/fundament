@@ -30,7 +30,6 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
 
 @Component({
   selector: 'app-resource-list',
-  standalone: true,
   imports: [RouterLink, NgIcon],
   viewProviders: [
     provideIcons({

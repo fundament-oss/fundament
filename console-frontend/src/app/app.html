@@ -323,7 +323,7 @@
                       @for (item of group.items; track item.crdPlural) {
                         <li>
                           <a
-                            [routerLink]="item.routerLink"
+                            [routerLink]="['/plugin-resources', group.pluginName, item.crdPlural]"
                             routerLinkActive="active"
                             class="nav-link"
                             (click)="closeSidebar()"

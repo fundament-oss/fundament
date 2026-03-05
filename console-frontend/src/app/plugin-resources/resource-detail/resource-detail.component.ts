@@ -8,17 +8,7 @@ import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
 import { TitleService } from '../../title.service';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
-import { formatDate, fieldNameToLabel } from '../crd-schema.utils';
-
-function toDateValue(val: unknown): string {
-  return formatDate(String(val ?? ''));
-}
-
-function toSimpleValue(val: unknown): string {
-  if (val === null || val === undefined) return '\u2014';
-  if (typeof val === 'object') return JSON.stringify(val);
-  return String(val);
-}
+import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
 
 function checkIsWideField(schema: CrdPropertySchema): boolean {
   return (
@@ -44,7 +34,6 @@ function toRecord(val: unknown): Record<string, unknown> {
 
 @Component({
   selector: 'app-resource-detail',
-  standalone: true,
   imports: [RouterLink, NgIcon, FieldRendererComponent],
   viewProviders: [provideIcons({ tablerArrowLeft })],
   templateUrl: './resource-detail.component.html',

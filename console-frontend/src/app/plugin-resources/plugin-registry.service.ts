@@ -84,6 +84,11 @@ export default class PluginRegistryService {
       }),
     );
 
+    results
+      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      // eslint-disable-next-line no-console
+      .forEach((r) => console.error('[PluginRegistry] Failed to load plugin:', r.reason));
+
     const definitions: PluginDefinition[] = results
       .filter((r): r is PromiseFulfilledResult<PluginDefinition> => r.status === 'fulfilled')
       .map((r) => r.value);

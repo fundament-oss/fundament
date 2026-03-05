@@ -50,13 +50,4 @@ export default class PluginResourceStoreService {
     });
   }
 
-  deleteResource(pluginName: string, kind: string, uid: string): void {
-    this.resources.update((current) => {
-      const updated = structuredClone(current);
-      if (updated[pluginName]?.[kind]) {
-        updated[pluginName][kind] = updated[pluginName][kind].filter((r) => r.metadata.uid !== uid);
-      }
-      return updated;
-    });
-  }
 }

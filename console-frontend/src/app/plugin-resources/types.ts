@@ -89,7 +89,6 @@ export interface PluginNavItem {
   label: string;
   crdKind: string;
   crdPlural: string;
-  routerLink: string[];
   icon?: string;
 }
 
