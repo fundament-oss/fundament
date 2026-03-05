@@ -139,7 +139,7 @@ SELECT
     tenant.clusters.name,
     tenant.clusters.deleted,
     tenant.organizations.name AS organization_name,
-    EXISTS (SELECT 1 FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id AND status = 'completed') AS has_completed_outbox
+    (tenant.clusters.outbox_status = 'completed') AS has_completed_outbox
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
@@ -201,7 +201,7 @@ FROM
 WHERE
     ( -- Delete has been synced: has shoot_status or a completed outbox row
         tenant.clusters.shoot_status IS NOT NULL
-        OR EXISTS (SELECT 1 FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id AND status = 'completed')
+        OR tenant.clusters.outbox_status = 'completed'
     )
     AND tenant.clusters.deleted IS NOT NULL -- Soft-deleted
     AND (
@@ -283,7 +283,7 @@ FROM
 WHERE
     ( -- Cluster has been synced: has shoot_status or a completed outbox row
         tenant.clusters.shoot_status IS NOT NULL
-        OR EXISTS (SELECT 1 FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id AND status = 'completed')
+        OR tenant.clusters.outbox_status = 'completed'
     )
     AND tenant.clusters.deleted IS NULL -- Active (not deleted)
     AND (

@@ -33,7 +33,6 @@ FROM
 WHERE
     tenant.clusters.id = @cluster_id;
 
--- NOTE: This seems to be a duplicate
 -- name: ClusterGetForSync :one
 -- Get cluster with the fields needed to build a gardener.ClusterToSync.
 -- Used by the cluster handler's Sync() method.

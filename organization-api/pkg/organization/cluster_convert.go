@@ -33,7 +33,7 @@ func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text) or
 }
 
 func syncStateFromRow(
-	outboxStatus string,
+	outboxStatus pgtype.Text,
 	outboxRetries int32,
 	outboxError pgtype.Text,
 	shootStatus pgtype.Text,
@@ -44,8 +44,8 @@ func syncStateFromRow(
 		OutboxRetries: outboxRetries,
 	}.Build()
 
-	if outboxStatus != "" {
-		state.SetOutboxStatus(outboxStatus)
+	if outboxStatus.Valid {
+		state.SetOutboxStatus(outboxStatus.String)
 	}
 	if outboxError.Valid {
 		state.SetOutboxError(outboxError.String)

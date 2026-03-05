@@ -34,8 +34,8 @@ type config struct {
 
 	// Worker config
 	Outbox    outbox.Config         `envPrefix:"OUTBOX_"`
-	Status    status.Config         `envPrefix:"OUTBOX_"`
-	Reconcile reconcile.Config      `envPrefix:"OUTBOX_"`
+	Status    status.Config         `envPrefix:"STATUS_"`
+	Reconcile reconcile.Config      `envPrefix:"RECONCILE_"`
 	Cluster   clusterhandler.Config `envPrefix:"CLUSTER_"`
 
 	// Provider configuration for real Gardener mode.

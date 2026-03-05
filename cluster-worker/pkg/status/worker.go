@@ -12,7 +12,7 @@ import (
 
 // Config holds configuration for the status polling loop.
 type Config struct {
-	Interval time.Duration `env:"STATUS_INTERVAL" envDefault:"30s"`
+	Interval time.Duration `env:"INTERVAL" envDefault:"30s"`
 }
 
 // Worker periodically calls all registered StatusHandlers.

@@ -3,9 +3,9 @@
 -- Excludes clusters where Gardener has confirmed deletion (shoot_status = 'deleted').
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
        shoot_status, shoot_status_message, shoot_status_updated,
-       (SELECT status FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_status,
-       COALESCE((SELECT retries FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1), 0)::int AS outbox_retries,
-       (SELECT status_info FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_error
+       tenant.clusters.outbox_status,
+       tenant.clusters.outbox_retries,
+       tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 ORDER BY created DESC;
@@ -14,18 +14,18 @@ ORDER BY created DESC;
 -- Get cluster by ID, including deleted clusters for direct access.
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
        shoot_status, shoot_status_message, shoot_status_updated,
-       (SELECT status FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_status,
-       COALESCE((SELECT retries FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1), 0)::int AS outbox_retries,
-       (SELECT status_info FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_error
+       tenant.clusters.outbox_status,
+       tenant.clusters.outbox_retries,
+       tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE tenant.clusters.id = $1;
 
 -- name: ClusterGetByName :one
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
        shoot_status, shoot_status_message, shoot_status_updated,
-       (SELECT status FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_status,
-       COALESCE((SELECT retries FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1), 0)::int AS outbox_retries,
-       (SELECT status_info FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_error
+       tenant.clusters.outbox_status,
+       tenant.clusters.outbox_retries,
+       tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE name = $1 AND deleted IS NULL;
 

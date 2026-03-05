@@ -263,6 +263,40 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="cluster_outbox_update_cluster_status"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF NEW.cluster_id IS NOT NULL THEN
+        UPDATE tenant.clusters
+        SET outbox_status = latest.status,
+            outbox_retries = latest.retries,
+            outbox_error = latest.status_info
+        FROM (
+            SELECT status, retries, status_info
+            FROM tenant.cluster_outbox
+            WHERE cluster_id = NEW.cluster_id
+            ORDER BY id DESC
+            LIMIT 1
+        ) latest
+        WHERE tenant.clusters.id = NEW.cluster_id;
+    END IF;
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
 <function name="current_user_id"
 		window-func="false"
 		returns-setof="false"
@@ -613,7 +647,7 @@ BEGIN
 END;]]> </definition>
 </function>
 
-<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="16" z-value="0">
+<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="19" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
 	<position x="880" y="400"/>
@@ -649,6 +683,15 @@ END;]]> </definition>
 	</column>
 	<column name="shoot_status_updated">
 		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="outbox_status">
+		<type name="text" length="0"/>
+	</column>
+	<column name="outbox_retries" not-null="true" default-value="0">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="outbox_error">
+		<type name="text" length="0"/>
 	</column>
 
 	<constraint name="clusters_pk" type="pk-constr" table="tenant.clusters">
@@ -1544,6 +1587,12 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="false" trunc-event="false"
 	 table="tenant.cluster_outbox">
 		<function signature="tenant.cluster_outbox_notify()"/>
+</trigger>
+
+<trigger name="cluster_outbox_update_cluster_status" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.cluster_outbox">
+		<function signature="tenant.cluster_outbox_update_cluster_status()"/>
 </trigger>
 
 

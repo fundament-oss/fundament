@@ -198,6 +198,40 @@ $function$;
 ALTER FUNCTION tenant.cluster_outbox_notify() OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: tenant.cluster_outbox_update_cluster_status | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_outbox_update_cluster_status() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_outbox_update_cluster_status ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    IF NEW.cluster_id IS NOT NULL THEN
+        UPDATE tenant.clusters
+        SET outbox_status = latest.status,
+            outbox_retries = latest.retries,
+            outbox_error = latest.status_info
+        FROM (
+            SELECT status, retries, status_info
+            FROM tenant.cluster_outbox
+            WHERE cluster_id = NEW.cluster_id
+            ORDER BY id DESC
+            LIMIT 1
+        ) latest
+        WHERE tenant.clusters.id = NEW.cluster_id;
+    END IF;
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_outbox_update_cluster_status() OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: authn.current_user_id | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authn.current_user_id() CASCADE;
 CREATE OR REPLACE FUNCTION authn.current_user_id ()
@@ -519,6 +553,9 @@ CREATE TABLE tenant.clusters (
 	shoot_status text,
 	shoot_status_message text,
 	shoot_status_updated timestamptz,
+	outbox_status text,
+	outbox_retries integer NOT NULL DEFAULT 0,
+	outbox_error text,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
 	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
@@ -1337,6 +1374,15 @@ CREATE OR REPLACE TRIGGER cluster_outbox_notify
 	ON tenant.cluster_outbox
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.cluster_outbox_notify();
+-- ddl-end --
+
+-- object: cluster_outbox_update_cluster_status | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS cluster_outbox_update_cluster_status ON tenant.cluster_outbox CASCADE;
+CREATE OR REPLACE TRIGGER cluster_outbox_update_cluster_status
+	AFTER INSERT OR UPDATE
+	ON tenant.cluster_outbox
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.cluster_outbox_update_cluster_status();
 -- ddl-end --
 
 -- object: tenant.organizations_users | type: TABLE --

@@ -141,7 +141,6 @@ type ClusterGetForSyncRow struct {
 	OrganizationName  string
 }
 
-// NOTE: This seems to be a duplicate
 // Get cluster with the fields needed to build a gardener.ClusterToSync.
 // Used by the cluster handler's Sync() method.
 func (q *Queries) ClusterGetForSync(ctx context.Context, arg ClusterGetForSyncParams) (ClusterGetForSyncRow, error) {

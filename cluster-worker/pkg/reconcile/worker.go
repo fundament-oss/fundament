@@ -13,7 +13,7 @@ import (
 
 // Config holds configuration for the reconciliation loop.
 type Config struct {
-	Interval time.Duration `env:"RECONCILE_INTERVAL" envDefault:"5m"`
+	Interval time.Duration `env:"INTERVAL" envDefault:"5m"`
 }
 
 // Worker periodically calls all registered ReconcileHandlers.

@@ -84,9 +84,9 @@ func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) (i
 const clusterGetByID = `-- name: ClusterGetByID :one
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
        shoot_status, shoot_status_message, shoot_status_updated,
-       (SELECT status FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_status,
-       COALESCE((SELECT retries FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1), 0)::int AS outbox_retries,
-       (SELECT status_info FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_error
+       tenant.clusters.outbox_status,
+       tenant.clusters.outbox_retries,
+       tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE tenant.clusters.id = $1
 `
@@ -106,7 +106,7 @@ type ClusterGetByIDRow struct {
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
-	OutboxStatus       string
+	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
 }
@@ -136,9 +136,9 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 const clusterGetByName = `-- name: ClusterGetByName :one
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
        shoot_status, shoot_status_message, shoot_status_updated,
-       (SELECT status FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_status,
-       COALESCE((SELECT retries FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1), 0)::int AS outbox_retries,
-       (SELECT status_info FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_error
+       tenant.clusters.outbox_status,
+       tenant.clusters.outbox_retries,
+       tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE name = $1 AND deleted IS NULL
 `
@@ -158,7 +158,7 @@ type ClusterGetByNameRow struct {
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
-	OutboxStatus       string
+	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
 }
@@ -229,9 +229,9 @@ func (q *Queries) ClusterGetEvents(ctx context.Context, arg ClusterGetEventsPara
 const clusterList = `-- name: ClusterList :many
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
        shoot_status, shoot_status_message, shoot_status_updated,
-       (SELECT status FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_status,
-       COALESCE((SELECT retries FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1), 0)::int AS outbox_retries,
-       (SELECT status_info FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_error
+       tenant.clusters.outbox_status,
+       tenant.clusters.outbox_retries,
+       tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 ORDER BY created DESC
@@ -248,7 +248,7 @@ type ClusterListRow struct {
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
-	OutboxStatus       string
+	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
 }
