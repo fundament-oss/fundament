@@ -18,32 +18,32 @@ Each persona belongs to one of three fictional tenant organizations: *Acme Corp*
 |===
 | Name | Organization | Role
 
-| Alice Johnson | Acme Corp | admin
-| Bob Smith | Acme Corp | viewer
-| Carol White | Acme Corp | viewer
-| David Brown | Globex | admin
-| Eve Davis | Globex | viewer
-| Frank Miller | Initech | admin
-| Grace Lee | Initech | viewer
+| Alice | Acme Corp | admin
+| Bart | Acme Corp | viewer
+| Cindy | Acme Corp | viewer
+| David | Globex | admin
+| Emily | Globex | viewer
+| Frank | Initech | admin
+| Grace | Initech | viewer
 |===
 
 NOTE: The authorization model also supports _project-level_ membership (project admin and project viewer), which scopes access to a single project rather than the whole organization. No seed data exists for these roles yet; candidate personas are listed in <<_to_be_added>>.
 
 == Persona Descriptions
 
-=== Alice Johnson — Acme Corp admin
+=== Alice — Acme Corp admin
 
 Alice is the platform owner at Acme Corp. She was responsible for onboarding her organization into Fundament and continues to manage day-to-day platform operations. Alice provisions new clusters for her development teams, installs plugins from the appstore, and maintains the user roster — including inviting new colleagues and assigning appropriate roles. When a new product team spins up, Alice is the one creating their project and granting access.
 
-=== Bob Smith — Acme Corp viewer
+=== Bart — Acme Corp viewer
 
-Bob is a backend engineer at Acme Corp. He uses Fundament primarily to understand the state of the clusters his services run on — checking which plugins are active, reviewing cluster health, and looking up configuration details when debugging production issues. Bob cannot make changes himself; when he identifies something that needs updating, he raises it with Alice.
+Bart is a backend engineer at Acme Corp. He uses Fundament primarily to understand the state of the clusters his services run on — checking which plugins are active, reviewing cluster health, and looking up configuration details when debugging production issues. Bart cannot make changes himself; when he identifies something that needs updating, he raises it with Alice.
 
-=== Carol White — Acme Corp viewer
+=== Cindy — Acme Corp viewer
 
-Carol works in operations at Acme Corp. She regularly checks cluster status and installed plugin versions to ensure the environment meets compliance requirements. Carol is particularly interested in the observability stack — she cross-references what is installed in Fundament with dashboards in Grafana to confirm that telemetry pipelines are functioning correctly.
+Cindy works in operations at Acme Corp. She regularly checks cluster status and installed plugin versions to ensure the environment meets compliance requirements. Cindy is particularly interested in the observability stack — she cross-references what is installed in Fundament with dashboards in Grafana to confirm that telemetry pipelines are functioning correctly.
 
-=== David Brown — Globex admin
+=== David — Globex admin
 
 David is the sole platform administrator at Globex, a smaller organization with fewer clusters but strict security requirements. He uses Fundament to manage the complete lifecycle of Globex's clusters, including selecting plugins from the appstore with a focus on security tooling such as cert-manager and Sealed Secrets. David periodically reviews the list of users in his organization and revokes access for departed employees.
 
@@ -51,11 +51,11 @@ David is the sole platform administrator at Globex, a smaller organization with 
 
 Eve is a data engineer at Globex. She interacts with Fundament primarily to verify that the database infrastructure — specifically CloudNativePG clusters — is available and properly configured. She does not manage the platform herself but relies on the Fundament UI to get a quick overview before directing more detailed queries to David.
 
-=== Frank Miller — Initech admin
+=== Frank — Initech admin
 
 Frank manages the Initech platform team and uses Fundament to coordinate infrastructure across several clusters. He is a power user of the appstore: he frequently evaluates new plugins, consults their documentation, and decides which ones to roll out to his organization. Frank also manages the Initech user directory in Fundament, ensuring the right people have the right level of access.
 
-=== Grace Lee — Initech viewer
+=== Grace — Initech viewer
 
 Grace is a security analyst at Initech. She uses Fundament to audit the set of installed plugins across clusters, verifying that only approved software is running in the environment. Grace pays particular attention to identity and secrets management plugins such as Keycloak and Sealed Secrets. When she spots a gap, she reports it to Frank so he can take action.
 
