@@ -814,6 +814,13 @@ func sumTimeSeries(allSeries [][]prom.TimeSeries) []prom.TimeSeries {
 	return []prom.TimeSeries{{Labels: map[string]string{}, Samples: points}}
 }
 
+// promEscapeLabelValue escapes backslashes and double-quotes in a PromQL label value.
+func promEscapeLabelValue(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	return s
+}
+
 // buildNamespaceFilter returns a PromQL label selector fragment that matches any
 // of the given namespace names: namespace=~"ns1|ns2|ns3".
 // names must be non-empty; callers are responsible for guarding against empty slices.
