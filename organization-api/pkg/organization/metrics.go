@@ -218,7 +218,8 @@ func (s *Server) GetClusterInfraMetrics(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	return s.infraMetrics(ctx, fmt.Sprintf(`metal_machine_allocation_info{clusterTag=~"shoot--.*--%s"}`, promEscapeLabelValue(cluster.Name)))
+	// Anchor the regex at the end so that a cluster named "foo" does not match "bar-foo".
+	return s.infraMetrics(ctx, fmt.Sprintf(`metal_machine_allocation_info{clusterTag=~"shoot--.*--%s$"}`, promEscapeLabelValue(cluster.Name)))
 }
 
 // -- Org-level RPCs --
@@ -235,6 +236,7 @@ func (s *Server) GetOrgWorkloadMetrics(
 	now := time.Now()
 
 	type clusterResult struct {
+		id                   string
 		name                 string
 		cpuUsed, cpuTotal    float64
 		memUsed, memTotal    float64
@@ -247,12 +249,16 @@ func (s *Server) GetOrgWorkloadMetrics(
 
 	results := make([]clusterResult, len(clusters))
 	g, gctx := errgroup.WithContext(ctx)
+	// Limit outer concurrency to avoid overwhelming Prometheus and connection pools
+	// when an org has many clusters (each cluster fans out to ~15 sub-queries).
+	g.SetLimit(10)
 
 	for i, cl := range clusters {
 		i, cl := i, cl
 		g.Go(func() error {
 			client := s.k8sClientForCluster(cl.PrometheusUrl)
 			r := &results[i]
+			r.id = cl.ID.String()
 			r.name = cl.Name
 
 			sub, subCtx := errgroup.WithContext(gctx)
@@ -325,6 +331,7 @@ func (s *Server) GetOrgWorkloadMetrics(
 		podsTotal += r.podsTotal
 
 		clusterSummaries = append(clusterSummaries, organizationv1.ClusterWorkloadSummary_builder{
+			ClusterId:   r.id,
 			ClusterName: r.name,
 			Cpu:         makeResourceUsage(r.cpuUsed, r.cpuTotal, "cores"),
 			Memory:      makeResourceUsage(r.memUsed/bytesPerGiB, r.memTotal/bytesPerGiB, "GiB"),
@@ -382,6 +389,7 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 
 	results := make([]clusterTSResult, len(clusters))
 	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(10)
 
 	for i, cl := range clusters {
 		i, cl := i, cl
@@ -470,7 +478,17 @@ func (s *Server) GetProjectWorkloadMetrics(
 		}.Build()), nil
 	}
 
-	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: namespaces[0].ClusterID})
+	// All namespaces in a project are expected to live on the same cluster.
+	// If cross-cluster projects are ever introduced, this must be updated to
+	// fan out per-cluster and aggregate results.
+	clusterID := namespaces[0].ClusterID
+	for _, ns := range namespaces[1:] {
+		if ns.ClusterID != clusterID {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("project spans multiple clusters, which is not supported"))
+		}
+	}
+
+	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
@@ -563,7 +581,17 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 		return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{}.Build()), nil
 	}
 
-	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: namespaces[0].ClusterID})
+	// All namespaces in a project are expected to live on the same cluster.
+	// If cross-cluster projects are ever introduced, this must be updated to
+	// fan out per-cluster and aggregate results.
+	clusterID := namespaces[0].ClusterID
+	for _, ns := range namespaces[1:] {
+		if ns.ClusterID != clusterID {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("project spans multiple clusters, which is not supported"))
+		}
+	}
+
+	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
@@ -910,7 +938,8 @@ func resolveTimeRange(hasStart bool, start time.Time, hasEnd bool, end time.Time
 	if !hasStart {
 		start = end.Add(-7 * 24 * time.Hour)
 	}
-	step := end.Sub(start) / 9
+	// Default to 5-minute steps as documented in the proto (step_seconds defaults to 300).
+	step := 300 * time.Second
 	if stepSeconds > 0 {
 		step = time.Duration(stepSeconds) * time.Second
 	}

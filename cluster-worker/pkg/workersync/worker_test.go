@@ -460,7 +460,7 @@ func TestSyncWorker_Integration(t *testing.T) {
 	logger := common.TestLogger()
 	mock := gardener.NewMock(logger)
 
-	w := New(pool, mock, logger, Config{
+	w := New(pool, mock, "", logger, Config{
 		PollInterval:      30 * time.Second,
 		ReconcileInterval: 5 * time.Minute,
 	})

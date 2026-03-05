@@ -5,6 +5,7 @@ import {
   ElementRef,
   ViewChild,
   signal,
+  computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
@@ -158,9 +159,9 @@ export default class UsageComponent implements OnInit {
   projectId = signal<string | null>(null);
 
   // Filter state
-  selectedClusterId = '';
+  selectedClusterId = signal('');
 
-  selectedNamespace = '';
+  selectedNamespace = signal('');
 
   dateFrom = '';
 
@@ -230,19 +231,19 @@ export default class UsageComponent implements OnInit {
     }
   }
 
-  get currentTotals(): ClusterUsageData | null {
+  currentTotals = computed<ClusterUsageData | null>(() => {
     if (this.viewMode() === 'project') return this.projectTotals();
-    return this.selectedClusterId ? this.clusterTotals() : this.orgTotals();
-  }
+    return this.selectedClusterId() ? this.clusterTotals() : this.orgTotals();
+  });
 
   get hasTimeSeriesData(): boolean {
     return this.cpuSeriesData.length > 0;
   }
 
-  get filteredNamespaceUsage(): NamespaceUsageData[] {
-    if (!this.selectedNamespace) return this.namespaceUsage();
-    return this.namespaceUsage().filter((ns) => ns.name === this.selectedNamespace);
-  }
+  filteredNamespaceUsage = computed<NamespaceUsageData[]>(() => {
+    if (!this.selectedNamespace()) return this.namespaceUsage();
+    return this.namespaceUsage().filter((ns) => ns.name === this.selectedNamespace());
+  });
 
   getUsagePercentage = getUsagePercentage;
 
@@ -251,8 +252,8 @@ export default class UsageComponent implements OnInit {
   getMachineStateClass = getMachineStateClass;
 
   onClusterChange(): void {
-    if (this.selectedClusterId) {
-      this.loadClusterMetrics(this.selectedClusterId);
+    if (this.selectedClusterId()) {
+      this.loadClusterMetrics(this.selectedClusterId());
     } else {
       this.clusterTotals.set(null);
       this.nodeUsage.set([]);
@@ -263,8 +264,8 @@ export default class UsageComponent implements OnInit {
   onDateChange(): void {
     if (this.viewMode() === 'project') {
       this.loadProjectMetrics();
-    } else if (this.selectedClusterId) {
-      this.loadClusterMetrics(this.selectedClusterId);
+    } else if (this.selectedClusterId()) {
+      this.loadClusterMetrics(this.selectedClusterId());
     } else {
       this.loadOrgMetrics();
     }
@@ -281,8 +282,10 @@ export default class UsageComponent implements OnInit {
           name: c.name,
         })),
       );
-    } catch {
-      // Non-fatal — cluster dropdown will be empty
+    } catch (err) {
+      // Non-fatal — cluster dropdown will be empty but the rest of the page still works.
+      // eslint-disable-next-line no-console
+      console.error('Failed to load cluster list:', err);
     }
   }
 
@@ -314,6 +317,8 @@ export default class UsageComponent implements OnInit {
       this.errorMessage.set(String(err));
     } finally {
       this.isLoading.set(false);
+      // setTimeout defers chart creation until the next macrotask, giving Angular
+      // a chance to render the canvas elements before Chart.js tries to access them.
       setTimeout(() => this.refreshCharts());
     }
   }
@@ -354,6 +359,8 @@ export default class UsageComponent implements OnInit {
       this.errorMessage.set(String(err));
     } finally {
       this.isLoading.set(false);
+      // setTimeout defers chart creation until the next macrotask, giving Angular
+      // a chance to render the canvas elements before Chart.js tries to access them.
       setTimeout(() => this.refreshCharts());
     }
   }
@@ -391,6 +398,8 @@ export default class UsageComponent implements OnInit {
       this.errorMessage.set(String(err));
     } finally {
       this.isLoading.set(false);
+      // setTimeout defers chart creation until the next macrotask, giving Angular
+      // a chance to render the canvas elements before Chart.js tries to access them.
       setTimeout(() => this.refreshCharts());
     }
   }
@@ -432,16 +441,13 @@ export default class UsageComponent implements OnInit {
         : null,
     );
     this.clusterSummaries.set(
-      r.clusters.map((c) => {
-        const match = this.clusters().find((cl) => cl.name === c.clusterName);
-        return {
-          id: match?.id ?? c.clusterName,
-          name: c.clusterName,
-          cpu: { used: c.cpu?.used ?? 0, total: c.cpu?.total ?? 0 },
-          memory: { used: c.memory?.used ?? 0, total: c.memory?.total ?? 0 },
-          pods: { used: c.pods?.used ?? 0, total: c.pods?.total ?? 0 },
-        };
-      }),
+      r.clusters.map((c) => ({
+        id: c.clusterId,
+        name: c.clusterName,
+        cpu: { used: c.cpu?.used ?? 0, total: c.cpu?.total ?? 0 },
+        memory: { used: c.memory?.used ?? 0, total: c.memory?.total ?? 0 },
+        pods: { used: c.pods?.used ?? 0, total: c.pods?.total ?? 0 },
+      })),
     );
     this.namespaceUsage.set(UsageComponent.mapNamespaceUsage(r.namespaces));
   }

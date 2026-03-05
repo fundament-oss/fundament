@@ -47,7 +47,8 @@
           >
           <select
             id="cluster"
-            [(ngModel)]="selectedClusterId"
+            [ngModel]="selectedClusterId()"
+            (ngModelChange)="selectedClusterId.set($event)"
             (change)="onClusterChange()"
             class="w-full"
           >
@@ -67,7 +68,12 @@
             class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
             >Namespace</label
           >
-          <select id="namespace" [(ngModel)]="selectedNamespace" class="w-full">
+          <select
+            id="namespace"
+            [ngModel]="selectedNamespace()"
+            (ngModelChange)="selectedNamespace.set($event)"
+            class="w-full"
+          >
             <option value="">All namespaces</option>
             @for (ns of namespaceUsage(); track ns.name) {
               <option [value]="ns.name">{{ ns.name }}</option>
@@ -98,10 +104,10 @@
 
     @if (!isLoading()) {
       <!-- Totals summary cards (all views)                        -->
-      @if (currentTotals; as totals) {
+      @if (currentTotals(); as totals) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
-            @if (selectedClusterId) {
+            @if (selectedClusterId()) {
               Cluster usage
             } @else if (viewMode() === 'project') {
               Project usage
@@ -229,7 +235,7 @@
       </div>
 
       <!-- Per-cluster breakdown — org-level, no cluster selected  -->
-      @if (viewMode() === 'org' && !selectedClusterId && clusterSummaries().length > 0) {
+      @if (viewMode() === 'org' && !selectedClusterId() && clusterSummaries().length > 0) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Per cluster</h3>
           <div class="overflow-x-auto">
@@ -286,7 +292,7 @@
       }
 
       <!-- Per-node breakdown — cluster-level only                 -->
-      @if (selectedClusterId) {
+      @if (selectedClusterId()) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Per node</h3>
           @if (nodeUsage().length > 0) {
@@ -378,7 +384,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (ns of filteredNamespaceUsage; track ns.name) {
+                @for (ns of filteredNamespaceUsage(); track ns.name) {
                   <tr>
                     <td class="font-medium dark:text-white">{{ ns.name }}</td>
                     <td>{{ ns.cpu | number: '1.2-2' }} cores</td>

@@ -150,6 +150,7 @@ message GetOrgWorkloadMetricsResponse {
 // ClusterWorkloadSummary summarises workload usage for a single cluster within
 // an org-level view.
 message ClusterWorkloadSummary {
+  string cluster_id = 5;
   string cluster_name = 10;
   ResourceUsage cpu = 20;
   ResourceUsage memory = 30;

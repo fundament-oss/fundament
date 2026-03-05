@@ -457,7 +457,7 @@ func mockNSDistributed(clusters []ClusterInfo, perNodeValue float64, nsFilter []
 
 var (
 	mockReClusterLabel    = regexp.MustCompile(`cluster="([^"]+)"`)
-	mockReClusterTagLabel = regexp.MustCompile(`clusterTag=~"[^"]*--([^"\\|]+)"`)
+	mockReClusterTagLabel = regexp.MustCompile(`clusterTag=~"[^"]*--([^"\\|$]+)`)
 	mockReNamespaceRegex  = regexp.MustCompile(`namespace=~"([^"]+)"`)
 	mockReMachineIDRegex  = regexp.MustCompile(`machineid=~"([^"]+)"`)
 	mockReGroupBy         = regexp.MustCompile(`\bby\s*\(\s*([^)]+)\s*\)`)

@@ -1236,6 +1236,7 @@ func (b0 GetOrgWorkloadMetricsResponse_builder) Build() *GetOrgWorkloadMetricsRe
 // an org-level view.
 type ClusterWorkloadSummary struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterId   string                 `protobuf:"bytes,5,opt,name=cluster_id,json=clusterId"`
 	xxx_hidden_ClusterName string                 `protobuf:"bytes,10,opt,name=cluster_name,json=clusterName"`
 	xxx_hidden_Cpu         *ResourceUsage         `protobuf:"bytes,20,opt,name=cpu"`
 	xxx_hidden_Memory      *ResourceUsage         `protobuf:"bytes,30,opt,name=memory"`
@@ -1269,6 +1270,13 @@ func (x *ClusterWorkloadSummary) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+func (x *ClusterWorkloadSummary) GetClusterId() string {
+	if x != nil {
+		return x.xxx_hidden_ClusterId
+	}
+	return ""
+}
+
 func (x *ClusterWorkloadSummary) GetClusterName() string {
 	if x != nil {
 		return x.xxx_hidden_ClusterName
@@ -1295,6 +1303,10 @@ func (x *ClusterWorkloadSummary) GetPods() *ResourceUsage {
 		return x.xxx_hidden_Pods
 	}
 	return nil
+}
+
+func (x *ClusterWorkloadSummary) SetClusterId(v string) {
+	x.xxx_hidden_ClusterId = v
 }
 
 func (x *ClusterWorkloadSummary) SetClusterName(v string) {
@@ -1349,6 +1361,7 @@ func (x *ClusterWorkloadSummary) ClearPods() {
 type ClusterWorkloadSummary_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	ClusterId   string
 	ClusterName string
 	Cpu         *ResourceUsage
 	Memory      *ResourceUsage
@@ -1359,6 +1372,7 @@ func (b0 ClusterWorkloadSummary_builder) Build() *ClusterWorkloadSummary {
 	m0 := &ClusterWorkloadSummary{}
 	b, x := &b0, m0
 	_, _ = b, x
+	x.xxx_hidden_ClusterId = b.ClusterId
 	x.xxx_hidden_ClusterName = b.ClusterName
 	x.xxx_hidden_Cpu = b.Cpu
 	x.xxx_hidden_Memory = b.Memory
@@ -1867,8 +1881,10 @@ const file_v1_metrics_proto_rawDesc = "" +
 	"\bclusters\x18\x14 \x03(\v2'.organization.v1.ClusterWorkloadSummaryR\bclusters\x12I\n" +
 	"\n" +
 	"namespaces\x18\x1e \x03(\v2).organization.v1.NamespaceWorkloadMetricsR\n" +
-	"namespaces\"\xd9\x01\n" +
-	"\x16ClusterWorkloadSummary\x12!\n" +
+	"namespaces\"\xf8\x01\n" +
+	"\x16ClusterWorkloadSummary\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18\x05 \x01(\tR\tclusterId\x12!\n" +
 	"\fcluster_name\x18\n" +
 	" \x01(\tR\vclusterName\x120\n" +
 	"\x03cpu\x18\x14 \x01(\v2\x1e.organization.v1.ResourceUsageR\x03cpu\x126\n" +

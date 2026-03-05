@@ -314,7 +314,10 @@ func (w *SyncWorker) processOne(ctx context.Context) (bool, error) {
 			ClusterID:     cluster.ID,
 			PrometheusUrl: w.prometheusURL,
 		}); err != nil {
-			w.logger.Warn("failed to set prometheus_url", "cluster_id", cluster.ID, "error", err)
+			// Log as Error: if this fails the cluster will never serve mock/real metrics.
+			// The sync itself is not retried for this failure; the next reconciliation cycle
+			// will re-attempt it automatically.
+			w.logger.Error("failed to set prometheus_url; cluster metrics will be unavailable", "cluster_id", cluster.ID, "error", err)
 		}
 	}
 
