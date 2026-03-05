@@ -27,7 +27,7 @@ Each persona belongs to one of three fictional tenant organizations: *Acme Corp*
 | Grace | Initech | viewer
 |===
 
-NOTE: The authorization model also supports _project-level_ membership (project admin and project viewer), which scopes access to a single project rather than the whole organization. No seed data exists for these roles yet; candidate personas are listed in <<_to_be_added>>.
+NOTE: The authorization model also supports _project-level_ membership (project admin and project viewer), which scopes access to a single project rather than the whole organization. Bart holds the project admin role and Cindy holds the project viewer role on the acme-project project in the acme-cluster cluster.
 
 == Persona Descriptions
 
@@ -35,13 +35,13 @@ NOTE: The authorization model also supports _project-level_ membership (project 
 
 Alice is the platform owner at Acme Corp. She was responsible for onboarding her organization into Fundament and continues to manage day-to-day platform operations. Alice provisions new clusters for her development teams, installs plugins from the appstore, and maintains the user roster — including inviting new colleagues and assigning appropriate roles. When a new product team spins up, Alice is the one creating their project and granting access.
 
-=== Bart — Acme Corp viewer
+=== Bart — Acme Corp viewer / acme-project admin
 
-Bart is a backend engineer at Acme Corp. He uses Fundament primarily to understand the state of the clusters his services run on — checking which plugins are active, reviewing cluster health, and looking up configuration details when debugging production issues. Bart cannot make changes himself; when he identifies something that needs updating, he raises it with Alice.
+Bart is a backend engineer at Acme Corp. He uses Fundament primarily to understand the state of the clusters his services run on — checking which plugins are active, reviewing cluster health, and looking up configuration details when debugging production issues. Bart cannot make changes at the organization level; when he identifies something that needs updating there, he raises it with Alice. Within the acme-project project, however, Bart holds the project admin role: he can manage the project's members, create and manage namespaces, and view the cluster resources that back the project. He does not have visibility into other teams' projects or into organization-wide settings such as the user roster or appstore plugin management.
 
-=== Cindy — Acme Corp viewer
+=== Cindy — Acme Corp viewer / acme-project viewer
 
-Cindy works in operations at Acme Corp. She regularly checks cluster status and installed plugin versions to ensure the environment meets compliance requirements. Cindy is particularly interested in the observability stack — she cross-references what is installed in Fundament with dashboards in Grafana to confirm that telemetry pipelines are functioning correctly.
+Cindy works in operations at Acme Corp. She regularly checks cluster status and installed plugin versions to ensure the environment meets compliance requirements. Cindy is particularly interested in the observability stack — she cross-references what is installed in Fundament with dashboards in Grafana to confirm that telemetry pipelines are functioning correctly. Within the acme-project project, Cindy holds the project viewer role: she can browse its namespaces, check which plugins are available in the cluster, and look up cluster configuration relevant to her workload, but cannot make changes to the project itself.
 
 === David — Globex admin
 
@@ -58,19 +58,6 @@ Frank manages the Initech platform team and uses Fundament to coordinate infrast
 === Grace — Initech viewer
 
 Grace is a security analyst at Initech. She uses Fundament to audit the set of installed plugins across clusters, verifying that only approved software is running in the environment. Grace pays particular attention to identity and secrets management plugins such as Keycloak and Sealed Secrets. When she spots a gap, she reports it to Frank so he can take action.
-
-[[_to_be_added]]
-== To be added
-
-The following personas cover access patterns not represented by the seed users above. They should be defined and added to seed data in a future iteration.
-
-=== Dev — project viewer (scoped access)
-
-A developer who has been invited directly to a single project by a project admin. This user has no organization-level role and therefore cannot see other projects, clusters, or organization members. They interact with Fundament exclusively through the lens of their project: browsing its namespaces, checking which plugins are available in the cluster, and looking up cluster configuration relevant to their workload. This is the most common access pattern for developers in larger organizations where not everyone should have org-wide visibility.
-
-=== Team Lead — project admin (scoped access)
-
-A senior engineer or team lead who owns a project within a cluster but is not an organization admin. They can manage their project's members (invite colleagues, adjust roles), create and manage namespaces, and view the cluster resources that back their project. They do not have visibility into other teams' projects or into organization-wide settings such as the user roster or appstore plugin management. This persona exercises the project-level authorization boundaries distinct from both the org-admin and the project-viewer.
 
 === Fundament Operator — platform staff
 

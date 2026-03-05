@@ -20,6 +20,10 @@ INSERT INTO tenant.users (id, organization_id, name, external_id, role, email) V
     ('019b4000-1000-7000-8000-000000000006', '019b4000-0000-7000-8000-000000000003', 'Frank', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDYSBWxvY2Fs', 'admin', 'frank@initech.com'),
     ('019b4000-1000-7000-8000-000000000007', '019b4000-0000-7000-8000-000000000003', 'Grace', 'CiQwMTliNDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDcSBWxvY2Fs', 'viewer', 'grace@initech.com');
 
+-- Cluster for acme-corp
+INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version) VALUES
+    ('019b4000-2000-7000-8000-000000000001', '019b4000-0000-7000-8000-000000000001', 'acme-cluster', 'eu-west-1', '1.31.0');
+
 -- Categories
 INSERT INTO appstore.categories (id, name) VALUES
     ('019b4000-4000-7000-8000-000000000001', 'Observability'),
