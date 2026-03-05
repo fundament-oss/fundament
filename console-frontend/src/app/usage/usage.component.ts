@@ -236,8 +236,20 @@ export default class UsageComponent implements OnInit {
     return this.selectedClusterId() ? this.clusterTotals() : this.orgTotals();
   });
 
-  get hasTimeSeriesData(): boolean {
+  get hasCpuData(): boolean {
     return this.cpuSeriesData.length > 0;
+  }
+
+  get hasMemoryData(): boolean {
+    return this.memorySeriesData.length > 0;
+  }
+
+  get hasPodData(): boolean {
+    return this.podSeriesData.length > 0;
+  }
+
+  get hasNetworkData(): boolean {
+    return this.networkRxSeriesData.length > 0 || this.networkTxSeriesData.length > 0;
   }
 
   filteredNamespaceUsage = computed<NamespaceUsageData[]>(() => {

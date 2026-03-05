@@ -191,44 +191,56 @@
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">CPU usage over time</h3>
           <div class="relative h-64">
-            <canvas #cpuChart></canvas>
-            @if (!hasTimeSeriesData) {
-              <div class="absolute inset-0 flex items-center justify-center">
-                <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
-              </div>
+            @if (hasCpuData) {
+              <canvas #cpuChart></canvas>
+            } @else {
+              <p
+                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
+              >
+                No data available
+              </p>
             }
           </div>
         </div>
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Memory usage over time</h3>
           <div class="relative h-64">
-            <canvas #memoryChart></canvas>
-            @if (!hasTimeSeriesData) {
-              <div class="absolute inset-0 flex items-center justify-center">
-                <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
-              </div>
+            @if (hasMemoryData) {
+              <canvas #memoryChart></canvas>
+            } @else {
+              <p
+                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
+              >
+                No data available
+              </p>
             }
           </div>
         </div>
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Pod count over time</h3>
           <div class="relative h-64">
-            <canvas #podChart></canvas>
-            @if (!hasTimeSeriesData) {
-              <div class="absolute inset-0 flex items-center justify-center">
-                <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
-              </div>
+            @if (hasPodData) {
+              <canvas #podChart></canvas>
+            } @else {
+              <p
+                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
+              >
+                No data available
+              </p>
             }
           </div>
         </div>
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium dark:text-white">Network I/O over time</h3>
           <div class="relative h-64">
-            <canvas #networkChart></canvas>
-            @if (!hasTimeSeriesData) {
-              <div class="absolute inset-0 flex items-center justify-center">
-                <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
-              </div>
+            @if (hasNetworkData) {
+              <canvas #networkChart></canvas>
+            } @else {
+              <p
+                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
+              >
+                No data available
+              </p>
             }
           </div>
         </div>
