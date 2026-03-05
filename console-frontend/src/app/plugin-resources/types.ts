@@ -3,31 +3,13 @@
 export interface PluginDefinition {
   apiVersion: string;
   kind: 'PluginDefinition';
-  metadata: PluginMetadata;
-  menu: PluginMenu;
-  uiHints?: Record<string, CrdUiHints>;
-  customComponents?: PluginCustomComponents;
-  crds: ParsedCrd[];
-}
-
-// Maps CRD kind → view type → registered component name
-export type PluginCustomComponents = Record<
-  string,
-  {
-    list?: string;
-    detail?: string;
-    create?: string;
-    edit?: string;
-  }
->;
-
-export interface PluginMetadata {
   name: string;
   displayName: string;
   version: string;
   description: string;
   author?: string;
-  tags?: string[];
+  menu: PluginMenu;
+  crds: ParsedCrd[];
 }
 
 export interface PluginMenu {
@@ -37,27 +19,7 @@ export interface PluginMenu {
 
 export interface PluginMenuItem {
   crd: string;
-  list: boolean;
-  detail: boolean;
-  create: boolean;
   icon?: string;
-}
-
-export interface CrdUiHints {
-  formGroups?: FormGroup[];
-  hiddenFields?: string[];
-  editableFields?: string[];
-  statusMapping?: StatusMapping;
-}
-
-export interface FormGroup {
-  name: string;
-  fields: string[];
-}
-
-export interface StatusMapping {
-  jsonPath: string;
-  values: Record<string, { badge: string; label: string }>;
 }
 
 // Parsed CRD types
@@ -136,10 +98,12 @@ export interface PluginNavItem {
 export interface RawPluginYaml {
   apiVersion: string;
   kind: string;
-  metadata: PluginMetadata;
+  name: string;
+  displayName: string;
+  version: string;
+  description: string;
+  author?: string;
   menu: PluginMenu;
-  uiHints?: Record<string, CrdUiHints>;
-  customComponents?: PluginCustomComponents;
   crds: string[];
 }
 

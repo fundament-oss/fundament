@@ -378,7 +378,7 @@ export default class App implements OnInit {
 
     if (label === ':pluginDisplayName') {
       const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
-      label = plugin?.metadata.displayName ?? params['pluginName'] ?? 'Plugin';
+      label = plugin?.displayName ?? params['pluginName'] ?? 'Plugin';
     }
 
     if (label === ':resourceKindLabel') {

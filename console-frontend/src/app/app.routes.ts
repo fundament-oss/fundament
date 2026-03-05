@@ -234,23 +234,6 @@ const routes: Routes = [
             },
           },
           {
-            path: ':resourceKind/create',
-            loadComponent: () =>
-              import('./plugin-resources/dispatchers/plugin-create-dispatcher.component').then(
-                (m) => m.default,
-              ),
-            data: {
-              breadcrumbs: [
-                { label: ':pluginDisplayName' },
-                {
-                  label: ':resourceKindLabel',
-                  route: '/plugin-resources/:pluginName/:resourceKind',
-                },
-                { label: 'Create' },
-              ],
-            },
-          },
-          {
             path: ':resourceKind/:resourceId',
             loadComponent: () =>
               import('./plugin-resources/dispatchers/plugin-detail-dispatcher.component').then(
@@ -264,27 +247,6 @@ const routes: Routes = [
                   route: '/plugin-resources/:pluginName/:resourceKind',
                 },
                 { label: ':resourceName' },
-              ],
-            },
-          },
-          {
-            path: ':resourceKind/:resourceId/edit',
-            loadComponent: () =>
-              import('./plugin-resources/dispatchers/plugin-edit-dispatcher.component').then(
-                (m) => m.default,
-              ),
-            data: {
-              breadcrumbs: [
-                { label: ':pluginDisplayName' },
-                {
-                  label: ':resourceKindLabel',
-                  route: '/plugin-resources/:pluginName/:resourceKind',
-                },
-                {
-                  label: ':resourceName',
-                  route: '/plugin-resources/:pluginName/:resourceKind/:resourceId',
-                },
-                { label: 'Edit' },
               ],
             },
           },
@@ -311,24 +273,6 @@ const routes: Routes = [
             },
           },
           {
-            path: ':resourceKind/create',
-            loadComponent: () =>
-              import('./plugin-resources/dispatchers/plugin-create-dispatcher.component').then(
-                (m) => m.default,
-              ),
-            data: {
-              breadcrumbs: [
-                { label: ':projectName', route: '/projects/:id' },
-                { label: ':pluginDisplayName' },
-                {
-                  label: ':resourceKindLabel',
-                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
-                },
-                { label: 'Create' },
-              ],
-            },
-          },
-          {
             path: ':resourceKind/:resourceId',
             loadComponent: () =>
               import('./plugin-resources/dispatchers/plugin-detail-dispatcher.component').then(
@@ -343,28 +287,6 @@ const routes: Routes = [
                   route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
                 },
                 { label: ':resourceName' },
-              ],
-            },
-          },
-          {
-            path: ':resourceKind/:resourceId/edit',
-            loadComponent: () =>
-              import('./plugin-resources/dispatchers/plugin-edit-dispatcher.component').then(
-                (m) => m.default,
-              ),
-            data: {
-              breadcrumbs: [
-                { label: ':projectName', route: '/projects/:id' },
-                { label: ':pluginDisplayName' },
-                {
-                  label: ':resourceKindLabel',
-                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
-                },
-                {
-                  label: ':resourceName',
-                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind/:resourceId',
-                },
-                { label: 'Edit' },
               ],
             },
           },

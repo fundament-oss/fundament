@@ -1,115 +1,21 @@
 apiVersion: fundament.io/v1
 kind: PluginDefinition
 
-metadata:
-  name: cert-manager
-  displayName: Cert Manager
-  version: v1.19.3
-  description: Automatic TLS certificate management using cert-manager. Supports ACME, CA, and self-signed issuers.
-  author: Jetstack / CNCF
-  tags:
-    - security
-    - tls
-    - certificates
+name: cert-manager
+displayName: Cert Manager
+version: v1.19.3
+description: Automatic TLS certificate management using cert-manager. Supports ACME, CA, and self-signed issuers.
+author: Jetstack / CNCF
 
 menu:
   organization:
     - crd: ClusterIssuer
-      list: true
-      detail: true
-      create: true
       icon: tablerShieldCheck
   project:
     - crd: Certificate
-      list: true
-      detail: true
-      create: true
       icon: tablerCertificate
     - crd: Issuer
-      list: true
-      detail: true
-      create: true
       icon: tablerUserCircle
-
-uiHints:
-  Certificate:
-    formGroups:
-      - name: Basic information
-        fields: [secretName, commonName]
-      - name: Issuer
-        fields: [issuerRef]
-      - name: Subject alternative names
-        fields: [dnsNames, ipAddresses, uris, emailAddresses]
-      - name: Duration & renewal
-        fields: [duration, renewBefore]
-      - name: Private key
-        fields: [privateKey]
-    hiddenFields:
-      - additionalOutputFormats
-      - keystores
-      - nameConstraints
-      - literalSubject
-      - subject
-      - encodeUsagesInRequest
-      - otherNames
-      - signatureAlgorithm
-      - revisionHistoryLimit
-      - secretTemplate
-      - renewBeforePercentage
-      - usages
-      - isCA
-    statusMapping:
-      jsonPath: .status.conditions[?(@.type == "Ready")].status
-      values:
-        'True':
-          badge: badge badge-sm badge-emerald
-          label: Ready
-        'False':
-          badge: badge badge-sm badge-yellow
-          label: Not ready
-        'Unknown':
-          badge: badge badge-sm badge-gray
-          label: Unknown
-  Issuer:
-    formGroups:
-      - name: CA configuration
-        fields: [ca]
-      - name: ACME configuration
-        fields: [acme]
-      - name: Self-signed
-        fields: [selfSigned]
-    hiddenFields:
-      - vault
-      - venafi
-    statusMapping:
-      jsonPath: .status.conditions[?(@.type == "Ready")].status
-      values:
-        'True':
-          badge: badge badge-sm badge-emerald
-          label: Ready
-        'False':
-          badge: badge badge-sm badge-yellow
-          label: Not ready
-  ClusterIssuer:
-    formGroups:
-      - name: CA configuration
-        fields: [ca]
-      - name: ACME configuration
-        fields: [acme]
-      - name: Self-signed
-        fields: [selfSigned]
-    hiddenFields:
-      - vault
-      - venafi
-    statusMapping:
-      jsonPath: .status.conditions[?(@.type == "Ready")].status
-      values:
-        'True':
-          badge: badge badge-sm badge-emerald
-          label: Ready
-        'False':
-          badge: badge badge-sm badge-yellow
-          label: Not ready
 
 crds:
   - |

@@ -13,25 +13,22 @@ export default class PluginNavService {
       .filter((plugin) => plugin.menu.organization && plugin.menu.organization.length > 0)
       .reduce<PluginNavGroup[]>((groups, plugin) => {
         const items: PluginNavItem[] = (plugin.menu.organization ?? [])
-          .filter((menuItem) => {
-            const crd = plugin.crds.find((c) => c.kind === menuItem.crd);
-            return crd && menuItem.list;
-          })
+          .filter((menuItem) => plugin.crds.find((c) => c.kind === menuItem.crd))
           .map((menuItem) => {
             const crd = plugin.crds.find((c) => c.kind === menuItem.crd)!;
             return {
               label: kindToLabel(crd.kind),
               crdKind: crd.kind,
               crdPlural: crd.plural,
-              routerLink: ['/plugin-resources', plugin.metadata.name, crd.plural],
+              routerLink: ['/plugin-resources', plugin.name, crd.plural],
               icon: menuItem.icon,
             };
           });
 
         if (items.length > 0) {
           groups.push({
-            pluginName: plugin.metadata.name,
-            displayName: plugin.metadata.displayName,
+            pluginName: plugin.name,
+            displayName: plugin.displayName,
             items,
           });
         }
@@ -45,10 +42,7 @@ export default class PluginNavService {
       .filter((plugin) => plugin.menu.project && plugin.menu.project.length > 0)
       .reduce<PluginNavGroup[]>((groups, plugin) => {
         const items: PluginNavItem[] = (plugin.menu.project ?? [])
-          .filter((menuItem) => {
-            const crd = plugin.crds.find((c) => c.kind === menuItem.crd);
-            return crd && menuItem.list;
-          })
+          .filter((menuItem) => plugin.crds.find((c) => c.kind === menuItem.crd))
           .map((menuItem) => {
             const crd = plugin.crds.find((c) => c.kind === menuItem.crd)!;
             return {
@@ -62,8 +56,8 @@ export default class PluginNavService {
 
         if (items.length > 0) {
           groups.push({
-            pluginName: plugin.metadata.name,
-            displayName: plugin.metadata.displayName,
+            pluginName: plugin.name,
+            displayName: plugin.displayName,
             items,
           });
         }

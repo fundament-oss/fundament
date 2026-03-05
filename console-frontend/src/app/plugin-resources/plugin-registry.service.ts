@@ -49,10 +49,12 @@ function parsePluginYaml(yamlText: string): PluginDefinition {
   return {
     apiVersion: raw.apiVersion,
     kind: 'PluginDefinition',
-    metadata: raw.metadata,
+    name: raw.name,
+    displayName: raw.displayName,
+    version: raw.version,
+    description: raw.description,
+    author: raw.author,
     menu: raw.menu,
-    uiHints: raw.uiHints,
-    customComponents: raw.customComponents,
     crds: parsedCrds,
   };
 }
@@ -66,7 +68,6 @@ export default class PluginRegistryService {
   private readonly pluginFiles = [
     '/plugins/cert-manager/cert-manager.plugin.yaml',
     '/plugins/cnpg/cnpg.plugin.yaml',
-    '/plugins/sample-plugin/sample-plugin.plugin.yaml',
   ];
 
   async loadPlugins(): Promise<void> {
@@ -92,7 +93,7 @@ export default class PluginRegistryService {
   }
 
   getPlugin(name: string): PluginDefinition | undefined {
-    return this.plugins().find((p) => p.metadata.name === name);
+    return this.plugins().find((p) => p.name === name);
   }
 
   getCrd(pluginName: string, kind: string): ParsedCrd | undefined {
