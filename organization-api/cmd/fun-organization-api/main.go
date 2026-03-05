@@ -135,7 +135,7 @@ func run() error {
 
 	db, err := psqldb.New(ctx, logger, cfg.Database, options...)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return fmt.Errorf("failed to setup to database: %w", err)
 	}
 
 	defer db.Close()

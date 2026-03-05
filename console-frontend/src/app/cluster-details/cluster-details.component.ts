@@ -62,13 +62,13 @@ const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
 
 const getSyncStatusColor = (status: string | undefined): string => {
   const colors: Record<string, string> = {
-    ready: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200',
-    progressing: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200',
-    error: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
-    deleting: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200',
+    ready: 'badge-emerald',
+    progressing: 'badge-blue',
+    pending: 'badge-yellow',
+    error: 'badge-red',
+    deleting: 'badge-orange',
   };
-  return colors[status ?? ''] || 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200';
+  return colors[status ?? ''] || 'badge-gray';
 };
 
 const getSyncStatusLabel = (syncState: SyncState | null): string => {
