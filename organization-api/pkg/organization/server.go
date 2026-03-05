@@ -21,24 +21,22 @@ import (
 )
 
 type Config struct {
-	JWTSecret             []byte
-	CORSAllowedOrigins    []string
-	Clock                 clock.Clock
-	MockPrometheusClient  *prom.MockClient
-	MetalPrometheusClient prom.Client
+	JWTSecret            []byte
+	CORSAllowedOrigins   []string
+	Clock                clock.Clock
+	MockPrometheusClient *prom.MockClient
 }
 
 type Server struct {
-	config          *Config
-	db              *psqldb.DB
-	queries         *db.Queries
-	logger          *slog.Logger
-	authValidator   *auth.Validator
-	authz           *authz.Client
-	clock           clock.Clock
-	handler         http.Handler
-	mockPromClient  *prom.MockClient
-	metalPromClient prom.Client
+	config         *Config
+	db             *psqldb.DB
+	queries        *db.Queries
+	logger         *slog.Logger
+	authValidator  *auth.Validator
+	authz          *authz.Client
+	clock          clock.Clock
+	handler        http.Handler
+	mockPromClient *prom.MockClient
 }
 
 func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client) (*Server, error) {
@@ -47,21 +45,15 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		clk = clock.New()
 	}
 
-	metalPromClient := cfg.MetalPrometheusClient
-	if metalPromClient == nil {
-		metalPromClient = prom.StubClient{}
-	}
-
 	s := &Server{
-		logger:          logger,
-		config:          cfg,
-		db:              database,
-		queries:         db.New(database.Pool),
-		authValidator:   auth.NewValidator(cfg.JWTSecret, logger),
-		authz:           authzClient,
-		clock:           clk,
-		mockPromClient:  cfg.MockPrometheusClient,
-		metalPromClient: metalPromClient,
+		logger:         logger,
+		config:         cfg,
+		db:             database,
+		queries:        db.New(database.Pool),
+		authValidator:  auth.NewValidator(cfg.JWTSecret, logger),
+		authz:          authzClient,
+		clock:          clk,
+		mockPromClient: cfg.MockPrometheusClient,
 	}
 
 	mux := http.NewServeMux()

@@ -31,7 +31,6 @@ type config struct {
 	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
 	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
-	PrometheusMetalURL string     `env:"PROMETHEUS_METAL_URL"`
 }
 
 func main() {
@@ -186,14 +185,11 @@ func run() error {
 		return clusters, nil
 	})
 
-	metalPromClient := promClient("metal-stack", cfg.PrometheusMetalURL, mockClient, logger)
-
 	server, err := organization.New(logger, &organization.Config{
-		JWTSecret:             []byte(cfg.JWTSecret),
-		CORSAllowedOrigins:    cfg.CORSAllowedOrigins,
-		Clock:                 clock.New(),
-		MockPrometheusClient:  mockClient,
-		MetalPrometheusClient: metalPromClient,
+		JWTSecret:            []byte(cfg.JWTSecret),
+		CORSAllowedOrigins:   cfg.CORSAllowedOrigins,
+		Clock:                clock.New(),
+		MockPrometheusClient: mockClient,
 	}, db, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)
@@ -213,20 +209,3 @@ func run() error {
 	return nil
 }
 
-// promClient selects the appropriate Prometheus client based on the URL value:
-//   - ""     → StubClient (returns empty data, no metrics configured)
-//   - "mock" → MockClient (in-process generated data, no real Prometheus needed)
-//   - other  → HTTPClient targeting the given URL
-func promClient(name, url string, mock *prom.MockClient, logger *slog.Logger) prom.Client {
-	switch url {
-	case "":
-		logger.Info("Prometheus not configured, metrics will return empty data", "client", name)
-		return prom.StubClient{}
-	case "mock":
-		logger.Info("Prometheus mock mode enabled", "client", name)
-		return mock
-	default:
-		logger.Info("Prometheus configured", "client", name, "url", url)
-		return prom.NewHTTPClient(url)
-	}
-}

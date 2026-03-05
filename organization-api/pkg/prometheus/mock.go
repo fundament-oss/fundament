@@ -101,8 +101,6 @@ const (
 	mockRAMBytesPerNode = 4.0 * 1073741824.0 // 4 GiB
 	mockMaxPodsPerNode  = 110.0
 	mockNetBytesPerSec  = 10_000_000.0 // 10 MB/s
-	mockPowerBaseWatts  = 200.0
-	mockPowerRangeWatts = 50.0
 )
 
 var mockDefaultNamespaces = []string{"default", "kube-system", "monitoring"}
@@ -164,13 +162,8 @@ func mockGenerate(q string, t time.Time, clusters []ClusterInfo) []Sample {
 	byNamespace := mockHasGroupBy(q, "namespace")
 	byCluster := mockHasGroupBy(q, "cluster")
 	nsFilter := mockExtractNamespaces(q)
-	machineIDs := mockExtractMachineIDs(q)
 
 	switch {
-	case strings.Contains(q, "metal_machine_allocation_info"):
-		return mockMetalAllocationInfo(clusters)
-	case strings.Contains(q, "metal_machine_power_usage"):
-		return mockMetalPowerUsage(clusters, machineIDs, t)
 	case strings.Contains(q, "container_cpu_usage_seconds_total"):
 		return mockCPUUsage(clusters, t, byNode, byNamespace, byCluster, nsFilter)
 	case strings.Contains(q, "kube_node_status_capacity") && strings.Contains(q, `resource="cpu"`):
@@ -198,51 +191,6 @@ func mockGenerate(q string, t time.Time, clusters []ClusterInfo) []Sample {
 	default:
 		return nil
 	}
-}
-
-func mockMetalAllocationInfo(clusters []ClusterInfo) []Sample {
-	var result []Sample
-	for _, cl := range clusters {
-		tag := fmt.Sprintf("shoot--garden-mock--%s", cl.Name)
-		poolTypes := make(map[string]string, len(cl.NodePools))
-		for _, p := range cl.NodePools {
-			poolTypes[p.Name] = p.MachineType
-		}
-		for _, n := range mockClusterNodes(cl) {
-			size := poolTypes[n.poolName]
-			if size == "" {
-				size = "mock-standard"
-			}
-			result = append(result, Sample{
-				Labels: map[string]string{
-					"machineid":   n.machineID,
-					"machinename": n.name,
-					"size":        size,
-					"state":       "Allocated",
-					"clusterTag":  tag,
-				},
-				Value: 1,
-			})
-		}
-	}
-	return result
-}
-
-func mockMetalPowerUsage(clusters []ClusterInfo, machineIDs map[string]bool, t time.Time) []Sample {
-	power := mockPowerBaseWatts + mockPowerRangeWatts*math.Sin(2*math.Pi*float64(t.Unix())/3600)
-	var result []Sample
-	for _, cl := range clusters {
-		for _, n := range mockClusterNodes(cl) {
-			if machineIDs != nil && !machineIDs[n.machineID] {
-				continue
-			}
-			result = append(result, Sample{
-				Labels: map[string]string{"machineid": n.machineID},
-				Value:  power,
-			})
-		}
-	}
-	return result
 }
 
 func mockCPUUsage(clusters []ClusterInfo, t time.Time, byNode, byNamespace, byCluster bool, nsFilter []string) []Sample {
@@ -456,18 +404,13 @@ func mockNSDistributed(clusters []ClusterInfo, perNodeValue float64, nsFilter []
 // ---- PromQL filter/groupby helpers ----
 
 var (
-	mockReClusterLabel    = regexp.MustCompile(`cluster="([^"]+)"`)
-	mockReClusterTagLabel = regexp.MustCompile(`clusterTag=~"[^"]*--([^"\\|$]+)`)
-	mockReNamespaceRegex  = regexp.MustCompile(`namespace=~"([^"]+)"`)
-	mockReMachineIDRegex  = regexp.MustCompile(`machineid=~"([^"]+)"`)
-	mockReGroupBy         = regexp.MustCompile(`\bby\s*\(\s*([^)]+)\s*\)`)
+	mockReClusterLabel   = regexp.MustCompile(`cluster="([^"]+)"`)
+	mockReNamespaceRegex = regexp.MustCompile(`namespace=~"([^"]+)"`)
+	mockReGroupBy        = regexp.MustCompile(`\bby\s*\(\s*([^)]+)\s*\)`)
 )
 
 func mockExtractClusterName(q string) string {
 	if m := mockReClusterLabel.FindStringSubmatch(q); m != nil {
-		return m[1]
-	}
-	if m := mockReClusterTagLabel.FindStringSubmatch(q); m != nil {
 		return m[1]
 	}
 	return ""
@@ -479,20 +422,6 @@ func mockExtractNamespaces(q string) []string {
 		return nil
 	}
 	return strings.Split(m[1], "|")
-}
-
-func mockExtractMachineIDs(q string) map[string]bool {
-	m := mockReMachineIDRegex.FindStringSubmatch(q)
-	if m == nil {
-		return nil
-	}
-	set := make(map[string]bool)
-	for _, id := range strings.Split(m[1], "|") {
-		if id != "" {
-			set[id] = true
-		}
-	}
-	return set
 }
 
 func mockHasGroupBy(q, label string) bool {

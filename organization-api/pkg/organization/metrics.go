@@ -200,28 +200,6 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 	}.Build()), nil
 }
 
-func (s *Server) GetClusterInfraMetrics(
-	ctx context.Context,
-	req *connect.Request[organizationv1.GetClusterInfraMetricsRequest],
-) (*connect.Response[organizationv1.GetInfraMetricsResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
-
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
-		return nil, err
-	}
-
-	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
-		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
-	}
-
-	// Anchor the regex at the end so that a cluster named "foo" does not match "bar-foo".
-	return s.infraMetrics(ctx, fmt.Sprintf(`metal_machine_allocation_info{clusterTag=~"shoot--.*--%s$"}`, promEscapeLabelValue(cluster.Name)))
-}
-
 // -- Org-level RPCs --
 
 func (s *Server) GetOrgWorkloadMetrics(
@@ -446,14 +424,6 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 	}.Build()), nil
 }
 
-func (s *Server) GetOrgInfraMetrics(
-	ctx context.Context,
-	_ *connect.Request[organizationv1.GetOrgInfraMetricsRequest],
-) (*connect.Response[organizationv1.GetInfraMetricsResponse], error) {
-	// No clusterTag filter — returns all machines the metal-stack Prometheus exposes.
-	return s.infraMetrics(ctx, `metal_machine_allocation_info`)
-}
-
 // -- Project-level RPCs --
 
 func (s *Server) GetProjectWorkloadMetrics(
@@ -634,65 +604,6 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 		PodCount:           timeSeriesFirstToProto(podSeries, 1),
 		NetworkReceiveMbS:  timeSeriesFirstToProto(netRxSeries, 1.0/bytesPerMB),
 		NetworkTransmitMbS: timeSeriesFirstToProto(netTxSeries, 1.0/bytesPerMB),
-	}.Build()), nil
-}
-
-// -- Shared infrastructure helper --
-
-// infraMetrics queries metal-stack machine info and power usage using the given
-// machine allocation query. machineQuery should be a PromQL expression that
-// returns metal_machine_allocation_info samples.
-func (s *Server) infraMetrics(ctx context.Context, machineQuery string) (*connect.Response[organizationv1.GetInfraMetricsResponse], error) {
-	now := time.Now()
-
-	machines, err := s.metalPromClient.Query(ctx, machineQuery, now)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query machines: %w", err))
-	}
-
-	if len(machines) == 0 {
-		return connect.NewResponse(organizationv1.GetInfraMetricsResponse_builder{}.Build()), nil
-	}
-
-	machineIDs := make([]string, 0, len(machines))
-	for _, m := range machines {
-		if id := m.Labels["machineid"]; id != "" {
-			machineIDs = append(machineIDs, id)
-		}
-	}
-
-	powerByID := make(map[string]float64)
-	if len(machineIDs) > 0 {
-		powerSamples, err := s.metalPromClient.Query(ctx, buildPowerQuery(machineIDs), now)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query power: %w", err))
-		}
-		for _, p := range powerSamples {
-			if id := p.Labels["machineid"]; id != "" {
-				powerByID[id] = p.Value
-			}
-		}
-	}
-
-	var totalPower float64
-	machineInfos := make([]*organizationv1.MachineInfo, 0, len(machines))
-	for _, m := range machines {
-		id := m.Labels["machineid"]
-		power := powerByID[id]
-		totalPower += power
-
-		machineInfos = append(machineInfos, organizationv1.MachineInfo_builder{
-			Id:         id,
-			Name:       m.Labels["machinename"],
-			Size:       m.Labels["size"],
-			State:      m.Labels["state"],
-			PowerWatts: power,
-		}.Build())
-	}
-
-	return connect.NewResponse(organizationv1.GetInfraMetricsResponse_builder{
-		Machines:        machineInfos,
-		TotalPowerWatts: totalPower,
 	}.Build()), nil
 }
 
@@ -903,13 +814,6 @@ func sumTimeSeries(allSeries [][]prom.TimeSeries) []prom.TimeSeries {
 	return []prom.TimeSeries{{Labels: map[string]string{}, Samples: points}}
 }
 
-// promEscapeLabelValue escapes backslashes and double-quotes in a PromQL label value.
-func promEscapeLabelValue(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	s = strings.ReplaceAll(s, `"`, `\"`)
-	return s
-}
-
 // buildNamespaceFilter returns a PromQL label selector fragment that matches any
 // of the given namespace names: namespace=~"ns1|ns2|ns3".
 // names must be non-empty; callers are responsible for guarding against empty slices.
@@ -920,12 +824,6 @@ func buildNamespaceFilter(names []string) string {
 		return `namespace="_"`
 	}
 	return fmt.Sprintf(`namespace=~"%s"`, strings.Join(names, "|"))
-}
-
-// buildPowerQuery returns a PromQL query for machine power usage filtered to the
-// given machine IDs.
-func buildPowerQuery(machineIDs []string) string {
-	return fmt.Sprintf(`metal_machine_power_usage{machineid=~"%s"}`, strings.Join(machineIDs, "|"))
 }
 
 // resolveTimeRange returns start, end, and step for a Prometheus range query,

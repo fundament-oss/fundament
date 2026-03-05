@@ -12,9 +12,9 @@ option features.(pb.go).api_level = API_OPAQUE;
 option features.field_presence = IMPLICIT;
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
-// MetricsService provides workload and infrastructure metrics for clusters,
-// organizations, and projects. Metrics are sourced from a configured Prometheus
-// instance. When Prometheus is not configured, all RPCs return empty results.
+// MetricsService provides workload metrics for clusters, organizations, and
+// projects. Metrics are sourced from a configured Prometheus instance. When
+// Prometheus is not configured, all RPCs return empty results.
 service MetricsService {
   // Cluster-level workload metrics (CPU, memory, pods) for a specific cluster
   rpc GetClusterWorkloadMetrics(GetClusterWorkloadMetricsRequest) returns (GetClusterWorkloadMetricsResponse);
@@ -22,17 +22,11 @@ service MetricsService {
   // Time-series workload metrics for a specific cluster
   rpc GetClusterWorkloadTimeSeries(GetClusterWorkloadTimeSeriesRequest) returns (GetWorkloadTimeSeriesResponse);
 
-  // metal-stack infrastructure metrics for a specific cluster's machines
-  rpc GetClusterInfraMetrics(GetClusterInfraMetricsRequest) returns (GetInfraMetricsResponse);
-
   // Org-level workload metrics aggregated across all clusters
   rpc GetOrgWorkloadMetrics(GetOrgWorkloadMetricsRequest) returns (GetOrgWorkloadMetricsResponse);
 
   // Org-level time-series workload metrics aggregated across all clusters
   rpc GetOrgWorkloadTimeSeries(GetOrgWorkloadTimeSeriesRequest) returns (GetWorkloadTimeSeriesResponse);
-
-  // metal-stack infrastructure metrics for all machines in the organization
-  rpc GetOrgInfraMetrics(GetOrgInfraMetricsRequest) returns (GetInfraMetricsResponse);
 
   // Project-level workload metrics filtered to the project's namespaces
   rpc GetProjectWorkloadMetrics(GetProjectWorkloadMetricsRequest) returns (GetProjectWorkloadMetricsResponse);
@@ -58,22 +52,6 @@ message GetWorkloadTimeSeriesResponse {
 message MetricSample {
   google.protobuf.Timestamp timestamp = 10;
   double value = 20;
-}
-
-// GetInfraMetricsResponse contains metal-stack machine information.
-// Used as the response for all *InfraMetrics RPCs.
-message GetInfraMetricsResponse {
-  repeated MachineInfo machines = 10;
-  double total_power_watts = 20;
-}
-
-// MachineInfo describes a single metal-stack machine.
-message MachineInfo {
-  string id = 10;
-  string name = 20;
-  string size = 30;
-  string state = 40;
-  double power_watts = 50;
 }
 
 // NamespaceWorkloadMetrics describes workload usage for a single namespace.
@@ -127,11 +105,6 @@ message GetClusterWorkloadTimeSeriesRequest {
   int32 step_seconds = 40;
 }
 
-// GetClusterInfraMetricsRequest requests infrastructure metrics for a cluster's machines.
-message GetClusterInfraMetricsRequest {
-  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
-}
-
 // -- Org-level --
 
 // GetOrgWorkloadMetricsRequest requests workload metrics aggregated across all clusters.
@@ -165,9 +138,6 @@ message GetOrgWorkloadTimeSeriesRequest {
   // Resolution in seconds. Defaults to 300 (5 minutes) when zero.
   int32 step_seconds = 30;
 }
-
-// GetOrgInfraMetricsRequest requests infrastructure metrics for all org machines.
-message GetOrgInfraMetricsRequest {}
 
 // -- Project-level --
 

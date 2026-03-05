@@ -232,195 +232,6 @@ func (b0 MetricSample_builder) Build() *MetricSample {
 	return m0
 }
 
-// GetInfraMetricsResponse contains metal-stack machine information.
-// Used as the response for all *InfraMetrics RPCs.
-type GetInfraMetricsResponse struct {
-	state                      protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Machines        *[]*MachineInfo        `protobuf:"bytes,10,rep,name=machines"`
-	xxx_hidden_TotalPowerWatts float64                `protobuf:"fixed64,20,opt,name=total_power_watts,json=totalPowerWatts"`
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
-}
-
-func (x *GetInfraMetricsResponse) Reset() {
-	*x = GetInfraMetricsResponse{}
-	mi := &file_v1_metrics_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetInfraMetricsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetInfraMetricsResponse) ProtoMessage() {}
-
-func (x *GetInfraMetricsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *GetInfraMetricsResponse) GetMachines() []*MachineInfo {
-	if x != nil {
-		if x.xxx_hidden_Machines != nil {
-			return *x.xxx_hidden_Machines
-		}
-	}
-	return nil
-}
-
-func (x *GetInfraMetricsResponse) GetTotalPowerWatts() float64 {
-	if x != nil {
-		return x.xxx_hidden_TotalPowerWatts
-	}
-	return 0
-}
-
-func (x *GetInfraMetricsResponse) SetMachines(v []*MachineInfo) {
-	x.xxx_hidden_Machines = &v
-}
-
-func (x *GetInfraMetricsResponse) SetTotalPowerWatts(v float64) {
-	x.xxx_hidden_TotalPowerWatts = v
-}
-
-type GetInfraMetricsResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Machines        []*MachineInfo
-	TotalPowerWatts float64
-}
-
-func (b0 GetInfraMetricsResponse_builder) Build() *GetInfraMetricsResponse {
-	m0 := &GetInfraMetricsResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Machines = &b.Machines
-	x.xxx_hidden_TotalPowerWatts = b.TotalPowerWatts
-	return m0
-}
-
-// MachineInfo describes a single metal-stack machine.
-type MachineInfo struct {
-	state                 protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id         string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_Name       string                 `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_Size       string                 `protobuf:"bytes,30,opt,name=size"`
-	xxx_hidden_State      string                 `protobuf:"bytes,40,opt,name=state"`
-	xxx_hidden_PowerWatts float64                `protobuf:"fixed64,50,opt,name=power_watts,json=powerWatts"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
-}
-
-func (x *MachineInfo) Reset() {
-	*x = MachineInfo{}
-	mi := &file_v1_metrics_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *MachineInfo) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*MachineInfo) ProtoMessage() {}
-
-func (x *MachineInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *MachineInfo) GetId() string {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return ""
-}
-
-func (x *MachineInfo) GetName() string {
-	if x != nil {
-		return x.xxx_hidden_Name
-	}
-	return ""
-}
-
-func (x *MachineInfo) GetSize() string {
-	if x != nil {
-		return x.xxx_hidden_Size
-	}
-	return ""
-}
-
-func (x *MachineInfo) GetState() string {
-	if x != nil {
-		return x.xxx_hidden_State
-	}
-	return ""
-}
-
-func (x *MachineInfo) GetPowerWatts() float64 {
-	if x != nil {
-		return x.xxx_hidden_PowerWatts
-	}
-	return 0
-}
-
-func (x *MachineInfo) SetId(v string) {
-	x.xxx_hidden_Id = v
-}
-
-func (x *MachineInfo) SetName(v string) {
-	x.xxx_hidden_Name = v
-}
-
-func (x *MachineInfo) SetSize(v string) {
-	x.xxx_hidden_Size = v
-}
-
-func (x *MachineInfo) SetState(v string) {
-	x.xxx_hidden_State = v
-}
-
-func (x *MachineInfo) SetPowerWatts(v float64) {
-	x.xxx_hidden_PowerWatts = v
-}
-
-type MachineInfo_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Id         string
-	Name       string
-	Size       string
-	State      string
-	PowerWatts float64
-}
-
-func (b0 MachineInfo_builder) Build() *MachineInfo {
-	m0 := &MachineInfo{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Id = b.Id
-	x.xxx_hidden_Name = b.Name
-	x.xxx_hidden_Size = b.Size
-	x.xxx_hidden_State = b.State
-	x.xxx_hidden_PowerWatts = b.PowerWatts
-	return m0
-}
-
 // NamespaceWorkloadMetrics describes workload usage for a single namespace.
 type NamespaceWorkloadMetrics struct {
 	state                         protoimpl.MessageState `protogen:"opaque.v1"`
@@ -440,7 +251,7 @@ type NamespaceWorkloadMetrics struct {
 
 func (x *NamespaceWorkloadMetrics) Reset() {
 	*x = NamespaceWorkloadMetrics{}
-	mi := &file_v1_metrics_proto_msgTypes[4]
+	mi := &file_v1_metrics_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -452,7 +263,7 @@ func (x *NamespaceWorkloadMetrics) String() string {
 func (*NamespaceWorkloadMetrics) ProtoMessage() {}
 
 func (x *NamespaceWorkloadMetrics) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[4]
+	mi := &file_v1_metrics_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -617,7 +428,7 @@ type GetClusterWorkloadMetricsRequest struct {
 
 func (x *GetClusterWorkloadMetricsRequest) Reset() {
 	*x = GetClusterWorkloadMetricsRequest{}
-	mi := &file_v1_metrics_proto_msgTypes[5]
+	mi := &file_v1_metrics_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -629,7 +440,7 @@ func (x *GetClusterWorkloadMetricsRequest) String() string {
 func (*GetClusterWorkloadMetricsRequest) ProtoMessage() {}
 
 func (x *GetClusterWorkloadMetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[5]
+	mi := &file_v1_metrics_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -677,7 +488,7 @@ type GetClusterWorkloadMetricsResponse struct {
 
 func (x *GetClusterWorkloadMetricsResponse) Reset() {
 	*x = GetClusterWorkloadMetricsResponse{}
-	mi := &file_v1_metrics_proto_msgTypes[6]
+	mi := &file_v1_metrics_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -689,7 +500,7 @@ func (x *GetClusterWorkloadMetricsResponse) String() string {
 func (*GetClusterWorkloadMetricsResponse) ProtoMessage() {}
 
 func (x *GetClusterWorkloadMetricsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[6]
+	mi := &file_v1_metrics_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -782,7 +593,7 @@ type NodeWorkloadMetrics struct {
 
 func (x *NodeWorkloadMetrics) Reset() {
 	*x = NodeWorkloadMetrics{}
-	mi := &file_v1_metrics_proto_msgTypes[7]
+	mi := &file_v1_metrics_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -794,7 +605,7 @@ func (x *NodeWorkloadMetrics) String() string {
 func (*NodeWorkloadMetrics) ProtoMessage() {}
 
 func (x *NodeWorkloadMetrics) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[7]
+	mi := &file_v1_metrics_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -915,7 +726,7 @@ type GetClusterWorkloadTimeSeriesRequest struct {
 
 func (x *GetClusterWorkloadTimeSeriesRequest) Reset() {
 	*x = GetClusterWorkloadTimeSeriesRequest{}
-	mi := &file_v1_metrics_proto_msgTypes[8]
+	mi := &file_v1_metrics_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -927,7 +738,7 @@ func (x *GetClusterWorkloadTimeSeriesRequest) String() string {
 func (*GetClusterWorkloadTimeSeriesRequest) ProtoMessage() {}
 
 func (x *GetClusterWorkloadTimeSeriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[8]
+	mi := &file_v1_metrics_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1026,64 +837,6 @@ func (b0 GetClusterWorkloadTimeSeriesRequest_builder) Build() *GetClusterWorkloa
 	return m0
 }
 
-// GetClusterInfraMetricsRequest requests infrastructure metrics for a cluster's machines.
-type GetClusterInfraMetricsRequest struct {
-	state                protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_ClusterId string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
-}
-
-func (x *GetClusterInfraMetricsRequest) Reset() {
-	*x = GetClusterInfraMetricsRequest{}
-	mi := &file_v1_metrics_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetClusterInfraMetricsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetClusterInfraMetricsRequest) ProtoMessage() {}
-
-func (x *GetClusterInfraMetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *GetClusterInfraMetricsRequest) GetClusterId() string {
-	if x != nil {
-		return x.xxx_hidden_ClusterId
-	}
-	return ""
-}
-
-func (x *GetClusterInfraMetricsRequest) SetClusterId(v string) {
-	x.xxx_hidden_ClusterId = v
-}
-
-type GetClusterInfraMetricsRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	ClusterId string
-}
-
-func (b0 GetClusterInfraMetricsRequest_builder) Build() *GetClusterInfraMetricsRequest {
-	m0 := &GetClusterInfraMetricsRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_ClusterId = b.ClusterId
-	return m0
-}
-
 // GetOrgWorkloadMetricsRequest requests workload metrics aggregated across all clusters.
 type GetOrgWorkloadMetricsRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
@@ -1093,7 +846,7 @@ type GetOrgWorkloadMetricsRequest struct {
 
 func (x *GetOrgWorkloadMetricsRequest) Reset() {
 	*x = GetOrgWorkloadMetricsRequest{}
-	mi := &file_v1_metrics_proto_msgTypes[10]
+	mi := &file_v1_metrics_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1105,7 +858,7 @@ func (x *GetOrgWorkloadMetricsRequest) String() string {
 func (*GetOrgWorkloadMetricsRequest) ProtoMessage() {}
 
 func (x *GetOrgWorkloadMetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[10]
+	mi := &file_v1_metrics_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1140,7 +893,7 @@ type GetOrgWorkloadMetricsResponse struct {
 
 func (x *GetOrgWorkloadMetricsResponse) Reset() {
 	*x = GetOrgWorkloadMetricsResponse{}
-	mi := &file_v1_metrics_proto_msgTypes[11]
+	mi := &file_v1_metrics_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1152,7 +905,7 @@ func (x *GetOrgWorkloadMetricsResponse) String() string {
 func (*GetOrgWorkloadMetricsResponse) ProtoMessage() {}
 
 func (x *GetOrgWorkloadMetricsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[11]
+	mi := &file_v1_metrics_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1247,7 +1000,7 @@ type ClusterWorkloadSummary struct {
 
 func (x *ClusterWorkloadSummary) Reset() {
 	*x = ClusterWorkloadSummary{}
-	mi := &file_v1_metrics_proto_msgTypes[12]
+	mi := &file_v1_metrics_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1259,7 +1012,7 @@ func (x *ClusterWorkloadSummary) String() string {
 func (*ClusterWorkloadSummary) ProtoMessage() {}
 
 func (x *ClusterWorkloadSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[12]
+	mi := &file_v1_metrics_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1392,7 +1145,7 @@ type GetOrgWorkloadTimeSeriesRequest struct {
 
 func (x *GetOrgWorkloadTimeSeriesRequest) Reset() {
 	*x = GetOrgWorkloadTimeSeriesRequest{}
-	mi := &file_v1_metrics_proto_msgTypes[13]
+	mi := &file_v1_metrics_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1404,7 +1157,7 @@ func (x *GetOrgWorkloadTimeSeriesRequest) String() string {
 func (*GetOrgWorkloadTimeSeriesRequest) ProtoMessage() {}
 
 func (x *GetOrgWorkloadTimeSeriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[13]
+	mi := &file_v1_metrics_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1490,50 +1243,6 @@ func (b0 GetOrgWorkloadTimeSeriesRequest_builder) Build() *GetOrgWorkloadTimeSer
 	return m0
 }
 
-// GetOrgInfraMetricsRequest requests infrastructure metrics for all org machines.
-type GetOrgInfraMetricsRequest struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetOrgInfraMetricsRequest) Reset() {
-	*x = GetOrgInfraMetricsRequest{}
-	mi := &file_v1_metrics_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetOrgInfraMetricsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetOrgInfraMetricsRequest) ProtoMessage() {}
-
-func (x *GetOrgInfraMetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type GetOrgInfraMetricsRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 GetOrgInfraMetricsRequest_builder) Build() *GetOrgInfraMetricsRequest {
-	m0 := &GetOrgInfraMetricsRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 // GetProjectWorkloadMetricsRequest requests workload metrics for a project's namespaces.
 type GetProjectWorkloadMetricsRequest struct {
 	state                protoimpl.MessageState `protogen:"opaque.v1"`
@@ -1544,7 +1253,7 @@ type GetProjectWorkloadMetricsRequest struct {
 
 func (x *GetProjectWorkloadMetricsRequest) Reset() {
 	*x = GetProjectWorkloadMetricsRequest{}
-	mi := &file_v1_metrics_proto_msgTypes[15]
+	mi := &file_v1_metrics_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1556,7 +1265,7 @@ func (x *GetProjectWorkloadMetricsRequest) String() string {
 func (*GetProjectWorkloadMetricsRequest) ProtoMessage() {}
 
 func (x *GetProjectWorkloadMetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[15]
+	mi := &file_v1_metrics_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1603,7 +1312,7 @@ type GetProjectWorkloadMetricsResponse struct {
 
 func (x *GetProjectWorkloadMetricsResponse) Reset() {
 	*x = GetProjectWorkloadMetricsResponse{}
-	mi := &file_v1_metrics_proto_msgTypes[16]
+	mi := &file_v1_metrics_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1615,7 +1324,7 @@ func (x *GetProjectWorkloadMetricsResponse) String() string {
 func (*GetProjectWorkloadMetricsResponse) ProtoMessage() {}
 
 func (x *GetProjectWorkloadMetricsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[16]
+	mi := &file_v1_metrics_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1692,7 +1401,7 @@ type GetProjectWorkloadTimeSeriesRequest struct {
 
 func (x *GetProjectWorkloadTimeSeriesRequest) Reset() {
 	*x = GetProjectWorkloadTimeSeriesRequest{}
-	mi := &file_v1_metrics_proto_msgTypes[17]
+	mi := &file_v1_metrics_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1704,7 +1413,7 @@ func (x *GetProjectWorkloadTimeSeriesRequest) String() string {
 func (*GetProjectWorkloadTimeSeriesRequest) ProtoMessage() {}
 
 func (x *GetProjectWorkloadTimeSeriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metrics_proto_msgTypes[17]
+	mi := &file_v1_metrics_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1819,19 +1528,7 @@ const file_v1_metrics_proto_rawDesc = "" +
 	"\fMetricSample\x128\n" +
 	"\ttimestamp\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x14\n" +
-	"\x05value\x18\x14 \x01(\x01R\x05value\"\x7f\n" +
-	"\x17GetInfraMetricsResponse\x128\n" +
-	"\bmachines\x18\n" +
-	" \x03(\v2\x1c.organization.v1.MachineInfoR\bmachines\x12*\n" +
-	"\x11total_power_watts\x18\x14 \x01(\x01R\x0ftotalPowerWatts\"|\n" +
-	"\vMachineInfo\x12\x0e\n" +
-	"\x02id\x18\n" +
-	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x12\x12\n" +
-	"\x04size\x18\x1e \x01(\tR\x04size\x12\x14\n" +
-	"\x05state\x18( \x01(\tR\x05state\x12\x1f\n" +
-	"\vpower_watts\x182 \x01(\x01R\n" +
-	"powerWatts\"\x8a\x03\n" +
+	"\x05value\x18\x14 \x01(\x01R\x05value\"\x8a\x03\n" +
 	"\x18NamespaceWorkloadMetrics\x12\x1c\n" +
 	"\tnamespace\x18\n" +
 	" \x01(\tR\tnamespace\x12\x1b\n" +
@@ -1869,11 +1566,7 @@ const file_v1_metrics_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x127\n" +
 	"\x05start\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
 	"\x03end\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12!\n" +
-	"\fstep_seconds\x18( \x01(\x05R\vstepSeconds\"H\n" +
-	"\x1dGetClusterInfraMetricsRequest\x12'\n" +
-	"\n" +
-	"cluster_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"\x1e\n" +
+	"\fstep_seconds\x18( \x01(\x05R\vstepSeconds\"\x1e\n" +
 	"\x1cGetOrgWorkloadMetricsRequest\"\xeb\x01\n" +
 	"\x1dGetOrgWorkloadMetricsResponse\x12:\n" +
 	"\x06totals\x18\n" +
@@ -1894,8 +1587,7 @@ const file_v1_metrics_proto_rawDesc = "" +
 	"\x05start\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
 	"\x03end\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12!\n" +
-	"\fstep_seconds\x18\x1e \x01(\x05R\vstepSeconds\"\x1b\n" +
-	"\x19GetOrgInfraMetricsRequest\"K\n" +
+	"\fstep_seconds\x18\x1e \x01(\x05R\vstepSeconds\"K\n" +
 	" GetProjectWorkloadMetricsRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
@@ -1912,40 +1604,34 @@ const file_v1_metrics_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\x127\n" +
 	"\x05start\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
 	"\x03end\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12!\n" +
-	"\fstep_seconds\x18( \x01(\x05R\vstepSeconds2\xfe\a\n" +
+	"\fstep_seconds\x18( \x01(\x05R\vstepSeconds2\x9e\x06\n" +
 	"\x0eMetricsService\x12\x82\x01\n" +
 	"\x19GetClusterWorkloadMetrics\x121.organization.v1.GetClusterWorkloadMetricsRequest\x1a2.organization.v1.GetClusterWorkloadMetricsResponse\x12\x84\x01\n" +
-	"\x1cGetClusterWorkloadTimeSeries\x124.organization.v1.GetClusterWorkloadTimeSeriesRequest\x1a..organization.v1.GetWorkloadTimeSeriesResponse\x12r\n" +
-	"\x16GetClusterInfraMetrics\x12..organization.v1.GetClusterInfraMetricsRequest\x1a(.organization.v1.GetInfraMetricsResponse\x12v\n" +
+	"\x1cGetClusterWorkloadTimeSeries\x124.organization.v1.GetClusterWorkloadTimeSeriesRequest\x1a..organization.v1.GetWorkloadTimeSeriesResponse\x12v\n" +
 	"\x15GetOrgWorkloadMetrics\x12-.organization.v1.GetOrgWorkloadMetricsRequest\x1a..organization.v1.GetOrgWorkloadMetricsResponse\x12|\n" +
-	"\x18GetOrgWorkloadTimeSeries\x120.organization.v1.GetOrgWorkloadTimeSeriesRequest\x1a..organization.v1.GetWorkloadTimeSeriesResponse\x12j\n" +
-	"\x12GetOrgInfraMetrics\x12*.organization.v1.GetOrgInfraMetricsRequest\x1a(.organization.v1.GetInfraMetricsResponse\x12\x82\x01\n" +
+	"\x18GetOrgWorkloadTimeSeries\x120.organization.v1.GetOrgWorkloadTimeSeriesRequest\x1a..organization.v1.GetWorkloadTimeSeriesResponse\x12\x82\x01\n" +
 	"\x19GetProjectWorkloadMetrics\x121.organization.v1.GetProjectWorkloadMetricsRequest\x1a2.organization.v1.GetProjectWorkloadMetricsResponse\x12\x84\x01\n" +
 	"\x1cGetProjectWorkloadTimeSeries\x124.organization.v1.GetProjectWorkloadTimeSeriesRequest\x1a..organization.v1.GetWorkloadTimeSeriesResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_metrics_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_v1_metrics_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_v1_metrics_proto_goTypes = []any{
 	(*GetWorkloadTimeSeriesResponse)(nil),       // 0: organization.v1.GetWorkloadTimeSeriesResponse
 	(*MetricSample)(nil),                        // 1: organization.v1.MetricSample
-	(*GetInfraMetricsResponse)(nil),             // 2: organization.v1.GetInfraMetricsResponse
-	(*MachineInfo)(nil),                         // 3: organization.v1.MachineInfo
-	(*NamespaceWorkloadMetrics)(nil),            // 4: organization.v1.NamespaceWorkloadMetrics
-	(*GetClusterWorkloadMetricsRequest)(nil),    // 5: organization.v1.GetClusterWorkloadMetricsRequest
-	(*GetClusterWorkloadMetricsResponse)(nil),   // 6: organization.v1.GetClusterWorkloadMetricsResponse
-	(*NodeWorkloadMetrics)(nil),                 // 7: organization.v1.NodeWorkloadMetrics
-	(*GetClusterWorkloadTimeSeriesRequest)(nil), // 8: organization.v1.GetClusterWorkloadTimeSeriesRequest
-	(*GetClusterInfraMetricsRequest)(nil),       // 9: organization.v1.GetClusterInfraMetricsRequest
-	(*GetOrgWorkloadMetricsRequest)(nil),        // 10: organization.v1.GetOrgWorkloadMetricsRequest
-	(*GetOrgWorkloadMetricsResponse)(nil),       // 11: organization.v1.GetOrgWorkloadMetricsResponse
-	(*ClusterWorkloadSummary)(nil),              // 12: organization.v1.ClusterWorkloadSummary
-	(*GetOrgWorkloadTimeSeriesRequest)(nil),     // 13: organization.v1.GetOrgWorkloadTimeSeriesRequest
-	(*GetOrgInfraMetricsRequest)(nil),           // 14: organization.v1.GetOrgInfraMetricsRequest
-	(*GetProjectWorkloadMetricsRequest)(nil),    // 15: organization.v1.GetProjectWorkloadMetricsRequest
-	(*GetProjectWorkloadMetricsResponse)(nil),   // 16: organization.v1.GetProjectWorkloadMetricsResponse
-	(*GetProjectWorkloadTimeSeriesRequest)(nil), // 17: organization.v1.GetProjectWorkloadTimeSeriesRequest
-	(*timestamppb.Timestamp)(nil),               // 18: google.protobuf.Timestamp
-	(*ResourceUsageInfo)(nil),                   // 19: organization.v1.ResourceUsageInfo
-	(*ResourceUsage)(nil),                       // 20: organization.v1.ResourceUsage
+	(*NamespaceWorkloadMetrics)(nil),            // 2: organization.v1.NamespaceWorkloadMetrics
+	(*GetClusterWorkloadMetricsRequest)(nil),    // 3: organization.v1.GetClusterWorkloadMetricsRequest
+	(*GetClusterWorkloadMetricsResponse)(nil),   // 4: organization.v1.GetClusterWorkloadMetricsResponse
+	(*NodeWorkloadMetrics)(nil),                 // 5: organization.v1.NodeWorkloadMetrics
+	(*GetClusterWorkloadTimeSeriesRequest)(nil), // 6: organization.v1.GetClusterWorkloadTimeSeriesRequest
+	(*GetOrgWorkloadMetricsRequest)(nil),        // 7: organization.v1.GetOrgWorkloadMetricsRequest
+	(*GetOrgWorkloadMetricsResponse)(nil),       // 8: organization.v1.GetOrgWorkloadMetricsResponse
+	(*ClusterWorkloadSummary)(nil),              // 9: organization.v1.ClusterWorkloadSummary
+	(*GetOrgWorkloadTimeSeriesRequest)(nil),     // 10: organization.v1.GetOrgWorkloadTimeSeriesRequest
+	(*GetProjectWorkloadMetricsRequest)(nil),    // 11: organization.v1.GetProjectWorkloadMetricsRequest
+	(*GetProjectWorkloadMetricsResponse)(nil),   // 12: organization.v1.GetProjectWorkloadMetricsResponse
+	(*GetProjectWorkloadTimeSeriesRequest)(nil), // 13: organization.v1.GetProjectWorkloadTimeSeriesRequest
+	(*timestamppb.Timestamp)(nil),               // 14: google.protobuf.Timestamp
+	(*ResourceUsageInfo)(nil),                   // 15: organization.v1.ResourceUsageInfo
+	(*ResourceUsage)(nil),                       // 16: organization.v1.ResourceUsage
 }
 var file_v1_metrics_proto_depIdxs = []int32{
 	1,  // 0: organization.v1.GetWorkloadTimeSeriesResponse.cpu_cores:type_name -> organization.v1.MetricSample
@@ -1953,49 +1639,44 @@ var file_v1_metrics_proto_depIdxs = []int32{
 	1,  // 2: organization.v1.GetWorkloadTimeSeriesResponse.pod_count:type_name -> organization.v1.MetricSample
 	1,  // 3: organization.v1.GetWorkloadTimeSeriesResponse.network_receive_mb_s:type_name -> organization.v1.MetricSample
 	1,  // 4: organization.v1.GetWorkloadTimeSeriesResponse.network_transmit_mb_s:type_name -> organization.v1.MetricSample
-	18, // 5: organization.v1.MetricSample.timestamp:type_name -> google.protobuf.Timestamp
-	3,  // 6: organization.v1.GetInfraMetricsResponse.machines:type_name -> organization.v1.MachineInfo
-	19, // 7: organization.v1.GetClusterWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
-	7,  // 8: organization.v1.GetClusterWorkloadMetricsResponse.nodes:type_name -> organization.v1.NodeWorkloadMetrics
-	4,  // 9: organization.v1.GetClusterWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
-	20, // 10: organization.v1.NodeWorkloadMetrics.cpu:type_name -> organization.v1.ResourceUsage
-	20, // 11: organization.v1.NodeWorkloadMetrics.memory:type_name -> organization.v1.ResourceUsage
-	20, // 12: organization.v1.NodeWorkloadMetrics.pods:type_name -> organization.v1.ResourceUsage
-	18, // 13: organization.v1.GetClusterWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 14: organization.v1.GetClusterWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	19, // 15: organization.v1.GetOrgWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
-	12, // 16: organization.v1.GetOrgWorkloadMetricsResponse.clusters:type_name -> organization.v1.ClusterWorkloadSummary
-	4,  // 17: organization.v1.GetOrgWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
-	20, // 18: organization.v1.ClusterWorkloadSummary.cpu:type_name -> organization.v1.ResourceUsage
-	20, // 19: organization.v1.ClusterWorkloadSummary.memory:type_name -> organization.v1.ResourceUsage
-	20, // 20: organization.v1.ClusterWorkloadSummary.pods:type_name -> organization.v1.ResourceUsage
-	18, // 21: organization.v1.GetOrgWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 22: organization.v1.GetOrgWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	19, // 23: organization.v1.GetProjectWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
-	4,  // 24: organization.v1.GetProjectWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
-	18, // 25: organization.v1.GetProjectWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 26: organization.v1.GetProjectWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	5,  // 27: organization.v1.MetricsService.GetClusterWorkloadMetrics:input_type -> organization.v1.GetClusterWorkloadMetricsRequest
-	8,  // 28: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:input_type -> organization.v1.GetClusterWorkloadTimeSeriesRequest
-	9,  // 29: organization.v1.MetricsService.GetClusterInfraMetrics:input_type -> organization.v1.GetClusterInfraMetricsRequest
-	10, // 30: organization.v1.MetricsService.GetOrgWorkloadMetrics:input_type -> organization.v1.GetOrgWorkloadMetricsRequest
-	13, // 31: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:input_type -> organization.v1.GetOrgWorkloadTimeSeriesRequest
-	14, // 32: organization.v1.MetricsService.GetOrgInfraMetrics:input_type -> organization.v1.GetOrgInfraMetricsRequest
-	15, // 33: organization.v1.MetricsService.GetProjectWorkloadMetrics:input_type -> organization.v1.GetProjectWorkloadMetricsRequest
-	17, // 34: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:input_type -> organization.v1.GetProjectWorkloadTimeSeriesRequest
-	6,  // 35: organization.v1.MetricsService.GetClusterWorkloadMetrics:output_type -> organization.v1.GetClusterWorkloadMetricsResponse
-	0,  // 36: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	2,  // 37: organization.v1.MetricsService.GetClusterInfraMetrics:output_type -> organization.v1.GetInfraMetricsResponse
-	11, // 38: organization.v1.MetricsService.GetOrgWorkloadMetrics:output_type -> organization.v1.GetOrgWorkloadMetricsResponse
-	0,  // 39: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	2,  // 40: organization.v1.MetricsService.GetOrgInfraMetrics:output_type -> organization.v1.GetInfraMetricsResponse
-	16, // 41: organization.v1.MetricsService.GetProjectWorkloadMetrics:output_type -> organization.v1.GetProjectWorkloadMetricsResponse
-	0,  // 42: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	35, // [35:43] is the sub-list for method output_type
-	27, // [27:35] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	14, // 5: organization.v1.MetricSample.timestamp:type_name -> google.protobuf.Timestamp
+	15, // 6: organization.v1.GetClusterWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	5,  // 7: organization.v1.GetClusterWorkloadMetricsResponse.nodes:type_name -> organization.v1.NodeWorkloadMetrics
+	2,  // 8: organization.v1.GetClusterWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
+	16, // 9: organization.v1.NodeWorkloadMetrics.cpu:type_name -> organization.v1.ResourceUsage
+	16, // 10: organization.v1.NodeWorkloadMetrics.memory:type_name -> organization.v1.ResourceUsage
+	16, // 11: organization.v1.NodeWorkloadMetrics.pods:type_name -> organization.v1.ResourceUsage
+	14, // 12: organization.v1.GetClusterWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	14, // 13: organization.v1.GetClusterWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	15, // 14: organization.v1.GetOrgWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	9,  // 15: organization.v1.GetOrgWorkloadMetricsResponse.clusters:type_name -> organization.v1.ClusterWorkloadSummary
+	2,  // 16: organization.v1.GetOrgWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
+	16, // 17: organization.v1.ClusterWorkloadSummary.cpu:type_name -> organization.v1.ResourceUsage
+	16, // 18: organization.v1.ClusterWorkloadSummary.memory:type_name -> organization.v1.ResourceUsage
+	16, // 19: organization.v1.ClusterWorkloadSummary.pods:type_name -> organization.v1.ResourceUsage
+	14, // 20: organization.v1.GetOrgWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	14, // 21: organization.v1.GetOrgWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	15, // 22: organization.v1.GetProjectWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	2,  // 23: organization.v1.GetProjectWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
+	14, // 24: organization.v1.GetProjectWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	14, // 25: organization.v1.GetProjectWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	3,  // 26: organization.v1.MetricsService.GetClusterWorkloadMetrics:input_type -> organization.v1.GetClusterWorkloadMetricsRequest
+	6,  // 27: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:input_type -> organization.v1.GetClusterWorkloadTimeSeriesRequest
+	7,  // 28: organization.v1.MetricsService.GetOrgWorkloadMetrics:input_type -> organization.v1.GetOrgWorkloadMetricsRequest
+	10, // 29: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:input_type -> organization.v1.GetOrgWorkloadTimeSeriesRequest
+	11, // 30: organization.v1.MetricsService.GetProjectWorkloadMetrics:input_type -> organization.v1.GetProjectWorkloadMetricsRequest
+	13, // 31: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:input_type -> organization.v1.GetProjectWorkloadTimeSeriesRequest
+	4,  // 32: organization.v1.MetricsService.GetClusterWorkloadMetrics:output_type -> organization.v1.GetClusterWorkloadMetricsResponse
+	0,  // 33: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	8,  // 34: organization.v1.MetricsService.GetOrgWorkloadMetrics:output_type -> organization.v1.GetOrgWorkloadMetricsResponse
+	0,  // 35: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	12, // 36: organization.v1.MetricsService.GetProjectWorkloadMetrics:output_type -> organization.v1.GetProjectWorkloadMetricsResponse
+	0,  // 37: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	32, // [32:38] is the sub-list for method output_type
+	26, // [26:32] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_v1_metrics_proto_init() }
@@ -2011,7 +1692,7 @@ func file_v1_metrics_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_metrics_proto_rawDesc), len(file_v1_metrics_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

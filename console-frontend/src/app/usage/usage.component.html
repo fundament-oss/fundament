@@ -421,42 +421,6 @@
           <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
         }
       </div>
-
-      <!-- Infrastructure — org and cluster views only             -->
-      @if (viewMode() === 'org' && machines().length > 0) {
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-lg font-medium dark:text-white">Infrastructure</h3>
-            <span class="text-sm text-gray-500 dark:text-gray-400">
-              Total power: {{ totalPowerWatts() | number: '1.0-0' }} W
-            </span>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th scope="col">Machine</th>
-                  <th scope="col">Size</th>
-                  <th scope="col">State</th>
-                  <th scope="col">Power</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (m of machines(); track m.id) {
-                  <tr>
-                    <td class="font-mono font-medium dark:text-white">{{ m.name }}</td>
-                    <td>{{ m.size }}</td>
-                    <td>
-                      <span [class]="getMachineStateClass(m.state)">{{ m.state }}</span>
-                    </td>
-                    <td>{{ m.powerWatts | number: '1.0-0' }} W</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-      }
     }
     <!-- end @if (!isLoading()) -->
   </div>

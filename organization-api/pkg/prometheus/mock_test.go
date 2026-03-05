@@ -26,13 +26,6 @@ func TestMockExtractClusterName_ClusterLabel(t *testing.T) {
 	}
 }
 
-func TestMockExtractClusterName_ClusterTagLabel(t *testing.T) {
-	q := `metal_machine_allocation_info{clusterTag=~"shoot--.*--my-cluster$"}`
-	if got := mockExtractClusterName(q); got != "my-cluster" {
-		t.Errorf("got %q, want %q", got, "my-cluster")
-	}
-}
-
 func TestMockExtractClusterName_NoCluster(t *testing.T) {
 	q := `sum(rate(container_cpu_usage_seconds_total[5m]))`
 	if got := mockExtractClusterName(q); got != "" {
@@ -207,23 +200,6 @@ func TestMockGenerate_NamespaceFilter(t *testing.T) {
 	for i, v := range want {
 		if names[i] != v {
 			t.Errorf("[%d]: got %q, want %q", i, names[i], v)
-		}
-	}
-}
-
-func TestMockGenerate_MetalAllocationInfo(t *testing.T) {
-	q := `metal_machine_allocation_info`
-	samples := mockGenerate(q, time.Now(), testClusters)
-	nodes := mockClusterNodes(testCluster)
-	if len(samples) != len(nodes) {
-		t.Errorf("expected %d machine samples, got %d", len(nodes), len(samples))
-	}
-	for _, s := range samples {
-		if s.Labels["machineid"] == "" {
-			t.Errorf("missing machineid label: %v", s.Labels)
-		}
-		if s.Labels["state"] != "Allocated" {
-			t.Errorf("expected state=Allocated, got %q", s.Labels["state"])
 		}
 	}
 }

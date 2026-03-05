@@ -18,7 +18,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/metrics.proto.
  */
 export const file_v1_metrics: GenFile = /*@__PURE__*/
-  fileDesc("ChB2MS9tZXRyaWNzLnByb3RvEg9vcmdhbml6YXRpb24udjEisQIKHUdldFdvcmtsb2FkVGltZVNlcmllc1Jlc3BvbnNlEjAKCWNwdV9jb3JlcxgKIAMoCzIdLm9yZ2FuaXphdGlvbi52MS5NZXRyaWNTYW1wbGUSMQoKbWVtb3J5X2dpYhgUIAMoCzIdLm9yZ2FuaXphdGlvbi52MS5NZXRyaWNTYW1wbGUSMAoJcG9kX2NvdW50GB4gAygLMh0ub3JnYW5pemF0aW9uLnYxLk1ldHJpY1NhbXBsZRI7ChRuZXR3b3JrX3JlY2VpdmVfbWJfcxgoIAMoCzIdLm9yZ2FuaXphdGlvbi52MS5NZXRyaWNTYW1wbGUSPAoVbmV0d29ya190cmFuc21pdF9tYl9zGDIgAygLMh0ub3JnYW5pemF0aW9uLnYxLk1ldHJpY1NhbXBsZSJMCgxNZXRyaWNTYW1wbGUSLQoJdGltZXN0YW1wGAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBINCgV2YWx1ZRgUIAEoASJkChdHZXRJbmZyYU1ldHJpY3NSZXNwb25zZRIuCghtYWNoaW5lcxgKIAMoCzIcLm9yZ2FuaXphdGlvbi52MS5NYWNoaW5lSW5mbxIZChF0b3RhbF9wb3dlcl93YXR0cxgUIAEoASJZCgtNYWNoaW5lSW5mbxIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEgwKBHNpemUYHiABKAkSDQoFc3RhdGUYKCABKAkSEwoLcG93ZXJfd2F0dHMYMiABKAEigQIKGE5hbWVzcGFjZVdvcmtsb2FkTWV0cmljcxIRCgluYW1lc3BhY2UYCiABKAkSEQoJY3B1X2NvcmVzGBQgASgBEhIKCm1lbW9yeV9naWIYHiABKAESDAoEcG9kcxgoIAEoBRIUCgxjcHVfcmVxdWVzdHMYMiABKAESEgoKY3B1X2xpbWl0cxg8IAEoARIbChNtZW1vcnlfcmVxdWVzdHNfZ2liGEYgASgBEhkKEW1lbW9yeV9saW1pdHNfZ2liGFAgASgBEhwKFG5ldHdvcmtfcmVjZWl2ZV9tYl9zGFogASgBEh0KFW5ldHdvcmtfdHJhbnNtaXRfbWJfcxhkIAEoASJACiBHZXRDbHVzdGVyV29ya2xvYWRNZXRyaWNzUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASLLAQohR2V0Q2x1c3Rlcldvcmtsb2FkTWV0cmljc1Jlc3BvbnNlEjIKBnRvdGFscxgKIAEoCzIiLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlSW5mbxIzCgVub2RlcxgUIAMoCzIkLm9yZ2FuaXphdGlvbi52MS5Ob2RlV29ya2xvYWRNZXRyaWNzEj0KCm5hbWVzcGFjZXMYHiADKAsyKS5vcmdhbml6YXRpb24udjEuTmFtZXNwYWNlV29ya2xvYWRNZXRyaWNzIq4BChNOb2RlV29ya2xvYWRNZXRyaWNzEgwKBG5vZGUYCiABKAkSKwoDY3B1GBQgASgLMh4ub3JnYW5pemF0aW9uLnYxLlJlc291cmNlVXNhZ2USLgoGbWVtb3J5GB4gASgLMh4ub3JnYW5pemF0aW9uLnYxLlJlc291cmNlVXNhZ2USLAoEcG9kcxgoIAEoCzIeLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlIrsBCiNHZXRDbHVzdGVyV29ya2xvYWRUaW1lU2VyaWVzUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABARIwCgVzdGFydBgUIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEi4KA2VuZBgeIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhQKDHN0ZXBfc2Vjb25kcxgoIAEoBSI9Ch1HZXRDbHVzdGVySW5mcmFNZXRyaWNzUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASIeChxHZXRPcmdXb3JrbG9hZE1ldHJpY3NSZXF1ZXN0Is0BCh1HZXRPcmdXb3JrbG9hZE1ldHJpY3NSZXNwb25zZRIyCgZ0b3RhbHMYCiABKAsyIi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZUluZm8SOQoIY2x1c3RlcnMYFCADKAsyJy5vcmdhbml6YXRpb24udjEuQ2x1c3Rlcldvcmtsb2FkU3VtbWFyeRI9CgpuYW1lc3BhY2VzGB4gAygLMikub3JnYW5pemF0aW9uLnYxLk5hbWVzcGFjZVdvcmtsb2FkTWV0cmljcyLNAQoWQ2x1c3Rlcldvcmtsb2FkU3VtbWFyeRISCgpjbHVzdGVyX2lkGAUgASgJEhQKDGNsdXN0ZXJfbmFtZRgKIAEoCRIrCgNjcHUYFCABKAsyHi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZRIuCgZtZW1vcnkYHiABKAsyHi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZRIsCgRwb2RzGCggASgLMh4ub3JnYW5pemF0aW9uLnYxLlJlc291cmNlVXNhZ2UimQEKH0dldE9yZ1dvcmtsb2FkVGltZVNlcmllc1JlcXVlc3QSMAoFc3RhcnQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIuCgNlbmQYFCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIUCgxzdGVwX3NlY29uZHMYHiABKAUiGwoZR2V0T3JnSW5mcmFNZXRyaWNzUmVxdWVzdCJACiBHZXRQcm9qZWN0V29ya2xvYWRNZXRyaWNzUmVxdWVzdBIcCgpwcm9qZWN0X2lkGAogASgJQgi6SAVyA7ABASKWAQohR2V0UHJvamVjdFdvcmtsb2FkTWV0cmljc1Jlc3BvbnNlEjIKBnRvdGFscxgKIAEoCzIiLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlSW5mbxI9CgpuYW1lc3BhY2VzGBQgAygLMikub3JnYW5pemF0aW9uLnYxLk5hbWVzcGFjZVdvcmtsb2FkTWV0cmljcyK7AQojR2V0UHJvamVjdFdvcmtsb2FkVGltZVNlcmllc1JlcXVlc3QSHAoKcHJvamVjdF9pZBgKIAEoCUIIukgFcgOwAQESMAoFc3RhcnQYFCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIuCgNlbmQYHiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIUCgxzdGVwX3NlY29uZHMYKCABKAUy/gcKDk1ldHJpY3NTZXJ2aWNlEoIBChlHZXRDbHVzdGVyV29ya2xvYWRNZXRyaWNzEjEub3JnYW5pemF0aW9uLnYxLkdldENsdXN0ZXJXb3JrbG9hZE1ldHJpY3NSZXF1ZXN0GjIub3JnYW5pemF0aW9uLnYxLkdldENsdXN0ZXJXb3JrbG9hZE1ldHJpY3NSZXNwb25zZRKEAQocR2V0Q2x1c3Rlcldvcmtsb2FkVGltZVNlcmllcxI0Lm9yZ2FuaXphdGlvbi52MS5HZXRDbHVzdGVyV29ya2xvYWRUaW1lU2VyaWVzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5HZXRXb3JrbG9hZFRpbWVTZXJpZXNSZXNwb25zZRJyChZHZXRDbHVzdGVySW5mcmFNZXRyaWNzEi4ub3JnYW5pemF0aW9uLnYxLkdldENsdXN0ZXJJbmZyYU1ldHJpY3NSZXF1ZXN0Gigub3JnYW5pemF0aW9uLnYxLkdldEluZnJhTWV0cmljc1Jlc3BvbnNlEnYKFUdldE9yZ1dvcmtsb2FkTWV0cmljcxItLm9yZ2FuaXphdGlvbi52MS5HZXRPcmdXb3JrbG9hZE1ldHJpY3NSZXF1ZXN0Gi4ub3JnYW5pemF0aW9uLnYxLkdldE9yZ1dvcmtsb2FkTWV0cmljc1Jlc3BvbnNlEnwKGEdldE9yZ1dvcmtsb2FkVGltZVNlcmllcxIwLm9yZ2FuaXphdGlvbi52MS5HZXRPcmdXb3JrbG9hZFRpbWVTZXJpZXNSZXF1ZXN0Gi4ub3JnYW5pemF0aW9uLnYxLkdldFdvcmtsb2FkVGltZVNlcmllc1Jlc3BvbnNlEmoKEkdldE9yZ0luZnJhTWV0cmljcxIqLm9yZ2FuaXphdGlvbi52MS5HZXRPcmdJbmZyYU1ldHJpY3NSZXF1ZXN0Gigub3JnYW5pemF0aW9uLnYxLkdldEluZnJhTWV0cmljc1Jlc3BvbnNlEoIBChlHZXRQcm9qZWN0V29ya2xvYWRNZXRyaWNzEjEub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RXb3JrbG9hZE1ldHJpY3NSZXF1ZXN0GjIub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RXb3JrbG9hZE1ldHJpY3NSZXNwb25zZRKEAQocR2V0UHJvamVjdFdvcmtsb2FkVGltZVNlcmllcxI0Lm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0V29ya2xvYWRUaW1lU2VyaWVzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5HZXRXb3JrbG9hZFRpbWVTZXJpZXNSZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_cluster, file_v1_common]);
+  fileDesc("ChB2MS9tZXRyaWNzLnByb3RvEg9vcmdhbml6YXRpb24udjEisQIKHUdldFdvcmtsb2FkVGltZVNlcmllc1Jlc3BvbnNlEjAKCWNwdV9jb3JlcxgKIAMoCzIdLm9yZ2FuaXphdGlvbi52MS5NZXRyaWNTYW1wbGUSMQoKbWVtb3J5X2dpYhgUIAMoCzIdLm9yZ2FuaXphdGlvbi52MS5NZXRyaWNTYW1wbGUSMAoJcG9kX2NvdW50GB4gAygLMh0ub3JnYW5pemF0aW9uLnYxLk1ldHJpY1NhbXBsZRI7ChRuZXR3b3JrX3JlY2VpdmVfbWJfcxgoIAMoCzIdLm9yZ2FuaXphdGlvbi52MS5NZXRyaWNTYW1wbGUSPAoVbmV0d29ya190cmFuc21pdF9tYl9zGDIgAygLMh0ub3JnYW5pemF0aW9uLnYxLk1ldHJpY1NhbXBsZSJMCgxNZXRyaWNTYW1wbGUSLQoJdGltZXN0YW1wGAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBINCgV2YWx1ZRgUIAEoASKBAgoYTmFtZXNwYWNlV29ya2xvYWRNZXRyaWNzEhEKCW5hbWVzcGFjZRgKIAEoCRIRCgljcHVfY29yZXMYFCABKAESEgoKbWVtb3J5X2dpYhgeIAEoARIMCgRwb2RzGCggASgFEhQKDGNwdV9yZXF1ZXN0cxgyIAEoARISCgpjcHVfbGltaXRzGDwgASgBEhsKE21lbW9yeV9yZXF1ZXN0c19naWIYRiABKAESGQoRbWVtb3J5X2xpbWl0c19naWIYUCABKAESHAoUbmV0d29ya19yZWNlaXZlX21iX3MYWiABKAESHQoVbmV0d29ya190cmFuc21pdF9tYl9zGGQgASgBIkAKIEdldENsdXN0ZXJXb3JrbG9hZE1ldHJpY3NSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBIssBCiFHZXRDbHVzdGVyV29ya2xvYWRNZXRyaWNzUmVzcG9uc2USMgoGdG90YWxzGAogASgLMiIub3JnYW5pemF0aW9uLnYxLlJlc291cmNlVXNhZ2VJbmZvEjMKBW5vZGVzGBQgAygLMiQub3JnYW5pemF0aW9uLnYxLk5vZGVXb3JrbG9hZE1ldHJpY3MSPQoKbmFtZXNwYWNlcxgeIAMoCzIpLm9yZ2FuaXphdGlvbi52MS5OYW1lc3BhY2VXb3JrbG9hZE1ldHJpY3MirgEKE05vZGVXb3JrbG9hZE1ldHJpY3MSDAoEbm9kZRgKIAEoCRIrCgNjcHUYFCABKAsyHi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZRIuCgZtZW1vcnkYHiABKAsyHi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZRIsCgRwb2RzGCggASgLMh4ub3JnYW5pemF0aW9uLnYxLlJlc291cmNlVXNhZ2UiuwEKI0dldENsdXN0ZXJXb3JrbG9hZFRpbWVTZXJpZXNSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEjAKBXN0YXJ0GBQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESLgoDZW5kGB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESFAoMc3RlcF9zZWNvbmRzGCggASgFIh4KHEdldE9yZ1dvcmtsb2FkTWV0cmljc1JlcXVlc3QizQEKHUdldE9yZ1dvcmtsb2FkTWV0cmljc1Jlc3BvbnNlEjIKBnRvdGFscxgKIAEoCzIiLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlSW5mbxI5CghjbHVzdGVycxgUIAMoCzInLm9yZ2FuaXphdGlvbi52MS5DbHVzdGVyV29ya2xvYWRTdW1tYXJ5Ej0KCm5hbWVzcGFjZXMYHiADKAsyKS5vcmdhbml6YXRpb24udjEuTmFtZXNwYWNlV29ya2xvYWRNZXRyaWNzIs0BChZDbHVzdGVyV29ya2xvYWRTdW1tYXJ5EhIKCmNsdXN0ZXJfaWQYBSABKAkSFAoMY2x1c3Rlcl9uYW1lGAogASgJEisKA2NwdRgUIAEoCzIeLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlEi4KBm1lbW9yeRgeIAEoCzIeLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlEiwKBHBvZHMYKCABKAsyHi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZSKZAQofR2V0T3JnV29ya2xvYWRUaW1lU2VyaWVzUmVxdWVzdBIwCgVzdGFydBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEi4KA2VuZBgUIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhQKDHN0ZXBfc2Vjb25kcxgeIAEoBSJACiBHZXRQcm9qZWN0V29ya2xvYWRNZXRyaWNzUmVxdWVzdBIcCgpwcm9qZWN0X2lkGAogASgJQgi6SAVyA7ABASKWAQohR2V0UHJvamVjdFdvcmtsb2FkTWV0cmljc1Jlc3BvbnNlEjIKBnRvdGFscxgKIAEoCzIiLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlSW5mbxI9CgpuYW1lc3BhY2VzGBQgAygLMikub3JnYW5pemF0aW9uLnYxLk5hbWVzcGFjZVdvcmtsb2FkTWV0cmljcyK7AQojR2V0UHJvamVjdFdvcmtsb2FkVGltZVNlcmllc1JlcXVlc3QSHAoKcHJvamVjdF9pZBgKIAEoCUIIukgFcgOwAQESMAoFc3RhcnQYFCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIuCgNlbmQYHiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIUCgxzdGVwX3NlY29uZHMYKCABKAUyngYKDk1ldHJpY3NTZXJ2aWNlEoIBChlHZXRDbHVzdGVyV29ya2xvYWRNZXRyaWNzEjEub3JnYW5pemF0aW9uLnYxLkdldENsdXN0ZXJXb3JrbG9hZE1ldHJpY3NSZXF1ZXN0GjIub3JnYW5pemF0aW9uLnYxLkdldENsdXN0ZXJXb3JrbG9hZE1ldHJpY3NSZXNwb25zZRKEAQocR2V0Q2x1c3Rlcldvcmtsb2FkVGltZVNlcmllcxI0Lm9yZ2FuaXphdGlvbi52MS5HZXRDbHVzdGVyV29ya2xvYWRUaW1lU2VyaWVzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5HZXRXb3JrbG9hZFRpbWVTZXJpZXNSZXNwb25zZRJ2ChVHZXRPcmdXb3JrbG9hZE1ldHJpY3MSLS5vcmdhbml6YXRpb24udjEuR2V0T3JnV29ya2xvYWRNZXRyaWNzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5HZXRPcmdXb3JrbG9hZE1ldHJpY3NSZXNwb25zZRJ8ChhHZXRPcmdXb3JrbG9hZFRpbWVTZXJpZXMSMC5vcmdhbml6YXRpb24udjEuR2V0T3JnV29ya2xvYWRUaW1lU2VyaWVzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5HZXRXb3JrbG9hZFRpbWVTZXJpZXNSZXNwb25zZRKCAQoZR2V0UHJvamVjdFdvcmtsb2FkTWV0cmljcxIxLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0V29ya2xvYWRNZXRyaWNzUmVxdWVzdBoyLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0V29ya2xvYWRNZXRyaWNzUmVzcG9uc2UShAEKHEdldFByb2plY3RXb3JrbG9hZFRpbWVTZXJpZXMSNC5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdFdvcmtsb2FkVGltZVNlcmllc1JlcXVlc3QaLi5vcmdhbml6YXRpb24udjEuR2V0V29ya2xvYWRUaW1lU2VyaWVzUmVzcG9uc2VCX1pTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_cluster, file_v1_common]);
 
 /**
  * GetWorkloadTimeSeriesResponse contains time-series data for workload metrics.
@@ -87,70 +87,6 @@ export const MetricSampleSchema: GenMessage<MetricSample> = /*@__PURE__*/
   messageDesc(file_v1_metrics, 1);
 
 /**
- * GetInfraMetricsResponse contains metal-stack machine information.
- * Used as the response for all *InfraMetrics RPCs.
- *
- * @generated from message organization.v1.GetInfraMetricsResponse
- */
-export type GetInfraMetricsResponse = Message<"organization.v1.GetInfraMetricsResponse"> & {
-  /**
-   * @generated from field: repeated organization.v1.MachineInfo machines = 10;
-   */
-  machines: MachineInfo[];
-
-  /**
-   * @generated from field: double total_power_watts = 20;
-   */
-  totalPowerWatts: number;
-};
-
-/**
- * Describes the message organization.v1.GetInfraMetricsResponse.
- * Use `create(GetInfraMetricsResponseSchema)` to create a new message.
- */
-export const GetInfraMetricsResponseSchema: GenMessage<GetInfraMetricsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 2);
-
-/**
- * MachineInfo describes a single metal-stack machine.
- *
- * @generated from message organization.v1.MachineInfo
- */
-export type MachineInfo = Message<"organization.v1.MachineInfo"> & {
-  /**
-   * @generated from field: string id = 10;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string name = 20;
-   */
-  name: string;
-
-  /**
-   * @generated from field: string size = 30;
-   */
-  size: string;
-
-  /**
-   * @generated from field: string state = 40;
-   */
-  state: string;
-
-  /**
-   * @generated from field: double power_watts = 50;
-   */
-  powerWatts: number;
-};
-
-/**
- * Describes the message organization.v1.MachineInfo.
- * Use `create(MachineInfoSchema)` to create a new message.
- */
-export const MachineInfoSchema: GenMessage<MachineInfo> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 3);
-
-/**
  * NamespaceWorkloadMetrics describes workload usage for a single namespace.
  *
  * @generated from message organization.v1.NamespaceWorkloadMetrics
@@ -216,7 +152,7 @@ export type NamespaceWorkloadMetrics = Message<"organization.v1.NamespaceWorkloa
  * Use `create(NamespaceWorkloadMetricsSchema)` to create a new message.
  */
 export const NamespaceWorkloadMetricsSchema: GenMessage<NamespaceWorkloadMetrics> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 4);
+  messageDesc(file_v1_metrics, 2);
 
 /**
  * GetClusterWorkloadMetricsRequest requests workload metrics for a single cluster.
@@ -235,7 +171,7 @@ export type GetClusterWorkloadMetricsRequest = Message<"organization.v1.GetClust
  * Use `create(GetClusterWorkloadMetricsRequestSchema)` to create a new message.
  */
 export const GetClusterWorkloadMetricsRequestSchema: GenMessage<GetClusterWorkloadMetricsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 5);
+  messageDesc(file_v1_metrics, 3);
 
 /**
  * GetClusterWorkloadMetricsResponse contains current workload metrics for a cluster.
@@ -270,7 +206,7 @@ export type GetClusterWorkloadMetricsResponse = Message<"organization.v1.GetClus
  * Use `create(GetClusterWorkloadMetricsResponseSchema)` to create a new message.
  */
 export const GetClusterWorkloadMetricsResponseSchema: GenMessage<GetClusterWorkloadMetricsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 6);
+  messageDesc(file_v1_metrics, 4);
 
 /**
  * NodeWorkloadMetrics describes workload usage for a single Kubernetes node.
@@ -304,7 +240,7 @@ export type NodeWorkloadMetrics = Message<"organization.v1.NodeWorkloadMetrics">
  * Use `create(NodeWorkloadMetricsSchema)` to create a new message.
  */
 export const NodeWorkloadMetricsSchema: GenMessage<NodeWorkloadMetrics> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 7);
+  messageDesc(file_v1_metrics, 5);
 
 /**
  * GetClusterWorkloadTimeSeriesRequest requests time-series workload metrics for a cluster.
@@ -342,26 +278,7 @@ export type GetClusterWorkloadTimeSeriesRequest = Message<"organization.v1.GetCl
  * Use `create(GetClusterWorkloadTimeSeriesRequestSchema)` to create a new message.
  */
 export const GetClusterWorkloadTimeSeriesRequestSchema: GenMessage<GetClusterWorkloadTimeSeriesRequest> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 8);
-
-/**
- * GetClusterInfraMetricsRequest requests infrastructure metrics for a cluster's machines.
- *
- * @generated from message organization.v1.GetClusterInfraMetricsRequest
- */
-export type GetClusterInfraMetricsRequest = Message<"organization.v1.GetClusterInfraMetricsRequest"> & {
-  /**
-   * @generated from field: string cluster_id = 10;
-   */
-  clusterId: string;
-};
-
-/**
- * Describes the message organization.v1.GetClusterInfraMetricsRequest.
- * Use `create(GetClusterInfraMetricsRequestSchema)` to create a new message.
- */
-export const GetClusterInfraMetricsRequestSchema: GenMessage<GetClusterInfraMetricsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 9);
+  messageDesc(file_v1_metrics, 6);
 
 /**
  * GetOrgWorkloadMetricsRequest requests workload metrics aggregated across all clusters.
@@ -376,7 +293,7 @@ export type GetOrgWorkloadMetricsRequest = Message<"organization.v1.GetOrgWorklo
  * Use `create(GetOrgWorkloadMetricsRequestSchema)` to create a new message.
  */
 export const GetOrgWorkloadMetricsRequestSchema: GenMessage<GetOrgWorkloadMetricsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 10);
+  messageDesc(file_v1_metrics, 7);
 
 /**
  * GetOrgWorkloadMetricsResponse contains org-wide workload metrics.
@@ -411,7 +328,7 @@ export type GetOrgWorkloadMetricsResponse = Message<"organization.v1.GetOrgWorkl
  * Use `create(GetOrgWorkloadMetricsResponseSchema)` to create a new message.
  */
 export const GetOrgWorkloadMetricsResponseSchema: GenMessage<GetOrgWorkloadMetricsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 11);
+  messageDesc(file_v1_metrics, 8);
 
 /**
  * ClusterWorkloadSummary summarises workload usage for a single cluster within
@@ -451,7 +368,7 @@ export type ClusterWorkloadSummary = Message<"organization.v1.ClusterWorkloadSum
  * Use `create(ClusterWorkloadSummarySchema)` to create a new message.
  */
 export const ClusterWorkloadSummarySchema: GenMessage<ClusterWorkloadSummary> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 12);
+  messageDesc(file_v1_metrics, 9);
 
 /**
  * GetOrgWorkloadTimeSeriesRequest requests org-wide aggregated time-series metrics.
@@ -484,22 +401,7 @@ export type GetOrgWorkloadTimeSeriesRequest = Message<"organization.v1.GetOrgWor
  * Use `create(GetOrgWorkloadTimeSeriesRequestSchema)` to create a new message.
  */
 export const GetOrgWorkloadTimeSeriesRequestSchema: GenMessage<GetOrgWorkloadTimeSeriesRequest> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 13);
-
-/**
- * GetOrgInfraMetricsRequest requests infrastructure metrics for all org machines.
- *
- * @generated from message organization.v1.GetOrgInfraMetricsRequest
- */
-export type GetOrgInfraMetricsRequest = Message<"organization.v1.GetOrgInfraMetricsRequest"> & {
-};
-
-/**
- * Describes the message organization.v1.GetOrgInfraMetricsRequest.
- * Use `create(GetOrgInfraMetricsRequestSchema)` to create a new message.
- */
-export const GetOrgInfraMetricsRequestSchema: GenMessage<GetOrgInfraMetricsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 14);
+  messageDesc(file_v1_metrics, 10);
 
 /**
  * GetProjectWorkloadMetricsRequest requests workload metrics for a project's namespaces.
@@ -518,7 +420,7 @@ export type GetProjectWorkloadMetricsRequest = Message<"organization.v1.GetProje
  * Use `create(GetProjectWorkloadMetricsRequestSchema)` to create a new message.
  */
 export const GetProjectWorkloadMetricsRequestSchema: GenMessage<GetProjectWorkloadMetricsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 15);
+  messageDesc(file_v1_metrics, 11);
 
 /**
  * GetProjectWorkloadMetricsResponse contains workload metrics for a project.
@@ -546,7 +448,7 @@ export type GetProjectWorkloadMetricsResponse = Message<"organization.v1.GetProj
  * Use `create(GetProjectWorkloadMetricsResponseSchema)` to create a new message.
  */
 export const GetProjectWorkloadMetricsResponseSchema: GenMessage<GetProjectWorkloadMetricsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 16);
+  messageDesc(file_v1_metrics, 12);
 
 /**
  * GetProjectWorkloadTimeSeriesRequest requests time-series metrics for a project.
@@ -584,12 +486,12 @@ export type GetProjectWorkloadTimeSeriesRequest = Message<"organization.v1.GetPr
  * Use `create(GetProjectWorkloadTimeSeriesRequestSchema)` to create a new message.
  */
 export const GetProjectWorkloadTimeSeriesRequestSchema: GenMessage<GetProjectWorkloadTimeSeriesRequest> = /*@__PURE__*/
-  messageDesc(file_v1_metrics, 17);
+  messageDesc(file_v1_metrics, 13);
 
 /**
- * MetricsService provides workload and infrastructure metrics for clusters,
- * organizations, and projects. Metrics are sourced from a configured Prometheus
- * instance. When Prometheus is not configured, all RPCs return empty results.
+ * MetricsService provides workload metrics for clusters, organizations, and
+ * projects. Metrics are sourced from a configured Prometheus instance. When
+ * Prometheus is not configured, all RPCs return empty results.
  *
  * @generated from service organization.v1.MetricsService
  */
@@ -615,16 +517,6 @@ export const MetricsService: GenService<{
     output: typeof GetWorkloadTimeSeriesResponseSchema;
   },
   /**
-   * metal-stack infrastructure metrics for a specific cluster's machines
-   *
-   * @generated from rpc organization.v1.MetricsService.GetClusterInfraMetrics
-   */
-  getClusterInfraMetrics: {
-    methodKind: "unary";
-    input: typeof GetClusterInfraMetricsRequestSchema;
-    output: typeof GetInfraMetricsResponseSchema;
-  },
-  /**
    * Org-level workload metrics aggregated across all clusters
    *
    * @generated from rpc organization.v1.MetricsService.GetOrgWorkloadMetrics
@@ -643,16 +535,6 @@ export const MetricsService: GenService<{
     methodKind: "unary";
     input: typeof GetOrgWorkloadTimeSeriesRequestSchema;
     output: typeof GetWorkloadTimeSeriesResponseSchema;
-  },
-  /**
-   * metal-stack infrastructure metrics for all machines in the organization
-   *
-   * @generated from rpc organization.v1.MetricsService.GetOrgInfraMetrics
-   */
-  getOrgInfraMetrics: {
-    methodKind: "unary";
-    input: typeof GetOrgInfraMetricsRequestSchema;
-    output: typeof GetInfraMetricsResponseSchema;
   },
   /**
    * Project-level workload metrics filtered to the project's namespaces

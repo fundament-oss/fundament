@@ -27,17 +27,14 @@ import {
 import {
   GetClusterWorkloadMetricsRequestSchema,
   GetClusterWorkloadTimeSeriesRequestSchema,
-  GetClusterInfraMetricsRequestSchema,
   GetOrgWorkloadMetricsRequestSchema,
   GetOrgWorkloadTimeSeriesRequestSchema,
-  GetOrgInfraMetricsRequestSchema,
   GetProjectWorkloadMetricsRequestSchema,
   GetProjectWorkloadTimeSeriesRequestSchema,
   type GetClusterWorkloadMetricsResponse,
   type GetOrgWorkloadMetricsResponse,
   type GetProjectWorkloadMetricsResponse,
   type GetWorkloadTimeSeriesResponse,
-  type GetInfraMetricsResponse,
   type NamespaceWorkloadMetrics,
 } from '../../generated/v1/metrics_pb';
 
@@ -82,14 +79,6 @@ interface ClusterSummaryData {
   pods: { used: number; total: number };
 }
 
-interface MachineData {
-  id: string;
-  name: string;
-  size: string;
-  state: string;
-  powerWatts: number;
-}
-
 function getUsagePercentage(used: number, total: number): number {
   if (total === 0) return 0;
   return Math.round((used / total) * 100);
@@ -99,16 +88,6 @@ function getUsageColor(percentage: number): string {
   if (percentage >= 90) return 'bg-red-500';
   if (percentage >= 75) return 'bg-yellow-500';
   return 'bg-green-500';
-}
-
-function getMachineStateClass(state: string): string {
-  const map: Record<string, string> = {
-    Allocated: 'badge badge-emerald',
-    Available: 'badge badge-blue',
-    Reserved: 'badge badge-yellow',
-    Failed: 'badge badge-rose',
-  };
-  return map[state] ?? 'badge';
 }
 
 function formatTimestamp(ts: Timestamp | undefined): string {
@@ -190,11 +169,6 @@ export default class UsageComponent implements OnInit {
   // Shared: namespace breakdown
   namespaceUsage = signal<NamespaceUsageData[]>([]);
 
-  // Infrastructure (org + cluster views)
-  machines = signal<MachineData[]>([]);
-
-  totalPowerWatts = signal(0);
-
   // Chart data (plain arrays — updated before chart re-creation)
   private cpuSeriesData: number[] = [];
 
@@ -261,8 +235,6 @@ export default class UsageComponent implements OnInit {
 
   getUsageColor = getUsageColor;
 
-  getMachineStateClass = getMachineStateClass;
-
   onClusterChange(): void {
     if (this.selectedClusterId()) {
       this.loadClusterMetrics(this.selectedClusterId());
@@ -308,7 +280,7 @@ export default class UsageComponent implements OnInit {
     const { start, end } = this.dateRange();
 
     try {
-      const [workload, timeSeries, infra] = await Promise.all([
+      const [workload, timeSeries] = await Promise.all([
         firstValueFrom(
           this.metricsClient.getOrgWorkloadMetrics(create(GetOrgWorkloadMetricsRequestSchema, {})),
         ),
@@ -317,14 +289,10 @@ export default class UsageComponent implements OnInit {
             create(GetOrgWorkloadTimeSeriesRequestSchema, { start, end }),
           ),
         ),
-        firstValueFrom(
-          this.metricsClient.getOrgInfraMetrics(create(GetOrgInfraMetricsRequestSchema, {})),
-        ),
       ]);
 
       this.applyOrgWorkload(workload);
       this.applyTimeSeries(timeSeries);
-      this.applyInfra(infra);
     } catch (err) {
       this.errorMessage.set(String(err));
     } finally {
@@ -342,7 +310,7 @@ export default class UsageComponent implements OnInit {
     const { start, end } = this.dateRange();
 
     try {
-      const [workload, timeSeries, infra] = await Promise.all([
+      const [workload, timeSeries] = await Promise.all([
         firstValueFrom(
           this.metricsClient.getClusterWorkloadMetrics(
             create(GetClusterWorkloadMetricsRequestSchema, { clusterId }),
@@ -357,16 +325,10 @@ export default class UsageComponent implements OnInit {
             }),
           ),
         ),
-        firstValueFrom(
-          this.metricsClient.getClusterInfraMetrics(
-            create(GetClusterInfraMetricsRequestSchema, { clusterId }),
-          ),
-        ),
       ]);
 
       this.applyClusterWorkload(workload);
       this.applyTimeSeries(timeSeries);
-      this.applyInfra(infra);
     } catch (err) {
       this.errorMessage.set(String(err));
     } finally {
@@ -525,18 +487,6 @@ export default class UsageComponent implements OnInit {
     this.networkTxSeriesData = r.networkTransmitMbS.map((s) => s.value);
   }
 
-  private applyInfra(r: GetInfraMetricsResponse): void {
-    this.machines.set(
-      r.machines.map((m) => ({
-        id: m.id,
-        name: m.name,
-        size: m.size,
-        state: m.state,
-        powerWatts: m.powerWatts,
-      })),
-    );
-    this.totalPowerWatts.set(r.totalPowerWatts);
-  }
 
   private dateRange(): { start: Timestamp; end: Timestamp } {
     const start = timestampFromDate(new Date(this.dateFrom));
