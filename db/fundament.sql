@@ -135,7 +135,15 @@ CREATE OR REPLACE FUNCTION tenant.node_pool_outbox_trigger ()
 $function$
 BEGIN
     INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
-    VALUES (COALESCE(NEW.cluster_id, OLD.cluster_id), 'updated', 'trigger');
+    VALUES (
+        COALESCE(NEW.cluster_id, OLD.cluster_id),
+        CASE
+            WHEN TG_OP = 'INSERT' THEN 'created'
+            WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+            ELSE 'updated'
+        END,
+        'node_pool'
+    );
     RETURN NULL;
 END;
 $function$;
@@ -973,7 +981,7 @@ CREATE TABLE tenant.cluster_outbox (
 	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id) = 1),
 	CONSTRAINT cluster_outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed')),
 	CONSTRAINT cluster_outbox_ck_event CHECK (event IN ('created', 'updated', 'deleted', 'reconcile')),
-	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual'))
+	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual', 'node_pool'))
 );
 -- ddl-end --
 ALTER TABLE tenant.cluster_outbox OWNER TO fun_owner;

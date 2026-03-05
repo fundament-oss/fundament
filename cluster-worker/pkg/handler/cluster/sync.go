@@ -14,6 +14,7 @@ import (
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
@@ -44,7 +45,7 @@ func New(pool *pgxpool.Pool, gardenerClient gardener.Client, logger *slog.Logger
 
 // Sync processes a single cluster outbox row by syncing the cluster to Gardener.
 // Returns nil to mark the row as processed, or an error to trigger outbox retry.
-func (h *Handler) Sync(ctx context.Context, id uuid.UUID) error {
+func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext) error {
 	// 1. Look up cluster
 	cluster, err := h.queries.ClusterGetForSync(ctx, db.ClusterGetForSyncParams{ClusterID: id})
 	if err != nil {
@@ -80,7 +81,7 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID) error {
 			return fmt.Errorf("delete shoot: %w", err)
 		}
 
-		h.createSyncSucceededEvent(ctx, cluster.ID, syncAction)
+		h.createSyncSucceededEvent(ctx, cluster.ID, syncAction, syncMessage(sc.Event, sc.Source))
 		h.logger.Info("synced cluster deletion to gardener", "cluster_id", cluster.ID, "name", cluster.Name)
 		return nil
 	}
@@ -126,7 +127,7 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID) error {
 	}
 
 	// 7. Success
-	h.createSyncSucceededEvent(ctx, cluster.ID, syncAction)
+	h.createSyncSucceededEvent(ctx, cluster.ID, syncAction, syncMessage(sc.Event, sc.Source))
 	h.logger.Info("synced cluster to gardener", "cluster_id", cluster.ID, "name", cluster.Name)
 	return nil
 }
@@ -432,12 +433,32 @@ func (h *Handler) createSyncFailedEvent(ctx context.Context, clusterID uuid.UUID
 }
 
 // createSyncSucceededEvent creates a sync_succeeded event.
-func (h *Handler) createSyncSucceededEvent(ctx context.Context, clusterID uuid.UUID, action dbconst.ClusterEventSyncAction) {
+func (h *Handler) createSyncSucceededEvent(ctx context.Context, clusterID uuid.UUID, action dbconst.ClusterEventSyncAction, message string) {
 	if _, err := h.queries.ClusterCreateSyncSucceededEvent(ctx, db.ClusterCreateSyncSucceededEventParams{
 		ClusterID:  clusterID,
 		SyncAction: pgtype.Text{String: string(action), Valid: true},
-		Message:    pgtype.Text{},
+		Message:    pgtype.Text{String: message, Valid: message != ""},
 	}); err != nil {
 		h.logger.Warn("failed to create sync_succeeded event", "cluster_id", clusterID, "error", err)
+	}
+}
+
+// syncMessage builds a human-readable message from the outbox event and source.
+func syncMessage(event, source string) string {
+	entity := "Cluster"
+	if source == "node_pool" {
+		entity = "Node pool"
+	}
+	switch event {
+	case "created":
+		return entity + " created"
+	case "updated":
+		return entity + " updated"
+	case "deleted":
+		return entity + " deleted"
+	case "reconcile":
+		return entity + " reconciled"
+	default:
+		return ""
 	}
 }

@@ -215,7 +215,7 @@ func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 		return true, nil
 	}
 
-	err = h.Sync(ctx, entityID)
+	err = h.Sync(ctx, entityID, handler.SyncContext{Event: row.Event, Source: row.Source})
 	if err != nil {
 		markErr := w.handleRowError(ctx, w.queries, &row, err)
 		if markErr != nil {

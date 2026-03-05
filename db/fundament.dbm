@@ -203,7 +203,15 @@ END;]]> </definition>
 	</return-type>
 	<definition> <![CDATA[BEGIN
     INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
-    VALUES (COALESCE(NEW.cluster_id, OLD.cluster_id), 'updated', 'trigger');
+    VALUES (
+        COALESCE(NEW.cluster_id, OLD.cluster_id),
+        CASE
+            WHEN TG_OP = 'INSERT' THEN 'created'
+            WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+            ELSE 'updated'
+        END,
+        'node_pool'
+    );
     RETURN NULL;
 END;]]> </definition>
 </function>
@@ -1181,7 +1189,7 @@ END;]]> </definition>
 			<expression> <![CDATA[event IN ('created', 'updated', 'deleted', 'reconcile')]]> </expression>
 	</constraint>
 	<constraint name="cluster_outbox_ck_source" type="ck-constr" table="tenant.cluster_outbox">
-			<expression> <![CDATA[source IN ('trigger', 'reconcile', 'manual')]]> </expression>
+			<expression> <![CDATA[source IN ('trigger', 'reconcile', 'manual', 'node_pool')]]> </expression>
 	</constraint>
 </table>
 
