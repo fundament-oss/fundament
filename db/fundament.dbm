@@ -210,6 +210,32 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="node_pool_reset_cluster_synced"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    UPDATE tenant.clusters
+    SET synced = NULL,
+        sync_claimed_at = NULL,
+        sync_attempts = 0,
+        sync_error = NULL
+    WHERE id = COALESCE(NEW.cluster_id, OLD.cluster_id);
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
 <function name="cluster_sync_notify"
 		window-func="false"
 		returns-setof="false"
@@ -229,6 +255,59 @@ END;]]> </definition>
     IF NEW.synced IS NULL AND (TG_OP = 'INSERT' OR OLD.synced IS NOT NULL) THEN
         PERFORM pg_notify('cluster_sync', '');
     END IF;
+    RETURN NEW;
+END;]]> </definition>
+</function>
+
+<function name="cluster_outbox_cluster_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF TG_OP = 'INSERT'
+       OR OLD.deleted IS DISTINCT FROM NEW.deleted
+    THEN
+        INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+        VALUES (COALESCE(NEW.id, OLD.id),
+                CASE
+                    WHEN TG_OP = 'INSERT' THEN 'created'
+                    WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                    ELSE 'updated'
+                END,
+                'trigger');
+    END IF;
+    RETURN NEW;
+END;]]> </definition>
+</function>
+
+<function name="cluster_outbox_notify"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    PERFORM pg_notify('cluster_outbox', '');
     RETURN NEW;
 END;]]> </definition>
 </function>
@@ -717,6 +796,13 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
+<!-- USING (true) is intentional: fun_cluster_worker needs unrestricted SELECT on all
+     node pools across all organizations to build Gardener worker specs during sync.
+     The API-facing policy node_pools_organization_policy restricts by organization instead. -->
+<policy name="node_pools_cluster_worker_read" table="tenant.node_pools" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
@@ -1068,6 +1154,82 @@ END;]]> </definition>
 		</idxelement>
 </index>
 
+<table name="cluster_outbox" layers="0" collapse-mode="2" max-obj-count="14" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<position x="2200" y="400"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="cluster_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="event" not-null="true" default-value="'updated'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="source" not-null="true" default-value="'trigger'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status" not-null="true" default-value="'pending'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="retries" not-null="true" default-value="0">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="retry_after">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="processed">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="failed">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="status_info">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="cluster_outbox_pk" type="pk-constr" table="tenant.cluster_outbox">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="cluster_outbox_ck_single_fk" type="ck-constr" table="tenant.cluster_outbox">
+			<expression> <![CDATA[num_nonnulls(cluster_id) = 1]]> </expression>
+	</constraint>
+	<constraint name="cluster_outbox_ck_status" type="ck-constr" table="tenant.cluster_outbox">
+			<expression> <![CDATA[status IN ('pending', 'completed', 'retrying', 'failed')]]> </expression>
+	</constraint>
+	<constraint name="cluster_outbox_ck_event" type="ck-constr" table="tenant.cluster_outbox">
+			<expression> <![CDATA[event IN ('created', 'updated', 'deleted', 'reconcile')]]> </expression>
+	</constraint>
+	<constraint name="cluster_outbox_ck_source" type="ck-constr" table="tenant.cluster_outbox">
+			<expression> <![CDATA[source IN ('trigger', 'reconcile', 'manual')]]> </expression>
+	</constraint>
+</table>
+
+<index name="cluster_outbox_status_retry_idx" table="tenant.cluster_outbox"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="status"/>
+		</idxelement>
+		<idxelement use-sorting="false">
+			<column name="retry_after"/>
+		</idxelement>
+		<idxelement use-sorting="false">
+			<column name="id"/>
+		</idxelement>
+</index>
+
+<index name="cluster_outbox_idx_cluster_id" table="tenant.cluster_outbox"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="cluster_id"/>
+		</idxelement>
+</index>
+
 <table name="outbox" layers="0" collapse-mode="2" max-obj-count="19" z-value="0">
 	<schema name="authz"/>
 	<role name="fun_owner"/>
@@ -1394,6 +1556,13 @@ END;]]> </definition>
 		<function signature="authz.node_pools_sync_trigger()"/>
 </trigger>
 
+<trigger name="node_pool_reset_cluster_synced" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.node_pools">
+		<function signature="tenant.node_pool_reset_cluster_synced()"/>
+		<columns names="name,machine_type,autoscale_min,autoscale_max,deleted"/>
+</trigger>
+
 <index name="namespaces_idx_project_id" table="tenant.namespaces"
 	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
 	 index-type="btree" factor="0">
@@ -1425,6 +1594,18 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="false" trunc-event="false"
 	 table="authz.outbox">
 		<function signature="authz.outbox_notify_trigger()"/>
+</trigger>
+
+<trigger name="cluster_outbox_cluster" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.clusters">
+		<function signature="tenant.cluster_outbox_cluster_trigger()"/>
+</trigger>
+
+<trigger name="cluster_outbox_notify" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="false" trunc-event="false"
+	 table="tenant.cluster_outbox">
+		<function signature="tenant.cluster_outbox_notify()"/>
 </trigger>
 
 
@@ -1636,6 +1817,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="cluster_outbox_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.cluster_outbox">
+	<columns names="cluster_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="outbox_fk_node_pool" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.node_pools" table="authz.outbox">
 	<columns names="node_pool_id" ref-type="src-columns"/>
@@ -1812,6 +1999,11 @@ END;]]> </definition>
 	 dst-table="tenant.organizations_users" reference-fk="outbox_fk_organization_user"
 	 src-required="false" dst-required="false"/>
 
+<relationship name="rel_cluster_outbox_clusters" type="relfk" layers="0"
+	 src-table="tenant.cluster_outbox"
+	 dst-table="tenant.clusters" reference-fk="cluster_outbox_fk_cluster"
+	 src-required="false" dst-required="false"/>
+
 <relationship name="rel_organizations_users_organizations" type="relfk" layers="0"
 	 src-table="tenant.organizations_users"
 	 dst-table="tenant.organizations" reference-fk="organizations_users_fk_organization"
@@ -1906,6 +2098,11 @@ END;]]> </definition>
 	<object name="tenant.node_pools" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.node_pools" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="appstore.installs" type="table"/>
@@ -2126,5 +2323,15 @@ END;]]> </definition>
 	<object name="tenant.organizations_users" type="table"/>
 	<roles names="fun_authz"/>
 	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.cluster_outbox" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.cluster_outbox" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges insert="true"/>
 </permission>
 </dbmodel>

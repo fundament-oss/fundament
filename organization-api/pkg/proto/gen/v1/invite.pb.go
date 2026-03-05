@@ -98,10 +98,10 @@ func (b0 InviteMemberRequest_builder) Build() *InviteMemberRequest {
 
 // Invite member response
 type InviteMemberResponse struct {
-	state             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Member *Member                `protobuf:"bytes,10,opt,name=member"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_InvitationId string                 `protobuf:"bytes,10,opt,name=invitation_id,json=invitationId"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *InviteMemberResponse) Reset() {
@@ -129,39 +129,28 @@ func (x *InviteMemberResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *InviteMemberResponse) GetMember() *Member {
+func (x *InviteMemberResponse) GetInvitationId() string {
 	if x != nil {
-		return x.xxx_hidden_Member
+		return x.xxx_hidden_InvitationId
 	}
-	return nil
+	return ""
 }
 
-func (x *InviteMemberResponse) SetMember(v *Member) {
-	x.xxx_hidden_Member = v
-}
-
-func (x *InviteMemberResponse) HasMember() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Member != nil
-}
-
-func (x *InviteMemberResponse) ClearMember() {
-	x.xxx_hidden_Member = nil
+func (x *InviteMemberResponse) SetInvitationId(v string) {
+	x.xxx_hidden_InvitationId = v
 }
 
 type InviteMemberResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Member *Member
+	InvitationId string
 }
 
 func (b0 InviteMemberResponse_builder) Build() *InviteMemberResponse {
 	m0 := &InviteMemberResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Member = b.Member
+	x.xxx_hidden_InvitationId = b.InvitationId
 	return m0
 }
 
@@ -608,10 +597,10 @@ const file_v1_invite_proto_rawDesc = "" +
 	" \x01(\tB\a\xbaH\x04r\x02`\x01R\x05email\x124\n" +
 	"\n" +
 	"permission\x18\x14 \x01(\tB\x14\xbaH\x11r\x0fR\x06viewerR\x05adminR\n" +
-	"permission\"G\n" +
-	"\x14InviteMemberResponse\x12/\n" +
-	"\x06member\x18\n" +
-	" \x01(\v2\x17.organization.v1.MemberR\x06member\"\x18\n" +
+	"permission\";\n" +
+	"\x14InviteMemberResponse\x12#\n" +
+	"\rinvitation_id\x18\n" +
+	" \x01(\tR\finvitationId\"\x18\n" +
 	"\x16ListInvitationsRequest\"X\n" +
 	"\x17ListInvitationsResponse\x12=\n" +
 	"\vinvitations\x18\n" +
@@ -651,26 +640,24 @@ var file_v1_invite_proto_goTypes = []any{
 	(*AcceptInvitationResponse)(nil),  // 6: organization.v1.AcceptInvitationResponse
 	(*DeclineInvitationRequest)(nil),  // 7: organization.v1.DeclineInvitationRequest
 	(*DeclineInvitationResponse)(nil), // 8: organization.v1.DeclineInvitationResponse
-	(*Member)(nil),                    // 9: organization.v1.Member
-	(*timestamppb.Timestamp)(nil),     // 10: google.protobuf.Timestamp
+	(*timestamppb.Timestamp)(nil),     // 9: google.protobuf.Timestamp
 }
 var file_v1_invite_proto_depIdxs = []int32{
-	9,  // 0: organization.v1.InviteMemberResponse.member:type_name -> organization.v1.Member
-	4,  // 1: organization.v1.ListInvitationsResponse.invitations:type_name -> organization.v1.Invitation
-	10, // 2: organization.v1.Invitation.created:type_name -> google.protobuf.Timestamp
-	0,  // 3: organization.v1.InviteService.InviteMember:input_type -> organization.v1.InviteMemberRequest
-	2,  // 4: organization.v1.InviteService.ListInvitations:input_type -> organization.v1.ListInvitationsRequest
-	5,  // 5: organization.v1.InviteService.AcceptInvitation:input_type -> organization.v1.AcceptInvitationRequest
-	7,  // 6: organization.v1.InviteService.DeclineInvitation:input_type -> organization.v1.DeclineInvitationRequest
-	1,  // 7: organization.v1.InviteService.InviteMember:output_type -> organization.v1.InviteMemberResponse
-	3,  // 8: organization.v1.InviteService.ListInvitations:output_type -> organization.v1.ListInvitationsResponse
-	6,  // 9: organization.v1.InviteService.AcceptInvitation:output_type -> organization.v1.AcceptInvitationResponse
-	8,  // 10: organization.v1.InviteService.DeclineInvitation:output_type -> organization.v1.DeclineInvitationResponse
-	7,  // [7:11] is the sub-list for method output_type
-	3,  // [3:7] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	4, // 0: organization.v1.ListInvitationsResponse.invitations:type_name -> organization.v1.Invitation
+	9, // 1: organization.v1.Invitation.created:type_name -> google.protobuf.Timestamp
+	0, // 2: organization.v1.InviteService.InviteMember:input_type -> organization.v1.InviteMemberRequest
+	2, // 3: organization.v1.InviteService.ListInvitations:input_type -> organization.v1.ListInvitationsRequest
+	5, // 4: organization.v1.InviteService.AcceptInvitation:input_type -> organization.v1.AcceptInvitationRequest
+	7, // 5: organization.v1.InviteService.DeclineInvitation:input_type -> organization.v1.DeclineInvitationRequest
+	1, // 6: organization.v1.InviteService.InviteMember:output_type -> organization.v1.InviteMemberResponse
+	3, // 7: organization.v1.InviteService.ListInvitations:output_type -> organization.v1.ListInvitationsResponse
+	6, // 8: organization.v1.InviteService.AcceptInvitation:output_type -> organization.v1.AcceptInvitationResponse
+	8, // 9: organization.v1.InviteService.DeclineInvitation:output_type -> organization.v1.DeclineInvitationResponse
+	6, // [6:10] is the sub-list for method output_type
+	2, // [2:6] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_v1_invite_proto_init() }

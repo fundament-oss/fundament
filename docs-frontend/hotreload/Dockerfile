@@ -17,6 +17,10 @@ COPY funs/ ./src/content/docs/funs/
 RUN mkdir -p ./src/content/docs/docs
 COPY docs/ ./src/content/docs/docs/
 
+# Serve docs assets statically to avoid Astro/Vite processing large SVGs
+COPY docs/assets/ ./public/assets/
+RUN find ./src/content/docs/docs -name '*.md' -exec sed -i 's|(assets/|(/assets/|g' {} +
+
 # Expose Astro dev server port (using 80 to match production service port)
 EXPOSE 80
 

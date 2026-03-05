@@ -130,7 +130,10 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		KubernetesVersion: plan.KubernetesVersion.ValueString(),
 	}.Build())
 
-	createResp, err := r.client.ClusterService.CreateCluster(ctx, createReq)
+	// Retry on permission_denied: OpenFGA needs time to sync after login.
+	createResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.CreateClusterResponse], error) {
+		return r.client.ClusterService.CreateCluster(ctx, createReq)
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Cluster",
@@ -142,12 +145,15 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	// Set the ID from the response
 	plan.ID = types.StringValue(createResp.Msg.GetClusterId())
 
-	// Read the cluster to get the full state including status
+	// Read the cluster to get the full state including status.
+	// Retry on permission_denied, OpenFGA needs time to sync
 	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
 		ClusterId: createResp.Msg.GetClusterId(),
 	}.Build())
 
-	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
+	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetClusterResponse], error) {
+		return r.client.ClusterService.GetCluster(ctx, getReq)
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Created Cluster",
@@ -287,12 +293,15 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	// Read the cluster to get the updated state
+	// Read the cluster to get the updated state.
+	// Retry on permission_denied, OpenFGA needs time to sync.
 	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
 		ClusterId: state.ID.ValueString(),
 	}.Build())
 
-	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
+	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetClusterResponse], error) {
+		return r.client.ClusterService.GetCluster(ctx, getReq)
+	})
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeNotFound:

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -18,6 +19,8 @@ import (
 	"github.com/fundament-oss/fundament/common/rollback"
 )
 
+const listenChannel = "authz_outbox"
+
 // Config holds configuration for the outbox worker.
 type Config struct {
 	PollInterval time.Duration
@@ -25,6 +28,7 @@ type Config struct {
 	BaseBackoff  time.Duration
 	MaxBackoff   time.Duration
 	MaxRetries   int32
+	BackoffDelay time.Duration
 }
 
 // Worker processes the authz outbox table and syncs tuples to OpenFGA.
@@ -34,6 +38,7 @@ type Worker struct {
 	handler *handler.Handler
 	logger  *slog.Logger
 	cfg     Config
+	ready   atomic.Bool
 }
 
 // New creates a new authz worker with sensible defaults.
@@ -52,6 +57,11 @@ func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, logger *slog.Logge
 	}
 }
 
+// IsReady returns whether the worker has an active LISTEN connection and is processing.
+func (w *Worker) IsReady() bool {
+	return w.ready.Load()
+}
+
 func applyDefaults(cfg Config) Config {
 	if cfg.PollInterval == 0 {
 		cfg.PollInterval = 5 * time.Second
@@ -68,26 +78,59 @@ func applyDefaults(cfg Config) Config {
 	if cfg.MaxRetries == 0 {
 		cfg.MaxRetries = 3
 	}
+	if cfg.BackoffDelay == 0 {
+		cfg.BackoffDelay = 5 * time.Second
+	}
 	return cfg
 }
 
-// Run starts the worker loop. It blocks until the context is cancelled.
+// Run starts the worker with automatic reconnection. It blocks until the context is cancelled.
 func (w *Worker) Run(ctx context.Context) error {
 	w.logger.Info("starting authz worker",
 		"poll_interval", w.cfg.PollInterval,
 		"batch_size", w.cfg.BatchSize,
 	)
 
+	for {
+		err := w.runWithConnection(ctx)
+		if ctx.Err() != nil {
+			return fmt.Errorf("worker stopped: %w", ctx.Err())
+		}
+		w.logger.Error("connection lost, reconnecting", "error", err, "delay", w.cfg.BackoffDelay)
+		w.ready.Store(false)
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("worker stopped: %w", ctx.Err())
+		case <-time.After(w.cfg.BackoffDelay):
+		}
+	}
+}
+
+func (w *Worker) runWithConnection(ctx context.Context) error {
 	conn, err := w.setupListener(ctx)
 	if err != nil {
 		return err
 	}
-
 	defer conn.Release()
+
+	w.ready.Store(true)
+
+	// Reset permanently-failed items so they are retried after a worker restart.
+	if err := w.queries.ResetFailedOutboxItems(ctx); err != nil {
+		return fmt.Errorf("reset failed outbox items: %w", err)
+	}
 
 	w.processBatch(ctx)
 
-	return w.runLoop(ctx, conn.Conn())
+	for {
+		notified, err := w.waitForNotification(ctx, conn)
+		if err != nil {
+			return err
+		}
+		if notified {
+			w.processBatch(ctx)
+		}
+	}
 }
 
 func (w *Worker) setupListener(ctx context.Context) (*pgxpool.Conn, error) {
@@ -96,7 +139,7 @@ func (w *Worker) setupListener(ctx context.Context) (*pgxpool.Conn, error) {
 		return nil, fmt.Errorf("acquire connection for LISTEN: %w", err)
 	}
 
-	if _, err := conn.Exec(ctx, "LISTEN authz_outbox"); err != nil {
+	if _, err := conn.Exec(ctx, "LISTEN "+listenChannel); err != nil {
 		conn.Release()
 		return nil, fmt.Errorf("LISTEN: %w", err)
 	}
@@ -106,34 +149,62 @@ func (w *Worker) setupListener(ctx context.Context) (*pgxpool.Conn, error) {
 	return conn, nil
 }
 
-func (w *Worker) runLoop(ctx context.Context, conn *pgx.Conn) error {
-	for {
-		select {
-		case <-ctx.Done():
-			w.logger.Info("shutting down authz worker")
-			return nil
-		default:
+func (w *Worker) waitForNotification(ctx context.Context, conn *pgxpool.Conn) (bool, error) {
+	waitCtx, cancel := context.WithTimeout(ctx, w.cfg.PollInterval)
+	defer cancel()
+
+	_, err := conn.Conn().WaitForNotification(waitCtx)
+
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(ctx.Err(), context.Canceled):
+		return false, fmt.Errorf("shutdown requested: %w", ctx.Err())
+	case errors.Is(err, context.DeadlineExceeded):
+		// Active health check: verify the connection is alive and still listening.
+		// IsClosed() alone is insufficient — TCP connections can be silently dead
+		// (firewall drops, network partitions) while IsClosed() still returns false.
+		if err := w.verifyConnection(ctx, conn); err != nil {
+			return false, err
 		}
+		return false, nil
 
-		waitCtx, cancel := context.WithTimeout(ctx, w.cfg.PollInterval)
-		notification, err := conn.WaitForNotification(waitCtx)
-		cancel()
+	case conn.Conn().IsClosed():
+		return false, fmt.Errorf("connection closed")
 
-		switch {
-		case err == nil:
-			w.logger.Debug("received notification", "payload", notification.Payload)
-		case errors.Is(err, context.DeadlineExceeded):
-			w.logger.Debug("poll interval elapsed, checking for pending items")
-		case errors.Is(err, context.Canceled):
-			w.logger.Info("shutting down authz worker")
-			return nil
-		default:
-			w.logger.Warn("unexpected error waiting for notification", "error", err)
-		}
-
-		w.processBatch(ctx)
-		w.logger.Debug("done processing pending items")
+	default:
+		w.logger.Warn("unexpected error waiting for notification", "error", err)
+		return false, nil
 	}
+}
+
+func (w *Worker) verifyConnection(ctx context.Context, conn *pgxpool.Conn) error {
+	checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// Step 1: Verify the connection is alive.
+	if err := conn.Conn().Ping(checkCtx); err != nil {
+		return fmt.Errorf("connection health check failed: %w", err)
+	}
+
+	// Step 2: Verify the LISTEN subscription is still active.
+	rows, err := conn.Query(checkCtx, "SELECT pg_listening_channels()")
+	if err != nil {
+		return fmt.Errorf("failed to query listening channels: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var channel string
+		if err := rows.Scan(&channel); err != nil {
+			return fmt.Errorf("failed to scan listening channel: %w", err)
+		}
+		if channel == listenChannel {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("LISTEN subscription lost for channel %q", listenChannel)
 }
 
 func (w *Worker) processBatch(ctx context.Context) {

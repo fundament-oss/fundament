@@ -350,3 +350,14 @@ func (q *Queries) MarkOutboxRowRetry(ctx context.Context, arg MarkOutboxRowRetry
 	err := row.Scan(&retries)
 	return retries, err
 }
+
+const resetFailedOutboxItems = `-- name: ResetFailedOutboxItems :exec
+UPDATE authz.outbox
+SET status = 'pending', retries = 0, retry_after = NULL
+WHERE status = 'failed'
+`
+
+func (q *Queries) ResetFailedOutboxItems(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, resetFailedOutboxItems)
+	return err
+}

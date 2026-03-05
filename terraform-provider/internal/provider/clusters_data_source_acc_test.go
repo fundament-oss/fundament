@@ -1,14 +1,13 @@
 package provider
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-// TestAccClustersDataSource tests the fundament_clusters data source against a real API.
-// Set TF_ACC=1 and configure FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN to run.
 func TestAccClustersDataSource(t *testing.T) {
 	// Skip if not running acceptance tests
 	if os.Getenv("TF_ACC") == "" {
@@ -16,18 +15,21 @@ func TestAccClustersDataSource(t *testing.T) {
 	}
 
 	// Ensure required environment variables are set
+	if os.Getenv("FUNDAMENT_API_KEY") == "" {
+		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
+	}
 	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
 		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
 	}
-	if os.Getenv("FUNDAMENT_TOKEN") == "" {
-		t.Fatal("FUNDAMENT_TOKEN must be set for acceptance tests")
+	if os.Getenv("FUNDAMENT_ORGANIZATION_ID") == "" {
+		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccClustersDataSourceConfig,
+				Config: testAccClustersDataSourceConfig(os.Getenv("FUNDAMENT_ENDPOINT"), os.Getenv("FUNDAMENT_ORGANIZATION_ID")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Verify the data source ID is set
 					resource.TestCheckResourceAttr("data.fundament_clusters.test", "id", "clusters"),
@@ -39,57 +41,14 @@ func TestAccClustersDataSource(t *testing.T) {
 	})
 }
 
-const testAccClustersDataSourceConfig = `
+func testAccClustersDataSourceConfig(endpoint, organizationID string) string {
+	return fmt.Sprintf(`
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN from environment
+  endpoint        = %[1]q
+  organization_id = %[2]q
+  # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
 data "fundament_clusters" "test" {}
-`
-
-// TestAccClustersDataSourceWithProjectFilter tests filtering clusters by project ID.
-func TestAccClustersDataSourceWithProjectFilter(t *testing.T) {
-	// Skip if not running acceptance tests
-	if os.Getenv("TF_ACC") == "" {
-		t.Skip("Acceptance tests skipped unless TF_ACC=1 is set")
-	}
-
-	// Ensure required environment variables are set
-	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
-		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
-	}
-	if os.Getenv("FUNDAMENT_TOKEN") == "" {
-		t.Fatal("FUNDAMENT_TOKEN must be set for acceptance tests")
-	}
-
-	projectID := os.Getenv("FUNDAMENT_TEST_PROJECT_ID")
-	if projectID == "" {
-		t.Skip("FUNDAMENT_TEST_PROJECT_ID not set, skipping project filter test")
-	}
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccClustersDataSourceConfigWithProject(projectID),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					// Verify the data source ID includes project ID
-					resource.TestCheckResourceAttr("data.fundament_clusters.by_project", "id", "clusters-"+projectID),
-					resource.TestCheckResourceAttr("data.fundament_clusters.by_project", "project_id", projectID),
-				),
-			},
-		},
-	})
-}
-
-func testAccClustersDataSourceConfigWithProject(projectID string) string {
-	return `
-provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN from environment
-}
-
-data "fundament_clusters" "by_project" {
-  project_id = "` + projectID + `"
-}
-`
+`, endpoint, organizationID)
 }

@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -16,23 +17,28 @@ func TestAccClusterDataSource(t *testing.T) {
 	}
 
 	// Ensure required environment variables are set
-	if os.Getenv("FUNDAMENT_ENDPOINT") == "" {
-		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
-	}
-	if os.Getenv("FUNDAMENT_TOKEN") == "" {
-		t.Fatal("FUNDAMENT_TOKEN must be set for acceptance tests")
+	if os.Getenv("FUNDAMENT_API_KEY") == "" {
+		t.Fatal("FUNDAMENT_API_KEY must be set for acceptance tests")
 	}
 
-	clusterName := os.Getenv("FUNDAMENT_TEST_CLUSTER_NAME")
-	if clusterName == "" {
-		t.Skip("FUNDAMENT_TEST_CLUSTER_NAME not set, skipping cluster data source test")
+	endpoint := os.Getenv("FUNDAMENT_ENDPOINT")
+	if endpoint == "" {
+		t.Fatal("FUNDAMENT_ENDPOINT must be set for acceptance tests")
 	}
+
+	organizationID := os.Getenv("FUNDAMENT_ORGANIZATION_ID")
+	if organizationID == "" {
+		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
+	}
+
+	suffix := acctest.RandString(6)
+	clusterName := "tf-acc-" + suffix
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccClusterDataSourceConfig(clusterName),
+				Config: testAccClusterDataSourceConfig(clusterName, endpoint, organizationID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.fundament_cluster.test", "name", clusterName),
 					resource.TestCheckResourceAttrSet("data.fundament_cluster.test", "id"),
@@ -45,14 +51,22 @@ func TestAccClusterDataSource(t *testing.T) {
 	})
 }
 
-func testAccClusterDataSourceConfig(clusterName string) string {
+func testAccClusterDataSourceConfig(clusterName, endpoint, organizationID string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  # Uses FUNDAMENT_ENDPOINT and FUNDAMENT_TOKEN from environment
+  endpoint        = %[2]q
+  organization_id = %[3]q
+  # api_key read from environment variable FUNDAMENT_API_KEY
+}
+
+resource "fundament_cluster" "test" {
+  name               = %[1]q
+  region             = "eu-west-1"
+  kubernetes_version = "1.28"
 }
 
 data "fundament_cluster" "test" {
-  name = %[1]q
+  name = fundament_cluster.test.name
 }
-`, clusterName)
+`, clusterName, endpoint, organizationID)
 }
