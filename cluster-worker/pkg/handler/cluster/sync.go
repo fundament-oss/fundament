@@ -80,10 +80,6 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID) error {
 			return fmt.Errorf("delete shoot: %w", err)
 		}
 
-		if err := h.queries.ClusterMarkSynced(ctx, db.ClusterMarkSyncedParams{ClusterID: cluster.ID}); err != nil {
-			return fmt.Errorf("mark synced after delete: %w", err)
-		}
-
 		h.createSyncSucceededEvent(ctx, cluster.ID, syncAction)
 		h.logger.Info("synced cluster deletion to gardener", "cluster_id", cluster.ID, "name", cluster.Name)
 		return nil
@@ -130,10 +126,6 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID) error {
 	}
 
 	// 7. Success
-	if err := h.queries.ClusterMarkSynced(ctx, db.ClusterMarkSyncedParams{ClusterID: cluster.ID}); err != nil {
-		return fmt.Errorf("mark synced: %w", err)
-	}
-
 	h.createSyncSucceededEvent(ctx, cluster.ID, syncAction)
 	h.logger.Info("synced cluster to gardener", "cluster_id", cluster.ID, "name", cluster.Name)
 	return nil
@@ -184,7 +176,7 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 	// Drift detection: synced clusters missing in Gardener
 	var driftedCount int
 	for _, cluster := range dbClusters {
-		if cluster.Synced.Valid {
+		if cluster.HasCompletedOutbox {
 			if _, exists := shootByClusterID[cluster.ID]; !exists {
 				h.logger.Warn("drift detected: shoot missing in Gardener",
 					"cluster_id", cluster.ID, "name", cluster.Name)

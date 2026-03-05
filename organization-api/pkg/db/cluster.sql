@@ -1,9 +1,11 @@
-
 -- name: ClusterList :many
 -- List active clusters and clusters being deleted (not yet confirmed deleted in Gardener).
 -- Excludes clusters where Gardener has confirmed deletion (shoot_status = 'deleted').
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
+       shoot_status, shoot_status_message, shoot_status_updated,
+       (SELECT status FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_status,
+       COALESCE((SELECT retries FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1), 0)::int AS outbox_retries,
+       (SELECT status_info FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_error
 FROM tenant.clusters
 WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 ORDER BY created DESC;
@@ -11,19 +13,25 @@ ORDER BY created DESC;
 -- name: ClusterGetByID :one
 -- Get cluster by ID, including deleted clusters for direct access.
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
+       shoot_status, shoot_status_message, shoot_status_updated,
+       (SELECT status FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_status,
+       COALESCE((SELECT retries FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1), 0)::int AS outbox_retries,
+       (SELECT status_info FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_error
 FROM tenant.clusters
-WHERE id = $1;
+WHERE tenant.clusters.id = $1;
 
 -- name: ClusterGetByName :one
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
+       shoot_status, shoot_status_message, shoot_status_updated,
+       (SELECT status FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_status,
+       COALESCE((SELECT retries FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1), 0)::int AS outbox_retries,
+       (SELECT status_info FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id ORDER BY tenant.cluster_outbox.id DESC LIMIT 1) AS outbox_error
 FROM tenant.clusters
 WHERE name = $1 AND deleted IS NULL;
 
 -- name: ClusterCreate :one
 -- Create a cluster if no active or pending-delete cluster with the same name exists.
--- Allows creation only after delete is finalized (synced to Gardener).
+-- Allows creation only after Gardener confirms deletion (shoot_status = 'deleted').
 -- Returns NULL if blocked (caller should check for pgx.ErrNoRows).
 INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version)
 SELECT $1, $2, $3, $4
@@ -32,7 +40,7 @@ WHERE NOT EXISTS (
     FROM tenant.clusters
     WHERE organization_id = $1
       AND name = $2
-      AND (deleted IS NULL OR synced IS NULL)
+      AND (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 )
 RETURNING id;
 

@@ -1,13 +1,3 @@
--- name: ClusterMarkSynced :exec
--- Mark cluster as synced (Gardener accepted request).
-UPDATE tenant.clusters
-SET
-    synced = now(),
-    sync_claimed_at = NULL,
-    sync_error = NULL
-WHERE
-    id = @cluster_id;
-
 -- name: ClusterCreateSyncSucceededEvent :one
 -- Insert sync_succeeded event when Gardener accepts the manifest.
 INSERT INTO
@@ -49,51 +39,14 @@ SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
-    tenant.clusters.synced,
-    tenant.organizations.name AS organization_name
+    tenant.organizations.name AS organization_name,
+    EXISTS (SELECT 1 FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id AND status = 'completed') AS has_completed_outbox
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
     tenant.clusters.deleted IS NULL
 ORDER BY
-    tenant.clusters.id;
-
--- name: ClusterListFailing :many
--- Used for alerting - clusters that have failed multiple times.
-SELECT
-    tenant.clusters.id,
-    tenant.clusters.name,
-    tenant.clusters.sync_error,
-    tenant.clusters.sync_attempts,
-    tenant.organizations.name AS organization_name
-FROM
-    tenant.clusters
-    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-WHERE
-    tenant.clusters.sync_attempts >= @min_attempts
-ORDER BY
-    tenant.clusters.sync_attempts DESC,
-    tenant.clusters.id;
-
--- name: ClusterListExhausted :many
--- Lists clusters that have exceeded max sync attempts.
--- Used for alerting and admin dashboards.
-SELECT
-    tenant.clusters.id,
-    tenant.clusters.name,
-    tenant.clusters.sync_error,
-    tenant.clusters.sync_attempts,
-    tenant.clusters.sync_claimed_at,
-    tenant.organizations.name AS organization_name
-FROM
-    tenant.clusters
-    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-WHERE
-    tenant.clusters.synced IS NULL
-    AND tenant.clusters.sync_attempts >= @max_attempts
-ORDER BY
-    tenant.clusters.sync_claimed_at DESC,
     tenant.clusters.id;
 
 -- name: ClusterHasActiveWithSameName :one
@@ -149,7 +102,10 @@ FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
-    tenant.clusters.synced IS NOT NULL -- Manifest was applied
+    ( -- Cluster has been synced: has shoot_status or a completed outbox row
+        tenant.clusters.shoot_status IS NOT NULL
+        OR EXISTS (SELECT 1 FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id AND status = 'completed')
+    )
     AND tenant.clusters.deleted IS NULL -- Active (not deleted)
     AND (
         tenant.clusters.shoot_status IS NULL -- Never checked
@@ -183,7 +139,10 @@ FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
-    tenant.clusters.synced IS NOT NULL -- Delete was synced
+    ( -- Delete has been synced: has shoot_status or a completed outbox row
+        tenant.clusters.shoot_status IS NOT NULL
+        OR EXISTS (SELECT 1 FROM tenant.cluster_outbox WHERE cluster_id = tenant.clusters.id AND status = 'completed')
+    )
     AND tenant.clusters.deleted IS NOT NULL -- Soft-deleted
     AND (
         tenant.clusters.shoot_status IS NULL

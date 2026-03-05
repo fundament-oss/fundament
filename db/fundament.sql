@@ -121,9 +121,9 @@ $function$;
 ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO postgres;
 -- ddl-end --
 
--- object: tenant.cluster_reset_synced | type: FUNCTION --
--- DROP FUNCTION IF EXISTS tenant.cluster_reset_synced() CASCADE;
-CREATE OR REPLACE FUNCTION tenant.cluster_reset_synced ()
+-- object: tenant.node_pool_outbox_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.node_pool_outbox_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.node_pool_outbox_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
 	VOLATILE 
@@ -134,64 +134,13 @@ CREATE OR REPLACE FUNCTION tenant.cluster_reset_synced ()
 	AS 
 $function$
 BEGIN
-    NEW.synced := NULL;
-    NEW.sync_claimed_at := NULL;
-    NEW.sync_attempts := 0;
-    NEW.sync_error := NULL;
-    RETURN NEW;
-END;
-$function$;
--- ddl-end --
-ALTER FUNCTION tenant.cluster_reset_synced() OWNER TO fun_owner;
--- ddl-end --
-
--- object: tenant.node_pool_reset_cluster_synced | type: FUNCTION --
--- DROP FUNCTION IF EXISTS tenant.node_pool_reset_cluster_synced() CASCADE;
-CREATE OR REPLACE FUNCTION tenant.node_pool_reset_cluster_synced ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE 
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS 
-$function$
-BEGIN
-    UPDATE tenant.clusters
-    SET synced = NULL,
-        sync_claimed_at = NULL,
-        sync_attempts = 0,
-        sync_error = NULL
-    WHERE id = COALESCE(NEW.cluster_id, OLD.cluster_id);
+    INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+    VALUES (COALESCE(NEW.cluster_id, OLD.cluster_id), 'updated', 'trigger');
     RETURN NULL;
 END;
 $function$;
 -- ddl-end --
-ALTER FUNCTION tenant.node_pool_reset_cluster_synced() OWNER TO fun_owner;
--- ddl-end --
-
--- object: tenant.cluster_sync_notify | type: FUNCTION --
--- DROP FUNCTION IF EXISTS tenant.cluster_sync_notify() CASCADE;
-CREATE OR REPLACE FUNCTION tenant.cluster_sync_notify ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE 
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS 
-$function$
-BEGIN
-    IF NEW.synced IS NULL AND (TG_OP = 'INSERT' OR OLD.synced IS NOT NULL) THEN
-        PERFORM pg_notify('cluster_sync', '');
-    END IF;
-    RETURN NEW;
-END;
-$function$;
--- ddl-end --
-ALTER FUNCTION tenant.cluster_sync_notify() OWNER TO fun_owner;
+ALTER FUNCTION tenant.node_pool_outbox_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.cluster_outbox_cluster_trigger | type: FUNCTION --
@@ -567,9 +516,6 @@ CREATE TABLE tenant.clusters (
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	synced timestamptz,
-	sync_claimed_at timestamptz,
-	sync_error text,
-	sync_attempts integer NOT NULL DEFAULT 0,
 	shoot_status text,
 	shoot_status_message text,
 	shoot_status_updated timestamptz,
@@ -608,28 +554,6 @@ CREATE POLICY cluster_worker_all_access ON tenant.clusters
 	FOR ALL
 	TO fun_cluster_worker
 	USING (true);
--- ddl-end --
-
--- object: cluster_reset_synced | type: TRIGGER --
--- DROP TRIGGER IF EXISTS cluster_reset_synced ON tenant.clusters CASCADE;
-CREATE OR REPLACE TRIGGER cluster_reset_synced
-	BEFORE UPDATE OF name,region,kubernetes_version,deleted
-	ON tenant.clusters
-	FOR EACH ROW
-	WHEN (OLD.name IS DISTINCT FROM NEW.name
-    OR OLD.region IS DISTINCT FROM NEW.region
-    OR OLD.kubernetes_version IS DISTINCT FROM NEW.kubernetes_version
-    OR (OLD.deleted IS NULL AND NEW.deleted IS NOT NULL))
-	EXECUTE PROCEDURE tenant.cluster_reset_synced();
--- ddl-end --
-
--- object: cluster_sync_notify | type: TRIGGER --
--- DROP TRIGGER IF EXISTS cluster_sync_notify ON tenant.clusters CASCADE;
-CREATE OR REPLACE TRIGGER cluster_sync_notify
-	AFTER INSERT OR UPDATE
-	ON tenant.clusters
-	FOR EACH ROW
-	EXECUTE PROCEDURE tenant.cluster_sync_notify();
 -- ddl-end --
 
 -- object: clusters_idx_needs_sync | type: INDEX --
@@ -888,6 +812,15 @@ CREATE POLICY projects_organization_policy ON tenant.projects
 	USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
+-- object: projects_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS projects_cluster_worker_policy ON tenant.projects CASCADE;
+CREATE POLICY projects_cluster_worker_policy ON tenant.projects
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
 -- object: namespaces_organization_policy | type: POLICY --
 -- DROP POLICY IF EXISTS namespaces_organization_policy ON tenant.namespaces CASCADE;
 CREATE POLICY namespaces_organization_policy ON tenant.namespaces
@@ -921,6 +854,15 @@ CREATE POLICY organizations_authn_api_policy ON tenant.organizations
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_authn_api
+	USING (true);
+-- ddl-end --
+
+-- object: organizations_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_cluster_worker_policy ON tenant.organizations CASCADE;
+CREATE POLICY organizations_cluster_worker_policy ON tenant.organizations
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
 	USING (true);
 -- ddl-end --
 
@@ -1016,7 +958,8 @@ USING btree
 CREATE INDEX cluster_outbox_idx_cluster_id ON tenant.cluster_outbox
 USING btree
 (
-	cluster_id
+	cluster_id,
+	id DESC NULLS LAST
 );
 -- ddl-end --
 
@@ -1323,13 +1266,13 @@ CREATE OR REPLACE TRIGGER node_pools_outbox
 	EXECUTE PROCEDURE authz.node_pools_sync_trigger();
 -- ddl-end --
 
--- object: node_pool_reset_cluster_synced | type: TRIGGER --
--- DROP TRIGGER IF EXISTS node_pool_reset_cluster_synced ON tenant.node_pools CASCADE;
-CREATE OR REPLACE TRIGGER node_pool_reset_cluster_synced
-	AFTER INSERT OR UPDATE OF name,machine_type,autoscale_min,autoscale_max,deleted
+-- object: node_pool_outbox | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS node_pool_outbox ON tenant.node_pools CASCADE;
+CREATE OR REPLACE TRIGGER node_pool_outbox
+	AFTER INSERT OR DELETE OR UPDATE OF name,machine_type,autoscale_min,autoscale_max,deleted
 	ON tenant.node_pools
 	FOR EACH ROW
-	EXECUTE PROCEDURE tenant.node_pool_reset_cluster_synced();
+	EXECUTE PROCEDURE tenant.node_pool_outbox_trigger();
 -- ddl-end --
 
 -- object: namespaces_idx_project_id | type: INDEX --
@@ -1830,6 +1773,14 @@ GRANT SELECT
 -- ddl-end --
 
 
+-- object: grant_r_526fae1c28 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.projects
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
 -- object: grant_raw_31f2fce1d0 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.node_pools
@@ -2206,8 +2157,8 @@ GRANT SELECT,INSERT,UPDATE
 -- ddl-end --
 
 
--- object: grant_a_aa475c9278 | type: PERMISSION --
-GRANT INSERT
+-- object: grant_ra_aa475c9278 | type: PERMISSION --
+GRANT SELECT,INSERT
    ON TABLE tenant.cluster_outbox
    TO fun_fundament_api;
 

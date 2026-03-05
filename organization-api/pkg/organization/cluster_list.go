@@ -48,9 +48,9 @@ func clusterSummaryFromListRow(row *db.ClusterListRow) *organizationv1.ListClust
 		ProjectCount:  0, // Stub
 		NodePoolCount: 0, // Stub
 		SyncState: syncStateFromRow(
-			row.Synced,
-			row.SyncError,
-			row.SyncAttempts,
+			row.OutboxStatus,
+			row.OutboxRetries,
+			row.OutboxError,
 			row.ShootStatus,
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
