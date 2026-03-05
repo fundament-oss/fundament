@@ -295,6 +295,6 @@ This pattern:
 
 == Related
 
-* FUN-4: Plugins expose resources through the API
+* FUN-11: Plugins expose resources through the API
 * https://swagger.io/resources/articles/adopting-an-api-first-approach/[Adopting an API-First Approach]
 * https://buf.build/docs/best-practices/style-guide[Buf Style Guide for Protocol Buffers]
