@@ -165,7 +165,6 @@ jobs:
             - grace@initech.com (Initech)
             </details>
 
-  # Teardown: remove PR overlay from GitLab Flux repo
   teardown:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
