@@ -1,10 +1,4 @@
-import {
-  Component,
-  ChangeDetectionStrategy,
-  inject,
-  computed,
-  effect,
-} from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, computed, effect } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -14,15 +8,7 @@ import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
 import { TitleService } from '../../title.service';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
-import {
-  formatDate,
-  fieldNameToLabel,
-  kindToSingularLabel,
-} from '../crd-schema.utils';
-
-function buildListLink(): string[] {
-  return ['..'];
-}
+import { formatDate, fieldNameToLabel } from '../crd-schema.utils';
 
 function toDateValue(val: unknown): string {
   return formatDate(String(val ?? ''));
@@ -106,11 +92,6 @@ export default class ResourceDetailComponent {
     return Object.entries(r.status);
   });
 
-  singularLabel = computed(() => {
-    const crd = this.crdDef();
-    return crd ? kindToSingularLabel(crd.kind) : 'resource';
-  });
-
   constructor() {
     effect(() => {
       const r = this.resource();
@@ -118,7 +99,7 @@ export default class ResourceDetailComponent {
     });
   }
 
-  listLink = buildListLink;
+  readonly listLink = ['..'];
 
   formatLabel = fieldNameToLabel;
 
@@ -137,6 +118,6 @@ export default class ResourceDetailComponent {
   asRecord = toRecord;
 
   getSpecValue(fieldName: string): unknown {
-    return this.resource()?.spec?.[fieldName] ?? null;
+    return this.resource()?.spec[fieldName] ?? null;
   }
 }

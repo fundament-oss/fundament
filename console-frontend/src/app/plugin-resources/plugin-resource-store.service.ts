@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import type { KubeResource } from './types';
 import { MOCK_RESOURCES, type MockResourceMap } from './mock-resources';
 
+// TODO: Replace mock data with real Kubernetes API calls.
 @Injectable({ providedIn: 'root' })
 export default class PluginResourceStoreService {
   private resources = signal<MockResourceMap>(structuredClone(MOCK_RESOURCES));

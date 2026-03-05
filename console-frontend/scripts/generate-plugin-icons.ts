@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Reads all src/app/plugins/.../*.plugin.yaml files, collects every referenced icon
- * name (from metadata.icon and menu[].icon), and generates a TypeScript file
+ * name (from menu[].icon), and generates a TypeScript file
  * that re-exports only those icons from @ng-icons/tabler-icons.
  *
  * This lets the Angular build tree-shake everything else out of the bundle.

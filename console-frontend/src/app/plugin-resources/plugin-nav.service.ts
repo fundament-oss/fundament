@@ -7,12 +7,27 @@ import { kindToLabel } from './crd-schema.utils';
 export default class PluginNavService {
   private registry = inject(PluginRegistryService);
 
-  organizationNav = computed<PluginNavGroup[]>(() => {
-    const plugins = this.registry.allPlugins();
-    return plugins
-      .filter((plugin) => plugin.menu.organization && plugin.menu.organization.length > 0)
+  organizationNav = computed<PluginNavGroup[]>(() =>
+    this.buildNavGroups('organization', (plugin, crd) => [
+      '/plugin-resources',
+      plugin.name,
+      crd.plural,
+    ]),
+  );
+
+  projectNav = computed<PluginNavGroup[]>(() =>
+    this.buildNavGroups('project', (_plugin, crd) => [crd.plural]),
+  );
+
+  private buildNavGroups(
+    section: 'organization' | 'project',
+    routerLink: (plugin: { name: string }, crd: { kind: string; plural: string }) => string[],
+  ): PluginNavGroup[] {
+    return this.registry
+      .allPlugins()
+      .filter((plugin) => plugin.menu[section] && plugin.menu[section]!.length > 0)
       .reduce<PluginNavGroup[]>((groups, plugin) => {
-        const items: PluginNavItem[] = (plugin.menu.organization ?? [])
+        const items: PluginNavItem[] = (plugin.menu[section] ?? [])
           .filter((menuItem) => plugin.crds.find((c) => c.kind === menuItem.crd))
           .map((menuItem) => {
             const crd = plugin.crds.find((c) => c.kind === menuItem.crd)!;
@@ -20,48 +35,15 @@ export default class PluginNavService {
               label: kindToLabel(crd.kind),
               crdKind: crd.kind,
               crdPlural: crd.plural,
-              routerLink: ['/plugin-resources', plugin.name, crd.plural],
+              routerLink: routerLink(plugin, crd),
               icon: menuItem.icon,
             };
           });
 
         if (items.length > 0) {
-          groups.push({
-            pluginName: plugin.name,
-            displayName: plugin.displayName,
-            items,
-          });
+          groups.push({ pluginName: plugin.name, displayName: plugin.displayName, items });
         }
         return groups;
       }, []);
-  });
-
-  projectNav = computed<PluginNavGroup[]>(() => {
-    const plugins = this.registry.allPlugins();
-    return plugins
-      .filter((plugin) => plugin.menu.project && plugin.menu.project.length > 0)
-      .reduce<PluginNavGroup[]>((groups, plugin) => {
-        const items: PluginNavItem[] = (plugin.menu.project ?? [])
-          .filter((menuItem) => plugin.crds.find((c) => c.kind === menuItem.crd))
-          .map((menuItem) => {
-            const crd = plugin.crds.find((c) => c.kind === menuItem.crd)!;
-            return {
-              label: kindToLabel(crd.kind),
-              crdKind: crd.kind,
-              crdPlural: crd.plural,
-              routerLink: [crd.plural],
-              icon: menuItem.icon,
-            };
-          });
-
-        if (items.length > 0) {
-          groups.push({
-            pluginName: plugin.name,
-            displayName: plugin.displayName,
-            items,
-          });
-        }
-        return groups;
-      }, []);
-  });
+  }
 }

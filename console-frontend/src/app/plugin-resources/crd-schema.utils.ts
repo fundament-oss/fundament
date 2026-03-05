@@ -1,8 +1,4 @@
-import type {
-  CrdObjectSchema,
-  CrdPropertySchema,
-  AdditionalPrinterColumn,
-} from './types';
+import type { CrdObjectSchema, CrdPropertySchema, AdditionalPrinterColumn } from './types';
 
 function parsePropertySchema(raw: Record<string, unknown>): CrdPropertySchema {
   const schema: CrdPropertySchema = {
@@ -21,9 +17,6 @@ function parsePropertySchema(raw: Record<string, unknown>): CrdPropertySchema {
     Object.entries(nestedProps).forEach(([name, propDef]) => {
       schema.properties![name] = parsePropertySchema(propDef);
     });
-    if (raw['required']) {
-      schema.required = raw['required'] as string[];
-    }
   }
 
   if (raw['items']) {

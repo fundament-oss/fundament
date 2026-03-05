@@ -1,31 +1,17 @@
-import {
-  Component,
-  ChangeDetectionStrategy,
-  inject,
-  computed,
-  effect,
-} from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, computed, effect } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerEye,
-  tablerDatabaseOff,
-} from '@ng-icons/tabler-icons';
+import { tablerEye, tablerDatabaseOff } from '@ng-icons/tabler-icons';
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
 import { TitleService } from '../../title.service';
-import type {
-  ParsedCrd,
-  AdditionalPrinterColumn,
-  KubeResource,
-} from '../types';
+import type { ParsedCrd, AdditionalPrinterColumn, KubeResource } from '../types';
 import {
   resolveJsonPath,
   formatColumnValue,
   getListColumns,
   kindToLabel,
-  kindToSingularLabel,
 } from '../crd-schema.utils';
 
 function buildDetailLink(resource: KubeResource): string[] {
@@ -95,11 +81,6 @@ export default class ResourceListComponent {
   kindLabel = computed(() => {
     const crd = this.crdDef();
     return crd ? kindToLabel(crd.kind) : 'Resources';
-  });
-
-  singularLabel = computed(() => {
-    const crd = this.crdDef();
-    return crd ? kindToSingularLabel(crd.kind) : 'resource';
   });
 
   constructor() {

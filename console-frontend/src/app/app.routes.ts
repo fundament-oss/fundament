@@ -226,7 +226,7 @@ const routes: Routes = [
           {
             path: ':resourceKind',
             loadComponent: () =>
-              import('./plugin-resources/dispatchers/plugin-list-dispatcher.component').then(
+              import('./plugin-resources/resource-list/resource-list.component').then(
                 (m) => m.default,
               ),
             data: {
@@ -236,7 +236,7 @@ const routes: Routes = [
           {
             path: ':resourceKind/:resourceId',
             loadComponent: () =>
-              import('./plugin-resources/dispatchers/plugin-detail-dispatcher.component').then(
+              import('./plugin-resources/resource-detail/resource-detail.component').then(
                 (m) => m.default,
               ),
             data: {
@@ -261,7 +261,7 @@ const routes: Routes = [
           {
             path: ':resourceKind',
             loadComponent: () =>
-              import('./plugin-resources/dispatchers/plugin-list-dispatcher.component').then(
+              import('./plugin-resources/resource-list/resource-list.component').then(
                 (m) => m.default,
               ),
             data: {
@@ -275,7 +275,7 @@ const routes: Routes = [
           {
             path: ':resourceKind/:resourceId',
             loadComponent: () =>
-              import('./plugin-resources/dispatchers/plugin-detail-dispatcher.component').then(
+              import('./plugin-resources/resource-detail/resource-detail.component').then(
                 (m) => m.default,
               ),
             data: {
