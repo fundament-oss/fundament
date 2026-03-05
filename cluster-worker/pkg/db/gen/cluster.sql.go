@@ -78,7 +78,12 @@ func (q *Queries) ClusterCreateSyncFailedEvent(ctx context.Context, arg ClusterC
 
 const clusterCreateSyncSucceededEvent = `-- name: ClusterCreateSyncSucceededEvent :one
 INSERT INTO
-    tenant.cluster_events (cluster_id, event_type, sync_action, message)
+    tenant.cluster_events (
+        cluster_id,
+        event_type,
+        sync_action,
+        message
+    )
 VALUES
     (
         $1,
@@ -102,35 +107,6 @@ func (q *Queries) ClusterCreateSyncSucceededEvent(ctx context.Context, arg Clust
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
-}
-
-const clusterHasActiveWithSameName = `-- name: ClusterHasActiveWithSameName :one
-SELECT
-    EXISTS (
-        SELECT
-            1
-        FROM
-            tenant.clusters
-            JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-        WHERE
-            tenant.organizations.name = $1
-            AND tenant.clusters.name = $2
-            AND tenant.clusters.deleted IS NULL
-    ) AS EXISTS
-`
-
-type ClusterHasActiveWithSameNameParams struct {
-	OrganizationName string
-	ClusterName      string
-}
-
-// Check if there's an active (non-deleted) cluster with the same name in the same organization.
-// Used to prevent deleting a shoot that's been recreated.
-func (q *Queries) ClusterHasActiveWithSameName(ctx context.Context, arg ClusterHasActiveWithSameNameParams) (bool, error) {
-	row := q.db.QueryRow(ctx, clusterHasActiveWithSameName, arg.OrganizationName, arg.ClusterName)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
 }
 
 const clusterListActive = `-- name: ClusterListActive :many

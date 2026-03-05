@@ -48,7 +48,11 @@ func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (u
 }
 
 const clusterCreateSyncRequestedEvent = `-- name: ClusterCreateSyncRequestedEvent :exec
-INSERT INTO tenant.cluster_events (cluster_id, event_type, sync_action)
+INSERT INTO tenant.cluster_events (
+    cluster_id,
+    event_type,
+    sync_action
+)
 VALUES ($1, 'sync_requested', $2)
 `
 
@@ -82,11 +86,20 @@ func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) (i
 }
 
 const clusterGetByID = `-- name: ClusterGetByID :one
-SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       shoot_status, shoot_status_message, shoot_status_updated,
-       tenant.clusters.outbox_status,
-       tenant.clusters.outbox_retries,
-       tenant.clusters.outbox_error
+SELECT
+    id,
+    organization_id,
+    name,
+    region,
+    kubernetes_version,
+    created,
+    deleted,
+    shoot_status,
+    shoot_status_message,
+    shoot_status_updated,
+    tenant.clusters.outbox_status,
+    tenant.clusters.outbox_retries,
+    tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE tenant.clusters.id = $1
 `
@@ -134,11 +147,20 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 }
 
 const clusterGetByName = `-- name: ClusterGetByName :one
-SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       shoot_status, shoot_status_message, shoot_status_updated,
-       tenant.clusters.outbox_status,
-       tenant.clusters.outbox_retries,
-       tenant.clusters.outbox_error
+SELECT
+    id,
+    organization_id,
+    name,
+    region,
+    kubernetes_version,
+    created,
+    deleted,
+    shoot_status,
+    shoot_status_message,
+    shoot_status_updated,
+    tenant.clusters.outbox_status,
+    tenant.clusters.outbox_retries,
+    tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE name = $1 AND deleted IS NULL
 `
@@ -185,7 +207,14 @@ func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNamePara
 }
 
 const clusterGetEvents = `-- name: ClusterGetEvents :many
-SELECT id, cluster_id, event_type, created, sync_action, message, attempt
+SELECT
+    id,
+    cluster_id,
+    event_type,
+    created,
+    sync_action,
+    message,
+    attempt
 FROM tenant.cluster_events
 WHERE cluster_id = $1
 ORDER BY created DESC, id DESC
@@ -227,11 +256,20 @@ func (q *Queries) ClusterGetEvents(ctx context.Context, arg ClusterGetEventsPara
 }
 
 const clusterList = `-- name: ClusterList :many
-SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       shoot_status, shoot_status_message, shoot_status_updated,
-       tenant.clusters.outbox_status,
-       tenant.clusters.outbox_retries,
-       tenant.clusters.outbox_error
+SELECT
+    id,
+    organization_id,
+    name,
+    region,
+    kubernetes_version,
+    created,
+    deleted,
+    shoot_status,
+    shoot_status_message,
+    shoot_status_updated,
+    tenant.clusters.outbox_status,
+    tenant.clusters.outbox_retries,
+    tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 ORDER BY created DESC

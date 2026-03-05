@@ -1,7 +1,12 @@
 -- name: ClusterCreateSyncSucceededEvent :one
 -- Insert sync_succeeded event when Gardener accepts the manifest.
 INSERT INTO
-    tenant.cluster_events (cluster_id, event_type, sync_action, message)
+    tenant.cluster_events (
+        cluster_id,
+        event_type,
+        sync_action,
+        message
+    )
 VALUES
     (
         @cluster_id,
@@ -48,22 +53,6 @@ WHERE
     tenant.clusters.deleted IS NULL
 ORDER BY
     tenant.clusters.id;
-
--- name: ClusterHasActiveWithSameName :one
--- Check if there's an active (non-deleted) cluster with the same name in the same organization.
--- Used to prevent deleting a shoot that's been recreated.
-SELECT
-    EXISTS (
-        SELECT
-            1
-        FROM
-            tenant.clusters
-            JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-        WHERE
-            tenant.organizations.name = @organization_name
-            AND tenant.clusters.name = @cluster_name
-            AND tenant.clusters.deleted IS NULL
-    ) AS EXISTS;
 
 -- name: NodePoolListByClusterID :many
 -- Fetch active (non-deleted) node pools for a cluster.
