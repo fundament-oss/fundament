@@ -8,26 +8,26 @@
 
 Users gain access by being assigned:
 
-* Permissions, for access in the Fundament systems
-* Roles, for access in a cluster
+* Permissions, for access in their organization within Fundament systems
+* Roles, for access in a Cluster
 
-== Organization Role
+== Organization Permission
 
-Organization member with `role='viewer'`::
+Organization member with `permission='viewer'`::
 * Read projects
 
-Organization member with `role='admin'`::
+Organization member with `permission='admin'`::
 * Write projects
 * Read/Write users
 
-NOTE: Do organization admins automatically have `project admin` permissions? Or should they add themselves as a project member with `role='admin'` first to obtain that permission?
+NOTE: Do organization admins automatically have `project admin` permissions? Or should they add themselves as a project member with `permission='admin'` first to obtain that permission?
 
-Project member with `role='viewer'`::
+Project member with `permission='viewer'`::
 * Read project members
 * Read project namespaces
 * Read project rolebindings
 
-Project member with `role='admin'`::
+Project member with `permission='admin'`::
 * Write project members (also create more admins in the same project)
 * Write project namespaces
 * Write project rolebindings
