@@ -44,12 +44,12 @@ spec:
     jwtSecret: ${JWT_SECRET}
 
     externalUrls:
-      authn: https://authn.pr${PR_NUM}-${DOMAIN}
-      organization: https://organization.pr${PR_NUM}-${DOMAIN}
-      console: https://console.pr${PR_NUM}-${DOMAIN}
-      docs: https://docs.pr${PR_NUM}-${DOMAIN}
-      cookieDomain: pr${PR_NUM}-${DOMAIN}
-      corsAllowedOrigins: "https://console.pr${PR_NUM}-${DOMAIN}"
+      authn: https://authn.pr${PR_NUM}.${DOMAIN}
+      organization: https://organization.pr${PR_NUM}.${DOMAIN}
+      console: https://console.pr${PR_NUM}.${DOMAIN}
+      docs: https://docs.pr${PR_NUM}.${DOMAIN}
+      cookieDomain: pr${PR_NUM}.${DOMAIN}
+      corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN}"
 
     images:
       dbMigrations: ${IMAGE_PREFIX}/db-migrations:${IMAGE_TAG}
@@ -93,13 +93,14 @@ spec:
         enabled: false
 
     dex:
-      issuer: https://dex.pr${PR_NUM}-${DOMAIN}
+      issuer: https://dex.pr${PR_NUM}.${DOMAIN}
       staticClients:
         - id: fundament
           name: Fundament
           redirectURIs:
-            - https://authn.pr${PR_NUM}-${DOMAIN}/callback
+            - https://authn.pr${PR_NUM}.${DOMAIN}/callback
           public: true
 
     ingress:
-      subdomainInfix: "pr${PR_NUM}-"
+      subdomainInfix: "pr${PR_NUM}."
+      domain: ${DOMAIN}
