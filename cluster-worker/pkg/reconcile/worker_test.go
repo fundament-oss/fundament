@@ -37,10 +37,7 @@ func TestReconcileWorker_RunsImmediately(t *testing.T) {
 
 	// Wait for the initial reconcile to complete
 	deadline := time.After(2 * time.Second)
-	for {
-		if mock.callCount.Load() > 0 {
-			break
-		}
+	for mock.callCount.Load() == 0 {
 		select {
 		case <-deadline:
 			t.Fatal("timed out waiting for initial reconcile")

@@ -78,7 +78,7 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 		return fmt.Errorf("load node pools: %w", err)
 	}
 
-	// 6. Build ClusterToSync and apply (D4: SyncAttempts = 0)
+	// 6. Build ClusterToSync and apply
 	shootName := gardener.GenerateShootName(cluster.Name, cluster.ID)
 	clusterToSync := &gardener.ClusterToSync{
 		ID:                cluster.ID,
@@ -90,7 +90,6 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 		Region:            cluster.Region,
 		KubernetesVersion: cluster.KubernetesVersion,
 		Deleted:           deleted,
-		SyncAttempts:      0,
 		NodePools:         toGardenerNodePools(nodePoolRows),
 	}
 

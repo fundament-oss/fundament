@@ -4,6 +4,7 @@ package reconcile
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync/atomic"
@@ -12,6 +13,9 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 )
 
+// maxConsecutiveFailures is the number of consecutive failed ticks before the worker exits.
+const maxConsecutiveFailures = 3
+
 // Config holds configuration for the reconciliation loop.
 type Config struct {
 	Interval time.Duration `env:"INTERVAL" envDefault:"5m"`
@@ -19,10 +23,11 @@ type Config struct {
 
 // Worker periodically calls all registered ReconcileHandlers.
 type Worker struct {
-	registry *handler.Registry
-	logger   *slog.Logger
-	cfg      Config
-	ready    atomic.Bool
+	registry         *handler.Registry
+	logger           *slog.Logger
+	cfg              Config
+	ready            atomic.Bool
+	consecutiveFails int
 }
 
 func New(registry *handler.Registry, logger *slog.Logger, cfg Config) *Worker {
@@ -43,7 +48,10 @@ func (w *Worker) Run(ctx context.Context) error {
 	w.logger.Info("starting reconcile loop", "interval", w.cfg.Interval)
 
 	// Run immediately on startup, then on the ticker interval.
-	w.reconcileAll(ctx)
+	err := w.reconcileAll(ctx)
+	if err := w.trackFails(err); err != nil {
+		return err
+	}
 	w.ready.Store(true)
 
 	ticker := time.NewTicker(w.cfg.Interval)
@@ -54,25 +62,45 @@ func (w *Worker) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return fmt.Errorf("reconcile loop stopped: %w", ctx.Err())
 		case <-ticker.C:
-			w.reconcileAll(ctx)
+			err := w.reconcileAll(ctx)
+			if err := w.trackFails(err); err != nil {
+				return err
+			}
 		}
 	}
 }
 
 // reconcileAll delegates reconciliation to each registered ReconcileHandler.
 // Each handler owns its own re-enqueue and orphan-detection logic.
-func (w *Worker) reconcileAll(ctx context.Context) {
+func (w *Worker) reconcileAll(ctx context.Context) error {
 	if ctx.Err() != nil {
-		return
+		return nil //nolint:nilerr // gracefull shutdown
 	}
 
 	w.logger.Info("starting reconciliation")
 
+	var errs []error
 	for _, h := range w.registry.ReconcileHandlers() {
 		if err := h.Reconcile(ctx); err != nil {
 			w.logger.Error("reconcile handler failed", "error", err)
+			errs = append(errs, err)
 		}
 	}
 
 	w.logger.Info("reconciliation complete")
+	return fmt.Errorf("reconcile: %w", errors.Join(errs...))
+}
+
+// trackFails tracks consecutive handler failures and returns a fatal error after maxConsecutiveFailures.
+func (w *Worker) trackFails(err error) error {
+	if err == nil {
+		w.consecutiveFails = 0
+		return nil
+	}
+	w.consecutiveFails++
+	if w.consecutiveFails >= maxConsecutiveFailures {
+		return fmt.Errorf("reconcile worker fatal: %d consecutive failures, last: %w", w.consecutiveFails, err)
+	}
+	w.logger.Warn("reconcile tick failed, will retry", "consecutive_failures", w.consecutiveFails, "error", err)
+	return nil
 }

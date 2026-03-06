@@ -3,6 +3,7 @@ package status
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync/atomic"
@@ -11,6 +12,9 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 )
 
+// maxConsecutiveFailures is the number of consecutive failed ticks before the worker exits.
+const maxConsecutiveFailures = 3
+
 // Config holds configuration for the status polling loop.
 type Config struct {
 	Interval time.Duration `env:"INTERVAL" envDefault:"30s"`
@@ -18,10 +22,11 @@ type Config struct {
 
 // Worker periodically calls all registered StatusHandlers.
 type Worker struct {
-	registry *handler.Registry
-	logger   *slog.Logger
-	cfg      Config
-	ready    atomic.Bool
+	registry         *handler.Registry
+	logger           *slog.Logger
+	cfg              Config
+	ready            atomic.Bool
+	consecutiveFails int
 }
 
 func New(registry *handler.Registry, logger *slog.Logger, cfg Config) *Worker {
@@ -42,7 +47,10 @@ func (w *Worker) Run(ctx context.Context) error {
 	w.logger.Info("starting status loop", "interval", w.cfg.Interval)
 
 	// Run immediately on startup, then on the ticker interval.
-	w.runAllHandlers(ctx)
+	err := w.runAllHandlers(ctx)
+	if err := w.trackFails(err); err != nil {
+		return err
+	}
 	w.ready.Store(true)
 
 	ticker := time.NewTicker(w.cfg.Interval)
@@ -53,23 +61,43 @@ func (w *Worker) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return fmt.Errorf("status loop stopped: %w", ctx.Err())
 		case <-ticker.C:
-			w.runAllHandlers(ctx)
+			err := w.runAllHandlers(ctx)
+			if err := w.trackFails(err); err != nil {
+				return err
+			}
 		}
 	}
 }
 
 // runAllHandlers delegates status checking to each registered StatusHandler.
-func (w *Worker) runAllHandlers(ctx context.Context) {
+func (w *Worker) runAllHandlers(ctx context.Context) error {
 	if ctx.Err() != nil {
-		return
+		return nil //nolint:nilerr // gracefull shutdown
 	}
 
+	var errs []error
 	for _, h := range w.registry.StatusHandlers() {
 		if ctx.Err() != nil {
-			return
+			return nil //nolint:nilerr // gracefull shutdown
 		}
 		if err := h.CheckStatus(ctx); err != nil {
 			w.logger.Error("status handler failed", "error", err)
+			errs = append(errs, err)
 		}
 	}
+	return fmt.Errorf("status: %w", errors.Join(errs...))
+}
+
+// trackFails tracks consecutive handler failures and returns a fatal error after maxConsecutiveFailures.
+func (w *Worker) trackFails(err error) error {
+	if err == nil {
+		w.consecutiveFails = 0
+		return nil
+	}
+	w.consecutiveFails++
+	if w.consecutiveFails >= maxConsecutiveFailures {
+		return fmt.Errorf("status worker fatal: %d consecutive failures, last: %w", w.consecutiveFails, err)
+	}
+	w.logger.Warn("status tick failed, will retry", "consecutive_failures", w.consecutiveFails, "error", err)
+	return nil
 }
