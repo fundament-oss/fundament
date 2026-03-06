@@ -14,6 +14,7 @@ import (
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/organization-api/pkg/organization/kube"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/rs/cors"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
@@ -33,6 +34,7 @@ type Server struct {
 	authValidator *auth.Validator
 	authz         *authz.Client
 	clock         clock.Clock
+	kubeClient    kube.KubeClient
 	handler       http.Handler
 }
 
@@ -50,6 +52,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
 		authz:         authzClient,
 		clock:         clk,
+		kubeClient:    &kube.MockKubeClient{},
 	}
 
 	mux := http.NewServeMux()
@@ -105,6 +108,8 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 
 	apiKeyPath, apiKeyHandler := organizationv1connect.NewAPIKeyServiceHandler(s, interceptors)
 	mux.Handle(apiKeyPath, apiKeyHandler)
+
+	mux.Handle("/k8s/", http.HandlerFunc(s.handleClusterProxy))
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,

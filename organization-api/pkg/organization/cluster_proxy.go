@@ -1,0 +1,111 @@
+package organization
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"slices"
+	"strings"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/fundament-oss/fundament/common/authz"
+	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
+)
+
+// handleClusterProxy is a read-only HTTP proxy to the Kubernetes API for a specific cluster.
+// Path format: /k8s/{clusterID}/{...kubernetes_api_path}
+//
+// Authentication mirrors the Connect interceptor logic: JWT from Authorization header or
+// fundament_auth cookie, plus Fun-Organization header for org scoping.
+// Authorization: user must have can_view on the cluster.
+func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Read-only: reject anything that is not a GET request.
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// --- Authentication ---
+
+	claims, err := s.authValidator.Validate(r.Header)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	orgHeader := r.Header.Get(OrganizationHeader)
+	if orgHeader == "" {
+		http.Error(w, fmt.Sprintf("missing %s header", OrganizationHeader), http.StatusBadRequest)
+		return
+	}
+
+	organizationID, err := uuid.Parse(orgHeader)
+	if err != nil {
+		http.Error(w, "invalid organization ID", http.StatusBadRequest)
+		return
+	}
+
+	if !slices.Contains(claims.OrganizationIDs, organizationID) {
+		http.Error(w, "permission denied", http.StatusForbidden)
+		return
+	}
+
+	// Enrich context for RLS (PrepareConn uses OrganizationIDFromContext / UserIDFromContext).
+	ctx = WithOrganizationID(ctx, organizationID)
+	ctx = WithUserID(ctx, claims.UserID)
+	ctx = WithClaims(ctx, claims)
+
+	// --- Parse cluster ID from URL ---
+	// Path: /k8s/{clusterID}/{...}
+	rest := strings.TrimPrefix(r.URL.Path, "/k8s/")
+	clusterIDStr, k8sPath, _ := strings.Cut(rest, "/")
+	if clusterIDStr == "" {
+		http.Error(w, "missing cluster ID in path", http.StatusBadRequest)
+		return
+	}
+
+	clusterID, err := uuid.Parse(clusterIDStr)
+	if err != nil {
+		http.Error(w, "invalid cluster ID", http.StatusBadRequest)
+		return
+	}
+
+	// --- Authorization ---
+
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+		http.Error(w, "permission denied", http.StatusForbidden)
+		return
+	}
+
+	// Confirm cluster exists and belongs to the organization (RLS enforces isolation).
+	_, err = s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "cluster not found", http.StatusNotFound)
+			return
+		}
+		s.logger.ErrorContext(ctx, "failed to get cluster for proxy", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// --- Proxy to Kubernetes API ---
+
+	k8sPath = "/" + k8sPath
+
+	statusCode, body, err := s.kubeClient.Do(ctx, r.Method, k8sPath, r.Body)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "kubernetes client error", "error", err, "path", k8sPath)
+		http.Error(w, "failed to contact kubernetes API", http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	_, _ = io.Copy(w, body)
+}
