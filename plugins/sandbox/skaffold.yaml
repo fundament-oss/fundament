@@ -1,0 +1,35 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: fundament-plugin-sandbox
+
+build:
+  local:
+    useBuildkit: true
+    concurrency: 0
+    push: true
+
+  artifacts:
+    - image: plugin-controller
+      context: ..
+      docker:
+        dockerfile: plugin-controller/Dockerfile
+
+    - image: cert-manager-plugin
+      context: ..
+      docker:
+        dockerfile: plugins/cert-manager/Dockerfile
+
+deploy:
+  kubeContext: k3d-fundament-plugin
+  statusCheckDeadlineSeconds: 120
+  helm:
+    releases:
+      - name: fundament
+        chartPath: ../charts/fundament
+        namespace: fundament
+        createNamespace: true
+        valuesFiles:
+          - sandbox/values.yaml
+        setValueTemplates:
+          images.pluginController: "{{.IMAGE_FULLY_QUALIFIED_plugin_controller}}"

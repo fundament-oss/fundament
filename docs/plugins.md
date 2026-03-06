@@ -487,3 +487,50 @@ service PluginMetadataService {
 |----------|--------|---------|
 | Plugin Controller | `GetStatus` | Poll phase, message, version → write to CR `.status` |
 | Console Frontend | `GetDefinition` | Fetch menu entries, UI hints, CRDs → render plugin UI |
+
+---
+
+## Plugin Sandbox
+
+A self-contained development environment lives in `plugins/sandbox/`. It creates an isolated K3D cluster with only the plugin controller -- no database, auth services, or other Fundament components needed. The sandbox cluster (`fundament-plugin`) uses a separate registry on port `5112`, so it can coexist with the main Fundament cluster without conflicts.
+
+### Quick Start
+
+```bash
+cd plugins
+just cluster-create   # Create K3D cluster + registry (~10s)
+just dev              # Build + deploy plugin-controller with file watching
+
+# In another terminal:
+cd plugins
+just plugin-install cert-manager   # Build plugin, push to registry, apply CR
+just plugin-status                 # Check PluginInstallation status
+just logs                          # Watch controller logs
+
+# Verify cert-manager actually works:
+just cert-manager test             # Creates a self-signed ClusterIssuer + Certificate
+just cert-manager test-cleanup     # Remove test resources
+
+# Cleanup:
+just plugin-uninstall cert-manager
+just cluster-delete
+```
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `just cluster-create` | Create a K3D cluster for plugin development |
+| `just cluster-start` | Start the cluster (creates if it doesn't exist) |
+| `just cluster-stop` | Stop the cluster without deleting it |
+| `just cluster-delete` | Delete the cluster and registry |
+| `just dev` | Deploy plugin-controller with file watching (auto-rebuild) |
+| `just deploy` | Deploy plugin-controller (one-time) |
+| `just undeploy` | Remove the deployment |
+| `just plugin-install <plugin>` | Build plugin image, push to registry, apply CR |
+| `just plugin-uninstall <plugin>` | Delete PluginInstallation CR |
+| `just plugin-logs <plugin>` | Stream a specific plugin's logs |
+| `just plugin-status` | Show all PluginInstallation CRs |
+| `just logs` | Stream plugin-controller logs |
+| `just cert-manager test` | Verify cert-manager with a self-signed certificate |
+| `just cert-manager test-cleanup` | Remove cert-manager test resources |

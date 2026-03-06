@@ -1,0 +1,84 @@
+mod cert-manager
+
+cluster := "fundament-plugin"
+registry := "plugin-registry.localhost"
+registry_port := "5112"
+export kube_context := "k3d-" + cluster
+
+_default:
+    @just --list
+
+# --- Cluster commands ---
+
+# Create a local K3D cluster for plugin development with local registry
+cluster-create:
+    k3d cluster create --config=sandbox/k3d-config.yaml
+
+# Start the cluster (creates if it doesn't exist)
+cluster-start:
+    @k3d cluster list {{ cluster }} > /dev/null 2>&1 && k3d cluster start {{ cluster }} || just cluster-create
+
+# Stop the cluster without deleting it
+cluster-stop:
+    k3d cluster stop {{ cluster }}
+
+# Delete the local K3D cluster and registry
+cluster-delete:
+    k3d cluster delete {{ cluster }}
+    @k3d registry delete {{ registry }} 2>/dev/null || true
+
+# --- Deployment commands ---
+
+# Deploy plugin-controller with file watching (auto-rebuild on changes)
+dev *flags:
+    SKAFFOLD_DEFAULT_REPO="localhost:{{ registry_port }}" \
+    skaffold dev -f sandbox/skaffold.yaml --cleanup=false {{ flags }}
+
+# Deploy plugin-controller (one-time)
+deploy:
+    SKAFFOLD_DEFAULT_REPO="localhost:{{ registry_port }}" \
+    skaffold run -f sandbox/skaffold.yaml
+
+# Remove the deployment
+undeploy:
+    skaffold delete -f sandbox/skaffold.yaml
+
+# --- Plugin commands ---
+
+# Build a plugin image, push to registry, and apply the PluginInstallation CR
+plugin-install plugin:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tag=$(git describe --always --dirty)
+    image="localhost:{{ registry_port }}/{{ plugin }}-plugin:${tag}"
+    docker build -t "${image}" -f "{{ plugin }}/Dockerfile" ..
+    docker push "${image}"
+    kubectl --context {{ kube_context }} apply -f - <<EOF
+    apiVersion: plugins.fundament.io/v1
+    kind: PluginInstallation
+    metadata:
+      name: {{ plugin }}
+      namespace: fundament
+    spec:
+      image: ${image}
+      pluginName: {{ plugin }}
+      version: ${tag}
+      clusterRoles:
+        - cluster-admin
+    EOF
+
+# Delete a PluginInstallation CR
+plugin-uninstall plugin:
+    kubectl --context {{ kube_context }} delete plugininstallation -n fundament {{ plugin }}
+
+# Stream logs for a specific plugin
+plugin-logs plugin:
+    kubectl --context {{ kube_context }} logs -l plugins.fundament.io/plugin={{ plugin }} --all-namespaces -f
+
+# Show all PluginInstallation CRs
+plugin-status:
+    kubectl --context {{ kube_context }} get plugininstallations -n fundament
+
+# View logs from all pods
+logs:
+    kubectl --context {{ kube_context }} logs -n fundament -l app.kubernetes.io/component=plugin-controller -f
