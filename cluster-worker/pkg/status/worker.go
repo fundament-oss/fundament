@@ -85,7 +85,10 @@ func (w *Worker) runAllHandlers(ctx context.Context) error {
 			errs = append(errs, err)
 		}
 	}
-	return fmt.Errorf("status: %w", errors.Join(errs...))
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("status: %w", err)
+	}
+	return nil
 }
 
 // trackFails tracks consecutive handler failures and returns a fatal error after maxConsecutiveFailures.

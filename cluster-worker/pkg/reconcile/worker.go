@@ -88,7 +88,10 @@ func (w *Worker) reconcileAll(ctx context.Context) error {
 	}
 
 	w.logger.Info("reconciliation complete")
-	return fmt.Errorf("reconcile: %w", errors.Join(errs...))
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("reconcile: %w", err)
+	}
+	return nil
 }
 
 // trackFails tracks consecutive handler failures and returns a fatal error after maxConsecutiveFailures.
