@@ -1,4 +1,8 @@
-# Fundament Plugin System
+---
+title: Plugins
+sidebar:
+  order: 5
+---
 
 The plugin system allows extending Fundament with installable plugins that integrate into the platform's console UI, RBAC, and lifecycle management.
 
@@ -38,8 +42,6 @@ The plugin system allows extending Fundament with installable plugins that integ
 | [**Plugin SDK**](#plugin-sdk) | Go framework that plugins implement. Handles HTTP, health probes, metadata API, logging, and lifecycle. |
 | [**Plugin Controller**](#plugin-controller) | Kubernetes controller that watches `PluginInstallation` CRs and manages plugin namespaces, RBAC, and deployments. |
 | [**Plugin** (e.g. cert-manager)](#writing-a-plugin) | A container image that uses the SDK. Implements business logic (install software, manage CRDs, serve console UI). |
-
----
 
 ## Plugin SDK
 
@@ -153,8 +155,6 @@ return pluginerrors.NewPermanent(fmt.Errorf("invalid configuration: %w", err))
 | `console` | Convert embedded FS to `http.FileSystem` for console assets |
 | `auth` | JWT validation middleware for Connect RPC interceptors |
 
----
-
 ## Plugin Controller
 
 The controller runs in the `fundament` namespace and watches `PluginInstallation` CRs.
@@ -251,8 +251,6 @@ For each `PluginInstallation`, the controller creates:
                  ├─ Delete Namespace (cascades to all resources)
                  └─ Remove finalizer → CR garbage collected
 ```
-
----
 
 ## Writing a Plugin
 
@@ -389,8 +387,6 @@ spec:
   #   - cluster-admin
 ```
 
----
-
 ## Example: cert-manager Plugin
 
 The cert-manager plugin is a reference implementation that installs and manages cert-manager.
@@ -470,8 +466,6 @@ spec:
        └─ If not: ReportStatus("degraded")
 ```
 
----
-
 ## Metadata API
 
 Every plugin exposes a ConnectRPC service that the controller and console consume:
@@ -488,15 +482,13 @@ service PluginMetadataService {
 | Plugin Controller | `GetStatus` | Poll phase, message, version → write to CR `.status` |
 | Console Frontend | `GetDefinition` | Fetch menu entries, UI hints, CRDs → render plugin UI |
 
----
-
 ## Plugin Sandbox
 
 A self-contained development environment lives in `plugins/sandbox/`. It creates an isolated K3D cluster with only the plugin controller -- no database, auth services, or other Fundament components needed. The sandbox cluster (`fundament-plugin`) uses a separate registry on port `5112`, so it can coexist with the main Fundament cluster without conflicts.
 
 ### Quick Start
 
-```bash
+```shell
 cd plugins
 just cluster-create   # Create K3D cluster + registry (~10s)
 just dev              # Build + deploy plugin-controller with file watching

@@ -54,11 +54,6 @@ build:
       docker:
         dockerfile: Dockerfile
 
-    - image: cert-manager-plugin
-      context: .
-      docker:
-        dockerfile: plugins/cert-manager/Dockerfile
-
     - image: plugin-controller
       context: .
       docker:
