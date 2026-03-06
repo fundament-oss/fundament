@@ -54,6 +54,16 @@ build:
       docker:
         dockerfile: Dockerfile
 
+    - image: cert-manager-plugin
+      context: .
+      docker:
+        dockerfile: plugins/cert-manager/Dockerfile
+
+    - image: plugin-controller
+      context: .
+      docker:
+        dockerfile: plugin-controller/Dockerfile
+
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheck: true
@@ -74,6 +84,7 @@ deploy:
           images.docsFrontend: "{{.IMAGE_FULLY_QUALIFIED_docs_frontend}}"
           images.authzWorker: "{{.IMAGE_FULLY_QUALIFIED_authz_worker}}"
           images.openfgaSetup: "{{.IMAGE_FULLY_QUALIFIED_openfga_setup}}"
+          images.pluginController: "{{.IMAGE_FULLY_QUALIFIED_plugin_controller}}"
 
 profiles:
   - name: env-local

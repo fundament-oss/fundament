@@ -1,0 +1,159 @@
+{{- if $.Values.pluginController.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $.Release.Name }}-plugin-controller
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plugin-controller
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $.Release.Name }}-plugin-controller
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plugin-controller
+rules:
+  - apiGroups:
+      - plugins.fundament.io
+    resources:
+      - plugininstallations
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+  - apiGroups:
+      - plugins.fundament.io
+    resources:
+      - plugininstallations/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+      - serviceaccounts
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - bind
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - clusterroles
+    verbs:
+      - get
+      - list
+      - watch
+      - bind
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - clusterrolebindings
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $.Release.Name }}-plugin-controller
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plugin-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $.Release.Name }}-plugin-controller
+subjects:
+  - kind: ServiceAccount
+    name: {{ $.Release.Name }}-plugin-controller
+    namespace: {{ $.Release.Namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-plugin-controller
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plugin-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: plugin-controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: plugin-controller
+    spec:
+      serviceAccountName: {{ $.Release.Name }}-plugin-controller
+      containers:
+        - name: plugin-controller
+          image: {{ $.Values.images.pluginController }}
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: FUNDAMENT_CLUSTER_ID
+              value: {{ $.Release.Name }}
+            - name: FUNDAMENT_INSTALL_ID
+              value: {{ $.Release.Name }}
+            - name: FUNDAMENT_ORGANIZATION_ID
+              value: {{ $.Release.Name }}
+            - name: LOG_LEVEL
+              value: {{ $.Values.pluginController.logLevel }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8097
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8097
+            initialDelaySeconds: 5
+            periodSeconds: 10
+{{- end }}
