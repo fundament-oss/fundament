@@ -84,11 +84,11 @@ spec:
   {{- if $.Values.ingress.tls.clusterIssuer }}
   tls:
     - hosts:
-        - console.{{ $.Values.ingress.domain }}
+        - console.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
       secretName: {{ $.Release.Name }}-console-frontend-tls
   {{- end }}
   rules:
-    - host: console.{{ $.Values.ingress.domain }}
+    - host: console.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
       http:
         paths:
           - path: /
