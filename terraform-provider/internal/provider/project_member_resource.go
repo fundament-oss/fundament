@@ -182,18 +182,40 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	// Set the ID from the response
 	plan.ID = types.StringValue(createResp.Msg.GetMemberId())
 
-	// Read back the created member to get computed fields
-	found, diags := readProjectMemberIntoModel(ctx, r.client, &plan)
-	if diags.HasError() {
-		resp.Diagnostics.Append(diags...)
-		return
-	}
-	if !found {
+	// Read back the created member to get computed fields.
+	// Retry on permission_denied: OpenFGA needs time to sync after the member is added.
+	getReq := connect.NewRequest(organizationv1.GetProjectMemberRequest_builder{
+		MemberId: createResp.Msg.GetMemberId(),
+	}.Build())
+
+	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetProjectMemberResponse], error) {
+		return r.client.ProjectService.GetProjectMember(ctx, getReq)
+	})
+	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Find Created Project Member",
-			fmt.Sprintf("Project member was created with ID %q but could not be found.", plan.ID.ValueString()),
+			"Unable to Read Created Project Member",
+			fmt.Sprintf("Unable to read created project member: %s", err.Error()),
 		)
 		return
+	}
+
+	permissionStr, err := projectMemberPermissionFromProto(getResp.Msg.GetMember().GetRole())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Project Member Permission",
+			fmt.Sprintf("Unable to convert permission for member %q: %s", getResp.Msg.GetMember().GetId(), err.Error()),
+		)
+		return
+	}
+	m := getResp.Msg.GetMember()
+	plan.ProjectID = types.StringValue(m.GetProjectId())
+	plan.UserID = types.StringValue(m.GetUserId())
+	plan.UserName = types.StringValue(m.GetUserName())
+	plan.Permission = types.StringValue(permissionStr)
+	if m.GetCreated() != nil {
+		plan.Created = types.StringValue(m.GetCreated().AsTime().Format(time.RFC3339))
+	} else {
+		plan.Created = types.StringNull()
 	}
 
 	tflog.Info(ctx, "Created project member", map[string]any{

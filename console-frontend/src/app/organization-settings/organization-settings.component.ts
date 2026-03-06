@@ -24,7 +24,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 import OrganizationContextService from '../organization-context.service';
 
 @Component({
-  selector: 'app-organization',
+  selector: 'app-organization-settings',
   imports: [FormsModule, NgIcon],
   viewProviders: [
     provideIcons({
@@ -34,7 +34,7 @@ import OrganizationContextService from '../organization-context.service';
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './organization.component.html',
+  templateUrl: './organization-settings.component.html',
 })
 export default class OrganizationComponent implements OnInit {
   private titleService = inject(TitleService);

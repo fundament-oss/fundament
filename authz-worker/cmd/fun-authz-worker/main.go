@@ -29,6 +29,7 @@ type config struct {
 	BaseBackoff  time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
 	MaxBackoff   time.Duration `env:"MAX_BACKOFF" envDefault:"5s"`
 	MaxRetries   int32         `env:"MAX_RETRIES" envDefault:"3"`
+	BackoffDelay time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
 }
 
 func main() {
@@ -55,6 +56,7 @@ func run() error {
 		"base_backoff", cfg.BaseBackoff,
 		"max_backoff", cfg.MaxBackoff,
 		"max_retries", cfg.MaxRetries,
+		"backoff_delay", cfg.BackoffDelay,
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -118,6 +120,7 @@ func run() error {
 		BaseBackoff:  cfg.BaseBackoff,
 		MaxBackoff:   cfg.MaxBackoff,
 		MaxRetries:   cfg.MaxRetries,
+		BackoffDelay: cfg.BackoffDelay,
 	})
 
 	if err := w.Run(ctx); err != nil {

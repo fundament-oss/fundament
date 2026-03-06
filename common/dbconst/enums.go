@@ -24,6 +24,35 @@ const (
 	ClusterEventSyncAction_Delete ClusterEventSyncAction = "delete"
 )
 
+// ClusterOutboxEvent represents valid values for tenant.cluster_outbox.event.
+type ClusterOutboxEvent string
+
+const (
+	ClusterOutboxEvent_Created   ClusterOutboxEvent = "created"
+	ClusterOutboxEvent_Updated   ClusterOutboxEvent = "updated"
+	ClusterOutboxEvent_Deleted   ClusterOutboxEvent = "deleted"
+	ClusterOutboxEvent_Reconcile ClusterOutboxEvent = "reconcile"
+)
+
+// ClusterOutboxSource represents valid values for tenant.cluster_outbox.source.
+type ClusterOutboxSource string
+
+const (
+	ClusterOutboxSource_Trigger   ClusterOutboxSource = "trigger"
+	ClusterOutboxSource_Reconcile ClusterOutboxSource = "reconcile"
+	ClusterOutboxSource_Manual    ClusterOutboxSource = "manual"
+)
+
+// ClusterOutboxStatus represents valid values for tenant.cluster_outbox.status.
+type ClusterOutboxStatus string
+
+const (
+	ClusterOutboxStatus_Pending   ClusterOutboxStatus = "pending"
+	ClusterOutboxStatus_Completed ClusterOutboxStatus = "completed"
+	ClusterOutboxStatus_Retrying  ClusterOutboxStatus = "retrying"
+	ClusterOutboxStatus_Failed    ClusterOutboxStatus = "failed"
+)
+
 // OrganizationsUserPermission represents valid values for tenant.organizations_users.permission.
 type OrganizationsUserPermission string
 
