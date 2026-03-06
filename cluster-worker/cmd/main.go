@@ -112,10 +112,10 @@ func run() error {
 	outboxWorker := outbox.New(db.Pool, registry, logger, cfg.Outbox)
 
 	// Status worker
-	statusWorker := status.New(registry, logger)
+	statusWorker := status.New(registry, logger, cfg.Status)
 
 	// Reconcile worker
-	reconcileWorker := reconcile.New(registry, logger)
+	reconcileWorker := reconcile.New(registry, logger, cfg.Reconcile)
 
 	// Health check server
 	healthServer := startHealthServer(&cfg, outboxWorker, logger)
@@ -135,18 +135,20 @@ func run() error {
 	})
 
 	g.Go(func() error {
-		return statusWorker.Run(ctx, cfg.Status)
+		return statusWorker.Run(ctx)
 	})
 
 	g.Go(func() error {
-		return reconcileWorker.Run(ctx, cfg.Reconcile)
+		return reconcileWorker.Run(ctx)
 	})
 
 	err = g.Wait()
 
 	// Graceful shutdown
 	logger.Info("shutting down...")
-	if shutdownErr := healthServer.Shutdown(context.Background()); shutdownErr != nil {
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	defer shutdownCancel()
+	if shutdownErr := healthServer.Shutdown(shutdownCtx); shutdownErr != nil {
 		logger.Error("health server shutdown error", "error", shutdownErr)
 	}
 

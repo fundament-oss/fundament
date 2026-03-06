@@ -106,7 +106,7 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 	}
 
 	// 6. Build ClusterToSync and apply (D4: SyncAttempts = 0)
-	shootName := gardener.GenerateShootName(cluster.Name)
+	shootName := gardener.GenerateShootName(cluster.Name, cluster.ID)
 	clusterToSync := &gardener.ClusterToSync{
 		ID:                cluster.ID,
 		OrganizationID:    cluster.OrganizationID,
@@ -134,9 +134,14 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 
 // CheckStatus polls Gardener for shoot status and updates the database.
 func (h *Handler) CheckStatus(ctx context.Context) error {
-	h.pollActiveClusters(ctx)
-	h.pollDeletedClusters(ctx)
-	return nil
+	var errs []error
+	if err := h.pollActiveClusters(ctx); err != nil {
+		errs = append(errs, err)
+	}
+	if err := h.pollDeletedClusters(ctx); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
 }
 
 // Reconcile compares DB state with Gardener state to detect drift and clean up orphans.
@@ -213,16 +218,19 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 }
 
 // pollActiveClusters checks Gardener status for active (non-deleted) clusters.
-func (h *Handler) pollActiveClusters(ctx context.Context) {
+func (h *Handler) pollActiveClusters(ctx context.Context) error {
 	clusters, err := h.queries.ClusterListNeedingStatusCheck(ctx, db.ClusterListNeedingStatusCheckParams{
 		LimitCount: h.cfg.StatusBatchSize,
 	})
 	if err != nil {
 		h.logger.Error("failed to list clusters for status check", "error", err)
-		return
+		return fmt.Errorf("list clusters for status check: %w", err)
 	}
 
 	for i := range clusters {
+		if ctx.Err() != nil {
+			return nil
+		}
 		cluster := &clusters[i]
 
 		projectName := gardener.ProjectName(cluster.OrganizationName)
@@ -314,19 +322,23 @@ func (h *Handler) pollActiveClusters(ctx context.Context) {
 				"message", shootStatus.Message)
 		}
 	}
+	return nil
 }
 
 // pollDeletedClusters verifies that soft-deleted clusters have actually been removed from Gardener.
-func (h *Handler) pollDeletedClusters(ctx context.Context) {
+func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 	clusters, err := h.queries.ClusterListDeletedNeedingVerification(ctx, db.ClusterListDeletedNeedingVerificationParams{
 		LimitCount: h.cfg.StatusBatchSize,
 	})
 	if err != nil {
 		h.logger.Error("failed to list deleted clusters for verification", "error", err)
-		return
+		return fmt.Errorf("list deleted clusters for verification: %w", err)
 	}
 
 	for i := range clusters {
+		if ctx.Err() != nil {
+			return nil
+		}
 		cluster := &clusters[i]
 		var deleted *time.Time
 		if cluster.Deleted.Valid {
@@ -404,6 +416,7 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) {
 				"status", shootStatus.Status)
 		}
 	}
+	return nil
 }
 
 // toGardenerNodePools converts DB rows to the gardener.NodePool slice expected by ClusterToSync.
@@ -459,6 +472,6 @@ func syncMessage(event, source string) string {
 	case "reconcile":
 		return entity + " reconciled"
 	default:
-		return ""
+		panic(fmt.Sprintf("unhandled sync event: %q (source: %q)", event, source))
 	}
 }

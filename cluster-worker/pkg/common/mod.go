@@ -21,11 +21,12 @@ func TestLogger() *slog.Logger {
 // Includes a default node pool.
 func TestCluster(name, org string) gardener.ClusterToSync {
 	orgID := uuid.New()
+	clusterID := uuid.New()
 	projectName := gardener.ProjectName(org)
 	namespace := gardener.NamespaceFromProjectName(projectName)
-	shootName := gardener.GenerateShootName(name)
+	shootName := gardener.GenerateShootName(name, clusterID)
 	return gardener.ClusterToSync{
-		ID:                uuid.New(),
+		ID:                clusterID,
 		OrganizationID:    orgID,
 		OrganizationName:  org,
 		Name:              name,

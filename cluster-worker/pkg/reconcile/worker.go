@@ -20,23 +20,25 @@ type Config struct {
 type Worker struct {
 	registry *handler.Registry
 	logger   *slog.Logger
+	cfg      Config
 }
 
-func New(registry *handler.Registry, logger *slog.Logger) *Worker {
+func New(registry *handler.Registry, logger *slog.Logger, cfg Config) *Worker {
 	return &Worker{
 		registry: registry,
 		logger:   logger.With("worker", "reconcile"),
+		cfg:      cfg,
 	}
 }
 
 // Run starts the reconciliation loop. It should be run as a separate goroutine.
-func (w *Worker) Run(ctx context.Context, cfg Config) error {
-	w.logger.Info("starting reconcile loop", "interval", cfg.Interval)
+func (w *Worker) Run(ctx context.Context) error {
+	w.logger.Info("starting reconcile loop", "interval", w.cfg.Interval)
 
 	// Run immediately on startup, then on the ticker interval.
 	w.reconcileAll(ctx)
 
-	ticker := time.NewTicker(cfg.Interval)
+	ticker := time.NewTicker(w.cfg.Interval)
 	defer ticker.Stop()
 
 	for {
