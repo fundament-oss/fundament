@@ -221,8 +221,6 @@ const routes: Routes = [
       // Plugin resource routes (organization-level)
       {
         path: 'plugin-resources/:pluginName',
-        loadComponent: () =>
-          import('./plugin-resources/plugin-layout/plugin-layout.component').then((m) => m.default),
         children: [
           {
             path: ':resourceKind',
@@ -256,8 +254,6 @@ const routes: Routes = [
       // Plugin resource routes (project-level)
       {
         path: 'projects/:id/plugin-resources/:pluginName',
-        loadComponent: () =>
-          import('./plugin-resources/plugin-layout/plugin-layout.component').then((m) => m.default),
         children: [
           {
             path: ':resourceKind',
