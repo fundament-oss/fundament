@@ -86,11 +86,11 @@ spec:
   {{- if $.Values.ingress.tls.clusterIssuer }}
   tls:
     - hosts:
-        - authn.{{ $.Values.ingress.domain }}
+        - authn.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
       secretName: {{ $.Release.Name }}-authn-api-tls
   {{- end }}
   rules:
-    - host: authn.{{ $.Values.ingress.domain }}
+    - host: authn.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
       http:
         paths:
           - path: /
