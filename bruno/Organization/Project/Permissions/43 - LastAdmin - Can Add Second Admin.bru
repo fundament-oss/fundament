@@ -20,13 +20,13 @@ headers {
 
 body:json {
   {
-    "memberId": "{{bobMemberId}}",
+    "memberId": "{{bartMemberId}}",
     "role": "PROJECT_MEMBER_ROLE_ADMIN"
   }
 }
 
 tests {
-  test("should be able to promote bob to admin", function() {
+  test("should be able to promote bart to admin", function() {
     expect(res.status).to.equal(200);
   });
 }

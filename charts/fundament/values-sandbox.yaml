@@ -62,9 +62,9 @@ dex:
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: David
       userID: "019b4000-1000-7000-8000-000000000004"
-    - email: eve@globex.com
+    - email: emily@globex.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Eve Davis
+      username: Emily
       userID: "019b4000-1000-7000-8000-000000000005"
     # initech users
     - email: frank@initech.com

@@ -11,7 +11,7 @@ post {
 }
 
 auth:bearer {
-  token: {{bobToken}}
+  token: {{bartToken}}
 }
 
 headers {
@@ -26,7 +26,7 @@ body:json {
 
 tests {
   test("should delete test project", function() {
-    // Bob is admin after test 44, so he can delete
+    // Bart is admin after test 44, so he can delete
     expect(res.status).to.equal(200);
   });
 }

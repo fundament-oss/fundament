@@ -157,10 +157,10 @@ jobs:
             <summary>Test credentials (all passwords: <code>password</code>)</summary>
 
             - alice@acme-corp.com (Acme Corp)
-            - bob@acme-corp.com (Acme Corp)
-            - carol@acme-corp.com (Acme Corp)
+            - bart@acme-corp.com (Acme Corp)
+            - cindy@acme-corp.com (Acme Corp)
             - david@globex.com (Globex)
-            - eve@globex.com (Globex)
+            - emily@globex.com (Globex)
             - frank@initech.com (Initech)
             - grace@initech.com (Initech)
             </details>

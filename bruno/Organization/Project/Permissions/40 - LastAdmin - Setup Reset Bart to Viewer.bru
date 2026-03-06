@@ -1,5 +1,5 @@
 meta {
-  name: 40 - LastAdmin - Setup Reset Bob to Viewer
+  name: 40 - LastAdmin - Setup Reset Bart to Viewer
   type: http
   seq: 40
 }
@@ -20,14 +20,14 @@ headers {
 
 body:json {
   {
-    "memberId": "{{bobMemberId}}",
+    "memberId": "{{bartMemberId}}",
     "role": "PROJECT_MEMBER_ROLE_VIEWER"
   }
 }
 
 tests {
-  test("should reset bob to viewer for last admin tests", function() {
-    // This may succeed (if bob was promoted) or fail (if bob is already viewer)
+  test("should reset bart to viewer for last admin tests", function() {
+    // This may succeed (if bart was promoted) or fail (if bart is already viewer)
     // We accept both outcomes to set up the test state
     expect([200, 400]).to.include(res.status);
   });
