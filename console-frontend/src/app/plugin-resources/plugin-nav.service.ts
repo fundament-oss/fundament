@@ -14,7 +14,7 @@ export default class PluginNavService {
   private buildNavGroups(section: 'organization' | 'project'): PluginNavGroup[] {
     return this.registry
       .allPlugins()
-      .filter((plugin) => plugin.menu[section] && plugin.menu[section]!.length > 0)
+      .filter((plugin) => (plugin.menu[section]?.length ?? 0) > 0)
       .reduce<PluginNavGroup[]>((groups, plugin) => {
         const items: PluginNavItem[] = (plugin.menu[section] ?? [])
           .filter((menuItem) => plugin.crds.find((c) => c.kind === menuItem.crd))

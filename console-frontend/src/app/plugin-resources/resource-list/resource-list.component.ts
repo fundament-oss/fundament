@@ -15,7 +15,7 @@ import {
 } from '../crd-schema.utils';
 
 function buildDetailLink(resource: KubeResource): string[] {
-  return ['.', resource.metadata.uid];
+  return ['.', resource.metadata.name];
 }
 
 function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): string {
