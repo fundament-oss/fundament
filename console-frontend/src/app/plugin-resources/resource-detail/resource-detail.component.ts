@@ -68,7 +68,7 @@ export default class ResourceDetailComponent {
     return this.store.getResource(this.pluginName(), crd.kind, this.resourceId());
   });
 
-  fieldGroups = computed(() => {
+  specSections = computed(() => {
     const crd = this.crdDef();
     if (!crd) return [];
     const fields = Object.entries(crd.specSchema.properties) as [string, CrdPropertySchema][];
