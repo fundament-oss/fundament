@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
@@ -20,6 +21,7 @@ type Worker struct {
 	registry *handler.Registry
 	logger   *slog.Logger
 	cfg      Config
+	ready    atomic.Bool
 }
 
 func New(registry *handler.Registry, logger *slog.Logger, cfg Config) *Worker {
@@ -30,12 +32,18 @@ func New(registry *handler.Registry, logger *slog.Logger, cfg Config) *Worker {
 	}
 }
 
+// IsReady returns true after the first status poll has completed.
+func (w *Worker) IsReady() bool {
+	return w.ready.Load()
+}
+
 // Run starts the status polling loop. It should be run as a separate goroutine.
 func (w *Worker) Run(ctx context.Context) error {
 	w.logger.Info("starting status loop", "interval", w.cfg.Interval)
 
 	// Run immediately on startup, then on the ticker interval.
 	w.runAllHandlers(ctx)
+	w.ready.Store(true)
 
 	ticker := time.NewTicker(w.cfg.Interval)
 	defer ticker.Stop()

@@ -65,6 +65,11 @@ type config struct {
 	ProviderDefaultMachineType string `env:"GARDENER_DEFAULT_MACHINE_TYPE"`
 }
 
+// ReadyChecker reports whether a worker is ready to serve traffic.
+type ReadyChecker interface {
+	IsReady() bool
+}
+
 func main() {
 	if err := run(); err != nil {
 		log.Fatal(err)
@@ -118,7 +123,7 @@ func run() error {
 	reconcileWorker := reconcile.New(registry, logger, cfg.Reconcile)
 
 	// Health check server
-	healthServer := startHealthServer(&cfg, outboxWorker, logger)
+	healthServer := startHealthServer(&cfg, logger, outboxWorker, statusWorker, reconcileWorker)
 
 	logger.Info("cluster-worker starting",
 		"poll_interval", cfg.Outbox.PollInterval,
@@ -206,20 +211,22 @@ func createGardenerClient(cfg *config, logger *slog.Logger) (gardener.Client, er
 	}
 }
 
-func startHealthServer(cfg *config, w *outbox.Worker, logger *slog.Logger) *http.Server {
+func startHealthServer(cfg *config, logger *slog.Logger, checkers ...ReadyChecker) *http.Server {
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/healthz", func(resp http.ResponseWriter, _ *http.Request) {
 		resp.WriteHeader(http.StatusOK)
 		_, _ = resp.Write([]byte("ok"))
 	})
 	healthMux.HandleFunc("/readyz", func(resp http.ResponseWriter, _ *http.Request) {
-		if w.IsReady() {
-			resp.WriteHeader(http.StatusOK)
-			_, _ = resp.Write([]byte("ready"))
-		} else {
-			resp.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = resp.Write([]byte("not ready"))
+		for _, c := range checkers {
+			if !c.IsReady() {
+				resp.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = resp.Write([]byte("not ready"))
+				return
+			}
 		}
+		resp.WriteHeader(http.StatusOK)
+		_, _ = resp.Write([]byte("ready"))
 	})
 
 	healthServer := &http.Server{

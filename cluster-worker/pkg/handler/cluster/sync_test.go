@@ -3,13 +3,12 @@ package cluster
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
-
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
-	"github.com/google/uuid"
 )
 
 var (

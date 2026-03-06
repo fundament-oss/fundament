@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/google/uuid"
 )
@@ -91,10 +90,10 @@ func (r *Registry) SyncHandlerFor(entityType EntityType) (SyncHandler, error) {
 
 // StatusHandlers returns all registered status handlers.
 func (r *Registry) StatusHandlers() []StatusHandler {
-	return slices.Clone(r.statusHandlers)
+	return r.statusHandlers
 }
 
 // ReconcileHandlers returns all registered reconcile handlers.
 func (r *Registry) ReconcileHandlers() []ReconcileHandler {
-	return slices.Clone(r.reconcileHandlers)
+	return r.reconcileHandlers
 }
