@@ -25,6 +25,7 @@ type Config struct {
 	CORSAllowedOrigins   []string
 	Clock                clock.Clock
 	MockPrometheusClient *prom.MockClient
+	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
 }
 
 type Server struct {
@@ -37,6 +38,7 @@ type Server struct {
 	clock          clock.Clock
 	handler        http.Handler
 	mockPromClient *prom.MockClient
+	prometheusURL  string
 }
 
 func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client) (*Server, error) {
@@ -54,6 +56,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		authz:          authzClient,
 		clock:          clk,
 		mockPromClient: cfg.MockPrometheusClient,
+		prometheusURL:  cfg.PrometheusURL,
 	}
 
 	mux := http.NewServeMux()

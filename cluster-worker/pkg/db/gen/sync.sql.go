@@ -455,23 +455,6 @@ func (q *Queries) ClusterMarkSynced(ctx context.Context, arg ClusterMarkSyncedPa
 	return err
 }
 
-const clusterSetPrometheusUrl = `-- name: ClusterSetPrometheusUrl :exec
-UPDATE tenant.clusters
-SET prometheus_url = $1
-WHERE id = $2
-`
-
-type ClusterSetPrometheusUrlParams struct {
-	PrometheusUrl string
-	ClusterID     uuid.UUID
-}
-
-// Set the prometheus_url for a cluster (e.g. "mock" for local development).
-func (q *Queries) ClusterSetPrometheusUrl(ctx context.Context, arg ClusterSetPrometheusUrlParams) error {
-	_, err := q.db.Exec(ctx, clusterSetPrometheusUrl, arg.PrometheusUrl, arg.ClusterID)
-	return err
-}
-
 const clusterSyncReset = `-- name: ClusterSyncReset :exec
 UPDATE tenant.clusters
 SET

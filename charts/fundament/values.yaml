@@ -53,6 +53,7 @@ clusterWorker:
   logLevel: info
   gardenerMode: mock # mock or real
   gardenerKubeconfigSecret: "" # Secret name containing kubeconfig for real mode
+  prometheusURL: mock # Prometheus URL for metrics; "mock" uses generated data
 
 # Console Frontend
 consoleFrontend:

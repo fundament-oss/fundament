@@ -31,6 +31,7 @@ type config struct {
 	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
 	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
+	PrometheusURL      string     `env:"PROMETHEUS_URL" envDefault:"mock"`
 }
 
 func main() {
@@ -190,6 +191,7 @@ func run() error {
 		CORSAllowedOrigins:   cfg.CORSAllowedOrigins,
 		Clock:                clock.New(),
 		MockPrometheusClient: mockClient,
+		PrometheusURL:        cfg.PrometheusURL,
 	}, db, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)

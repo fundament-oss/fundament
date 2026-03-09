@@ -83,8 +83,7 @@ func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) (i
 
 const clusterGetByID = `-- name: ClusterGetByID :one
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated,
-       prometheus_url
+       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
 FROM tenant.clusters
 WHERE id = $1
 `
@@ -107,7 +106,6 @@ type ClusterGetByIDRow struct {
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
-	PrometheusUrl      string
 }
 
 // Get cluster by ID, including deleted clusters for direct access.
@@ -128,15 +126,13 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
-		&i.PrometheusUrl,
 	)
 	return i, err
 }
 
 const clusterGetByName = `-- name: ClusterGetByName :one
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated,
-       prometheus_url
+       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
 FROM tenant.clusters
 WHERE name = $1 AND deleted IS NULL
 `
@@ -159,7 +155,6 @@ type ClusterGetByNameRow struct {
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
-	PrometheusUrl      string
 }
 
 func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (ClusterGetByNameRow, error) {
@@ -179,7 +174,6 @@ func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNamePara
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
-		&i.PrometheusUrl,
 	)
 	return i, err
 }
@@ -228,8 +222,7 @@ func (q *Queries) ClusterGetEvents(ctx context.Context, arg ClusterGetEventsPara
 
 const clusterList = `-- name: ClusterList :many
 SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated,
-       prometheus_url
+       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
 FROM tenant.clusters
 WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 ORDER BY created DESC
@@ -249,7 +242,6 @@ type ClusterListRow struct {
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
-	PrometheusUrl      string
 }
 
 // List active clusters and clusters being deleted (not yet confirmed deleted in Gardener).
@@ -277,7 +269,6 @@ func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
 			&i.ShootStatus,
 			&i.ShootStatusMessage,
 			&i.ShootStatusUpdated,
-			&i.PrometheusUrl,
 		); err != nil {
 			return nil, err
 		}

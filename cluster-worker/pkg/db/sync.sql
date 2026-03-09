@@ -222,12 +222,6 @@ ORDER BY
     tenant.node_pools.created,
     tenant.node_pools.id;
 
--- name: ClusterSetPrometheusUrl :exec
--- Set the prometheus_url for a cluster (e.g. "mock" for local development).
-UPDATE tenant.clusters
-SET prometheus_url = @prometheus_url
-WHERE id = @cluster_id;
-
 -- name: ClusterHasActiveWithSameName :one
 -- Check if there's an active (non-deleted) cluster with the same name in the same organization.
 -- Used to prevent deleting a shoot that's been recreated.

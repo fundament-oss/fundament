@@ -14,7 +14,7 @@ db:
   enabled: true
   instances: 1
   storageSize: 1Gi
-  reset: false
+  reset: true
   insertTestData: true
   exposePort: 54328
   postgresql:
@@ -42,6 +42,7 @@ clusterWorker:
   enabled: true
   replicas: 1
   gardenerMode: mock
+  prometheusURL: mock
 
 docsFrontend:
   enabled: true

@@ -25,18 +25,18 @@ const (
 	bytesPerMB  = 1_000_000.0
 )
 
-// k8sClientForCluster returns the appropriate Prometheus client for a cluster's
-// prometheus_url: empty or "mock" → MockClient (if configured) or StubClient,
+// promClient returns the appropriate Prometheus client based on the server's configured
+// prometheusURL: empty or "mock" → MockClient (if configured) or StubClient,
 // otherwise HTTPClient targeting the given URL.
-func (s *Server) k8sClientForCluster(prometheusURL string) prom.Client {
-	switch prometheusURL {
+func (s *Server) promClient() prom.Client {
+	switch s.prometheusURL {
 	case "", "mock":
 		if s.mockPromClient != nil {
 			return s.mockPromClient
 		}
 		return prom.StubClient{}
 	default:
-		return prom.NewHTTPClient(prometheusURL)
+		return prom.NewHTTPClient(s.prometheusURL)
 	}
 }
 
@@ -52,15 +52,14 @@ func (s *Server) GetClusterWorkloadMetrics(
 		return nil, err
 	}
 
-	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
-	if err != nil {
+	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.k8sClientForCluster(cluster.PrometheusUrl)
+	client := s.promClient()
 	now := time.Now()
 
 	var (
@@ -152,15 +151,14 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 		return nil, err
 	}
 
-	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
-	if err != nil {
+	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.k8sClientForCluster(cluster.PrometheusUrl)
+	client := s.promClient()
 	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
 
 	var (
@@ -234,7 +232,7 @@ func (s *Server) GetOrgWorkloadMetrics(
 	for i, cl := range clusters {
 		i, cl := i, cl
 		g.Go(func() error {
-			client := s.k8sClientForCluster(cl.PrometheusUrl)
+			client := s.promClient()
 			r := &results[i]
 			r.id = cl.ID.String()
 			r.name = cl.Name
@@ -372,7 +370,7 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 	for i, cl := range clusters {
 		i, cl := i, cl
 		g.Go(func() error {
-			client := s.k8sClientForCluster(cl.PrometheusUrl)
+			client := s.promClient()
 			r := &results[i]
 
 			sub, subCtx := errgroup.WithContext(gctx)
@@ -458,12 +456,11 @@ func (s *Server) GetProjectWorkloadMetrics(
 		}
 	}
 
-	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
-	if err != nil {
+	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.k8sClientForCluster(cluster.PrometheusUrl)
+	client := s.promClient()
 	nsFilter := buildNamespaceFilter(namespaceNames(namespaces))
 	now := time.Now()
 
@@ -561,12 +558,11 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 		}
 	}
 
-	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
-	if err != nil {
+	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.k8sClientForCluster(cluster.PrometheusUrl)
+	client := s.promClient()
 	nsFilter := buildNamespaceFilter(namespaceNames(namespaces))
 	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
 

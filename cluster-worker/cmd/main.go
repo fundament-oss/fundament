@@ -25,6 +25,7 @@ type config struct {
 	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
 	GardenerMode       string        `env:"GARDENER_MODE"`       // mock or real
 	GardenerKubeconfig string        `env:"GARDENER_KUBECONFIG"` // Required for real mode
+	PrometheusURL      string        `env:"PROMETHEUS_URL" envDefault:"mock"` // Prometheus URL for metrics; "mock" uses generated data
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	HealthPort         int           `env:"HEALTH_PORT" envDefault:"8097"`
 	ShutdownTimeout    time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
@@ -94,14 +95,8 @@ func run() error {
 		return err
 	}
 
-	// In mock mode, set prometheus_url to "mock" so the organization-api serves mock metrics.
-	var prometheusURL string
-	if cfg.GardenerMode == "mock" {
-		prometheusURL = "mock"
-	}
-
 	// SyncWorker (syncs manifests to Gardener)
-	syncWorker := workersync.New(db.Pool, gardenerClient, prometheusURL, logger, cfg.Sync)
+	syncWorker := workersync.New(db.Pool, gardenerClient, logger, cfg.Sync)
 
 	// StatusWorker (monitors Gardener reconciliation)
 	statusWorker := workerstatus.New(db.Pool, gardenerClient, logger, cfg.Status)
