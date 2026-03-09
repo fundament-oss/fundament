@@ -1,0 +1,31 @@
+repos:
+  # Universal checks (always recommended)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: mixed-line-ending
+      - id: check-case-conflict
+
+  # Security scanning (always recommended)
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks
+
+  # Local user checks (script in home directory)
+  - repo: local
+    hooks:
+      - id: user-checks
+        name: User-specific checks
+        entry: bash -c 'if [ -f "$HOME/scripts/user-checks.sh" ]; then "$HOME/scripts/user-checks.sh" "$@"; else exit 0; fi' --
+        language: system
+        pass_filenames: true
+        always_run: true
+        # This will only run if the script exists
