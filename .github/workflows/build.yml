@@ -185,14 +185,30 @@ jobs:
         with:
           tofu_wrapper: false
 
-      - name: Wait for organization-api
+#      - name: Wait for organization-api
+#        run: |
+#          URL="https://organization.pr${PR_NUMBER}-${{ env.DOMAIN }}"
+#          echo "Waiting for ${URL} to be ready..."
+#          for i in $(seq 1 30); do
+#            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
+#            if [ "${STATUS}" != "000" ]; then
+#              echo "Organization API responded (HTTP ${STATUS})"
+#              exit 0
+#            fi
+#            echo "Attempt ${i}/30, retrying in 30s..."
+#            sleep 30
+#          done
+#          echo "Timed out waiting for environment to be ready"
+#          exit 1
+
+      - name: Wait for console
         run: |
-          URL="https://organization.pr${PR_NUMBER}-${{ env.DOMAIN }}"
+          URL="https://console.pr${PR_NUMBER}-${{ env.DOMAIN }}"
           echo "Waiting for ${URL} to be ready..."
           for i in $(seq 1 30); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
             if [ "${STATUS}" != "000" ]; then
-              echo "Organization API responded (HTTP ${STATUS})"
+              echo "Console responded (HTTP ${STATUS})"
               exit 0
             fi
             echo "Attempt ${i}/30, retrying in 30s..."
