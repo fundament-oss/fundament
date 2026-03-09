@@ -1,0 +1,39 @@
+:showtitle:
+:state: proposed
+
+= ADR-0015: Distributed storage
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: storage
+Depends-on:: ADR-0009, ADR-0014
+
+== Context
+
+The platform needs distributed storage that replicates data across nodes and availability zones (ADR-0009), runs hyperconverged on bare-metal (ADR-0014), and provides block, file, and object storage to tenant clusters via Kubernetes CSI.
+
+== Options
+
+=== Option 1: Ceph (via Rook operator)
+* Pros: proven at scale (exabyte-class deployments); provides block (RBD), file (CephFS), and object (RGW) from one system; cross-AZ replication built in; Rook provides Kubernetes-native lifecycle management; open source (LGPL); supports both hyperconverged and disaggregated topologies
+* Cons: operationally complex; requires tuning for bare-metal performance; minimum 3 nodes per storage cluster; significant resource overhead (MON, OSD, MGR daemons)
+
+=== Option 2: Longhorn
+* Pros: simple to deploy and operate; Kubernetes-native; CNCF project; good for small-to-medium clusters
+* Cons: block storage only — no file or object; not proven at large scale; no cross-AZ replication; limited to hyperconverged
+
+=== Option 3: OpenEBS (Mayastor)
+* Pros: NVMe-optimized; Kubernetes-native; CNCF project
+* Cons: less mature than Ceph; primarily block storage; smaller community; limited large-scale production references
+
+== Decision
+
+Ceph via Rook. The only option proven at the target scale (ADR-0002) that provides block, file, and object storage from a single system. Cross-AZ replication satisfies the 3-AZ requirement (ADR-0009). Supports both hyperconverged and future disaggregated topologies (ADR-0014). Rook handles Ceph lifecycle within Kubernetes.
+
+== Consequences
+
+* Rook operator manages Ceph cluster lifecycle per tenant or shared infrastructure
+* Storage replication is configured across 3 AZs
+* Object storage (Ceph RGW) may eliminate the need for a separate object storage solution
+* Ceph tuning and monitoring is a first-class operational concern
+* Backup and disaster recovery strategy must account for Ceph's replication model (separate ADR)
