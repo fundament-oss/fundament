@@ -1,0 +1,39 @@
+:showtitle:
+:state: proposed
+
+= ADR-0010: API architecture
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: platform
+Depends-on:: ADR-0002
+
+== Context
+
+At 50,000 physical servers (ADR-0002), manual operations are not viable. Every action — tenant onboarding, cluster provisioning, network configuration, storage allocation — must be automatable. This requires a decision on whether the platform is API-first or UI-first.
+
+== Options
+
+=== Option 1: API-first
+* Pros: all operations are automatable from day one; UI is just an API client; third-party integrations use the same interface; enables GitOps and IaC workflows; single source of truth for platform state
+* Cons: higher upfront investment in API design; UI development depends on API readiness
+
+=== Option 2: UI-first with API added later
+* Pros: faster initial user-facing progress; easier to demo
+* Cons: API becomes an afterthought; UI often accumulates business logic that must be extracted later; dual code paths; does not scale to 50,000 physical servers
+
+=== Option 3: Mixed (some operations API, some UI-only)
+* Pros: pragmatic for early stages
+* Cons: inconsistent automation story; some operations cannot be scripted; technical debt accumulates; unclear contract for integrators
+
+== Decision
+
+API-first. Every platform operation must be available through a versioned API. The UI consumes the same API as external clients. No operation may exist only in the UI. This is the only model compatible with the automation-first requirement from ADR-0002.
+
+== Consequences
+
+* API design is a first-class concern, not an afterthought
+* UI development is decoupled from backend — it is an API client
+* All platform state changes go through the API
+* RPC framework choice must be made (separate ADR)
+* API versioning and compatibility strategy must be defined
