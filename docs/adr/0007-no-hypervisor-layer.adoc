@@ -16,7 +16,7 @@ Traditional cloud platforms use hypervisors (KVM/QEMU managed by libvirt, OpenSt
 
 === Option 1: No hypervisor — Kubernetes directly on bare-metal
 * Pros: one less layer to operate, secure, and patch; clear physical boundaries per tenant (every workload maps to a physical server in a known tenant); no hypervisor escape attack surface; simpler capacity planning; better performance (no virtualization overhead)
-* Cons: minimum cluster size is 3 physical nodes (no sub-node tenancy); VM workloads require an alternative solution (e.g. KubeVirt); less flexible resource slicing
+* Cons: VM workloads require an alternative solution (e.g. KubeVirt); less flexible resource slicing
 
 === Option 2: Hypervisor layer (KVM/libvirt or OpenStack Nova)
 * Pros: fine-grained resource slicing below physical server level; mature VM lifecycle tooling; familiar to traditional operations teams
@@ -24,11 +24,10 @@ Traditional cloud platforms use hypervisors (KVM/QEMU managed by libvirt, OpenSt
 
 == Decision
 
-No hypervisor. Kubernetes runs directly on bare-metal. The government context makes this viable: we don't need sub-3-node clusters, so the minimum cluster size is not a constraint. Clear physical boundaries make it trivially auditable which workload belongs to which tenant. One less layer to secure means a smaller attack surface. Where VM workloads are needed, KubeVirt on bare-metal Kubernetes is the path (separate ADR).
+No hypervisor. Kubernetes runs directly on bare-metal. The government context makes this viable: we don't need small-node clusters, so the minimum cluster size is not a constraint. Clear physical boundaries make it trivially auditable which workload belongs to which tenant. One less layer to secure means a smaller attack surface. Where VM workloads are needed, KubeVirt on bare-metal Kubernetes is the path (separate ADR).
 
 == Consequences
 
-* Minimum tenant allocation is 3 physical nodes
 * VM workloads require KubeVirt or similar (separate ADR)
 * Physical server ↔ tenant mapping is always traceable
 * No hypervisor patching, no hypervisor CVEs, no escape vectors
