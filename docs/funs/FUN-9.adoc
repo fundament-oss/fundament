@@ -2,6 +2,7 @@
 :toc: left
 :numbered:
 :icons: font
+:sidebar-order: 9
 :state: prediscussion
 
 = FUN-9 API Keys

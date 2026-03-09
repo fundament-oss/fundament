@@ -2,6 +2,7 @@
 :toc: left
 :numbered:
 :icons: font
+:sidebar-order: 7
 :state: discussion
 
 = FUN-7 User Permissions and Roles

@@ -2,6 +2,7 @@
 :toc: left
 :numbered:
 :icons: font
+:sidebar-order: 1
 :state: discussion
 
 = FUN-1 Fundament Update Note
@@ -51,7 +52,7 @@ But none of this is required upfront. The most important thing is to start writi
 
 == Format
 
-FUNs are written in AsciiDoc and live in the `funs/` directory, one directory per FUN. Each FUN has a four-digit zero-padded number and a descriptive title.
+FUNs are written in AsciiDoc and live in the `docs/funs/` directory. Each FUN file is named `FUN-<number>.adoc`.
 
 Every FUN file starts with these document attributes:
 
@@ -60,12 +61,11 @@ Every FUN file starts with these document attributes:
 :toc: left
 :numbered:
 :icons: font
+:sidebar-order: <number>
 :state: prediscussion
 ....
 
-The `:state:` attribute tracks the FUN's lifecycle (see below). The rest are rendering directives.
-
-See the `funs/README.adoc` for the step-by-step workflow for creating and progressing a FUN.
+The `:state:` attribute tracks the FUN's lifecycle (see below). The `:sidebar-order:` controls the position in the documentation sidebar. The rest are rendering directives.
 
 == States
 

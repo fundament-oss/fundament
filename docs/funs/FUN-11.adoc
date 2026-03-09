@@ -2,6 +2,7 @@
 :toc: left
 :numbered:
 :icons: font
+:sidebar-order: 11
 :state: prediscussion
 
 = FUN-11 Plugins and the Marketplace

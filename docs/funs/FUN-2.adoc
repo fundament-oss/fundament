@@ -2,6 +2,7 @@
 :toc: left
 :numbered:
 :icons: font
+:sidebar-order: 2
 :state: prediscussion
 
 = FUN-2 A Fundament for the Future of Government Computing
