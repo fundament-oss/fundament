@@ -1,0 +1,54 @@
+:showtitle:
+:sidebar-order: 0
+:sidebar-label: Overview
+
+= Fundament Update Notes
+
+FUNs (Fundament Update Notes) document technical decisions, architecture, and processes for the Fundament platform. See link:/funs/fun-1[FUN-1] for the full philosophy and workflow.
+
+[cols="4,1", options="header"]
+|===
+| Title | State
+
+| link:/funs/fun-1[FUN-1 Fundament Update Note]
+| discussion
+
+| link:/funs/fun-2[FUN-2 A Fundament for the Future of Government Computing]
+| prediscussion
+
+| link:/funs/fun-3[FUN-3 Security Principles]
+| prediscussion
+
+| link:/funs/fun-4[FUN-4 Organizational Hierarchies]
+| discussion
+
+| link:/funs/fun-5[FUN-5 Identifiers]
+| discussion
+
+| link:/funs/fun-6[FUN-6 API-First Design]
+| prediscussion
+
+| link:/funs/fun-7[FUN-7 User Permissions and Roles]
+| discussion
+
+| link:/funs/fun-8[FUN-8 funops - Operator CLI]
+| prediscussion
+
+| link:/funs/fun-9[FUN-9 API Keys]
+| prediscussion
+
+| link:/funs/fun-10[FUN-10 Console frontend styling]
+| prediscussion
+
+| link:/funs/fun-11[FUN-11 Plugins and the Marketplace]
+| prediscussion
+
+| link:/funs/fun-12[FUN-12 Unauthorized vs Not Found]
+| published
+
+| link:/funs/fun-13[FUN-13 Testing Strategy]
+| prediscussion
+
+| link:/funs/fun-14[FUN-14 Personas]
+| discussion
+|===

@@ -12,11 +12,12 @@ RUN bun install --frozen-lockfile
 COPY docs-frontend/ .
 
 # Copy FUNs from the main repo
-COPY funs/ ./src/content/docs/funs/
+COPY docs/funs/ ./src/content/docs/funs/
 
 # Copy docs from the main repo and create a docs subdirectory
 RUN mkdir -p ./src/content/docs/docs
 COPY docs/ ./src/content/docs/docs/
+RUN rm -rf ./src/content/docs/docs/funs/
 
 # Serve docs assets statically to avoid Astro/Vite processing large SVGs
 COPY docs/assets/ ./public/assets/

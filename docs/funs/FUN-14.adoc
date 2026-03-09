@@ -2,9 +2,10 @@
 :toc: left
 :numbered:
 :icons: font
+:sidebar-order: 14
 :state: discussion
 
-= FUN-13 Personas
+= FUN-14 Personas
 
 == Introduction
 

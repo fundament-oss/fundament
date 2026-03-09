@@ -2,6 +2,7 @@
 :toc: left
 :numbered:
 :icons: font
+:sidebar-order: 5
 :state: discussion
 
 = FUN-5 Identifiers

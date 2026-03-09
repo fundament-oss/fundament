@@ -2,6 +2,7 @@
 :toc: left
 :numbered:
 :icons: font
+:sidebar-order: 4
 :state: discussion
 
 = FUN-4 Organizational Hierarchies

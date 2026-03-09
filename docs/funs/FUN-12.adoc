@@ -2,6 +2,7 @@
 :toc: left
 :numbered:
 :icons: font
+:sidebar-order: 12
 :state: published
 
 = FUN-12 Unauthorized vs Not Found
