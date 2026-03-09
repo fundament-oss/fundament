@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 15
 :state: proposed
 
 = ADR-0015: Distributed storage

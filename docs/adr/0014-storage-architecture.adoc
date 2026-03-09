@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 14
 :state: proposed
 
 = ADR-0014: Storage architecture

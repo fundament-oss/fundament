@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 3
 :state: proposed
 
 = ADR-0003: Bare-metal infrastructure

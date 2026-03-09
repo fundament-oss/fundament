@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 4
 :state: proposed
 
 = ADR-0004: Datacenter network topology

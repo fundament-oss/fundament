@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 5
 :state: proposed
 
 = ADR-0005: Bare-metal provisioning tool
