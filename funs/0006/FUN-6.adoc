@@ -241,39 +241,25 @@ CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id, name, de
 
 ==== Multi-tenancy
 
-Fundament uses PostgreSQL Row-Level Security (RLS) to enforce organization isolation at the database level. Each request sets the current organization context:
+Fundament enforces organization isolation at the application level using a combination of HTTP headers, JWT validation, and OpenFGA authorization checks.
 
-[source,sql]
-----
-SET app.current_organization_id = '<uuid>';
-----
+Every organization-scoped API request must include the `Fun-Organization` HTTP header carrying the active organization's UUID. The auth interceptor processes this header on each request:
 
-RLS policies automatically filter queries to only return rows belonging to the current organization:
+1. It extracts and validates the JWT from the `Authorization` header (or cookie)
+2. It parses the `Fun-Organization` header and confirms the user belongs to that organization (checking against the organization IDs in the JWT claims)
+3. It injects the validated organization ID and user ID into the request context
 
-[source,sql]
-----
-CREATE POLICY organization_isolation ON tenant.clusters
-  FOR ALL TO fun_fundament_api
-  USING (organization_id = current_setting('app.current_organization_id')::uuid);
-----
+Queries then scope results to the active organization through application-level filtering. Every database query for organization-scoped resources includes the organization ID from the request context.
 
-This approach ensures:
+On top of this scoping, OpenFGA provides fine-grained permission checks (`can_view`, `can_edit`, `can_delete`, etc.) based on the user's relationship to the resource being accessed. See FUN-7 for the full permission model.
 
-* **Defense in depth**: Tenant isolation enforced at database level, not just application code
-* **No accidental leaks**: Impossible to query another organization's data without explicit context change
-* **Simplified queries**: Application code doesn't need to add organization filters
+User-scoped endpoints (`ListOrganizations`, `ListInvitations`, `AcceptInvitation`, `DeclineInvitation`) do not require the `Fun-Organization` header since they operate across all of the user's organizations.
 
-Child resources (e.g., `node_pools`, `installs`) use policies that join to their parent to inherit organization isolation:
+This approach provides:
 
-[source,sql]
-----
-CREATE POLICY node_pools_organization_policy ON tenant.node_pools
-  USING (EXISTS (
-    SELECT 1 FROM clusters
-    WHERE clusters.id = node_pools.cluster_id
-    AND clusters.organization_id = current_setting('app.current_organization_id')::uuid
-  ));
-----
+* **Clear request-scoped context**: The organization boundary is explicit in every request via the HTTP header, making it easy to trace and debug
+* **Auditable authorization**: OpenFGA provides relationship-based authorization with a clear model that can be reasoned about and tested
+* **Straightforward database access**: Queries use standard `WHERE` clauses with the organization ID from context, with no database-level policy magic
 
 ==== Partial Updates
 
