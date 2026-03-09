@@ -1,0 +1,39 @@
+:showtitle:
+:state: proposed
+
+= ADR-0012: Platform API and tenant model
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: platform
+Depends-on:: ADR-0010, ADR-0011
+
+== Context
+
+With API-first architecture (ADR-0010) and a two-level organizational hierarchy (ADR-0011), we need to define the platform API: what resources it exposes, how tenants interact with it, and where the API boundary sits relative to Gardener and other subsystems.
+
+== Options
+
+=== Option 1: Thin wrapper — expose Gardener API directly to tenants
+* Pros: no additional API layer to maintain; tenants get full Gardener capabilities
+* Cons: tenants are coupled to Gardener internals; no place to enforce platform policies (quotas, naming, allowed configurations); organizational hierarchy must be bolted onto Gardener; Gardener API changes break tenants
+
+=== Option 2: Platform API as abstraction layer over Gardener
+* Pros: platform controls the contract; can enforce policies, quotas, and defaults; organizational hierarchy is a first-class concept; Gardener is an implementation detail; API can be extended with non-Gardener resources (DNS, storage, certificates)
+* Cons: additional API to design and maintain; must keep in sync with Gardener capabilities
+
+=== Option 3: Platform API replaces Gardener API entirely
+* Pros: full control over tenant experience
+* Cons: reimplements Gardener features; massive scope; loses Gardener ecosystem benefits
+
+== Decision
+
+Platform API as abstraction layer. The platform API owns the tenant-facing contract: organizations, projects, clusters, and platform-managed resources. Gardener is the backend for cluster lifecycle but is not exposed directly to tenants. The platform API enforces organizational policies, quotas, and allowed configurations before delegating to Gardener. Non-cluster resources (DNS zones, certificates, storage buckets) are managed through the same API surface.
+
+== Consequences
+
+* Platform API is the single entry point for all tenant operations
+* Gardener API is internal — tenants never interact with it directly
+* Platform API must map its resource model to Gardener projects and shoots
+* RPC framework (separate ADR) and database (separate ADR) choices apply to the platform API
+* Authorization model (separate ADR) is enforced at the platform API layer

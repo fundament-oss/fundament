@@ -1,0 +1,38 @@
+:showtitle:
+:state: proposed
+
+= ADR-0011: Organizational hierarchy
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: platform
+Depends-on:: ADR-0008
+
+== Context
+
+With dedicated physical clusters per tenant (ADR-0008), we need a resource hierarchy that maps government organizational structures to platform resources. The hierarchy determines how access control, billing, and resource quotas are scoped.
+
+== Options
+
+=== Option 1: Flat (organization → clusters)
+* Pros: simplest model; easy to reason about
+* Cons: no sub-grouping within an organization; large ministries cannot delegate to departments; all clusters share one authorization scope
+
+=== Option 2: Two-level (organization → project → clusters)
+* Pros: organizations can group clusters by purpose or department; access control can be scoped to project level; matches how government organizations are structured (ministry → department/program); proven pattern (GCP, Gardener)
+* Cons: slightly more complex than flat
+
+=== Option 3: Deeply nested (organization → folder → folder → ... → project → clusters)
+* Pros: maximum flexibility for complex org structures
+* Cons: deep nesting creates confusion about where policies apply; inheritance rules become complex; over-engineering for current needs
+
+== Decision
+
+Two-level hierarchy: organization → project → clusters. An organization represents a government entity (ministry, agency). A project groups related clusters within an organization (e.g. by department, program, or environment). Access control, quotas, and billing are scoped at both organization and project level. This matches the Gardener project model and typical government organizational structures.
+
+== Consequences
+
+* Every cluster belongs to exactly one project, every project belongs to exactly one organization
+* Authorization model must support scoping at both organization and project level
+* Tenant onboarding creates an organization; teams within it create projects
+* Billing and quota aggregation happens at organization level
