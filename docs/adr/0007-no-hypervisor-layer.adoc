@@ -6,7 +6,7 @@
 Status:: proposed
 Date:: 2026-03-09
 Group:: hardware
-Depends-on:: ADR-0003, ADR-0006
+Depends-on:: ADR-0003
 
 == Context
 

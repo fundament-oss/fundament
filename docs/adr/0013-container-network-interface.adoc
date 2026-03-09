@@ -6,7 +6,7 @@
 Status:: proposed
 Date:: 2026-03-09
 Group:: networking
-Depends-on:: ADR-0004, ADR-0007
+Depends-on:: ADR-0004, ADR-0006
 
 == Context
 
