@@ -1,9 +1,9 @@
 :showtitle:
-:state: prediscussion
+:state: proposed
 
 = ADR-0000: Title of the decision
 
-Status:: prediscussion | published | superseded by ADR-XXXX
+Status:: proposed | accepted | superseded by ADR-XXXX | deprecated
 Date:: YYYY-MM-DD
 Group:: cross-cutting | hardware | networking | storage |
         cluster-management | platform | managed-services |
