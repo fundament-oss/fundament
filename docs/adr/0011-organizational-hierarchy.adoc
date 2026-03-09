@@ -4,7 +4,7 @@
 = ADR-0011: Organizational hierarchy
 
 Status:: proposed
-Date:: 2026-03-09
+Date:: 2026-03-10
 Group:: platform
 Depends-on:: ADR-0008
 
@@ -16,23 +16,28 @@ With dedicated physical clusters per tenant (ADR-0008), we need a resource hiera
 
 === Option 1: Flat (organization → clusters)
 * Pros: simplest model; easy to reason about
-* Cons: no sub-grouping within an organization; large ministries cannot delegate to departments; all clusters share one authorization scope
+* Cons: no sub-grouping within a cluster; large ministries cannot delegate environments or teams; all workloads share one authorization scope
 
-=== Option 2: Two-level (organization → project → clusters)
-* Pros: organizations can group clusters by purpose or department; access control can be scoped to project level; matches how government organizations are structured (ministry → department/program); proven pattern (GCP, Gardener)
+=== Option 2: Organization → cluster → project → namespace
+* Pros: organization is the tenant boundary; clusters are infrastructure owned by the organization; projects group workloads within a cluster (e.g. by environment or team); namespaces are the deployment unit within a project; access control scopes at both organization level (platform access) and project level (workload access); clean separation between infrastructure concerns (clusters, node pools) and workload concerns (projects, namespaces)
 * Cons: slightly more complex than flat
 
-=== Option 3: Deeply nested (organization → folder → folder → ... → project → clusters)
+=== Option 3: Organization → project → cluster (Gardener/GCP model)
+* Pros: matches Gardener's native project concept; proven pattern in GCP
+* Cons: project-as-grouping-of-clusters does not match how teams actually work — teams work within a cluster, not across clusters; conflates infrastructure grouping with workload grouping
+
+=== Option 4: Deeply nested (organization → folder → folder → ... → project → clusters)
 * Pros: maximum flexibility for complex org structures
 * Cons: deep nesting creates confusion about where policies apply; inheritance rules become complex; over-engineering for current needs
 
 == Decision
 
-Two-level hierarchy: organization → project → clusters. An organization represents a government entity (ministry, agency). A project groups related clusters within an organization (e.g. by department, program, or environment). Access control, quotas, and billing are scoped at both organization and project level. This matches the Gardener project model and typical government organizational structures.
+Organization → cluster → project → namespace. An organization represents a government entity (ministry, agency) and is the tenant boundary. Clusters are managed Kubernetes clusters provisioned via Gardener, owned by the organization. Projects are logical groupings within a cluster (e.g. staging, production, or per-team). Namespaces are the unit of deployment within a project. Access control is scoped at two levels: organization membership controls platform access, project membership controls workload access.
 
 == Consequences
 
-* Every cluster belongs to exactly one project, every project belongs to exactly one organization
+* Every namespace belongs to exactly one project, every project to one cluster, every cluster to one organization
 * Authorization model must support scoping at both organization and project level
-* Tenant onboarding creates an organization; teams within it create projects
+* Tenant onboarding creates an organization; infrastructure admins provision clusters; teams create projects within clusters
 * Billing and quota aggregation happens at organization level
+* Node pools are an infrastructure concern managed at cluster level, not visible to project-level users
