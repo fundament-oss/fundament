@@ -76,20 +76,10 @@ spec:
                 echo "Authorization model ID: $MODEL_ID"
               fi
 
-              # Write store ID and model ID to a ConfigMap for the organization-api to read
-              cat <<ENDOFCM | kubectl apply -f -
-              apiVersion: v1
-              kind: ConfigMap
-              metadata:
-                name: {{ $.Release.Name }}-openfga-config
-                namespace: {{ $.Release.Namespace }}
-                labels:
-                  {{- include "fundament.labels" . | nindent 18 }}
-                  app.kubernetes.io/component: openfga
-              data:
-                store-id: "$FGA_STORE_ID"
-                authorization-model-id: "$MODEL_ID"
-              ENDOFCM
+              # Write store ID and model ID to the ConfigMap managed by Helm
+              kubectl patch configmap {{ $.Release.Name }}-openfga-config \
+                -n {{ $.Release.Namespace }} \
+                --patch "{\"data\":{\"store-id\":\"$FGA_STORE_ID\",\"authorization-model-id\":\"$MODEL_ID\"}}"
 
               echo "ConfigMap updated successfully"
           volumeMounts:
