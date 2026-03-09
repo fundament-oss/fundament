@@ -1,5 +1,5 @@
 meta {
-  name: 04 - Setup - Add Bob as Viewer
+  name: 04 - Setup - Add Bart as Viewer
   type: http
   seq: 4
 }
@@ -28,12 +28,12 @@ body:json {
 
 script:post-response {
   if (res.headers['content-type']?.includes('application/json')) {
-    bru.setVar("bobMemberId", res.body.memberId);
+    bru.setVar("bartMemberId", res.body.memberId);
   }
 }
 
 tests {
-  test("should add bob as viewer", function() {
+  test("should add bart as viewer", function() {
     expect(res.status).to.equal(200);
     expect(res.body.memberId).to.be.a('string');
   });
