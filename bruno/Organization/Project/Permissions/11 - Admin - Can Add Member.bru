@@ -28,7 +28,7 @@ body:json {
 
 script:post-response {
   if (res.headers['content-type']?.includes('application/json')) {
-    bru.setVar("carolMemberId", res.body.memberId);
+    bru.setVar("cindyMemberId", res.body.memberId);
   }
 }
 

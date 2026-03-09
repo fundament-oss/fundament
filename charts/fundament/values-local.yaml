@@ -67,33 +67,33 @@ dex:
     # acme-corp users
     - email: alice@acme-corp.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Alice Johnson
+      username: Alice
       userID: "019b4000-1000-7000-8000-000000000001"
-    - email: bob@acme-corp.com
+    - email: bart@acme-corp.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Bob Smith
+      username: Bart
       userID: "019b4000-1000-7000-8000-000000000002"
-    - email: carol@acme-corp.com
+    - email: cindy@acme-corp.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Carol White
+      username: Cindy
       userID: "019b4000-1000-7000-8000-000000000003"
     # globex users
     - email: david@globex.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: David Brown
+      username: David
       userID: "019b4000-1000-7000-8000-000000000004"
-    - email: eve@globex.com
+    - email: emily@globex.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Eve Davis
+      username: Emily
       userID: "019b4000-1000-7000-8000-000000000005"
     # initech users
     - email: frank@initech.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Frank Miller
+      username: Frank
       userID: "019b4000-1000-7000-8000-000000000006"
     - email: grace@initech.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Grace Lee
+      username: Grace
       userID: "019b4000-1000-7000-8000-000000000007"
 
 authzWorker:
