@@ -1,0 +1,34 @@
+:showtitle:
+:state: proposed
+
+= ADR-0007: No hypervisor layer
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: hardware
+Depends-on:: ADR-0003, ADR-0006
+
+== Context
+
+Traditional cloud platforms use hypervisors (KVM/QEMU managed by libvirt, OpenStack Nova, VMware ESXi) to multiplex physical servers into VMs. This adds a full software layer between hardware and workloads. With Gardener (ADR-0006) providing dedicated physical clusters per tenant, the question is whether a hypervisor layer is needed at all.
+
+== Options
+
+=== Option 1: No hypervisor — Kubernetes directly on bare-metal
+* Pros: one less layer to operate, secure, and patch; clear physical boundaries per tenant (every workload maps to a physical server in a known tenant); no hypervisor escape attack surface; simpler capacity planning; better performance (no virtualization overhead)
+* Cons: minimum cluster size is 3 physical nodes (no sub-node tenancy); VM workloads require an alternative solution (e.g. KubeVirt); less flexible resource slicing
+
+=== Option 2: Hypervisor layer (KVM/libvirt or OpenStack Nova)
+* Pros: fine-grained resource slicing below physical server level; mature VM lifecycle tooling; familiar to traditional operations teams
+* Cons: full additional platform to operate, patch, and secure; hypervisor escape is a real attack vector; blurs physical tenant boundaries; doubles the operational complexity
+
+== Decision
+
+No hypervisor. Kubernetes runs directly on bare-metal. The government context makes this viable: we don't need sub-3-node clusters, so the minimum cluster size is not a constraint. Clear physical boundaries make it trivially auditable which workload belongs to which tenant. One less layer to secure means a smaller attack surface. Where VM workloads are needed, KubeVirt on bare-metal Kubernetes is the path (separate ADR).
+
+== Consequences
+
+* Minimum tenant allocation is 3 physical nodes
+* VM workloads require KubeVirt or similar (separate ADR)
+* Physical server ↔ tenant mapping is always traceable
+* No hypervisor patching, no hypervisor CVEs, no escape vectors
