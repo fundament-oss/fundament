@@ -1,0 +1,42 @@
+:showtitle:
+:state: proposed
+
+= ADR-0008: Tenant isolation model
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: cluster-management
+Depends-on:: ADR-0006, ADR-0007
+
+== Context
+
+Fundament serves multiple government organizations on shared physical infrastructure. Each tenant must be isolated from others on compute, storage, and network level. The isolation model determines the security posture, resource efficiency, and operational complexity of the platform. With Gardener (ADR-0006) and no hypervisor layer (ADR-0007), tenant boundaries must be enforced at the Kubernetes cluster level.
+
+== Options
+
+=== Option 1: Dedicated physical clusters per tenant (Gardener Shoots)
+* Pros: strongest isolation — no shared kernel, API server, or etcd; physical server ↔ tenant mapping is traceable (ADR-0007); independent cluster lifecycles; meets EUCS SEAL-4 and BIO isolation requirements
+* Cons: minimum 3 physical nodes per tenant; higher resource overhead for small tenants; more clusters to manage (but Gardener handles this)
+
+=== Option 2: Shared clusters with namespace isolation
+* Pros: highest resource efficiency; fast tenant onboarding; single cluster to manage
+* Cons: shared kernel — container breakout affects other tenants; noisy neighbor problems; complex RBAC and network policy management; does not meet EUCS SEAL-4 for sensitive workloads
+
+=== Option 3: Virtual clusters (vCluster) on shared physical clusters
+* Pros: tenant gets own API server and control plane; better isolation than namespaces; low overhead
+* Cons: still shares kernel; sync mechanism adds attack surface; commercial vendor dependency (Loft Labs)
+
+=== Option 4: Hybrid — dedicated clusters for sensitive tenants, shared for others
+* Pros: resource efficient for low-risk tenants; strong isolation where needed
+* Cons: two operational models; classification complexity; inconsistent security posture
+
+== Decision
+
+Dedicated physical clusters per tenant via Gardener Shoots. Every tenant organization gets its own Kubernetes cluster on dedicated physical nodes. This is the only model that provides full isolation at compute level without a hypervisor. Combined with ADR-0007, every physical server is attributable to exactly one tenant. Gardener's lifecycle management (ADR-0006) makes operating hundreds of clusters viable.
+
+== Consequences
+
+* Minimum tenant size is 3 physical nodes
+* Tenant onboarding means provisioning a Gardener Shoot cluster
+* Organizational hierarchy (how tenants map to clusters, projects, namespaces) needs a separate ADR
+* Network isolation between tenant clusters must be enforced at the physical network level

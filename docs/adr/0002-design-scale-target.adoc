@@ -24,16 +24,15 @@ Fundament must define its design scale to make informed architecture decisions. 
 
 === Option 3: Hyperscale (up to 50,000 physical servers / ~2M logical CPUs)
 * Pros: meets government target (30-50% sovereign compute)
-* Cons: eliminates many tools, requires automation-first approach, multi-site mandatory, dedicated DC network automation required
+* Cons: eliminates many tools, requires automation-first approach, dedicated DC network automation required
 
 == Decision
 
-Design for 50,000 physical servers / ~2,000,000 logical CPUs across 3+ sites, to be reached within 3 years. All architecture decisions must be validated against this target.
+Design for 50,000 physical servers / ~2,000,000 logical CPUs, to be reached within 3 years. All architecture decisions must be validated against this target.
 
 == Consequences
 
 * Tools must be proven or credibly validated at this scale
 * Manual operations are not viable — everything must be automated
-* Multi-site is mandatory, not optional
 * DC network automation is a first-class concern
 * Capacity management and monitoring must scale horizontally
