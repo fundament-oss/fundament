@@ -28,7 +28,7 @@ With bare-metal provisioning in place (ADR-0005), tenant organizations need dedi
 
 == Decision
 
-Gardener. The built-in lifecycle management while not sharing control plane between tenants. Native metal-stack integration means the full stack (provisioning → cluster lifecycle) is proven in production together. European governance aligns with sovereignty requirements.
+Gardener. Native metal-stack integration means the full stack (provisioning → cluster lifecycle) is proven in production together. Mature project with a lot of production exposure. European governance aligns with sovereignty requirements.
 
 == Consequences
 
