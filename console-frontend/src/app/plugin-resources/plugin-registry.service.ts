@@ -66,6 +66,14 @@ export default class PluginRegistryService {
   // Keyed by "${pluginName}/${crdK8sName}" (e.g. "cert-manager/certificates.cert-manager.io")
   private parsedCrdCache = new Map<string, ParsedCrd>();
 
+  // Secondary indexes for O(1) lookup by kind/plural
+  private parsedCrdByKind = new Map<string, ParsedCrd>(); // key: "${pluginName}/${kind}"
+
+  private parsedCrdByPlural = new Map<string, ParsedCrd>(); // key: "${pluginName}/${plural}"
+
+  // Tracks which plugins have had their CRDs fully fetched
+  private loadedCrdPlugins = signal<ReadonlySet<string>>(new Set());
+
   private readonly pluginFiles = [
     '/plugins/cert-manager/cert-manager.plugin.yaml',
     '/plugins/cnpg/cnpg.plugin.yaml',
@@ -119,12 +127,21 @@ export default class PluginRegistryService {
           credentials: 'include',
           headers: { 'Fun-Organization': orgId },
         });
-        if (!response.ok) return;
+        if (!response.ok) {
+          // eslint-disable-next-line no-console
+          console.error(`[PluginRegistry] Failed to fetch CRD ${crdName}: ${response.status}`);
+          return;
+        }
 
         const raw = (await response.json()) as RawCrdYaml;
-        this.parsedCrdCache.set(cacheKey, parseCrd(raw));
+        const parsed = parseCrd(raw);
+        this.parsedCrdCache.set(cacheKey, parsed);
+        this.parsedCrdByKind.set(`${pluginName}/${parsed.kind}`, parsed);
+        this.parsedCrdByPlural.set(`${pluginName}/${parsed.plural}`, parsed);
       }),
     );
+
+    this.loadedCrdPlugins.update((prev) => new Set([...prev, pluginName]));
   }
 
   getPlugin(name: string): PluginDefinition | undefined {
@@ -132,15 +149,15 @@ export default class PluginRegistryService {
   }
 
   getCrd(pluginName: string, kind: string): ParsedCrd | undefined {
-    return [...this.parsedCrdCache.entries()].find(
-      ([key, crd]) => key.startsWith(`${pluginName}/`) && crd.kind === kind,
-    )?.[1];
+    return this.parsedCrdByKind.get(`${pluginName}/${kind}`);
   }
 
   getCrdByPlural(pluginName: string, plural: string): ParsedCrd | undefined {
-    return [...this.parsedCrdCache.entries()].find(
-      ([key, crd]) => key.startsWith(`${pluginName}/`) && crd.plural === plural,
-    )?.[1];
+    return this.parsedCrdByPlural.get(`${pluginName}/${plural}`);
+  }
+
+  areCrdsLoaded(pluginName: string): boolean {
+    return this.loadedCrdPlugins().has(pluginName);
   }
 
   allPlugins = this.plugins.asReadonly();
