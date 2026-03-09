@@ -28,7 +28,7 @@ With Kubernetes on bare-metal (ADR-0003, ADR-0007), persistent storage must be p
 
 == Decision
 
-Hyperconverged as the starting architecture. All bare-metal nodes contribute storage capacity alongside compute. The chosen storage technology (separate ADR) must support adding dedicated storage nodes later without migration, so the platform can evolve to a mixed model when scale or tenant requirements demand it.
+Hyperconverged initially, with the option to add disaggregated storage nodes when needed (Option 3). All bare-metal nodes contribute storage capacity alongside compute. The chosen storage technology (separate ADR) must support adding dedicated storage nodes later without migration, so the platform can evolve to a mixed model when scale or tenant requirements demand it.
 
 == Consequences
 

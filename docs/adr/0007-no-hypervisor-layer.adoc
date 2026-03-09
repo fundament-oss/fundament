@@ -24,7 +24,7 @@ Traditional cloud platforms use hypervisors (KVM/QEMU managed by libvirt, OpenSt
 
 == Decision
 
-No hypervisor. Kubernetes runs directly on bare-metal. One less layer to operate, secure, and patch. No hypervisor escape attack surface. The government context makes this viable: minimum cluster size of 3 physical nodes is not a constraint. Where VM workloads are needed, KubeVirt on bare-metal Kubernetes is the path (separate ADR).
+No hypervisor. Kubernetes runs directly on bare-metal. The primary benefit is operational simplicity: one less layer to operate, patch, and secure. The government context makes this viable: minimum cluster size of 3 physical nodes is not a constraint. Where VM workloads are needed, KubeVirt on bare-metal Kubernetes is the path (separate ADR).
 
 == Consequences
 
