@@ -10,32 +10,25 @@ Depends-on:: ADR-0001
 
 == Context
 
-Fundament must define its design scale to make informed
-architecture decisions. Components that work at 500 servers
-may not work at 50,000. The target determines which tools
-are viable and which operational models are required.
+Fundament must define its design scale to make informed architecture decisions. Components that work at 500 physical servers may not work at 50,000. The target determines which tools are viable and which operational models are required.
 
 == Options
 
-=== Option 1: Single-org scale (up to 500 servers)
+=== Option 1: Single-org scale (up to 500 physical servers)
 * Pros: most tools work, small team viable
 * Cons: not relevant for national government platform
 
-=== Option 2: Medium scale (up to 5,000 servers)
+=== Option 2: Medium scale (up to 5,000 physical servers)
 * Pros: broad tool support, proven architectures available
 * Cons: insufficient for stated government ambition
 
-=== Option 3: Hyperscale (up to 50,000 servers / ~2M vCPUs)
+=== Option 3: Hyperscale (up to 50,000 physical servers / ~2M vCPUs)
 * Pros: meets government target (30-50% sovereign compute)
-* Cons: eliminates many tools, requires automation-first
-  approach, multi-site mandatory, dedicated DC network
-  automation required
+* Cons: eliminates many tools, requires automation-first approach, multi-site mandatory, dedicated DC network automation required
 
 == Decision
 
-Design for 50,000 servers / ~2,000,000 vCPUs across 3+ sites,
-to be reached within 3 years. All architecture decisions must
-be validated against this target.
+Design for 50,000 physical servers / ~2,000,000 vCPUs across 3+ sites, to be reached within 3 years. All architecture decisions must be validated against this target.
 
 == Consequences
 

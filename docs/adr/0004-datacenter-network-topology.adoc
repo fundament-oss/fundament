@@ -10,7 +10,7 @@ Depends-on:: ADR-0002, ADR-0003
 
 == Context
 
-At 50,000 servers across 3+ sites, the physical network architecture must be explicitly chosen. The topology determines scalability, fault domains, and whether network provisioning can be fully automated alongside compute provisioning.
+At 50,000 physical servers across 3+ sites, the physical network architecture must be explicitly chosen. The topology determines scalability, fault domains, and whether network provisioning can be fully automated alongside compute provisioning.
 
 == Options
 
@@ -20,7 +20,7 @@ At 50,000 servers across 3+ sites, the physical network architecture must be exp
 
 === Option 2: Traditional three-tier (core/distribution/access)
 * Pros: familiar to most network teams, works with any vendor
-* Cons: spanning tree limits scale, poor east-west performance, difficult to automate, does not scale to 50k servers
+* Cons: spanning tree limits scale, poor east-west performance, difficult to automate, does not scale to 50,000 physical servers
 
 === Option 3: SDN overlay (e.g. NSX, Contrail)
 * Pros: abstraction from physical topology, multi-tenant network virtualization built in
@@ -28,7 +28,7 @@ At 50,000 servers across 3+ sites, the physical network architecture must be exp
 
 == Decision
 
-Spine-leaf with BGP/EVPN. Only topology proven to scale to 50,000+ servers with full automation. Aligns with the automation-first requirement from ADR-0002.
+Spine-leaf with BGP/EVPN. Only topology proven to scale to 50,000+ physical servers with full automation. Aligns with the automation-first requirement from ADR-0002.
 
 == Consequences
 
