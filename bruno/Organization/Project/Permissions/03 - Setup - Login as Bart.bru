@@ -1,7 +1,7 @@
 meta {
-  name: 05 - Setup - Login as Carol
+  name: 03 - Setup - Login as Bart
   type: http
-  seq: 5
+  seq: 3
 }
 
 post {
@@ -12,7 +12,7 @@ post {
 
 body:json {
   {
-    "email": "{{user3}}",
+    "email": "{{user2}}",
     "password": "password",
     "return_to": ""
   }
@@ -20,7 +20,7 @@ body:json {
 
 script:post-response {
   if (res.headers['content-type']?.includes('application/json')) {
-    bru.setVar("carolToken", res.body.access_token);
+    bru.setVar("bartToken", res.body.access_token);
 
     // Extract the first organization ID from the JWT claims
     var payload = JSON.parse(atob(res.body.access_token.split('.')[1]));
@@ -31,7 +31,7 @@ script:post-response {
 }
 
 tests {
-  test("should login as carol successfully", function() {
+  test("should login as bart successfully", function() {
     expect(res.status).to.equal(200);
     expect(res.body.access_token).to.be.a('string');
   });

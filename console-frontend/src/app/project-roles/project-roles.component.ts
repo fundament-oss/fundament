@@ -88,9 +88,9 @@ export default class ProjectRolesComponent implements OnInit {
 
   // Members available for role bindings (same users from project-members mock data)
   members = signal([
-    { id: 'user-1', name: 'Alice Johnson' },
-    { id: 'user-2', name: 'Bob Smith' },
-    { id: 'user-3', name: 'Carol Williams' },
+    { id: 'user-1', name: 'Alice' },
+    { id: 'user-2', name: 'Bart' },
+    { id: 'user-3', name: 'Cindy' },
     { id: 'user-5', name: 'Eve Davis' },
   ]);
 
@@ -124,14 +124,14 @@ export default class ProjectRolesComponent implements OnInit {
       {
         id: 'rb-1',
         userId: 'user-2',
-        memberName: 'Bob Smith',
+        memberName: 'Bart',
         namespace: 'namespace-1',
         roles: ['deploy', 'view-pods'],
       },
       {
         id: 'rb-2',
         userId: 'user-2',
-        memberName: 'Bob Smith',
+        memberName: 'Bart',
         namespace: 'namespace-2',
         roles: ['deploy', 'view-pods', 'view-logs'],
       },

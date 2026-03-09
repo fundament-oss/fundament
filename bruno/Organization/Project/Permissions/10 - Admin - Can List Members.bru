@@ -26,7 +26,7 @@ body:json {
 
 script:post-response {
   if (res.headers['content-type']?.includes('application/json') && res.body.members) {
-    // Find and store Alice's member ID by userId (not role, since Bob becomes admin later)
+    // Find and store Alice's member ID by userId (not role, since Bart becomes admin later)
     const aliceMember = res.body.members.find(m => m.userId === "019b4000-1000-7000-8000-000000000001");
     if (aliceMember) {
       bru.setVar("aliceMemberId", aliceMember.id);
@@ -40,7 +40,7 @@ tests {
     expect(res.body.members).to.be.an('array');
   });
 
-  test("should have at least 2 members (alice and bob)", function() {
+  test("should have at least 2 members (alice and bart)", function() {
     expect(res.body.members.length).to.be.at.least(2);
   });
 
@@ -49,7 +49,7 @@ tests {
     expect(admin).to.exist;
   });
 
-  test("should include bob as viewer", function() {
+  test("should include bart as viewer", function() {
     const viewer = res.body.members.find(m => m.role === "PROJECT_MEMBER_ROLE_VIEWER");
     expect(viewer).to.exist;
   });
