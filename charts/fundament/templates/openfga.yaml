@@ -49,16 +49,24 @@ data:
   model.fga: |
 {{- .Files.Get "openfga/model.fga" | nindent 4 }}
 ---
+{{- $openfgaConfigName := printf "%s-openfga-config" $.Release.Name }}
+{{- $openfgaConfigExisting := lookup "v1" "ConfigMap" $.Release.Namespace $openfgaConfigName }}
+{{- $openfgaStoreID := "pending" }}
+{{- $openfgaAuthModelID := "pending" }}
+{{- if $openfgaConfigExisting }}
+{{- $openfgaStoreID = index $openfgaConfigExisting.data "store-id" | default "pending" }}
+{{- $openfgaAuthModelID = index $openfgaConfigExisting.data "authorization-model-id" | default "pending" }}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $.Release.Name }}-openfga-config
+  name: {{ $openfgaConfigName }}
   labels:
     {{- include "fundament.labels" . | nindent 4 }}
     app.kubernetes.io/component: openfga
 data:
-  store-id: "pending"
-  authorization-model-id: "pending"
+  store-id: {{ $openfgaStoreID | quote }}
+  authorization-model-id: {{ $openfgaAuthModelID | quote }}
 ---
 apiVersion: v1
 kind: ServiceAccount
