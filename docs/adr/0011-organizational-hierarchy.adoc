@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 11
 :state: proposed
 
 = ADR-0011: Organizational hierarchy

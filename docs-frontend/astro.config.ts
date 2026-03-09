@@ -107,6 +107,10 @@ export default defineConfig({
           label: 'Fundament Update Notes',
           autogenerate: { directory: 'funs' },
         },
+        {
+          label: 'Architecture Decision Records',
+          autogenerate: { directory: 'adr' },
+        },
       ],
       customCss: [
         './src/styles/starlight-custom.css',

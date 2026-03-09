@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 8
 :state: proposed
 
 = ADR-0008: Tenant isolation model

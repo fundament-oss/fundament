@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-hidden: true
 :state: proposed
 
 = ADR-0000: Title of the decision

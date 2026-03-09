@@ -1,5 +1,7 @@
 :showtitle:
 :toc: left
+:sidebar-order: 0
+:sidebar-label: Overview
 
 = Architecture Decision Records
 

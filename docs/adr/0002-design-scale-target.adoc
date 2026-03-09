@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 2
 :state: proposed
 
 = ADR-0002: Design scale target

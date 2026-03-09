@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 12
 :state: proposed
 
 = ADR-0012: Platform API and tenant model

@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 10
 :state: proposed
 
 = ADR-0010: API architecture

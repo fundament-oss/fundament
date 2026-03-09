@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 6
 :state: proposed
 
 = ADR-0006: Cluster lifecycle management
