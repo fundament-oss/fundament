@@ -7,13 +7,17 @@ ADRs capture decisions between alternatives. Each ADR is short, focused on a sin
 
 == States
 
+ADRs reuse the same states as FUNs:
+
 [cols="1,3"]
 |===
 | State | Description
 
-| proposed | Under consideration, not yet decided
-| decided | Decision has been made
-| superseded | Replaced by a newer ADR
+| prediscussion | Initial draft, under consideration
+| discussion | Actively being discussed
+| published | Decision has been made
+| committed | Implementation delivered
+| abandoned | No longer being pursued
 |===
 
 == Groups
