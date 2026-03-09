@@ -218,6 +218,77 @@ const routes: Routes = [
           breadcrumbs: [{ label: 'API keys' }],
         },
       },
+      // Plugin resource routes (organization-level)
+      {
+        path: 'plugin-resources/:pluginName',
+        children: [
+          {
+            path: ':resourceKind',
+            loadComponent: () =>
+              import('./plugin-resources/resource-list/resource-list.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [{ label: ':pluginDisplayName' }, { label: ':resourceKindLabel' }],
+            },
+          },
+          {
+            path: ':resourceKind/:resourceId',
+            loadComponent: () =>
+              import('./plugin-resources/resource-detail/resource-detail.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: ':resourceName' },
+              ],
+            },
+          },
+        ],
+      },
+      // Plugin resource routes (project-level)
+      {
+        path: 'projects/:id/plugin-resources/:pluginName',
+        children: [
+          {
+            path: ':resourceKind',
+            loadComponent: () =>
+              import('./plugin-resources/resource-list/resource-list.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                { label: ':resourceKindLabel' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/:resourceId',
+            loadComponent: () =>
+              import('./plugin-resources/resource-detail/resource-detail.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: ':resourceName' },
+              ],
+            },
+          },
+        ],
+      },
       {
         path: '',
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),

@@ -20,7 +20,7 @@ RUN bun run build
 # Production stage
 FROM nginx:alpine
 COPY --from=build /app/dist/fundament-console/browser /usr/share/nginx/html
-COPY console-frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY console-frontend/nginx.conf /etc/nginx/conf.d/default.conf.template
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/bin/sh", "-c", "envsubst '${CONNECT_SRC}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
