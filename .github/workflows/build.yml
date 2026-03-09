@@ -203,7 +203,7 @@ jobs:
 
       - name: Wait for console
         run: |
-          URL="https://console.pr${PR_NUMBER}-${{ env.DOMAIN }}"
+          URL="https://console.pr${PR_NUMBER}.${{ env.DOMAIN }}"
           echo "Waiting for ${URL} to be ready..."
           for i in $(seq 1 30); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
@@ -220,7 +220,7 @@ jobs:
       - name: Run Terraform acceptance tests
         run: |
           cd terraform-provider
-          FUNDAMENT_ENDPOINT="https://organization.pr${PR_NUMBER}-${{ env.DOMAIN }}" \
+          FUNDAMENT_ENDPOINT="https://organization.pr${PR_NUMBER}.${{ env.DOMAIN }}" \
           TF_ACC=1 \
           TF_ACC_TERRAFORM_PATH="$(which tofu)" \
           TF_ACC_PROVIDER_HOST=registry.opentofu.org \
