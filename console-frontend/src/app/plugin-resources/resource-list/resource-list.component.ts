@@ -105,7 +105,17 @@ export default class ResourceListComponent implements OnInit {
 
   kindLabel = computed(() => {
     const crd = this.crdDef();
-    return crd ? kindToLabel(crd.kind) : kindToLabel(this.resourceKind());
+    if (crd) return kindToLabel(crd.kind);
+
+    // Fallback: look up the menu entry by plural to get the proper PascalCase CRD name
+    const plugin = this.plugin();
+    const resourceKind = this.resourceKind();
+    if (plugin) {
+      const allItems = [...(plugin.menu.organization ?? []), ...(plugin.menu.project ?? [])];
+      const item = allItems.find((i) => i.plural === resourceKind);
+      if (item) return kindToLabel(item.crd);
+    }
+    return kindToLabel(resourceKind);
   });
 
   constructor() {

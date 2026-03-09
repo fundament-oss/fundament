@@ -15,21 +15,30 @@
 
     <!-- Cluster select -->
     <div class="mt-2 flex items-center gap-3">
-      <label for="cluster-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-        >Cluster</label
-      >
       @if (isLoadingClusters()) {
+        <label
+          for="cluster-select"
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >Cluster</label
+        >
         <div class="select animate-pulse bg-gray-100 dark:bg-gray-800">&nbsp;</div>
+      } @else if (clusters().length === 0) {
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          No clusters found.
+          <a routerLink="/clusters/add" class="link">Create a cluster first</a> to use this plugin.
+        </p>
       } @else {
+        <label
+          for="cluster-select"
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >Cluster</label
+        >
         <select
           id="cluster-select"
           class="select"
           [value]="selectedClusterId()"
           (change)="onClusterChange($any($event.target).value)"
         >
-          @if (clusters().length === 0) {
-            <option value="" disabled>No clusters available</option>
-          }
           @for (cluster of clusters(); track cluster.id) {
             <option [value]="cluster.id">{{ cluster.name }}</option>
           }
