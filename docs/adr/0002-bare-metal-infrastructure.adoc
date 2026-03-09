@@ -1,0 +1,46 @@
+:showtitle:
+:state: proposed
+
+= ADR-0002: Bare-metal infrastructure
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: cross-cutting
+Depends-on:: ADR-0001
+
+== Context
+
+Fundament needs a compute foundation for multi-tenant Kubernetes.
+Government requirements: data residency in NL, full-stack
+auditability, no dependency on non-European vendors.
+
+== Options
+
+=== Option 1: Bare-metal in government datacenters
+* Pros: full sovereignty, lowest cost at scale, auditable from
+  firmware up
+* Cons: high upfront investment, requires DC operations expertise
+
+=== Option 2: Managed Kubernetes on public cloud (EKS/AKS/GKE)
+* Pros: fastest to production, elastic scaling
+* Cons: non-EU vendor dependency, fails EUCS SEAL-4 sovereignty
+
+=== Option 3: OpenStack + Kubernetes on VMs
+* Pros: mature multi-tenancy, VM+container coexistence
+* Cons: two platforms to operate, virtualization overhead
+
+=== Option 4: Hybrid (bare-metal + public cloud overflow)
+* Pros: sovereignty for sensitive, elasticity for the rest
+* Cons: two operational models, data classification complexity
+
+== Decision
+
+Bare-metal. Sovereignty and cost at scale outweigh initial
+investment. VM support via KubeVirt on bare-metal where needed,
+no separate virtualization layer.
+
+== Consequences
+
+* Requires bare-metal provisioning tooling (separate ADR)
+* Requires cluster lifecycle management (separate ADR)
+* Requires explicit DC network design (separate ADR)
