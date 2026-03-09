@@ -210,7 +210,6 @@ jobs:
           TF_ACC_PROVIDER_HOST=registry.opentofu.org \
           go test -v ./...
 
-  # Teardown: remove PR overlay from GitLab Flux repo
   teardown:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
