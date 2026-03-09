@@ -10,7 +10,7 @@ Depends-on:: ADR-0003, ADR-0006
 
 == Context
 
-Traditional cloud platforms use hypervisors (KVM/QEMU managed by libvirt, OpenStack Nova, VMware ESXi) to multiplex physical servers into VMs. This adds a full software layer between hardware and workloads. The question is whether this layer is needed or whether Kubernetes can run directly on bare-metal.
+Traditional cloud platforms use hypervisors (KVM/QEMU managed by libvirt, OpenStack Nova, VMware ESXi) to multiplex physical servers into VMs. This adds a full software layer between hardware and workloads. The question is whether this layer adds value or whether it is unnecessary complexity.
 
 == Options
 
