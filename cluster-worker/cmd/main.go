@@ -23,8 +23,8 @@ import (
 
 type config struct {
 	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
-	GardenerMode       string        `env:"GARDENER_MODE"`       // mock or real
-	GardenerKubeconfig string        `env:"GARDENER_KUBECONFIG"` // Required for real mode
+	GardenerMode       string        `env:"GARDENER_MODE"`                    // mock or real
+	GardenerKubeconfig string        `env:"GARDENER_KUBECONFIG"`              // Required for real mode
 	PrometheusURL      string        `env:"PROMETHEUS_URL" envDefault:"mock"` // Prometheus URL for metrics; "mock" uses generated data
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	HealthPort         int           `env:"HEALTH_PORT" envDefault:"8097"`
