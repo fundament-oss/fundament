@@ -1,10 +1,26 @@
-import { Component, ChangeDetectionStrategy, inject, computed, effect } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  computed,
+  signal,
+  effect,
+  untracked,
+  OnInit,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerEye, tablerDatabaseOff } from '@ng-icons/tabler-icons';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { CLUSTER } from '../../../connect/tokens';
+import { ListClustersRequestSchema } from '../../../generated/v1/cluster_pb';
+import type { ListClustersResponse_ClusterSummary as ClusterSummary } from '../../../generated/v1/cluster_pb';
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
+import { ConfigService } from '../../config.service';
+import OrganizationContextService from '../../organization-context.service';
 import { TitleService } from '../../title.service';
 import type { ParsedCrd, AdditionalPrinterColumn, KubeResource } from '../types';
 import {
@@ -40,7 +56,7 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
   templateUrl: './resource-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class ResourceListComponent {
+export default class ResourceListComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   private registry = inject(PluginRegistryService);
@@ -48,6 +64,12 @@ export default class ResourceListComponent {
   private store = inject(PluginResourceStoreService);
 
   private titleService = inject(TitleService);
+
+  private clusterClient = inject(CLUSTER);
+
+  private configService = inject(ConfigService);
+
+  private orgContext = inject(OrganizationContextService);
 
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -59,9 +81,19 @@ export default class ResourceListComponent {
 
   plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
-  crdDef = computed<ParsedCrd | undefined>(() =>
-    this.registry.getCrdByPlural(this.pluginName(), this.resourceKind()),
-  );
+  clusters = signal<ClusterSummary[]>([]);
+
+  selectedClusterId = signal<string>('');
+
+  isLoadingClusters = signal(true);
+
+  isLoading = signal(false);
+
+  errorMessage = signal<string | null>(null);
+
+  crdDef = signal<ParsedCrd | undefined>(undefined);
+
+  resources = signal<KubeResource[]>([]);
 
   columns = computed<AdditionalPrinterColumn[]>(() => {
     const crd = this.crdDef();
@@ -71,21 +103,76 @@ export default class ResourceListComponent {
     );
   });
 
-  resources = computed<KubeResource[]>(() => {
-    const crd = this.crdDef();
-    if (!crd) return [];
-    return this.store.listResources(this.pluginName(), crd.kind);
-  });
-
   kindLabel = computed(() => {
     const crd = this.crdDef();
-    return crd ? kindToLabel(crd.kind) : 'Resources';
+    return crd ? kindToLabel(crd.kind) : kindToLabel(this.resourceKind());
   });
 
   constructor() {
     effect(() => {
       this.titleService.setTitle(this.kindLabel());
     });
+
+    effect(() => {
+      const pluginName = this.pluginName();
+      const resourceKind = this.resourceKind();
+      const clusterId = this.selectedClusterId();
+      if (pluginName && resourceKind && clusterId) {
+        untracked(() => {
+          this.loadCrdsAndResources(clusterId);
+        });
+      }
+    });
+  }
+
+  async ngOnInit(): Promise<void> {
+    await this.loadClusters();
+  }
+
+  async loadClusters(): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),
+      );
+      this.clusters.set(response.clusters);
+      if (response.clusters.length > 0) {
+        this.selectedClusterId.set(response.clusters[0].id);
+      }
+    } catch {
+      this.errorMessage.set('Failed to load clusters.');
+    } finally {
+      this.isLoadingClusters.set(false);
+    }
+  }
+
+  onClusterChange(clusterId: string): void {
+    this.selectedClusterId.set(clusterId);
+  }
+
+  private async loadCrdsAndResources(clusterId: string): Promise<void> {
+    const orgId = this.orgContext.currentOrganizationId();
+    if (!orgId) return;
+
+    const orgApiUrl = this.configService.getConfig().organizationApiUrl;
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    this.crdDef.set(undefined);
+    this.resources.set([]);
+
+    try {
+      await this.registry.loadCrdsForPlugin(this.pluginName(), clusterId, orgApiUrl, orgId);
+      const crd = this.registry.getCrdByPlural(this.pluginName(), this.resourceKind());
+      this.crdDef.set(crd);
+
+      if (crd) {
+        await this.store.loadResources(this.pluginName(), crd, clusterId, orgApiUrl, orgId);
+        this.resources.set(this.store.listResources(this.pluginName(), crd.kind, clusterId));
+      }
+    } catch (err) {
+      this.errorMessage.set(`Failed to load resources: ${err}`);
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   detailLink = buildDetailLink;

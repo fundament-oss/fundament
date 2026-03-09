@@ -26,7 +26,9 @@ type config struct {
 	JWTSecret          string     `env:"JWT_SECRET,required,notEmpty" `
 	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
 	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
+	CORSAllowedOrigins  []string   `env:"CORS_ALLOWED_ORIGINS"`
+	KubeProxyMode       string     `env:"KUBE_PROXY_MODE" envDefault:"mock"`
+	KubeProxyKubeconfig string     `env:"KUBE_PROXY_KUBECONFIG"`
 }
 
 func main() {
@@ -79,9 +81,11 @@ func run() error {
 	logger.Debug("OpenFGA client connected")
 
 	server, err := organization.New(logger, &organization.Config{
-		JWTSecret:          []byte(cfg.JWTSecret),
-		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
-		Clock:              clock.New(),
+		JWTSecret:           []byte(cfg.JWTSecret),
+		CORSAllowedOrigins:  cfg.CORSAllowedOrigins,
+		Clock:               clock.New(),
+		KubeProxyMode:       cfg.KubeProxyMode,
+		KubeProxyKubeconfig: cfg.KubeProxyKubeconfig,
 	}, db, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)

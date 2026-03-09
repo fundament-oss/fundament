@@ -33,6 +33,7 @@ organizationApi:
   enabled: true
   replicas: 1
   logLevel: debug
+  kubeProxyMode: "mock"
 
 consoleFrontend:
   enabled: true

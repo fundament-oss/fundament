@@ -24,6 +24,8 @@ type Config struct {
 	JWTSecret          []byte
 	CORSAllowedOrigins []string
 	Clock              clock.Clock
+	KubeProxyMode      string // "mock" (default) or "real"
+	KubeProxyKubeconfig string // path to kubeconfig; only used when KubeProxyMode == "real"
 }
 
 type Server struct {
@@ -36,6 +38,13 @@ type Server struct {
 	clock         clock.Clock
 	kubeClient    kube.KubeClient
 	handler       http.Handler
+}
+
+func newKubeClient(cfg *Config) kube.KubeClient {
+	if cfg.KubeProxyMode == "real" {
+		return &kube.RealKubeClient{KubeconfigPath: cfg.KubeProxyKubeconfig}
+	}
+	return &kube.MockKubeClient{}
 }
 
 func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client) (*Server, error) {
@@ -52,7 +61,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
 		authz:         authzClient,
 		clock:         clk,
-		kubeClient:    &kube.MockKubeClient{},
+		kubeClient:    newKubeClient(cfg),
 	}
 
 	mux := http.NewServeMux()

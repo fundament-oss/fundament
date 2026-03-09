@@ -16,17 +16,12 @@ export default class PluginNavService {
       .allPlugins()
       .filter((plugin) => (plugin.menu[section]?.length ?? 0) > 0)
       .reduce<PluginNavGroup[]>((groups, plugin) => {
-        const items: PluginNavItem[] = (plugin.menu[section] ?? [])
-          .filter((menuItem) => plugin.crds.find((c) => c.kind === menuItem.crd))
-          .map((menuItem) => {
-            const crd = plugin.crds.find((c) => c.kind === menuItem.crd)!;
-            return {
-              label: kindToLabel(crd.kind),
-              crdKind: crd.kind,
-              crdPlural: crd.plural,
-              icon: menuItem.icon,
-            };
-          });
+        const items: PluginNavItem[] = (plugin.menu[section] ?? []).map((menuItem) => ({
+          label: kindToLabel(menuItem.crd),
+          crdKind: menuItem.crd,
+          crdPlural: menuItem.plural,
+          icon: menuItem.icon,
+        }));
 
         if (items.length > 0) {
           groups.push({ pluginName: plugin.name, displayName: plugin.displayName, items });

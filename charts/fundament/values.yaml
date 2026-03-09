@@ -45,6 +45,8 @@ organizationApi:
   enabled: false
   replicas: 1
   logLevel: info
+  kubeProxyMode: "mock" # "mock" or "real"
+  kubeProxyKubeconfig: "" # path to kubeconfig file (only used when kubeProxyMode is "real")
 
 # Cluster Worker
 clusterWorker:

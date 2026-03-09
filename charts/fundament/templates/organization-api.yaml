@@ -37,6 +37,12 @@ spec:
             - name: CORS_ALLOWED_ORIGINS
               value: {{ $.Values.externalUrls.corsAllowedOrigins }}
             {{- end }}
+            - name: KUBE_PROXY_MODE
+              value: {{ .Values.organizationApi.kubeProxyMode | default "mock" }}
+            {{- if .Values.organizationApi.kubeProxyKubeconfig }}
+            - name: KUBE_PROXY_KUBECONFIG
+              value: {{ .Values.organizationApi.kubeProxyKubeconfig }}
+            {{- end }}
             {{- if $.Values.openfga.enabled }}
             - name: OPENFGA_API_URL
               value: http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.apiPort | default 8080 }}

@@ -4,7 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
+	"sync"
+
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // KubeClient abstracts access to a Kubernetes API server.
@@ -16,73 +21,76 @@ type KubeClient interface {
 type MockKubeClient struct{}
 
 func (m *MockKubeClient) Do(_ context.Context, _, path string, _ io.Reader) (int, io.Reader, error) {
-	if strings.Contains(path, "customresourcedefinitions") {
-		return 200, strings.NewReader(mockCRDList), nil
+	switch {
+	case strings.Contains(path, "/customresourcedefinitions/"):
+		name := path[strings.LastIndex(path, "/")+1:]
+		if crd := mockCRDForName(name); crd != "" {
+			return 200, strings.NewReader(crd), nil
+		}
+		return 404, strings.NewReader(`{"message":"not found"}`), nil
+	case strings.Contains(path, "customresourcedefinitions"):
+		return 200, strings.NewReader(mockCRDListJSON), nil
+	case strings.HasSuffix(path, "/certificates"):
+		return 200, strings.NewReader(mockCertificateListJSON), nil
+	case strings.HasSuffix(path, "/clusterissuers"):
+		return 200, strings.NewReader(mockClusterIssuerListJSON), nil
+	case strings.HasSuffix(path, "/issuers"):
+		return 200, strings.NewReader(mockIssuerListJSON), nil
+	case strings.HasSuffix(path, "/databases"):
+		return 200, strings.NewReader(mockDatabaseListJSON), nil
+	case strings.HasSuffix(path, "/backups"):
+		return 200, strings.NewReader(mockBackupListJSON), nil
+	case strings.HasSuffix(path, "/subscriptions"):
+		return 200, strings.NewReader(mockSubscriptionListJSON), nil
+	default:
+		return 200, strings.NewReader(mockEmptyList), nil
 	}
-	return 200, strings.NewReader(mockEmptyList), nil
 }
 
 // RealKubeClient connects to a real Kubernetes API server using a kubeconfig.
-// Not yet implemented — placeholder for future use.
-type RealKubeClient struct{}
+// The HTTP client and host URL are initialized lazily on the first request.
+type RealKubeClient struct {
+	KubeconfigPath string
 
-func (r *RealKubeClient) Do(_ context.Context, _, _ string, _ io.Reader) (int, io.Reader, error) {
-	return 0, nil, fmt.Errorf("real kubernetes client not yet implemented")
+	once       sync.Once
+	httpClient *http.Client
+	host       string
+	initErr    error
 }
 
-const mockCRDList = `{
-  "apiVersion": "apiextensions.k8s.io/v1",
-  "kind": "CustomResourceDefinitionList",
-  "metadata": {
-    "resourceVersion": "1"
-  },
-  "items": [
-    {
-      "apiVersion": "apiextensions.k8s.io/v1",
-      "kind": "CustomResourceDefinition",
-      "metadata": {
-        "name": "widgets.example.com"
-      },
-      "spec": {
-        "group": "example.com",
-        "names": {
-          "kind": "Widget",
-          "listKind": "WidgetList",
-          "plural": "widgets",
-          "singular": "widget"
-        },
-        "scope": "Namespaced",
-        "versions": [
-          {
-            "name": "v1",
-            "schema": {
-              "openAPIV3Schema": {
-                "properties": {
-                  "spec": {
-                    "properties": {
-                      "color": {"type": "string"},
-                      "size": {"type": "integer"}
-                    },
-                    "type": "object"
-                  }
-                },
-                "type": "object"
-              }
-            },
-            "served": true,
-            "storage": true
-          }
-        ]
-      }
-    }
-  ]
-}`
+func (r *RealKubeClient) init() {
+	cfg, err := clientcmd.BuildConfigFromFlags("", r.KubeconfigPath)
+	if err != nil {
+		r.initErr = fmt.Errorf("load kubeconfig: %w", err)
+		return
+	}
+	httpClient, err := rest.HTTPClientFor(cfg)
+	if err != nil {
+		r.initErr = fmt.Errorf("build http client: %w", err)
+		return
+	}
+	r.httpClient = httpClient
+	r.host = strings.TrimRight(cfg.Host, "/")
+}
 
-const mockEmptyList = `{
-  "apiVersion": "v1",
-  "kind": "List",
-  "metadata": {
-    "resourceVersion": ""
-  },
-  "items": []
-}`
+func (r *RealKubeClient) Do(ctx context.Context, method, path string, body io.Reader) (int, io.Reader, error) {
+	r.once.Do(r.init)
+	if r.initErr != nil {
+		return 0, nil, r.initErr
+	}
+
+	url := r.host + path
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	if err != nil {
+		return 0, nil, fmt.Errorf("build request: %w", err)
+	}
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("kubernetes request: %w", err)
+	}
+
+	return resp.StatusCode, resp.Body, nil
+}
+
+const mockEmptyList = `{"apiVersion":"v1","kind":"List","metadata":{"resourceVersion":""},"items":[]}`

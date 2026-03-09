@@ -1,3 +1,9 @@
+@if (errorMessage()) {
+  <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
+    <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
+  </div>
+}
+
 <div class="card">
   <div class="card-header">
     <h1 class="text-2xl font-bold dark:text-white">{{ kindLabel() }}</h1>
@@ -6,77 +12,110 @@
         {{ plugin()?.description }}
       </p>
     }
+
+    <!-- Cluster select -->
+    <div class="mt-2 flex items-center gap-3">
+      <label for="cluster-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >Cluster</label
+      >
+      @if (isLoadingClusters()) {
+        <div class="select animate-pulse bg-gray-100 dark:bg-gray-800">&nbsp;</div>
+      } @else {
+        <select
+          id="cluster-select"
+          class="select"
+          [value]="selectedClusterId()"
+          (change)="onClusterChange($any($event.target).value)"
+        >
+          @if (clusters().length === 0) {
+            <option value="" disabled>No clusters available</option>
+          }
+          @for (cluster of clusters(); track cluster.id) {
+            <option [value]="cluster.id">{{ cluster.name }}</option>
+          }
+        </select>
+      }
+    </div>
   </div>
 
   <div class="p-6">
-    <!-- Table -->
-    @if (resources().length > 0) {
-      <div class="table-container">
-        <table class="table">
-          <thead>
-            <tr>
-              <th scope="col">Name</th>
-              @for (col of columns(); track col.name) {
-                <th
-                  scope="col"
-                  [class.hidden]="col.priority && col.priority > 0"
-                  [class.lg:table-cell]="col.priority && col.priority > 0"
-                >
-                  {{ col.name }}
-                </th>
-              }
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (resource of resources(); track resource.metadata.uid) {
+    @if (isLoading()) {
+      <div class="py-8 text-center">
+        <span
+          class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"
+        ></span>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading…</p>
+      </div>
+    } @else {
+      <!-- Table -->
+      @if (resources().length > 0) {
+        <div class="table-container">
+          <table class="table">
+            <thead>
               <tr>
-                <td class="whitespace-normal">
-                  <a
-                    [routerLink]="detailLink(resource)"
-                    class="font-medium hover:underline dark:text-white"
-                    >{{ resource.metadata.name }}</a
-                  >
-                  @if (resource.metadata.namespace) {
-                    <div class="mt-0.5 font-mono text-xs text-gray-500 dark:text-gray-400">
-                      {{ resource.metadata.namespace }}
-                    </div>
-                  }
-                </td>
+                <th scope="col">Name</th>
                 @for (col of columns(); track col.name) {
-                  <td
+                  <th
+                    scope="col"
                     [class.hidden]="col.priority && col.priority > 0"
                     [class.lg:table-cell]="col.priority && col.priority > 0"
-                    class="whitespace-normal"
                   >
-                    {{ formatCell(resource, col) }}
-                  </td>
+                    {{ col.name }}
+                  </th>
                 }
-                <td>
-                  <div class="flex gap-1">
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (resource of resources(); track resource.metadata.uid) {
+                <tr>
+                  <td class="whitespace-normal">
                     <a
                       [routerLink]="detailLink(resource)"
-                      class="btn-light inline-flex shrink-0 items-center px-2!"
-                      aria-label="View"
-                      title="View"
+                      class="font-medium hover:underline dark:text-white"
+                      >{{ resource.metadata.name }}</a
                     >
-                      <ng-icon name="tablerEye" />
-                    </a>
-                  </div>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
+                    @if (resource.metadata.namespace) {
+                      <div class="mt-0.5 font-mono text-xs text-gray-500 dark:text-gray-400">
+                        {{ resource.metadata.namespace }}
+                      </div>
+                    }
+                  </td>
+                  @for (col of columns(); track col.name) {
+                    <td
+                      [class.hidden]="col.priority && col.priority > 0"
+                      [class.lg:table-cell]="col.priority && col.priority > 0"
+                      class="whitespace-normal"
+                    >
+                      {{ formatCell(resource, col) }}
+                    </td>
+                  }
+                  <td>
+                    <div class="flex gap-1">
+                      <a
+                        [routerLink]="detailLink(resource)"
+                        class="btn-light inline-flex shrink-0 items-center px-2!"
+                        aria-label="View"
+                        title="View"
+                      >
+                        <ng-icon name="tablerEye" />
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
 
-    <!-- Empty State -->
-    @if (resources().length === 0) {
-      <div class="py-8 text-center">
-        <ng-icon name="tablerDatabaseOff" size="3rem" class="mx-auto mb-3 text-gray-400!" />
-        <p class="text-gray-600 dark:text-gray-300">No {{ kindLabel().toLowerCase() }} found</p>
-      </div>
+      <!-- Empty State -->
+      @if (resources().length === 0) {
+        <div class="py-8 text-center">
+          <ng-icon name="tablerDatabaseOff" size="3rem" class="mx-auto mb-3 text-gray-400!" />
+          <p class="text-gray-600 dark:text-gray-300">No {{ kindLabel().toLowerCase() }} found</p>
+        </div>
+      }
     }
   </div>
 </div>

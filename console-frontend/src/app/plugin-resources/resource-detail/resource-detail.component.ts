@@ -1,11 +1,26 @@
-import { Component, ChangeDetectionStrategy, inject, computed, effect } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  computed,
+  signal,
+  effect,
+  OnInit,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerArrowLeft } from '@ng-icons/tabler-icons';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { CLUSTER } from '../../../connect/tokens';
+import { ListClustersRequestSchema } from '../../../generated/v1/cluster_pb';
+import type { ListClustersResponse_ClusterSummary as ClusterSummary } from '../../../generated/v1/cluster_pb';
 import FieldRendererComponent from '../field-renderers/field-renderer.component';
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
+import { ConfigService } from '../../config.service';
+import OrganizationContextService from '../../organization-context.service';
 import { TitleService } from '../../title.service';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
@@ -39,7 +54,7 @@ function toRecord(val: unknown): Record<string, unknown> {
   templateUrl: './resource-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class ResourceDetailComponent {
+export default class ResourceDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   private registry = inject(PluginRegistryService);
@@ -47,6 +62,12 @@ export default class ResourceDetailComponent {
   private store = inject(PluginResourceStoreService);
 
   private titleService = inject(TitleService);
+
+  private clusterClient = inject(CLUSTER);
+
+  private configService = inject(ConfigService);
+
+  private orgContext = inject(OrganizationContextService);
 
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -58,15 +79,19 @@ export default class ResourceDetailComponent {
 
   private resourceId = computed(() => this.routeParams().get('resourceId') ?? '');
 
-  crdDef = computed<ParsedCrd | undefined>(() =>
-    this.registry.getCrdByPlural(this.pluginName(), this.resourceKind()),
-  );
+  clusters = signal<ClusterSummary[]>([]);
 
-  resource = computed<KubeResource | undefined>(() => {
-    const crd = this.crdDef();
-    if (!crd) return undefined;
-    return this.store.getResource(this.pluginName(), crd.kind, this.resourceId());
-  });
+  selectedClusterId = signal<string>('');
+
+  isLoadingClusters = signal(true);
+
+  isLoading = signal(false);
+
+  errorMessage = signal<string | null>(null);
+
+  crdDef = signal<ParsedCrd | undefined>(undefined);
+
+  resource = signal<KubeResource | undefined>(undefined);
 
   specSections = computed(() => {
     const crd = this.crdDef();
@@ -86,6 +111,59 @@ export default class ResourceDetailComponent {
       const r = this.resource();
       this.titleService.setTitle(r?.metadata.name);
     });
+  }
+
+  async ngOnInit(): Promise<void> {
+    await this.loadClusters();
+  }
+
+  async loadClusters(): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),
+      );
+      this.clusters.set(response.clusters);
+      if (response.clusters.length > 0) {
+        const firstId = response.clusters[0].id;
+        this.selectedClusterId.set(firstId);
+        await this.loadCrdAndResource(firstId);
+      }
+    } catch {
+      this.errorMessage.set('Failed to load clusters.');
+    } finally {
+      this.isLoadingClusters.set(false);
+    }
+  }
+
+  async onClusterChange(clusterId: string): Promise<void> {
+    this.selectedClusterId.set(clusterId);
+    await this.loadCrdAndResource(clusterId);
+  }
+
+  private async loadCrdAndResource(clusterId: string): Promise<void> {
+    const orgId = this.orgContext.currentOrganizationId();
+    if (!orgId) return;
+
+    const orgApiUrl = this.configService.getConfig().organizationApiUrl;
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
+    try {
+      await this.registry.loadCrdsForPlugin(this.pluginName(), clusterId, orgApiUrl, orgId);
+      const crd = this.registry.getCrdByPlural(this.pluginName(), this.resourceKind());
+      this.crdDef.set(crd);
+
+      if (crd) {
+        await this.store.loadResources(this.pluginName(), crd, clusterId, orgApiUrl, orgId);
+        this.resource.set(
+          this.store.getResource(this.pluginName(), crd.kind, this.resourceId(), clusterId),
+        );
+      }
+    } catch (err) {
+      this.errorMessage.set(`Failed to load resource: ${err}`);
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   readonly listLink = ['..'];

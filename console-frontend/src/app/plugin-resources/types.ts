@@ -9,7 +9,7 @@ export interface PluginDefinition {
   description: string;
   author?: string;
   menu: PluginMenu;
-  crds: ParsedCrd[];
+  crds: string[];
 }
 
 export interface PluginMenu {
@@ -19,6 +19,7 @@ export interface PluginMenu {
 
 export interface PluginMenuItem {
   crd: string;
+  plural: string;
   icon?: string;
 }
 

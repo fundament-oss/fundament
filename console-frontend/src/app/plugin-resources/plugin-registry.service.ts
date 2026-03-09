@@ -3,8 +3,7 @@ import * as yaml from 'js-yaml';
 import type { PluginDefinition, ParsedCrd, RawPluginYaml, RawCrdYaml } from './types';
 import { parseObjectSchema } from './crd-schema.utils';
 
-function parseCrd(crdYamlStr: string): ParsedCrd {
-  const raw = yaml.load(crdYamlStr) as RawCrdYaml;
+function parseCrd(raw: RawCrdYaml): ParsedCrd {
   const version = raw.spec.versions.find((v) => v.storage) ?? raw.spec.versions[0];
 
   const specRaw = version.schema.openAPIV3Schema.properties?.['spec'] as
@@ -44,7 +43,6 @@ function parseCrd(crdYamlStr: string): ParsedCrd {
 
 function parsePluginYaml(yamlText: string): PluginDefinition {
   const raw = yaml.load(yamlText) as RawPluginYaml;
-  const parsedCrds: ParsedCrd[] = raw.crds.map((crdStr) => parseCrd(crdStr));
 
   return {
     apiVersion: raw.apiVersion,
@@ -55,7 +53,7 @@ function parsePluginYaml(yamlText: string): PluginDefinition {
     description: raw.description,
     author: raw.author,
     menu: raw.menu,
-    crds: parsedCrds,
+    crds: raw.crds,
   };
 }
 
@@ -64,6 +62,9 @@ export default class PluginRegistryService {
   private plugins = signal<PluginDefinition[]>([]);
 
   private loaded = signal(false);
+
+  // Keyed by "${pluginName}/${crdK8sName}" (e.g. "cert-manager/certificates.cert-manager.io")
+  private parsedCrdCache = new Map<string, ParsedCrd>();
 
   private readonly pluginFiles = [
     '/plugins/cert-manager/cert-manager.plugin.yaml',
@@ -97,18 +98,49 @@ export default class PluginRegistryService {
     this.loaded.set(true);
   }
 
+  async loadCrdsForPlugin(
+    pluginName: string,
+    clusterId: string,
+    orgApiUrl: string,
+    orgId: string,
+  ): Promise<void> {
+    const plugin = this.getPlugin(pluginName);
+    if (!plugin) return;
+
+    const base = orgApiUrl.replace(/\/$/, '');
+
+    await Promise.allSettled(
+      plugin.crds.map(async (crdName) => {
+        const cacheKey = `${pluginName}/${crdName}`;
+        if (this.parsedCrdCache.has(cacheKey)) return;
+
+        const url = `${base}/k8s/${clusterId}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
+        const response = await fetch(url, {
+          credentials: 'include',
+          headers: { 'Fun-Organization': orgId },
+        });
+        if (!response.ok) return;
+
+        const raw = (await response.json()) as RawCrdYaml;
+        this.parsedCrdCache.set(cacheKey, parseCrd(raw));
+      }),
+    );
+  }
+
   getPlugin(name: string): PluginDefinition | undefined {
     return this.plugins().find((p) => p.name === name);
   }
 
   getCrd(pluginName: string, kind: string): ParsedCrd | undefined {
-    const plugin = this.getPlugin(pluginName);
-    return plugin?.crds.find((c) => c.kind === kind);
+    return [...this.parsedCrdCache.entries()].find(
+      ([key, crd]) => key.startsWith(`${pluginName}/`) && crd.kind === kind,
+    )?.[1];
   }
 
   getCrdByPlural(pluginName: string, plural: string): ParsedCrd | undefined {
-    const plugin = this.getPlugin(pluginName);
-    return plugin?.crds.find((c) => c.plural === plural);
+    return [...this.parsedCrdCache.entries()].find(
+      ([key, crd]) => key.startsWith(`${pluginName}/`) && crd.plural === plural,
+    )?.[1];
   }
 
   allPlugins = this.plugins.asReadonly();
