@@ -21,10 +21,10 @@ import (
 )
 
 type Config struct {
-	JWTSecret          []byte
-	CORSAllowedOrigins []string
-	Clock              clock.Clock
-	KubeProxyMode      string // "mock" (default) or "real"
+	JWTSecret           []byte
+	CORSAllowedOrigins  []string
+	Clock               clock.Clock
+	KubeProxyMode       string // "mock" (default) or "real"
 	KubeProxyKubeconfig string // path to kubeconfig; only used when KubeProxyMode == "real"
 }
 

@@ -21,11 +21,11 @@ import (
 )
 
 type config struct {
-	Database           psqldb.Config
-	OpenFGA            authz.Config
-	JWTSecret          string     `env:"JWT_SECRET,required,notEmpty" `
-	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
-	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	Database            psqldb.Config
+	OpenFGA             authz.Config
+	JWTSecret           string     `env:"JWT_SECRET,required,notEmpty" `
+	ListenAddr          string     `env:"LISTEN_ADDR" envDefault:":8080"`
+	LogLevel            slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins  []string   `env:"CORS_ALLOWED_ORIGINS"`
 	KubeProxyMode       string     `env:"KUBE_PROXY_MODE" envDefault:"mock"`
 	KubeProxyKubeconfig string     `env:"KUBE_PROXY_KUBECONFIG"`
