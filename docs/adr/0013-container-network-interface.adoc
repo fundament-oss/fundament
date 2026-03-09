@@ -1,0 +1,40 @@
+:showtitle:
+:state: proposed
+
+= ADR-0013: Container network interface
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: networking
+Depends-on:: ADR-0004, ADR-0007
+
+== Context
+
+With Kubernetes on bare-metal (ADR-0007) and a spine-leaf BGP/EVPN underlay (ADR-0004), we need a CNI plugin that handles pod networking, network policy enforcement, and integrates with the physical network. The CNI choice affects performance, observability, and security capabilities across all tenant clusters. metal-stack currently ships with Calico, but this does not preclude choosing a different CNI.
+
+== Options
+
+=== Option 1: Cilium
+* Pros: eBPF-based — high performance, no iptables overhead; built-in network policy, observability (Hubble), encryption (WireGuard), and load balancing; large CNCF community; BGP support for bare-metal integration; service mesh capabilities without sidecars
+* Cons: Isovalent (main contributor) was acquired by Cisco — long-term sovereignty implications unclear; eBPF requires recent kernel versions; metal-stack default is Calico, so integration requires additional work
+
+=== Option 2: Calico
+* Pros: metal-stack default — proven integration; mature and battle-tested; supports BGP natively; well-understood operational model
+* Cons: iptables-based data plane at scale has performance limitations; less built-in observability; eBPF mode exists but is less mature than Cilium's; Tigera (main contributor) is also a commercial entity
+
+=== Option 3: Calico with eBPF data plane
+* Pros: keeps metal-stack default integration; gains some eBPF performance benefits
+* Cons: eBPF support in Calico is less mature; smaller community around this mode; still lacks Cilium's integrated observability and service mesh
+
+== Decision
+
+Cilium. The eBPF-based architecture provides superior performance, observability, and security features that align with platform requirements at scale. The sovereignty concern (Cisco acquisition of Isovalent) is noted but mitigated by Cilium's Apache 2.0 license and large open-source community beyond Isovalent. The metal-stack Calico default can be overridden at the Gardener shoot level. This decision should be revisited if Cilium's open-source governance changes materially.
+
+== Consequences
+
+* metal-stack's default Calico must be replaced with Cilium in Gardener shoot cluster provisioning
+* Kernel version requirements must be met on bare-metal nodes
+* Hubble provides built-in network observability per tenant cluster
+* Network policy enforcement uses Cilium's policy engine
+* WireGuard encryption is available for cross-node pod traffic
+* Bare-metal load balancing ADR should evaluate Cilium's built-in LB capabilities
