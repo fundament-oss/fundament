@@ -1,27 +1,46 @@
 name: Terraform Acceptance tests
 
 on:
-  push:
-    branches: [master]
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches: [master]
   workflow_run:
     workflows: [Build]
     types: [completed]
 
-#env:
-#  DOMAIN: fundament.digilab.reviews
-#  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/fundament
+env:
+  DOMAIN: fundament.digilab.reviews
 
 jobs:
-  on-success:
+  # We need this check, because the 'Build' workflow can also complete because of the 'Teardown' step
+  # If so, we don't want to run this workflow.
+  check:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.workflow_run.conclusion == 'success'
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'
+    outputs:
+      should-run: ${{ steps.pr-check.outputs.should-run }}
+      pr-number: ${{ steps.pr-check.outputs.pr-number }}
+    steps:
+      - name: Check PR is open
+        id: pr-check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER="${{ github.event.workflow_run.pull_requests[0].number }}"
+          PR_STATE=$(gh api repos/${{ github.repository }}/pulls/${PR_NUMBER} --jq '.state')
+          echo "pr-number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+          if [ "$PR_STATE" = "open" ]; then
+            echo "should-run=true" >> $GITHUB_OUTPUT
+          else
+            echo "PR #${PR_NUMBER} is ${PR_STATE}, skipping."
+            echo "should-run=false" >> $GITHUB_OUTPUT
+          fi
+
+  run-tests:
+    needs: check
+    if: needs.check.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     env:
-      PR_NUMBER: ${{ github.event.number }}
+      PR_NUMBER: ${{ needs.check.outputs.pr-number }}
     steps:
       - uses: actions/checkout@v5
 
