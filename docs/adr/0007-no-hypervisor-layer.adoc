@@ -10,24 +10,24 @@ Depends-on:: ADR-0003, ADR-0006
 
 == Context
 
-Traditional cloud platforms use hypervisors (KVM/QEMU managed by libvirt, OpenStack Nova, VMware ESXi) to multiplex physical servers into VMs. This adds a full software layer between hardware and workloads. With Gardener (ADR-0006) providing dedicated physical clusters per tenant, the question is whether a hypervisor layer is needed at all.
+Traditional cloud platforms use hypervisors (KVM/QEMU managed by libvirt, OpenStack Nova, VMware ESXi) to multiplex physical servers into VMs. This adds a full software layer between hardware and workloads. The question is whether this layer is needed or whether Kubernetes can run directly on bare-metal.
 
 == Options
 
 === Option 1: No hypervisor — Kubernetes directly on bare-metal
-* Pros: one less layer to operate, secure, and patch; clear physical boundaries per tenant (every workload maps to a physical server in a known tenant); no hypervisor escape attack surface; simpler capacity planning; better performance (no virtualization overhead)
-* Cons: VM workloads require an alternative solution (e.g. KubeVirt); less flexible resource slicing
+* Pros: one less layer to operate, secure, and patch; no hypervisor escape attack surface; simpler capacity planning; better performance (no virtualization overhead)
+* Cons: no sub-node resource slicing; VM workloads require an alternative solution (e.g. KubeVirt)
 
 === Option 2: Hypervisor layer (KVM/libvirt or OpenStack Nova)
 * Pros: fine-grained resource slicing below physical server level; mature VM lifecycle tooling; familiar to traditional operations teams
-* Cons: full additional platform to operate, patch, and secure; hypervisor escape is a real attack vector; blurs physical tenant boundaries; doubles the operational complexity
+* Cons: full additional platform to operate, patch, and secure; hypervisor escape is a real attack vector; doubles the operational complexity
 
 == Decision
 
-No hypervisor. Kubernetes runs directly on bare-metal. The government context makes this viable: we don't need small-node clusters, so the minimum cluster size is not a constraint. Clear physical boundaries make it trivially auditable which workload belongs to which tenant. One less layer to secure means a smaller attack surface. Where VM workloads are needed, KubeVirt on bare-metal Kubernetes is the path (separate ADR).
+No hypervisor. Kubernetes runs directly on bare-metal. One less layer to operate, secure, and patch. No hypervisor escape attack surface. The government context makes this viable: minimum cluster size of 3 physical nodes is not a constraint. Where VM workloads are needed, KubeVirt on bare-metal Kubernetes is the path (separate ADR).
 
 == Consequences
 
 * VM workloads require KubeVirt or similar (separate ADR)
-* Physical server ↔ tenant mapping is always traceable
 * No hypervisor patching, no hypervisor CVEs, no escape vectors
+* Tenant isolation must be solved at the Kubernetes cluster level (ADR-0008)

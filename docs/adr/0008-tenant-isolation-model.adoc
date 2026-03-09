@@ -10,12 +10,12 @@ Depends-on:: ADR-0006, ADR-0007
 
 == Context
 
-Fundament serves multiple government organizations on shared physical infrastructure. Each tenant must be isolated from others on compute, storage, and network level. The isolation model determines the security posture, resource efficiency, and operational complexity of the platform. With Gardener (ADR-0006) and no hypervisor layer (ADR-0007), tenant boundaries must be enforced at the Kubernetes cluster level.
+Fundament serves multiple government organizations on shared physical infrastructure. Each tenant must be isolated from others on compute, storage, and network level. The isolation model determines the security posture, resource efficiency, and operational complexity of the platform.
 
 == Options
 
 === Option 1: Dedicated physical clusters per tenant (Gardener Shoots)
-* Pros: strongest isolation — no shared kernel, API server, or etcd; physical server ↔ tenant mapping is traceable (ADR-0007); independent cluster lifecycles; meets EUCS SEAL-4 and BIO isolation requirements
+* Pros: strongest isolation — no shared kernel, API server, or etcd; every physical server is attributable to exactly one tenant; independent cluster lifecycles; meets EUCS SEAL-4 and BIO isolation requirements
 * Cons: minimum 3 physical nodes per tenant; higher resource overhead for small tenants; more clusters to manage (but Gardener handles this)
 
 === Option 2: Shared clusters with namespace isolation
@@ -32,7 +32,7 @@ Fundament serves multiple government organizations on shared physical infrastruc
 
 == Decision
 
-Dedicated physical clusters per tenant via Gardener Shoots. Every tenant organization gets its own Kubernetes cluster on dedicated physical nodes. This is the only model that provides full isolation at compute level without a hypervisor. Combined with ADR-0007, every physical server is attributable to exactly one tenant. Gardener's lifecycle management (ADR-0006) makes operating hundreds of clusters viable.
+Dedicated physical clusters per tenant via Gardener Shoots. Every tenant organization gets its own Kubernetes cluster on dedicated physical nodes. This provides full compute isolation — no shared kernel, no shared control plane. Every physical server is attributable to exactly one tenant. Gardener's lifecycle management (ADR-0006) makes operating hundreds of clusters viable.
 
 == Consequences
 
