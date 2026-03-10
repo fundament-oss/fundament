@@ -509,7 +509,7 @@ export default class App implements OnInit {
 
   openSelectorModal() {
     this.selectorModalOpen.set(true);
-    this.organizationDataService.loadProjectsAndNamespaces();
+    this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
   }
 
   closeSelectorModal() {

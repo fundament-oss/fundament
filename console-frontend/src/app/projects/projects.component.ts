@@ -39,7 +39,7 @@ export default class ProjectsComponent implements OnInit {
 
   ngOnInit() {
     // Projects are not pre-loaded on app init; load them now (deduplicates if already in flight).
-    void this.organizationDataService.loadProjectsAndNamespaces();
+    this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
   }
 
   readonly formatDate = formatDateUtil;

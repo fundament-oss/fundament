@@ -25,8 +25,6 @@ export default class AuthnApiService {
 
   private pendingGetUserInfo: Promise<User | undefined> | null = null;
 
-  private initializationPromise: Promise<void> | null = null;
-
   constructor() {
     // Configure the authn REST client with the runtime base URL and credentials
     this.restClient.setConfig({
@@ -75,31 +73,19 @@ export default class AuthnApiService {
   }
 
   async initializeAuth(): Promise<void> {
-    if (this.initializationPromise) {
-      return this.initializationPromise;
-    }
-
     // Check hint flag to avoid unnecessary API calls when we know user isn't logged in
     // This is just an optimization - the server (via HTTP-only cookie) is still the source of truth
     if (!AuthnApiService.hasAuthHint()) {
       this.currentUserSubject.next(undefined);
-      return Promise.resolve();
+      return;
     }
 
-    this.initializationPromise = this.getUserInfo()
-      .then(() => {
-        // getUserInfo already updates currentUserSubject
-      })
-      .catch(() => {
-        // Not authenticated or session expired - clear the hint
-        this.currentUserSubject.next(undefined);
-        localStorage.removeItem('auth_hint');
-      })
-      .finally(() => {
-        this.initializationPromise = null;
-      });
-
-    return this.initializationPromise;
+    // getUserInfo() already deduplicates concurrent calls; just attach the init-specific error handler
+    await this.getUserInfo().catch(() => {
+      // Not authenticated or session expired - clear the hint
+      this.currentUserSubject.next(undefined);
+      localStorage.removeItem('auth_hint');
+    });
   }
 
   async refreshToken(): Promise<void> {

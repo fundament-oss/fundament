@@ -202,22 +202,15 @@ export default class UsageComponent implements OnInit, AfterViewInit {
 
     if (projectId) {
       this.selectedProjectId = projectId;
-      // Find the actual project name from organization data
-      const orgs = this.organizationDataService.organizations();
-      const project = orgs
-        .flatMap((org) => org.clusters)
-        .flatMap((c) => c.projects)
-        .find((p) => p.id === projectId);
-      if (project) {
-        this.projectName.set(project.name);
+      const projectData = this.organizationDataService.getProjectById(projectId);
+      if (projectData) {
+        this.projectName.set(projectData.project.name);
       }
     }
     if (namespaceId) {
       this.selectedNamespace = namespaceId;
       firstValueFrom(
-        this.namespaceClient.getNamespace(
-          create(GetNamespaceRequestSchema, { namespaceId }),
-        ),
+        this.namespaceClient.getNamespace(create(GetNamespaceRequestSchema, { namespaceId })),
       )
         .then((r) => {
           if (r.namespace) this.namespaceName.set(r.namespace.name);

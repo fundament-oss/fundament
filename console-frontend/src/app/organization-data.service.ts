@@ -189,6 +189,7 @@ export class OrganizationDataService {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error loading project data:', error);
+      throw error;
     } finally {
       this.loading.set(false);
     }
