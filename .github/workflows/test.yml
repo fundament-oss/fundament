@@ -43,3 +43,22 @@ jobs:
       - name: Run tests
         working-directory: organization-api
         run: go test ./... -count=1
+
+  functl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install dependencies
+        run: go get ./...
+
+      - name: Build and vet
+        working-directory: functl
+        run: |
+          go build ./...
+          go vet ./...
