@@ -1,0 +1,38 @@
+:showtitle:
+:state: proposed
+
+= ADR-0001: Platform positioning
+
+Status:: proposed
+Date:: 2026-03-10
+Group:: cross-cutting
+
+== Context
+
+The Dutch government needs sovereign compute infrastructure that meets data residency, auditability, and security classification requirements (EUCS, BIO). Current government workloads run on commercial public clouds or legacy on-premises infrastructure, neither of which satisfies the long-term sovereignty ambition. Fundament must choose what kind of platform it is — this decision constrains every subsequent architecture choice.
+
+== Options
+
+=== Option 1: Private cloud built on OpenStack + VMs
+* Pros: mature ecosystem; well-understood by government operations teams; VM-based multi-tenancy is proven; large community and vendor support
+* Cons: two full platforms to operate (OpenStack + Kubernetes on top); hypervisor layer adds complexity and attack surface; not aligned with cloud-native application development; operational cost at scale is high
+
+=== Option 2: Kubernetes-native platform on bare-metal (CNCF stack)
+* Pros: single platform to operate; no hypervisor layer; full sovereignty — auditable from firmware to workload; aligned with modern application development; CNCF components are open source with broad community; cost-effective at scale
+* Cons: requires deep Kubernetes and bare-metal expertise; less mature for traditional VM workloads; smaller talent pool than OpenStack/VMware
+
+=== Option 3: Turnkey sovereign cloud product (e.g. Sovereign Cloud Stack, vendor offering)
+* Pros: faster time to production; vendor handles integration; reduced need for in-house expertise
+* Cons: dependency on vendor roadmap and viability; limited ability to customize; still requires operational team; sovereignty depends on vendor's supply chain
+
+== Decision
+
+Kubernetes-native platform on bare-metal, built from CNCF components in government datacenters. This gives full sovereignty — every layer from hardware to workload is under government control and auditable. A single platform (Kubernetes) rather than a stack of platforms (hypervisor + orchestrator + container runtime) minimizes operational complexity. The CNCF ecosystem provides open-source components for every layer without vendor lock-in. Where VM workloads are needed, they run on KubeVirt within the same platform rather than requiring a separate virtualization stack.
+
+== Consequences
+
+* All subsequent ADRs assume bare-metal Kubernetes with CNCF components
+* The platform team must build and maintain deep Kubernetes and bare-metal expertise
+* VM workloads are supported via KubeVirt, not a traditional hypervisor
+* Vendor selection favors open-source components with active communities over proprietary solutions
+* The platform is opinionated — it does not attempt to be all things to all workloads

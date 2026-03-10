@@ -1,0 +1,42 @@
+:showtitle:
+:state: proposed
+
+= ADR-0021: Operational security certification
+
+Status:: proposed
+Date:: 2026-03-10
+Group:: cross-cutting
+Depends-on:: ADR-0016
+
+== Context
+
+A sovereign cloud platform must demonstrate that it is operated securely on an ongoing basis — not just designed securely. Government customers need assurance around incident response, vulnerability management, change management, and availability. ISO 27001 (ADR-0018) covers some operational controls, but continuous operational assurance may require additional evidence.
+
+== Options
+
+=== Option 1: ISO 27001 operational controls only
+* Pros: already covered by ADR-0018; no additional certification; Annex A includes incident management (A.5.24-5.28), change management (A.8.32), and vulnerability management (A.8.8)
+* Cons: ISO 27001 audits are point-in-time (or periodic); does not provide continuous assurance; less convincing for customers who want ongoing evidence
+
+=== Option 2: SOC 2 Type II
+* Pros: covers a continuous period (typically 12 months); evaluates whether controls are not just designed but operating effectively; well-known format for operational assurance reports; covers security, availability, and confidentiality
+* Cons: US-origin (AICPA); additional audit cost; some overlap with ISO 27001; less recognized in European government than ISO
+
+=== Option 3: ISO 27001 + SOC 2 Type II
+* Pros: ISO 27001 for European government recognition; SOC 2 Type II for continuous operational assurance; together they cover both design and ongoing operation of controls; strong signal to customers of all types
+* Cons: two audit tracks; higher cost; significant overlap in control domains
+
+=== Option 4: ISO 27001 + ISAE 3402 Type II
+* Pros: ISAE 3402 is the international (non-US) equivalent of SOC 2; recognized in European audit context; provides continuous assurance over a period; familiar to European government auditors
+* Cons: additional audit cost; requires mature operational processes before meaningful reporting
+
+== Decision
+
+ISO 27001 + ISAE 3402 Type II. ISO 27001 (ADR-0018) provides the baseline ISMS. ISAE 3402 Type II adds continuous operational assurance in a format recognized by European auditors. This avoids the US-origin SOC 2 while providing equivalent continuous assurance. ISAE 3402 can be pursued once the platform has been operational for sufficient time to produce a meaningful audit period.
+
+== Consequences
+
+* Operational processes (incident response, change management, vulnerability management) must be formalized and evidenced from day one — even before ISAE 3402 audit
+* Monitoring and logging must produce auditable records of operational events
+* ISAE 3402 Type II audit should be planned for after the first year of production operation
+* Control descriptions must be maintained and aligned with ISO 27001 controls to minimize audit duplication

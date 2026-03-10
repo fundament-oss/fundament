@@ -1,0 +1,38 @@
+:showtitle:
+:state: proposed
+
+= ADR-0018: Information security certification
+
+Status:: proposed
+Date:: 2026-03-10
+Group:: cross-cutting
+Depends-on:: ADR-0016
+
+== Context
+
+Beyond cloud sovereignty (ADR-0017), the platform needs a recognized information security management framework. This covers risk management, access control, incident management, business continuity, and operational security controls. Government customers and auditors expect a recognized certification.
+
+== Options
+
+=== Option 1: ISO 27001
+* Pros: globally recognized ISMS standard; well-understood audit process; covers organizational and technical controls; required or expected by most government procurement; large ecosystem of auditors and tooling
+* Cons: generic — not cloud-specific; Annex A controls need interpretation for cloud platforms; certification scope must be carefully defined
+
+=== Option 2: ISO 27001 + ISO 27017 (cloud security controls)
+* Pros: ISO 27017 provides cloud-specific guidance on top of ISO 27001; addresses shared responsibility, virtualization security, and cloud-specific threats; demonstrates cloud security maturity beyond generic ISMS
+* Cons: ISO 27017 is a code of practice, not separately certifiable — it extends the ISO 27001 Statement of Applicability; marginal additional audit effort
+
+=== Option 3: SOC 2 Type II
+* Pros: well-known in commercial cloud; continuous assurance model (Type II covers a period, not a point in time); covers security, availability, confidentiality
+* Cons: US-origin (AICPA); less recognized in European government procurement; not a substitute for ISO 27001 in EU context; separate audit track
+
+== Decision
+
+ISO 27001 + ISO 27017. ISO 27001 is the baseline ISMS that government customers expect. ISO 27017 extends it with cloud-specific controls that are directly relevant to a cloud platform — this demonstrates that security controls are tailored to cloud, not generic. SOC 2 can be added later for international commercial customers but is not a priority for European government.
+
+== Consequences
+
+* ISMS must be established covering the platform's operational scope
+* ISO 27017 cloud controls must be included in the Statement of Applicability
+* Risk assessments must cover cloud-specific threats (multi-tenancy, shared infrastructure, API security)
+* Operational security processes (incident response, change management, access control) must be documented and auditable

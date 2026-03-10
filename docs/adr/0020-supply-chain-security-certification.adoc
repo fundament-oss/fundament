@@ -1,0 +1,39 @@
+:showtitle:
+:state: proposed
+
+= ADR-0020: Supply chain security certification
+
+Status:: proposed
+Date:: 2026-03-10
+Group:: cross-cutting
+Depends-on:: ADR-0016
+
+== Context
+
+A sovereign cloud platform must demonstrate that its software supply chain is trustworthy. Government customers need assurance that platform components have not been tampered with, that dependencies are tracked, and that vulnerabilities are managed systematically. EUCS SEAL-4 (ADR-0017) includes supply chain requirements, but the implementation approach needs its own decision.
+
+== Options
+
+=== Option 1: SLSA (Supply-chain Levels for Software Artifacts)
+* Pros: concrete, graduated framework (levels 1-4) for software supply chain integrity; covers build provenance, source integrity, and build platform security; backed by Google/OpenSSF but open and vendor-neutral; practical — can be adopted incrementally; well-aligned with CNCF ecosystem tooling (Sigstore, in-toto)
+* Cons: focused on software artifacts, does not cover hardware supply chain; relatively new, not yet widely required in government procurement
+
+=== Option 2: SBOM-only approach (CycloneDX or SPDX)
+* Pros: SBOMs provide transparency into dependencies; CycloneDX and SPDX are established standards; increasingly required by regulation (EU Cyber Resilience Act)
+* Cons: SBOMs alone are passive — they list components but do not guarantee integrity; no build provenance; no tamper protection
+
+=== Option 3: SLSA + SBOM (CycloneDX)
+* Pros: SLSA provides integrity guarantees (provenance, tamper protection); SBOMs provide transparency (what components are used); together they satisfy both EUCS supply chain requirements and EU Cyber Resilience Act; CycloneDX integrates well with vulnerability management
+* Cons: more tooling to set up and maintain; SLSA level 3+ requires hardened build platforms
+
+== Decision
+
+SLSA + SBOM (CycloneDX). SLSA provides the integrity guarantees (build provenance, source integrity) while CycloneDX SBOMs provide the transparency (dependency tracking, vulnerability correlation). Together they satisfy EUCS SEAL-4 supply chain requirements and the upcoming EU Cyber Resilience Act. SLSA can be adopted incrementally — start at level 2, progress to level 3 as build infrastructure matures.
+
+== Consequences
+
+* CI/CD pipelines must produce SLSA provenance attestations for all platform artifacts
+* CycloneDX SBOMs must be generated and published for every release
+* Build infrastructure must be hardened to achieve SLSA level 3
+* Dependency vulnerability management must be automated using SBOM data
+* Hardware supply chain (firmware, BMC) is out of scope for this ADR but must be addressed separately
