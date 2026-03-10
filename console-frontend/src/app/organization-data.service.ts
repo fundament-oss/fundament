@@ -1,5 +1,6 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
+import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { ORGANIZATION, CLUSTER, PROJECT } from '../connect/tokens';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
@@ -24,6 +25,7 @@ export interface OrganizationData {
   id: string;
   name: string;
   displayName: string;
+  created?: Timestamp;
   clusters: ClusterData[];
 }
 
@@ -116,6 +118,7 @@ export class OrganizationDataService {
           id: orgResponse.organization.id,
           name: orgResponse.organization.name,
           displayName: orgResponse.organization.displayName,
+          created: orgResponse.organization.created,
           clusters: clustersData,
         },
       ]);
@@ -151,6 +154,7 @@ export class OrganizationDataService {
   /** Force a fresh fetch of projects, bypassing the in-flight deduplication. */
   reloadProjectsAndNamespaces(): Promise<void> {
     this.loadProjectsPromise = null;
+    this.projectsLoaded.set(false);
     return this.loadProjectsAndNamespaces();
   }
 
