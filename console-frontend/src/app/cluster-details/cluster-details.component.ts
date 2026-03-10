@@ -25,7 +25,6 @@ import { ToastService } from '../toast.service';
 import { CLUSTER, NAMESPACE, PLUGIN } from '../../connect/tokens';
 import {
   GetClusterRequestSchema,
-  GetNodePoolRequestSchema,
   ListNodePoolsRequestSchema,
   DeleteClusterRequestSchema,
   ListInstallsRequestSchema,
@@ -281,15 +280,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       };
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
-      // Fetch full node pool details (including status) for each pool
-      const nodePools = await Promise.all(
-        nodePoolsResponse.nodePools.map((pool) =>
-          firstValueFrom(
-            this.client.getNodePool(create(GetNodePoolRequestSchema, { nodePoolId: pool.id })),
-          ).then((r) => r.nodePool ?? pool),
-        ),
-      );
-      this.clusterData.nodePools = nodePools;
+      this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
       this.titleService.setTitle(response.cluster.name);
 

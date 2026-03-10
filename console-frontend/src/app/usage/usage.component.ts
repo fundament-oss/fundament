@@ -10,12 +10,16 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerTableDown } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
 import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';
 import { OrganizationDataService } from '../organization-data.service';
+import { NAMESPACE } from '../../connect/tokens';
+import { GetNamespaceRequestSchema } from '../../generated/v1/namespace_pb';
 
 Chart.register(...registerables);
 
@@ -78,6 +82,8 @@ export default class UsageComponent implements OnInit, AfterViewInit {
   private route = inject(ActivatedRoute);
 
   private organizationDataService = inject(OrganizationDataService);
+
+  private namespaceClient = inject(NAMESPACE);
 
   @ViewChild('cpuChart') cpuChartCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -207,7 +213,19 @@ export default class UsageComponent implements OnInit, AfterViewInit {
       }
     }
     if (namespaceId) {
-      this.namespaceName.set(namespaceId);
+      this.selectedNamespace = namespaceId;
+      firstValueFrom(
+        this.namespaceClient.getNamespace(
+          create(GetNamespaceRequestSchema, { namespaceId }),
+        ),
+      )
+        .then((r) => {
+          if (r.namespace) this.namespaceName.set(r.namespace.name);
+        })
+        .catch(() => {
+          // Fall back to showing the ID if the fetch fails
+          this.namespaceName.set(namespaceId);
+        });
     }
   }
 

@@ -94,6 +94,9 @@ export default class AuthnApiService {
         // Not authenticated or session expired - clear the hint
         this.currentUserSubject.next(undefined);
         localStorage.removeItem('auth_hint');
+      })
+      .finally(() => {
+        this.initializationPromise = null;
       });
 
     return this.initializationPromise;

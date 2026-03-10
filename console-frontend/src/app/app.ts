@@ -376,7 +376,7 @@ export default class App implements OnInit {
     let route = segment.route;
 
     if (label === ':projectName') {
-      await this.organizationDataService.loadProjectsAndNamespaces();
+      await this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
       const projectData = this.organizationDataService.getProjectById(params['id']);
       label = projectData?.project.name ?? 'Project';
     }
