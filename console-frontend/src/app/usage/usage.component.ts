@@ -207,17 +207,7 @@ export default class UsageComponent implements OnInit, AfterViewInit {
       }
     }
     if (namespaceId) {
-      this.selectedNamespace = namespaceId;
-      // Find the actual namespace name from organization data
-      const orgs = this.organizationDataService.organizations();
-      const namespace = orgs
-        .flatMap((org) => org.clusters)
-        .flatMap((c) => c.projects)
-        .flatMap((p) => p.namespaces)
-        .find((ns) => ns.id === namespaceId);
-      if (namespace) {
-        this.namespaceName.set(namespace.name);
-      }
+      this.namespaceName.set(namespaceId);
     }
   }
 
