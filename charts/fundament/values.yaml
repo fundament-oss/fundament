@@ -39,6 +39,13 @@ authnApi:
   enabled: true
   replicas: 1
   logLevel: info
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - authn.example.com
 
 # Organization API
 organizationApi:
@@ -46,6 +53,13 @@ organizationApi:
   replicas: 1
   logLevel: info
   prometheusURL: mock # Prometheus URL for metrics; "mock" uses generated data
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - organization.example.com
 
 # Cluster Worker
 clusterWorker:
@@ -59,11 +73,25 @@ clusterWorker:
 consoleFrontend:
   enabled: false
   replicas: 1
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - console.example.com
 
 # Docs frontend
 docsFrontend:
   enabled: false
   replicas: 1
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - docs.example.com
 
 # Authz Worker (outbox pattern for OpenFGA tuple sync)
 authzWorker:
@@ -89,6 +117,13 @@ dex:
   discoveryUrl: "" # Internal URL for OIDC discovery (defaults to issuer if empty)
   staticClients: []
   staticPasswords: []
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - dex.example.com
 
 # Host aliases for pods (useful for local development to resolve external URLs to internal services)
 hostAliases: []

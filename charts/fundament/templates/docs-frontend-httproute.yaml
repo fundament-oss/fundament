@@ -1,0 +1,19 @@
+{{- if $.Values.docsFrontend.httproute.enabled }}
+{{- if not $.Values.docsFrontend.httproute.parentRefs }}{{ fail "docsFrontend.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-docs-frontend
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: docs-frontend
+spec:
+  parentRefs:
+    {{- toYaml $.Values.docsFrontend.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml $.Values.docsFrontend.httproute.hostnames | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: {{ $.Release.Name }}-docs-frontend
+          port: 80
+{{- end }}
