@@ -23,6 +23,10 @@ export default class AuthnApiService {
 
   public currentUser$: Observable<User | undefined> = this.currentUserSubject.asObservable();
 
+  private pendingGetUserInfo: Promise<User | undefined> | null = null;
+
+  private initializationPromise: Promise<void> | null = null;
+
   constructor() {
     // Configure the authn REST client with the runtime base URL and credentials
     this.restClient.setConfig({
@@ -56,28 +60,43 @@ export default class AuthnApiService {
   }
 
   async getUserInfo(): Promise<User | undefined> {
-    const response = await firstValueFrom(this.client.getUserInfo({}));
-    this.currentUserSubject.next(response.user);
-    return response.user;
+    if (this.pendingGetUserInfo) {
+      return this.pendingGetUserInfo;
+    }
+    this.pendingGetUserInfo = firstValueFrom(this.client.getUserInfo({}))
+      .then((response) => {
+        this.currentUserSubject.next(response.user);
+        return response.user;
+      })
+      .finally(() => {
+        this.pendingGetUserInfo = null;
+      });
+    return this.pendingGetUserInfo;
   }
 
   async initializeAuth(): Promise<void> {
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
     // Check hint flag to avoid unnecessary API calls when we know user isn't logged in
     // This is just an optimization - the server (via HTTP-only cookie) is still the source of truth
     if (!AuthnApiService.hasAuthHint()) {
       this.currentUserSubject.next(undefined);
-      return;
+      return Promise.resolve();
     }
 
-    try {
-      // Try to fetch user info - if successful, user is authenticated via HTTP-only cookie
-      const userInfo = await this.getUserInfo();
-      this.currentUserSubject.next(userInfo);
-    } catch {
-      // Not authenticated or session expired - clear the hint
-      this.currentUserSubject.next(undefined);
-      localStorage.removeItem('auth_hint');
-    }
+    this.initializationPromise = this.getUserInfo()
+      .then(() => {
+        // getUserInfo already updates currentUserSubject
+      })
+      .catch(() => {
+        // Not authenticated or session expired - clear the hint
+        this.currentUserSubject.next(undefined);
+        localStorage.removeItem('auth_hint');
+      });
+
+    return this.initializationPromise;
   }
 
   async refreshToken(): Promise<void> {

@@ -5,6 +5,7 @@ import {
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
@@ -21,9 +22,10 @@ import {
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { CLUSTER, NAMESPACE, PROJECT, PLUGIN } from '../../connect/tokens';
+import { CLUSTER, NAMESPACE, PLUGIN } from '../../connect/tokens';
 import {
   GetClusterRequestSchema,
+  GetNodePoolRequestSchema,
   ListNodePoolsRequestSchema,
   DeleteClusterRequestSchema,
   ListInstallsRequestSchema,
@@ -33,7 +35,7 @@ import {
   type SyncState,
 } from '../../generated/v1/cluster_pb';
 import { ListClusterNamespacesRequestSchema, Namespace } from '../../generated/v1/namespace_pb';
-import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
+import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { LoadingIndicatorComponent } from '../icons';
@@ -148,11 +150,13 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private namespaceClient = inject(NAMESPACE);
 
-  private projectClient = inject(PROJECT);
+  private organizationDataService = inject(OrganizationDataService);
 
   private pluginClient = inject(PLUGIN);
 
   private toastService = inject(ToastService);
+
+  private cdr = inject(ChangeDetectorRef);
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -172,8 +176,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   // Namespace management
   namespaces = signal<Namespace[]>([]);
-
-  projects = signal<Project[]>([]);
 
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
@@ -259,8 +261,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.isLoading.set(true);
       this.errorMessage.set(null);
 
-      const request = create(GetClusterRequestSchema, { clusterId });
-      const response = await firstValueFrom(this.client.getCluster(request));
+      const [response, nodePoolsResponse] = await Promise.all([
+        firstValueFrom(this.client.getCluster(create(GetClusterRequestSchema, { clusterId }))),
+        firstValueFrom(
+          this.client.listNodePools(create(ListNodePoolsRequestSchema, { clusterId })),
+        ),
+      ]);
 
       if (!response.cluster) {
         throw new Error('Cluster not found');
@@ -275,20 +281,21 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       };
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
+      // Fetch full node pool details (including status) for each pool
+      const nodePools = await Promise.all(
+        nodePoolsResponse.nodePools.map((pool) =>
+          firstValueFrom(
+            this.client.getNodePool(create(GetNodePoolRequestSchema, { nodePoolId: pool.id })),
+          ).then((r) => r.nodePool ?? pool),
+        ),
+      );
+      this.clusterData.nodePools = nodePools;
 
       this.titleService.setTitle(response.cluster.name);
 
-      // Fetch node pools
-      const nodePoolsRequest = create(ListNodePoolsRequestSchema, { clusterId });
-      const nodePoolsResponse = await firstValueFrom(this.client.listNodePools(nodePoolsRequest));
-
-      // Map node pools to the expected format
-      this.clusterData.nodePools = nodePoolsResponse.nodePools;
-
-      // Fetch namespaces, projects, plugins, and events in parallel
+      // Fetch namespaces, plugins, and events in parallel
       await Promise.all([
         this.loadNamespaces(clusterId),
-        this.loadProjects(),
         this.loadInstalledPlugins(clusterId),
         this.loadClusterEvents(clusterId),
       ]);
@@ -321,6 +328,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
+      this.cdr.markForCheck();
       this.updatePolling();
     } catch {
       // If the request fails with a not-found-like error, the cluster was deleted
@@ -402,23 +410,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  async loadProjects(): Promise<void> {
-    try {
-      const request = create(ListProjectsRequestSchema, { clusterId: this.clusterData.basics.id });
-      const response = await firstValueFrom(this.projectClient.listProjects(request));
-      this.projects.set(response.projects);
-    } catch (error) {
-      this.toastService.error(
-        error instanceof Error
-          ? `Failed to load projects: ${error.message}`
-          : 'Failed to load projects',
-      );
-    }
-  }
-
   getProjectName(projectId: string): string {
-    const project = this.projects().find((p) => p.id === projectId);
-    return project?.name || projectId;
+    return this.organizationDataService.getProjectById(projectId)?.project.name ?? projectId;
   }
 
   // Load installed plugins for the cluster

@@ -1,21 +1,17 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
-import { ORGANIZATION, CLUSTER, NAMESPACE, PROJECT } from '../connect/tokens';
+import { ORGANIZATION, CLUSTER, PROJECT } from '../connect/tokens';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
-import { ListClustersRequestSchema } from '../generated/v1/cluster_pb';
+import {
+  ListClustersRequestSchema,
+  type ListClustersResponse_ClusterSummary as ClusterSummary,
+} from '../generated/v1/cluster_pb';
 import { ListProjectsRequestSchema } from '../generated/v1/project_pb';
-import { ListProjectNamespacesRequestSchema } from '../generated/v1/namespace_pb';
-
-export interface NamespaceData {
-  id: string;
-  name: string;
-}
 
 export interface ProjectData {
   id: string;
   name: string;
-  namespaces: NamespaceData[];
 }
 
 export interface ClusterData {
@@ -41,39 +37,18 @@ export class OrganizationDataService {
 
   private projectClient = inject(PROJECT);
 
-  private namespaceClient = inject(NAMESPACE);
+  /** Full ClusterSummary list (with status, region, etc.) for the current organization. */
+  clusterSummaries = signal<ClusterSummary[]>([]);
 
   /** All organizations the user belongs to. Lightweight, without nested projects and namespaces. */
   userOrganizations = signal<Organization[]>([]);
 
-  /** Full data (with clusters, projects and namespaces) for the currently selected organization. */
+  /** Organization data (with clusters) for the currently selected organization. Projects are populated lazily via loadProjects(). */
   organizations = signal<OrganizationData[]>([]);
 
   loading = signal(false);
 
   // Lookup maps for O(1) access
-  private namespaceMap = computed(() => {
-    const map = new Map<
-      string,
-      {
-        namespace: NamespaceData;
-        project: ProjectData;
-        cluster: ClusterData;
-        organization: OrganizationData;
-      }
-    >();
-    this.organizations().forEach((org) => {
-      org.clusters.forEach((cluster) => {
-        cluster.projects.forEach((project) => {
-          project.namespaces.forEach((namespace) => {
-            map.set(namespace.id, { namespace, project, cluster, organization: org });
-          });
-        });
-      });
-    });
-    return map;
-  });
-
   private projectMap = computed(() => {
     const map = new Map<
       string,
@@ -101,73 +76,49 @@ export class OrganizationDataService {
 
   private cachedOrganizationId: string | null = null;
 
+  private loadProjectsPromise: Promise<void> | null = null;
+
+  /** True once loadProjectsAndNamespaces() has completed successfully for the current org. */
+  projectsLoaded = signal(false);
+
   async loadOrganizationData(organizationId?: string) {
     const orgId = organizationId ?? this.cachedOrganizationId;
     if (!orgId) return;
     this.cachedOrganizationId = orgId;
 
+    // Reset project cache so the next loadProjectsAndNamespaces() fetches fresh data.
+    this.loadProjectsPromise = null;
+    this.projectsLoaded.set(false);
+
     this.loading.set(true);
     try {
-      // Fetch organization and clusters in parallel
       const orgRequest = create(GetOrganizationRequestSchema, { id: orgId });
-      const clustersRequest = create(ListClustersRequestSchema, {});
 
       const [orgResponse, clustersResponse] = await Promise.all([
         firstValueFrom(this.organizationClient.getOrganization(orgRequest)),
-        firstValueFrom(this.clusterClient.listClusters(clustersRequest)),
+        firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
       ]);
 
       if (!orgResponse.organization) {
         return;
       }
 
-      // For each cluster, fetch its projects, then for each project fetch namespaces
-      const clustersData: ClusterData[] = await Promise.all(
-        clustersResponse.clusters.map(async (cluster) => {
-          const projectsRequest = create(ListProjectsRequestSchema, {
-            clusterId: cluster.id,
-          });
-          const projectsResponse = await firstValueFrom(
-            this.projectClient.listProjects(projectsRequest),
-          );
+      this.clusterSummaries.set(clustersResponse.clusters);
 
-          const projects: ProjectData[] = await Promise.all(
-            projectsResponse.projects.map(async (project) => {
-              const namespacesRequest = create(ListProjectNamespacesRequestSchema, {
-                projectId: project.id,
-              });
-              const namespacesResponse = await firstValueFrom(
-                this.namespaceClient.listProjectNamespaces(namespacesRequest),
-              );
+      const clustersData: ClusterData[] = clustersResponse.clusters.map((cluster) => ({
+        id: cluster.id,
+        name: cluster.name,
+        projects: [],
+      }));
 
-              return {
-                id: project.id,
-                name: project.name,
-                namespaces: namespacesResponse.namespaces.map((ns) => ({
-                  id: ns.id,
-                  name: ns.name,
-                })),
-              };
-            }),
-          );
-
-          return {
-            id: cluster.id,
-            name: cluster.name,
-            projects,
-          };
-        }),
-      );
-
-      // Build the organization data
-      const organizationData: OrganizationData = {
-        id: orgResponse.organization.id,
-        name: orgResponse.organization.name,
-        displayName: orgResponse.organization.displayName,
-        clusters: clustersData,
-      };
-
-      this.organizations.set([organizationData]);
+      this.organizations.set([
+        {
+          id: orgResponse.organization.id,
+          name: orgResponse.organization.name,
+          displayName: orgResponse.organization.displayName,
+          clusters: clustersData,
+        },
+      ]);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error loading organization data:', error);
@@ -177,10 +128,66 @@ export class OrganizationDataService {
   }
 
   /**
-   * Get namespace by ID with its parent project, cluster and organization (O(1) lookup)
+   * Load projects for all clusters in the current organization.
+   * Deduplicates concurrent calls — simultaneous callers share the same in-flight request.
+   * Use reloadProjectsAndNamespaces() to force a fresh fetch (e.g. after mutations).
    */
-  getNamespaceById(namespaceId: string) {
-    return this.namespaceMap().get(namespaceId);
+  loadProjectsAndNamespaces(): Promise<void> {
+    if (this.projectsLoaded()) {
+      return Promise.resolve();
+    }
+    if (!this.loadProjectsPromise) {
+      this.loadProjectsPromise = this.doLoadProjects()
+        .then(() => {
+          this.projectsLoaded.set(true);
+        })
+        .finally(() => {
+          this.loadProjectsPromise = null;
+        });
+    }
+    return this.loadProjectsPromise;
+  }
+
+  /** Force a fresh fetch of projects, bypassing the in-flight deduplication. */
+  reloadProjectsAndNamespaces(): Promise<void> {
+    this.loadProjectsPromise = null;
+    return this.loadProjectsAndNamespaces();
+  }
+
+  private async doLoadProjects() {
+    const orgData = this.organizations()[0];
+    if (!orgData) return;
+
+    this.loading.set(true);
+    try {
+      const clustersData: ClusterData[] = await Promise.all(
+        orgData.clusters.map(async (cluster) => {
+          const projectsResponse = await firstValueFrom(
+            this.projectClient.listProjects(
+              create(ListProjectsRequestSchema, { clusterId: cluster.id }),
+            ),
+          );
+
+          return {
+            id: cluster.id,
+            name: cluster.name,
+            projects: projectsResponse.projects.map((project) => ({
+              id: project.id,
+              name: project.name,
+            })),
+          };
+        }),
+      );
+
+      this.organizations.update((orgs) =>
+        orgs.map((org) => (org.id === orgData.id ? { ...org, clusters: clustersData } : org)),
+      );
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error loading project data:', error);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   /**
@@ -244,5 +251,8 @@ export class OrganizationDataService {
   clearAll() {
     this.organizations.set([]);
     this.userOrganizations.set([]);
+    this.clusterSummaries.set([]);
+    this.loadProjectsPromise = null;
+    this.projectsLoaded.set(false);
   }
 }

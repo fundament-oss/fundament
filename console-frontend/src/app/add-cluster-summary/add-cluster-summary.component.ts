@@ -292,7 +292,7 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
       const response = await firstValueFrom(this.client.createNodePool(request));
       this.updateItem(key, {
         requestStatus: 'succeeded',
-        syncStatus: 'syncing',
+        syncStatus: 'none',
         createdId: response.nodePoolId,
       });
     } catch (error) {

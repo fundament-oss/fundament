@@ -1,4 +1,4 @@
-import { Component, inject, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerChevronRight } from '@ng-icons/tabler-icons';
@@ -21,7 +21,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
   templateUrl: './projects.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class ProjectsComponent {
+export default class ProjectsComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private organizationDataService = inject(OrganizationDataService);
@@ -35,6 +35,11 @@ export default class ProjectsComponent {
 
   constructor() {
     this.titleService.setTitle('Projects');
+  }
+
+  ngOnInit() {
+    // Projects are not pre-loaded on app init; load them now (deduplicates if already in flight).
+    void this.organizationDataService.loadProjectsAndNamespaces();
   }
 
   readonly formatDate = formatDateUtil;
