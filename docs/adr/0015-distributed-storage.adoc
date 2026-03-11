@@ -19,17 +19,25 @@ The platform needs distributed storage that replicates data across nodes and ava
 * Pros: proven at scale (exabyte-class deployments); provides block (RBD), file (CephFS), and object (RGW) from one system; cross-AZ replication built in; Rook provides Kubernetes-native lifecycle management; open source (LGPL); supports both hyperconverged and disaggregated topologies
 * Cons: operationally complex; requires tuning for bare-metal performance; minimum 3 nodes per storage cluster; significant resource overhead (MON, OSD, MGR daemons)
 
-=== Option 2: Longhorn
-* Pros: simple to deploy and operate; Kubernetes-native; CNCF project; good for small-to-medium clusters
+=== Option 2: LINSTOR/DRBD
+* Pros: proven in European hosting (Linbit is Austrian); efficient synchronous block replication; low overhead; supports both hyperconverged and disaggregated
+* Cons: block storage only — no file or object; smaller community than Ceph; dual licensing (GPLv2/commercial); less Kubernetes-native than Rook
+
+=== Option 3: Longhorn
+* Pros: simple to deploy and operate; Kubernetes-native; CNCF project
 * Cons: block storage only — no file or object; not proven at large scale; no cross-AZ replication; limited to hyperconverged
 
-=== Option 3: OpenEBS (Mayastor)
+=== Option 4: Specialized tools per storage tier (e.g. LINSTOR for block, MinIO for object, CephFS for file)
+* Pros: best-of-breed per tier; each component optimized for its workload
+* Cons: three systems to operate, monitor, and upgrade; no unified management; cross-tier consistency is the operator's problem; higher operational complexity
+
+=== Option 5: OpenEBS (Mayastor)
 * Pros: NVMe-optimized; Kubernetes-native; CNCF project
-* Cons: less mature than Ceph; primarily block storage; smaller community; limited large-scale production references
+* Cons: primarily block storage; less mature than Ceph; smaller community; limited large-scale production references
 
 == Decision
 
-Ceph via Rook. The only option proven at the target scale (ADR-0002) that provides block, file, and object storage from a single system. Cross-AZ replication satisfies the 3-AZ requirement (ADR-0009). Supports both hyperconverged and future disaggregated topologies (ADR-0014). Rook handles Ceph lifecycle within Kubernetes.
+Ceph via Rook. Ceph is the only option that provides block, file, and object storage from a single system at our target scale. LINSTOR is a credible block storage alternative with European roots, but lacks file and object storage — we would need additional systems (e.g. MinIO for object), increasing operational complexity. The specialized-tools-per-tier approach was considered but rejected: operating three storage systems is significantly more complex than one. Longhorn and OpenEBS are not proven at the scale we need (ADR-0002). Cross-AZ replication satisfies the 3-AZ requirement (ADR-0009). Rook handles Ceph lifecycle within Kubernetes.
 
 == Consequences
 

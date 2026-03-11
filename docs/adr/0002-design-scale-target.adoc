@@ -16,20 +16,20 @@ Fundament must define its design scale to make informed architecture decisions. 
 == Options
 
 === Option 1: Single-org scale (up to 500 physical servers)
-* Pros: most tools work, small team viable
-* Cons: not relevant for national government platform
+* Pros: most tools work out of the box; small team viable; fastest time to production
+* Cons: limits the platform to a single organization or small consortium
 
 === Option 2: Medium scale (up to 5,000 physical servers)
-* Pros: broad tool support, proven architectures available
-* Cons: insufficient for stated government ambition
+* Pros: broad tool support; proven architectures available; serves multiple organizations
+* Cons: may require re-architecture if demand grows beyond this target
 
 === Option 3: Hyperscale (up to 50,000 physical servers / ~2M logical CPUs)
-* Pros: meets government target (30-50% sovereign compute)
-* Cons: eliminates many tools, requires automation-first approach, dedicated DC network automation required
+* Pros: meets stated government ambition (30-50% sovereign compute); future-proof for multi-year growth; serves all government organizations on one platform
+* Cons: eliminates many tools that are not proven at this scale; requires automation-first approach from day one; dedicated DC network automation required
 
 == Decision
 
-Design for 50,000 physical servers / ~2,000,000 logical CPUs, to be reached within 3 years. All architecture decisions must be validated against this target.
+Design for 50,000 physical servers / ~2,000,000 logical CPUs, to be reached within 3 years. Options 1 and 2 were considered but do not match the government ambition to consolidate 30-50% of sovereign compute onto a single platform. Designing for a smaller target risks costly re-architecture when demand exceeds the initial design. All architecture decisions must be validated against this target.
 
 == Consequences
 
