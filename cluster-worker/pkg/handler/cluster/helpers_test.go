@@ -123,13 +123,13 @@ func insertDeletedCluster(t *testing.T, db *testDB, orgID uuid.UUID, name string
 }
 
 // insertNodePool inserts a node pool for a cluster.
-func insertNodePool(t *testing.T, db *testDB, clusterID uuid.UUID, name, machineType string, min, max int32) {
+func insertNodePool(t *testing.T, db *testDB, clusterID uuid.UUID, name, machineType string, scaleMin, scaleMax int32) {
 	t.Helper()
 
 	_, err := db.adminPool.Exec(t.Context(),
 		`INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max)
 		 VALUES ($1, $2, $3, $4, $5)`,
-		clusterID, name, machineType, min, max,
+		clusterID, name, machineType, scaleMin, scaleMax,
 	)
 	require.NoError(t, err)
 }

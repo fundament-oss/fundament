@@ -30,10 +30,10 @@ func TestMain(m *testing.M) {
 
 		cacheDir = filepath.Join(userCache, "fundament-test-pg-cw")
 	} else {
-		cacheDir = cacheDir + "-cw"
+		cacheDir += "-cw"
 	}
 
-	err := os.MkdirAll(cacheDir, 0o755)
+	err := os.MkdirAll(cacheDir, 0o750)
 	if err != nil {
 		log.Fatalf("failed to create cache directory: %v", err)
 	}
@@ -77,14 +77,15 @@ func TestMain(m *testing.M) {
 	}()
 
 	adminPool := newAdminPool()
-	defer adminPool.Close()
 
 	createRoles(adminPool)
 
-	err = setupTemplateDatabaseWithMigrations(adminPool)
-	if err != nil {
+	if err = setupTemplateDatabaseWithMigrations(adminPool); err != nil {
+		adminPool.Close()
 		log.Fatalf("failed to setup template database: %v", err)
 	}
+
+	adminPool.Close()
 
 	code := m.Run()
 
@@ -130,13 +131,13 @@ func removeStalePostmasterPID(pgBin, dataDir string) {
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d)", pid)
-		os.Remove(pidFile)
+		_ = os.Remove(pidFile)
 		return
 	}
 
 	if err := process.Signal(syscall.Signal(0)); err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d no longer running)", pid)
-		os.Remove(pidFile)
+		_ = os.Remove(pidFile)
 		return
 	}
 
@@ -181,14 +182,14 @@ func setupTemplateDatabaseWithMigrations(pool *pgxpool.Pool) error {
 
 	_, err := pool.Exec(context.Background(), "UPDATE pg_database SET datistemplate = false WHERE datname = 'fundament'")
 	if err != nil {
-		return fmt.Errorf("failed to unmark fundament as template: %v", err)
+		return fmt.Errorf("failed to unmark fundament as template: %w", err)
 	}
 
 	trekApply(projectRoot)
 
 	_, err = pool.Exec(context.Background(), "UPDATE pg_database SET datistemplate = true WHERE datname = 'fundament'")
 	if err != nil {
-		return fmt.Errorf("failed to mark fundament as template: %v", err)
+		return fmt.Errorf("failed to mark fundament as template: %w", err)
 	}
 
 	return nil
