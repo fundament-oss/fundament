@@ -110,4 +110,12 @@ func Test_Cluster_List_MultiOrg(t *testing.T) {
 	res, err := client.ListClusters(context.Background(), listReq)
 	require.NoError(t, err)
 	assert.Empty(t, res.Msg.GetClusters())
+
+	listReqOrgA := connect.NewRequest(organizationv1.ListClustersRequest_builder{}.Build())
+	listReqOrgA.Header().Set("Authorization", "Bearer "+token)
+	listReqOrgA.Header().Set("Fun-Organization", orgAID.String())
+
+	resOrgA, err := client.ListClusters(context.Background(), listReqOrgA)
+	require.NoError(t, err)
+	assert.Len(t, resOrgA.Msg.GetClusters(), 1)
 }
