@@ -56,6 +56,7 @@ Feature: API Token Exchange
     Given I have created an API key named "revoked-exchange"
     And I have saved the full token
     And I have revoked the API key
+    And I wait 2 seconds
     When I call ExchangeToken with the API token
     Then I should receive an unauthenticated error
 
@@ -64,8 +65,26 @@ Feature: API Token Exchange
     Given I have created an API key named "deleted-exchange"
     And I have saved the full token
     And I have deleted the API key for exchange test
+    And I wait 2 seconds
     When I call ExchangeToken with the API token
     Then I should receive an unauthenticated error
+
+  @api @token
+  Scenario: Exchange API token with future expiry succeeds
+    Given I have created an API key named "future-expiry" with expiry "1h"
+    And I have saved the full token
+    When I call ExchangeToken with the API token
+    Then I should receive a valid JWT
+    And the token type should be "Bearer"
+
+  @api @token @negative
+  Scenario: Exchange expired API token fails
+    Given I have created an API key named "expired-exchange" with expiry "2s"
+    And I have saved the full token
+    And I wait 5 seconds
+    When I call ExchangeToken with the API token
+    Then I should receive an unauthenticated error
+    And the error message should contain "token expired"
 
   @api @token @negative
   Scenario: Exchange non-existent token fails

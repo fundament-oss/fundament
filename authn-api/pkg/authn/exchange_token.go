@@ -8,12 +8,11 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 	"github.com/fundament-oss/fundament/common/apitoken"
-	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/authz"
 )
 
 const (
@@ -96,39 +95,51 @@ func extractBearerToken(authHeader string) (string, error) {
 	return authHeader[7:], nil
 }
 
-// lookupAPIKey looks up an API key by token hash and handles DB errors.
+// lookupAPIKey looks up an API key by token hash and validates it via OpenFGA.
 func (s *AuthnServer) lookupAPIKey(ctx context.Context, token string) (*db.APIKeyGetByHashRow, error) {
 	hash := apitoken.Hash(token)
 	apiKey, err := s.queries.APIKeyGetByHash(ctx, db.APIKeyGetByHashParams{
 		PTokenHash: hash,
 	})
 	if err != nil {
-		return nil, s.handleAPIKeyError(err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.logger.Debug("api token not found")
+			return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid token"))
+		}
+		s.logger.Error("failed to get api key", "error", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))
 	}
+
+	decision, err := s.authz.Evaluate(ctx, authz.EvaluationRequest{
+		Subject:  authz.User(apiKey.UserID),
+		Action:   authz.CanUse(),
+		Resource: authz.ApiKey(apiKey.ID),
+		Context:  authz.Context{"current_time": time.Now().UTC().Format(time.RFC3339)},
+	})
+	if err != nil {
+		s.logger.Error("failed to evaluate api key authorization", "error", err, "api_key_id", apiKey.ID)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))
+	}
+
+	if !decision.Decision {
+		s.logger.Debug("api key authorization denied", "api_key_id", apiKey.ID)
+		return nil, connect.NewError(connect.CodeUnauthenticated, s.apiKeyDenialReason(apiKey))
+	}
+
+	if err := s.queries.APIKeyUpdateLastUsed(ctx, db.APIKeyUpdateLastUsedParams{PID: apiKey.ID}); err != nil {
+		s.logger.Error("failed to update api key last_used", "error", err, "api_key_id", apiKey.ID)
+	}
+
 	return &apiKey, nil
 }
 
-// handleAPIKeyError converts database errors to appropriate connect errors.
-func (s *AuthnServer) handleAPIKeyError(err error) error {
-	if errors.Is(err, pgx.ErrNoRows) {
-		s.logger.Debug("api token not found")
-		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid token"))
+// apiKeyDenialReason returns a user-facing error based on the API key's state.
+func (s *AuthnServer) apiKeyDenialReason(apiKey db.APIKeyGetByHashRow) error {
+	if apiKey.Revoked.Valid {
+		return fmt.Errorf("token revoked")
 	}
-
-	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-		switch pgErr.Hint {
-		case dbconst.HintApiKeyDeleted:
-			s.logger.Debug("api token deleted")
-			return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid token"))
-		case dbconst.HintApiKeyRevoked:
-			s.logger.Debug("api token revoked")
-			return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("token revoked"))
-		case dbconst.HintApiKeyExpired:
-			s.logger.Debug("api token expired")
-			return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("token expired"))
-		}
+	if apiKey.Expires.Valid && apiKey.Expires.Time.Before(time.Now()) {
+		return fmt.Errorf("token expired")
 	}
-
-	s.logger.Error("failed to get api key", "error", err)
-	return connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))
+	return fmt.Errorf("invalid token")
 }
