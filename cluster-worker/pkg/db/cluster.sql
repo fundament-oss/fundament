@@ -45,7 +45,7 @@ SELECT
     tenant.clusters.name,
     tenant.clusters.deleted,
     tenant.organizations.name AS organization_name,
-    (tenant.clusters.outbox_status = 'completed') AS has_completed_outbox
+    COALESCE(tenant.clusters.outbox_status = 'completed', false) AS has_completed_outbox
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
