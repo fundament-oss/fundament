@@ -133,7 +133,7 @@ export default class PluginRegistryService {
           headers: { 'Fun-Organization': orgId },
         });
         if (!response.ok) {
-          failureCount++;
+          failureCount += 1;
           // eslint-disable-next-line no-console
           console.error(`[PluginRegistry] Failed to fetch CRD ${crdName}: ${response.status}`);
           return;

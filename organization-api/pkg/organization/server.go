@@ -50,7 +50,7 @@ func newKubeClient(cfg *Config) kube.KubeClient {
 
 func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client) (*Server, error) {
 	if cfg.KubeProxyMode != "mock" && cfg.KubeProxyMode != "real" {
-		return nil, fmt.Errorf("invalid KubeProxyMode %q: must be \"mock\" or \"real\"", cfg.KubeProxyMode)
+		return nil, fmt.Errorf(`invalid KubeProxyMode %q: must be "mock" or "real"`, cfg.KubeProxyMode)
 	}
 
 	clk := cfg.Clock

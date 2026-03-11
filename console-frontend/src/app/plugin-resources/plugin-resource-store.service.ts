@@ -17,10 +17,13 @@ export default class PluginResourceStoreService {
     orgId: string,
   ): Promise<void> {
     const cacheKey = `${pluginName}/${crd.kind}/${clusterId}`;
-    if (this.resourceCache.has(cacheKey)) return;
+    if (this.resourceCache.has(cacheKey)) return undefined;
 
     const existing = this.inFlight.get(cacheKey);
-    if (existing) return existing;
+    if (existing) {
+      await existing;
+      return undefined;
+    }
 
     const base = orgApiUrl.replace(/\/$/, '');
     const url = `${base}/k8s/${clusterId}/apis/${crd.group}/${crd.version}/${crd.plural}`;
