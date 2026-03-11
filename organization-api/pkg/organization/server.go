@@ -14,26 +14,31 @@ import (
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
+	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/rs/cors"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 )
 
 type Config struct {
-	JWTSecret          []byte
-	CORSAllowedOrigins []string
-	Clock              clock.Clock
+	JWTSecret            []byte
+	CORSAllowedOrigins   []string
+	Clock                clock.Clock
+	MockPrometheusClient *prom.MockClient
+	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
 }
 
 type Server struct {
-	config        *Config
-	db            *psqldb.DB
-	queries       *db.Queries
-	logger        *slog.Logger
-	authValidator *auth.Validator
-	authz         *authz.Client
-	clock         clock.Clock
-	handler       http.Handler
+	config         *Config
+	db             *psqldb.DB
+	queries        *db.Queries
+	logger         *slog.Logger
+	authValidator  *auth.Validator
+	authz          *authz.Client
+	clock          clock.Clock
+	handler        http.Handler
+	mockPromClient *prom.MockClient
+	prometheusURL  string
 }
 
 func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client) (*Server, error) {
@@ -43,13 +48,15 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 	}
 
 	s := &Server{
-		logger:        logger,
-		config:        cfg,
-		db:            database,
-		queries:       db.New(database.Pool),
-		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
-		authz:         authzClient,
-		clock:         clk,
+		logger:         logger,
+		config:         cfg,
+		db:             database,
+		queries:        db.New(database.Pool),
+		authValidator:  auth.NewValidator(cfg.JWTSecret, logger),
+		authz:          authzClient,
+		clock:          clk,
+		mockPromClient: cfg.MockPrometheusClient,
+		prometheusURL:  cfg.PrometheusURL,
 	}
 
 	mux := http.NewServeMux()
@@ -85,6 +92,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		"organization.v1.InviteService",
 		"organization.v1.APIKeyService",
 		"organization.v1.NamespaceService",
+		"organization.v1.MetricsService",
 	)
 	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
 	mux.Handle(reflectPath, reflectHandler)
@@ -105,6 +113,9 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 
 	apiKeyPath, apiKeyHandler := organizationv1connect.NewAPIKeyServiceHandler(s, interceptors)
 	mux.Handle(apiKeyPath, apiKeyHandler)
+
+	metricsPath, metricsHandler := organizationv1connect.NewMetricsServiceHandler(s, interceptors)
+	mux.Handle(metricsPath, metricsHandler)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,

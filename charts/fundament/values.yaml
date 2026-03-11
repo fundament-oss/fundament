@@ -45,6 +45,7 @@ organizationApi:
   enabled: false
   replicas: 1
   logLevel: info
+  prometheusURL: mock # Prometheus URL for metrics; "mock" uses generated data
 
 # Cluster Worker
 clusterWorker:

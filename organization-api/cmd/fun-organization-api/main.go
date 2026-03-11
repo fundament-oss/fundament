@@ -17,7 +17,9 @@ import (
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
+	dbgen "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
+	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 )
 
 type config struct {
@@ -27,6 +29,7 @@ type config struct {
 	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
 	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
+	PrometheusURL      string     `env:"PROMETHEUS_URL" envDefault:"mock"`
 }
 
 func main() {
@@ -78,10 +81,42 @@ func run() error {
 
 	logger.Debug("OpenFGA client connected")
 
+	mockClient := prom.NewMockClient(func(ctx context.Context) ([]prom.ClusterInfo, error) {
+		q := dbgen.New(db.Pool)
+		rows, err := q.ClusterList(ctx)
+		if err != nil {
+			return nil, err
+		}
+		clusters := make([]prom.ClusterInfo, 0, len(rows))
+		for _, row := range rows {
+			pools, err := q.NodePoolListByClusterID(ctx, dbgen.NodePoolListByClusterIDParams{ClusterID: row.ID})
+			if err != nil {
+				return nil, err
+			}
+			nodePools := make([]prom.NodePoolInfo, 0, len(pools))
+			for _, p := range pools {
+				nodePools = append(nodePools, prom.NodePoolInfo{
+					Name:         p.Name,
+					MachineType:  p.MachineType,
+					AutoscaleMin: p.AutoscaleMin,
+					AutoscaleMax: p.AutoscaleMax,
+				})
+			}
+			clusters = append(clusters, prom.ClusterInfo{
+				ID:        row.ID.String(),
+				Name:      row.Name,
+				NodePools: nodePools,
+			})
+		}
+		return clusters, nil
+	})
+
 	server, err := organization.New(logger, &organization.Config{
-		JWTSecret:          []byte(cfg.JWTSecret),
-		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
-		Clock:              clock.New(),
+		JWTSecret:            []byte(cfg.JWTSecret),
+		CORSAllowedOrigins:   cfg.CORSAllowedOrigins,
+		Clock:                clock.New(),
+		MockPrometheusClient: mockClient,
+		PrometheusURL:        cfg.PrometheusURL,
 	}, db, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)
