@@ -17,19 +17,23 @@ With Kubernetes on bare-metal (ADR-0007) and a spine-leaf BGP/EVPN underlay (ADR
 
 === Option 1: Cilium
 * Pros: eBPF-based — high performance, no iptables overhead; built-in network policy, observability (Hubble), encryption (WireGuard), and load balancing; large CNCF community; BGP support for bare-metal integration; service mesh capabilities without sidecars
-* Cons: Isovalent (main contributor) was acquired by Cisco — long-term sovereignty implications unclear; eBPF requires recent kernel versions; metal-stack default is Calico, so integration requires additional work
+* Cons: Isovalent (main contributor) was acquired by Cisco — long-term sovereignty implications unclear; eBPF requires recent kernel versions; metal-stack default is Calico, so integration requires additional work; steep learning curve for eBPF debugging
 
 === Option 2: Calico
-* Pros: metal-stack default — proven integration; mature and battle-tested; supports BGP natively; well-understood operational model
-* Cons: iptables-based data plane at scale has performance limitations; less built-in observability; eBPF mode exists but is less mature than Cilium's; Tigera (main contributor) is also a commercial entity
+* Pros: metal-stack default — proven integration; mature and battle-tested; supports BGP natively; well-understood operational model; eBPF data plane mode available as optional upgrade path
+* Cons: iptables-based data plane has performance limitations at scale; less built-in observability; Tigera (main contributor) is also a commercial entity; eBPF mode is less mature than Cilium's native eBPF implementation
 
-=== Option 3: Calico with eBPF data plane
-* Pros: keeps metal-stack default integration; gains some eBPF performance benefits
-* Cons: eBPF support in Calico is less mature; smaller community around this mode; still lacks Cilium's integrated observability and service mesh
+=== Option 3: Antrea
+* Pros: OVS-based with eBPF support; CNCF project; strong multi-cluster networking; good VMware/Broadcom ecosystem integration
+* Cons: smaller community than Cilium and Calico; less bare-metal focus (origins in VMware); Broadcom acquisition adds vendor uncertainty
+
+=== Option 4: Flannel
+* Pros: simplest CNI to operate; well-understood; minimal resource overhead
+* Cons: no network policy enforcement (requires a separate policy engine); limited observability; no BGP support; too simple for a multi-tenant platform
 
 == Decision
 
-Cilium. The eBPF-based architecture provides superior performance, observability, and security features that align with platform requirements at scale. The sovereignty concern (Cisco acquisition of Isovalent) is noted but mitigated by Cilium's Apache 2.0 license and large open-source community beyond Isovalent. The metal-stack Calico default can be overridden at the Gardener shoot level. This decision should be revisited if Cilium's open-source governance changes materially.
+Cilium. The eBPF-based architecture provides superior performance, observability, and security features at scale. Calico is the metal-stack default and a credible alternative, but its iptables data plane is a scaling concern and its eBPF mode is less mature than Cilium's. Antrea has a smaller community and less bare-metal focus. Flannel lacks network policy enforcement entirely. The sovereignty concern around Cisco's acquisition of Isovalent is noted but mitigated by Cilium's Apache 2.0 license and large open-source community. This decision should be revisited if Cilium's open-source governance changes materially.
 
 == Consequences
 
