@@ -1,0 +1,40 @@
+:showtitle:
+:state: proposed
+
+= ADR-0022: Datacenter fabric scaling
+
+Status:: proposed
+Date:: 2026-03-11
+Group:: networking
+Depends-on:: ADR-0002, ADR-0004
+
+== Context
+
+ADR-0004 chose spine-leaf with BGP/EVPN. At 50,000 physical servers (ADR-0002), a single 2-tier leaf-spine CLOS cannot accommodate all servers — switch radix limits how many leaves a spine layer can connect. The question is how the fabric scales beyond a single pod.
+
+== Options
+
+=== Option 1: Multiple independent fabric partitions
+* Pros: each partition is a self-contained 2-tier leaf-spine CLOS and a natural failure domain; partitions can be added incrementally; no super-spine complexity; cross-partition communication via exit/border switches; well-understood operational model
+* Cons: cross-partition traffic goes through exit layer (higher latency than intra-partition); no single flat L3 fabric spanning all servers; partition sizing must be planned
+
+=== Option 2: Single multi-stage CLOS (5-stage with super-spine)
+* Pros: single flat fabric across all servers; optimal east-west bandwidth; well-understood in hyperscale datacenters (Google, Meta)
+* Cons: enormous blast radius; complex to operate and automate; not incrementally deployable; requires custom tooling for provisioning and lifecycle management
+
+=== Option 3: Partition groups with inter-partition spine layer
+* Pros: groups of partitions get low-latency interconnect; better than pure exit-layer routing for cross-partition traffic
+* Cons: additional switch layer to operate; hybrid approach with unclear failure domains; custom topology
+
+== Decision
+
+Multiple independent fabric partitions. Each partition is a self-contained 2-tier leaf-spine CLOS (a group of racks sharing one spine layer). Partitions are the unit of scaling — adding capacity means adding partitions. Cross-partition traffic routes through exit switches. This model provides clear failure domains and incremental growth. The provisioning tool (separate ADR) must natively support this partition-based model.
+
+== Consequences
+
+* Partition sizing must be defined (how many racks/servers per partition)
+* Cross-partition latency is higher than intra-partition — tenant clusters should be placed within a single partition where possible
+* Exit switch capacity must be planned for cross-partition and external traffic
+* Partition placement across AZs (ADR-0009) must be defined
+* Adding capacity means adding partitions, not expanding existing fabrics
+* The provisioning tool must support partition-based fabric management (separate ADR)

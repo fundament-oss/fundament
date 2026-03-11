@@ -7,11 +7,11 @@
 Status:: proposed
 Date:: 2026-03-09
 Group:: hardware
-Depends-on:: ADR-0003, ADR-0004
+Depends-on:: ADR-0003, ADR-0022, ADR-0023
 
 == Context
 
-With bare-metal infrastructure (ADR-0003) and spine-leaf networking (ADR-0004) chosen, we need a tool that provisions servers and manages their lifecycle. At 50,000 servers, manual provisioning is not viable.
+With bare-metal infrastructure (ADR-0003), partition-based fabric scaling (ADR-0022), and VRF-per-tenant network isolation (ADR-0023), we need a tool that provisions both compute and network in an integrated, zero-touch manner. At 50,000 physical servers, manual provisioning is not viable. The provisioning tool must natively implement the fabric and isolation model we chose.
 
 == Options
 
