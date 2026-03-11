@@ -91,10 +91,10 @@ func (c *OrgMemberInviteCmd) Run(ctx *Context) error {
 		return fmt.Errorf("failed to invite member: %w", err)
 	}
 
-	member := resp.Msg.GetMember()
-
 	if ctx.Output == OutputJSON {
-		return PrintJSON(member)
+		return PrintJSON(map[string]string{
+			"invitation_id": resp.Msg.GetInvitationId(),
+		})
 	}
 
 	fmt.Printf("Invited %s with permission %s\n", c.Email, c.Permission)

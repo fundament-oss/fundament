@@ -16,29 +16,34 @@ import (
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization/kube"
+	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/rs/cors"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 )
 
 type Config struct {
-	JWTSecret           []byte
-	CORSAllowedOrigins  []string
-	Clock               clock.Clock
-	KubeProxyMode       string // "mock" (default) or "real"
-	KubeProxyKubeconfig string // path to kubeconfig; only used when KubeProxyMode == "real"
+	JWTSecret            []byte
+	CORSAllowedOrigins   []string
+	Clock                clock.Clock
+	KubeProxyMode        string // "mock" (default) or "real"
+	KubeProxyKubeconfig  string // path to kubeconfig; only used when KubeProxyMode == "real"
+	MockPrometheusClient *prom.MockClient
+	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
 }
 
 type Server struct {
-	config        *Config
-	db            *psqldb.DB
-	queries       *db.Queries
-	logger        *slog.Logger
-	authValidator *auth.Validator
-	authz         *authz.Client
-	clock         clock.Clock
-	kubeClient    kube.KubeClient
-	handler       http.Handler
+	config         *Config
+	db             *psqldb.DB
+	queries        *db.Queries
+	logger         *slog.Logger
+	authValidator  *auth.Validator
+	authz          *authz.Client
+	clock          clock.Clock
+	kubeClient     kube.KubeClient
+	handler        http.Handler
+	mockPromClient *prom.MockClient
+	prometheusURL  string
 }
 
 func newKubeClient(cfg *Config) kube.KubeClient {
@@ -59,14 +64,16 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 	}
 
 	s := &Server{
-		logger:        logger,
-		config:        cfg,
-		db:            database,
-		queries:       db.New(database.Pool),
-		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
-		authz:         authzClient,
-		clock:         clk,
-		kubeClient:    newKubeClient(cfg),
+		logger:         logger,
+		config:         cfg,
+		db:             database,
+		queries:        db.New(database.Pool),
+		authValidator:  auth.NewValidator(cfg.JWTSecret, logger),
+		authz:          authzClient,
+		clock:          clk,
+		kubeClient:     newKubeClient(cfg),
+		mockPromClient: cfg.MockPrometheusClient,
+		prometheusURL:  cfg.PrometheusURL,
 	}
 
 	mux := http.NewServeMux()
@@ -102,6 +109,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		"organization.v1.InviteService",
 		"organization.v1.APIKeyService",
 		"organization.v1.NamespaceService",
+		"organization.v1.MetricsService",
 	)
 	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
 	mux.Handle(reflectPath, reflectHandler)
@@ -126,6 +134,9 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 	mux.Handle("/k8s/", http.HandlerFunc(s.handleClusterProxy))
 
 	// TODO: add PATCH, PUT, DELETE to AllowedMethods when the k8s proxy gains write support.
+	metricsPath, metricsHandler := organizationv1connect.NewMetricsServiceHandler(s, interceptors)
+	mux.Handle(metricsPath, metricsHandler)
+
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},

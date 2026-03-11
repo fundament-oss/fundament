@@ -33,6 +33,8 @@ spec:
             {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
             - name: LOG_LEVEL
               value: {{ .Values.organizationApi.logLevel }}
+            - name: PROMETHEUS_URL
+              value: {{ $.Values.organizationApi.prometheusURL }}
             {{- if $.Values.externalUrls.corsAllowedOrigins }}
             - name: CORS_ALLOWED_ORIGINS
               value: {{ $.Values.externalUrls.corsAllowedOrigins }}

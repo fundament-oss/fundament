@@ -16,11 +16,13 @@ type ClusterCmd struct {
 }
 
 // ClusterListCmd handles the cluster list command.
-type ClusterListCmd struct{}
+type ClusterListCmd struct {
+	OrgID string `help:"Organization ID." required:"" name:"org"`
+}
 
 // Run executes the cluster list command.
 func (c *ClusterListCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfig(WithOrg(c.OrgID))
 	if err != nil {
 		return err
 	}
@@ -56,12 +58,13 @@ func (c *ClusterListCmd) Run(ctx *Context) error {
 
 // ClusterGetCmd handles the cluster get command.
 type ClusterGetCmd struct {
+	OrgID     string `help:"Organization ID." required:"" name:"org"`
 	ClusterID string `arg:"" help:"Cluster ID to get."`
 }
 
 // Run executes the cluster get command.
 func (c *ClusterGetCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfig(WithOrg(c.OrgID))
 	if err != nil {
 		return err
 	}

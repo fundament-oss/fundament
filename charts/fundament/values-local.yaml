@@ -33,7 +33,8 @@ organizationApi:
   enabled: true
   replicas: 1
   logLevel: debug
-  kubeProxyMode: "mock"
+  kubeProxyMode: mock
+  prometheusURL: mock
 
 consoleFrontend:
   enabled: true

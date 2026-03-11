@@ -708,6 +708,7 @@ END;]]> </definition>
 	<column name="shoot_status_updated">
 		<type name="timestamptz" length="0"/>
 	</column>
+
 	<constraint name="clusters_pk" type="pk-constr" table="tenant.clusters">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
