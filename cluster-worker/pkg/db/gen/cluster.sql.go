@@ -115,7 +115,7 @@ SELECT
     tenant.clusters.name,
     tenant.clusters.deleted,
     tenant.organizations.name AS organization_name,
-    COALESCE(tenant.clusters.outbox_status = 'completed', false) AS has_completed_outbox
+    COALESCE(tenant.clusters.outbox_status = 'completed', false)::boolean AS has_completed_outbox
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
@@ -130,7 +130,7 @@ type ClusterListActiveRow struct {
 	Name               string
 	Deleted            pgtype.Timestamptz
 	OrganizationName   string
-	HasCompletedOutbox interface{}
+	HasCompletedOutbox bool
 }
 
 // Used by periodic reconciliation to compare with Gardener state.
