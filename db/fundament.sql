@@ -571,7 +571,6 @@ CREATE TABLE tenant.clusters (
 	shoot_status text,
 	shoot_status_message text,
 	shoot_status_updated timestamptz,
-	prometheus_url text NOT NULL DEFAULT '',
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
 	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );

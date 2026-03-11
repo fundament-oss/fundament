@@ -14,7 +14,7 @@ db:
   enabled: true
   instances: 1
   storageSize: 1Gi
-  reset: true
+  reset: false
   insertTestData: true
   exposePort: 54328
   postgresql:

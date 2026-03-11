@@ -487,7 +487,6 @@ export default class UsageComponent implements OnInit {
     this.networkTxSeriesData = r.networkTransmitMbS.map((s) => s.value);
   }
 
-
   private dateRange(): { start: Timestamp; end: Timestamp } {
     const start = timestampFromDate(new Date(this.dateFrom));
     const end = timestampFromDate(new Date(`${this.dateTo}T23:59:59`));
