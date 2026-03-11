@@ -12,21 +12,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Cluster_List_Unauthenticated(t *testing.T) {
+func Test_Cluster_Get_Unauthenticated(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
 
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.ListClusters(context.Background(), connect.NewRequest(organizationv1.ListClustersRequest_builder{}.Build()))
+	_, err := client.GetCluster(context.Background(), connect.NewRequest(organizationv1.GetClusterRequest_builder{
+		ClusterId: uuid.New().String(),
+	}.Build()))
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeUnauthenticated, connectErr.Code())
 }
 
-func Test_Cluster_List(t *testing.T) {
+func Test_Cluster_Get(t *testing.T) {
 	t.Parallel()
 
 	orgID := uuid.New()
@@ -53,25 +55,28 @@ func Test_Cluster_List(t *testing.T) {
 	createReq.Header().Set("Authorization", "Bearer "+token)
 	createReq.Header().Set("Fun-Organization", orgID.String())
 
-	_, err := client.CreateCluster(context.Background(), createReq)
+	createRes, err := client.CreateCluster(context.Background(), createReq)
 	require.NoError(t, err)
 
-	listReq := connect.NewRequest(organizationv1.ListClustersRequest_builder{}.Build())
-	listReq.Header().Set("Authorization", "Bearer "+token)
-	listReq.Header().Set("Fun-Organization", orgID.String())
+	clusterID := createRes.Msg.GetClusterId()
 
-	res, err := client.ListClusters(context.Background(), listReq)
+	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+		ClusterId: clusterID,
+	}.Build())
+	getReq.Header().Set("Authorization", "Bearer "+token)
+	getReq.Header().Set("Fun-Organization", orgID.String())
+
+	res, err := client.GetCluster(context.Background(), getReq)
 	require.NoError(t, err)
-	require.Len(t, res.Msg.GetClusters(), 1)
 
-	cluster := res.Msg.GetClusters()[0]
+	cluster := res.Msg.GetCluster()
+	assert.Equal(t, clusterID, cluster.GetId())
 	assert.Equal(t, "test-cluster", cluster.GetName())
 	assert.Equal(t, "eu-west-1", cluster.GetRegion())
-	// TODO: kubernetes version missing in cluster?
 	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING, cluster.GetStatus())
 }
 
-func Test_Cluster_List_MultiOrg(t *testing.T) {
+func Test_Cluster_Get_OtherOrg(t *testing.T) {
 	t.Parallel()
 
 	orgAID := uuid.New()
@@ -100,22 +105,20 @@ func Test_Cluster_List_MultiOrg(t *testing.T) {
 	createReq.Header().Set("Authorization", "Bearer "+token)
 	createReq.Header().Set("Fun-Organization", orgAID.String())
 
-	_, err := client.CreateCluster(context.Background(), createReq)
+	createRes, err := client.CreateCluster(context.Background(), createReq)
 	require.NoError(t, err)
 
-	listReq := connect.NewRequest(organizationv1.ListClustersRequest_builder{}.Build())
-	listReq.Header().Set("Authorization", "Bearer "+token)
-	listReq.Header().Set("Fun-Organization", orgBID.String())
+	clusterID := createRes.Msg.GetClusterId()
 
-	res, err := client.ListClusters(context.Background(), listReq)
-	require.NoError(t, err)
-	assert.Empty(t, res.Msg.GetClusters())
+	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+		ClusterId: clusterID,
+	}.Build())
+	getReq.Header().Set("Authorization", "Bearer "+token)
+	getReq.Header().Set("Fun-Organization", orgBID.String())
 
-	listReqOrgA := connect.NewRequest(organizationv1.ListClustersRequest_builder{}.Build())
-	listReqOrgA.Header().Set("Authorization", "Bearer "+token)
-	listReqOrgA.Header().Set("Fun-Organization", orgAID.String())
+	_, err = client.GetCluster(context.Background(), getReq)
 
-	resOrgA, err := client.ListClusters(context.Background(), listReqOrgA)
-	require.NoError(t, err)
-	assert.Len(t, resOrgA.Msg.GetClusters(), 1)
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
 }
