@@ -1,0 +1,46 @@
+:showtitle:
+:state: proposed
+
+= ADR-0022: Datacenter fabric scaling
+
+Status:: proposed
+Date:: 2026-03-11
+Group:: networking
+Depends-on:: ADR-0002, ADR-0004
+
+== Context
+
+ADR-0004 chose spine-leaf with BGP/EVPN. At 50,000 physical servers (ADR-0002), a single 2-tier leaf-spine CLOS cannot accommodate all servers: switch radix limits how many leaves a spine layer can connect. At the same time, tenant workloads include large Kubernetes clusters, and a cluster placed in a partition must be able to grow later without being forced to move. A 2-tier partition does not leave enough headroom once several clusters share it. Confining each partition to a small 2-tier pod is therefore not workable. The question is how the fabric scales beyond a single pod while still giving clusters room to grow inside one flat L3 fabric.
+
+== Options
+
+=== Option 1: Multiple independent 2-tier fabric partitions
+* Pros: each partition is a self-contained 2-tier leaf-spine CLOS and a natural failure domain; partitions can be added incrementally; no super-spine complexity; cross-partition communication via exit/border switches; well-understood operational model
+* Cons: partition size capped by spine radix, leaving too little headroom for co-located Kubernetes clusters to scale up in place; cross-partition traffic goes through exit layer (higher latency than intra-partition); no single flat L3 fabric spanning all servers; partition sizing must be planned
+
+=== Option 2: Single multi-stage CLOS (5-stage with super-spine)
+* Pros: single flat fabric across all servers; optimal east-west bandwidth; well-understood in hyperscale datacenters (Google, Meta)
+* Cons: enormous blast radius; complex to operate and automate; not incrementally deployable; requires custom tooling for provisioning and lifecycle management
+
+=== Option 3: Partition groups with inter-partition spine layer
+* Pros: groups of partitions get low-latency interconnect; better than pure exit-layer routing for cross-partition traffic
+* Cons: additional switch layer to operate; hybrid approach with unclear failure domains; custom topology
+
+=== Option 4: Multiple partitions, each a multi-tier (4/5/6-tier) CLOS
+* Pros: combines Option 1 and Option 2. Partitions remain the unit of failure isolation and incremental growth, while each partition is itself a multi-tier CLOS (4/5/6-tier) large enough to host very large Kubernetes clusters inside one flat L3 fabric; blast radius bounded by the partition, not the whole fleet; no fleet-wide super-spine; aligns with the partition model the provisioning tool (ADR-0005) already needs to support
+* Cons: per-partition complexity higher than a 2-tier spine-leaf pod, with more switch tiers, more cabling, and more BGP sessions to operate; provisioning tooling must natively handle multi-tier CLOS fabrics within a partition; partition sizing trade-off becomes richer (tier count per partition is now a parameter)
+
+== Decision
+
+Multiple independent fabric partitions, each built as a multi-tier (4/5/6-tier) CLOS. Partitions are the unit of scaling and the outer failure domain, so adding capacity means adding partitions. Inside a partition, the fabric is a multi-tier CLOS sized so a large Kubernetes cluster fits in a single flat L3 fabric without crossing partition boundaries. Cross-partition traffic routes through exit switches. The exact tier count per partition (4, 5, or 6) is chosen per deployment based on target cluster size and switch radix, not fixed globally. The provisioning tool (ADR-0005) must natively support this partition-based multi-tier model.
+
+== Consequences
+
+* Partition sizing must be defined per deployment, including how many tiers each partition uses (4/5/6) and the resulting server capacity
+* Large Kubernetes clusters can be placed inside a single partition, avoiding cross-partition east-west traffic for the common case
+* Cross-partition latency is higher than intra-partition, so clusters should be placed within a single partition where possible
+* Exit switch capacity must be planned for cross-partition and external traffic
+* Partition placement across AZs (ADR-0009) must be defined
+* Adding capacity means adding partitions, not expanding existing fabrics
+* The provisioning tool must support partition-based multi-tier CLOS fabric management (ADR-0005)
+* Operational tooling and runbooks must cover multi-tier CLOS within a partition, not just 2-tier leaf-spine

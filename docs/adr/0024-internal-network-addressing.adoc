@@ -1,0 +1,38 @@
+:showtitle:
+:state: proposed
+
+= ADR-0024: Internal network addressing
+
+Status:: proposed
+Date:: 2026-03-11
+Group:: networking
+Depends-on:: ADR-0004, ADR-0013
+
+== Context
+
+The platform must choose an IP addressing model for internal networking: the pod network, service network, and inter-node communication within the CLOS fabric. Government policy promotes IPv6 adoption, but this applies to externally reachable services, not necessarily to internal infrastructure. The fabric already uses IPv6 link-local addresses for BGP Unnumbered peering (RFC 5549), so the underlay is IPv6-capable regardless of this decision. The question is what addressing the pod and service CIDRs use.
+
+== Options
+
+=== Option 1: IPv4 internally
+* Pros: all Kubernetes tooling, operators, and CNI plugins are mature on IPv4; simpler troubleshooting and operational model; no dual-stack complexity; address space is not a constraint for internal networks (RFC 1918); metal-stack and Cilium are proven on IPv4
+* Cons: does not satisfy a strict interpretation of "everything must be IPv6"; future migration to dual-stack requires re-addressing
+
+=== Option 2: IPv6 only internally
+* Pros: future-proof; unlimited address space; aligns with a strict reading of government IPv6 policy
+* Cons: many Kubernetes operators and third-party tools still assume IPv4; Helm charts and container images often hardcode IPv4 assumptions; debugging is harder (longer addresses, less familiar to most engineers); some legacy workloads cannot run on IPv6-only
+
+=== Option 3: Dual-stack (IPv4 + IPv6) internally
+* Pros: supports both; tenants can choose; most flexible
+* Cons: doubles the operational surface (two address families to monitor, troubleshoot, and secure); dual-stack Kubernetes is supported but adds complexity to network policies, service discovery, and CNI configuration; every component must be tested on both stacks; increases attack surface
+
+== Decision
+
+IPv4 internally. The pod network, service network, and internal communication use IPv4. Government IPv6 policy applies to externally reachable services, not internal infrastructure. The fabric underlay already uses IPv6 link-local for BGP peering, so the infrastructure is not "IPv6-unaware." Dual-stack was considered but rejected: the operational complexity of maintaining two address families internally is not justified when the internal address space is not constrained. IPv6 support for external-facing services (ingress, load balancing) is a separate concern handled at the ingress layer.
+
+== Consequences
+
+* Pod and service CIDRs are IPv4 (RFC 1918)
+* Internal tooling, monitoring, and network policies only need to handle IPv4
+* IPv6 at the ingress/load balancer layer is a separate decision (bare-metal load balancing ADR)
+* Migration to dual-stack remains possible in the future if requirements change, but is not designed for now

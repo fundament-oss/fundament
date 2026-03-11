@@ -1,0 +1,40 @@
+:showtitle:
+:state: proposed
+
+= ADR-0023: Tenant network isolation
+
+Status:: proposed
+Date:: 2026-03-11
+Group:: networking
+Depends-on:: ADR-0004, ADR-0008
+
+== Context
+
+ADR-0008 requires dedicated physical clusters per tenant and states that network isolation must be enforced at the physical network level. With a spine-leaf BGP/EVPN fabric (ADR-0004), the question is how tenant traffic is isolated on the wire.
+
+== Options
+
+=== Option 1: VRF per tenant with EVPN/VXLAN
+* Pros: each tenant gets a dedicated VRF (routing table) on the leaf switches; complete L3 isolation at the fabric level — no tenant can see another tenant's traffic; EVPN distributes VRF state automatically across the fabric; VXLAN provides the overlay transport; scales to thousands of tenants (24-bit VNI space); per-tenant firewall for external connectivity provides explicit control over what enters/leaves the tenant boundary
+* Cons: VRF state on leaf switches grows with number of tenants; per-tenant firewall consumes capacity; cross-tenant communication requires explicit route leaking
+
+=== Option 2: VLAN-based isolation
+* Pros: simple and well-understood; no overlay required
+* Cons: limited to 4094 VLANs — does not scale; L2 only, no L3 isolation; spanning tree dependency
+
+=== Option 3: Network policy only (Cilium/CNI level)
+* Pros: software-defined; flexible; no switch configuration needed
+* Cons: isolation is only within the cluster, not between clusters on the wire; a compromised node could see other tenants' traffic on the physical network; does not satisfy EUCS SEAL-4 requirements for infrastructure-level isolation
+
+== Decision
+
+VRF per tenant with EVPN/VXLAN. Each tenant's traffic is confined to its own VRF, distributed across the CLOS fabric via EVPN Type-5 routes over VXLAN. Per-tenant firewalls provide controlled external connectivity with explicit route leaking between tenant VRF and Internet VRF. Combined with dedicated physical clusters (ADR-0008), tenant isolation is enforced at both compute and network level. The provisioning tool (separate ADR) must implement this model natively.
+
+== Consequences
+
+* Network isolation is a property of the infrastructure, not a software policy
+* Each tenant consumes a VRF and at least one VNI on the fabric
+* Per-tenant firewalls are required for external connectivity
+* Cilium network policies (ADR-0013) provide additional in-cluster isolation but are not the primary tenant boundary
+* Cross-tenant communication requires explicit route leaking — default is full isolation
+* The provisioning tool must automate VRF lifecycle as part of tenant provisioning (separate ADR)
