@@ -82,7 +82,9 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Confirm cluster exists and belongs to the organization (RLS enforces isolation).
+	// Confirm cluster exists and belongs to the organization. OpenFGA permissions can only exist
+	// for real clusters, but RLS ensures the query returns nothing if the cluster belongs to a
+	// different org, giving a clean 404 instead of proxying to an unauthorised cluster.
 	_, err = s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

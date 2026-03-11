@@ -50,6 +50,9 @@ func (m *MockKubeClient) Do(_ context.Context, _, path string, _ io.Reader) (int
 
 // RealKubeClient connects to a real Kubernetes API server using a kubeconfig.
 // The HTTP client and host URL are initialized lazily on the first request.
+// Auth is handled by the transport created via rest.HTTPClientFor, which supports
+// bearer tokens, client certificates, and basic auth from the kubeconfig.
+// Exec-based credential plugins (e.g. aws-iam-authenticator) are not supported.
 type RealKubeClient struct {
 	KubeconfigPath string
 

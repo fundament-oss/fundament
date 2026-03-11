@@ -15,11 +15,11 @@ export default class KubeClusterContextService {
 
   isLoadingClusters = signal(true);
 
-  private loadStarted = false;
+  private loadStarted = signal(false);
 
   async loadClusters(): Promise<void> {
-    if (this.loadStarted) return;
-    this.loadStarted = true;
+    if (this.loadStarted()) return;
+    this.loadStarted.set(true);
     try {
       const response = await firstValueFrom(
         this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),

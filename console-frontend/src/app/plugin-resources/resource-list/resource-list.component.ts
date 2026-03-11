@@ -97,12 +97,12 @@ export default class ResourceListComponent implements OnInit {
     const crd = this.crdDef();
     if (crd) return kindToLabel(crd.kind);
 
-    // Fallback: look up the menu entry by plural to get the proper PascalCase CRD name
+    // Fallback: look up the menu entry by CRD kind to get the proper PascalCase CRD name
     const plugin = this.plugin();
     const resourceKind = this.resourceKind();
     if (plugin) {
       const allItems = [...(plugin.menu.organization ?? []), ...(plugin.menu.project ?? [])];
-      const item = allItems.find((i) => i.label === resourceKind);
+      const item = allItems.find((i) => i.crd === resourceKind);
       if (item) return kindToLabel(item.crd);
     }
     return kindToLabel(resourceKind);
@@ -149,7 +149,7 @@ export default class ResourceListComponent implements OnInit {
 
     try {
       await this.registry.loadCrdsForPlugin(this.pluginName(), clusterId, orgApiUrl, orgId);
-      const crd = this.registry.getCrdByPlural(this.pluginName(), this.resourceKind());
+      const crd = this.registry.getCrd(this.pluginName(), this.resourceKind());
       this.crdDef.set(crd);
 
       if (crd) {

@@ -89,7 +89,6 @@ export interface PluginNavGroup {
 export interface PluginNavItem {
   label: string;
   crdKind: string;
-  crdLabel: string;
   icon?: string;
 }
 

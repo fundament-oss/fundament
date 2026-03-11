@@ -126,7 +126,7 @@ export default class ResourceDetailComponent implements OnInit {
 
     try {
       await this.registry.loadCrdsForPlugin(this.pluginName(), clusterId, orgApiUrl, orgId);
-      const crd = this.registry.getCrdByPlural(this.pluginName(), this.resourceKind());
+      const crd = this.registry.getCrd(this.pluginName(), this.resourceKind());
       this.crdDef.set(crd);
 
       if (crd) {

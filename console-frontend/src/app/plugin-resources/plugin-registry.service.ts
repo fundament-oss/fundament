@@ -74,6 +74,9 @@ export default class PluginRegistryService {
   // Tracks which plugins have had their CRDs fully fetched
   private loadedCrdPlugins = signal<ReadonlySet<string>>(new Set());
 
+  // Tracks which plugins had one or more CRD fetch failures
+  private failedCrdPlugins = signal<ReadonlySet<string>>(new Set());
+
   private readonly pluginFiles = [
     '/plugins/cert-manager/cert-manager.plugin.yaml',
     '/plugins/cnpg/cnpg.plugin.yaml',
@@ -117,6 +120,8 @@ export default class PluginRegistryService {
 
     const base = orgApiUrl.replace(/\/$/, '');
 
+    let failureCount = 0;
+
     await Promise.allSettled(
       plugin.crds.map(async (crdName) => {
         const cacheKey = `${pluginName}/${crdName}`;
@@ -128,6 +133,7 @@ export default class PluginRegistryService {
           headers: { 'Fun-Organization': orgId },
         });
         if (!response.ok) {
+          failureCount++;
           // eslint-disable-next-line no-console
           console.error(`[PluginRegistry] Failed to fetch CRD ${crdName}: ${response.status}`);
           return;
@@ -141,6 +147,9 @@ export default class PluginRegistryService {
       }),
     );
 
+    if (failureCount > 0) {
+      this.failedCrdPlugins.update((prev) => new Set([...prev, pluginName]));
+    }
     this.loadedCrdPlugins.update((prev) => new Set([...prev, pluginName]));
   }
 
@@ -158,6 +167,10 @@ export default class PluginRegistryService {
 
   areCrdsLoaded(pluginName: string): boolean {
     return this.loadedCrdPlugins().has(pluginName);
+  }
+
+  hasCrdLoadError(pluginName: string): boolean {
+    return this.failedCrdPlugins().has(pluginName);
   }
 
   allPlugins = this.plugins.asReadonly();

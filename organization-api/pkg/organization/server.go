@@ -125,6 +125,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 
 	mux.Handle("/k8s/", http.HandlerFunc(s.handleClusterProxy))
 
+	// TODO: add PATCH, PUT, DELETE to AllowedMethods when the k8s proxy gains write support.
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
