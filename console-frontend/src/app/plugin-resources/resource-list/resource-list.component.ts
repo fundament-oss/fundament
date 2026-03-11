@@ -12,11 +12,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerEye, tablerDatabaseOff } from '@ng-icons/tabler-icons';
-import { create } from '@bufbuild/protobuf';
-import { firstValueFrom } from 'rxjs';
-import { CLUSTER } from '../../../connect/tokens';
-import { ListClustersRequestSchema } from '../../../generated/v1/cluster_pb';
-import type { ListClustersResponse_ClusterSummary as ClusterSummary } from '../../../generated/v1/cluster_pb';
+import KubeClusterContextService from '../kube-cluster-context.service';
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
 import { ConfigService } from '../../config.service';
@@ -65,7 +61,7 @@ export default class ResourceListComponent implements OnInit {
 
   private titleService = inject(TitleService);
 
-  private clusterClient = inject(CLUSTER);
+  protected clusterContext = inject(KubeClusterContextService);
 
   private configService = inject(ConfigService);
 
@@ -80,12 +76,6 @@ export default class ResourceListComponent implements OnInit {
   private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
 
   plugin = computed(() => this.registry.getPlugin(this.pluginName()));
-
-  clusters = signal<ClusterSummary[]>([]);
-
-  selectedClusterId = signal<string>('');
-
-  isLoadingClusters = signal(true);
 
   isLoading = signal(false);
 
@@ -126,7 +116,7 @@ export default class ResourceListComponent implements OnInit {
     effect(() => {
       const pluginName = this.pluginName();
       const resourceKind = this.resourceKind();
-      const clusterId = this.selectedClusterId();
+      const clusterId = this.clusterContext.selectedClusterId();
       if (pluginName && resourceKind && clusterId) {
         untracked(() => {
           this.loadCrdsAndResources(clusterId);
@@ -136,27 +126,15 @@ export default class ResourceListComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    await this.loadClusters();
-  }
-
-  async loadClusters(): Promise<void> {
     try {
-      const response = await firstValueFrom(
-        this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),
-      );
-      this.clusters.set(response.clusters);
-      if (response.clusters.length > 0) {
-        this.selectedClusterId.set(response.clusters[0].id);
-      }
+      await this.clusterContext.loadClusters();
     } catch {
       this.errorMessage.set('Failed to load clusters.');
-    } finally {
-      this.isLoadingClusters.set(false);
     }
   }
 
   onClusterChange(clusterId: string): void {
-    this.selectedClusterId.set(clusterId);
+    this.clusterContext.onClusterChange(clusterId);
   }
 
   private async loadCrdsAndResources(clusterId: string): Promise<void> {

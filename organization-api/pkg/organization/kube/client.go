@@ -14,36 +14,37 @@ import (
 
 // KubeClient abstracts access to a Kubernetes API server.
 type KubeClient interface {
-	Do(ctx context.Context, method, path string, body io.Reader) (statusCode int, responseBody io.Reader, err error)
+	Do(ctx context.Context, method, path string, body io.Reader) (statusCode int, responseBody io.ReadCloser, err error)
 }
 
 // MockKubeClient returns hardcoded Kubernetes API responses for development and testing.
 type MockKubeClient struct{}
 
-func (m *MockKubeClient) Do(_ context.Context, _, path string, _ io.Reader) (int, io.Reader, error) {
+func (m *MockKubeClient) Do(_ context.Context, _, path string, _ io.Reader) (int, io.ReadCloser, error) {
+	r := func(s string) io.ReadCloser { return io.NopCloser(strings.NewReader(s)) }
 	switch {
 	case strings.Contains(path, "/customresourcedefinitions/"):
 		name := path[strings.LastIndex(path, "/")+1:]
 		if crd := mockCRDForName(name); crd != "" {
-			return 200, strings.NewReader(crd), nil
+			return 200, r(crd), nil
 		}
-		return 404, strings.NewReader(`{"message":"not found"}`), nil
+		return 404, r(`{"message":"not found"}`), nil
 	case strings.Contains(path, "customresourcedefinitions"):
-		return 200, strings.NewReader(mockCRDListJSON), nil
+		return 200, r(mockCRDListJSON), nil
 	case strings.HasSuffix(path, "/certificates"):
-		return 200, strings.NewReader(mockCertificateListJSON), nil
+		return 200, r(mockCertificateListJSON), nil
 	case strings.HasSuffix(path, "/clusterissuers"):
-		return 200, strings.NewReader(mockClusterIssuerListJSON), nil
+		return 200, r(mockClusterIssuerListJSON), nil
 	case strings.HasSuffix(path, "/issuers"):
-		return 200, strings.NewReader(mockIssuerListJSON), nil
+		return 200, r(mockIssuerListJSON), nil
 	case strings.HasSuffix(path, "/databases"):
-		return 200, strings.NewReader(mockDatabaseListJSON), nil
+		return 200, r(mockDatabaseListJSON), nil
 	case strings.HasSuffix(path, "/backups"):
-		return 200, strings.NewReader(mockBackupListJSON), nil
+		return 200, r(mockBackupListJSON), nil
 	case strings.HasSuffix(path, "/subscriptions"):
-		return 200, strings.NewReader(mockSubscriptionListJSON), nil
+		return 200, r(mockSubscriptionListJSON), nil
 	default:
-		return 200, strings.NewReader(mockEmptyList), nil
+		return 200, r(mockEmptyList), nil
 	}
 }
 
@@ -73,7 +74,7 @@ func (r *RealKubeClient) init() {
 	r.host = strings.TrimRight(cfg.Host, "/")
 }
 
-func (r *RealKubeClient) Do(ctx context.Context, method, path string, body io.Reader) (int, io.Reader, error) {
+func (r *RealKubeClient) Do(ctx context.Context, method, path string, body io.Reader) (int, io.ReadCloser, error) {
 	r.once.Do(r.init)
 	if r.initErr != nil {
 		return 0, nil, r.initErr

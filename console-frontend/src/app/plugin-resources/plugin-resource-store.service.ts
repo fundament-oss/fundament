@@ -22,7 +22,9 @@ export default class PluginResourceStoreService {
       credentials: 'include',
       headers: { 'Fun-Organization': orgId },
     });
-    if (!response.ok) return;
+    if (!response.ok) {
+      throw new Error(`Failed to fetch resources for ${crd.kind}: ${response.status}`);
+    }
 
     const data = (await response.json()) as { items?: KubeResource[] };
     this.resourceCache.set(cacheKey, data.items ?? []);

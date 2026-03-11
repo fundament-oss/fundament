@@ -11,12 +11,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerArrowLeft } from '@ng-icons/tabler-icons';
-import { create } from '@bufbuild/protobuf';
-import { firstValueFrom } from 'rxjs';
-import { CLUSTER } from '../../../connect/tokens';
-import { ListClustersRequestSchema } from '../../../generated/v1/cluster_pb';
-import type { ListClustersResponse_ClusterSummary as ClusterSummary } from '../../../generated/v1/cluster_pb';
 import FieldRendererComponent from '../field-renderers/field-renderer.component';
+import KubeClusterContextService from '../kube-cluster-context.service';
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
 import { ConfigService } from '../../config.service';
@@ -63,7 +59,7 @@ export default class ResourceDetailComponent implements OnInit {
 
   private titleService = inject(TitleService);
 
-  private clusterClient = inject(CLUSTER);
+  private clusterContext = inject(KubeClusterContextService);
 
   private configService = inject(ConfigService);
 
@@ -78,12 +74,6 @@ export default class ResourceDetailComponent implements OnInit {
   private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
 
   private resourceId = computed(() => this.routeParams().get('resourceId') ?? '');
-
-  clusters = signal<ClusterSummary[]>([]);
-
-  selectedClusterId = signal<string>('');
-
-  isLoadingClusters = signal(true);
 
   isLoading = signal(false);
 
@@ -114,30 +104,16 @@ export default class ResourceDetailComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    await this.loadClusters();
-  }
-
-  async loadClusters(): Promise<void> {
     try {
-      const response = await firstValueFrom(
-        this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),
-      );
-      this.clusters.set(response.clusters);
-      if (response.clusters.length > 0) {
-        const firstId = response.clusters[0].id;
-        this.selectedClusterId.set(firstId);
-        await this.loadCrdAndResource(firstId);
-      }
+      await this.clusterContext.loadClusters();
     } catch {
       this.errorMessage.set('Failed to load clusters.');
-    } finally {
-      this.isLoadingClusters.set(false);
+      return;
     }
-  }
-
-  async onClusterChange(clusterId: string): Promise<void> {
-    this.selectedClusterId.set(clusterId);
-    await this.loadCrdAndResource(clusterId);
+    const clusterId = this.clusterContext.selectedClusterId();
+    if (clusterId) {
+      await this.loadCrdAndResource(clusterId);
+    }
   }
 
   private async loadCrdAndResource(clusterId: string): Promise<void> {
