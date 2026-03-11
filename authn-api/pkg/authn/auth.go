@@ -18,6 +18,7 @@ import (
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )
 
@@ -54,11 +55,12 @@ type AuthnServer struct {
 	validator      *auth.Validator
 	cookieBuilder  *auth.CookieBuilder
 	gardenerClient GardenerClient
+	authz          *authz.Client
 }
 
 // New creates a new AuthnServer.
 // gardenerClient may be nil if cluster token support is not enabled.
-func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, gardenerClient GardenerClient) (*AuthnServer, error) {
+func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, gardenerClient GardenerClient, authzClient *authz.Client) (*AuthnServer, error) {
 	return &AuthnServer{
 		config:         cfg,
 		logger:         logger,
@@ -70,6 +72,7 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		validator:      auth.NewValidator(cfg.JWTSecret, logger),
 		cookieBuilder:  auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure),
 		gardenerClient: gardenerClient,
+		authz:          authzClient,
 	}, nil
 }
 

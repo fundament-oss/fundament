@@ -27,6 +27,7 @@ import (
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -34,6 +35,7 @@ import (
 
 type config struct {
 	Database           psqldb.Config
+	OpenFGA            authz.Config
 	JWTSecret          string        `env:"JWT_SECRET,required,notEmpty" `
 	OIDCIssuer         string        `env:"OIDC_ISSUER,required,notEmpty" envDefault:"http://localhost:5556"`
 	OIDCDiscoveryURL   string        `env:"OIDC_DISCOVERY_URL"` // URL to fetch OIDC discovery document (defaults to OIDCIssuer)
@@ -132,6 +134,18 @@ func run() error {
 
 	logger.Debug("database connected")
 
+	logger.Debug("connecting to OpenFGA",
+		"api_url", cfg.OpenFGA.APIURL,
+		"store_id", cfg.OpenFGA.StoreID,
+	)
+
+	authzClient, err := authz.New(cfg.OpenFGA)
+	if err != nil {
+		return fmt.Errorf("failed to create OpenFGA client: %w", err)
+	}
+
+	logger.Debug("OpenFGA client connected")
+
 	// Create session store for OAuth state management
 	sessionStore := authn.NewSessionStore([]byte(cfg.JWTSecret))
 	sessionStore.ConfigureOptions(cfg.CookieDomain, cfg.CookieSecure)
@@ -163,7 +177,7 @@ func run() error {
 		FrontendURL:  cfg.FrontendURL,
 	}
 
-	server, err := authn.New(logger, authnCfg, oauth2Config, verifier, sessionStore, db, gardenerClient)
+	server, err := authn.New(logger, authnCfg, oauth2Config, verifier, sessionStore, db, gardenerClient, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create authn api: %w", err)
 	}

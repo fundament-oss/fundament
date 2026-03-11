@@ -71,11 +71,12 @@ type namespace
 type api_key
   relations
     define owner: [organization]
-    define creator: [user, user with is_not_expired]
+    define creator: [user]
+    define usable_by: [user, user with is_not_expired]
     define can_view: creator or admin from owner
     define can_edit: creator or admin from owner
     define can_delete: creator or admin from owner
-    define can_use: creator
+    define can_use: usable_by
 
 type install
   relations

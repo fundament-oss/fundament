@@ -21,5 +21,5 @@ WHERE id = $1 AND user_id = $2 AND deleted IS NULL AND revoked IS NULL;
 
 -- name: APIKeyDelete :execrows
 UPDATE authn.api_keys
-SET deleted = NOW()
+SET deleted = NOW(), expires = NOW()
 WHERE id = $1 AND user_id = $2 AND deleted IS NULL;
