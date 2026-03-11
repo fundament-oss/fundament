@@ -1,0 +1,39 @@
+:showtitle:
+:sidebar-order: 9
+:state: proposed
+
+= ADR-0009: Availability zones
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: cross-cutting
+Depends-on:: ADR-0002, ADR-0003
+
+== Context
+
+Government workloads require high availability and disaster resilience. A single datacenter is a single point of failure (power, cooling, network, physical incidents). The number of availability zones determines the resilience model, the complexity of data replication, and the network architecture between sites.
+
+== Options
+
+=== Option 1: Single AZ (1 datacenter)
+* Pros: simplest operations, no cross-site networking, no replication latency
+* Cons: single point of failure, unacceptable for government continuity requirements
+
+=== Option 2: 2 AZs
+* Pros: survives single-site failure, simpler than 3-site
+* Cons: split-brain risk for distributed systems (no quorum possible), failover capacity requires 2x provisioning
+
+=== Option 3: 3+ AZs
+* Pros: quorum-based consensus possible (etcd, Ceph, etc.), survives single-site failure without split-brain, capacity can be distributed (each site runs at ~66% instead of 50%)
+* Cons: cross-site network complexity, data replication across 3 sites, higher infrastructure investment
+
+== Decision
+
+Minimum 3 availability zones across physically separate government datacenters (ODCs). Three is the minimum for quorum-based distributed systems. Each AZ must be independently operational (separate power, cooling, network uplinks). Gardener Seed clusters, etcd, and storage replication all require odd-numbered site counts for consensus.
+
+== Consequences
+
+* Cross-AZ networking must be low-latency and high-bandwidth (separate ADR)
+* Storage replication strategy must span 3 AZs (separate ADR)
+* Gardener Seed placement across AZs needs to be defined
+* Each AZ must have sufficient capacity to absorb failure of one other AZ

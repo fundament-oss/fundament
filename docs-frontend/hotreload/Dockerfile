@@ -10,16 +10,14 @@ RUN bun install --frozen-lockfile
 # Copy source files
 COPY docs-frontend/ .
 
-# Copy FUNs from the main repo
-COPY funs/ ./src/content/docs/funs/
-
-# Copy docs from the main repo and create a docs subdirectory
-RUN mkdir -p ./src/content/docs/docs
-COPY docs/ ./src/content/docs/docs/
-
-# Serve docs assets statically to avoid Astro/Vite processing large SVGs
-COPY docs/assets/ ./public/assets/
-RUN find ./src/content/docs/docs -name '*.md' -exec sed -i 's|(assets/|(/assets/|g' {} +
+# Copy docs, FUNs, and ADRs into their respective content directories
+# Serve assets statically to avoid Astro/Vite processing large SVGs
+COPY docs/ /tmp/docs/
+RUN mv /tmp/docs/funs ./src/content/docs/funs \
+ && mv /tmp/docs/adr ./src/content/docs/adr \
+ && cp -r /tmp/docs/assets public/assets \
+ && mv /tmp/docs ./src/content/docs/docs \
+ && find ./src/content/docs/docs -name '*.md' -exec sed -i 's|(assets/|(/assets/|g' {} +
 
 # Expose Astro dev server port (using 80 to match production service port)
 EXPOSE 80

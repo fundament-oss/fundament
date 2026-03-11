@@ -1,0 +1,42 @@
+:showtitle:
+:sidebar-order: 5
+:state: proposed
+
+= ADR-0005: Bare-metal provisioning tool
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: hardware
+Depends-on:: ADR-0003, ADR-0004
+
+== Context
+
+With bare-metal infrastructure (ADR-0003) and spine-leaf networking (ADR-0004) chosen, we need a tool that provisions servers and manages their lifecycle. At 50,000 servers, manual provisioning is not viable.
+
+== Options
+
+=== Option 1: metal-stack
+* Pros: integrated compute + network provisioning (spine-leaf BGP/EVPN built in), production-proven at scale (German financial sector under BaFin/ECB), European origin (x-cellent), API-first zero-touch provisioning, proven Gardener integration, small team viable at scale (estimated 10-30 FTE for 500-50,000 servers, to be validated)
+* Cons: smaller community than CAPI/Metal³, opinionated network architecture (but matches ADR-0004), not a CNCF project, Dutch market expertise limited
+
+=== Option 2: Cluster API + Metal³ + Ironic
+* Pros: CNCF sandbox project, declarative and Kubernetes-native, modular — infrastructure provider is swappable
+* Cons: compute-only — network provisioning is a separate problem, Ironic unproven at 50k server scale, high initial complexity, management cluster is extra operational burden
+
+=== Option 3: Talos Linux + CAPI
+* Pros: minimal attack surface (no SSH, no shell), immutable, fast bootstrap
+* Cons: single vendor (Sidero Labs), no network provisioning, smaller community, culture shift required
+
+=== Option 4: kubeadm + Tinkerbell
+* Pros: most familiar bootstrap tool, CNCF-aligned, maximum OS flexibility
+* Cons: CNCF Sandbox (immature), no integrated lifecycle management, no network provisioning, all integration is custom glue
+
+== Decision
+
+metal-stack. Integrated compute + network provisioning is the key differentiator at our scale. Separate network automation for 50,000 servers would be a project in itself. The proven Gardener integration provides a path to cluster lifecycle management. European governance aligns with sovereignty requirements.
+
+== Consequences
+
+* Datacenter switches must be Edgecore with SONiC (or compatible)
+* Cluster lifecycle management via Gardener becomes the natural next choice (separate ADR)
+* The platform team needs metal-stack expertise

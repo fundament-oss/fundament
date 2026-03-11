@@ -1,0 +1,34 @@
+:showtitle:
+:sidebar-order: 7
+:state: proposed
+
+= ADR-0007: No hypervisor layer
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: hardware
+Depends-on:: ADR-0003
+
+== Context
+
+Traditional cloud platforms use hypervisors (KVM/QEMU managed by libvirt, OpenStack Nova, VMware ESXi) to multiplex physical servers into VMs. This adds a full software layer between hardware and workloads. The question is whether this layer adds value or whether it is unnecessary complexity.
+
+== Options
+
+=== Option 1: No hypervisor — Kubernetes directly on bare-metal
+* Pros: one less layer to operate, secure, and patch; no hypervisor escape attack surface; simpler capacity planning; better performance (no virtualization overhead)
+* Cons: no sub-node resource slicing; VM workloads require an alternative solution (e.g. KubeVirt)
+
+=== Option 2: Hypervisor layer (KVM/libvirt or OpenStack Nova)
+* Pros: fine-grained resource slicing below physical server level; mature VM lifecycle tooling; familiar to traditional operations teams
+* Cons: full additional platform to operate, patch, and secure; hypervisor escape is a real attack vector; doubles the operational complexity
+
+== Decision
+
+No hypervisor. Kubernetes runs directly on bare-metal. The primary benefit is operational simplicity: one less layer to operate, patch, and secure. The government context makes this viable: minimum cluster size of 3 physical nodes is not a constraint. Where VM workloads are needed, KubeVirt on bare-metal Kubernetes is the path (separate ADR).
+
+== Consequences
+
+* VM workloads require KubeVirt or similar (separate ADR)
+* No hypervisor patching, no hypervisor CVEs, no escape vectors
+* Tenant isolation must be solved at the Kubernetes cluster level (ADR-0008)

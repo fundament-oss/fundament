@@ -1,0 +1,118 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 5
+:state: discussion
+
+= FUN-5 Identifiers
+
+== Introduction
+
+Every resource in Fundament has two kinds of identity: a UUIDv7 primary key for internal use and a human-readable name for external use. This document describes the naming constraints for human-readable names and how they interact with Kubernetes.
+
+The constraints aren't arbitrary. They exist because Fundament resources map to Kubernetes resources, and Kubernetes has strict rules about what constitutes a valid name. Getting this wrong means a project that works fine in our API but can't be provisioned on the cluster.
+
+== General Rules
+
+Names are immutable after creation. This is a deliberate choice: names appear in Kubernetes resources, DNS records, URLs, and configuration files. Renaming a resource would require cascading changes across all of those, which is fragile and error-prone. If you need a different name, create a new resource.
+
+Where resources interact with Kubernetes, names follow the https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names[DNS-1123 label] specification: lowercase alphanumeric characters and hyphens, starting with a letter, ending with an alphanumeric character, at most 63 characters. This is the most restrictive common denominator across Kubernetes resource types.
+
+== Entity-Specific Constraints
+
+=== Organization Name
+
+The organization name is the most constrained identifier. It serves as the tenant identifier in URLs, API paths, and potentially DNS names.
+
+* **Regex**: `^[a-z][a-z0-9-]*[a-z0-9]$`
+* **Uniqueness**: globally unique (soft-deleted names can be reused)
+* **Immutable** after creation
+
+This regex is slightly more permissive than DNS-1123 (it doesn't enforce the 63-character limit), but in practice organization names are short. Organizations also have a mutable `display_name` (1-255 characters) for human-readable presentation.
+
+=== Cluster Name
+
+* **Length**: 1-255 characters
+* **Uniqueness**: unique per organization
+* **No regex constraint**: cluster names don't directly become Kubernetes resource names (the Gardener shoot name is derived separately)
+
+=== Project Name
+
+* **Regex**: `^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$` (DNS-1123 label)
+* **Max length**: 63 characters
+* **Uniqueness**: unique per cluster
+
+Project names are DNS-1123 labels because they form part of the Kubernetes namespace name (see below).
+
+=== Namespace Name
+
+* **Regex**: `^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$` (DNS-1123 label)
+* **Max length**: 63 characters
+* **Uniqueness**: unique per project
+
+Same constraints as project names, for the same reason.
+
+=== NodePool Name
+
+* **Length**: 1-255 characters
+* **Uniqueness**: unique per cluster
+* **No regex constraint**: node pool names are passed to Gardener but don't appear in DNS
+
+== Kubernetes Namespace Convention
+
+When a namespace is provisioned on a cluster, the Kubernetes namespace name is constructed by concatenating the project name and namespace name with a double-dash separator:
+
+....
+{project}--{namespace}
+....
+
+The double dash was chosen as a separator because DNS-1123 labels allow single hyphens but the convention of `--` is visually distinct and unlikely to appear in normal names.
+
+Some examples:
+
+[cols="1,1,1"]
+|===
+|Project |Namespace |K8s Namespace
+
+|`burger-test`
+|`foo-app`
+|`burger-test--foo-app`
+
+|`burger-test`
+|`observability-tools`
+|`burger-test--observability-tools`
+
+|`burger-prod`
+|`foo-app`
+|`burger-prod--foo-app`
+
+|`other-project`
+|`some-namespace`
+|`other-project--some-namespace`
+|===
+
+NOTE: There are two open questions with this scheme. First, the DNS-1123 regex currently allows `--` within project and namespace names, nothing explicitly prohibits `my--project` as a project name, which could create ambiguous Kubernetes namespace names. Second, the combined length `len(project) + 2 + len(namespace)` can exceed 63 characters (both are independently allowed up to 63), which would produce an invalid Kubernetes namespace name. Both of these need to be addressed with additional validation.
+
+== Uniqueness Scoping
+
+Names are unique within their parent scope:
+
+* Organization names are globally unique
+* Cluster names are unique within an organization
+* Project names are unique within a cluster
+* Namespace names are unique within a project
+* NodePool names are unique within a cluster
+
+Soft-deleting a resource releases its name and you can create a new resource with the same name after deleting the old one. Only one active (non-deleted) resource can hold a given name within its scope. See FUN-6 for the soft-delete pattern.
+
+== Primary Identifiers
+
+UUIDv7 is the canonical identifier for all resources. Names exist for human readability and Kubernetes integration, but the API uses UUIDs for all references (foreign keys, request parameters, etc.). See FUN-6 for the rationale behind UUIDv7.
+
+The API provides `GetByName` endpoints for convenience (looking up a cluster by name within an organization, for example), but these are sugar on top of the UUID-based model.
+
+== Related
+
+* FUN-4: Organizational hierarchies (what resources exist and how they relate)
+* FUN-6: API-first design (UUIDv7 rationale, soft-delete pattern)

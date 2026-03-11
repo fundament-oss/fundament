@@ -1,0 +1,110 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 4
+:state: discussion
+
+= FUN-4 Organizational Hierarchies
+
+== Introduction
+
+Fundament is a multi-tenant platform. Every resource (e.g. clusters, projects, namespaces, workloads) belongs to exactly one organization. This document describes the resource hierarchy that makes that possible and the design decisions behind it.
+
+The hierarchy is deliberately simple. Early designs explored more flexible structures (projects spanning multiple clusters, shared namespaces), but the complexity wasn't justified by real use cases. What we have instead is a clean tree:
+
+....
+Organization
+├── Cluster
+│   ├── NodePool
+│   └── Project
+│       ├── Namespace
+│       └── ProjectMember
+└── OrganizationUser (membership + invitation)
+....
+
+Every resource has exactly one parent. There are no cross-cutting relationships, no shared ownership, no diamonds in the graph. This makes authorization straightforward (permissions flow down the tree) and deletion semantics predictable (you can't delete a parent with active children).
+
+== Entities
+
+=== Organization
+
+The organization is the top-level tenant boundary. It represents a company or team. Organizations have two name fields: an immutable `name` that serves as a machine-readable identifier (DNS-compatible, used in URLs and API references), and a mutable `display_name` for human consumption.
+
+Organizations own clusters and have members. That's it, they don't directly own projects or namespaces. Those are reached through the cluster.
+
+=== Cluster
+
+A cluster represents a managed Kubernetes cluster provisioned through Gardener. Each cluster belongs to exactly one organization and has a region, a Kubernetes version, and a set of node pools.
+
+Clusters have eventual-consistency lifecycle machinery. Changes to clusters (and their children) are propagated through an outbox pattern, which ensures the actual Gardener shoot stays in sync with the desired state in our database. Cluster events provide an audit log of sync operations and status transitions.
+
+=== Project
+
+A project is a logical grouping within a cluster. The typical use case is separating environments (`staging`, `production`, `testing`) but teams also use projects to isolate different applications or team boundaries on the same cluster.
+
+Early designs considered letting a project span multiple clusters (for multi-region deployments, for example). We decided against this: a project belongs to exactly one cluster. Multi-region is better handled by having separate projects on separate clusters, which keeps the deployment model simple and avoids the complexity of coordinating namespaces across clusters.
+
+Projects have their own membership model, separate from organization membership. Organization admins do inherit project admin permissions automatically (they need to be able to intervene anywhere), but regular users must be explicitly added to each project they need access to. This lets you have developers who can work on `staging` but can't touch `production`. See FUN-7 for how these two membership levels interact.
+
+=== Namespace
+
+A namespace is the unit of deployment within a project. It maps directly to a Kubernetes namespace on the cluster, using the naming convention `{project}--{namespace}` (see FUN-5 for the full naming rules).
+
+Namespaces are where actual workloads live. They inherit permissions from their parent project and there is no namespace-level membership. If you can access the project, you can view its namespaces. See FUN-7 for how permission inheritance works and why namespace-level access control is a future consideration.
+
+=== NodePool
+
+A node pool is an autoscaling worker group within a cluster. Each pool has a machine type and min/max autoscale bounds. Node pools are infrastructure-level resources. They're managed by organization admins, not project users.
+
+When a node pool is created or modified, it resets the parent cluster's sync state, triggering a reconciliation with Gardener.
+
+=== Users and Membership
+
+Users are global entities; they exist outside the organization hierarchy. A user participates in the platform through two membership tables:
+
+**Organization membership** gates access to the platform. It doubles as the invitation mechanism: a membership record tracks both the invitation status (`pending`, `accepted`, `declined`, `revoked`) and the permission level (`admin` or `viewer`). An admin invites a user by email, creating a pending membership. The invited user can accept or decline. Admins can revoke membership at any time.
+
+**Project membership** gates access to workloads. Each membership has a permission (`admin` or `viewer`). Project membership is separate from organization membership, you need both to actually do anything in a project. See FUN-7 for the full permission model.
+
+== Design Decisions
+
+=== Single-Parent Hierarchy
+
+Every resource has exactly one parent. Projects belong to one cluster. Namespaces belong to one project. This was a deliberate simplification from earlier designs that explored multi-parent relationships.
+
+The benefit is predictability: authorization flows down a single path, deletion has clear semantics, and queries don't need to traverse complex graphs. The cost is that some scenarios (a project deployed across multiple clusters) require creating separate resources. We think that's the right tradeoff.
+
+=== Soft-Delete Cascading
+
+Resources are never physically deleted. they're soft-deleted by setting a `deleted` timestamp (see FUN-6 for the pattern). Database triggers prevent deleting a parent that still has active children: you cannot soft-delete a cluster with active projects, or a project with active namespaces. This forces explicit cleanup of the tree from the leaves up.
+
+=== Two-Level Membership
+
+Organization membership and project membership are intentionally separate. Organization membership controls who can see and manage the platform infrastructure (clusters, node pools). Project membership controls who can work with the actual applications and workloads.
+
+This separation exists because the people managing infrastructure are often different from the people deploying applications. An organization admin (a platform engineer) sets up clusters and invites users, but may not need access to every project. A project member (a developer) deploys workloads but doesn't need to manage cluster infrastructure.
+
+Organization admins do automatically inherit project admin permissions through the OpenFGA authorization chain, they *can* access every project, they just don't have to. See FUN-7 for the full inheritance model.
+
+=== Every Project Needs an Admin
+
+Every project must have at least one admin member. This is enforced at creation time (a project without an admin is rejected) and throughout its lifecycle (the last admin cannot be removed or demoted). This avoids orphaned projects that nobody can manage.
+
+== Multi-Tenancy Boundary
+
+The organization is the isolation boundary. Every organization-scoped API request carries a `Fun-Organization` HTTP header with the active organization's UUID. The auth interceptor validates that the calling user belongs to that organization (from JWT claims) and injects the organization ID into the request context. Application-level filtering scopes all queries to the active organization. OpenFGA provides fine-grained permission checks on top of this scoping.
+
+User-scoped endpoints (listing organizations, managing invitations) bypass the organization header since they operate across the user's organizations.
+
+See FUN-6 for the full multi-tenancy approach.
+
+== Related
+
+* FUN-5: Identifiers and naming constraints
+* FUN-6: API-first design, soft deletes, multi-tenancy approach
+* FUN-7: User permissions and roles (OpenFGA model)
+* FUN-8: Cluster sync and reconciliation
+* FUN-11: Plugins
+* FUN-13: Testing strategy
+* FUN-14: Personas

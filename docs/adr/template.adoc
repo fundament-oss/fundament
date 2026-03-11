@@ -1,0 +1,34 @@
+:showtitle:
+:sidebar-hidden: true
+:state: proposed
+
+= ADR-0000: Title of the decision
+
+Status:: proposed | accepted | superseded by ADR-XXXX | deprecated
+Date:: YYYY-MM-DD
+Group:: cross-cutting | hardware | networking | storage |
+        cluster-management | platform | managed-services |
+        deployment | frontend
+Depends-on:: ADR-XXXX, ADR-YYYY
+
+== Context
+
+What is the problem? What forces are at play?
+
+== Options
+
+=== Option 1: Name
+* Pros: ...
+* Cons: ...
+
+=== Option 2: Name
+* Pros: ...
+* Cons: ...
+
+== Decision
+
+Which option was chosen and why.
+
+== Consequences
+
+What changes as a result of this decision? Which ADRs does this enable or constrain?

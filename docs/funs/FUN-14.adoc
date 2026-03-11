@@ -1,0 +1,65 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 14
+:state: discussion
+
+= FUN-14 Personas
+
+== Introduction
+
+This document defines the personas used throughout Fundament's design and development. Personas are fictional but representative users, used in the seed data for local development and testing. They provide a shared vocabulary for discussions about features, access control, and user experience.
+
+Each persona belongs to one of three fictional tenant organizations: *Acme Corp*, *Globex*, and *Initech*. Within each organization, users hold either the `admin` or `viewer` role.
+
+== Personas
+
+[cols="1,1,1", options="header"]
+|===
+| Name | Organization | Role
+
+| Alice | Acme Corp | admin
+| Bart | Acme Corp | viewer
+| Cindy | Acme Corp | viewer
+| David | Globex | admin
+| Emily | Globex | viewer
+| Frank | Initech | admin
+| Grace | Initech | viewer
+|===
+
+NOTE: The authorization model also supports _project-level_ membership (project admin and project viewer), which scopes access to a single project rather than the whole organization. Bart holds the project admin role and Cindy holds the project viewer role on the acme-project project in the acme-cluster cluster.
+
+== Persona Descriptions
+
+=== Alice — Acme Corp admin
+
+Alice is the platform owner at Acme Corp. She was responsible for onboarding her organization into Fundament and continues to manage day-to-day platform operations. Alice provisions new clusters for her development teams, installs plugins from the appstore, and maintains the user roster — including inviting new colleagues and assigning appropriate roles. When a new product team spins up, Alice is the one creating their project and granting access.
+
+=== Bart — Acme Corp viewer / acme-project admin
+
+Bart is a backend engineer at Acme Corp. He uses Fundament primarily to understand the state of the clusters his services run on — checking which plugins are active, reviewing cluster health, and looking up configuration details when debugging production issues. Bart cannot make changes at the organization level; when he identifies something that needs updating there, he raises it with Alice. Within the acme-project project, however, Bart holds the project admin role: he can manage the project's members, create and manage namespaces, and view the cluster resources that back the project. He does not have visibility into other teams' projects or into organization-wide settings such as the user roster or appstore plugin management.
+
+=== Cindy — Acme Corp viewer / acme-project viewer
+
+Cindy works in operations at Acme Corp. She regularly checks cluster status and installed plugin versions to ensure the environment meets compliance requirements. Cindy is particularly interested in the observability stack — she cross-references what is installed in Fundament with dashboards in Grafana to confirm that telemetry pipelines are functioning correctly. Within the acme-project project, Cindy holds the project viewer role: she can browse its namespaces, check which plugins are available in the cluster, and look up cluster configuration relevant to her workload, but cannot make changes to the project itself.
+
+=== David — Globex admin
+
+David is the sole platform administrator at Globex, a smaller organization with fewer clusters but strict security requirements. He uses Fundament to manage the complete lifecycle of Globex's clusters, including selecting plugins from the appstore with a focus on security tooling such as cert-manager and Sealed Secrets. David periodically reviews the list of users in his organization and revokes access for departed employees.
+
+=== Eve Davis — Globex viewer
+
+Eve is a data engineer at Globex. She interacts with Fundament primarily to verify that the database infrastructure — specifically CloudNativePG clusters — is available and properly configured. She does not manage the platform herself but relies on the Fundament UI to get a quick overview before directing more detailed queries to David.
+
+=== Frank — Initech admin
+
+Frank manages the Initech platform team and uses Fundament to coordinate infrastructure across several clusters. He is a power user of the appstore: he frequently evaluates new plugins, consults their documentation, and decides which ones to roll out to his organization. Frank also manages the Initech user directory in Fundament, ensuring the right people have the right level of access.
+
+=== Grace — Initech viewer
+
+Grace is a security analyst at Initech. She uses Fundament to audit the set of installed plugins across clusters, verifying that only approved software is running in the environment. Grace pays particular attention to identity and secrets management plugins such as Keycloak and Sealed Secrets. When she spots a gap, she reports it to Frank so he can take action.
+
+=== Fundament Operator — platform staff
+
+A member of the team that runs the Fundament platform itself (not a tenant). The operator interacts with Fundament through `funops`, the privileged operator CLI, rather than through the regular API or UI. Typical tasks include bootstrapping new installations, performing database maintenance, and investigating incidents that require direct access below the RLS layer. This persona has no organization membership in any tenant; their access bypasses the normal OpenFGA authorization model entirely and is controlled through separate operational credentials.

@@ -1,0 +1,52 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 13
+:state: prediscussion
+
+= FUN-13 Testing Strategy
+
+== Introduction
+
+This document captures the current testing state of Fundament and defines the testing strategy going forward.
+
+== Components
+
+=== organization-api
+
+Integration tests written in Go.
+The tests spin up a real Postgres instance using the [embedded-postgres](https://github.com/fergusstrange/embedded-postgres) library.
+We create a database for each test, so tests can run fully isolated and in parallel by default.
+
+External dependencies are stubbed. We create the token for authenticating as part of the test setup instead of relying on the authn-api.
+A fake clock can be used so we can make exact assertions (eg. expiry dates of API keys).
+
+Tests cover only the organization-api endpoints.
+
+=== Terraform Provider
+
+Acceptance tests written in Go using Terraform's testing framework.
+Tests run plans and applies against a running environment.
+
+=== E2E tests
+
+These test the integration of the full application.
+
+== Principles
+
+- Tests are written in the implementation language (Go).
+- Tests should be easy to run and fail fast.
+- The test of a component are independent.
+- The E2E tests and Terraform Acceptance Tests verify the cross-component integration.
+
+== Gaps
+
+The following components do not yet have a test setup:
+
+- authn-api
+- authz-worker
+- functl
+- funops
+
+E2E tests will be added to CI once per-PR environments are available.

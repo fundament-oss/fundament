@@ -1,0 +1,8 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 3
+:state: prediscussion
+
+= FUN-3 Security Principles

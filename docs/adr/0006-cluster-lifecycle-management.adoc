@@ -1,0 +1,39 @@
+:showtitle:
+:sidebar-order: 6
+:state: proposed
+
+= ADR-0006: Cluster lifecycle management
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: cluster-management
+Depends-on:: ADR-0002, ADR-0005
+
+== Context
+
+With bare-metal provisioning in place (ADR-0005), tenant organizations need dedicated Kubernetes clusters with full lifecycle management: provisioning, upgrades, certificate rotation, node rotation, auto-scaling, and self-healing. At 50,000 physical servers this means potentially hundreds of clusters that must be managed without manual intervention.
+
+== Options
+
+=== Option 1: Gardener
+* Pros: full lifecycle management built in (upgrades, cert rotation, node rotation, auto-scaling, self-healing), proven at scale (SAP runs thousands of clusters), control planes run as pods on Seed cluster (efficient), native metal-stack integration, European origin (SAP/NeoNephos/LF Europe), Apache 2.0
+* Cons: has its own concept model (Garden/Seed/Shoot) with learning curve, Seed cluster is critical component
+
+=== Option 2: Kamaji
+* Pros: efficient shared control planes, CNCF Sandbox, fast provisioning
+* Cons: young project, smaller community, central etcd requires careful capacity planning, less mature tooling
+
+=== Option 3: vCluster
+* Pros: lowest overhead, seconds to provision, works within existing cluster
+* Cons: no kernel isolation (container breakout affects other tenants), fails EUCS SEAL-4 isolation requirements, sync mechanism adds attack surface
+
+== Decision
+
+Gardener. Native metal-stack integration means the full stack (provisioning → cluster lifecycle) is proven in production together. Mature project with a lot of production exposure. European governance aligns with sovereignty requirements.
+
+== Consequences
+
+* Seed cluster(s) must be operated with HA configuration
+* Gardener Extensions model provides the plugin mechanism for per-cluster services (DNS, certs, monitoring)
+* Tenant isolation is at the Shoot cluster level — each organization gets dedicated clusters
+* The platform team needs Gardener expertise

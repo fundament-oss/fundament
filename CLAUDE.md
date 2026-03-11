@@ -7,7 +7,7 @@
 - For frontend development in console-frontend, check for existing predefined classes in `console-frontend/src/styles.css` and use those if applicable
 - When working on the database schema you should always edit db/fundament.dbm.
 - When working on the database, never generate a migration. We generate that with trek
-- Always read @funs to find our architecture decision records
+- Always read @docs/funs to find our architecture decision records
 - when using pgmodeler to generate fundament.sql always use the --pgsql-ver 18.0 flag
 - Panic in switch default when all enum cases should be exhaustively handled.
 - We always use soft deletes, records will never be thrown away

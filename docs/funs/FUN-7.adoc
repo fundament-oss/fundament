@@ -1,0 +1,222 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 7
+:state: discussion
+
+= FUN-7 User Permissions and Roles
+
+== Introduction
+
+This document describes how authorization works in Fundament: who can do what, and how we decide.
+
+The short version is that we use https://openfga.dev/[OpenFGA] (a Zanzibar-based authorization system) for relationship-based access control. Permissions are defined as relationships between users and resources, and the authorization model is the single source of truth for what's allowed.
+
+== Authorization Approach
+
+We considered several approaches to authorization. Simple role-based access control (RBAC) with hardcoded checks in application code would have been the fastest to implement but doesn't scale well, it scatters authorization logic across the codebase and makes it hard to audit. Policy engines like OPA are powerful but better suited for attribute-based policies than relationship-based ones.
+
+OpenFGA was the right fit because Fundament's authorization model is fundamentally about relationships: a user is an admin *of* an organization, a project belongs *to* a cluster, a cluster is owned *by* an organization. These relationships form the tree described in FUN-4, and permissions flow down that tree.
+
+Changes to relationships (adding a project member, creating a cluster) are synced from the database to OpenFGA via the outbox pattern. When a relationship changes in the database, an outbox entry is created, and a background worker processes it to update OpenFGA. This means authorization state is eventually consistent with the database. There's a brief delay between a database write and the corresponding permission becoming active.
+
+Organization scoping is handled at the application level via the `Fun-Organization` HTTP header (see FUN-6). OpenFGA provides fine-grained permission checks on top of that scoping.
+
+== Organization Permissions
+
+Organization membership has two roles: `admin` and `viewer`. Viewers get read access to the organization and its resources. Admins get full control.
+
+[cols="2,1,1"]
+|===
+|Capability |Admin |Viewer
+
+|View organization details
+|yes
+|yes
+
+|Edit organization
+|yes
+|no
+
+|Create clusters
+|yes
+|no
+
+|List clusters
+|yes
+|yes
+
+|Invite members
+|yes
+|no
+
+|Edit members
+|yes
+|no
+
+|Remove members
+|yes
+|no
+
+|List members
+|yes
+|yes
+
+|Create API keys
+|yes
+|yes
+
+|List API keys
+|yes
+|yes
+|===
+
+Viewers can create and list API keys because API keys are user-scoped; a viewer's API key only grants the same permissions the viewer already has.
+
+== Cluster Permissions
+
+Cluster permissions are inherited from the organization. There are no separate cluster-level roles. If you're an organization admin, you're a cluster admin for every cluster in that organization. If you're an organization viewer, you're a cluster viewer.
+
+This is a simplification, we could have cluster-specific roles, but the current use cases don't justify the complexity. The people managing clusters (platform engineers) are the same people administering the organization.
+
+[cols="2,1,1"]
+|===
+|Capability |Admin (from org) |Viewer (from org)
+
+|View cluster
+|yes
+|yes
+
+|Edit cluster
+|yes
+|no
+
+|Delete cluster
+|yes
+|no
+
+|Create node pools
+|yes
+|no
+
+|List node pools
+|yes
+|yes
+
+|Create installs (plugins)
+|yes
+|no
+
+|List installs
+|yes
+|yes
+
+|Create projects
+|yes
+|no
+
+|List projects
+|yes
+|yes
+
+|List namespaces (cluster-wide)
+|yes
+|yes
+|===
+
+== Project Permissions
+
+Projects have their own membership, separate from the organization. This is the key design decision in the permission model: project access is explicitly granted, not automatically inherited from organizational permission.
+
+Well, almost. Organization admins *do* automatically get project admin permissions through the authorization chain: org admin -> cluster admin -> project admin. So org admins can always access every project, but this happens through the authorization model rather than being hardcoded.
+
+The rationale is that org admins are responsible for the platform and need to be able to intervene in any project (remove a stuck deployment, debug a permission issue). But regular project access should be explicitly granted, so you can have developers who work on `staging` but can't touch `production`.
+
+[cols="2,1,1"]
+|===
+|Capability |Project Admin |Project Viewer
+
+|View project
+|yes
+|yes
+
+|Edit project
+|yes
+|no
+
+|Delete project
+|yes
+|no
+
+|Manage members
+|yes
+|no
+
+|List members
+|yes
+|yes
+
+|Create namespaces
+|yes
+|no
+
+|List namespaces
+|yes
+|yes
+|===
+
+== Permission Inheritance
+
+Permissions flow down the resource tree. Child resources (namespaces, node pools, installs, project members) inherit permissions from their parent:
+
+* **Node pool** permissions come from the parent cluster (which inherits from the organization)
+* **Namespace** permissions come from the parent project
+* **Project member** permissions come from the parent project
+* **Install** permissions come from the parent cluster
+* **API key** permissions come from the organization, plus the creating user always has access
+
+There is no per-resource override mechanism. You can't grant someone access to a specific namespace without giving them access to the entire project. This keeps the model simple and auditable. If you need namespace-level isolation, use separate projects.
+
+== Invitation Workflow
+
+Organization membership uses an invitation workflow:
+
+1. An organization admin invites a user by email, specifying a permission level (`admin` or `viewer`). This creates a membership record in `pending` state.
+2. The invited user sees the invitation (via the `ListInvitations` endpoint, which is user-scoped and doesn't require the `Fun-Organization` header).
+3. The user accepts or declines the invitation.
+4. An admin can revoke membership at any time.
+
+There is no separate invitations table. The membership record tracks the full lifecycle: `pending` -> `accepted` (or `declined` or `revoked`).
+
+== Invariants
+
+Two invariants protect the integrity of the permission model:
+
+**Every project must have at least one admin.** A project without an admin is rejected at creation time. The last admin of a project cannot be removed or demoted. You must promote another member first. This means a project can never end up in a state where nobody can manage it.
+
+**Unique membership.** A user can only have one active membership per project, and one active membership per organization. Soft-deleted memberships don't count toward uniqueness, so a user can be re-invited after being removed.
+
+== RoleBindings and Service Accounts
+
+The permissions described above govern access to the Fundament platform itself; the API, the console, the management plane. In-cluster authorization (what a user can do inside a Kubernetes cluster) is a separate concern.
+
+The current approach is:
+
+* Each user gets a Kubernetes ServiceAccount on the cluster
+* RoleBindings are created from project membership. When a user is added to a project, corresponding Kubernetes RoleBindings are synced to every namespace within that project
+* Users can download a KubeConfig with their credentials via the API or the console
+
+In-cluster authorization is intentionally simple for now. The RoleBindings grant either read or write access to standard Kubernetes resources (deployments, services, pods, etc.) based on the user's project permission.
+
+NOTE: A future enhancement may add namespace-level granularity, where RoleBindings can target specific namespaces within a project using a glob or matcher pattern (e.g., `{user_id, project_id, namespace_match="staging-*"}`). This is not currently implemented.
+
+== Related
+
+* FUN-4: Organizational hierarchies (the resource tree that permissions flow through)
+* FUN-5: Identifiers (naming constraints for resources)
+* FUN-6: API-first design (multi-tenancy via `Fun-Organization` header)
+* FUN-9: Cluster sync
+* FUN-12: API keys
+* FUN-13: Testing strategy
+* FUN-14: Personas (illustrate permission levels with concrete examples)
