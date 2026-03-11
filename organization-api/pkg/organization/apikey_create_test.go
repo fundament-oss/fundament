@@ -2,6 +2,7 @@ package organization_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -94,6 +95,10 @@ func Test_APIKey_Create(t *testing.T) {
 			res, err := client.CreateAPIKey(context.Background(), createReq)
 			require.NoError(t, err)
 
+			assert.True(t, strings.HasPrefix(res.Msg.GetToken(), "fun_"))
+			assert.Equal(t, 40, len(res.Msg.GetToken()))
+			assert.Equal(t, 8, len(res.Msg.GetTokenPrefix()))
+
 			getReq := connect.NewRequest(organizationv1.GetAPIKeyRequest_builder{
 				ApiKeyId: res.Msg.GetId(),
 			}.Build())
@@ -111,4 +116,40 @@ func Test_APIKey_Create(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_APIKey_Create_DuplicateName(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	token := env.createAuthnToken(t, userID)
+	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
+
+	createReq := func() *connect.Request[organizationv1.CreateAPIKeyRequest] {
+		req := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+			Name: "duplicate-key",
+		}.Build())
+		req.Header().Set("Authorization", "Bearer "+token)
+		req.Header().Set("Fun-Organization", orgID.String())
+		return req
+	}
+
+	_, err := client.CreateAPIKey(context.Background(), createReq())
+	require.NoError(t, err)
+
+	_, err = client.CreateAPIKey(context.Background(), createReq())
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeAlreadyExists, connectErr.Code())
 }
