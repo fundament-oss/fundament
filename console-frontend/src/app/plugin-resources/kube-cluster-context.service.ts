@@ -10,7 +10,9 @@ export default class KubeClusterContextService {
   private clusterClient = inject(CLUSTER);
 
   clusters = signal<ClusterSummary[]>([]);
+
   selectedClusterId = signal<string>('');
+
   isLoadingClusters = signal(true);
 
   private loadStarted = false;

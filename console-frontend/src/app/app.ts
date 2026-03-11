@@ -381,7 +381,7 @@ export default class App implements OnInit {
     if (label === ':resourceKindLabel') {
       const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
       const allMenuItems = [...(plugin?.menu.organization ?? []), ...(plugin?.menu.project ?? [])];
-      const menuItem = allMenuItems.find((m) => m.plural === params['resourceKind']);
+      const menuItem = allMenuItems.find((m) => m.label === params['resourceKind']);
       label = menuItem ? kindToLabel(menuItem.crd) : (params['resourceKind'] ?? 'Resources');
     }
 

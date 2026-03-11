@@ -10,20 +10,20 @@ author: Fundament Team
 menu:
   organization:
     - crd: ClusterIssuer
-      plural: clusterissuers
+      label: Cluster issuers
       icon: tablerShieldCheck
     - crd: Certificate
-      plural: certificates
+      label: Certificates
       icon: tablerCertificate
     - crd: Issuer
-      plural: issuers
+      label: Issuers
       icon: tablerUserCircle
   project:
     - crd: Certificate
-      plural: certificates
+      label: Certificates
       icon: tablerCertificate
     - crd: Issuer
-      plural: issuers
+      label: Issuers
       icon: tablerUserCircle
 
 crds:

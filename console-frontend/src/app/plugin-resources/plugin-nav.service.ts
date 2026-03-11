@@ -19,7 +19,7 @@ export default class PluginNavService {
         const items: PluginNavItem[] = (plugin.menu[section] ?? []).map((menuItem) => ({
           label: kindToLabel(menuItem.crd),
           crdKind: menuItem.crd,
-          crdPlural: menuItem.plural,
+          crdLabel: menuItem.label,
           icon: menuItem.icon,
         }));
 

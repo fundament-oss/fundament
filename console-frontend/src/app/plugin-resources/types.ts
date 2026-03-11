@@ -19,7 +19,7 @@ export interface PluginMenu {
 
 export interface PluginMenuItem {
   crd: string;
-  plural: string;
+  label: string;
   icon?: string;
 }
 
@@ -89,7 +89,7 @@ export interface PluginNavGroup {
 export interface PluginNavItem {
   label: string;
   crdKind: string;
-  crdPlural: string;
+  crdLabel: string;
   icon?: string;
 }
 

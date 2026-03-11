@@ -102,7 +102,7 @@ export default class ResourceListComponent implements OnInit {
     const resourceKind = this.resourceKind();
     if (plugin) {
       const allItems = [...(plugin.menu.organization ?? []), ...(plugin.menu.project ?? [])];
-      const item = allItems.find((i) => i.plural === resourceKind);
+      const item = allItems.find((i) => i.label === resourceKind);
       if (item) return kindToLabel(item.crd);
     }
     return kindToLabel(resourceKind);
