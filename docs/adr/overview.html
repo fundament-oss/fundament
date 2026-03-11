@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fundament ADR Overview</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-hover: #1c2333;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent-dim: #1f6feb33;
+    --green: #3fb950;
+    --green-dim: #23863633;
+    --yellow: #d29922;
+    --yellow-dim: #bb800926;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --purple-dim: #8957e533;
+    --orange: #f0883e;
+    --orange-dim: #bd561d33;
+    --pink: #f778ba;
+    --pink-dim: rgba(247,120,186,0.15);
+    --teal: #56d4dd;
+    --teal-dim: rgba(86,212,221,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 { font-size: 2rem; font-weight: 600; margin-bottom: 0.5rem; }
+  header p { color: var(--text-muted); font-size: 0.95rem; }
+
+  .stats {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.85rem;
+  }
+
+  .stat strong { color: var(--accent); font-size: 1.1rem; margin-right: 0.3rem; }
+
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+    justify-content: center;
+  }
+
+  .tab-bar button {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+  }
+
+  .tab-bar button:hover { color: var(--text); }
+  .tab-bar button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .group { margin-bottom: 2rem; }
+
+  .group-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .group-header h2 { font-size: 1.15rem; font-weight: 600; }
+
+  .group-badge {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 1rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    transition: all 0.15s;
+    cursor: default;
+  }
+
+  .card:hover { border-color: var(--accent); background: var(--surface-hover); }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .card-number {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .card-title { font-size: 0.95rem; font-weight: 600; flex: 1; }
+
+  .status-badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .status-proposed { background: var(--yellow-dim); color: var(--yellow); }
+  .status-accepted { background: var(--green-dim); color: var(--green); }
+  .status-deprecated { background: #f8514926; color: var(--red); }
+  .status-superseded { background: #8b949e26; color: var(--text-muted); }
+
+  .card-decision { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.5; }
+
+  .card-deps { font-size: 0.75rem; color: var(--text-muted); }
+  .card-deps span {
+    display: inline-block;
+    background: var(--bg);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    margin: 0.1rem 0.15rem;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .graph-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    overflow: auto;
+    min-height: 500px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    justify-content: center;
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-muted); }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+  .table-container { overflow-x: auto; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { text-align: left; padding: 0.75rem 1rem; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+  td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: var(--surface-hover); }
+  td.decision-col { max-width: 400px; color: var(--text-muted); }
+
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    .cards { grid-template-columns: 1fr; }
+    .stats { flex-direction: column; align-items: center; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Fundament Architecture Decision Records</h1>
+  <p>Overview of all ADRs, their relationships, and current status</p>
+  <div class="stats" id="stats"></div>
+</header>
+
+<div class="tab-bar" id="tab-bar">
+  <button class="active" data-tab="grouped">Grouped</button>
+  <button data-tab="graph">Dependency Graph</button>
+  <button data-tab="table">Table</button>
+</div>
+
+<div id="tab-grouped" class="tab-content active"></div>
+
+<div id="tab-graph" class="tab-content">
+  <div class="legend" id="legend"></div>
+  <div class="graph-container">
+    <canvas id="graph-canvas"></canvas>
+  </div>
+</div>
+
+<div id="tab-table" class="tab-content">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr><th>ADR</th><th>Title</th><th>Status</th><th>Group</th><th>Depends on</th><th>Decision</th></tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ADR data — all 24 ADRs
+const adrs = [
+  { id: '0001', title: 'Platform positioning', group: 'cross-cutting', status: 'proposed', deps: [], decision: 'Kubernetes-native on bare-metal with a pure CNCF stack. Highest degree of sovereignty of these options.' },
+  { id: '0002', title: 'Design scale target', group: 'cross-cutting', status: 'proposed', deps: ['0001'], decision: 'Design for 50,000 physical servers / ~2,000,000 logical CPUs, to be reached within 3 years.' },
+  { id: '0003', title: 'Bare-metal infrastructure', group: 'hardware', status: 'proposed', deps: ['0001', '0002'], decision: 'Bare-metal in government datacenters. Sovereignty and cost at scale outweigh initial investment.' },
+  { id: '0004', title: 'Datacenter network topology', group: 'networking', status: 'proposed', deps: ['0002', '0003'], decision: 'Spine-leaf with BGP/EVPN. Only topology proven to scale to 50,000+ physical servers with full automation.' },
+  { id: '0005', title: 'Bare-metal provisioning tool', group: 'hardware', status: 'proposed', deps: ['0003', '0022', '0023'], decision: 'metal-stack. Integrated compute + network provisioning is the key differentiator at our scale.' },
+  { id: '0006', title: 'Cluster lifecycle management', group: 'cluster-management', status: 'proposed', deps: ['0002', '0005'], decision: 'Gardener. Native metal-stack integration means the full stack is proven in production together.' },
+  { id: '0007', title: 'No hypervisor layer', group: 'hardware', status: 'proposed', deps: ['0003'], decision: 'No hypervisor. Kubernetes runs directly on bare-metal for operational simplicity.' },
+  { id: '0008', title: 'Tenant isolation model', group: 'cluster-management', status: 'proposed', deps: ['0006', '0007'], decision: 'Dedicated physical clusters per tenant via Gardener Shoots.' },
+  { id: '0009', title: 'Availability zones', group: 'cross-cutting', status: 'proposed', deps: ['0002', '0003'], decision: 'Minimum 3 availability zones across physically separate government datacenters.' },
+  { id: '0010', title: 'API architecture', group: 'platform', status: 'proposed', deps: ['0002'], decision: 'API-first. Every platform operation must be available through a versioned API.' },
+  { id: '0011', title: 'Organizational hierarchy', group: 'platform', status: 'proposed', deps: ['0008'], decision: 'Organization \u2192 cluster \u2192 project \u2192 namespace. Organization is the tenant boundary.' },
+  { id: '0012', title: 'Platform API and tenant model', group: 'platform', status: 'proposed', deps: ['0010', '0011'], decision: 'Platform API as abstraction layer. The platform API owns the tenant-facing contract.' },
+  { id: '0013', title: 'Container network interface', group: 'networking', status: 'proposed', deps: ['0004', '0006'], decision: 'Cilium. eBPF-based architecture provides superior performance, observability, and security.' },
+  { id: '0014', title: 'Storage architecture', group: 'storage', status: 'proposed', deps: ['0003', '0008'], decision: 'Hyperconverged initially, with the option to add disaggregated storage nodes when needed.' },
+  { id: '0015', title: 'Distributed storage', group: 'storage', status: 'proposed', deps: ['0008', '0009', '0014'], decision: 'Ceph via Rook. The only option proven at the target scale for block, file, and object storage.' },
+  { id: '0016', title: 'Compliance by design', group: 'compliance', status: 'proposed', deps: ['0001'], decision: 'Compliance requirements are inputs to architecture decisions, not afterthoughts.' },
+  { id: '0017', title: 'Cloud sovereignty certification', group: 'compliance', status: 'proposed', deps: ['0016'], decision: 'EU Cloud Sovereignty Framework SEAL-4 as primary target, EUCS for security (SOV-7).' },
+  { id: '0018', title: 'Information security management', group: 'compliance', status: 'proposed', deps: ['0016'], decision: 'ISO 27001:2022 as the ISMS foundation for all other certifications.' },
+  { id: '0019', title: 'Data protection certification', group: 'compliance', status: 'proposed', deps: ['0016'], decision: 'ISO 27018 within the ISO 27001 scope for cloud PII protection.' },
+  { id: '0020', title: 'Supply chain security', group: 'compliance', status: 'proposed', deps: ['0016'], decision: 'SLSA framework + CycloneDX SBOMs for supply chain integrity.' },
+  { id: '0021', title: 'Cloud security certification', group: 'compliance', status: 'proposed', deps: ['0018'], decision: 'BSI C5 Type 2 for continuous cloud security assurance, builds on ISO 27001.' },
+  { id: '0022', title: 'Datacenter fabric scaling', group: 'networking', status: 'proposed', deps: ['0002', '0004'], decision: 'Multiple independent fabric partitions. Each partition is a self-contained 2-tier leaf-spine CLOS.' },
+  { id: '0023', title: 'Tenant network isolation', group: 'networking', status: 'proposed', deps: ['0004', '0008'], decision: 'VRF per tenant with EVPN/VXLAN. Each tenant\'s traffic is confined to its own VRF.' },
+  { id: '0024', title: 'Internal network addressing', group: 'networking', status: 'proposed', deps: ['0004', '0013'], decision: 'IPv4 internally. Government IPv6 policy applies to external services, not internal infrastructure.' },
+];
+
+const groupConfig = {
+  'cross-cutting': { label: 'Cross-cutting', color: 'var(--purple)', colorDim: 'var(--purple-dim)', badgeStyle: 'background: var(--purple-dim); color: var(--purple);' },
+  'hardware':      { label: 'Hardware', color: 'var(--orange)', colorDim: 'var(--orange-dim)', badgeStyle: 'background: var(--orange-dim); color: var(--orange);' },
+  'networking':    { label: 'Networking', color: 'var(--accent)', colorDim: 'var(--accent-dim)', badgeStyle: 'background: var(--accent-dim); color: var(--accent);' },
+  'cluster-management': { label: 'Cluster Management', color: 'var(--green)', colorDim: 'var(--green-dim)', badgeStyle: 'background: var(--green-dim); color: var(--green);' },
+  'platform':      { label: 'Platform', color: 'var(--yellow)', colorDim: 'var(--yellow-dim)', badgeStyle: 'background: var(--yellow-dim); color: var(--yellow);' },
+  'storage':       { label: 'Storage', color: 'var(--pink)', colorDim: 'var(--pink-dim)', badgeStyle: 'background: var(--pink-dim); color: var(--pink);' },
+  'compliance':    { label: 'Compliance', color: 'var(--teal)', colorDim: 'var(--teal-dim)', badgeStyle: 'background: var(--teal-dim); color: var(--teal);' },
+};
+
+// Group order for display
+const groupOrder = ['cross-cutting', 'hardware', 'networking', 'cluster-management', 'platform', 'storage', 'compliance'];
+
+// Resolved color values for canvas (can't use CSS vars there)
+const canvasColors = {
+  'cross-cutting': { fill: '#bc8cff', dim: 'rgba(188,140,255,0.15)' },
+  'hardware':      { fill: '#f0883e', dim: 'rgba(240,136,62,0.15)' },
+  'networking':    { fill: '#58a6ff', dim: 'rgba(88,166,255,0.15)' },
+  'cluster-management': { fill: '#3fb950', dim: 'rgba(63,185,80,0.15)' },
+  'platform':      { fill: '#d29922', dim: 'rgba(210,153,34,0.15)' },
+  'storage':       { fill: '#f778ba', dim: 'rgba(247,120,186,0.15)' },
+  'compliance':    { fill: '#56d4dd', dim: 'rgba(86,212,221,0.15)' },
+};
+
+// --- Render stats ---
+function renderStats() {
+  const groups = new Set(adrs.map(a => a.group));
+  const statuses = {};
+  adrs.forEach(a => { statuses[a.status] = (statuses[a.status] || 0) + 1; });
+
+  let html = `<div class="stat"><strong>${adrs.length}</strong> ADRs</div>`;
+  html += `<div class="stat"><strong>${groups.size}</strong> Groups</div>`;
+  for (const [s, c] of Object.entries(statuses)) {
+    html += `<div class="stat"><strong>${c}</strong> ${s.charAt(0).toUpperCase() + s.slice(1)}</div>`;
+  }
+  document.getElementById('stats').innerHTML = html;
+}
+
+// --- Render grouped view ---
+function renderGrouped() {
+  const container = document.getElementById('tab-grouped');
+  let html = '';
+
+  for (const gKey of groupOrder) {
+    const gAdrs = adrs.filter(a => a.group === gKey);
+    if (gAdrs.length === 0) continue;
+    const gc = groupConfig[gKey];
+
+    html += `<div class="group">
+      <div class="group-header">
+        <h2>${gc.label}</h2>
+        <span class="group-badge" style="${gc.badgeStyle}">${gAdrs.length} ADR${gAdrs.length > 1 ? 's' : ''}</span>
+      </div>
+      <div class="cards">`;
+
+    for (const a of gAdrs) {
+      const depsHtml = a.deps.length > 0
+        ? `<div class="card-deps">Depends on: ${a.deps.map(d => `<span>ADR-${d}</span>`).join(' ')}</div>`
+        : '';
+      html += `<div class="card">
+        <div class="card-header">
+          <span class="card-number">ADR-${a.id}</span>
+          <span class="card-title">${a.title}</span>
+          <span class="status-badge status-${a.status}">${a.status.charAt(0).toUpperCase() + a.status.slice(1)}</span>
+        </div>
+        <div class="card-decision">${a.decision}</div>
+        ${depsHtml}
+      </div>`;
+    }
+
+    html += '</div></div>';
+  }
+
+  container.innerHTML = html;
+}
+
+// --- Render table view ---
+function renderTable() {
+  const tbody = document.getElementById('table-body');
+  let html = '';
+
+  for (const a of adrs) {
+    const gc = groupConfig[a.group];
+    html += `<tr>
+      <td><code>${a.id}</code></td>
+      <td>${a.title}</td>
+      <td><span class="status-badge status-${a.status}">${a.status.charAt(0).toUpperCase() + a.status.slice(1)}</span></td>
+      <td>${gc.label}</td>
+      <td>${a.deps.map(d => `<code>${d}</code>`).join(' ')}</td>
+      <td class="decision-col">${a.decision}</td>
+    </tr>`;
+  }
+
+  tbody.innerHTML = html;
+}
+
+// --- Render legend ---
+function renderLegend() {
+  let html = '';
+  for (const gKey of groupOrder) {
+    const gc = groupConfig[gKey];
+    const cc = canvasColors[gKey];
+    html += `<div class="legend-item"><div class="legend-dot" style="background: ${cc.fill};"></div> ${gc.label}</div>`;
+  }
+  html += `<div class="legend-item" style="margin-left: 1rem;"><svg width="30" height="12"><line x1="0" y1="6" x2="20" y2="6" stroke="var(--text-muted)" stroke-width="1.5"/><polygon points="20,2 28,6 20,10" fill="var(--text-muted)"/></svg> depends on</div>`;
+  document.getElementById('legend').innerHTML = html;
+}
+
+// --- Tab switching ---
+document.getElementById('tab-bar').addEventListener('click', function(e) {
+  const btn = e.target.closest('button[data-tab]');
+  if (!btn) return;
+  const name = btn.dataset.tab;
+
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-bar button').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+
+  if (name === 'graph') {
+    requestAnimationFrame(() => drawGraph());
+  }
+});
+
+// --- Graph drawing ---
+function drawGraph() {
+  const canvas = document.getElementById('graph-canvas');
+  const container = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+
+  // Build map
+  const adrMap = {};
+  adrs.forEach(a => adrMap[a.id] = a);
+
+  const allIds = adrs.map(a => a.id);
+
+  // Compute depth via topological ordering
+  const depth = {};
+  allIds.forEach(id => depth[id] = 0);
+
+  let changed = true;
+  let iterations = 0;
+  while (changed && iterations < 100) {
+    changed = false;
+    iterations++;
+    allIds.forEach(id => {
+      const a = adrMap[id];
+      a.deps.forEach(depId => {
+        if (adrMap[depId] && depth[id] <= depth[depId]) {
+          depth[id] = depth[depId] + 1;
+          changed = true;
+        }
+      });
+    });
+  }
+
+  // Group by depth layer
+  const maxDepth = Math.max(...Object.values(depth));
+  const layers = [];
+  for (let d = 0; d <= maxDepth; d++) {
+    layers.push(allIds.filter(id => depth[id] === d));
+  }
+
+  // Layout constants
+  const nodeW = 190;
+  const nodeH = 48;
+  const layerGap = 90;
+  const nodeGap = 20;
+
+  const maxLayerSize = Math.max(...layers.map(l => l.length));
+  const totalW = Math.max(maxLayerSize * (nodeW + nodeGap) + 60, 900);
+  const totalH = (maxDepth + 1) * (nodeH + layerGap) + 80;
+
+  canvas.width = totalW * dpr;
+  canvas.height = totalH * dpr;
+  canvas.style.width = totalW + 'px';
+  canvas.style.height = totalH + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, totalW, totalH);
+
+  // Compute positions
+  const pos = {};
+  layers.forEach((layer, d) => {
+    const layerW = layer.length * (nodeW + nodeGap) - nodeGap;
+    const startX = (totalW - layerW) / 2;
+    const y = 40 + d * (nodeH + layerGap);
+    layer.forEach((id, i) => {
+      pos[id] = { x: startX + i * (nodeW + nodeGap), y: y };
+    });
+  });
+
+  // Draw edges
+  allIds.forEach(id => {
+    const a = adrMap[id];
+    a.deps.forEach(depId => {
+      if (!pos[depId] || !pos[id]) return;
+      const from = pos[depId];
+      const to = pos[id];
+      const x1 = from.x + nodeW / 2;
+      const y1 = from.y + nodeH;
+      const x2 = to.x + nodeW / 2;
+      const y2 = to.y;
+
+      ctx.strokeStyle = 'rgba(139,148,158,0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      const cy1 = y1 + (y2 - y1) * 0.4;
+      const cy2 = y1 + (y2 - y1) * 0.6;
+      ctx.moveTo(x1, y1);
+      ctx.bezierCurveTo(x1, cy1, x2, cy2, x2, y2);
+      ctx.stroke();
+
+      // Arrowhead
+      const arrowSize = 6;
+      ctx.fillStyle = 'rgba(139,148,158,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - arrowSize, y2 - arrowSize * 1.5);
+      ctx.lineTo(x2 + arrowSize, y2 - arrowSize * 1.5);
+      ctx.closePath();
+      ctx.fill();
+    });
+  });
+
+  // Draw nodes
+  allIds.forEach(id => {
+    const a = adrMap[id];
+    if (!pos[id]) return;
+    const p = pos[id];
+    const cc = canvasColors[a.group] || { fill: '#8b949e', dim: 'rgba(139,148,158,0.15)' };
+
+    // Background
+    ctx.fillStyle = cc.dim;
+    roundRect(ctx, p.x, p.y, nodeW, nodeH, 6);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = cc.fill;
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, p.x, p.y, nodeW, nodeH, 6);
+    ctx.stroke();
+
+    // Left accent
+    ctx.fillStyle = cc.fill;
+    ctx.fillRect(p.x, p.y + 4, 3, nodeH - 8);
+
+    // ADR number
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('ADR-' + a.id, p.x + 12, p.y + 18);
+
+    // Title
+    ctx.fillStyle = '#e6edf3';
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+    const maxChars = 24;
+    const title = a.title.length > maxChars ? a.title.substring(0, maxChars - 2) + '\u2026' : a.title;
+    ctx.fillText(title, p.x + 12, p.y + 34);
+  });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+// Handle resize
+window.addEventListener('resize', () => {
+  if (document.getElementById('tab-graph').classList.contains('active')) {
+    drawGraph();
+  }
+});
+
+// Initialize
+renderStats();
+renderGrouped();
+renderTable();
+renderLegend();
+</script>
+
+</body>
+</html>
