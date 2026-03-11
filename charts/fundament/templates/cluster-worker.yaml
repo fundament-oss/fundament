@@ -32,8 +32,6 @@ spec:
               value: {{ $.Values.clusterWorker.gardenerMode }}
             - name: LOG_LEVEL
               value: {{ $.Values.clusterWorker.logLevel }}
-            - name: PROMETHEUS_URL
-              value: {{ $.Values.clusterWorker.prometheusURL }}
             {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
             - name: GARDENER_KUBECONFIG
               value: /etc/gardener/kubeconfig

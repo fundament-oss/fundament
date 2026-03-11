@@ -33,6 +33,7 @@ organizationApi:
   enabled: true
   replicas: 1
   logLevel: debug
+  prometheusURL: mock
 
 consoleFrontend:
   enabled: true
@@ -42,7 +43,6 @@ clusterWorker:
   enabled: true
   replicas: 1
   gardenerMode: mock
-  prometheusURL: mock
 
 docsFrontend:
   enabled: true
