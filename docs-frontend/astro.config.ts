@@ -104,8 +104,12 @@ export default defineConfig({
           autogenerate: { directory: 'docs' },
         },
         {
-          label: 'FUNs (Fundament Update Notes)',
+          label: 'Fundament Update Notes',
           autogenerate: { directory: 'funs' },
+        },
+        {
+          label: 'Architecture Decision Records',
+          autogenerate: { directory: 'adr' },
         },
       ],
       customCss: [

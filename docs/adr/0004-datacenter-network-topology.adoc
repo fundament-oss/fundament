@@ -1,0 +1,38 @@
+:showtitle:
+:sidebar-order: 4
+:state: proposed
+
+= ADR-0004: Datacenter network topology
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: networking
+Depends-on:: ADR-0002, ADR-0003
+
+== Context
+
+At 50,000 physical servers across 3+ sites, the physical network architecture must be explicitly chosen. The topology determines scalability, fault domains, and whether network provisioning can be fully automated alongside compute provisioning.
+
+== Options
+
+=== Option 1: Spine-leaf with BGP/EVPN
+* Pros: industry standard for large-scale DCs, horizontal scaling by adding leaves, well-understood fault domains, automated via open tooling (SONiC, FRR)
+* Cons: opinionated — requires compatible switch hardware, less flexible for legacy network designs
+
+=== Option 2: Traditional three-tier (core/distribution/access)
+* Pros: familiar to most network teams, works with any vendor
+* Cons: spanning tree limits scale, poor east-west performance, difficult to automate, does not scale to 50,000 physical servers
+
+=== Option 3: SDN overlay (e.g. NSX, Contrail)
+* Pros: abstraction from physical topology, multi-tenant network virtualization built in
+* Cons: proprietary vendor dependency, additional software layer, licensing costs at scale
+
+== Decision
+
+Spine-leaf with BGP/EVPN. Only topology proven to scale to 50,000+ physical servers with full automation. Aligns with the automation-first requirement from ADR-0002.
+
+== Consequences
+
+* Switch hardware must support BGP/EVPN (e.g. Edgecore with SONiC)
+* ODCs with legacy network designs must migrate to spine-leaf
+* Network provisioning can be integrated with compute provisioning

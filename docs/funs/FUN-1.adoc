@@ -1,0 +1,87 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 1
+:state: discussion
+
+= FUN-1 Fundament Update Note
+
+== Introduction
+
+A FUN about FUNs. This document describes what FUNs are, why we write them, and how to think about writing one.
+
+FUNs are inspired by https://rfd.shared.oxide.computer/rfd/0001[Oxide RFD-1] and the IETF Request for Comments tradition. From https://www.rfc-editor.org/rfc/rfc3[RFC 3]:
+
+[quote]
+The content of a note may be any thought, suggestion, etc. related to the software or other aspect of the network.
+
+== Philosophy
+
+The goal is to encourage rigorous thinking while lowering barriers to sharing ideas. Rather than demanding polish, FUNs embrace timely, unfinished thoughts. This eases the natural hesitancy people feel about publishing unpolished work.
+
+FUNs serve dual purposes: they enable rapid iteration on rough ideas while creating a permanent repository of established thinking. Some FUNs may be quick discussions that never go anywhere, others become authoritative references that guide implementation for years.
+
+Anyone can propose a FUN about technical decisions, API changes, architecture, or processes. Good ideas come from everywhere and deserve a structured forum.
+
+== Why FUNs?
+
+Writing things down forces clarity. A half-formed idea in someone's head becomes a concrete proposal when it hits paper. Even if the proposal is wrong, it gives the team something specific to react to, which is far more productive than debating abstractions.
+
+FUNs also create a historical record. Six months from now, when someone asks "why did we do it this way?", the answer is in a FUN. This is valuable for onboarding new team members and for our future selves.
+
+Concretely, FUNs serve three purposes:
+
+* Public discussion of new ideas
+* Documentation of decisions made
+* Reference and specification for implementation
+
+== Writing a FUN
+
+A FUN doesn't have to be strong from the start. Start with a rough idea, a few bullet points, or just a question. The document can grow and improve through discussion.
+
+Write in prose. Explain your reasoning, not just your conclusion. A FUN that says "we should use X" is less useful than one that says "we considered X and Y, X is better because of Z, but it comes with this tradeoff." Future readers will want to understand the *why*, not just the *what*.
+
+As a FUN matures, it may evolve to:
+
+* Document options with their benefits and drawbacks
+* Include reasoning supported by data or references
+* Make decisions transparent to future team members
+
+But none of this is required upfront. The most important thing is to start writing.
+
+== Format
+
+FUNs are written in AsciiDoc and live in the `docs/funs/` directory. Each FUN file is named `FUN-<number>.adoc`.
+
+Every FUN file starts with these document attributes:
+
+....
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: <number>
+:state: prediscussion
+....
+
+The `:state:` attribute tracks the FUN's lifecycle (see below). The `:sidebar-order:` controls the position in the documentation sidebar. The rest are rendering directives.
+
+== States
+
+FUNs progress through a lifecycle:
+
+* `prediscussion`: initial draft, not yet discussed. This is where every FUN starts. It might be rough, incomplete, or just a question.
+* `discussion`: actively being discussed. The FUN is being reviewed, debated, and refined. This is where most of the work happens.
+* `published`: approved. The team has agreed on the approach. The FUN is now the authoritative reference for this topic.
+* `committed`: implementation delivered. The decision has been implemented and the FUN reflects the actual state of the system.
+* `abandoned`: no longer being pursued. The idea was considered and rejected, or superseded by a different approach. Abandoned FUNs are still valuable as a record of what was considered and why it didn't work out.
+
+FUNs don't have to move through every state. Some may go directly from `prediscussion` to `abandoned`. Others may stay in `discussion` for a long time. The states are descriptive, not prescriptive.
+
+== Related proposal schemes
+
+* https://rfd.shared.oxide.computer/rfd/0001[Oxide RFDs]
+* https://github.com/kubernetes/enhancements[Kubernetes Enhancement Proposals]
+* https://github.com/gardener/gardener/tree/master/docs/proposals[Gardener Proposals]
+* https://metal-stack.io/docs/enhancement-proposals[metal-stack Enhancement Proposals]

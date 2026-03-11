@@ -1,0 +1,39 @@
+:showtitle:
+:sidebar-order: 14
+:state: proposed
+
+= ADR-0014: Storage architecture
+
+Status:: proposed
+Date:: 2026-03-09
+Group:: storage
+Depends-on:: ADR-0003, ADR-0008
+
+== Context
+
+With Kubernetes on bare-metal (ADR-0003, ADR-0007), persistent storage must be provided by the platform. The architectural question is whether storage runs on the same physical nodes as compute workloads (hyperconverged) or on dedicated storage nodes (disaggregated).
+
+== Options
+
+=== Option 1: Hyperconverged
+* Pros: every node contributes storage capacity; no separate storage hardware to procure and manage; scales linearly with compute; simpler initial deployment; proven at moderate scale
+* Cons: storage I/O competes with workload CPU, RAM, and network; harder to scale storage independently of compute; noisy neighbor risk between storage and workloads
+
+=== Option 2: Disaggregated (dedicated storage nodes)
+* Pros: storage and compute scale independently; no resource contention; optimized hardware per role (NVMe-heavy storage nodes, CPU-heavy compute nodes); better for storage-intensive tenants
+* Cons: more hardware SKUs; separate capacity planning; higher minimum investment; more complex network topology
+
+=== Option 3: Hyperconverged initially, disaggregated when needed
+* Pros: low barrier to start; same storage technology (e.g. Ceph) works in both models; disaggregated storage nodes can be added without migrating existing workloads; investment scales with actual demand
+* Cons: operational model changes over time; must ensure storage technology supports both topologies
+
+== Decision
+
+Hyperconverged initially, with the option to add disaggregated storage nodes when needed (Option 3). All bare-metal nodes contribute storage capacity alongside compute. The chosen storage technology (separate ADR) must support adding dedicated storage nodes later without migration, so the platform can evolve to a mixed model when scale or tenant requirements demand it.
+
+== Consequences
+
+* Initial hardware is uniform — no separate storage SKU needed
+* Storage technology must support both hyperconverged and disaggregated topologies
+* Capacity planning must account for storage I/O overhead on compute nodes
+* Disaggregated storage nodes can be introduced as a scaling strategy without re-architecture

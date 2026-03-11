@@ -1,6 +1,7 @@
 ---
 interface Props {
-  state: 'prediscussion' | 'discussion' | 'published' | 'committed' | 'abandoned';
+  state: 'prediscussion' | 'discussion' | 'published' | 'committed' | 'abandoned'
+       | 'proposed' | 'accepted' | 'superseded' | 'deprecated';
 }
 
 const { state } = Astro.props;
@@ -11,6 +12,10 @@ const stateConfig = {
   published: { label: 'Published' },
   committed: { label: 'Committed' },
   abandoned: { label: 'Abandoned' },
+  proposed: { label: 'Proposed' },
+  accepted: { label: 'Accepted' },
+  superseded: { label: 'Superseded' },
+  deprecated: { label: 'Deprecated' },
 };
 
 const currentState = stateConfig[state];
@@ -50,6 +55,22 @@ const currentState = stateConfig[state];
   }
 
   .state-label[data-state='abandoned'] {
+    @apply bg-rose-200 text-rose-900 dark:bg-rose-600 dark:text-white;
+  }
+
+  .state-label[data-state='proposed'] {
+    @apply bg-amber-200 text-amber-900 dark:bg-amber-600 dark:text-white;
+  }
+
+  .state-label[data-state='accepted'] {
+    @apply bg-emerald-200 text-emerald-900 dark:bg-emerald-600 dark:text-white;
+  }
+
+  .state-label[data-state='superseded'] {
+    @apply bg-gray-200 text-gray-900 dark:bg-gray-600 dark:text-white;
+  }
+
+  .state-label[data-state='deprecated'] {
     @apply bg-rose-200 text-rose-900 dark:bg-rose-600 dark:text-white;
   }
 </style>
