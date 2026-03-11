@@ -1,4 +1,4 @@
-package workeroutbox
+package outbox
 
 import (
 	"context"
@@ -89,8 +89,8 @@ func TestEntityFromRow_NoValidFK(t *testing.T) {
 	}
 }
 
-func newTestWorker() *OutboxWorker {
-	return &OutboxWorker{
+func newTestWorker() *Worker {
+	return &Worker{
 		logger: slog.Default(),
 		cfg: Config{
 			MaxRetries:  10,

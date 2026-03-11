@@ -80,7 +80,6 @@ type ClusterToSync struct {
 	Region            string
 	KubernetesVersion string
 	Deleted           *time.Time
-	SyncAttempts      int
 	NodePools         []NodePool // Node pool configurations for Gardener worker groups
 }
 

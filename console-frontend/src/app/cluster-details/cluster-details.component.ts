@@ -74,8 +74,10 @@ const getSyncStatusColor = (status: string | undefined): string => {
 const getSyncStatusLabel = (syncState: SyncState | null): string => {
   if (!syncState) return 'Unknown';
   if (syncState.shootStatus) return syncState.shootStatus;
-  if (syncState.syncedAt) return 'Synced';
-  if (syncState.syncError) return 'Error';
+  if (syncState.outboxError) return 'Error';
+  if (syncState.outboxStatus === 'completed') return 'Synced';
+  if (syncState.outboxStatus === 'failed') return 'Failed';
+  if (syncState.outboxStatus) return 'Syncing';
   return 'Pending';
 };
 

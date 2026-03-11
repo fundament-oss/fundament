@@ -178,9 +178,9 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 
 	now := m.clock()
 
-	// Check if shoot already exists (update case)
-	if existing, exists := m.shoots[shootName]; exists {
-		// Update preserves creation time
+	// Check if shoot already exists by cluster ID (mirrors real client's label-based lookup)
+	if existing, existingName := m.findShootByClusterID(cluster.ID); existing != nil {
+		// Update preserves creation time and existing shoot name
 		existing.Cluster = *cluster
 
 		// Record event
@@ -188,11 +188,11 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 			Time:      now,
 			Type:      "apply",
 			ClusterID: cluster.ID,
-			ShootName: shootName,
+			ShootName: existingName,
 			Message:   "Shoot updated",
 		})
 
-		m.logger.Info("MOCK: updated shoot", "shoot", shootName, "cluster_id", cluster.ID)
+		m.logger.Info("MOCK: updated shoot", "shoot", existingName, "cluster_id", cluster.ID)
 		return nil
 	}
 

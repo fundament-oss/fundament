@@ -45,12 +45,12 @@ func (s *Server) GetClusterByName(
 			KubernetesVersion:  cluster.KubernetesVersion,
 			Created:            cluster.Created,
 			Deleted:            cluster.Deleted,
-			Synced:             cluster.Synced,
-			SyncError:          cluster.SyncError,
-			SyncAttempts:       cluster.SyncAttempts,
 			ShootStatus:        cluster.ShootStatus,
 			ShootStatusMessage: cluster.ShootStatusMessage,
 			ShootStatusUpdated: cluster.ShootStatusUpdated,
+			OutboxStatus:       cluster.OutboxStatus,
+			OutboxRetries:      cluster.OutboxRetries,
+			OutboxError:        cluster.OutboxError,
 		}),
 	}.Build()), nil
 }
@@ -155,9 +155,9 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 		Created:           timestamppb.New(row.Created.Time),
 		ResourceUsage:     nil, // Stub
 		SyncState: syncStateFromRow(
-			row.Synced,
-			row.SyncError,
-			row.SyncAttempts,
+			row.OutboxStatus,
+			row.OutboxRetries,
+			row.OutboxError,
 			row.ShootStatus,
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
