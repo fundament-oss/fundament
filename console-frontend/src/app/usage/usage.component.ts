@@ -11,11 +11,11 @@ import {
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerTableDown } from '@ng-icons/tabler-icons';
-import { create } from '@bufbuild/protobuf';
-import { firstValueFrom } from 'rxjs';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';

@@ -167,8 +167,8 @@ export default class ProjectSettingsComponent implements OnInit {
       this.showDeleteModal.set(false);
       this.toastService.info(`Project '${currentProject.name}' deleted`);
 
-      // Reload organization data to update the selector modal
-      await this.organizationDataService.loadOrganizationData();
+      // Reload project data to update the selector modal
+      await this.organizationDataService.reloadProjectsAndNamespaces();
 
       this.router.navigate(['/projects']);
     } catch (err) {

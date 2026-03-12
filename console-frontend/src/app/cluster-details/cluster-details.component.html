@@ -141,7 +141,9 @@
           @if (clusterData.syncState && clusterData.syncState.outboxRetries > 0) {
             <dl>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Outbox retries</dt>
-              <dd class="mt-1 text-sm dark:text-white">{{ clusterData.syncState.outboxRetries }}</dd>
+              <dd class="mt-1 text-sm dark:text-white">
+                {{ clusterData.syncState.outboxRetries }}
+              </dd>
             </dl>
           }
         </div>
@@ -492,7 +494,13 @@
                     <span
                       class="badge-sm"
                       [class]="
-                        pool.status === NodePoolStatus.HEALTHY ? 'badge-emerald' : 'badge-rose'
+                        pool.status === NodePoolStatus.HEALTHY
+                          ? 'badge-emerald'
+                          : pool.status === NodePoolStatus.UNHEALTHY
+                            ? 'badge-rose'
+                            : pool.status === NodePoolStatus.DEGRADED
+                              ? 'badge-yellow'
+                              : 'badge-gray'
                       "
                     >
                       {{ getNodePoolStatusLabel(pool.status) }}
@@ -503,10 +511,6 @@
                       <span class="text-gray-500 dark:text-gray-400">Type:</span>
                       <span class="ml-1 dark:text-white">{{ pool.machineType }}</span>
                     </div>
-                    <!-- <div>
-                  <span class="text-gray-500 dark:text-gray-400">Version:</span>
-                  <span class="ml-1">{{ pool.version }}</span>
-                </div> -->
                     <div class="text-right">
                       <span class="text-gray-500 dark:text-gray-400">Nodes:</span>
                       <span class="ml-1 dark:text-white"
@@ -514,6 +518,12 @@
                         {{ pool.maxNodes }})</span
                       >
                     </div>
+                    @if (pool.version) {
+                      <div>
+                        <span class="text-gray-500 dark:text-gray-400">Version:</span>
+                        <span class="ml-1 dark:text-white">{{ pool.version }}</span>
+                      </div>
+                    }
                   </div>
                 </div>
               }

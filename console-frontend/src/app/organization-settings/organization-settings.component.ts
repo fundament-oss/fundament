@@ -12,14 +12,10 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
-import {
-  GetOrganizationRequestSchema,
-  UpdateOrganizationRequestSchema,
-  Organization,
-} from '../../generated/v1/organization_pb';
+import { UpdateOrganizationRequestSchema } from '../../generated/v1/organization_pb';
 import { ORGANIZATION } from '../../connect/tokens';
 import { TitleService } from '../title.service';
-import { OrganizationDataService } from '../organization-data.service';
+import { OrganizationDataService, type OrganizationData } from '../organization-data.service';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 import OrganizationContextService from '../organization-context.service';
 
@@ -47,7 +43,7 @@ export default class OrganizationComponent implements OnInit {
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
-  organization = signal<Organization | null>(null);
+  organization = signal<OrganizationData | null>(null);
 
   isEditing = signal(false);
 
@@ -61,40 +57,10 @@ export default class OrganizationComponent implements OnInit {
     this.titleService.setTitle('Organization settings');
   }
 
-  async ngOnInit() {
-    await this.loadOrganization();
-  }
-
-  async loadOrganization() {
-    this.loading.set(true);
-    this.error.set(null);
-
-    try {
-      // Get organization ID from context service
-      const organizationId = this.organizationContextService.currentOrganizationId();
-      if (!organizationId) {
-        throw new Error('Organization ID not found');
-      }
-
-      const request = create(GetOrganizationRequestSchema, {
-        id: organizationId,
-      });
-      const response = await firstValueFrom(this.organizationClient.getOrganization(request));
-
-      if (!response.organization) {
-        throw new Error('Organization not found');
-      }
-
-      this.organization.set(response.organization);
-    } catch (err) {
-      this.error.set(
-        err instanceof Error
-          ? `Failed to load organization: ${err.message}`
-          : 'Failed to load organization',
-      );
-    } finally {
-      this.loading.set(false);
-    }
+  ngOnInit() {
+    const orgId = this.organizationContextService.currentOrganizationId();
+    const orgData = orgId ? this.organizationDataService.getOrganizationById(orgId) : null;
+    this.organization.set(orgData ?? null);
   }
 
   startEdit() {
@@ -134,11 +100,7 @@ export default class OrganizationComponent implements OnInit {
 
       await firstValueFrom(this.organizationClient.updateOrganization(request));
 
-      // Update the local organization with the new display name
-      this.organization.set({
-        ...currentOrganization,
-        displayName: nameToSave.trim(),
-      });
+      this.organization.set({ ...currentOrganization, displayName: nameToSave.trim() });
       this.organizationDataService.updateOrganizationDisplayName(
         currentOrganization.id,
         nameToSave.trim(),

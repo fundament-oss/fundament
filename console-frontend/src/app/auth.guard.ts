@@ -11,24 +11,24 @@ const authGuard: CanActivateFn = async (route, state) => {
     return true;
   }
 
-  // Otherwise, try to fetch user info from server
+  // Wait for app-level initialization (deduplicates with App.ngOnInit's initializeAuth call)
+  await apiService.initializeAuth();
+
+  if (apiService.isAuthenticated()) {
+    return true;
+  }
+
+  // Still not authenticated - try refreshing the token
   try {
+    await apiService.refreshToken();
     await apiService.getUserInfo();
     return true;
   } catch {
-    // Access token might be expired, try to refresh it
-    try {
-      await apiService.refreshToken();
-      // Retry getting user info after successful refresh
-      await apiService.getUserInfo();
-      return true;
-    } catch {
-      // Refresh failed - not authenticated, store return URL and redirect to login
-      localStorage.setItem('returnUrl', state.url);
+    // Refresh failed - not authenticated, store return URL and redirect to login
+    localStorage.setItem('returnUrl', state.url);
 
-      router.navigate(['/login']);
-      return false;
-    }
+    router.navigate(['/login']);
+    return false;
   }
 };
 

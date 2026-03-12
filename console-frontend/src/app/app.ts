@@ -264,14 +264,18 @@ export default class App implements OnInit {
   }
 
   /**
-   * Select an organization and load its full data (projects, namespaces).
+   * Select an organization and load its cluster data, then render child routes.
+   * Projects and namespaces are loaded lazily on demand (selector open, project page visit).
    */
   private async selectAndLoadOrganization(orgId: string) {
     this.organizationContextService.setOrganizationId(orgId);
-    this.selectedOrgId.set(orgId);
     this.showOrgPicker.set(false);
 
     await this.organizationDataService.loadOrganizationData(orgId);
+
+    // Render child routes only after cluster data is ready, so the dashboard can
+    // use the pre-fetched clusterSummaries instead of making a duplicate API call.
+    this.selectedOrgId.set(orgId);
     this.updateSidebarStateFromRoute(this.router.url);
   }
 
@@ -372,8 +376,9 @@ export default class App implements OnInit {
     let route = segment.route;
 
     if (label === ':projectName') {
+      await this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
       const projectData = this.organizationDataService.getProjectById(params['id']);
-      label = projectData?.project.name || 'Project';
+      label = projectData?.project.name ?? 'Project';
     }
 
     if (label === ':pluginDisplayName') {
@@ -409,7 +414,8 @@ export default class App implements OnInit {
         if (cached) {
           label = cached;
         } else {
-          const name = await fetchClusterName(this.clusterClient, clusterId);
+          const fromStore = this.organizationDataService.getClusterById(clusterId)?.cluster.name;
+          const name = fromStore ?? (await fetchClusterName(this.clusterClient, clusterId));
           if (name) {
             this.clusterNameCache.set(clusterId, name);
             label = name;
@@ -503,6 +509,7 @@ export default class App implements OnInit {
 
   openSelectorModal() {
     this.selectorModalOpen.set(true);
+    this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
   }
 
   closeSelectorModal() {
@@ -545,7 +552,7 @@ export default class App implements OnInit {
     // Update the organization context for API requests
     this.organizationContextService.setOrganizationId(orgId);
 
-    // Load the new org's data (projects, namespaces)
+    // Load the new org's cluster data
     await this.organizationDataService.loadOrganizationData(orgId);
 
     // Restore selection — recreates the router outlet, triggering ngOnInit in child components
