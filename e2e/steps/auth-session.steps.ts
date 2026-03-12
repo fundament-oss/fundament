@@ -82,7 +82,7 @@ When('I click the logout button', async function (this: ICustomWorld) {
 
 Then('I should see the dashboard content', async function (this: ICustomWorld) {
   // Dashboard has a heading with "Dashboard"
-  const heading = this.page!.locator('h1:has-text("Dashboard")');
+  const heading = this.page!.locator('h1:has-text("Clusters")');
   await expect(heading).toBeVisible({ timeout: 10000 });
 });
 
@@ -109,7 +109,7 @@ Then(
     await expect(orgIdLabel).toBeVisible();
 
     // Check that the actual ID value is shown (a UUID-like string in a mono font element)
-    const orgIdValue = this.page!.locator('.font-mono');
+    const orgIdValue = this.page!.locator('.font-mono').first();
     await expect(orgIdValue).toBeVisible();
     const idText = await orgIdValue.textContent();
     expect(idText?.trim()).toMatch(
@@ -145,7 +145,7 @@ Then(
     expect(this.page!.url()).not.toContain('/login');
 
     // Dashboard content should be visible
-    const heading = this.page!.locator('h1:has-text("Dashboard")');
+    const heading = this.page!.locator('h1:has-text("Clusters")');
     await expect(heading).toBeVisible({ timeout: 10000 });
   }
 );
