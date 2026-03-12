@@ -171,8 +171,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      PR_NUMBER: ${{ github.event.number }}
     steps:
       - uses: actions/checkout@v5
 
@@ -221,8 +219,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      PR_NUMBER: ${{ github.event.number }}
     steps:
       - uses: actions/checkout@v5
 
@@ -276,8 +272,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
-    env:
-      PR_NUMBER: ${{ github.event.number }}
     steps:
       - name: Clone Flux repo
         run: |
