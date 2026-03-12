@@ -6,7 +6,7 @@ import (
 	"connectrpc.com/connect"
 )
 
-const retryAttempts = 3
+const retryAttempts = 5
 
 // retryOnPermissionDenied calls fn up to retryAttempts times.
 // Between attempts it sleeps attempt*second (linear back-off).
