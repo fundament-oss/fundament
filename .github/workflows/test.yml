@@ -40,11 +40,45 @@ jobs:
         if: steps.cache-trek.outputs.cache-hit != 'true'
         run: go install github.com/printeers/trek@v0.12.1
 
-      - name: Run tests
+      - name: Run tests (organization-api)
         working-directory: organization-api
         run: go test ./... -count=1
 
-  terraform:
+  cluster-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Trek binary
+        id: cache-trek
+        uses: actions/cache@v5
+        with:
+          path: ~/go/bin/trek
+          key: trek-${{ runner.os }}-v0.12.1
+
+      - name: Cache embedded PostgreSQL
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}-cw
+          key: embedded-pg-cw-${{ runner.os }}
+
+      - name: Install dependencies
+        run: go get ./...
+
+      - name: Install Trek
+        if: steps.cache-trek.outputs.cache-hit != 'true'
+        run: go install github.com/printeers/trek@v0.12.1
+
+      - name: Run tests (cluster-worker)
+        working-directory: cluster-worker
+        run: go test ./... -count=1
+
+  functl:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -55,8 +89,10 @@ jobs:
           go-version-file: go.mod
 
       - name: Install dependencies
-        run: go get ./...
+        run: go mod download
 
-      - name: Run tests
-        working-directory: terraform-provider
-        run: go test ./... -count=1
+      - name: Build and vet
+        working-directory: functl
+        run: |
+          go build ./...
+          go vet ./...

@@ -12,18 +12,14 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const clusterGetByID = `-- name: ClusterGetByID :one
+const clusterGetForSync = `-- name: ClusterGetForSync :one
 SELECT
     tenant.clusters.id,
     tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
     tenant.clusters.deleted,
-    tenant.clusters.synced,
-    tenant.clusters.sync_error,
-    tenant.clusters.sync_attempts,
-    tenant.clusters.sync_claimed_at,
-    tenant.clusters.shoot_status,
-    tenant.clusters.shoot_status_message,
-    tenant.clusters.shoot_status_updated,
+    tenant.clusters.organization_id,
     tenant.organizations.name AS organization_name
 FROM
     tenant.clusters
@@ -32,93 +28,33 @@ WHERE
     tenant.clusters.id = $1
 `
 
-type ClusterGetByIDParams struct {
+type ClusterGetForSyncParams struct {
 	ClusterID uuid.UUID
 }
 
-type ClusterGetByIDRow struct {
-	ID                 uuid.UUID
-	Name               string
-	Deleted            pgtype.Timestamptz
-	Synced             pgtype.Timestamptz
-	SyncError          pgtype.Text
-	SyncAttempts       int32
-	SyncClaimedAt      pgtype.Timestamptz
-	ShootStatus        pgtype.Text
-	ShootStatusMessage pgtype.Text
-	ShootStatusUpdated pgtype.Timestamptz
-	OrganizationName   string
+type ClusterGetForSyncRow struct {
+	ID                uuid.UUID
+	Name              string
+	Region            string
+	KubernetesVersion string
+	Deleted           pgtype.Timestamptz
+	OrganizationID    uuid.UUID
+	OrganizationName  string
 }
 
-// Get a single cluster by ID with sync state (for testing).
-func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) (ClusterGetByIDRow, error) {
-	row := q.db.QueryRow(ctx, clusterGetByID, arg.ClusterID)
-	var i ClusterGetByIDRow
+// Get cluster with the fields needed to build a gardener.ClusterToSync.
+// Used by the cluster handler's Sync() method.
+func (q *Queries) ClusterGetForSync(ctx context.Context, arg ClusterGetForSyncParams) (ClusterGetForSyncRow, error) {
+	row := q.db.QueryRow(ctx, clusterGetForSync, arg.ClusterID)
+	var i ClusterGetForSyncRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Region,
+		&i.KubernetesVersion,
 		&i.Deleted,
-		&i.Synced,
-		&i.SyncError,
-		&i.SyncAttempts,
-		&i.SyncClaimedAt,
-		&i.ShootStatus,
-		&i.ShootStatusMessage,
-		&i.ShootStatusUpdated,
+		&i.OrganizationID,
 		&i.OrganizationName,
 	)
 	return i, err
-}
-
-const clusterGetEvents = `-- name: ClusterGetEvents :many
-SELECT
-    id,
-    cluster_id,
-    event_type,
-    created,
-    sync_action,
-    message,
-    attempt
-FROM
-    tenant.cluster_events
-WHERE
-    cluster_id = $1
-ORDER BY
-    created DESC
-LIMIT
-    $2
-`
-
-type ClusterGetEventsParams struct {
-	ClusterID  uuid.UUID
-	LimitCount int32
-}
-
-// Get event history for a cluster.
-func (q *Queries) ClusterGetEvents(ctx context.Context, arg ClusterGetEventsParams) ([]TenantClusterEvent, error) {
-	rows, err := q.db.Query(ctx, clusterGetEvents, arg.ClusterID, arg.LimitCount)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TenantClusterEvent
-	for rows.Next() {
-		var i TenantClusterEvent
-		if err := rows.Scan(
-			&i.ID,
-			&i.ClusterID,
-			&i.EventType,
-			&i.Created,
-			&i.SyncAction,
-			&i.Message,
-			&i.Attempt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }

@@ -23,12 +23,12 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Cluster sync state from Gardener
+// Cluster sync state derived from cluster_outbox and Gardener
 type SyncState struct {
 	state                      protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_SyncedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=synced_at,json=syncedAt"`
-	xxx_hidden_SyncError       *string                `protobuf:"bytes,20,opt,name=sync_error,json=syncError"`
-	xxx_hidden_SyncAttempts    int32                  `protobuf:"varint,30,opt,name=sync_attempts,json=syncAttempts"`
+	xxx_hidden_OutboxStatus    *string                `protobuf:"bytes,10,opt,name=outbox_status,json=outboxStatus"`
+	xxx_hidden_OutboxRetries   int32                  `protobuf:"varint,20,opt,name=outbox_retries,json=outboxRetries"`
+	xxx_hidden_OutboxError     *string                `protobuf:"bytes,30,opt,name=outbox_error,json=outboxError"`
 	xxx_hidden_ShootStatus     *string                `protobuf:"bytes,40,opt,name=shoot_status,json=shootStatus"`
 	xxx_hidden_ShootMessage    *string                `protobuf:"bytes,50,opt,name=shoot_message,json=shootMessage"`
 	xxx_hidden_StatusUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=status_updated_at,json=statusUpdatedAt"`
@@ -63,28 +63,31 @@ func (x *SyncState) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *SyncState) GetSyncedAt() *timestamppb.Timestamp {
+func (x *SyncState) GetOutboxStatus() string {
 	if x != nil {
-		return x.xxx_hidden_SyncedAt
-	}
-	return nil
-}
-
-func (x *SyncState) GetSyncError() string {
-	if x != nil {
-		if x.xxx_hidden_SyncError != nil {
-			return *x.xxx_hidden_SyncError
+		if x.xxx_hidden_OutboxStatus != nil {
+			return *x.xxx_hidden_OutboxStatus
 		}
 		return ""
 	}
 	return ""
 }
 
-func (x *SyncState) GetSyncAttempts() int32 {
+func (x *SyncState) GetOutboxRetries() int32 {
 	if x != nil {
-		return x.xxx_hidden_SyncAttempts
+		return x.xxx_hidden_OutboxRetries
 	}
 	return 0
+}
+
+func (x *SyncState) GetOutboxError() string {
+	if x != nil {
+		if x.xxx_hidden_OutboxError != nil {
+			return *x.xxx_hidden_OutboxError
+		}
+		return ""
+	}
+	return ""
 }
 
 func (x *SyncState) GetShootStatus() string {
@@ -114,17 +117,18 @@ func (x *SyncState) GetStatusUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *SyncState) SetSyncedAt(v *timestamppb.Timestamp) {
-	x.xxx_hidden_SyncedAt = v
+func (x *SyncState) SetOutboxStatus(v string) {
+	x.xxx_hidden_OutboxStatus = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 6)
 }
 
-func (x *SyncState) SetSyncError(v string) {
-	x.xxx_hidden_SyncError = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 6)
+func (x *SyncState) SetOutboxRetries(v int32) {
+	x.xxx_hidden_OutboxRetries = v
 }
 
-func (x *SyncState) SetSyncAttempts(v int32) {
-	x.xxx_hidden_SyncAttempts = v
+func (x *SyncState) SetOutboxError(v string) {
+	x.xxx_hidden_OutboxError = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 6)
 }
 
 func (x *SyncState) SetShootStatus(v string) {
@@ -141,18 +145,18 @@ func (x *SyncState) SetStatusUpdatedAt(v *timestamppb.Timestamp) {
 	x.xxx_hidden_StatusUpdatedAt = v
 }
 
-func (x *SyncState) HasSyncedAt() bool {
+func (x *SyncState) HasOutboxStatus() bool {
 	if x == nil {
 		return false
 	}
-	return x.xxx_hidden_SyncedAt != nil
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
 }
 
-func (x *SyncState) HasSyncError() bool {
+func (x *SyncState) HasOutboxError() bool {
 	if x == nil {
 		return false
 	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
 }
 
 func (x *SyncState) HasShootStatus() bool {
@@ -176,13 +180,14 @@ func (x *SyncState) HasStatusUpdatedAt() bool {
 	return x.xxx_hidden_StatusUpdatedAt != nil
 }
 
-func (x *SyncState) ClearSyncedAt() {
-	x.xxx_hidden_SyncedAt = nil
+func (x *SyncState) ClearOutboxStatus() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_OutboxStatus = nil
 }
 
-func (x *SyncState) ClearSyncError() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_SyncError = nil
+func (x *SyncState) ClearOutboxError() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_OutboxError = nil
 }
 
 func (x *SyncState) ClearShootStatus() {
@@ -202,9 +207,9 @@ func (x *SyncState) ClearStatusUpdatedAt() {
 type SyncState_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	SyncedAt        *timestamppb.Timestamp
-	SyncError       *string
-	SyncAttempts    int32
+	OutboxStatus    *string
+	OutboxRetries   int32
+	OutboxError     *string
 	ShootStatus     *string
 	ShootMessage    *string
 	StatusUpdatedAt *timestamppb.Timestamp
@@ -214,12 +219,15 @@ func (b0 SyncState_builder) Build() *SyncState {
 	m0 := &SyncState{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_SyncedAt = b.SyncedAt
-	if b.SyncError != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 6)
-		x.xxx_hidden_SyncError = b.SyncError
+	if b.OutboxStatus != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 6)
+		x.xxx_hidden_OutboxStatus = b.OutboxStatus
 	}
-	x.xxx_hidden_SyncAttempts = b.SyncAttempts
+	x.xxx_hidden_OutboxRetries = b.OutboxRetries
+	if b.OutboxError != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 6)
+		x.xxx_hidden_OutboxError = b.OutboxError
+	}
 	if b.ShootStatus != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 6)
 		x.xxx_hidden_ShootStatus = b.ShootStatus
@@ -3189,13 +3197,12 @@ var File_v1_cluster_proto protoreflect.FileDescriptor
 
 const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xad\x02\n" +
-	"\tSyncState\x127\n" +
-	"\tsynced_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\bsyncedAt\x12$\n" +
-	"\n" +
-	"sync_error\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\tsyncError\x12#\n" +
-	"\rsync_attempts\x18\x1e \x01(\x05R\fsyncAttempts\x12(\n" +
+	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xa6\x02\n" +
+	"\tSyncState\x12*\n" +
+	"\routbox_status\x18\n" +
+	" \x01(\tB\x05\xaa\x01\x02\b\x01R\foutboxStatus\x12%\n" +
+	"\x0eoutbox_retries\x18\x14 \x01(\x05R\routboxRetries\x12(\n" +
+	"\foutbox_error\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\voutboxError\x12(\n" +
 	"\fshoot_status\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\vshootStatus\x12*\n" +
 	"\rshoot_message\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\fshootMessage\x12F\n" +
 	"\x11status_updated_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\x0fstatusUpdatedAt\"\x15\n" +
@@ -3439,64 +3446,63 @@ var file_v1_cluster_proto_goTypes = []any{
 	(NodePoolStatus)(0),                         // 42: organization.v1.NodePoolStatus
 }
 var file_v1_cluster_proto_depIdxs = []int32{
-	39, // 0: organization.v1.SyncState.synced_at:type_name -> google.protobuf.Timestamp
-	39, // 1: organization.v1.SyncState.status_updated_at:type_name -> google.protobuf.Timestamp
-	38, // 2: organization.v1.ListClustersResponse.clusters:type_name -> organization.v1.ListClustersResponse.ClusterSummary
-	6,  // 3: organization.v1.GetClusterResponse.cluster:type_name -> organization.v1.ClusterDetails
-	40, // 4: organization.v1.ClusterDetails.status:type_name -> organization.v1.ClusterStatus
-	39, // 5: organization.v1.ClusterDetails.created:type_name -> google.protobuf.Timestamp
-	7,  // 6: organization.v1.ClusterDetails.resource_usage:type_name -> organization.v1.ResourceUsageInfo
-	0,  // 7: organization.v1.ClusterDetails.sync_state:type_name -> organization.v1.SyncState
-	41, // 8: organization.v1.ResourceUsageInfo.cpu:type_name -> organization.v1.ResourceUsage
-	41, // 9: organization.v1.ResourceUsageInfo.memory:type_name -> organization.v1.ResourceUsage
-	41, // 10: organization.v1.ResourceUsageInfo.disk:type_name -> organization.v1.ResourceUsage
-	41, // 11: organization.v1.ResourceUsageInfo.pods:type_name -> organization.v1.ResourceUsage
-	42, // 12: organization.v1.NodePool.status:type_name -> organization.v1.NodePoolStatus
-	18, // 13: organization.v1.GetClusterActivityResponse.events:type_name -> organization.v1.ClusterEvent
-	39, // 14: organization.v1.ClusterEvent.created_at:type_name -> google.protobuf.Timestamp
-	8,  // 15: organization.v1.ListNodePoolsResponse.node_pools:type_name -> organization.v1.NodePool
-	8,  // 16: organization.v1.GetNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
-	39, // 17: organization.v1.Install.created:type_name -> google.protobuf.Timestamp
-	31, // 18: organization.v1.ListInstallsResponse.installs:type_name -> organization.v1.Install
-	40, // 19: organization.v1.ListClustersResponse.ClusterSummary.status:type_name -> organization.v1.ClusterStatus
-	0,  // 20: organization.v1.ListClustersResponse.ClusterSummary.sync_state:type_name -> organization.v1.SyncState
-	1,  // 21: organization.v1.ClusterService.ListClusters:input_type -> organization.v1.ListClustersRequest
-	3,  // 22: organization.v1.ClusterService.GetCluster:input_type -> organization.v1.GetClusterRequest
-	4,  // 23: organization.v1.ClusterService.GetClusterByName:input_type -> organization.v1.GetClusterByNameRequest
-	9,  // 24: organization.v1.ClusterService.CreateCluster:input_type -> organization.v1.CreateClusterRequest
-	12, // 25: organization.v1.ClusterService.UpdateCluster:input_type -> organization.v1.UpdateClusterRequest
-	14, // 26: organization.v1.ClusterService.DeleteCluster:input_type -> organization.v1.DeleteClusterRequest
-	16, // 27: organization.v1.ClusterService.GetClusterActivity:input_type -> organization.v1.GetClusterActivityRequest
-	19, // 28: organization.v1.ClusterService.GetKubeconfig:input_type -> organization.v1.GetKubeconfigRequest
-	27, // 29: organization.v1.ClusterService.ListNodePools:input_type -> organization.v1.ListNodePoolsRequest
-	29, // 30: organization.v1.ClusterService.GetNodePool:input_type -> organization.v1.GetNodePoolRequest
-	21, // 31: organization.v1.ClusterService.CreateNodePool:input_type -> organization.v1.CreateNodePoolRequest
-	23, // 32: organization.v1.ClusterService.UpdateNodePool:input_type -> organization.v1.UpdateNodePoolRequest
-	25, // 33: organization.v1.ClusterService.DeleteNodePool:input_type -> organization.v1.DeleteNodePoolRequest
-	32, // 34: organization.v1.ClusterService.ListInstalls:input_type -> organization.v1.ListInstallsRequest
-	34, // 35: organization.v1.ClusterService.AddInstall:input_type -> organization.v1.AddInstallRequest
-	37, // 36: organization.v1.ClusterService.RemoveInstall:input_type -> organization.v1.RemoveInstallRequest
-	2,  // 37: organization.v1.ClusterService.ListClusters:output_type -> organization.v1.ListClustersResponse
-	5,  // 38: organization.v1.ClusterService.GetCluster:output_type -> organization.v1.GetClusterResponse
-	5,  // 39: organization.v1.ClusterService.GetClusterByName:output_type -> organization.v1.GetClusterResponse
-	11, // 40: organization.v1.ClusterService.CreateCluster:output_type -> organization.v1.CreateClusterResponse
-	13, // 41: organization.v1.ClusterService.UpdateCluster:output_type -> organization.v1.UpdateClusterResponse
-	15, // 42: organization.v1.ClusterService.DeleteCluster:output_type -> organization.v1.DeleteClusterResponse
-	17, // 43: organization.v1.ClusterService.GetClusterActivity:output_type -> organization.v1.GetClusterActivityResponse
-	20, // 44: organization.v1.ClusterService.GetKubeconfig:output_type -> organization.v1.GetKubeconfigResponse
-	28, // 45: organization.v1.ClusterService.ListNodePools:output_type -> organization.v1.ListNodePoolsResponse
-	30, // 46: organization.v1.ClusterService.GetNodePool:output_type -> organization.v1.GetNodePoolResponse
-	22, // 47: organization.v1.ClusterService.CreateNodePool:output_type -> organization.v1.CreateNodePoolResponse
-	24, // 48: organization.v1.ClusterService.UpdateNodePool:output_type -> organization.v1.UpdateNodePoolResponse
-	26, // 49: organization.v1.ClusterService.DeleteNodePool:output_type -> organization.v1.DeleteNodePoolResponse
-	33, // 50: organization.v1.ClusterService.ListInstalls:output_type -> organization.v1.ListInstallsResponse
-	35, // 51: organization.v1.ClusterService.AddInstall:output_type -> organization.v1.AddInstallResponse
-	36, // 52: organization.v1.ClusterService.RemoveInstall:output_type -> organization.v1.RemoveInstallResponse
-	37, // [37:53] is the sub-list for method output_type
-	21, // [21:37] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	39, // 0: organization.v1.SyncState.status_updated_at:type_name -> google.protobuf.Timestamp
+	38, // 1: organization.v1.ListClustersResponse.clusters:type_name -> organization.v1.ListClustersResponse.ClusterSummary
+	6,  // 2: organization.v1.GetClusterResponse.cluster:type_name -> organization.v1.ClusterDetails
+	40, // 3: organization.v1.ClusterDetails.status:type_name -> organization.v1.ClusterStatus
+	39, // 4: organization.v1.ClusterDetails.created:type_name -> google.protobuf.Timestamp
+	7,  // 5: organization.v1.ClusterDetails.resource_usage:type_name -> organization.v1.ResourceUsageInfo
+	0,  // 6: organization.v1.ClusterDetails.sync_state:type_name -> organization.v1.SyncState
+	41, // 7: organization.v1.ResourceUsageInfo.cpu:type_name -> organization.v1.ResourceUsage
+	41, // 8: organization.v1.ResourceUsageInfo.memory:type_name -> organization.v1.ResourceUsage
+	41, // 9: organization.v1.ResourceUsageInfo.disk:type_name -> organization.v1.ResourceUsage
+	41, // 10: organization.v1.ResourceUsageInfo.pods:type_name -> organization.v1.ResourceUsage
+	42, // 11: organization.v1.NodePool.status:type_name -> organization.v1.NodePoolStatus
+	18, // 12: organization.v1.GetClusterActivityResponse.events:type_name -> organization.v1.ClusterEvent
+	39, // 13: organization.v1.ClusterEvent.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 14: organization.v1.ListNodePoolsResponse.node_pools:type_name -> organization.v1.NodePool
+	8,  // 15: organization.v1.GetNodePoolResponse.node_pool:type_name -> organization.v1.NodePool
+	39, // 16: organization.v1.Install.created:type_name -> google.protobuf.Timestamp
+	31, // 17: organization.v1.ListInstallsResponse.installs:type_name -> organization.v1.Install
+	40, // 18: organization.v1.ListClustersResponse.ClusterSummary.status:type_name -> organization.v1.ClusterStatus
+	0,  // 19: organization.v1.ListClustersResponse.ClusterSummary.sync_state:type_name -> organization.v1.SyncState
+	1,  // 20: organization.v1.ClusterService.ListClusters:input_type -> organization.v1.ListClustersRequest
+	3,  // 21: organization.v1.ClusterService.GetCluster:input_type -> organization.v1.GetClusterRequest
+	4,  // 22: organization.v1.ClusterService.GetClusterByName:input_type -> organization.v1.GetClusterByNameRequest
+	9,  // 23: organization.v1.ClusterService.CreateCluster:input_type -> organization.v1.CreateClusterRequest
+	12, // 24: organization.v1.ClusterService.UpdateCluster:input_type -> organization.v1.UpdateClusterRequest
+	14, // 25: organization.v1.ClusterService.DeleteCluster:input_type -> organization.v1.DeleteClusterRequest
+	16, // 26: organization.v1.ClusterService.GetClusterActivity:input_type -> organization.v1.GetClusterActivityRequest
+	19, // 27: organization.v1.ClusterService.GetKubeconfig:input_type -> organization.v1.GetKubeconfigRequest
+	27, // 28: organization.v1.ClusterService.ListNodePools:input_type -> organization.v1.ListNodePoolsRequest
+	29, // 29: organization.v1.ClusterService.GetNodePool:input_type -> organization.v1.GetNodePoolRequest
+	21, // 30: organization.v1.ClusterService.CreateNodePool:input_type -> organization.v1.CreateNodePoolRequest
+	23, // 31: organization.v1.ClusterService.UpdateNodePool:input_type -> organization.v1.UpdateNodePoolRequest
+	25, // 32: organization.v1.ClusterService.DeleteNodePool:input_type -> organization.v1.DeleteNodePoolRequest
+	32, // 33: organization.v1.ClusterService.ListInstalls:input_type -> organization.v1.ListInstallsRequest
+	34, // 34: organization.v1.ClusterService.AddInstall:input_type -> organization.v1.AddInstallRequest
+	37, // 35: organization.v1.ClusterService.RemoveInstall:input_type -> organization.v1.RemoveInstallRequest
+	2,  // 36: organization.v1.ClusterService.ListClusters:output_type -> organization.v1.ListClustersResponse
+	5,  // 37: organization.v1.ClusterService.GetCluster:output_type -> organization.v1.GetClusterResponse
+	5,  // 38: organization.v1.ClusterService.GetClusterByName:output_type -> organization.v1.GetClusterResponse
+	11, // 39: organization.v1.ClusterService.CreateCluster:output_type -> organization.v1.CreateClusterResponse
+	13, // 40: organization.v1.ClusterService.UpdateCluster:output_type -> organization.v1.UpdateClusterResponse
+	15, // 41: organization.v1.ClusterService.DeleteCluster:output_type -> organization.v1.DeleteClusterResponse
+	17, // 42: organization.v1.ClusterService.GetClusterActivity:output_type -> organization.v1.GetClusterActivityResponse
+	20, // 43: organization.v1.ClusterService.GetKubeconfig:output_type -> organization.v1.GetKubeconfigResponse
+	28, // 44: organization.v1.ClusterService.ListNodePools:output_type -> organization.v1.ListNodePoolsResponse
+	30, // 45: organization.v1.ClusterService.GetNodePool:output_type -> organization.v1.GetNodePoolResponse
+	22, // 46: organization.v1.ClusterService.CreateNodePool:output_type -> organization.v1.CreateNodePoolResponse
+	24, // 47: organization.v1.ClusterService.UpdateNodePool:output_type -> organization.v1.UpdateNodePoolResponse
+	26, // 48: organization.v1.ClusterService.DeleteNodePool:output_type -> organization.v1.DeleteNodePoolResponse
+	33, // 49: organization.v1.ClusterService.ListInstalls:output_type -> organization.v1.ListInstallsResponse
+	35, // 50: organization.v1.ClusterService.AddInstall:output_type -> organization.v1.AddInstallResponse
+	36, // 51: organization.v1.ClusterService.RemoveInstall:output_type -> organization.v1.RemoveInstallResponse
+	36, // [36:52] is the sub-list for method output_type
+	20, // [20:36] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_v1_cluster_proto_init() }

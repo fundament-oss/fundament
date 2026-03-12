@@ -1,6 +1,6 @@
-// Package workeroutbox implements the cluster outbox worker.
+// Package outbox implements the cluster outbox worker.
 // It processes outbox rows and dispatches to entity-specific sync handlers.
-package workeroutbox
+package outbox
 
 import (
 	"context"
@@ -23,16 +23,15 @@ import (
 
 // Config holds configuration for the outbox worker.
 type Config struct {
-	PollInterval      time.Duration `env:"POLL_INTERVAL" envDefault:"5s"`
-	ReconcileInterval time.Duration `env:"RECONCILE_INTERVAL" envDefault:"5m"`
-	BaseBackoff       time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
-	MaxBackoff        time.Duration `env:"MAX_BACKOFF" envDefault:"1m"`
-	MaxRetries        int32         `env:"MAX_RETRIES" envDefault:"10"`
-	BackoffDelay      time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
+	PollInterval time.Duration `env:"POLL_INTERVAL" envDefault:"5s"`
+	BaseBackoff  time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
+	MaxBackoff   time.Duration `env:"MAX_BACKOFF" envDefault:"1m"`
+	MaxRetries   int32         `env:"MAX_RETRIES" envDefault:"10"`
+	BackoffDelay time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
 }
 
-// OutboxWorker processes the cluster outbox table and dispatches to handlers.
-type OutboxWorker struct {
+// Worker processes the cluster outbox table and dispatches to handlers.
+type Worker struct {
 	pool     *pgxpool.Pool
 	queries  *db.Queries
 	registry *handler.Registry
@@ -42,11 +41,11 @@ type OutboxWorker struct {
 	ready atomic.Bool
 }
 
-func New(pool *pgxpool.Pool, registry *handler.Registry, logger *slog.Logger, cfg Config) *OutboxWorker {
+func New(pool *pgxpool.Pool, registry *handler.Registry, logger *slog.Logger, cfg Config) *Worker {
 	hostname, _ := os.Hostname()
 	workerID := fmt.Sprintf("%s-%d", hostname, os.Getpid())
 
-	return &OutboxWorker{
+	return &Worker{
 		pool:     pool,
 		queries:  db.New(pool),
 		registry: registry,
@@ -56,12 +55,12 @@ func New(pool *pgxpool.Pool, registry *handler.Registry, logger *slog.Logger, cf
 }
 
 // IsReady returns true if the worker is connected and processing.
-func (w *OutboxWorker) IsReady() bool {
+func (w *Worker) IsReady() bool {
 	return w.ready.Load()
 }
 
 // Run starts the worker with automatic reconnection on LISTEN connection loss.
-func (w *OutboxWorker) Run(ctx context.Context) error {
+func (w *Worker) Run(ctx context.Context) error {
 	for {
 		err := w.runWithConnection(ctx)
 		if ctx.Err() != nil {
@@ -77,7 +76,7 @@ func (w *OutboxWorker) Run(ctx context.Context) error {
 	}
 }
 
-func (w *OutboxWorker) runWithConnection(ctx context.Context) error {
+func (w *Worker) runWithConnection(ctx context.Context) error {
 	conn, err := w.pool.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("acquire listen connection: %w", err)
@@ -90,10 +89,8 @@ func (w *OutboxWorker) runWithConnection(ctx context.Context) error {
 	w.logger.Info("listening for cluster_outbox notifications")
 	w.ready.Store(true)
 
-	// Reconcile and process any pending work on startup
-	w.reconcileAllHandlers(ctx)
+	// Process any pending work on startup
 	w.processAllRows(ctx)
-	lastReconcile := time.Now()
 
 	for {
 		_, err := w.waitForNotification(ctx, conn)
@@ -102,15 +99,10 @@ func (w *OutboxWorker) runWithConnection(ctx context.Context) error {
 		}
 
 		w.processAllRows(ctx)
-
-		if time.Since(lastReconcile) >= w.cfg.ReconcileInterval {
-			w.reconcileAllHandlers(ctx)
-			lastReconcile = time.Now()
-		}
 	}
 }
 
-func (w *OutboxWorker) waitForNotification(ctx context.Context, conn *pgxpool.Conn) (bool, error) {
+func (w *Worker) waitForNotification(ctx context.Context, conn *pgxpool.Conn) (bool, error) {
 	waitCtx, cancel := context.WithTimeout(ctx, w.cfg.PollInterval)
 	defer cancel()
 
@@ -142,7 +134,7 @@ func (w *OutboxWorker) waitForNotification(ctx context.Context, conn *pgxpool.Co
 // Row-level errors (handler failures, invalid rows) are handled inside processNextRow.
 // Infrastructure errors (connection loss, commit failure) cause a backoff to avoid a
 // tight retry loop.
-func (w *OutboxWorker) processAllRows(ctx context.Context) {
+func (w *Worker) processAllRows(ctx context.Context) {
 	for {
 		hasNext, err := w.processNextRow(ctx)
 		if err != nil {
@@ -159,7 +151,7 @@ func (w *OutboxWorker) processAllRows(ctx context.Context) {
 	}
 }
 
-func (w *OutboxWorker) processNextRow(ctx context.Context) (hasNext bool, err error) {
+func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 	if ctx.Err() != nil {
 		return false, nil
 	}
@@ -223,7 +215,7 @@ func (w *OutboxWorker) processNextRow(ctx context.Context) (hasNext bool, err er
 		return true, nil
 	}
 
-	err = h.Sync(ctx, entityID)
+	err = h.Sync(ctx, entityID, handler.SyncContext{Event: row.Event, Source: row.Source})
 	if err != nil {
 		markErr := w.handleRowError(ctx, w.queries, &row, err)
 		if markErr != nil {
@@ -250,7 +242,7 @@ func (w *OutboxWorker) processNextRow(ctx context.Context) (hasNext bool, err er
 	return true, nil
 }
 
-func (w *OutboxWorker) handleRowError(ctx context.Context, qtx *db.Queries, row *db.OutboxGetAndLockRow, processErr error) error {
+func (w *Worker) handleRowError(ctx context.Context, qtx *db.Queries, row *db.OutboxGetAndLockRow, processErr error) error {
 	statusInfo := pgtype.Text{String: processErr.Error(), Valid: true}
 
 	// Check if we've exceeded max retries. row.Retries is the current count
@@ -287,24 +279,6 @@ func (w *OutboxWorker) handleRowError(ctx context.Context, qtx *db.Queries, row 
 		"error", processErr)
 
 	return nil
-}
-
-// reconcile delegates reconciliation to each registered ReconcileHandler.
-// Each handler owns its own re-enqueue and orphan-detection logic.
-func (w *OutboxWorker) reconcileAllHandlers(ctx context.Context) {
-	if ctx.Err() != nil {
-		return
-	}
-
-	w.logger.Info("starting outbox reconciliation")
-
-	for _, h := range w.registry.ReconcileHandlers() {
-		if err := h.Reconcile(ctx); err != nil {
-			w.logger.Error("reconcile handler failed", "error", err)
-		}
-	}
-
-	w.logger.Info("outbox reconciliation complete")
 }
 
 // entityFromRow determines the entity type and ID from the outbox row's FK columns.

@@ -20,7 +20,7 @@ WHERE NOT EXISTS (
     FROM tenant.clusters
     WHERE organization_id = $1
       AND name = $2
-      AND (deleted IS NULL OR synced IS NULL)
+      AND (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 )
 RETURNING id
 `
@@ -33,7 +33,7 @@ type ClusterCreateParams struct {
 }
 
 // Create a cluster if no active or pending-delete cluster with the same name exists.
-// Allows creation only after delete is finalized (synced to Gardener).
+// Allows creation only after Gardener confirms deletion (shoot_status = 'deleted').
 // Returns NULL if blocked (caller should check for pgx.ErrNoRows).
 func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, clusterCreate,
@@ -48,7 +48,11 @@ func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (u
 }
 
 const clusterCreateSyncRequestedEvent = `-- name: ClusterCreateSyncRequestedEvent :exec
-INSERT INTO tenant.cluster_events (cluster_id, event_type, sync_action)
+INSERT INTO tenant.cluster_events (
+    cluster_id,
+    event_type,
+    sync_action
+)
 VALUES ($1, 'sync_requested', $2)
 `
 
@@ -82,10 +86,22 @@ func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) (i
 }
 
 const clusterGetByID = `-- name: ClusterGetByID :one
-SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
+SELECT
+    id,
+    organization_id,
+    name,
+    region,
+    kubernetes_version,
+    created,
+    deleted,
+    shoot_status,
+    shoot_status_message,
+    shoot_status_updated,
+    tenant.clusters.outbox_status,
+    tenant.clusters.outbox_retries,
+    tenant.clusters.outbox_error
 FROM tenant.clusters
-WHERE id = $1
+WHERE tenant.clusters.id = $1
 `
 
 type ClusterGetByIDParams struct {
@@ -100,12 +116,12 @@ type ClusterGetByIDRow struct {
 	KubernetesVersion  string
 	Created            pgtype.Timestamptz
 	Deleted            pgtype.Timestamptz
-	Synced             pgtype.Timestamptz
-	SyncError          pgtype.Text
-	SyncAttempts       int32
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
+	OutboxStatus       pgtype.Text
+	OutboxRetries      int32
+	OutboxError        pgtype.Text
 }
 
 // Get cluster by ID, including deleted clusters for direct access.
@@ -120,19 +136,31 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.KubernetesVersion,
 		&i.Created,
 		&i.Deleted,
-		&i.Synced,
-		&i.SyncError,
-		&i.SyncAttempts,
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
+		&i.OutboxStatus,
+		&i.OutboxRetries,
+		&i.OutboxError,
 	)
 	return i, err
 }
 
 const clusterGetByName = `-- name: ClusterGetByName :one
-SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
+SELECT
+    id,
+    organization_id,
+    name,
+    region,
+    kubernetes_version,
+    created,
+    deleted,
+    shoot_status,
+    shoot_status_message,
+    shoot_status_updated,
+    tenant.clusters.outbox_status,
+    tenant.clusters.outbox_retries,
+    tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE name = $1 AND deleted IS NULL
 `
@@ -149,12 +177,12 @@ type ClusterGetByNameRow struct {
 	KubernetesVersion  string
 	Created            pgtype.Timestamptz
 	Deleted            pgtype.Timestamptz
-	Synced             pgtype.Timestamptz
-	SyncError          pgtype.Text
-	SyncAttempts       int32
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
+	OutboxStatus       pgtype.Text
+	OutboxRetries      int32
+	OutboxError        pgtype.Text
 }
 
 func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (ClusterGetByNameRow, error) {
@@ -168,18 +196,25 @@ func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNamePara
 		&i.KubernetesVersion,
 		&i.Created,
 		&i.Deleted,
-		&i.Synced,
-		&i.SyncError,
-		&i.SyncAttempts,
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
+		&i.OutboxStatus,
+		&i.OutboxRetries,
+		&i.OutboxError,
 	)
 	return i, err
 }
 
 const clusterGetEvents = `-- name: ClusterGetEvents :many
-SELECT id, cluster_id, event_type, created, sync_action, message, attempt
+SELECT
+    id,
+    cluster_id,
+    event_type,
+    created,
+    sync_action,
+    message,
+    attempt
 FROM tenant.cluster_events
 WHERE cluster_id = $1
 ORDER BY created DESC, id DESC
@@ -221,8 +256,20 @@ func (q *Queries) ClusterGetEvents(ctx context.Context, arg ClusterGetEventsPara
 }
 
 const clusterList = `-- name: ClusterList :many
-SELECT id, organization_id, name, region, kubernetes_version, created, deleted,
-       synced, sync_error, sync_attempts, shoot_status, shoot_status_message, shoot_status_updated
+SELECT
+    id,
+    organization_id,
+    name,
+    region,
+    kubernetes_version,
+    created,
+    deleted,
+    shoot_status,
+    shoot_status_message,
+    shoot_status_updated,
+    tenant.clusters.outbox_status,
+    tenant.clusters.outbox_retries,
+    tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 ORDER BY created DESC
@@ -236,12 +283,12 @@ type ClusterListRow struct {
 	KubernetesVersion  string
 	Created            pgtype.Timestamptz
 	Deleted            pgtype.Timestamptz
-	Synced             pgtype.Timestamptz
-	SyncError          pgtype.Text
-	SyncAttempts       int32
 	ShootStatus        pgtype.Text
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
+	OutboxStatus       pgtype.Text
+	OutboxRetries      int32
+	OutboxError        pgtype.Text
 }
 
 // List active clusters and clusters being deleted (not yet confirmed deleted in Gardener).
@@ -263,12 +310,12 @@ func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
 			&i.KubernetesVersion,
 			&i.Created,
 			&i.Deleted,
-			&i.Synced,
-			&i.SyncError,
-			&i.SyncAttempts,
 			&i.ShootStatus,
 			&i.ShootStatusMessage,
 			&i.ShootStatusUpdated,
+			&i.OutboxStatus,
+			&i.OutboxRetries,
+			&i.OutboxError,
 		); err != nil {
 			return nil, err
 		}

@@ -44,4 +44,17 @@ UPDATE tenant.cluster_outbox
 SET status = 'failed', failed = now(), status_info = @status_info
 WHERE id = @id;
 
-
+-- name: OutboxInsertReconcile :exec
+-- Conditionally insert a reconcile outbox row for a cluster.
+-- Skips insert if the cluster already has an active (pending/retrying) row
+-- or an exhausted failed row (retries >= max_retries).
+INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+SELECT @cluster_id, 'reconcile', 'reconcile'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = @cluster_id
+      AND (
+          tenant.cluster_outbox.status IN ('pending', 'retrying')
+          OR (tenant.cluster_outbox.status = 'failed' AND tenant.cluster_outbox.retries >= @max_retries)
+      )
+);

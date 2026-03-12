@@ -11,11 +11,11 @@ option features.(pb.go).api_level = API_OPAQUE;
 option features.field_presence = IMPLICIT;
 option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
 
-// Cluster sync state from Gardener
+// Cluster sync state derived from cluster_outbox and Gardener
 message SyncState {
-  google.protobuf.Timestamp synced_at = 10;
-  string sync_error = 20 [features.field_presence = EXPLICIT];
-  int32 sync_attempts = 30;
+  string outbox_status = 10 [features.field_presence = EXPLICIT];
+  int32 outbox_retries = 20;
+  string outbox_error = 30 [features.field_presence = EXPLICIT];
   string shoot_status = 40 [features.field_presence = EXPLICIT];
   string shoot_message = 50 [features.field_presence = EXPLICIT];
   google.protobuf.Timestamp status_updated_at = 60;

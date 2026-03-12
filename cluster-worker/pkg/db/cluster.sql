@@ -1,3 +1,78 @@
+-- name: ClusterCreateSyncSucceededEvent :one
+-- Insert sync_succeeded event when Gardener accepts the manifest.
+INSERT INTO
+    tenant.cluster_events (
+        cluster_id,
+        event_type,
+        sync_action,
+        message
+    )
+VALUES
+    (
+        @cluster_id,
+        'sync_succeeded',
+        @sync_action,
+        @message
+    )
+RETURNING
+    id;
+
+-- name: ClusterCreateSyncFailedEvent :one
+-- Insert sync_failed event for history.
+INSERT INTO
+    tenant.cluster_events (
+        cluster_id,
+        event_type,
+        sync_action,
+        message,
+        attempt
+    )
+VALUES
+    (
+        @cluster_id,
+        'sync_failed',
+        @sync_action,
+        @message,
+        @attempt
+    )
+RETURNING
+    id;
+
+-- name: ClusterListActive :many
+-- Used by periodic reconciliation to compare with Gardener state.
+SELECT
+    tenant.clusters.id,
+    tenant.clusters.name,
+    tenant.clusters.deleted,
+    tenant.organizations.name AS organization_name,
+    COALESCE(tenant.clusters.outbox_status = 'completed', false)::boolean AS has_completed_outbox
+FROM
+    tenant.clusters
+    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+WHERE
+    tenant.clusters.deleted IS NULL
+ORDER BY
+    tenant.clusters.id;
+
+-- name: NodePoolListByClusterID :many
+-- Fetch active (non-deleted) node pools for a cluster.
+-- Used by the cluster handler to build Gardener worker groups.
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.name,
+    tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.autoscale_max,
+    tenant.node_pools.created
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.cluster_id = @cluster_id
+    AND tenant.node_pools.deleted IS NULL
+ORDER BY
+    tenant.node_pools.created,
+    tenant.node_pools.id;
+
 -- name: ClusterListNeedingStatusCheck :many
 -- Get clusters where we need to check Gardener status (active clusters).
 -- Polls clusters in non-terminal states: NULL (never checked), pending, progressing, error.
@@ -16,7 +91,10 @@ FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
-    tenant.clusters.synced IS NOT NULL -- Manifest was applied
+    ( -- Cluster has been synced: has shoot_status or a completed outbox row
+        tenant.clusters.shoot_status IS NOT NULL
+        OR tenant.clusters.outbox_status = 'completed'
+    )
     AND tenant.clusters.deleted IS NULL -- Active (not deleted)
     AND (
         tenant.clusters.shoot_status IS NULL -- Never checked
@@ -50,7 +128,10 @@ FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
-    tenant.clusters.synced IS NOT NULL -- Delete was synced
+    ( -- Delete has been synced: has shoot_status or a completed outbox row
+        tenant.clusters.shoot_status IS NOT NULL
+        OR tenant.clusters.outbox_status = 'completed'
+    )
     AND tenant.clusters.deleted IS NOT NULL -- Soft-deleted
     AND (
         tenant.clusters.shoot_status IS NULL

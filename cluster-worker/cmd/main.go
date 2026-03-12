@@ -16,8 +16,11 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/workerstatus"
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/workersync"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	clusterhandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/cluster"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/outbox"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/reconcile"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/status"
 	"github.com/fundament-oss/fundament/common/psqldb"
 )
 
@@ -29,9 +32,11 @@ type config struct {
 	HealthPort         int           `env:"HEALTH_PORT" envDefault:"8097"`
 	ShutdownTimeout    time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 
-	// Worker configs (env tags defined in worker package)
-	Sync   workersync.Config   `envPrefix:"SYNC_"`
-	Status workerstatus.Config `envPrefix:"STATUS_"`
+	// Worker config
+	Outbox    outbox.Config         `envPrefix:"OUTBOX_"`
+	Status    status.Config         `envPrefix:"STATUS_"`
+	Reconcile reconcile.Config      `envPrefix:"RECONCILE_"`
+	Cluster   clusterhandler.Config `envPrefix:"CLUSTER_"`
 
 	// Provider configuration for real Gardener mode.
 	// These configure how Shoots are created in Gardener and depend on the target infrastructure.
@@ -58,6 +63,11 @@ type config struct {
 	// ProviderDefaultMachineType is the fallback machine type when a cluster has no node pools
 	// (e.g., "local", "n1-standard-4").
 	ProviderDefaultMachineType string `env:"GARDENER_DEFAULT_MACHINE_TYPE"`
+}
+
+// ReadyChecker reports whether a worker is ready to serve traffic.
+type ReadyChecker interface {
+	IsReady() bool
 }
 
 func main() {
@@ -94,38 +104,56 @@ func run() error {
 		return err
 	}
 
-	// SyncWorker (syncs manifests to Gardener)
-	syncWorker := workersync.New(db.Pool, gardenerClient, logger, cfg.Sync)
+	// Handler registry
+	registry := handler.NewRegistry()
 
-	// StatusWorker (monitors Gardener reconciliation)
-	statusWorker := workerstatus.New(db.Pool, gardenerClient, logger, cfg.Status)
+	// Cluster handler (sync, status, reconcile)
+	ch := clusterhandler.New(db.Pool, gardenerClient, logger, cfg.Cluster)
+	registry.RegisterSync(handler.EntityCluster, ch)
+	registry.RegisterStatus(ch)
+	registry.RegisterReconcile(ch)
+
+	// Outbox worker
+	outboxWorker := outbox.New(db.Pool, registry, logger, cfg.Outbox)
+
+	// Status worker
+	statusWorker := status.New(registry, logger, cfg.Status)
+
+	// Reconcile worker
+	reconcileWorker := reconcile.New(registry, logger, cfg.Reconcile)
 
 	// Health check server
-	healthServer := startHealthServer(&cfg, syncWorker, logger)
+	healthServer := startHealthServer(&cfg, logger, outboxWorker, statusWorker, reconcileWorker)
 
 	logger.Info("cluster-worker starting",
-		"poll_interval", cfg.Sync.PollInterval,
-		"reconcile_interval", cfg.Sync.ReconcileInterval,
-		"status_poll_interval", cfg.Status.PollInterval,
-		"max_attempts", cfg.Sync.MaxAttempts,
+		"poll_interval", cfg.Outbox.PollInterval,
+		"reconcile_interval", cfg.Reconcile.Interval,
+		"status_interval", cfg.Status.Interval,
+		"max_retries", cfg.Outbox.MaxRetries,
 		"gardener_mode", cfg.GardenerMode)
 
-	// Run both worker and status poller concurrently
+	// Run outbox worker and status loop concurrently
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		return syncWorker.Run(ctx)
+		return outboxWorker.Run(ctx)
 	})
 
 	g.Go(func() error {
 		return statusWorker.Run(ctx)
 	})
 
+	g.Go(func() error {
+		return reconcileWorker.Run(ctx)
+	})
+
 	err = g.Wait()
 
 	// Graceful shutdown
 	logger.Info("shutting down...")
-	if shutdownErr := healthServer.Shutdown(context.Background()); shutdownErr != nil {
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	defer shutdownCancel()
+	if shutdownErr := healthServer.Shutdown(shutdownCtx); shutdownErr != nil {
 		logger.Error("health server shutdown error", "error", shutdownErr)
 	}
 
@@ -183,20 +211,22 @@ func createGardenerClient(cfg *config, logger *slog.Logger) (gardener.Client, er
 	}
 }
 
-func startHealthServer(cfg *config, w *workersync.SyncWorker, logger *slog.Logger) *http.Server {
+func startHealthServer(cfg *config, logger *slog.Logger, checkers ...ReadyChecker) *http.Server {
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/healthz", func(resp http.ResponseWriter, _ *http.Request) {
 		resp.WriteHeader(http.StatusOK)
 		_, _ = resp.Write([]byte("ok"))
 	})
 	healthMux.HandleFunc("/readyz", func(resp http.ResponseWriter, _ *http.Request) {
-		if w.IsReady() {
-			resp.WriteHeader(http.StatusOK)
-			_, _ = resp.Write([]byte("ready"))
-		} else {
-			resp.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = resp.Write([]byte("not ready"))
+		for _, c := range checkers {
+			if !c.IsReady() {
+				resp.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = resp.Write([]byte("not ready"))
+				return
+			}
 		}
+		resp.WriteHeader(http.StatusOK)
+		_, _ = resp.Write([]byte("ready"))
 	})
 
 	healthServer := &http.Server{

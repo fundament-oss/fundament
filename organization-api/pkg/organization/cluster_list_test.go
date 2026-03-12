@@ -70,3 +70,52 @@ func Test_Cluster_List(t *testing.T) {
 	// TODO: kubernetes version missing in cluster?
 	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING, cluster.GetStatus())
 }
+
+func Test_Cluster_List_MultiOrg(t *testing.T) {
+	t.Parallel()
+
+	orgAID := uuid.New()
+	orgBID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgAID, "org-a"),
+		WithOrganization(orgBID, "org-b"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgAID, orgBID},
+		}),
+	)
+
+	token := env.createAuthnToken(t, userID)
+
+	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+
+	createReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+		Name:              "org-a-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	}.Build())
+	createReq.Header().Set("Authorization", "Bearer "+token)
+	createReq.Header().Set("Fun-Organization", orgAID.String())
+
+	_, err := client.CreateCluster(context.Background(), createReq)
+	require.NoError(t, err)
+
+	listReq := connect.NewRequest(organizationv1.ListClustersRequest_builder{}.Build())
+	listReq.Header().Set("Authorization", "Bearer "+token)
+	listReq.Header().Set("Fun-Organization", orgBID.String())
+
+	res, err := client.ListClusters(context.Background(), listReq)
+	require.NoError(t, err)
+	assert.Empty(t, res.Msg.GetClusters())
+
+	listReqOrgA := connect.NewRequest(organizationv1.ListClustersRequest_builder{}.Build())
+	listReqOrgA.Header().Set("Authorization", "Bearer "+token)
+	listReqOrgA.Header().Set("Fun-Organization", orgAID.String())
+
+	resOrgA, err := client.ListClusters(context.Background(), listReqOrgA)
+	require.NoError(t, err)
+	assert.Len(t, resOrgA.Msg.GetClusters(), 1)
+}
