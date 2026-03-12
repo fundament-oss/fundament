@@ -19,6 +19,7 @@ Given('I have saved the full token', async function (this: ICustomWorld) {
 
 Given('I have deleted the API key for exchange test', async function (this: ICustomWorld) {
   await this.apiKeyService!.deleteAPIKey(currentApiKey!.id);
+
   // Remove from cleanup map
   for (const [name, key] of this.createdApiKeys) {
     if (key.id === currentApiKey!.id) {
