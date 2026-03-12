@@ -1,0 +1,19 @@
+{{- if $.Values.dex.httproute.enabled }}
+{{- if not $.Values.dex.httproute.parentRefs }}{{ fail "dex.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-dex
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dex
+spec:
+  parentRefs:
+    {{- toYaml $.Values.dex.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml $.Values.dex.httproute.hostnames | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: {{ $.Release.Name }}-dex
+          port: 5556
+{{- end }}

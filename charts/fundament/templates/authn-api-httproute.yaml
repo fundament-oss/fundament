@@ -1,0 +1,19 @@
+{{- if $.Values.authnApi.httproute.enabled }}
+{{- if not $.Values.authnApi.httproute.parentRefs }}{{ fail "authnApi.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-authn-api
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: authn-api
+spec:
+  parentRefs:
+    {{- toYaml $.Values.authnApi.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml $.Values.authnApi.httproute.hostnames | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: {{ $.Release.Name }}-authn-api
+          port: 8080
+{{- end }}

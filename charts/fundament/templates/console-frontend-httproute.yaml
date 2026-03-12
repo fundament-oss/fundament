@@ -1,0 +1,19 @@
+{{- if $.Values.consoleFrontend.httproute.enabled }}
+{{- if not $.Values.consoleFrontend.httproute.parentRefs }}{{ fail "consoleFrontend.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-console-frontend
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: console-frontend
+spec:
+  parentRefs:
+    {{- toYaml $.Values.consoleFrontend.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml $.Values.consoleFrontend.httproute.hostnames | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: {{ $.Release.Name }}-console-frontend
+          port: 80
+{{- end }}
