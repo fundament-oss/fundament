@@ -171,8 +171,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      PR_NUMBER: ${{ github.event.number }}
     steps:
       - uses: actions/checkout@v5
 
@@ -215,13 +213,65 @@ jobs:
           TF_ACC_PROVIDER_HOST=registry.opentofu.org \
           go test -v ./...
 
+  e2e-tests:
+    needs: deploy
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: cd e2e && bun install
+
+      - name: Install Playwright browsers
+        run: cd e2e && bunx playwright install chromium --with-deps
+
+      - name: Wait for console
+        run: |
+          URL="https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
+          echo "Waiting for ${URL} to be ready..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
+            if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "401" ] || [ "${STATUS}" = "404" ]; then
+              echo "Console is ready (HTTP ${STATUS})"
+              exit 0
+            fi
+            if [ "${STATUS}" = "000" ] || [ "${STATUS}" = "502" ] || [ "${STATUS}" = "503" ] || [ "${STATUS}" = "504" ]; then
+              echo "Attempt ${i}/30, not ready yet (HTTP ${STATUS}), retrying in 30s..."
+            else
+              echo "Console responded with unexpected status (HTTP ${STATUS}), failing."
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "Timed out waiting for environment to be ready"
+          exit 1
+
+      - name: Run E2E tests
+        run: |
+          cd e2e
+          BASE_URL="https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+          ORGANIZATION_API_URL="https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+          AUTHN_API_URL="https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+          bun run test
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-reports
+          path: e2e/reports/
+
   teardown:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
-    env:
-      PR_NUMBER: ${{ github.event.number }}
     steps:
       - name: Clone Flux repo
         run: |

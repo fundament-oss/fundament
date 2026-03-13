@@ -3,6 +3,7 @@ import { expect } from '@playwright/test';
 import { ICustomWorld } from '../support/world.ts';
 import { APIKeyService, type CreateAPIKeyResponse } from '../support/api/apikey-service.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
+import pRetry from 'p-retry';
 
 // API token format constants (must match Go apitoken package)
 export const API_TOKEN_PREFIX = 'fun_';
@@ -75,11 +76,23 @@ Given('I have no authentication', async function (this: ICustomWorld) {
 Given('I have created an API key named {string}', async function (this: ICustomWorld, name: string) {
   const response = await this.apiKeyService!.createAPIKey({ name });
   currentApiKey = response;
+
   this.createdApiKeys.set(name, response);
   // Also track by user for cleanup
   if (this.currentUserEmail) {
     this.createdApiKeysByUser.get(this.currentUserEmail)?.set(name, response);
   }
+
+  // wait until the permissions have settled. So until we can retrieve the API key without permission_denied error
+  const retrieveAPIKey = async () => {
+    return this.apiKeyService?.getAPIKey(response.id)
+  }
+
+  await pRetry(retrieveAPIKey, {
+    shouldRetry: ({error}) => {
+      return ((error instanceof ConnectRpcError) && error.code == 'permission_denied')
+    }
+  })
 });
 
 Given('I have revoked the API key', async function (this: ICustomWorld) {

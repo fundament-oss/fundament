@@ -4,7 +4,7 @@ Feature: Authentication Session Management
   So that I can access protected resources and manage my session
 
   Background:
-    Given I am logged in as "admin@example.com" with password "password"
+    Given I am logged in as "alice@acme-corp.com" with password "password"
 
   @auth @session
   Scenario: Auth cookie enables access to protected pages
