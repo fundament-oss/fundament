@@ -2,7 +2,7 @@ apiVersion: fundament.io/v1
 kind: PluginDefinition
 
 name: cnpg
-displayName: CNPG Databases
+alias: CNPG Databases
 version: v1.25.1
 description: Manage PostgreSQL databases via CloudNativePG.
 author: Fundament Team

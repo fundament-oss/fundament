@@ -13,7 +13,7 @@ import (
 )
 
 const organizationGetByID = `-- name: OrganizationGetByID :one
-SELECT id, name, display_name, created
+SELECT id, name, alias, created
 FROM tenant.organizations
 WHERE id = $1
 `
@@ -23,10 +23,10 @@ type OrganizationGetByIDParams struct {
 }
 
 type OrganizationGetByIDRow struct {
-	ID          uuid.UUID
-	Name        string
-	DisplayName string
-	Created     pgtype.Timestamptz
+	ID      uuid.UUID
+	Name    string
+	Alias   string
+	Created pgtype.Timestamptz
 }
 
 func (q *Queries) OrganizationGetByID(ctx context.Context, arg OrganizationGetByIDParams) (OrganizationGetByIDRow, error) {
@@ -35,23 +35,23 @@ func (q *Queries) OrganizationGetByID(ctx context.Context, arg OrganizationGetBy
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.DisplayName,
+		&i.Alias,
 		&i.Created,
 	)
 	return i, err
 }
 
 const organizationList = `-- name: OrganizationList :many
-SELECT id, name, display_name, created
+SELECT id, name, alias, created
 FROM tenant.organizations
 ORDER BY created
 `
 
 type OrganizationListRow struct {
-	ID          uuid.UUID
-	Name        string
-	DisplayName string
-	Created     pgtype.Timestamptz
+	ID      uuid.UUID
+	Name    string
+	Alias   string
+	Created pgtype.Timestamptz
 }
 
 func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, error) {
@@ -66,7 +66,7 @@ func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, 
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.DisplayName,
+			&i.Alias,
 			&i.Created,
 		); err != nil {
 			return nil, err
@@ -81,30 +81,30 @@ func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, 
 
 const organizationUpdate = `-- name: OrganizationUpdate :one
 UPDATE tenant.organizations
-SET display_name = $2
+SET alias = $2
 WHERE id = $1
-RETURNING id, name, display_name, created
+RETURNING id, name, alias, created
 `
 
 type OrganizationUpdateParams struct {
-	ID          uuid.UUID
-	DisplayName string
+	ID    uuid.UUID
+	Alias string
 }
 
 type OrganizationUpdateRow struct {
-	ID          uuid.UUID
-	Name        string
-	DisplayName string
-	Created     pgtype.Timestamptz
+	ID      uuid.UUID
+	Name    string
+	Alias   string
+	Created pgtype.Timestamptz
 }
 
 func (q *Queries) OrganizationUpdate(ctx context.Context, arg OrganizationUpdateParams) (OrganizationUpdateRow, error) {
-	row := q.db.QueryRow(ctx, organizationUpdate, arg.ID, arg.DisplayName)
+	row := q.db.QueryRow(ctx, organizationUpdate, arg.ID, arg.Alias)
 	var i OrganizationUpdateRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.DisplayName,
+		&i.Alias,
 		&i.Created,
 	)
 	return i, err

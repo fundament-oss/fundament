@@ -47,10 +47,10 @@
           </p>
         </div>
 
-        <!-- Organization Display Name -->
+        <!-- Organization Alias -->
         <div>
           <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Display name
+            Alias
           </div>
           @if (isEditing()) {
             <div class="flex gap-2">
@@ -82,7 +82,7 @@
             </div>
           } @else {
             <div class="flex items-center gap-3">
-              <p class="text-sm text-gray-900 dark:text-white">{{ organization()!.displayName }}</p>
+              <p class="text-sm text-gray-900 dark:text-white">{{ organization()!.alias }}</p>
               <button
                 type="button"
                 (click)="startEdit()"

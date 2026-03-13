@@ -9,7 +9,7 @@ RETURNING id, organization_id, user_id, permission, status, created;
 SELECT
     organizations_users.id,
     organizations_users.organization_id,
-    organizations.display_name,
+    organizations.alias,
     organizations_users.permission,
     organizations_users.status,
     organizations_users.created

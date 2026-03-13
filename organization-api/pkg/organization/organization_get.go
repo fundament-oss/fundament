@@ -40,9 +40,9 @@ func (s *Server) GetOrganization(
 
 func organizationFromRow(row *db.OrganizationGetByIDRow) *organizationv1.Organization {
 	return organizationv1.Organization_builder{
-		Id:          row.ID.String(),
-		Name:        row.Name,
-		DisplayName: row.DisplayName,
-		Created:     timestamppb.New(row.Created.Time),
+		Id:      row.ID.String(),
+		Name:    row.Name,
+		Alias:   row.Alias,
+		Created: timestamppb.New(row.Created.Time),
 	}.Build()
 }

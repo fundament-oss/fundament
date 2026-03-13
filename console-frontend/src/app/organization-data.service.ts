@@ -24,7 +24,7 @@ export interface ClusterData {
 export interface OrganizationData {
   id: string;
   name: string;
-  displayName: string;
+  alias: string;
   created?: Timestamp;
   clusters: ClusterData[];
 }
@@ -117,7 +117,7 @@ export class OrganizationDataService {
         {
           id: orgResponse.organization.id,
           name: orgResponse.organization.name,
-          displayName: orgResponse.organization.displayName,
+          alias: orgResponse.organization.alias,
           created: orgResponse.organization.created,
           clusters: clustersData,
         },
@@ -219,12 +219,12 @@ export class OrganizationDataService {
   /**
    * Update the cached organization name without a full reload
    */
-  updateOrganizationDisplayName(organizationId: string, displayName: string) {
+  updateOrganizationAlias(organizationId: string, alias: string) {
     this.organizations.update((orgs) =>
-      orgs.map((org) => (org.id === organizationId ? { ...org, displayName } : org)),
+      orgs.map((org) => (org.id === organizationId ? { ...org, alias } : org)),
     );
     this.userOrganizations.update((orgs) =>
-      orgs.map((org) => (org.id === organizationId ? { ...org, displayName } : org)),
+      orgs.map((org) => (org.id === organizationId ? { ...org, alias } : org)),
     );
   }
 
