@@ -28,8 +28,8 @@ message Organization {
   string id = 10;
   // Organization name (immutable, machine-readable identifier)
   string name = 20;
-  // Organization display name (human-readable label)
-  string display_name = 30;
+  // Organization alias (human-readable label)
+  string alias = 30;
   // Creation timestamp (RFC3339)
   google.protobuf.Timestamp created = 40;
 }
@@ -50,8 +50,8 @@ message GetOrganizationResponse {
 message UpdateOrganizationRequest {
   // ID of the organization to update
   string id = 10 [(buf.validate.field).string = {uuid: true}];
-  // New display name for the organization
-  string display_name = 20 [(buf.validate.field).string = {
+  // New alias for the organization
+  string alias = 20 [(buf.validate.field).string = {
     min_len: 1
     max_len: 255
   }];

@@ -13,34 +13,34 @@ import (
 )
 
 const organizationCreate = `-- name: OrganizationCreate :one
-INSERT INTO tenant.organizations (name, display_name)
+INSERT INTO tenant.organizations (name, alias)
 VALUES ($1, $2)
 RETURNING
   id,
   name,
-  display_name,
+  alias,
   created
 `
 
 type OrganizationCreateParams struct {
-	Name        string
-	DisplayName string
+	Name  string
+	Alias string
 }
 
 type OrganizationCreateRow struct {
-	ID          uuid.UUID
-	Name        string
-	DisplayName string
-	Created     pgtype.Timestamptz
+	ID      uuid.UUID
+	Name    string
+	Alias   string
+	Created pgtype.Timestamptz
 }
 
 func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreateParams) (OrganizationCreateRow, error) {
-	row := q.db.QueryRow(ctx, organizationCreate, arg.Name, arg.DisplayName)
+	row := q.db.QueryRow(ctx, organizationCreate, arg.Name, arg.Alias)
 	var i OrganizationCreateRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.DisplayName,
+		&i.Alias,
 		&i.Created,
 	)
 	return i, err
@@ -84,17 +84,17 @@ const organizationList = `-- name: OrganizationList :many
 SELECT
   id,
   name,
-  display_name,
+  alias,
   created
 FROM tenant.organizations
 ORDER BY created DESC
 `
 
 type OrganizationListRow struct {
-	ID          uuid.UUID
-	Name        string
-	DisplayName string
-	Created     pgtype.Timestamptz
+	ID      uuid.UUID
+	Name    string
+	Alias   string
+	Created pgtype.Timestamptz
 }
 
 func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, error) {
@@ -109,7 +109,7 @@ func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, 
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.DisplayName,
+			&i.Alias,
 			&i.Created,
 		); err != nil {
 			return nil, err

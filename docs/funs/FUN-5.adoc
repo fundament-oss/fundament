@@ -29,7 +29,7 @@ The organization name is the most constrained identifier. It serves as the tenan
 * **Uniqueness**: globally unique (soft-deleted names can be reused)
 * **Immutable** after creation
 
-This regex is slightly more permissive than DNS-1123 (it doesn't enforce the 63-character limit), but in practice organization names are short. Organizations also have a mutable `display_name` (1-255 characters) for human-readable presentation.
+This regex is slightly more permissive than DNS-1123 (it doesn't enforce the 63-character limit), but in practice organization names are short. Organizations also have a mutable `alias` (1-255 characters) for human-readable presentation.
 
 === Cluster Name
 

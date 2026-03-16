@@ -50,7 +50,7 @@ function parsePluginYaml(yamlText: string): PluginDefinition {
     apiVersion: raw.apiVersion,
     kind: 'PluginDefinition',
     name: raw.name,
-    displayName: raw.displayName,
+    alias: raw.alias,
     version: raw.version,
     description: raw.description,
     author: raw.author,

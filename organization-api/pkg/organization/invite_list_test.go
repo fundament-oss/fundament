@@ -74,5 +74,5 @@ func Test_ListInvitations_HappyFlow(t *testing.T) {
 	require.NotNil(t, invitationsRes.Msg.GetInvitations()[0].GetCreated().AsTime())
 	require.Equal(t, "viewer", invitationsRes.Msg.GetInvitations()[0].GetPermission())
 	require.Equal(t, orgID.String(), invitationsRes.Msg.GetInvitations()[0].GetOrganizationId())
-	require.Equal(t, "test-org", invitationsRes.Msg.GetInvitations()[0].GetOrganizationDisplayName())
+	require.Equal(t, "test-org", invitationsRes.Msg.GetInvitations()[0].GetOrganizationAlias())
 }

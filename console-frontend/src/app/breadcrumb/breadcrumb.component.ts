@@ -28,7 +28,7 @@ export class BreadcrumbComponent {
 
   @Input() segments: BreadcrumbSegment[] = [];
 
-  organizationName = computed(() => this.orgDataService.organizations()[0]?.displayName ?? null);
+  organizationName = computed(() => this.orgDataService.organizations()[0]?.alias ?? null);
 
   organizationLoading = this.orgDataService.loading;
 

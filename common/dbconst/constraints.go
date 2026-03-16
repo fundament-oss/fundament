@@ -49,8 +49,8 @@ const (
 	ConstraintNodePoolsFkCluster = "node_pools_fk_cluster"
 	// ConstraintNodePoolsUqName is defined on tenant.node_pools.
 	ConstraintNodePoolsUqName = "node_pools_uq_name"
-	// ConstraintOrganizationsCkDisplayName is defined on tenant.organizations.
-	ConstraintOrganizationsCkDisplayName = "organizations_ck_display_name"
+	// ConstraintOrganizationsCkAlias is defined on tenant.organizations.
+	ConstraintOrganizationsCkAlias = "organizations_ck_alias"
 	// ConstraintOrganizationsCkName is defined on tenant.organizations.
 	ConstraintOrganizationsCkName = "organizations_ck_name"
 	// ConstraintOrganizationsUqName is defined on tenant.organizations.
