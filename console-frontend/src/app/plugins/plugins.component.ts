@@ -7,6 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
+import { OrganizationDataService } from '../organization-data.service';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import {
   ListPluginsRequestSchema,
@@ -16,7 +17,6 @@ import {
   type PluginSummary,
 } from '../../generated/v1/plugin_pb';
 import {
-  ListClustersRequestSchema,
   ListInstallsRequestSchema,
   AddInstallRequestSchema,
   InstallSchema,
@@ -74,6 +74,8 @@ export default class PluginsComponent implements OnInit {
   private pluginClient = inject(PLUGIN);
 
   private clusterClient = inject(CLUSTER);
+
+  private organizationDataService = inject(OrganizationDataService);
 
   private toastService = inject(ToastService);
 
@@ -139,11 +141,10 @@ export default class PluginsComponent implements OnInit {
 
   async ngOnInit() {
     try {
-      // Fetch plugins, presets, and clusters in parallel
-      const [pluginsResponse, presetsResponse, clustersResponse] = await Promise.all([
+      // Fetch plugins and presets in parallel; use pre-fetched cluster data from service
+      const [pluginsResponse, presetsResponse] = await Promise.all([
         firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
         firstValueFrom(this.pluginClient.listPresets(create(ListPresetsRequestSchema, {}))),
-        firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
       ]);
 
       // Store backend presets
@@ -171,11 +172,11 @@ export default class PluginsComponent implements OnInit {
         };
       });
 
-      // Store clusters
-      this.clusters = clustersResponse.clusters;
+      // Use pre-fetched cluster summaries instead of making a duplicate ListClusters call
+      this.clusters = this.organizationDataService.clusterSummaries();
 
       // Fetch installs for all clusters
-      const installsPromises = clustersResponse.clusters.map((cluster) =>
+      const installsPromises = this.clusters.map((cluster) =>
         firstValueFrom(
           this.clusterClient.listInstalls(
             create(ListInstallsRequestSchema, { clusterId: cluster.id }),

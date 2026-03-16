@@ -2,14 +2,18 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/apitoken"
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -64,6 +68,12 @@ func (s *Server) CreateAPIKey(
 
 	id, err := s.queries.APIKeyCreate(ctx, params)
 	if err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			if pgErr.Code == pgerrcode.UniqueViolation && pgErr.ConstraintName == dbconst.ConstraintApiKeysUqName {
+				return nil, connect.NewError(connect.CodeAlreadyExists,
+					fmt.Errorf("an API key with this name already exists"))
+			}
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create api key: %w", err))
 	}
 

@@ -23,6 +23,8 @@ export default class AuthnApiService {
 
   public currentUser$: Observable<User | undefined> = this.currentUserSubject.asObservable();
 
+  private pendingGetUserInfo: Promise<User | undefined> | null = null;
+
   constructor() {
     // Configure the authn REST client with the runtime base URL and credentials
     this.restClient.setConfig({
@@ -56,9 +58,18 @@ export default class AuthnApiService {
   }
 
   async getUserInfo(): Promise<User | undefined> {
-    const response = await firstValueFrom(this.client.getUserInfo({}));
-    this.currentUserSubject.next(response.user);
-    return response.user;
+    if (this.pendingGetUserInfo) {
+      return this.pendingGetUserInfo;
+    }
+    this.pendingGetUserInfo = firstValueFrom(this.client.getUserInfo({}))
+      .then((response) => {
+        this.currentUserSubject.next(response.user);
+        return response.user;
+      })
+      .finally(() => {
+        this.pendingGetUserInfo = null;
+      });
+    return this.pendingGetUserInfo;
   }
 
   async initializeAuth(): Promise<void> {
@@ -69,15 +80,12 @@ export default class AuthnApiService {
       return;
     }
 
-    try {
-      // Try to fetch user info - if successful, user is authenticated via HTTP-only cookie
-      const userInfo = await this.getUserInfo();
-      this.currentUserSubject.next(userInfo);
-    } catch {
+    // getUserInfo() already deduplicates concurrent calls; just attach the init-specific error handler
+    await this.getUserInfo().catch(() => {
       // Not authenticated or session expired - clear the hint
       this.currentUserSubject.next(undefined);
       localStorage.removeItem('auth_hint');
-    }
+    });
   }
 
   async refreshToken(): Promise<void> {

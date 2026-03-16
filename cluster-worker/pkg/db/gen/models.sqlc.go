@@ -3,18 +3,3 @@
 //   sqlc v1.30.0
 
 package db
-
-import (
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
-)
-
-type TenantClusterEvent struct {
-	ID         uuid.UUID
-	ClusterID  uuid.UUID
-	EventType  string
-	Created    pgtype.Timestamptz
-	SyncAction pgtype.Text
-	Message    pgtype.Text
-	Attempt    pgtype.Int4
-}

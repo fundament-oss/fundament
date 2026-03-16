@@ -13,6 +13,7 @@ import { tablerPlus, tablerEye } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
+import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER } from '../../connect/tokens';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
@@ -36,6 +37,8 @@ export default class DashboardComponent implements OnInit, OnDestroy {
 
   private toastService = inject(ToastService);
 
+  private organizationDataService = inject(OrganizationDataService);
+
   private client = inject(CLUSTER);
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
@@ -58,7 +61,17 @@ export default class DashboardComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
-    await this.loadClusters();
+    // Use cluster data pre-fetched during org initialization to avoid a duplicate
+    // ListClusters call immediately after the one made by OrganizationDataService.
+    const preloaded = this.organizationDataService.clusterSummaries();
+    if (preloaded.length > 0 || this.organizationDataService.organizations().length > 0) {
+      this.clusters.set(preloaded);
+      if (preloaded.some((c) => isTransitionalStatus(c.status))) {
+        this.pollingTimer = setInterval(() => this.loadClusters(), 5000);
+      }
+    } else {
+      await this.loadClusters();
+    }
   }
 
   private async loadClusters() {

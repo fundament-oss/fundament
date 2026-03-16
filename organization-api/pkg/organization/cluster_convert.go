@@ -33,22 +33,22 @@ func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text) or
 }
 
 func syncStateFromRow(
-	synced pgtype.Timestamptz,
-	syncError pgtype.Text,
-	syncAttempts int32,
+	outboxStatus pgtype.Text,
+	outboxRetries int32,
+	outboxError pgtype.Text,
 	shootStatus pgtype.Text,
 	shootStatusMessage pgtype.Text,
 	shootStatusUpdated pgtype.Timestamptz,
 ) *organizationv1.SyncState {
 	state := organizationv1.SyncState_builder{
-		SyncAttempts: syncAttempts,
+		OutboxRetries: outboxRetries,
 	}.Build()
 
-	if synced.Valid {
-		state.SetSyncedAt(timestamppb.New(synced.Time))
+	if outboxStatus.Valid {
+		state.SetOutboxStatus(outboxStatus.String)
 	}
-	if syncError.Valid {
-		state.SetSyncError(syncError.String)
+	if outboxError.Valid {
+		state.SetOutboxError(outboxError.String)
 	}
 	if shootStatus.Valid {
 		state.SetShootStatus(shootStatus.String)

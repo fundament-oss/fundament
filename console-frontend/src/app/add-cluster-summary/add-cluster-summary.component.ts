@@ -292,7 +292,7 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
       const response = await firstValueFrom(this.client.createNodePool(request));
       this.updateItem(key, {
         requestStatus: 'succeeded',
-        syncStatus: 'syncing',
+        syncStatus: 'none',
         createdId: response.nodePoolId,
       });
     } catch (error) {
@@ -353,10 +353,10 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
 
         if (syncState?.shootStatus === 'Ready' || syncState?.shootStatus === 'ready') {
           this.updateItem('cluster', { syncStatus: 'synced', shootStatus: 'Ready' });
-        } else if (syncState?.syncError) {
+        } else if (syncState?.outboxError) {
           this.updateItem('cluster', {
             syncStatus: 'failed',
-            error: syncState.syncError,
+            error: syncState.outboxError,
             shootStatus: syncState.shootStatus || undefined,
           });
         } else {

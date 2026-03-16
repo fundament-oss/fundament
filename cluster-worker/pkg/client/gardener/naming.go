@@ -1,10 +1,11 @@
 package gardener
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // Naming constants for Gardener resources.
@@ -22,8 +23,8 @@ const (
 
 	// ShootNamePrefixLength is the number of chars from the sanitized cluster name.
 	ShootNamePrefixLength = 8
-	// ShootNameRandomLength is the number of random chars appended to shoot name.
-	ShootNameRandomLength = 3
+	// ShootNameHashLength is the number of hash chars appended to shoot name.
+	ShootNameHashLength = 3
 	// ShootNameTotalLength is the fixed total length of shoot names.
 	ShootNameTotalLength = 11 // 8 + 3
 
@@ -86,39 +87,27 @@ func NamespaceFromProjectName(projectName string) string {
 	return "garden-" + projectName
 }
 
-// GenerateShootName generates a shoot name with a random suffix.
-// Format: sanitize(clusterName)[:8] + random(3) = 11 chars (fixed)
+// GenerateShootName generates a deterministic shoot name from a cluster name and ID.
+// Format: sanitize(clusterName)[:8] + hash(clusterID)[:3] = 11 chars (fixed)
 //
-// The random suffix ensures uniqueness within a project, even for clusters
-// with names that sanitize to the same prefix (e.g., "prod" and "production"
-// both truncate to "producti").
-func GenerateShootName(clusterName string) string {
+// The hash suffix is derived from the cluster ID, ensuring the same cluster always
+// produces the same shoot name across retries and reconciles. This prevents
+// duplicate shoots when label-based lookup fails.
+func GenerateShootName(clusterName string, clusterID uuid.UUID) string {
 	sanitized := sanitizeName(clusterName)
+
+	// Hash the cluster ID for deterministic suffix and padding
+	hash := sha256.Sum256(clusterID[:])
+	hashStr := hex.EncodeToString(hash[:])
 
 	// Truncate to prefix length
 	if len(sanitized) > ShootNamePrefixLength {
 		sanitized = sanitized[:ShootNamePrefixLength]
 	}
-	// Pad short/empty names with random chars
+	// Pad short/empty names with hash chars
 	if len(sanitized) < ShootNamePrefixLength {
-		sanitized += randomAlphanumeric(ShootNamePrefixLength - len(sanitized))
+		sanitized += hashStr[:ShootNamePrefixLength-len(sanitized)]
 	}
 
-	return sanitized + randomAlphanumeric(ShootNameRandomLength)
-}
-
-// randomAlphanumeric generates n random lowercase alphanumeric characters.
-// Uses crypto/rand for cryptographically secure randomness.
-func randomAlphanumeric(n int) string {
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		// crypto/rand.Read should never fail on a properly configured system.
-		// If it does, there's a serious system issue and we should panic.
-		panic("crypto/rand failed: " + err.Error())
-	}
-	for i := range b {
-		b[i] = chars[int(b[i])%len(chars)]
-	}
-	return string(b)
+	return sanitized + hashStr[:ShootNameHashLength]
 }

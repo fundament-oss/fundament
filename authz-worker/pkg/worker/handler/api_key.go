@@ -31,7 +31,7 @@ func (h *Handler) ApiKey(ctx context.Context, qtx *db.Queries, apiKeyID uuid.UUI
 	userObj := authz.User(apiKey.UserID)
 	apiKeyObj := authz.ApiKey(apiKey.ID)
 
-	if apiKey.Deleted.Valid || apiKey.Revoked.Valid {
+	if apiKey.Deleted.Valid {
 		return h.deleteTuplesIfExist(ctx,
 			tupleDelete(orgObj, authz.ActionOwner, apiKeyObj),
 			tupleDelete(userObj, authz.ActionCreator, apiKeyObj),

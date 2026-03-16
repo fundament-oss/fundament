@@ -14,13 +14,19 @@ const (
 	EntityCluster EntityType = "cluster"
 )
 
+// SyncContext carries metadata from the outbox row to the sync handler.
+type SyncContext struct {
+	Event  string // created, updated, deleted, reconcile
+	Source string // trigger, reconcile, manual, node_pool
+}
+
 // SyncHandler processes an outbox row for a specific entity type.
 // Implementations must be idempotent — the same ID may be delivered more than once
 // (retries, reconciliation). Handlers must also gracefully handle cases where the
 // entity referenced by the outbox row might no longer exist (e.g., deleted
 // between outbox insertion and processing). Return nil to mark the row as processed.
 type SyncHandler interface {
-	Sync(ctx context.Context, id uuid.UUID) error
+	Sync(ctx context.Context, id uuid.UUID, sc SyncContext) error
 }
 
 // StatusHandler checks the current state of synced objects and updates the DB.

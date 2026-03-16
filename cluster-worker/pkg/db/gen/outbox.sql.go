@@ -52,6 +52,32 @@ func (q *Queries) OutboxGetAndLock(ctx context.Context) (OutboxGetAndLockRow, er
 	return i, err
 }
 
+const outboxInsertReconcile = `-- name: OutboxInsertReconcile :exec
+INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+SELECT $1, 'reconcile', 'reconcile'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = $1
+      AND (
+          tenant.cluster_outbox.status IN ('pending', 'retrying')
+          OR (tenant.cluster_outbox.status = 'failed' AND tenant.cluster_outbox.retries >= $2)
+      )
+)
+`
+
+type OutboxInsertReconcileParams struct {
+	ClusterID  pgtype.UUID
+	MaxRetries int32
+}
+
+// Conditionally insert a reconcile outbox row for a cluster.
+// Skips insert if the cluster already has an active (pending/retrying) row
+// or an exhausted failed row (retries >= max_retries).
+func (q *Queries) OutboxInsertReconcile(ctx context.Context, arg OutboxInsertReconcileParams) error {
+	_, err := q.db.Exec(ctx, outboxInsertReconcile, arg.ClusterID, arg.MaxRetries)
+	return err
+}
+
 const outboxMarkFailed = `-- name: OutboxMarkFailed :exec
 UPDATE tenant.cluster_outbox
 SET status = 'failed', failed = now(), status_info = $1

@@ -6,7 +6,7 @@ RETURNING id;
 -- name: APIKeyGetByID :one
 SELECT id, organization_id, user_id, name, token_prefix, expires, revoked, last_used, created, deleted
 FROM authn.api_keys
-WHERE id = $1 AND deleted IS NULL;
+WHERE id = $1 AND user_id = $2 AND deleted IS NULL;
 
 -- name: APIKeyListByOrganizationID :many
 SELECT id, organization_id, user_id, name, token_prefix, expires, revoked, last_used, created, deleted
@@ -17,9 +17,9 @@ ORDER BY created DESC;
 -- name: APIKeyRevoke :execrows
 UPDATE authn.api_keys
 SET revoked = NOW()
-WHERE id = $1 AND deleted IS NULL AND revoked IS NULL;
+WHERE id = $1 AND user_id = $2 AND deleted IS NULL AND revoked IS NULL;
 
 -- name: APIKeyDelete :execrows
 UPDATE authn.api_keys
 SET deleted = NOW()
-WHERE id = $1 AND deleted IS NULL;
+WHERE id = $1 AND user_id = $2 AND deleted IS NULL;

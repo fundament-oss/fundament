@@ -126,8 +126,8 @@ export default class AddProjectComponent implements AfterViewInit, OnInit {
 
       this.toastService.success(`Project '${this.projectForm.value.name}' created successfully`);
 
-      // Reload organization data to update the selector modal
-      await this.organizationDataService.loadOrganizationData();
+      // Reload project data to update the selector modal and breadcrumbs
+      await this.organizationDataService.reloadProjectsAndNamespaces();
 
       this.router.navigate(['/projects', response.projectId]);
     } catch (error) {

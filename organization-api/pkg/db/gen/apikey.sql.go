@@ -44,15 +44,16 @@ func (q *Queries) APIKeyCreate(ctx context.Context, arg APIKeyCreateParams) (uui
 const aPIKeyDelete = `-- name: APIKeyDelete :execrows
 UPDATE authn.api_keys
 SET deleted = NOW()
-WHERE id = $1 AND deleted IS NULL
+WHERE id = $1 AND user_id = $2 AND deleted IS NULL
 `
 
 type APIKeyDeleteParams struct {
-	ID uuid.UUID
+	ID     uuid.UUID
+	UserID uuid.UUID
 }
 
 func (q *Queries) APIKeyDelete(ctx context.Context, arg APIKeyDeleteParams) (int64, error) {
-	result, err := q.db.Exec(ctx, aPIKeyDelete, arg.ID)
+	result, err := q.db.Exec(ctx, aPIKeyDelete, arg.ID, arg.UserID)
 	if err != nil {
 		return 0, err
 	}
@@ -62,11 +63,12 @@ func (q *Queries) APIKeyDelete(ctx context.Context, arg APIKeyDeleteParams) (int
 const aPIKeyGetByID = `-- name: APIKeyGetByID :one
 SELECT id, organization_id, user_id, name, token_prefix, expires, revoked, last_used, created, deleted
 FROM authn.api_keys
-WHERE id = $1 AND deleted IS NULL
+WHERE id = $1 AND user_id = $2 AND deleted IS NULL
 `
 
 type APIKeyGetByIDParams struct {
-	ID uuid.UUID
+	ID     uuid.UUID
+	UserID uuid.UUID
 }
 
 type APIKeyGetByIDRow struct {
@@ -83,7 +85,7 @@ type APIKeyGetByIDRow struct {
 }
 
 func (q *Queries) APIKeyGetByID(ctx context.Context, arg APIKeyGetByIDParams) (APIKeyGetByIDRow, error) {
-	row := q.db.QueryRow(ctx, aPIKeyGetByID, arg.ID)
+	row := q.db.QueryRow(ctx, aPIKeyGetByID, arg.ID, arg.UserID)
 	var i APIKeyGetByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -159,15 +161,16 @@ func (q *Queries) APIKeyListByOrganizationID(ctx context.Context, arg APIKeyList
 const aPIKeyRevoke = `-- name: APIKeyRevoke :execrows
 UPDATE authn.api_keys
 SET revoked = NOW()
-WHERE id = $1 AND deleted IS NULL AND revoked IS NULL
+WHERE id = $1 AND user_id = $2 AND deleted IS NULL AND revoked IS NULL
 `
 
 type APIKeyRevokeParams struct {
-	ID uuid.UUID
+	ID     uuid.UUID
+	UserID uuid.UUID
 }
 
 func (q *Queries) APIKeyRevoke(ctx context.Context, arg APIKeyRevokeParams) (int64, error) {
-	result, err := q.db.Exec(ctx, aPIKeyRevoke, arg.ID)
+	result, err := q.db.Exec(ctx, aPIKeyRevoke, arg.ID, arg.UserID)
 	if err != nil {
 		return 0, err
 	}

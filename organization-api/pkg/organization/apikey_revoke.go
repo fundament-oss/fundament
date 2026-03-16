@@ -22,7 +22,12 @@ func (s *Server) RevokeAPIKey(
 		return nil, err
 	}
 
-	rowsAffected, err := s.queries.APIKeyRevoke(ctx, db.APIKeyRevokeParams{ID: apiKeyID})
+	claims, ok := ClaimsFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("claims missing from context"))
+	}
+
+	rowsAffected, err := s.queries.APIKeyRevoke(ctx, db.APIKeyRevokeParams{ID: apiKeyID, UserID: claims.UserID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to revoke api key: %w", err))
 	}
