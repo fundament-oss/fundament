@@ -1,0 +1,91 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="card px-6 py-4">
+    <a
+      [routerLink]="listLink()"
+      class="mb-1 inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+      ><ng-icon name="tablerArrowLeft" class="mr-1" aria-hidden="true" /> Back to list</a
+    >
+    <h1 class="text-2xl font-bold dark:text-white">Create {{ singularLabel() }}</h1>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+      Fill in the fields below to create a new {{ singularLabel() }}.
+    </p>
+  </div>
+
+  <form (ngSubmit)="onSubmit()">
+    <!-- Identity -->
+    <div class="card mb-6">
+      <div class="card-header">
+        <h2 class="text-lg font-semibold dark:text-white">Identity</h2>
+      </div>
+      <div class="card-body">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="space-y-1">
+            <label for="resource-name" class="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >Name <span class="text-rose-500">*</span></label
+            >
+            <input
+              id="resource-name"
+              type="text"
+              [(ngModel)]="resourceName"
+              name="resourceName"
+              required
+              placeholder="my-resource"
+            />
+          </div>
+          @if (crdDef()?.scope === 'Namespaced') {
+            <div class="space-y-1">
+              <label
+                for="resource-namespace"
+                class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >Namespace <span class="text-rose-500">*</span></label
+              >
+              <input
+                id="resource-namespace"
+                type="text"
+                [(ngModel)]="resourceNamespace"
+                name="resourceNamespace"
+                required
+                placeholder="default"
+              />
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Field groups -->
+    @for (group of fieldGroups(); track group.name) {
+      <div class="card mb-6">
+        <div class="card-header">
+          <h2 class="text-lg font-semibold dark:text-white">{{ group.name }}</h2>
+        </div>
+        <div class="card-body">
+          <div class="space-y-4">
+            @for (field of group.fields; track field[0]) {
+              <app-form-field
+                [schema]="field[1]"
+                [fieldName]="field[0]"
+                [value]="getFormValue(field[0])"
+                [required]="isRequired(field[0])"
+                (valueChange)="setFormValue(field[0], $event)"
+              />
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Submit -->
+    <div class="flex gap-3">
+      <a [routerLink]="listLink()" class="btn-secondary">Cancel</a>
+      <button type="submit" class="btn-primary" [disabled]="saving()">
+        @if (saving()) {
+          Creating…
+        } @else {
+          Create {{ singularLabel() }}
+        }
+      </button>
+    </div>
+  </form>
+</div>

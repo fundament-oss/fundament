@@ -9,7 +9,56 @@ export interface PluginDefinition {
   description: string;
   author?: string;
   menu: PluginMenu;
+  uiHints?: Record<string, CrdUiHints>; // keyed by CRD kind
+  customComponents?: Record<string, ResourceExtension>; // keyed by CRD kind
+  dashboardWidgets?: WidgetDefinition[];
+  navSections?: NavSectionDefinition[];
   crds: string[];
+}
+
+export interface CrdUiHints {
+  formGroups?: FormGroup[];
+  hiddenFields?: string[];
+  editableFields?: string[];
+  statusMapping?: StatusMapping;
+}
+
+export interface FormGroup {
+  name: string;
+  fields: string[];
+}
+
+export interface StatusMapping {
+  jsonPath: string;
+  values: Record<string, { badge: string; label: string }>;
+}
+
+export interface ResourceExtension {
+  list?: string; // component name in registry
+  detail?: string;
+  createWizard?: string;
+  edit?: string;
+  actions?: ActionDefinition[];
+}
+
+export interface ActionDefinition {
+  label: string;
+  icon?: string;
+  modal: string; // component name in registry
+}
+
+export interface WidgetDefinition {
+  id: string;
+  title: string;
+  size: 'small' | 'medium' | 'large';
+  component: string; // component name in registry
+}
+
+export interface NavSectionDefinition {
+  label: string;
+  icon?: string;
+  path: string; // sub-path under /plugin-resources/:pluginName/
+  component: string; // component name in registry
 }
 
 export interface PluginMenu {
@@ -73,6 +122,7 @@ export interface KubeResource {
     creationTimestamp: string;
     labels?: Record<string, string>;
     annotations?: Record<string, string>;
+    resourceVersion?: string;
   };
   spec: Record<string, unknown>;
   status?: Record<string, unknown>;
@@ -103,6 +153,10 @@ export interface RawPluginYaml {
   description: string;
   author?: string;
   menu: PluginMenu;
+  uiHints?: Record<string, CrdUiHints>;
+  customComponents?: Record<string, ResourceExtension>;
+  dashboardWidgets?: WidgetDefinition[];
+  navSections?: NavSectionDefinition[];
   crds: string[];
 }
 

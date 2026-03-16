@@ -30,3 +30,83 @@ crds:
   - clusterissuers.cert-manager.io
   - certificates.cert-manager.io
   - issuers.cert-manager.io
+
+uiHints:
+  Certificate:
+    formGroups:
+      - name: Basic information
+        fields: [secretName, commonName]
+      - name: Issuer
+        fields: [issuerRef]
+      - name: Subject alternative names
+        fields: [dnsNames, ipAddresses, uris, emailAddresses]
+      - name: Duration & renewal
+        fields: [duration, renewBefore]
+      - name: Private key
+        fields: [privateKey]
+    hiddenFields:
+      - additionalOutputFormats
+      - keystores
+      - nameConstraints
+      - literalSubject
+      - subject
+      - encodeUsagesInRequest
+      - otherNames
+      - signatureAlgorithm
+      - revisionHistoryLimit
+      - secretTemplate
+      - renewBeforePercentage
+      - usages
+      - isCA
+    statusMapping:
+      jsonPath: .status.conditions[?(@.type == "Ready")].status
+      values:
+        'True':
+          badge: badge badge-sm badge-emerald
+          label: Ready
+        'False':
+          badge: badge badge-sm badge-yellow
+          label: Not ready
+        'Unknown':
+          badge: badge badge-sm badge-gray
+          label: Unknown
+  Issuer:
+    formGroups:
+      - name: CA configuration
+        fields: [ca]
+      - name: ACME configuration
+        fields: [acme]
+      - name: Self-signed
+        fields: [selfSigned]
+    hiddenFields:
+      - vault
+      - venafi
+    statusMapping:
+      jsonPath: .status.conditions[?(@.type == "Ready")].status
+      values:
+        'True':
+          badge: badge badge-sm badge-emerald
+          label: Ready
+        'False':
+          badge: badge badge-sm badge-yellow
+          label: Not ready
+  ClusterIssuer:
+    formGroups:
+      - name: CA configuration
+        fields: [ca]
+      - name: ACME configuration
+        fields: [acme]
+      - name: Self-signed
+        fields: [selfSigned]
+    hiddenFields:
+      - vault
+      - venafi
+    statusMapping:
+      jsonPath: .status.conditions[?(@.type == "Ready")].status
+      values:
+        'True':
+          badge: badge badge-sm badge-emerald
+          label: Ready
+        'False':
+          badge: badge badge-sm badge-yellow
+          label: Not ready

@@ -59,4 +59,80 @@ export default class PluginResourceStoreService {
   ): KubeResource | undefined {
     return this.listResources(pluginName, kind, clusterId).find((r) => r.metadata.name === name);
   }
+
+  /**
+   * PATCH an existing resource. Sends a strategic-merge-patch with the updated spec.
+   * Invalidates the in-memory cache so the list is refreshed on next load.
+   */
+  async patchResource(
+    pluginName: string,
+    crd: ParsedCrd,
+    name: string,
+    namespace: string | undefined,
+    spec: Record<string, unknown>,
+    clusterId: string,
+    orgApiUrl: string,
+    orgId: string,
+  ): Promise<KubeResource> {
+    const base = orgApiUrl.replace(/\/$/, '');
+    const namespacePart = namespace ? `namespaces/${namespace}/` : '';
+    const url = `${base}/k8s/${clusterId}/apis/${crd.group}/${crd.version}/${namespacePart}${crd.plural}/${name}`;
+
+    const response = await fetch(url, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/strategic-merge-patch+json',
+        'Fun-Organization': orgId,
+      },
+      body: JSON.stringify({ spec }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => response.statusText);
+      throw new Error(`Failed to patch ${crd.kind}/${name}: ${response.status} ${text}`);
+    }
+
+    const updated = (await response.json()) as KubeResource;
+    // Invalidate cache so next load fetches fresh data
+    this.resourceCache.delete(`${pluginName}/${crd.kind}/${clusterId}`);
+    return updated;
+  }
+
+  /**
+   * POST a new resource. Invalidates the in-memory cache so the list is refreshed on next load.
+   */
+  async createResource(
+    pluginName: string,
+    crd: ParsedCrd,
+    namespace: string | undefined,
+    resource: Omit<KubeResource, 'metadata'> & { metadata: { name: string; namespace?: string } },
+    clusterId: string,
+    orgApiUrl: string,
+    orgId: string,
+  ): Promise<KubeResource> {
+    const base = orgApiUrl.replace(/\/$/, '');
+    const namespacePart = namespace ? `namespaces/${namespace}/` : '';
+    const url = `${base}/k8s/${clusterId}/apis/${crd.group}/${crd.version}/${namespacePart}${crd.plural}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Fun-Organization': orgId,
+      },
+      body: JSON.stringify(resource),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => response.statusText);
+      throw new Error(`Failed to create ${crd.kind}: ${response.status} ${text}`);
+    }
+
+    const created = (await response.json()) as KubeResource;
+    // Invalidate cache so next load fetches fresh data
+    this.resourceCache.delete(`${pluginName}/${crd.kind}/${clusterId}`);
+    return created;
+  }
 }

@@ -53,6 +53,10 @@ function parsePluginYaml(yamlText: string): PluginDefinition {
     description: raw.description,
     author: raw.author,
     menu: raw.menu,
+    uiHints: raw.uiHints,
+    customComponents: raw.customComponents,
+    dashboardWidgets: raw.dashboardWidgets,
+    navSections: raw.navSections,
     crds: raw.crds,
   };
 }

@@ -56,6 +56,7 @@ import { fetchClusterName } from './utils/cluster-status';
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import { kindToLabel } from './plugin-resources/crd-schema.utils';
+import PluginModalPortalComponent from './plugin-resources/plugin-modal-portal/plugin-modal-portal.component';
 
 const reloadApp = () => {
   window.location.reload();
@@ -73,6 +74,7 @@ const reloadApp = () => {
     KubernetesIconComponent,
     BreadcrumbComponent,
     NgIcon,
+    PluginModalPortalComponent,
   ],
   viewProviders: [
     provideIcons({

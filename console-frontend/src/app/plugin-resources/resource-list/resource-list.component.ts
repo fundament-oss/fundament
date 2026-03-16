@@ -7,6 +7,7 @@ import {
   effect,
   untracked,
   OnInit,
+  input,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -67,6 +68,9 @@ export default class ResourceListComponent implements OnInit {
 
   private orgContext = inject(OrganizationContextService);
 
+  /** Set by the dispatcher. Controls whether create/edit/delete affordances are shown. */
+  canWrite = input<boolean>(false);
+
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
@@ -97,7 +101,6 @@ export default class ResourceListComponent implements OnInit {
     const crd = this.crdDef();
     if (crd) return kindToLabel(crd.kind);
 
-    // Fallback: look up the menu entry by CRD kind to get the proper PascalCase CRD name
     const plugin = this.plugin();
     const resourceKind = this.resourceKind();
     if (plugin) {

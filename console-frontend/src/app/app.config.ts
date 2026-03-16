@@ -17,6 +17,8 @@ import routes from './app.routes';
 import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
+import PluginComponentRegistryService from './plugin-resources/plugin-component-registry.service';
+import registerPluginComponents from './plugins/index';
 
 // Global version mismatch observable
 export const versionMismatch$ = new BehaviorSubject<boolean>(false);
@@ -43,6 +45,11 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const pluginRegistry = inject(PluginRegistryService);
       return pluginRegistry.loadPlugins();
+    }),
+    // Register compiled plugin components (Phase 1; replaced by PluginLoaderService in Phase 2)
+    provideAppInitializer(() => {
+      const componentRegistry = inject(PluginComponentRegistryService);
+      registerPluginComponents(componentRegistry);
     }),
     provideNgIconsConfig({
       size: '1rem', // Default icon size

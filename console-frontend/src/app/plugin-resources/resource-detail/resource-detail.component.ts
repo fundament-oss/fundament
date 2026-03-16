@@ -6,6 +6,7 @@ import {
   signal,
   effect,
   OnInit,
+  input,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -64,6 +65,9 @@ export default class ResourceDetailComponent implements OnInit {
   private configService = inject(ConfigService);
 
   private orgContext = inject(OrganizationContextService);
+
+  /** Set by the dispatcher. Controls whether edit/delete affordances are shown. */
+  canWrite = input<boolean>(false);
 
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,

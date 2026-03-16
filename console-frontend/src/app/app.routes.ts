@@ -99,6 +99,18 @@ const routes: Routes = [
         },
       },
       {
+        path: 'clusters/:id/dashboard',
+        loadComponent: () =>
+          import('./cluster-dashboard/cluster-dashboard.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [
+            { label: 'Clusters', route: '/' },
+            { label: ':clusterName', route: '/clusters/:id' },
+            { label: 'Dashboard' },
+          ],
+        },
+      },
+      {
         path: 'projects',
         loadComponent: () => import('./projects/projects.component').then((m) => m.default),
         data: {
@@ -225,19 +237,36 @@ const routes: Routes = [
           {
             path: ':resourceKind',
             loadComponent: () =>
-              import('./plugin-resources/resource-list/resource-list.component').then(
-                (m) => m.default,
-              ),
+              import(
+                './plugin-resources/dispatchers/plugin-list-dispatcher.component'
+              ).then((m) => m.default),
             data: {
               breadcrumbs: [{ label: ':pluginDisplayName' }, { label: ':resourceKindLabel' }],
             },
           },
           {
+            path: ':resourceKind/create',
+            loadComponent: () =>
+              import(
+                './plugin-resources/dispatchers/plugin-create-dispatcher.component'
+              ).then((m) => m.default),
+            data: {
+              breadcrumbs: [
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: 'Create' },
+              ],
+            },
+          },
+          {
             path: ':resourceKind/:resourceId',
             loadComponent: () =>
-              import('./plugin-resources/resource-detail/resource-detail.component').then(
-                (m) => m.default,
-              ),
+              import(
+                './plugin-resources/dispatchers/plugin-detail-dispatcher.component'
+              ).then((m) => m.default),
             data: {
               breadcrumbs: [
                 { label: ':pluginDisplayName' },
@@ -246,6 +275,27 @@ const routes: Routes = [
                   route: '/plugin-resources/:pluginName/:resourceKind',
                 },
                 { label: ':resourceName' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/:resourceId/edit',
+            loadComponent: () =>
+              import(
+                './plugin-resources/dispatchers/plugin-edit-dispatcher.component'
+              ).then((m) => m.default),
+            data: {
+              breadcrumbs: [
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/plugin-resources/:pluginName/:resourceKind',
+                },
+                {
+                  label: ':resourceName',
+                  route: '/plugin-resources/:pluginName/:resourceKind/:resourceId',
+                },
+                { label: 'Edit' },
               ],
             },
           },
@@ -258,9 +308,9 @@ const routes: Routes = [
           {
             path: ':resourceKind',
             loadComponent: () =>
-              import('./plugin-resources/resource-list/resource-list.component').then(
-                (m) => m.default,
-              ),
+              import(
+                './plugin-resources/dispatchers/plugin-list-dispatcher.component'
+              ).then((m) => m.default),
             data: {
               breadcrumbs: [
                 { label: ':projectName', route: '/projects/:id' },
@@ -270,11 +320,29 @@ const routes: Routes = [
             },
           },
           {
+            path: ':resourceKind/create',
+            loadComponent: () =>
+              import(
+                './plugin-resources/dispatchers/plugin-create-dispatcher.component'
+              ).then((m) => m.default),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: 'Create' },
+              ],
+            },
+          },
+          {
             path: ':resourceKind/:resourceId',
             loadComponent: () =>
-              import('./plugin-resources/resource-detail/resource-detail.component').then(
-                (m) => m.default,
-              ),
+              import(
+                './plugin-resources/dispatchers/plugin-detail-dispatcher.component'
+              ).then((m) => m.default),
             data: {
               breadcrumbs: [
                 { label: ':projectName', route: '/projects/:id' },
@@ -284,6 +352,28 @@ const routes: Routes = [
                   route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
                 },
                 { label: ':resourceName' },
+              ],
+            },
+          },
+          {
+            path: ':resourceKind/:resourceId/edit',
+            loadComponent: () =>
+              import(
+                './plugin-resources/dispatchers/plugin-edit-dispatcher.component'
+              ).then((m) => m.default),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginDisplayName' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
+                },
+                {
+                  label: ':resourceName',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind/:resourceId',
+                },
+                { label: 'Edit' },
               ],
             },
           },

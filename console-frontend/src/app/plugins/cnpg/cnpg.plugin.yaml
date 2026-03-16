@@ -27,3 +27,49 @@ crds:
   - databases.postgresql.cnpg.io
   - backups.postgresql.cnpg.io
   - subscriptions.postgresql.cnpg.io
+
+uiHints:
+  Database:
+    formGroups:
+      - name: Basic information
+        fields: [name, cluster, owner]
+      - name: Encoding & locale
+        fields: [encoding, locale, localeCollate, localeCType, localeProvider]
+      - name: Permissions
+        fields: [allowConnections, connectionLimit, isTemplate]
+      - name: Extensions
+        fields: [extensions]
+      - name: Lifecycle
+        fields: [ensure, databaseReclaimPolicy]
+    editableFields:
+      - owner
+      - encoding
+      - locale
+      - localeCollate
+      - localeCType
+      - localeProvider
+      - allowConnections
+      - connectionLimit
+      - isTemplate
+      - ensure
+      - databaseReclaimPolicy
+      - extensions
+    hiddenFields:
+      - builtinLocale
+      - icuLocale
+      - icuRules
+      - collationVersion
+      - fdws
+      - schemas
+      - servers
+      - tablespace
+      - template
+    statusMapping:
+      jsonPath: .status.applied
+      values:
+        'true':
+          badge: badge badge-sm badge-emerald
+          label: Applied
+        'false':
+          badge: badge badge-sm badge-yellow
+          label: Pending

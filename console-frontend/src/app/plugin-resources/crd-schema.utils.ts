@@ -1,4 +1,10 @@
-import type { CrdObjectSchema, CrdPropertySchema, AdditionalPrinterColumn } from './types';
+import type {
+  CrdObjectSchema,
+  CrdPropertySchema,
+  AdditionalPrinterColumn,
+  KubeResource,
+  FormGroup,
+} from './types';
 
 function parsePropertySchema(raw: Record<string, unknown>): CrdPropertySchema {
   const schema: CrdPropertySchema = {
@@ -208,4 +214,107 @@ export function fieldNameToLabel(name: string): string {
  */
 export function isFieldRequired(fieldName: string, schema: CrdObjectSchema): boolean {
   return schema.required?.includes(fieldName) ?? false;
+}
+
+/**
+ * Get visible spec fields for a CRD, applying hiddenFields filter.
+ */
+export function getVisibleFields(
+  specSchema: CrdObjectSchema,
+  hiddenFields?: string[],
+): [string, CrdPropertySchema][] {
+  const hidden = new Set(hiddenFields ?? []);
+  return Object.entries(specSchema.properties).filter(([name]) => !hidden.has(name));
+}
+
+/**
+ * Group fields into form sections based on uiHints formGroups.
+ */
+export function groupFields(
+  specSchema: CrdObjectSchema,
+  formGroups?: FormGroup[],
+  hiddenFields?: string[],
+): { name: string; fields: [string, CrdPropertySchema][] }[] {
+  const hidden = new Set(hiddenFields ?? []);
+  const allFields = Object.entries(specSchema.properties).filter(([name]) => !hidden.has(name));
+
+  if (!formGroups || formGroups.length === 0) {
+    return [{ name: 'Configuration', fields: allFields }];
+  }
+
+  const usedFields = new Set<string>();
+  const groups: { name: string; fields: [string, CrdPropertySchema][] }[] = [];
+
+  formGroups.forEach((group) => {
+    const fields: [string, CrdPropertySchema][] = group.fields
+      .filter((fieldName) => !hidden.has(fieldName))
+      .reduce<[string, CrdPropertySchema][]>((acc, fieldName) => {
+        const schema = specSchema.properties[fieldName];
+        if (schema) {
+          acc.push([fieldName, schema]);
+          usedFields.add(fieldName);
+        }
+        return acc;
+      }, []);
+
+    if (fields.length > 0) {
+      groups.push({ name: group.name, fields });
+    }
+  });
+
+  const remaining = allFields.filter(([name]) => !usedFields.has(name));
+  if (remaining.length > 0) {
+    groups.push({ name: 'Other', fields: remaining });
+  }
+
+  return groups;
+}
+
+/**
+ * Build a default value for a CRD property based on its schema.
+ */
+export function buildDefaultValue(schema: CrdPropertySchema): unknown {
+  if (schema.default !== undefined) return schema.default;
+
+  switch (schema.type) {
+    case 'string':
+      return '';
+    case 'integer':
+    case 'number':
+      return null;
+    case 'boolean':
+      return false;
+    case 'array':
+      return [];
+    case 'object': {
+      if (!schema.properties || Object.keys(schema.properties).length === 0) return null;
+      const obj: Record<string, unknown> = {};
+      Object.entries(schema.properties).forEach(([name, propSchema]) => {
+        obj[name] = buildDefaultValue(propSchema);
+      });
+      return obj;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Resolve status badge class from a resource using statusMapping.
+ */
+export function resolveStatusBadge(
+  resource: KubeResource,
+  statusMapping?: { jsonPath: string; values: Record<string, { badge: string; label: string }> },
+): { badge: string; label: string } | undefined {
+  if (!statusMapping) return undefined;
+
+  const fullObj = {
+    metadata: resource.metadata,
+    spec: resource.spec,
+    status: resource.status ?? {},
+  };
+  const value = resolveJsonPath(fullObj, statusMapping.jsonPath);
+  if (value === undefined || value === null) return undefined;
+
+  return statusMapping.values[String(value)];
 }
