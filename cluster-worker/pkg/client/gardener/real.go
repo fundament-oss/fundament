@@ -23,10 +23,17 @@ type ProviderConfig struct {
 	CloudProfile           string // e.g., "local", "metal", "aws"
 	CredentialsBindingName string // e.g., "local", "metal-credentials" (required for all providers)
 
-	// CredentialsSecretRef is the reference to the shared credentials secret.
+	// CredentialsRef is the reference to the shared credentials resource.
 	// This is used to create CredentialsBindings in new project namespaces.
 	// Format: "namespace/name" (e.g., "garden-local/local")
-	CredentialsSecretRef string
+	CredentialsRef string
+
+	// CredentialsRefKind is the kind of the credentials resource (e.g., "Secret", "WorkloadIdentity").
+	CredentialsRefKind string
+
+	// CredentialsRefAPIVersion is the API version of the credentials resource
+	// (e.g., "v1" for Secret, "security.gardener.cloud/v1alpha1" for WorkloadIdentity).
+	CredentialsRefAPIVersion string
 
 	MachineImageName    string // e.g., "local", "gardenlinux"
 	MachineImageVersion string // e.g., "1.0.0", "1592.2.0"
@@ -37,13 +44,15 @@ type ProviderConfig struct {
 // Override fields as needed for other providers.
 func NewProviderConfig() ProviderConfig {
 	return ProviderConfig{
-		Type:                   "local",
-		CloudProfile:           "local",
-		CredentialsBindingName: "local",              // Name of CredentialsBinding to create/reference
-		CredentialsSecretRef:   "garden-local/local", // Shared secret for local provider
-		MachineImageName:       "local",
-		MachineImageVersion:    "1.0.0",
-		DefaultMachineType:     "local",
+		Type:                     "local",
+		CloudProfile:             "local",
+		CredentialsBindingName:   "local",                                  // Name of CredentialsBinding to create/reference
+		CredentialsRef:           "garden-local/local",                     // Shared WorkloadIdentity for local provider
+		CredentialsRefKind:       "WorkloadIdentity",                      // Local provider uses WorkloadIdentity
+		CredentialsRefAPIVersion: "security.gardener.cloud/v1alpha1",      // Gardener security API
+		MachineImageName:         "local",
+		MachineImageVersion:      "1.0.0",
+		DefaultMachineType:       "local",
 	}
 }
 
@@ -82,7 +91,6 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 	if err := securityv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add Gardener security types to scheme: %w", err)
 	}
-
 	c, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
@@ -282,10 +290,11 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 }
 
 // ensureCredentialsBinding creates a CredentialsBinding in the namespace if it doesn't exist.
-// The binding references the shared credentials secret configured in ProviderConfig.
+// The binding references the shared credentials configured in ProviderConfig.
+// Supports both Secret and WorkloadIdentity credential types via CredentialsRefKind.
 func (r *RealClient) ensureCredentialsBinding(ctx context.Context, namespace string) error {
-	if r.provider.CredentialsSecretRef == "" {
-		// No credentials secret configured, skip
+	if r.provider.CredentialsRef == "" {
+		// No credentials configured, skip
 		return nil
 	}
 
@@ -311,10 +320,13 @@ func (r *RealClient) ensureCredentialsBinding(ctx context.Context, namespace str
 		return fmt.Errorf("failed to get credentials binding: %w", err)
 	}
 
-	secretNs, secretName, err := parseSecretRef(r.provider.CredentialsSecretRef)
+	refNs, refName, err := parseRef(r.provider.CredentialsRef)
 	if err != nil {
-		return fmt.Errorf("invalid credentials secret ref: %w", err)
+		return fmt.Errorf("invalid credentials ref: %w", err)
 	}
+
+	refKind := r.provider.CredentialsRefKind
+	refAPIVersion := r.provider.CredentialsRefAPIVersion
 
 	binding := &securityv1alpha1.CredentialsBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -325,17 +337,18 @@ func (r *RealClient) ensureCredentialsBinding(ctx context.Context, namespace str
 			Type: r.provider.Type,
 		},
 		CredentialsRef: corev1.ObjectReference{
-			APIVersion: "v1",
-			Kind:       "Secret",
-			Name:       secretName,
-			Namespace:  secretNs,
+			APIVersion: refAPIVersion,
+			Kind:       refKind,
+			Name:       refName,
+			Namespace:  refNs,
 		},
 	}
 
 	r.logger.Info("creating credentials binding",
 		"namespace", namespace,
 		"name", bindingName,
-		"secretRef", r.provider.CredentialsSecretRef)
+		"credentialsRef", r.provider.CredentialsRef,
+		"kind", refKind)
 
 	if err := r.client.Create(ctx, binding); err != nil {
 		if apierrors.IsAlreadyExists(err) {
@@ -347,8 +360,8 @@ func (r *RealClient) ensureCredentialsBinding(ctx context.Context, namespace str
 	return nil
 }
 
-// parseSecretRef parses "namespace/name" format into separate parts.
-func parseSecretRef(ref string) (namespace, name string, err error) {
+// parseRef parses "namespace/name" format into separate parts.
+func parseRef(ref string) (namespace, name string, err error) {
 	parts := make([]string, 0, 2)
 	for i, j := 0, 0; i <= len(ref); i++ {
 		if i == len(ref) || ref[i] == '/' {
