@@ -28,6 +28,7 @@ customComponents:
     list: demo-SampleItemList
     detail: demo-SampleItemDetail
     createWizard: demo-SampleItemCreate
+    edit: demo-SampleItemEdit
     actions:
       - label: Scale
         icon: tablerAdjustments

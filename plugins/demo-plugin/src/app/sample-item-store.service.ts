@@ -26,4 +26,10 @@ export class SampleItemStoreService {
   add(item: SampleItem): void {
     this.items.update((current) => [...current, item]);
   }
+
+  update(name: string, changes: Partial<Omit<SampleItem, 'name'>>): void {
+    this.items.update((current) =>
+      current.map((item) => (item.name === name ? { ...item, ...changes } : item)),
+    );
+  }
 }

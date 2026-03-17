@@ -183,7 +183,7 @@ export default class SampleItemDetailComponent {
 
   tabClass(tab: Tab): string {
     const base =
-      'px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
+      'px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer';
     return this.activeTab() === tab
       ? `${base} border-b-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400`
       : `${base} text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200`;

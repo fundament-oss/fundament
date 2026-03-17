@@ -24,6 +24,9 @@ export function register(registry: ComponentRegistry): void {
   registry.register('demo-SampleItemCreate', () =>
     import('./components/sample-item-create.component').then((m) => m.default),
   );
+  registry.register('demo-SampleItemEdit', () =>
+    import('./components/sample-item-edit.component').then((m) => m.default),
+  );
   registry.register('demo-SampleItemWidget', () =>
     import('./components/sample-item-widget.component').then((m) => m.default),
   );
