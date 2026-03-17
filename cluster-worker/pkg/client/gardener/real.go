@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/google/uuid"
@@ -91,6 +92,10 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 	if err := securityv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add Gardener security types to scheme: %w", err)
 	}
+	if err := authenticationv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add Gardener authentication types to scheme: %w", err)
+	}
+
 	c, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
@@ -287,6 +292,32 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 	// No last operation, likely still being created
 	return &ShootStatus{Status: StatusProgressing, Message: "Shoot is being created"}, nil
+}
+
+// RequestAdminKubeconfig requests a short-lived admin kubeconfig for a shoot.
+func (r *RealClient) RequestAdminKubeconfig(ctx context.Context, clusterID uuid.UUID, expirationSeconds int64) (*AdminKubeconfig, error) {
+	shoot, err := r.getShootByClusterID(ctx, clusterID)
+	if err != nil {
+		return nil, fmt.Errorf("look up shoot: %w", err)
+	}
+	if shoot == nil {
+		return nil, fmt.Errorf("shoot not found for cluster %s", clusterID)
+	}
+
+	adminKubeconfigRequest := &authenticationv1alpha1.AdminKubeconfigRequest{
+		Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
+			ExpirationSeconds: &expirationSeconds,
+		},
+	}
+
+	if err := r.client.SubResource("adminkubeconfig").Create(ctx, shoot, adminKubeconfigRequest); err != nil {
+		return nil, fmt.Errorf("create admin kubeconfig request for shoot %s/%s: %w", shoot.Namespace, shoot.Name, err)
+	}
+
+	return &AdminKubeconfig{
+		Kubeconfig: adminKubeconfigRequest.Status.Kubeconfig,
+		ExpiresAt:  adminKubeconfigRequest.Status.ExpirationTimestamp.Time,
+	}, nil
 }
 
 // ensureCredentialsBinding creates a CredentialsBinding in the namespace if it doesn't exist.

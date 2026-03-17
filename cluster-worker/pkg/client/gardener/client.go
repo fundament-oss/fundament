@@ -35,6 +35,12 @@ const (
 	MsgShootReady    = "Shoot is ready"
 )
 
+// AdminKubeconfig holds the result of an AdminKubeconfigRequest.
+type AdminKubeconfig struct {
+	Kubeconfig []byte
+	ExpiresAt  time.Time
+}
+
 // Client is the interface that all Gardener client implementations must satisfy.
 // This allows swapping between mock (tests) and real (production/local Gardener).
 type Client interface {
@@ -55,6 +61,10 @@ type Client interface {
 
 	// GetShootStatus returns the current reconciliation status of a Shoot.
 	GetShootStatus(ctx context.Context, cluster *ClusterToSync) (*ShootStatus, error)
+
+	// RequestAdminKubeconfig requests a short-lived admin kubeconfig for a shoot.
+	// The kubeconfig provides cluster-admin access to the shoot's kube-apiserver.
+	RequestAdminKubeconfig(ctx context.Context, clusterID uuid.UUID, expirationSeconds int64) (*AdminKubeconfig, error)
 }
 
 // NodePool represents a node pool configuration from the database.

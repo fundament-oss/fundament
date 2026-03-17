@@ -1,0 +1,74 @@
+{{- if $.Values.shootProxy.enabled }}
+# Shoot proxy: forwards port 443 to the Gardener istio ingress NodePort.
+# This allows k3d pods to reach shoot kube-apiservers using their advertised URLs (port 443)
+# without custom dialers or host overrides in Go code. Only deployed with the local-gardener profile.
+# See design Decision 14.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-shoot-proxy
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: shoot-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: shoot-proxy
+  template:
+    metadata:
+      labels:
+        {{- include "fundament.labels" . | nindent 8 }}
+        app.kubernetes.io/component: shoot-proxy
+    spec:
+      containers:
+        - name: socat
+          image: alpine/socat:latest
+          args:
+            - TCP-LISTEN:443,fork,reuseaddr
+            - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.gardenerNodePort }}
+          ports:
+            - containerPort: 443
+              name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Release.Name }}-shoot-proxy
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: shoot-proxy
+spec:
+  clusterIP: {{ $.Values.shootProxy.clusterIP }}
+  selector:
+    app.kubernetes.io/component: shoot-proxy
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+# CoreDNS custom config: resolves *.local.gardener.cloud to the shoot-proxy Service ClusterIP.
+# Uses a separate server block (*.server) with the template plugin.
+# The AAAA and ANY templates return NOERROR to prevent SERVFAIL-induced timeouts.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+    app.kubernetes.io/component: shoot-proxy
+data:
+  gardener.server: |
+    local.gardener.cloud:53 {
+      template IN A {
+        answer "{{`{{ .Name }}`}} 60 IN A {{ $.Values.shootProxy.clusterIP }}"
+      }
+      template IN AAAA {
+        rcode NOERROR
+      }
+      template IN ANY {
+        rcode NOERROR
+      }
+    }
+{{- end }}
