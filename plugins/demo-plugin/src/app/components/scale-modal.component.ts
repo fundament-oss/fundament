@@ -109,31 +109,15 @@ export default class ScaleModalComponent {
     if (!this.isValid()) return;
     this.saving.set(true);
 
-    /**
-     * In a real plugin, PATCH the resource here then close the modal:
-     *
-     *   const patch = { spec: { replicas: this.newReplicas() } };
-     *   await this.store.patchResource(pluginName, crd, resourceName, namespace, patch);
-     *   this.modalService.notifyClose();
-     *
-     * PluginResourceStoreService and PluginModalService are provided in the host's root
-     * injector and resolve automatically through shared Angular DI.
-     */
-    // eslint-disable-next-line no-console
-    console.info(
-      `[DemoPlugin] Would PATCH replicas → ${this.newReplicas()} for "${this.ctx().resourceName ?? 'unknown'}"`,
-    );
-
+    // In a real plugin, PATCH the resource here via PluginResourceStoreService before closing.
     // Simulate async patch for demo purposes
     setTimeout(() => {
       this.saving.set(false);
-      // Close the modal: inject PluginModalService and call modalService.notifyClose()
+      window.dispatchEvent(new CustomEvent('plugin:close-modal'));
     }, 800);
   }
 
   cancel(): void {
-    // Close the modal: inject PluginModalService and call modalService.notifyClose()
-    // eslint-disable-next-line no-console
-    console.info('[DemoPlugin] Modal cancel — wire PluginModalService.notifyClose() from SDK.');
+    window.dispatchEvent(new CustomEvent('plugin:close-modal'));
   }
 }

@@ -190,18 +190,13 @@ export default class SampleItemDetailComponent {
   }
 
   openScaleModal(): void {
-    /**
-     * In a real plugin, inject PluginModalService and call:
-     *   this.modalService.open('demo-ScaleModal', { currentReplicas: this.resource().spec.replicas });
-     *
-     * PluginModalService is provided in the host's root injector. Because @angular/core is shared
-     * as a singleton in the NF config, remote components can inject host services transparently.
-     *
-     * Import path (for type reference only — resolves from host at runtime):
-     *   import PluginModalService from 'fundament-plugin-sdk'; // Phase 2 SDK
-     */
-    // eslint-disable-next-line no-console
-    console.info('[DemoPlugin] Scale modal would open here — wire PluginModalService from SDK.');
+    const { replicas } = this.resource().spec;
+    const { name, namespace } = this.resource().metadata;
+    window.dispatchEvent(
+      new CustomEvent('plugin:open-modal', {
+        detail: { componentName: 'demo-ScaleModal', context: { currentReplicas: replicas, resourceName: name, namespace } },
+      }),
+    );
   }
 
   navigateEdit(): void {

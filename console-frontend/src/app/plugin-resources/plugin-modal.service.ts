@@ -9,7 +9,8 @@ export interface PluginModalRequest {
 /**
  * Service for opening plugin modal actions.
  *
- * Plugin components call `open(componentName, context)` to request a modal.
+ * Plugin components call `open(componentName, context)` to request a modal, either
+ * directly (same bundle) or via the `plugin:open-modal` CustomEvent on window (cross-bundle).
  * PluginModalPortalComponent subscribes to the `open$` observable, loads the
  * named component from PluginComponentRegistryService, and renders it inside
  * the app-modal wrapper.
@@ -25,6 +26,15 @@ export default class PluginModalService {
 
   /** Observable that emits when the portal closes the modal. */
   readonly close$ = this.closeSubject.asObservable();
+
+  constructor() {
+    // Accept open requests from cross-bundle plugin components (e.g. Native Federation remotes)
+    // that cannot share the same class reference for Angular DI.
+    window.addEventListener('plugin:open-modal', (event: Event) => {
+      const { componentName, context } = (event as CustomEvent<PluginModalRequest>).detail;
+      this.openSubject.next({ componentName, context });
+    });
+  }
 
   /**
    * Request opening a modal with the given registered component name.

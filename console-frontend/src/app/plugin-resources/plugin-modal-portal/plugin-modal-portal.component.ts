@@ -42,7 +42,11 @@ export default class PluginModalPortalComponent implements AfterViewInit, OnDest
 
   private subscription?: Subscription;
 
+  private closeModalListener = () => this.onClose();
+
   ngAfterViewInit(): void {
+    window.addEventListener('plugin:close-modal', this.closeModalListener);
+
     this.subscription = this.modalService.open$.subscribe(async ({ componentName, context }) => {
       this.outlet.clear();
       this.show.set(true);
@@ -68,6 +72,7 @@ export default class PluginModalPortalComponent implements AfterViewInit, OnDest
 
   ngOnDestroy(): void {
     this.subscription?.unsubscribe();
+    window.removeEventListener('plugin:close-modal', this.closeModalListener);
   }
 
   onClose(): void {
