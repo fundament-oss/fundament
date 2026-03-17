@@ -3,7 +3,7 @@
 :numbered:
 :icons: font
 :sidebar-order: 9
-:state: prediscussion
+:state: committed
 
 = FUN-9 API Keys
 

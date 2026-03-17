@@ -3,7 +3,7 @@
 :numbered:
 :icons: font
 :sidebar-order: 10
-:state: prediscussion
+:state: published
 
 = FUN-10 Console frontend styling
 

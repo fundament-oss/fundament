@@ -3,7 +3,7 @@
 :numbered:
 :icons: font
 :sidebar-order: 5
-:state: discussion
+:state: committed
 
 = FUN-5 Identifiers
 

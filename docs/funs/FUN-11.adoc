@@ -3,7 +3,7 @@
 :numbered:
 :icons: font
 :sidebar-order: 11
-:state: prediscussion
+:state: discussion
 
 = FUN-11 Plugins and the Marketplace
 

@@ -3,7 +3,7 @@
 :numbered:
 :icons: font
 :sidebar-order: 7
-:state: discussion
+:state: published
 
 = FUN-7 User Permissions and Roles
 
