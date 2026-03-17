@@ -1,4 +1,13 @@
-@if (resource()) {
+@if (isLoading()) {
+  <div class="p-6 text-sm text-gray-500 dark:text-gray-400">Loading…</div>
+} @else if (errorMessage()) {
+  <div class="card">
+    <div class="card-body text-center">
+      <p class="text-red-600 dark:text-red-400">{{ errorMessage() }}</p>
+      <a [routerLink]="detailLink()" class="btn-primary mt-4 inline-block">Go back</a>
+    </div>
+  </div>
+} @else if (resource()) {
   <div class="space-y-6">
     <!-- Header -->
     <div class="card px-6 py-4">

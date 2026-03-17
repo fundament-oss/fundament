@@ -58,6 +58,7 @@ function parsePluginYaml(yamlText: string): PluginDefinition {
     dashboardWidgets: raw.dashboardWidgets,
     navSections: raw.navSections,
     crds: raw.crds,
+    bundleUrl: raw.bundleUrl,
   };
 }
 
@@ -84,6 +85,7 @@ export default class PluginRegistryService {
   private readonly pluginFiles = [
     '/plugins/cert-manager/cert-manager.plugin.yaml',
     '/plugins/cnpg/cnpg.plugin.yaml',
+    '/plugins/demo/demo.plugin.yaml',
   ];
 
   async loadPlugins(): Promise<void> {

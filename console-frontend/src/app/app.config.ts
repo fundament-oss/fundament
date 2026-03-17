@@ -18,7 +18,8 @@ import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginComponentRegistryService from './plugin-resources/plugin-component-registry.service';
-import registerPluginComponents from './plugins/index';
+import registerPluginComponents from './plugins';
+import PluginLoaderService from './plugin-resources/plugin-loader.service';
 
 // Global version mismatch observable
 export const versionMismatch$ = new BehaviorSubject<boolean>(false);
@@ -41,15 +42,19 @@ export const appConfig: ApplicationConfig = {
       const configService = inject(ConfigService);
       return configService.loadConfig();
     }),
-    // Load plugin definitions from YAML files
+    // Load plugin definitions, register in-bundle components, then load remote bundles.
+    // These must run sequentially: loadPlugins() must complete before loadRemoteBundles()
+    // reads allPlugins(), otherwise the plugin list is still empty.
+    // Use a plain (non-async) function returning a promise chain: async functions combined with
+    // zone.js cause inject() to run in a microtask where the injection context is no longer active.
     provideAppInitializer(() => {
       const pluginRegistry = inject(PluginRegistryService);
-      return pluginRegistry.loadPlugins();
-    }),
-    // Register compiled plugin components (Phase 1; replaced by PluginLoaderService in Phase 2)
-    provideAppInitializer(() => {
       const componentRegistry = inject(PluginComponentRegistryService);
-      registerPluginComponents(componentRegistry);
+      const pluginLoader = inject(PluginLoaderService);
+      return pluginRegistry.loadPlugins().then(() => {
+        registerPluginComponents(componentRegistry);
+        return pluginLoader.loadRemoteBundles();
+      });
     }),
     provideNgIconsConfig({
       size: '1rem', // Default icon size

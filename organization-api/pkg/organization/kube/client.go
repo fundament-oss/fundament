@@ -43,6 +43,8 @@ func (m *MockKubeClient) Do(_ context.Context, _, path string, _ io.Reader) (int
 		return 200, r(mockBackupListJSON), nil
 	case strings.HasSuffix(path, "/subscriptions"):
 		return 200, r(mockSubscriptionListJSON), nil
+	case strings.HasSuffix(path, "/sampleitems"):
+		return 200, r(mockSampleItemListJSON), nil
 	default:
 		return 200, r(mockEmptyList), nil
 	}

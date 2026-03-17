@@ -21,21 +21,19 @@ export default class PluginNavService {
    * Custom nav sections declared by plugins via `navSections` in their manifest.
    * Each section renders a registered component at a sub-path under /plugin-resources/:pluginName/.
    */
-  navSections = computed<PluginNavSection[]>(() => {
-    const sections: PluginNavSection[] = [];
-    for (const plugin of this.registry.allPlugins()) {
-      if (plugin.navSections) {
-        for (const section of plugin.navSections) {
-          sections.push({
-            pluginName: plugin.name,
-            displayName: plugin.displayName,
-            section,
-          });
-        }
-      }
-    }
-    return sections;
-  });
+  navSections = computed<PluginNavSection[]>(() =>
+    this.registry
+      .allPlugins()
+      .filter((plugin) => plugin.navSections)
+
+      .flatMap((plugin) =>
+        plugin.navSections!.map((section) => ({
+          pluginName: plugin.name,
+          displayName: plugin.displayName,
+          section,
+        })),
+      ),
+  );
 
   private buildNavGroups(section: 'organization' | 'project'): PluginNavGroup[] {
     return this.registry

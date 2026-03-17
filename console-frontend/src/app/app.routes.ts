@@ -237,9 +237,9 @@ const routes: Routes = [
           {
             path: ':resourceKind',
             loadComponent: () =>
-              import(
-                './plugin-resources/dispatchers/plugin-list-dispatcher.component'
-              ).then((m) => m.default),
+              import('./plugin-resources/dispatchers/plugin-list-dispatcher.component').then(
+                (m) => m.default,
+              ),
             data: {
               breadcrumbs: [{ label: ':pluginDisplayName' }, { label: ':resourceKindLabel' }],
             },
@@ -247,9 +247,9 @@ const routes: Routes = [
           {
             path: ':resourceKind/create',
             loadComponent: () =>
-              import(
-                './plugin-resources/dispatchers/plugin-create-dispatcher.component'
-              ).then((m) => m.default),
+              import('./plugin-resources/dispatchers/plugin-create-dispatcher.component').then(
+                (m) => m.default,
+              ),
             data: {
               breadcrumbs: [
                 { label: ':pluginDisplayName' },
@@ -264,9 +264,9 @@ const routes: Routes = [
           {
             path: ':resourceKind/:resourceId',
             loadComponent: () =>
-              import(
-                './plugin-resources/dispatchers/plugin-detail-dispatcher.component'
-              ).then((m) => m.default),
+              import('./plugin-resources/dispatchers/plugin-detail-dispatcher.component').then(
+                (m) => m.default,
+              ),
             data: {
               breadcrumbs: [
                 { label: ':pluginDisplayName' },
@@ -281,9 +281,9 @@ const routes: Routes = [
           {
             path: ':resourceKind/:resourceId/edit',
             loadComponent: () =>
-              import(
-                './plugin-resources/dispatchers/plugin-edit-dispatcher.component'
-              ).then((m) => m.default),
+              import('./plugin-resources/dispatchers/plugin-edit-dispatcher.component').then(
+                (m) => m.default,
+              ),
             data: {
               breadcrumbs: [
                 { label: ':pluginDisplayName' },
@@ -308,9 +308,9 @@ const routes: Routes = [
           {
             path: ':resourceKind',
             loadComponent: () =>
-              import(
-                './plugin-resources/dispatchers/plugin-list-dispatcher.component'
-              ).then((m) => m.default),
+              import('./plugin-resources/dispatchers/plugin-list-dispatcher.component').then(
+                (m) => m.default,
+              ),
             data: {
               breadcrumbs: [
                 { label: ':projectName', route: '/projects/:id' },
@@ -322,9 +322,9 @@ const routes: Routes = [
           {
             path: ':resourceKind/create',
             loadComponent: () =>
-              import(
-                './plugin-resources/dispatchers/plugin-create-dispatcher.component'
-              ).then((m) => m.default),
+              import('./plugin-resources/dispatchers/plugin-create-dispatcher.component').then(
+                (m) => m.default,
+              ),
             data: {
               breadcrumbs: [
                 { label: ':projectName', route: '/projects/:id' },
@@ -340,9 +340,9 @@ const routes: Routes = [
           {
             path: ':resourceKind/:resourceId',
             loadComponent: () =>
-              import(
-                './plugin-resources/dispatchers/plugin-detail-dispatcher.component'
-              ).then((m) => m.default),
+              import('./plugin-resources/dispatchers/plugin-detail-dispatcher.component').then(
+                (m) => m.default,
+              ),
             data: {
               breadcrumbs: [
                 { label: ':projectName', route: '/projects/:id' },
@@ -358,9 +358,9 @@ const routes: Routes = [
           {
             path: ':resourceKind/:resourceId/edit',
             loadComponent: () =>
-              import(
-                './plugin-resources/dispatchers/plugin-edit-dispatcher.component'
-              ).then((m) => m.default),
+              import('./plugin-resources/dispatchers/plugin-edit-dispatcher.component').then(
+                (m) => m.default,
+              ),
             data: {
               breadcrumbs: [
                 { label: ':projectName', route: '/projects/:id' },

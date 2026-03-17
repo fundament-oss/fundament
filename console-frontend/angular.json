@@ -15,11 +15,41 @@
       "prefix": "app",
       "architect": {
         "build": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {},
+          "configurations": {
+            "production": {
+              "target": "fundament-console:esbuild:production"
+            },
+            "development": {
+              "target": "fundament-console:esbuild:development",
+              "dev": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {
+            "target": "fundament-console:serve-original:development",
+            "rebuildDelay": 0,
+            "dev": true
+          },
+          "configurations": {
+            "docker": {
+              "target": "fundament-console:serve-original:docker",
+              "rebuildDelay": 0,
+              "dev": true
+            }
+          }
+        },
+        "esbuild": {
           "builder": "@angular/build:application",
           "options": {
             "outputPath": "dist/fundament-console",
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
+            "polyfills": ["zone.js"],
             "assets": [
               {
                 "glob": "**/*",
@@ -29,6 +59,11 @@
                 "glob": "**/*.plugin.yaml",
                 "input": "src/app/plugins",
                 "output": "plugins"
+              },
+              {
+                "glob": "es-module-shims.js",
+                "input": "node_modules/es-module-shims/dist",
+                "output": "."
               }
             ],
             "styles": ["src/styles.css"]
@@ -65,17 +100,22 @@
           },
           "defaultConfiguration": "production"
         },
-        "serve": {
+        "serve-original": {
           "builder": "@angular/build:dev-server",
           "options": {
             "allowedHosts": ["console.fundament.localhost"]
           },
           "configurations": {
             "production": {
-              "buildTarget": "fundament-console:build:production"
+              "buildTarget": "fundament-console:esbuild:production"
             },
             "development": {
-              "buildTarget": "fundament-console:build:development"
+              "buildTarget": "fundament-console:esbuild:development"
+            },
+            "docker": {
+              "buildTarget": "fundament-console:esbuild:development",
+              "host": "0.0.0.0",
+              "port": 80
             }
           },
           "defaultConfiguration": "development"

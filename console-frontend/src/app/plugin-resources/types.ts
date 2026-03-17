@@ -14,6 +14,8 @@ export interface PluginDefinition {
   dashboardWidgets?: WidgetDefinition[];
   navSections?: NavSectionDefinition[];
   crds: string[];
+  /** URL to the remote's remoteEntry.json for Native Federation (Phase 2). */
+  bundleUrl?: string;
 }
 
 export interface CrdUiHints {
@@ -158,6 +160,7 @@ export interface RawPluginYaml {
   dashboardWidgets?: WidgetDefinition[];
   navSections?: NavSectionDefinition[];
   crds: string[];
+  bundleUrl?: string;
 }
 
 export interface RawCrdYaml {

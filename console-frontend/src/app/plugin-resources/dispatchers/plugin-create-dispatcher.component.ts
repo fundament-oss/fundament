@@ -66,8 +66,11 @@ export default class PluginCreateDispatcherComponent implements AfterViewInit {
       }
 
       const plugin = this.pluginRegistry.getPlugin(pluginName);
-      const crd = this.pluginRegistry.getCrdByPlural(pluginName, resourceKind);
-      const customName = crd ? plugin?.customComponents?.[crd.kind]?.createWizard : undefined;
+      const crd =
+        this.pluginRegistry.getCrdByPlural(pluginName, resourceKind) ??
+        this.pluginRegistry.getCrd(pluginName, resourceKind);
+      const kind = crd?.kind ?? resourceKind;
+      const customName = plugin?.customComponents?.[kind]?.createWizard;
 
       if (customName && this.componentRegistry.hasComponent(customName)) {
         const type = await this.componentRegistry.load(customName);
@@ -79,9 +82,8 @@ export default class PluginCreateDispatcherComponent implements AfterViewInit {
         }
       }
 
-      const { default: DefaultComponent } = await import(
-        '../resource-create/resource-create.component'
-      );
+      const { default: DefaultComponent } =
+        await import('../resource-create/resource-create.component');
       const ref = this.outlet.createComponent(DefaultComponent);
       ref.setInput('canWrite', canWrite);
       this.loading.set(false);

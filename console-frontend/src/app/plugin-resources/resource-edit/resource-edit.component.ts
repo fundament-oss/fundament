@@ -93,20 +93,13 @@ export default class ResourceEditComponent implements OnInit {
 
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
-  crdDef = computed<ParsedCrd | undefined>(() =>
-    this.registry.getCrdByPlural(this.pluginName(), this.resourceKind()),
-  );
+  isLoading = signal(false);
 
-  resource = computed<KubeResource | undefined>(() => {
-    const crd = this.crdDef();
-    if (!crd) return undefined;
-    return this.store.getResource(
-      this.pluginName(),
-      crd.kind,
-      this.resourceId(),
-      this.clusterContext.selectedClusterId(),
-    );
-  });
+  errorMessage = signal<string | null>(null);
+
+  crdDef = signal<ParsedCrd | undefined>(undefined);
+
+  resource = signal<KubeResource | undefined>(undefined);
 
   fieldGroups = computed(() => {
     const crd = this.crdDef();
@@ -139,10 +132,51 @@ export default class ResourceEditComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {
-    const resource = this.resource();
-    if (resource) {
-      this.formData.set(structuredClone(resource.spec) as Record<string, unknown>);
+  async ngOnInit(): Promise<void> {
+    try {
+      await this.clusterContext.loadClusters();
+    } catch {
+      this.errorMessage.set('Failed to load clusters.');
+      return;
+    }
+    const clusterId = this.clusterContext.selectedClusterId();
+    if (clusterId) {
+      await this.loadCrdAndResource(clusterId);
+    }
+  }
+
+  private async loadCrdAndResource(clusterId: string): Promise<void> {
+    const orgId = this.orgContext.currentOrganizationId();
+    if (!orgId) return;
+
+    const orgApiUrl = this.configService.getConfig().organizationApiUrl;
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
+    try {
+      await this.registry.loadCrdsForPlugin(this.pluginName(), clusterId, orgApiUrl, orgId);
+      const crd =
+        this.registry.getCrd(this.pluginName(), this.resourceKind()) ??
+        this.registry.getCrdByPlural(this.pluginName(), this.resourceKind());
+      this.crdDef.set(crd);
+
+      if (crd) {
+        await this.store.loadResources(this.pluginName(), crd, clusterId, orgApiUrl, orgId);
+        const resource = this.store.getResource(
+          this.pluginName(),
+          crd.kind,
+          this.resourceId(),
+          clusterId,
+        );
+        this.resource.set(resource);
+        if (resource) {
+          this.formData.set(structuredClone(resource.spec) as Record<string, unknown>);
+        }
+      }
+    } catch (err) {
+      this.errorMessage.set(`Failed to load resource: ${err}`);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

@@ -3,11 +3,9 @@ import {
   ChangeDetectionStrategy,
   inject,
   signal,
-  computed,
   OnInit,
   ViewContainerRef,
   viewChildren,
-  ElementRef,
   AfterViewInit,
   ChangeDetectorRef,
 } from '@angular/core';
@@ -20,6 +18,17 @@ import type { WidgetDefinition } from '../plugin-resources/types';
 interface ResolvedWidget {
   definition: WidgetDefinition;
   pluginName: string;
+}
+
+function widgetClass(size: 'small' | 'medium' | 'large'): string {
+  switch (size) {
+    case 'small':
+      return 'col-span-1';
+    case 'large':
+      return 'col-span-1 sm:col-span-2 lg:col-span-3';
+    default:
+      return 'col-span-1 sm:col-span-2';
+  }
 }
 
 @Component({
@@ -43,10 +52,7 @@ interface ResolvedWidget {
       } @else {
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           @for (widget of widgets(); track widget.definition.id) {
-            <div
-              [class]="widgetClass(widget.definition.size)"
-              class="card overflow-hidden"
-            >
+            <div [class]="widgetClass(widget.definition.size)" class="card overflow-hidden">
               <div class="card-header">
                 <h2 class="text-sm font-semibold dark:text-white">{{ widget.definition.title }}</h2>
               </div>
@@ -83,14 +89,13 @@ export default class ClusterDashboardComponent implements OnInit, AfterViewInit 
   async ngOnInit(): Promise<void> {
     await this.clusterContext.loadClusters();
 
-    const allWidgets: ResolvedWidget[] = [];
-    for (const plugin of this.registry.allPlugins()) {
-      if (plugin.dashboardWidgets) {
-        for (const widget of plugin.dashboardWidgets) {
-          allWidgets.push({ definition: widget, pluginName: plugin.name });
-        }
-      }
-    }
+    const allWidgets: ResolvedWidget[] = this.registry
+      .allPlugins()
+      .filter((plugin) => plugin.dashboardWidgets)
+      .flatMap((plugin) =>
+        plugin.dashboardWidgets!.map((widget) => ({ definition: widget, pluginName: plugin.name })),
+      );
+
     this.widgets.set(allWidgets);
     this.cdr.detectChanges();
   }
@@ -99,26 +104,17 @@ export default class ClusterDashboardComponent implements OnInit, AfterViewInit 
     const outlets = this.widgetOutlets();
     const widgetList = this.widgets();
 
-    for (let i = 0; i < widgetList.length; i++) {
-      const outlet = outlets[i];
-      const widget = widgetList[i];
-      if (!outlet || !widget) continue;
-
-      const type = await this.componentRegistry.load(widget.definition.component);
-      if (type) {
-        outlet.createComponent(type);
-      }
-    }
+    await Promise.all(
+      widgetList.map(async (widget, i) => {
+        const outlet = outlets[i];
+        if (!outlet) return;
+        const type = await this.componentRegistry.load(widget.definition.component);
+        if (type) {
+          outlet.createComponent(type);
+        }
+      }),
+    );
   }
 
-  widgetClass(size: 'small' | 'medium' | 'large'): string {
-    switch (size) {
-      case 'small':
-        return 'col-span-1';
-      case 'large':
-        return 'col-span-1 sm:col-span-2 lg:col-span-3';
-      default:
-        return 'col-span-1 sm:col-span-2';
-    }
-  }
+  protected readonly widgetClass = widgetClass;
 }

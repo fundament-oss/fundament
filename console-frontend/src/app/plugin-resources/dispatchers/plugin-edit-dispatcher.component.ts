@@ -66,8 +66,11 @@ export default class PluginEditDispatcherComponent implements AfterViewInit {
       }
 
       const plugin = this.pluginRegistry.getPlugin(pluginName);
-      const crd = this.pluginRegistry.getCrdByPlural(pluginName, resourceKind);
-      const customName = crd ? plugin?.customComponents?.[crd.kind]?.edit : undefined;
+      const crd =
+        this.pluginRegistry.getCrdByPlural(pluginName, resourceKind) ??
+        this.pluginRegistry.getCrd(pluginName, resourceKind);
+      const kind = crd?.kind ?? resourceKind;
+      const customName = plugin?.customComponents?.[kind]?.edit;
 
       if (customName && this.componentRegistry.hasComponent(customName)) {
         const type = await this.componentRegistry.load(customName);
@@ -79,9 +82,8 @@ export default class PluginEditDispatcherComponent implements AfterViewInit {
         }
       }
 
-      const { default: DefaultComponent } = await import(
-        '../resource-edit/resource-edit.component'
-      );
+      const { default: DefaultComponent } =
+        await import('../resource-edit/resource-edit.component');
       const ref = this.outlet.createComponent(DefaultComponent);
       ref.setInput('canWrite', canWrite);
       this.loading.set(false);

@@ -2,6 +2,42 @@ package kube
 
 // Mock resource instance lists, mirroring the former frontend mock-resources.ts
 
+const mockSampleItemListJSON = `{
+  "apiVersion": "demo.fundament.io/v1",
+  "kind": "SampleItemList",
+  "metadata": {"resourceVersion": "1"},
+  "items": [
+    {
+      "apiVersion": "demo.fundament.io/v1",
+      "kind": "SampleItem",
+      "metadata": {"name": "web-frontend", "namespace": "default", "uid": "sampleitem-1", "creationTimestamp": "2026-03-01T10:00:00Z"},
+      "spec": {"replicas": 3, "image": "nginx:1.25"},
+      "status": {"phase": "Ready"}
+    },
+    {
+      "apiVersion": "demo.fundament.io/v1",
+      "kind": "SampleItem",
+      "metadata": {"name": "api-service", "namespace": "default", "uid": "sampleitem-2", "creationTimestamp": "2026-03-05T14:30:00Z"},
+      "spec": {"replicas": 2, "image": "node:20-alpine"},
+      "status": {"phase": "Ready"}
+    },
+    {
+      "apiVersion": "demo.fundament.io/v1",
+      "kind": "SampleItem",
+      "metadata": {"name": "worker", "namespace": "jobs", "uid": "sampleitem-3", "creationTimestamp": "2026-03-10T08:00:00Z"},
+      "spec": {"replicas": 1, "image": "python:3.12-slim"},
+      "status": {"phase": "Pending"}
+    },
+    {
+      "apiVersion": "demo.fundament.io/v1",
+      "kind": "SampleItem",
+      "metadata": {"name": "legacy-app", "namespace": "legacy", "uid": "sampleitem-4", "creationTimestamp": "2026-01-15T09:00:00Z"},
+      "spec": {"replicas": 1, "image": "ubuntu:20.04"},
+      "status": {"phase": "Error"}
+    }
+  ]
+}`
+
 const mockCertificateListJSON = `{
   "apiVersion": "cert-manager.io/v1",
   "kind": "CertificateList",

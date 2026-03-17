@@ -1,4 +1,5 @@
 FROM oven/bun:1-alpine
+RUN apk add --no-cache nodejs libc6-compat
 WORKDIR /app
 
 # Copy package files
@@ -18,4 +19,4 @@ EXPOSE 80
 
 # Start development server with hot reload
 # Configure dev server to listen on 0.0.0.0:80 for pod accessibility
-CMD ["sh", "-c", "bun start --host 0.0.0.0 --port 80"]
+CMD ["node", "node_modules/@angular/cli/bin/ng.js", "serve", "--configuration", "docker"]

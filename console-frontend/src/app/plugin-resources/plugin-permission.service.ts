@@ -3,10 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { create } from '@bufbuild/protobuf';
 import { MEMBER, PROJECT } from '../../connect/tokens';
 import { GetMemberRequestSchema } from '../../generated/v1/member_pb';
-import {
-  ListProjectMembersRequestSchema,
-  ProjectMemberRole,
-} from '../../generated/v1/project_pb';
+import { ListProjectMembersRequestSchema, ProjectMemberRole } from '../../generated/v1/project_pb';
 import AuthnApiService from '../authn-api.service';
 
 /**

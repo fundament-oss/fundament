@@ -1,0 +1,40 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+
+name: demo
+displayName: Demo plugin
+version: v0.1.0
+description: >
+  Reference plugin that demonstrates custom UI components loaded via Native Federation.
+  Each extension point (list, detail, create, dashboard widget, modal action) is covered by a
+  purpose-built component in plugins/demo-plugin/. Run `bun run watch` there to build.
+author: Fundament Team
+# Native Federation remote entry served from the host's public/ directory.
+# Build first: cd plugins/demo-plugin && bun run watch
+bundleUrl: /demo-plugin/remoteEntry.json
+
+crds:
+  - sampleitems.demo.fundament.io
+
+menu:
+  organization:
+    - crd: SampleItem
+      label: Sample items
+      icon: tablerPuzzle
+  project: []
+
+customComponents:
+  SampleItem:
+    list: demo-SampleItemList
+    detail: demo-SampleItemDetail
+    createWizard: demo-SampleItemCreate
+    actions:
+      - label: Scale
+        icon: tablerAdjustments
+        modal: demo-ScaleModal
+
+dashboardWidgets:
+  - id: demo-widget
+    title: Sample items
+    size: small
+    component: demo-SampleItemWidget

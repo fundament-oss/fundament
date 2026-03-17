@@ -10,6 +10,9 @@
     <link rel="shortcut icon" href="/img/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    <!-- es-module-shims is served as a plain script (not bundled through Vite) to avoid
+         spurious "dynamic import cannot be analyzed" warnings from vite:import-analysis. -->
+    <script src="/es-module-shims.js" async="false"></script>
   </head>
 
   <body>

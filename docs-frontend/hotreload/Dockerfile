@@ -24,4 +24,4 @@ EXPOSE 80
 
 # Start development server with hot reload
 # Configure dev server to listen on 0.0.0.0:80 for pod accessibility
-CMD ["sh", "-c", "bun start --host 0.0.0.0 --port 80"]
+CMD ["sh", "-c", "bun start --host 0.0.0.0 --port 80 && cat /tmp/*/angular-errors.log"]

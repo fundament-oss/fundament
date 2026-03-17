@@ -17,6 +17,8 @@ func mockCRDForName(name string) string {
 		return mockBackupCRD
 	case "subscriptions.postgresql.cnpg.io":
 		return mockSubscriptionCRD
+	case "sampleitems.demo.fundament.io":
+		return mockSampleItemCRD
 	default:
 		return ""
 	}
@@ -31,6 +33,7 @@ var mockCRDListJSON = `{"apiVersion":"apiextensions.k8s.io/v1","kind":"CustomRes
 		mockDatabaseCRD,
 		mockBackupCRD,
 		mockSubscriptionCRD,
+		mockSampleItemCRD,
 	}, ",") + `]}`
 
 const mockCertificateCRD = `{
@@ -397,6 +400,60 @@ const mockBackupCRD = `{
                 "error": {"description": "The detected error", "type": "string"},
                 "startedAt": {"description": "When the backup was started", "type": "string", "format": "date-time"},
                 "stoppedAt": {"description": "When the backup was terminated", "type": "string", "format": "date-time"}
+              }
+            }
+          }
+        }
+      }
+    }]
+  }
+}`
+
+const mockSampleItemCRD = `{
+  "apiVersion": "apiextensions.k8s.io/v1",
+  "kind": "CustomResourceDefinition",
+  "metadata": {"name": "sampleitems.demo.fundament.io"},
+  "spec": {
+    "group": "demo.fundament.io",
+    "names": {"kind": "SampleItem", "plural": "sampleitems", "singular": "sampleitem"},
+    "scope": "Namespaced",
+    "versions": [{
+      "name": "v1",
+      "served": true,
+      "storage": true,
+      "additionalPrinterColumns": [
+        {"jsonPath": ".spec.replicas", "name": "Replicas", "type": "integer"},
+        {"jsonPath": ".spec.image", "name": "Image", "type": "string"},
+        {"jsonPath": ".status.phase", "name": "Status", "type": "string"},
+        {"jsonPath": ".metadata.creationTimestamp", "name": "Age", "type": "date"}
+      ],
+      "schema": {
+        "openAPIV3Schema": {
+          "description": "A SampleItem is a demo resource for the Fundament plugin system.",
+          "type": "object",
+          "required": ["metadata", "spec"],
+          "properties": {
+            "apiVersion": {"type": "string"},
+            "kind": {"type": "string"},
+            "metadata": {"type": "object"},
+            "spec": {
+              "description": "Desired state of the SampleItem.",
+              "type": "object",
+              "required": ["image"],
+              "properties": {
+                "replicas": {"description": "Number of replicas to run.", "type": "integer", "default": 1},
+                "image": {"description": "Container image to run.", "type": "string"}
+              }
+            },
+            "status": {
+              "description": "Observed state of the SampleItem.",
+              "type": "object",
+              "properties": {
+                "phase": {
+                  "description": "Current lifecycle phase.",
+                  "type": "string",
+                  "enum": ["Ready", "Pending", "Error"]
+                }
               }
             }
           }
