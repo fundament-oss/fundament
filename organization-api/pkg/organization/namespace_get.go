@@ -28,8 +28,7 @@ func (s *Server) GetNamespace(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get namespace: %w", err))
 	}
 
-	// Auth is done after the DB call because we don't know the namespace ID yet.
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Namespace(namespace.ID)); err != nil {
+	if err := s.checkPermission(ctx, authz.CanViewNamespace(), authz.Project(namespace.ProjectID)); err != nil {
 		return nil, err
 	}
 
@@ -54,8 +53,7 @@ func (s *Server) GetNamespaceByProjectAndName(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get namespace: %w", err))
 	}
 
-	// Auth is done after the DB call because we don't know the namespace ID yet.
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Namespace(namespace.ID)); err != nil {
+	if err := s.checkPermission(ctx, authz.CanViewNamespace(), authz.Project(namespace.ProjectID)); err != nil {
 		return nil, err
 	}
 

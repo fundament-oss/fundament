@@ -2,10 +2,12 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -19,7 +21,17 @@ func (s *Server) UpdateCluster(
 ) (*connect.Response[organizationv1.UpdateClusterResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Cluster(clusterID)); err != nil {
+	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
+		ID: clusterID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanEditCluster(), authz.Organization(cluster.OrganizationID)); err != nil {
 		return nil, err
 	}
 

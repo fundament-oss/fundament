@@ -2,10 +2,12 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -19,7 +21,15 @@ func (s *Server) UpdateProject(
 ) (*connect.Response[organizationv1.UpdateProjectResponse], error) {
 	projectID := uuid.MustParse(req.Msg.GetProjectId())
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Project(projectID)); err != nil {
+	project, err := s.queries.ProjectGetByID(ctx, db.ProjectGetByIDParams{ID: projectID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanEditProject(), authz.Cluster(project.ClusterID)); err != nil {
 		return nil, err
 	}
 

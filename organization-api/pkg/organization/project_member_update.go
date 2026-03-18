@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -27,7 +28,15 @@ func (s *Server) UpdateProjectMemberRole(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid role"))
 	}
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.ProjectMember(memberID)); err != nil {
+	member, err := s.queries.ProjectMemberGetByID(ctx, db.ProjectMemberGetByIDParams{ID: memberID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project member not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project member: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanEditProjectMember(), authz.Project(member.ProjectID)); err != nil {
 		return nil, err
 	}
 

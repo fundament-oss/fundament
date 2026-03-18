@@ -29,10 +29,7 @@ func (s *Server) GetClusterByName(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	// Auth is done after the DB call because we dont know the cluster ID yet.
-	// This does leave us open for enumerate attackes because attackers can distinguise between not found and permission denied.
-	// We could always return cluster not found instead of permission errors.
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(cluster.ID)); err != nil {
+	if err := s.checkPermission(ctx, authz.CanViewCluster(), authz.Organization(cluster.OrganizationID)); err != nil {
 		return nil, err
 	}
 
@@ -61,10 +58,6 @@ func (s *Server) GetCluster(
 ) (*connect.Response[organizationv1.GetClusterResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
-		return nil, err
-	}
-
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,
 	})
@@ -73,6 +66,10 @@ func (s *Server) GetCluster(
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanViewCluster(), authz.Organization(cluster.OrganizationID)); err != nil {
+		return nil, err
 	}
 
 	return connect.NewResponse(organizationv1.GetClusterResponse_builder{
@@ -86,11 +83,7 @@ func (s *Server) GetClusterActivity(
 ) (*connect.Response[organizationv1.GetClusterActivityResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
-		return nil, err
-	}
-
-	_, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
+	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,
 	})
 	if err != nil {
@@ -98,6 +91,10 @@ func (s *Server) GetClusterActivity(
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanViewCluster(), authz.Organization(cluster.OrganizationID)); err != nil {
+		return nil, err
 	}
 
 	limit := req.Msg.GetLimit()
@@ -124,10 +121,6 @@ func (s *Server) GetKubeconfig(
 ) (*connect.Response[organizationv1.GetKubeconfigResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
-		return nil, err
-	}
-
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
 		ID: clusterID,
 	})
@@ -136,6 +129,10 @@ func (s *Server) GetKubeconfig(
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanViewCluster(), authz.Organization(cluster.OrganizationID)); err != nil {
+		return nil, err
 	}
 
 	kubeconfig := buildKubeconfig(&cluster)

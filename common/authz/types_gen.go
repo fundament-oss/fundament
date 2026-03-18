@@ -23,34 +23,46 @@ const (
 type ActionName string
 
 const (
-	ActionAdmin              ActionName = "admin"
-	ActionViewer             ActionName = "viewer"
-	ActionCanView            ActionName = "can_view"
-	ActionCanEdit            ActionName = "can_edit"
-	ActionCanCreateApikey    ActionName = "can_create_apikey"
-	ActionCanListApikeys     ActionName = "can_list_apikeys"
-	ActionCanCreateCluster   ActionName = "can_create_cluster"
-	ActionCanListClusters    ActionName = "can_list_clusters"
-	ActionCanInviteMember    ActionName = "can_invite_member"
-	ActionCanEditMember      ActionName = "can_edit_member"
-	ActionCanDeleteMember    ActionName = "can_delete_member"
-	ActionCanListMembers     ActionName = "can_list_members"
-	ActionParent             ActionName = "parent"
-	ActionProjectAdmin       ActionName = "project_admin"
-	ActionProjectViewer      ActionName = "project_viewer"
-	ActionCanDelete          ActionName = "can_delete"
-	ActionCanManageMembers   ActionName = "can_manage_members"
-	ActionCanCreateNamespace ActionName = "can_create_namespace"
-	ActionCanListNamespaces  ActionName = "can_list_namespaces"
-	ActionOwner              ActionName = "owner"
-	ActionCanCreateNodePool  ActionName = "can_create_node_pool"
-	ActionCanListNodePools   ActionName = "can_list_node_pools"
-	ActionCanCreateInstall   ActionName = "can_create_install"
-	ActionCanListInstalls    ActionName = "can_list_installs"
-	ActionCanCreateProject   ActionName = "can_create_project"
-	ActionCanListProjects    ActionName = "can_list_projects"
-	ActionCreator            ActionName = "creator"
-	ActionCanUse             ActionName = "can_use"
+	ActionAdmin                ActionName = "admin"
+	ActionViewer               ActionName = "viewer"
+	ActionCanView              ActionName = "can_view"
+	ActionCanEdit              ActionName = "can_edit"
+	ActionCanCreateApikey      ActionName = "can_create_apikey"
+	ActionCanListApikeys       ActionName = "can_list_apikeys"
+	ActionCanCreateCluster     ActionName = "can_create_cluster"
+	ActionCanViewCluster       ActionName = "can_view_cluster"
+	ActionCanEditCluster       ActionName = "can_edit_cluster"
+	ActionCanListClusters      ActionName = "can_list_clusters"
+	ActionCanInviteMember      ActionName = "can_invite_member"
+	ActionCanEditMember        ActionName = "can_edit_member"
+	ActionCanDeleteMember      ActionName = "can_delete_member"
+	ActionCanListMembers       ActionName = "can_list_members"
+	ActionParent               ActionName = "parent"
+	ActionProjectAdmin         ActionName = "project_admin"
+	ActionProjectViewer        ActionName = "project_viewer"
+	ActionCanDelete            ActionName = "can_delete"
+	ActionCanManageMembers     ActionName = "can_manage_members"
+	ActionCanCreateNamespace   ActionName = "can_create_namespace"
+	ActionCanViewNamespace     ActionName = "can_view_namespace"
+	ActionCanEditNamespace     ActionName = "can_edit_namespace"
+	ActionCanListNamespaces    ActionName = "can_list_namespaces"
+	ActionCanViewProjectMember ActionName = "can_view_project_member"
+	ActionCanEditProjectMember ActionName = "can_edit_project_member"
+	ActionOwner                ActionName = "owner"
+	ActionCanCreateNodePool    ActionName = "can_create_node_pool"
+	ActionCanViewNodePool      ActionName = "can_view_node_pool"
+	ActionCanEditNodePool      ActionName = "can_edit_node_pool"
+	ActionCanListNodePools     ActionName = "can_list_node_pools"
+	ActionCanCreateInstall     ActionName = "can_create_install"
+	ActionCanViewInstall       ActionName = "can_view_install"
+	ActionCanEditInstall       ActionName = "can_edit_install"
+	ActionCanListInstalls      ActionName = "can_list_installs"
+	ActionCanCreateProject     ActionName = "can_create_project"
+	ActionCanViewProject       ActionName = "can_view_project"
+	ActionCanEditProject       ActionName = "can_edit_project"
+	ActionCanListProjects      ActionName = "can_list_projects"
+	ActionCreator              ActionName = "creator"
+	ActionCanUse               ActionName = "can_use"
 )
 
 // Object represents an entity in an authorization check (subject or resource).
@@ -234,6 +246,16 @@ func CanCreateCluster() Action {
 	return Action{Name: ActionCanCreateCluster}
 }
 
+// CanViewCluster creates an Action for the can_view_cluster relation.
+func CanViewCluster() Action {
+	return Action{Name: ActionCanViewCluster}
+}
+
+// CanEditCluster creates an Action for the can_edit_cluster relation.
+func CanEditCluster() Action {
+	return Action{Name: ActionCanEditCluster}
+}
+
 // CanListClusters creates an Action for the can_list_clusters relation.
 func CanListClusters() Action {
 	return Action{Name: ActionCanListClusters}
@@ -289,9 +311,29 @@ func CanCreateNamespace() Action {
 	return Action{Name: ActionCanCreateNamespace}
 }
 
+// CanViewNamespace creates an Action for the can_view_namespace relation.
+func CanViewNamespace() Action {
+	return Action{Name: ActionCanViewNamespace}
+}
+
+// CanEditNamespace creates an Action for the can_edit_namespace relation.
+func CanEditNamespace() Action {
+	return Action{Name: ActionCanEditNamespace}
+}
+
 // CanListNamespaces creates an Action for the can_list_namespaces relation.
 func CanListNamespaces() Action {
 	return Action{Name: ActionCanListNamespaces}
+}
+
+// CanViewProjectMember creates an Action for the can_view_project_member relation.
+func CanViewProjectMember() Action {
+	return Action{Name: ActionCanViewProjectMember}
+}
+
+// CanEditProjectMember creates an Action for the can_edit_project_member relation.
+func CanEditProjectMember() Action {
+	return Action{Name: ActionCanEditProjectMember}
 }
 
 // Owner creates an Action for the owner relation.
@@ -304,6 +346,16 @@ func CanCreateNodePool() Action {
 	return Action{Name: ActionCanCreateNodePool}
 }
 
+// CanViewNodePool creates an Action for the can_view_node_pool relation.
+func CanViewNodePool() Action {
+	return Action{Name: ActionCanViewNodePool}
+}
+
+// CanEditNodePool creates an Action for the can_edit_node_pool relation.
+func CanEditNodePool() Action {
+	return Action{Name: ActionCanEditNodePool}
+}
+
 // CanListNodePools creates an Action for the can_list_node_pools relation.
 func CanListNodePools() Action {
 	return Action{Name: ActionCanListNodePools}
@@ -314,6 +366,16 @@ func CanCreateInstall() Action {
 	return Action{Name: ActionCanCreateInstall}
 }
 
+// CanViewInstall creates an Action for the can_view_install relation.
+func CanViewInstall() Action {
+	return Action{Name: ActionCanViewInstall}
+}
+
+// CanEditInstall creates an Action for the can_edit_install relation.
+func CanEditInstall() Action {
+	return Action{Name: ActionCanEditInstall}
+}
+
 // CanListInstalls creates an Action for the can_list_installs relation.
 func CanListInstalls() Action {
 	return Action{Name: ActionCanListInstalls}
@@ -322,6 +384,16 @@ func CanListInstalls() Action {
 // CanCreateProject creates an Action for the can_create_project relation.
 func CanCreateProject() Action {
 	return Action{Name: ActionCanCreateProject}
+}
+
+// CanViewProject creates an Action for the can_view_project relation.
+func CanViewProject() Action {
+	return Action{Name: ActionCanViewProject}
+}
+
+// CanEditProject creates an Action for the can_edit_project relation.
+func CanEditProject() Action {
+	return Action{Name: ActionCanEditProject}
 }
 
 // CanListProjects creates an Action for the can_list_projects relation.

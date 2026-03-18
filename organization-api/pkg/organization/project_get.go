@@ -29,8 +29,7 @@ func (s *Server) GetProjectByName(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project: %w", err))
 	}
 
-	// Auth is done after the DB call because we don't know the project ID yet.
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Project(project.ID)); err != nil {
+	if err := s.checkPermission(ctx, authz.CanViewProject(), authz.Cluster(project.ClusterID)); err != nil {
 		return nil, err
 	}
 
@@ -45,16 +44,16 @@ func (s *Server) GetProject(
 ) (*connect.Response[organizationv1.GetProjectResponse], error) {
 	projectID := uuid.MustParse(req.Msg.GetProjectId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Project(projectID)); err != nil {
-		return nil, err
-	}
-
 	project, err := s.queries.ProjectGetByID(ctx, db.ProjectGetByIDParams{ID: projectID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanViewProject(), authz.Cluster(project.ClusterID)); err != nil {
+		return nil, err
 	}
 
 	return connect.NewResponse(organizationv1.GetProjectResponse_builder{

@@ -12,6 +12,8 @@ type organization
     define can_create_apikey: viewer
     define can_list_apikeys: viewer
     define can_create_cluster: admin
+    define can_view_cluster: admin or viewer
+    define can_edit_cluster: admin
     define can_list_clusters: admin or viewer
     define can_invite_member: admin
     define can_edit_member: admin
@@ -29,7 +31,11 @@ type project
     define can_manage_members: project_admin
     define can_list_members: project_admin or project_viewer
     define can_create_namespace: project_admin
+    define can_view_namespace: project_admin or project_viewer
+    define can_edit_namespace: project_admin
     define can_list_namespaces: project_admin or project_viewer
+    define can_view_project_member: project_admin or project_viewer
+    define can_edit_project_member: project_admin
 
 type project_member
   relations
@@ -47,11 +53,17 @@ type cluster
     define can_edit: admin
     define can_delete: admin
     define can_create_node_pool: admin
+    define can_view_node_pool: admin or viewer
+    define can_edit_node_pool: admin
     define can_list_node_pools: admin or viewer
     define can_create_install: admin
+    define can_view_install: admin or viewer
+    define can_edit_install: admin
     define can_list_installs: admin or viewer
     define can_list_namespaces: admin or viewer
     define can_create_project: admin
+    define can_view_project: admin or viewer
+    define can_edit_project: admin
     define can_list_projects: viewer
 
 type node_pool

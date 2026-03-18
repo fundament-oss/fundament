@@ -20,16 +20,16 @@ func (s *Server) GetNodePool(
 ) (*connect.Response[organizationv1.GetNodePoolResponse], error) {
 	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.NodePool(nodePoolID)); err != nil {
-		return nil, err
-	}
-
 	nodePool, err := s.queries.NodePoolGetByID(ctx, db.NodePoolGetByIDParams{ID: nodePoolID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("node pool not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pool: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanViewNodePool(), authz.Cluster(nodePool.ClusterID)); err != nil {
+		return nil, err
 	}
 
 	return connect.NewResponse(organizationv1.GetNodePoolResponse_builder{

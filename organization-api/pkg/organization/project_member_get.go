@@ -21,16 +21,16 @@ func (s *Server) GetProjectMember(
 ) (*connect.Response[organizationv1.GetProjectMemberResponse], error) {
 	memberID := uuid.MustParse(req.Msg.GetMemberId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.ProjectMember(memberID)); err != nil {
-		return nil, err
-	}
-
 	member, err := s.queries.ProjectMemberGetByID(ctx, db.ProjectMemberGetByIDParams{ID: memberID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project member not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project member: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanViewProjectMember(), authz.Project(member.ProjectID)); err != nil {
+		return nil, err
 	}
 
 	return connect.NewResponse(organizationv1.GetProjectMemberResponse_builder{

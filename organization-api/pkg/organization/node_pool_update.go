@@ -2,10 +2,12 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -19,7 +21,15 @@ func (s *Server) UpdateNodePool(
 ) (*connect.Response[organizationv1.UpdateNodePoolResponse], error) {
 	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.NodePool(nodePoolID)); err != nil {
+	nodePool, err := s.queries.NodePoolGetByID(ctx, db.NodePoolGetByIDParams{ID: nodePoolID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("node pool not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pool: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanEditNodePool(), authz.Cluster(nodePool.ClusterID)); err != nil {
 		return nil, err
 	}
 
