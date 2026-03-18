@@ -1,22 +1,22 @@
 {{- if and $.Values.authzWorker.enabled }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $.Release.Name }}-authz-worker
+  name: authz-worker
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: authz-worker
+    {{- include "fundament.labels" (dict "root" $ "name" "authz-worker" "component" "worker") | nindent 4 }}
   annotations:
     reloader.stakater.com/auto: "true"
 spec:
   replicas: {{ $.Values.authzWorker.replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: authz-worker
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "authz-worker") | nindent 6 }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: authz-worker
+        {{- include "fundament.labels" (dict "root" $ "name" "authz-worker" "component" "worker") | nindent 8 }}
     spec:
       containers:
         - name: authz-worker
@@ -25,7 +25,7 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ $.Release.Name }}-db-fun-authz-worker
+                  name: db-fun-authz-worker
                   key: uri
             - name: LOG_LEVEL
               value: {{ $.Values.authzWorker.logLevel }}
@@ -36,15 +36,15 @@ spec:
             - name: MAX_RETRIES
               value: {{ $.Values.authzWorker.maxRetries | quote }}
             - name: OPENFGA_API_URL
-              value: http://{{ $.Release.Name }}-openfga:{{ $.Values.openfga.apiPort | default 8080 }}
+              value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
             - name: OPENFGA_STORE_ID
               valueFrom:
                 configMapKeyRef:
-                  name: {{ $.Release.Name }}-openfga-config
+                  name: openfga-config
                   key: store-id
             - name: OPENFGA_AUTHORIZATION_MODEL_ID
               valueFrom:
                 configMapKeyRef:
-                  name: {{ $.Release.Name }}-openfga-config
+                  name: openfga-config
                   key: authorization-model-id
 {{- end }}
