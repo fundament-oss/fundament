@@ -101,7 +101,6 @@ func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, expiry tim
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
 		},
-		UserID:          u.ID,
 		OrganizationIDs: u.OrganizationIDs,
 		Name:            u.Name,
 		Groups:          groups,

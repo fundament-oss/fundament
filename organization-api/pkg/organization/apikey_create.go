@@ -31,9 +31,9 @@ func (s *Server) CreateAPIKey(
 		return nil, err
 	}
 
-	claims, ok := ClaimsFromContext(ctx)
+	userID, ok := UserIDFromContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("claims missing from context"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
 	}
 
 	token, hash, err := apitoken.GenerateToken()
@@ -59,7 +59,7 @@ func (s *Server) CreateAPIKey(
 
 	params := db.APIKeyCreateParams{
 		OrganizationID: organizationID,
-		UserID:         claims.UserID,
+		UserID:         userID,
 		Name:           req.Msg.GetName(),
 		TokenHash:      hash,
 		TokenPrefix:    prefix,
@@ -80,7 +80,7 @@ func (s *Server) CreateAPIKey(
 	s.logger.InfoContext(ctx, "api key created",
 		"api_key_id", id,
 		"organization_id", organizationID,
-		"user_id", claims.UserID,
+		"user_id", userID,
 		"name", req.Msg.GetName(),
 	)
 

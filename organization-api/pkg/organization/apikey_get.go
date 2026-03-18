@@ -24,14 +24,14 @@ func (s *Server) GetAPIKey(
 		return nil, err
 	}
 
-	claims, ok := ClaimsFromContext(ctx)
+	userID, ok := UserIDFromContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("claims missing from context"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
 	}
 
 	key, err := s.queries.APIKeyGetByID(ctx, db.APIKeyGetByIDParams{
 		ID:     apiKeyID,
-		UserID: claims.UserID,
+		UserID: userID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
