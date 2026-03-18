@@ -14,7 +14,9 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	organizationIDs, err := s.getUserOrganizationIDs(r.Context(), claims.UserID)
+	userID := claims.UserID()
+
+	organizationIDs, err := s.getUserOrganizationIDs(r.Context(), userID)
 	if err != nil {
 		s.logger.Error("failed to get user organizations", "error", err)
 		s.writeErrorJSON(w, http.StatusInternalServerError, "Failed to get user organizations")
@@ -22,7 +24,7 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u := &user{
-		ID:              claims.UserID,
+		ID:              userID,
 		OrganizationIDs: organizationIDs,
 		Name:            claims.Name,
 	}

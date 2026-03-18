@@ -48,14 +48,6 @@ func rlsOptions(logger *slog.Logger) []psqldb.Option {
 					logger.Debug("no user_id in context for PrepareConn")
 				}
 
-				if claims, ok := ClaimsFromContext(ctx); ok {
-					if err := queries.SetUserContext(ctx, dbgen.SetUserContextParams{
-						SetConfig: claims.UserID.String(),
-					}); err != nil {
-						return false, fmt.Errorf("failed to set user context: %w", err)
-					}
-				}
-
 				return true, nil
 			}
 

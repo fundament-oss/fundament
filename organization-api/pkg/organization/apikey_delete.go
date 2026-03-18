@@ -22,12 +22,12 @@ func (s *Server) DeleteAPIKey(
 		return nil, err
 	}
 
-	claims, ok := ClaimsFromContext(ctx)
+	userID, ok := UserIDFromContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("claims missing from context"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
 	}
 
-	rowsAffected, err := s.queries.APIKeyDelete(ctx, db.APIKeyDeleteParams{ID: apiKeyID, UserID: claims.UserID})
+	rowsAffected, err := s.queries.APIKeyDelete(ctx, db.APIKeyDeleteParams{ID: apiKeyID, UserID: userID})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete api key: %w", err))
 	}
