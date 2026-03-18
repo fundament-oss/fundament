@@ -118,6 +118,8 @@ message ClusterDetails {
   google.protobuf.Timestamp created = 60;
   ResourceUsageInfo resource_usage = 70;
   SyncState sync_state = 80;
+  string shoot_api_server_url = 90 [features.field_presence = EXPLICIT];
+  string shoot_ca_data = 100 [features.field_presence = EXPLICIT];
 }
 
 // Resource usage information for a cluster

@@ -185,6 +185,70 @@ $function$;
 ALTER FUNCTION tenant.cluster_outbox_cluster_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: tenant.cluster_outbox_organization_user_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_outbox_organization_user_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_outbox_organization_user_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO tenant.cluster_outbox (organization_user_id, event, source)
+        VALUES (
+            COALESCE(NEW.id, OLD.id),
+            CASE
+                WHEN TG_OP = 'INSERT' THEN 'created'
+                WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                ELSE 'updated'
+            END,
+            'trigger'
+        );
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_outbox_organization_user_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.cluster_outbox_project_member_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_outbox_project_member_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_outbox_project_member_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO tenant.cluster_outbox (project_member_id, event, source)
+        VALUES (
+            COALESCE(NEW.id, OLD.id),
+            CASE
+                WHEN TG_OP = 'INSERT' THEN 'created'
+                WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                ELSE 'updated'
+            END,
+            'trigger'
+        );
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_outbox_project_member_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: tenant.cluster_outbox_notify | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.cluster_outbox_notify() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_notify ()
@@ -564,6 +628,8 @@ CREATE TABLE tenant.clusters (
 	outbox_status text,
 	outbox_retries integer NOT NULL DEFAULT 0,
 	outbox_error text,
+	shoot_api_server_url text,
+	shoot_ca_data text,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
 	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
@@ -977,11 +1043,13 @@ CREATE TABLE tenant.cluster_outbox (
 	failed timestamptz,
 	status_info text,
 	created timestamptz NOT NULL DEFAULT now(),
+	organization_user_id uuid,
+	project_member_id uuid,
 	CONSTRAINT cluster_outbox_pk PRIMARY KEY (id),
-	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id) = 1),
+	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id, organization_user_id, project_member_id) = 1),
 	CONSTRAINT cluster_outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed')),
-	CONSTRAINT cluster_outbox_ck_event CHECK (event IN ('created', 'updated', 'deleted', 'reconcile')),
-	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual', 'node_pool'))
+	CONSTRAINT cluster_outbox_ck_event CHECK (event IN ('created', 'updated', 'deleted', 'reconcile', 'ready')),
+	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual', 'node_pool', 'status'))
 );
 -- ddl-end --
 ALTER TABLE tenant.cluster_outbox OWNER TO fun_owner;
@@ -1496,6 +1564,24 @@ USING btree
 WHERE (deleted IS NULL AND status NOT IN ('declined', 'revoked'));
 -- ddl-end --
 
+-- object: cluster_outbox_organization_user | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS cluster_outbox_organization_user ON tenant.organizations_users CASCADE;
+CREATE OR REPLACE TRIGGER cluster_outbox_organization_user
+	AFTER INSERT OR UPDATE
+	ON tenant.organizations_users
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.cluster_outbox_organization_user_trigger();
+-- ddl-end --
+
+-- object: cluster_outbox_project_member | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS cluster_outbox_project_member ON tenant.project_members CASCADE;
+CREATE OR REPLACE TRIGGER cluster_outbox_project_member
+	AFTER INSERT OR UPDATE
+	ON tenant.project_members
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.cluster_outbox_project_member_trigger();
+-- ddl-end --
+
 -- object: projects_fk_cluster | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_cluster CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_cluster FOREIGN KEY (cluster_id)
@@ -1626,6 +1712,20 @@ ON DELETE CASCADE ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_cluster CASCADE;
 ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_cluster FOREIGN KEY (cluster_id)
 REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: cluster_outbox_fk_organization_user | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_organization_user CASCADE;
+ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_organization_user FOREIGN KEY (organization_user_id)
+REFERENCES tenant.organizations_users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: cluster_outbox_fk_project_member | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_project_member CASCADE;
+ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_project_member FOREIGN KEY (project_member_id)
+REFERENCES tenant.project_members (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
