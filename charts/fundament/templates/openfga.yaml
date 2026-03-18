@@ -52,7 +52,7 @@ data:
 {{- .Files.Get "openfga/model.fga" | nindent 4 }}
 
 ---
-{{- $openfgaConfigName := printf "%s-openfga-config" $.Release.Name }}
+{{- $openfgaConfigName := "openfga-config" }}
 {{- $openfgaConfigExisting := lookup "v1" "ConfigMap" $.Release.Namespace $openfgaConfigName }}
 {{- $openfgaStoreID := "pending" }}
 {{- $openfgaAuthModelID := "pending" }}
@@ -65,8 +65,7 @@ kind: ConfigMap
 metadata:
   name: {{ $openfgaConfigName }}
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: openfga
+    {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 4 }}
 data:
   store-id: {{ $openfgaStoreID | quote }}
   authorization-model-id: {{ $openfgaAuthModelID | quote }}
