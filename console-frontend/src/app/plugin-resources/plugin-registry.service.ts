@@ -63,19 +63,14 @@ export default class PluginRegistryService {
 
   private loaded = signal(false);
 
-  // Keyed by "${pluginName}/${crdK8sName}" (e.g. "cert-manager/certificates.cert-manager.io")
+  // Keyed by "${pluginName}/${clusterId}/${crdK8sName}"
   private parsedCrdCache = new Map<string, ParsedCrd>();
 
-  // Secondary indexes for O(1) lookup by kind/plural
-  private parsedCrdByKind = new Map<string, ParsedCrd>(); // key: "${pluginName}/${kind}"
+  // Secondary index for O(1) lookup by kind, scoped by cluster
+  private parsedCrdByKind = new Map<string, ParsedCrd>(); // key: "${pluginName}/${clusterId}/${kind}"
 
-  private parsedCrdByPlural = new Map<string, ParsedCrd>(); // key: "${pluginName}/${plural}"
-
-  // Tracks which plugins have had their CRDs fully fetched
-  private loadedCrdPlugins = signal<ReadonlySet<string>>(new Set());
-
-  // Tracks which plugins had one or more CRD fetch failures
-  private failedCrdPlugins = signal<ReadonlySet<string>>(new Set());
+  // Tracks the currently active cluster so lookups use the right scope
+  private activeClusterId = '';
 
   private readonly pluginFiles = [
     '/plugins/cert-manager/cert-manager.plugin.yaml',
@@ -118,13 +113,12 @@ export default class PluginRegistryService {
     const plugin = this.getPlugin(pluginName);
     if (!plugin) return;
 
+    this.activeClusterId = clusterId;
     const base = orgApiUrl.replace(/\/$/, '');
-
-    let failureCount = 0;
 
     await Promise.allSettled(
       plugin.crds.map(async (crdName) => {
-        const cacheKey = `${pluginName}/${crdName}`;
+        const cacheKey = `${pluginName}/${clusterId}/${crdName}`;
         if (this.parsedCrdCache.has(cacheKey)) return;
 
         const url = `${base}/k8s/${clusterId}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
@@ -133,7 +127,6 @@ export default class PluginRegistryService {
           headers: { 'Fun-Organization': orgId },
         });
         if (!response.ok) {
-          failureCount += 1;
           // eslint-disable-next-line no-console
           console.error(`[PluginRegistry] Failed to fetch CRD ${crdName}: ${response.status}`);
           return;
@@ -142,15 +135,9 @@ export default class PluginRegistryService {
         const raw = (await response.json()) as RawCrdYaml;
         const parsed = parseCrd(raw);
         this.parsedCrdCache.set(cacheKey, parsed);
-        this.parsedCrdByKind.set(`${pluginName}/${parsed.kind}`, parsed);
-        this.parsedCrdByPlural.set(`${pluginName}/${parsed.plural}`, parsed);
+        this.parsedCrdByKind.set(`${pluginName}/${clusterId}/${parsed.kind}`, parsed);
       }),
     );
-
-    if (failureCount > 0) {
-      this.failedCrdPlugins.update((prev) => new Set([...prev, pluginName]));
-    }
-    this.loadedCrdPlugins.update((prev) => new Set([...prev, pluginName]));
   }
 
   getPlugin(name: string): PluginDefinition | undefined {
@@ -158,19 +145,7 @@ export default class PluginRegistryService {
   }
 
   getCrd(pluginName: string, kind: string): ParsedCrd | undefined {
-    return this.parsedCrdByKind.get(`${pluginName}/${kind}`);
-  }
-
-  getCrdByPlural(pluginName: string, plural: string): ParsedCrd | undefined {
-    return this.parsedCrdByPlural.get(`${pluginName}/${plural}`);
-  }
-
-  areCrdsLoaded(pluginName: string): boolean {
-    return this.loadedCrdPlugins().has(pluginName);
-  }
-
-  hasCrdLoadError(pluginName: string): boolean {
-    return this.failedCrdPlugins().has(pluginName);
+    return this.parsedCrdByKind.get(`${pluginName}/${this.activeClusterId}/${kind}`);
   }
 
   allPlugins = this.plugins.asReadonly();

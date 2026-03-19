@@ -22,13 +22,13 @@ type Server struct {
 	logger        *slog.Logger
 	authValidator *auth.Validator
 	authz         *authz.Client
-	kubeClient    kube.Client
+	kubeClient    kube.Interface
 	handler       http.Handler
 }
 
-func newKubeClient(cfg *Config) kube.Client {
+func newKubeClient(cfg *Config) kube.Interface {
 	if cfg.Mode == "real" {
-		return &kube.RealClient{KubeconfigPath: cfg.KubeconfigPath}
+		return &kube.Client{KubeconfigPath: cfg.KubeconfigPath}
 	}
 	return &kube.MockClient{}
 }

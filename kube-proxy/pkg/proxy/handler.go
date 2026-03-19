@@ -86,6 +86,13 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	// --- Proxy to Kubernetes API ---
 
 	k8sPath = "/" + k8sPath
+
+	// Only allow standard Kubernetes API paths to prevent SSRF.
+	if !strings.HasPrefix(k8sPath, "/apis/") && !strings.HasPrefix(k8sPath, "/api/") {
+		http.Error(w, "forbidden path", http.StatusForbidden)
+		return
+	}
+
 	if r.URL.RawQuery != "" {
 		k8sPath = k8sPath + "?" + r.URL.RawQuery
 	}

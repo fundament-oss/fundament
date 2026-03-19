@@ -13,16 +13,16 @@ import (
 )
 
 // Client abstracts access to a Kubernetes API server.
-type Client interface {
+type Interface interface {
 	Do(ctx context.Context, method, path string, body io.Reader) (statusCode int, responseBody io.ReadCloser, err error)
 }
 
-// RealClient connects to a real Kubernetes API server using a kubeconfig.
+// Client connects to a real Kubernetes API server using a kubeconfig.
 // The HTTP client and host URL are initialized lazily on the first request.
 // Auth is handled by the transport created via rest.HTTPClientFor, which supports
 // bearer tokens, client certificates, and basic auth from the kubeconfig.
 // Exec-based credential plugins (e.g. aws-iam-authenticator) are not supported.
-type RealClient struct {
+type Client struct {
 	KubeconfigPath string
 
 	once       sync.Once
@@ -31,7 +31,7 @@ type RealClient struct {
 	initErr    error
 }
 
-func (r *RealClient) init() {
+func (r *Client) init() {
 	cfg, err := clientcmd.BuildConfigFromFlags("", r.KubeconfigPath)
 	if err != nil {
 		r.initErr = fmt.Errorf("load kubeconfig: %w", err)
@@ -46,7 +46,7 @@ func (r *RealClient) init() {
 	r.host = strings.TrimRight(cfg.Host, "/")
 }
 
-func (r *RealClient) Do(ctx context.Context, method, path string, body io.Reader) (int, io.ReadCloser, error) {
+func (r *Client) Do(ctx context.Context, method, path string, body io.Reader) (int, io.ReadCloser, error) {
 	r.once.Do(r.init)
 	if r.initErr != nil {
 		return 0, nil, r.initErr
