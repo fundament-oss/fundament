@@ -106,7 +106,7 @@ export default class PluginIframeComponent implements OnInit {
   private handleMessage(msg: PluginMessage, iframe: HTMLIFrameElement): void {
     if (msg.type !== 'plugin:resize') {
       // eslint-disable-next-line no-console
-      console.log('[plugin-iframe]', msg);
+      console.log('[plugin-parent received message]', msg);
     }
 
     switch (msg.type) {
@@ -124,6 +124,8 @@ export default class PluginIframeComponent implements OnInit {
           this.router.navigateByUrl(msg.path);
         }
         break;
+      default:
+        throw new Error(`Unhandled plugin message type: ${(msg as PluginMessage).type}`);
     }
   }
 

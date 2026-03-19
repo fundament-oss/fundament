@@ -15,8 +15,15 @@
 
       body {
         font-family:
-          ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-          'Helvetica Neue', Arial, sans-serif;
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
         padding: 1.5rem;
         transition:
           background-color 0.2s,
@@ -73,6 +80,8 @@
         window.addEventListener('message', function (event) {
           var data = event.data;
           if (!data || typeof data.type !== 'string') return;
+
+          console.log('[demo-plugin received message]', data);
 
           if (data.type === 'fundament:init') {
             applyTheme(data.theme);
