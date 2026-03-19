@@ -311,6 +311,28 @@
                   </a>
                 </li>
 
+                <!-- Cloud Run section -->
+                <li class="mt-2">
+                  <p
+                    class="px-3 pt-3 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                  >
+                    Cloud Run
+                  </p>
+                  <ul class="mt-1 space-y-1">
+                    <li>
+                      <a
+                        routerLink="/cloud-run/services"
+                        routerLinkActive="active"
+                        class="nav-link"
+                        (click)="closeSidebar()"
+                      >
+                        <ng-icon name="tablerCloud" class="mr-3" size="1.25rem" />
+                        Services
+                      </a>
+                    </li>
+                  </ul>
+                </li>
+
                 <!-- Plugin navigation groups (organization-level) -->
                 @for (group of pluginNavService.organizationNav(); track group.pluginName) {
                   <li class="mt-2">

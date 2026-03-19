@@ -1,0 +1,44 @@
+<div class="flex items-center justify-between">
+  <h1 class="text-2xl font-bold dark:text-white">Services</h1>
+  <a routerLink="/cloud-run/services/new" class="btn-primary flex items-center gap-2">
+    <ng-icon name="tablerPlus" size="1rem" class="block!" />
+    Create service
+  </a>
+</div>
+
+@if (services.length === 0) {
+  <div class="mt-16 flex flex-col items-center gap-4 text-gray-500 dark:text-gray-400">
+    <ng-icon name="tablerCloud" size="3rem" class="block!" />
+    <p class="text-lg">No services yet</p>
+    <a routerLink="/cloud-run/services/new" class="btn-primary">Create service</a>
+  </div>
+} @else {
+  <div class="table-container mt-6">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Cluster</th>
+          <th>Namespace</th>
+          <th>URL</th>
+          <th>Status</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (service of services; track service.name) {
+          <tr>
+            <td class="font-medium dark:text-white">{{ service.name }}</td>
+            <td>{{ service.cluster }}</td>
+            <td>{{ service.namespace }}</td>
+            <td class="font-mono text-xs">{{ service.url }}</td>
+            <td>
+              <span [class]="statusBadgeClass(service.status)">{{ service.status }}</span>
+            </td>
+            <td>{{ service.created }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

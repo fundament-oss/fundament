@@ -290,6 +290,25 @@ const routes: Routes = [
         ],
       },
       {
+        path: 'cloud-run/services',
+        loadComponent: () =>
+          import('./cloud-run/services-list/services-list.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: 'Services' }],
+        },
+      },
+      {
+        path: 'cloud-run/services/new',
+        loadComponent: () =>
+          import('./cloud-run/create-service/create-service.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [
+            { label: 'Services', route: '/cloud-run/services' },
+            { label: 'Create service' },
+          ],
+        },
+      },
+      {
         path: '',
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),
         data: {

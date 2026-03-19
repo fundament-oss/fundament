@@ -1,0 +1,465 @@
+<div class="card">
+  <div class="card-header">
+    <h1 class="text-2xl font-bold dark:text-white">Create service</h1>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+      A service exposes a unique endpoint and automatically scales the underlying infrastructure.
+    </p>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-8 px-6 py-6">
+    <!-- Deployment source -->
+    <div class="grid grid-cols-3 gap-4">
+      <!-- Container image -->
+      <label class="card card-body cursor-pointer has-checked:ring-2 has-checked:ring-indigo-500">
+        <input
+          type="radio"
+          formControlName="deploymentSource"
+          value="container-image"
+          class="sr-only"
+        />
+        <ng-icon
+          name="tablerCloud"
+          size="2rem"
+          class="mb-2 block! text-gray-600 dark:text-gray-300"
+        />
+        <p class="text-sm font-medium dark:text-white">
+          Deploy one revision from an existing container image
+        </p>
+      </label>
+
+      <!-- Repository (disabled) -->
+      <div class="card card-body relative cursor-not-allowed opacity-50">
+        <span class="badge badge-sm badge-gray absolute top-2 right-2">Coming soon</span>
+        <input type="radio" disabled class="sr-only" />
+        <ng-icon
+          name="tablerBrandGithub"
+          size="2rem"
+          class="mb-2 block! text-gray-600 dark:text-gray-300"
+        />
+        <p class="text-sm font-medium dark:text-white">Continuously deploy from a repository</p>
+      </div>
+
+      <!-- Inline editor (disabled) -->
+      <div class="card card-body relative cursor-not-allowed opacity-50">
+        <span class="badge badge-sm badge-gray absolute top-2 right-2">Coming soon</span>
+        <input type="radio" disabled class="sr-only" />
+        <ng-icon
+          name="tablerCode"
+          size="2rem"
+          class="mb-2 block! text-gray-600 dark:text-gray-300"
+        />
+        <p class="text-sm font-medium dark:text-white">Use an inline editor to create a function</p>
+      </div>
+    </div>
+
+    <!-- Container image URL -->
+    @if (form.get('deploymentSource')?.value === 'container-image') {
+      <div>
+        <label
+          for="containerImageUrl"
+          class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+        >
+          Container image URL
+        </label>
+        <input
+          id="containerImageUrl"
+          type="text"
+          formControlName="containerImageUrl"
+          placeholder="E.g. docker.io/nginx:latest"
+        />
+      </div>
+    }
+
+    <!-- Configure -->
+    <section>
+      <h2 class="mb-4 text-lg font-semibold dark:text-white">Configure</h2>
+      <div class="space-y-4">
+        <!-- Service name -->
+        <div>
+          <label
+            for="serviceName"
+            class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+          >
+            Service name <span class="text-rose-500">*</span>
+          </label>
+          <input
+            id="serviceName"
+            type="text"
+            formControlName="serviceName"
+            placeholder="E.g. my-service"
+          />
+          @if (serviceName?.invalid && serviceName?.dirty) {
+            <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">
+              @if (serviceName?.hasError('required')) {
+                Service name is required.
+              } @else if (serviceName?.hasError('pattern')) {
+                Must be lowercase alphanumeric and hyphens, starting and ending with a letter or
+                digit.
+              }
+            </p>
+          }
+        </div>
+
+        <!-- Cluster -->
+        <div>
+          <label for="cluster" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+            Cluster <span class="text-rose-500">*</span>
+          </label>
+          <select
+            id="cluster"
+            formControlName="cluster"
+            (change)="onClusterChange()"
+            class="w-full"
+          >
+            <option value="">Select a cluster</option>
+            @for (c of clusters; track c) {
+              <option [value]="c">{{ c }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Namespace -->
+        <div>
+          <label
+            for="namespace"
+            class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+          >
+            Namespace <span class="text-rose-500">*</span>
+          </label>
+          <select
+            id="namespace"
+            formControlName="namespace"
+            class="w-full"
+            [attr.disabled]="availableNamespaces().length === 0 ? true : null"
+          >
+            <option value="">Select a namespace</option>
+            @for (ns of availableNamespaces(); track ns) {
+              <option [value]="ns">{{ ns }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Endpoint URL -->
+        <div>
+          <p class="mb-1 text-sm font-medium text-gray-700 dark:text-white">Endpoint URL</p>
+          <p class="font-mono text-sm text-gray-600 dark:text-gray-300">{{ endpointUrl() }}</p>
+        </div>
+
+        <!-- Authentication -->
+        <fieldset>
+          <legend class="mb-2 text-sm font-medium text-gray-700 dark:text-white">
+            Authentication
+          </legend>
+          <div class="space-y-2">
+            <label class="flex items-start gap-2 text-sm">
+              <input type="radio" formControlName="authentication" value="public" />
+              <span>
+                <span class="font-medium dark:text-white">Allow public access</span><br />
+                <span class="text-gray-500 dark:text-gray-400"
+                  >No authentication checks will be performed.</span
+                >
+              </span>
+            </label>
+            <label class="flex items-start gap-2 text-sm">
+              <input type="radio" formControlName="authentication" value="require" />
+              <span class="font-medium dark:text-white">Require authentication</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <!-- Service scaling -->
+        <fieldset>
+          <legend class="mb-2 text-sm font-medium text-gray-700 dark:text-white">
+            Service scaling
+          </legend>
+          <div class="space-y-3">
+            <label class="flex items-center gap-2 text-sm font-medium dark:text-white">
+              <input type="radio" formControlName="scaling" value="auto" />
+              Auto-scaling
+            </label>
+            @if (form.get('scaling')?.value === 'auto') {
+              <div class="ml-6 flex gap-4">
+                <div class="flex-1">
+                  <label
+                    for="minInstances"
+                    class="mb-1 block text-xs text-gray-600 dark:text-gray-400"
+                    >Minimum number of instances</label
+                  >
+                  <input id="minInstances" type="number" formControlName="minInstances" min="0" />
+                </div>
+                <div class="flex-1">
+                  <label
+                    for="maxInstances"
+                    class="mb-1 block text-xs text-gray-600 dark:text-gray-400"
+                    >Maximum number of instances</label
+                  >
+                  <input
+                    id="maxInstances"
+                    type="number"
+                    formControlName="maxInstances"
+                    min="1"
+                    placeholder="No limit"
+                  />
+                </div>
+              </div>
+            }
+            <label class="flex items-center gap-2 text-sm font-medium dark:text-white">
+              <input type="radio" formControlName="scaling" value="manual" />
+              Manual scaling
+            </label>
+            @if (form.get('scaling')?.value === 'manual') {
+              <div class="ml-6 w-48">
+                <label
+                  for="manualInstances"
+                  class="mb-1 block text-xs text-gray-600 dark:text-gray-400"
+                  >Number of instances</label
+                >
+                <input
+                  id="manualInstances"
+                  type="number"
+                  formControlName="manualInstances"
+                  min="1"
+                />
+              </div>
+            }
+          </div>
+        </fieldset>
+
+        <!-- Ingress -->
+        <fieldset>
+          <legend class="mb-2 text-sm font-medium text-gray-700 dark:text-white">Ingress</legend>
+          <div class="space-y-3">
+            <label class="flex items-start gap-2 text-sm">
+              <input type="radio" formControlName="ingress" value="internal" class="mt-0.5" />
+              <span>
+                <span class="font-medium dark:text-white">Internal</span><br />
+                <span class="text-gray-500 dark:text-gray-400"
+                  >Allow traffic from within the cluster only.</span
+                >
+              </span>
+            </label>
+            @if (form.get('ingress')?.value === 'internal') {
+              <label class="ml-6 flex items-center gap-2 text-sm dark:text-gray-300">
+                <input type="checkbox" formControlName="ingressAllowLoadBalancers" />
+                Allow traffic from external application load balancers
+              </label>
+            }
+            <label class="flex items-start gap-2 text-sm">
+              <input type="radio" formControlName="ingress" value="all" class="mt-0.5" />
+              <span>
+                <span class="font-medium dark:text-white">All</span><br />
+                <span class="text-gray-500 dark:text-gray-400"
+                  >Allow direct access to your service from the internet.</span
+                >
+              </span>
+            </label>
+          </div>
+        </fieldset>
+      </div>
+    </section>
+
+    <!-- Containers, networking, security collapsible panel -->
+    <section class="card overflow-hidden">
+      <button
+        type="button"
+        (click)="togglePanel()"
+        class="card-header flex w-full items-center justify-between text-left"
+      >
+        <h2 class="text-base font-semibold dark:text-white">Containers, networking, security</h2>
+        @if (panelOpen()) {
+          <ng-icon name="tablerChevronUp" size="1.25rem" class="block! text-gray-500" />
+        } @else {
+          <ng-icon name="tablerChevronDown" size="1.25rem" class="block! text-gray-500" />
+        }
+      </button>
+
+      @if (panelOpen()) {
+        <div class="card-body">
+          <!-- Tabs -->
+          <div class="tabs">
+            <button
+              type="button"
+              [class.active]="activeTab() === 'containers'"
+              (click)="activeTab.set('containers')"
+            >
+              Containers
+            </button>
+            <button
+              type="button"
+              [class.active]="activeTab() === 'networking'"
+              (click)="activeTab.set('networking')"
+            >
+              Networking
+            </button>
+            <button
+              type="button"
+              [class.active]="activeTab() === 'security'"
+              (click)="activeTab.set('security')"
+            >
+              Security
+            </button>
+          </div>
+
+          <div class="mt-4 space-y-4">
+            @if (activeTab() === 'containers') {
+              <!-- Container port -->
+              <div>
+                <label
+                  for="containerPort"
+                  class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+                >
+                  Container port
+                </label>
+                <input
+                  id="containerPort"
+                  type="number"
+                  formControlName="containerPort"
+                  class="w-32"
+                />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Requests will be sent to the container on this port.
+                </p>
+              </div>
+
+              <!-- Container name -->
+              <div>
+                <label
+                  for="containerName"
+                  class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+                >
+                  Container name
+                </label>
+                <input
+                  id="containerName"
+                  type="text"
+                  formControlName="containerName"
+                  placeholder="Generated automatically"
+                />
+              </div>
+
+              <!-- Container command -->
+              <div>
+                <label
+                  for="containerCommand"
+                  class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+                >
+                  Container command
+                </label>
+                <input
+                  id="containerCommand"
+                  type="text"
+                  formControlName="containerCommand"
+                  placeholder="Leave blank to use the entry point from the container image"
+                />
+              </div>
+
+              <!-- Container arguments -->
+              <div>
+                <label
+                  for="containerArgs"
+                  class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+                >
+                  Container arguments
+                </label>
+                <input
+                  id="containerArgs"
+                  type="text"
+                  formControlName="containerArgs"
+                  placeholder="Arguments passed to the entry point command"
+                />
+              </div>
+
+              <!-- Resources -->
+              <div>
+                <p class="mb-2 text-sm font-medium text-gray-700 dark:text-white">Resources</p>
+                <div class="flex gap-4">
+                  <div class="flex-1">
+                    <label for="memory" class="mb-1 block text-xs text-gray-600 dark:text-gray-400"
+                      >Memory</label
+                    >
+                    <select id="memory" formControlName="memory" class="w-full">
+                      @for (opt of memoryOptions; track opt) {
+                        <option [value]="opt">{{ opt }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="flex-1">
+                    <label for="cpu" class="mb-1 block text-xs text-gray-600 dark:text-gray-400"
+                      >CPU</label
+                    >
+                    <select id="cpu" formControlName="cpu" class="w-full">
+                      @for (opt of cpuOptions; track opt) {
+                        <option [value]="opt">{{ opt }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- GPU -->
+              <label class="flex items-center gap-2 text-sm dark:text-gray-300">
+                <input type="checkbox" formControlName="gpu" />
+                Attach GPUs to this container
+              </label>
+
+              <!-- Health checks -->
+              <div>
+                <p class="mb-2 text-sm font-medium text-gray-700 dark:text-white">Health checks</p>
+                <button type="button" class="btn-secondary text-xs">+ Add health check</button>
+              </div>
+            }
+
+            @if (activeTab() === 'networking' || activeTab() === 'security') {
+              <p class="text-sm text-gray-500 dark:text-gray-400">Coming soon.</p>
+            }
+          </div>
+
+          <!-- Requests (always visible, below tab content) -->
+          <div class="mt-6 space-y-4 border-t border-gray-200 pt-6 dark:border-gray-800">
+            <p class="text-sm font-semibold dark:text-white">Requests</p>
+            <div>
+              <label
+                for="requestTimeout"
+                class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+              >
+                Request timeout
+              </label>
+              <div class="flex items-center gap-2">
+                <input
+                  id="requestTimeout"
+                  type="number"
+                  formControlName="requestTimeout"
+                  class="w-32"
+                  min="1"
+                  max="3600"
+                />
+                <span class="text-sm text-gray-500 dark:text-gray-400">seconds</span>
+              </div>
+            </div>
+            <div>
+              <label
+                for="maxConcurrentRequests"
+                class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+              >
+                Maximum concurrent requests per instance
+              </label>
+              <input
+                id="maxConcurrentRequests"
+                type="number"
+                formControlName="maxConcurrentRequests"
+                class="w-32"
+                min="1"
+              />
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- Form actions -->
+    <div class="flex items-center gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+      <button type="button" (click)="onCancel()" class="btn-secondary">Cancel</button>
+      <button type="submit" class="btn-primary">Create</button>
+    </div>
+  </form>
+</div>
