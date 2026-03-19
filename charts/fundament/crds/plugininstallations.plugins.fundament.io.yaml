@@ -49,6 +49,12 @@ spec:
               properties:
                 image:
                   type: string
+                imagePullPolicy:
+                  type: string
+                  enum:
+                    - Always
+                    - IfNotPresent
+                    - Never
                 pluginName:
                   type: string
                 version:
@@ -66,6 +72,13 @@ spec:
               properties:
                 phase:
                   type: string
+                  enum:
+                    - Pending
+                    - Deploying
+                    - Running
+                    - Degraded
+                    - Failed
+                    - Terminating
                 message:
                   type: string
                 ready:

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"connectrpc.com/connect"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -28,13 +29,28 @@ type Reconciler struct {
 	statusPoller *statusPoller
 }
 
-func NewReconciler(c client.Client, logger *slog.Logger, cfg config.Config) *Reconciler {
-	return &Reconciler{
+// ReconcilerOption configures the Reconciler.
+type ReconcilerOption func(*Reconciler)
+
+// WithHTTPClient sets the HTTP client used for polling plugin status.
+func WithHTTPClient(c connect.HTTPClient) ReconcilerOption {
+	return func(r *Reconciler) {
+		r.statusPoller.WithClient(c)
+	}
+}
+
+func NewReconciler(c client.Client, logger *slog.Logger, cfg *config.Config, opts ...ReconcilerOption) *Reconciler {
+	r := &Reconciler{
 		client:       c,
 		logger:       logger,
-		cfg:          cfg,
+		cfg:          *cfg,
 		statusPoller: newStatusPoller(),
 	}
+
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -59,6 +75,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if err := r.client.Update(ctx, &cr); err != nil {
 			return ctrl.Result{}, fmt.Errorf("add finalizer: %w", err)
 		}
+		return ctrl.Result{}, nil // re-queue with updated resource version
+	}
+
+	// Validate plugin name
+	if err := validatePluginName(cr.Spec.PluginName); err != nil {
+		cr.Status = pluginsv1.PluginInstallationStatus{
+			Phase:              pluginsv1.PluginPhaseFailed,
+			Message:            err.Error(),
+			ObservedGeneration: cr.Generation,
+		}
+		_ = r.client.Status().Update(ctx, &cr)
+		return ctrl.Result{}, nil //nolint:nilerr // intentional: permanent validation error, don't requeue
 	}
 
 	// Reconcile child resources
@@ -156,8 +184,13 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 	}
 
 	// ClusterRoleBindings (cluster-scoped, cleaned up via finalizer)
+	// TODO: validate spec.clusterRoles against an allowlist to prevent privilege escalation.
+	// Currently any user who can create a PluginInstallation CR can bind arbitrary ClusterRoles
+	// (e.g. cluster-admin) to the plugin's ServiceAccount, which runs a user-specified image.
+	desiredCRBs := make(map[string]struct{}, len(cr.Spec.ClusterRoles))
 	for _, clusterRole := range cr.Spec.ClusterRoles {
 		crbName := clusterRoleBindingName(cr.Spec.PluginName, clusterRole)
+		desiredCRBs[crbName] = struct{}{}
 		crb := &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{Name: crbName},
 		}
@@ -168,6 +201,24 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 			return fmt.Errorf("reconcile ClusterRoleBinding %s: %w", crbName, err)
 		} else if op != controllerutil.OperationResultNone {
 			log.Info("reconciled resource", "kind", "ClusterRoleBinding", "name", crbName, "operation", op)
+		}
+	}
+
+	// Remove stale ClusterRoleBindings that are no longer in the spec
+	var existingCRBs rbacv1.ClusterRoleBindingList
+	if err := r.client.List(ctx, &existingCRBs, client.MatchingLabels{
+		labelManagedBy: managedByValue,
+		labelPlugin:    cr.Spec.PluginName,
+	}); err != nil {
+		return fmt.Errorf("list ClusterRoleBindings: %w", err)
+	}
+	for i := range existingCRBs.Items {
+		crb := &existingCRBs.Items[i]
+		if _, ok := desiredCRBs[crb.Name]; !ok {
+			if err := r.client.Delete(ctx, crb); err != nil && !apierrors.IsNotFound(err) {
+				return fmt.Errorf("delete stale ClusterRoleBinding %s: %w", crb.Name, err)
+			}
+			log.Info("deleted stale ClusterRoleBinding", "name", crb.Name)
 		}
 	}
 
@@ -209,9 +260,15 @@ func (r *Reconciler) fundamentEnvVars() []corev1.EnvVar {
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	err := ctrl.NewControllerManagedBy(mgr).
 		For(&pluginsv1.PluginInstallation{}).
 		Complete(r)
+
+	if err != nil {
+		return fmt.Errorf("setup controller: %w", err)
+	}
+
+	return nil
 }
 
 // RequeueAfter returns the configured status poll interval for use in tests.

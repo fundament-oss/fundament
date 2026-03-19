@@ -4,7 +4,7 @@ import (
 	"embed"
 	"net/http"
 
-	"github.com/fundament-oss/fundament/plugin-sdk/console"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/console"
 )
 
 //go:embed console/*

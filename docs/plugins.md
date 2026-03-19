@@ -10,28 +10,28 @@ The plugin system allows extending Fundament with installable plugins that integ
 
 ```
   ┌──────────────────────────────────────────────────────────────────────────┐
-  │                         Fundament Cluster                               │
-  │                                                                         │
-  │  fundament namespace                                                    │
-  │  ┌────────────────────────────────────────────────────────────────────┐  │
-  │  │  PluginInstallation CRs          Plugin Controller                │  │
-  │  │  ┌──────────────────────┐       ┌──────────────────────────────┐  │  │
-  │  │  │ cert-manager-test    │──────►│ Watches CRs                  │  │  │
-  │  │  │ another-plugin       │       │ Creates plugin namespaces    │  │  │
-  │  │  └──────────────────────┘       │ Manages RBAC + deployments   │  │  │
-  │  │                                 │ Polls plugin status          │  │  │
-  │  │                                 └──────┬───────────────────────┘  │  │
-  │  └────────────────────────────────────────┼──────────────────────────┘  │
-  │                                           │ creates                     │
-  │                     ┌─────────────────────┼─────────────────────┐       │
-  │                     ▼                     ▼                     ▼       │
-  │  plugin-cert-manager-test    plugin-another-plugin     plugin-...       │
-  │  ┌───────────────────────┐  ┌───────────────────────┐                  │
-  │  │ SA + RoleBinding      │  │ SA + RoleBinding      │                  │
-  │  │ Deployment + Service  │  │ Deployment + Service  │                  │
-  │  │ (+ ClusterRoleBinding │  │                       │                  │
-  │  │  if requested)        │  │                       │                  │
-  │  └───────────────────────┘  └───────────────────────┘                  │
+  │                         Fundament Cluster                                │
+  │                                                                          │
+  │  fundament namespace                                                     │
+  │  ┌───────────────────────────────────────────────────────────────────┐   │
+  │  │  PluginInstallation CRs          Plugin Controller                │   │
+  │  │  ┌──────────────────────┐       ┌──────────────────────────────┐  │   │
+  │  │  │ cert-manager-test    │──────►│ Watches CRs                  │  │   │
+  │  │  │ another-plugin       │       │ Creates plugin namespaces    │  │   │
+  │  │  └──────────────────────┘       │ Manages RBAC + deployments   │  │   │
+  │  │                                 │ Polls plugin status          │  │   │
+  │  │                                 └──────┬───────────────────────┘  │   │
+  │  └────────────────────────────────────────┼──────────────────────────┘   │
+  │                                           │ creates                      │
+  │               ┌───────────────────────────┼─────────────────────┐        │
+  │               ▼                           ▼                     ▼        │
+  │   plugin-cert-manager-test    plugin-another-plugin     plugin-...       │
+  │  ┌───────────────────────┐  ┌───────────────────────┐                    │
+  │  │ SA + RoleBinding      │  │ SA + RoleBinding      │                    │
+  │  │ Deployment + Service  │  │ Deployment + Service  │                    │
+  │  │ (+ ClusterRoleBinding │  │                       │                    │
+  │  │  if requested)        │  │                       │                    │
+  │  └───────────────────────┘  └───────────────────────┘                    │
   └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -39,13 +39,13 @@ The plugin system allows extending Fundament with installable plugins that integ
 
 | Component | Purpose |
 |-----------|---------|
-| [**Plugin SDK**](#plugin-sdk) | Go framework that plugins implement. Handles HTTP, health probes, metadata API, logging, and lifecycle. |
+| [**Plugin Runtime**](#plugin-runtime) | Go framework that plugins implement. Handles HTTP, health probes, metadata API, logging, and lifecycle. |
 | [**Plugin Controller**](#plugin-controller) | Kubernetes controller that watches `PluginInstallation` CRs and manages plugin namespaces, RBAC, and deployments. |
 | [**Plugin** (e.g. cert-manager)](#writing-a-plugin) | A container image that uses the SDK. Implements business logic (install software, manage CRDs, serve console UI). |
 
-## Plugin SDK
+## Plugin Runtime
 
-The SDK provides all the boilerplate so plugin authors only implement business logic.
+The runtime provides all the boilerplate so plugin authors only implement business logic.
 
 ### Core Interface
 
@@ -56,6 +56,8 @@ type Plugin interface {
     Shutdown(ctx context.Context) error          // Graceful cleanup
 }
 ```
+
+> **Idempotency requirement**: `Start` is called every time the container starts, including restarts. Implementations must be idempotent — for example, using `helm upgrade --install` rather than `helm install`, and checking existing state before performing setup.
 
 ### Optional Interfaces
 
@@ -75,12 +77,12 @@ type ConsoleProvider interface {   // Serve UI assets at /console/
 }
 ```
 
-### What `pluginsdk.Run()` Does
+### What `pluginruntime.Run()` Does
 
-When a plugin binary calls `pluginsdk.Run(plugin)`, the SDK:
+When a plugin binary calls `pluginruntime.Run(plugin)`, the SDK:
 
 ```
-  pluginsdk.Run(plugin)
+  pluginruntime.Run(plugin)
         │
         ├─ Parse environment config (cluster ID, org ID, log level, etc.)
         ├─ Initialize structured JSON logger
@@ -119,19 +121,37 @@ type Host interface {
 ### Plugin Phases
 
 ```
-  Installing ──► Running ◄──► Degraded
-      │              │
-      ▼              ▼
-   Failed        Uninstalling
+                 ┌──────────────┐
+                 │              │
+  Installing ──►─┤  Running ◄──►── Degraded
+      │    │     │              │      │
+      │    │     └──────────────┘      │
+      │    │            │              │
+      │    ▼            ▼              │
+      │  Degraded ─► Failed ◄──────────┘
+      │              │  ▲
+      │              ▼  │
+      └───────► Uninstalling
 ```
 
 | Phase | Meaning |
 |-------|---------|
 | `installing` | Plugin is setting up (e.g. running Helm install) |
 | `running` | Plugin is healthy and operational |
-| `degraded` | Plugin is running but something is wrong (transient error) |
-| `failed` | Unrecoverable error (permanent error) |
-| `uninstalling` | Plugin is cleaning up before shutdown |
+| `degraded` | Transient error — plugin will retry (e.g. failed install, missing CRD) |
+| `failed` | Permanent error requiring human intervention (e.g. invalid configuration) |
+| `uninstalling` | Plugin is cleaning up before removal |
+
+Transitions:
+- **installing → running**: Setup completed successfully.
+- **installing → degraded**: A recoverable error during setup (e.g. image pull backoff, transient helm failure). The container will restart and retry.
+- **installing → failed**: A permanent error during setup (e.g. invalid configuration).
+- **running → degraded**: A transient error is detected during reconciliation (e.g. missing CRD).
+- **degraded → running**: The transient error is resolved.
+- **degraded → failed**: A permanent error occurs while degraded.
+- **running/degraded/installing → uninstalling**: The plugin CR is deleted.
+- **failed → uninstalling**: The plugin CR is deleted; cleanup still runs.
+- **uninstalling → failed**: A permanent error during cleanup (e.g. cannot delete resources).
 
 ### Error Types
 
@@ -147,9 +167,11 @@ return pluginerrors.NewPermanent(fmt.Errorf("invalid configuration: %w", err))
 
 ### SDK Helpers
 
+The SDK provides optional helpers that plugins can use. Plugins are free to choose their own installation and management approach — these helpers are conveniences, not requirements.
+
 | Helper | Purpose |
 |--------|---------|
-| `helpers/helm` | Wrapper around `helm upgrade --install` and `helm uninstall` |
+| `helpers/helm` | Wrapper around `helm upgrade --install`, `helm status`, and `helm uninstall` |
 | `helpers/crd` | Verify that required CRDs exist in the cluster |
 | `helpers/controllerruntime` | Scaffold a controller-runtime manager |
 | `console` | Convert embedded FS to `http.FileSystem` for console assets |
@@ -173,8 +195,8 @@ spec:
   version: v1.17.2
   clusterRoles:          # Optional: bind SA to these ClusterRoles
     - cluster-admin
-  config:                # Optional: extra env vars for the container
-    LOG_LEVEL: debug
+  config:                # Optional: extra env vars (injected with FUNP_ prefix)
+    LOG_LEVEL: debug     # → becomes FUNP_LOG_LEVEL in the container
 ```
 
 ### What the Controller Creates
@@ -199,7 +221,7 @@ For each `PluginInstallation`, the controller creates:
   │  DEFAULT (always)                   │
   │                                     │
   │  RoleBinding in plugin namespace    │
-  │  → ClusterRole/admin               │
+  │  → ClusterRole/admin                │
   │                                     │
   │  Plugin can manage all resources    │
   │  within its own namespace.          │
@@ -310,28 +332,28 @@ import (
     "fmt"
     "log"
 
-    pluginsdk "github.com/fundament-oss/fundament/plugin-sdk"
+    "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
 type MyPlugin struct {
-    def pluginsdk.PluginDefinition
+    def pluginruntime.PluginDefinition
 }
 
-func (p *MyPlugin) Definition() pluginsdk.PluginDefinition {
+func (p *MyPlugin) Definition() pluginruntime.PluginDefinition {
     return p.def
 }
 
-func (p *MyPlugin) Start(ctx context.Context, host pluginsdk.Host) error {
-    host.ReportStatus(pluginsdk.PluginStatus{
-        Phase:   pluginsdk.PhaseInstalling,
+func (p *MyPlugin) Start(ctx context.Context, host pluginruntime.Host) error {
+    host.ReportStatus(pluginruntime.PluginStatus{
+        Phase:   pluginruntime.PhaseInstalling,
         Message: "setting up",
     })
 
     // Do setup work...
 
     host.ReportReady()
-    host.ReportStatus(pluginsdk.PluginStatus{
-        Phase:   pluginsdk.PhaseRunning,
+    host.ReportStatus(pluginruntime.PluginStatus{
+        Phase:   pluginruntime.PhaseRunning,
         Message: "operational",
     })
 
@@ -344,11 +366,11 @@ func (p *MyPlugin) Shutdown(_ context.Context) error {
 }
 
 func main() {
-    def, err := pluginsdk.LoadDefinition("definition.yaml")
+    def, err := pluginruntime.LoadDefinition("definition.yaml")
     if err != nil {
         log.Fatal(err)
     }
-    pluginsdk.Run(&MyPlugin{def: def})
+    pluginruntime.Run(&MyPlugin{def: def})
 }
 ```
 
@@ -393,7 +415,7 @@ The cert-manager plugin is a reference implementation that installs and manages 
 
 ### What It Does
 
-1. **Start**: Runs `helm upgrade --install cert-manager` from the Jetstack Helm repo
+1. **Start**: Checks if cert-manager is already installed, then runs `helm upgrade --install cert-manager` from the Jetstack Helm repo
 2. **Verify**: Checks that all cert-manager CRDs exist (`certificates`, `issuers`, `clusterissuers`, `certificaterequests`)
 3. **Reconcile**: Periodically re-checks CRD availability, reports degraded if missing
 4. **Console**: Serves a placeholder console UI at `/console/`
@@ -402,7 +424,7 @@ The cert-manager plugin is a reference implementation that installs and manages 
 
 ```
 plugins/cert-manager/
-├── main.go             # Entry point: load definition, call pluginsdk.Run()
+├── main.go             # Entry point: load definition, call pluginruntime.Run()
 ├── plugin.go           # Plugin implementation (Start, Install, Reconcile, etc.)
 ├── console.go          # Embeds console/ directory as http.FileSystem
 ├── definition.yaml     # Plugin metadata, permissions, menu entries, UI hints
@@ -443,14 +465,15 @@ spec:
   Container starts
        │
        ▼
-  pluginsdk.Run()
+  pluginruntime.Run()
        │
        ├─ HTTP server on :8080
        │
        ▼
   Start()
        │
-       ├─ ReportStatus("installing", "installing cert-manager")
+       ├─ Check if cert-manager is already installed
+       ├─ ReportStatus("installing", "checking/installing cert-manager")
        ├─ helm upgrade --install cert-manager jetstack/cert-manager
        ├─ Create k8s client
        ├─ crd.VerifyAll([certificates, certificaterequests, issuers, clusterissuers])
@@ -484,45 +507,4 @@ service PluginMetadataService {
 
 ## Plugin Sandbox
 
-A self-contained development environment lives in `plugins/sandbox/`. It creates an isolated K3D cluster with only the plugin controller -- no database, auth services, or other Fundament components needed. The sandbox cluster (`fundament-plugin`) uses a separate registry on port `5112`, so it can coexist with the main Fundament cluster without conflicts.
-
-### Quick Start
-
-```shell
-cd plugins
-just cluster-create   # Create K3D cluster + registry (~10s)
-just dev              # Build + deploy plugin-controller with file watching
-
-# In another terminal:
-cd plugins
-just plugin-install cert-manager   # Build plugin, push to registry, apply CR
-just plugin-status                 # Check PluginInstallation status
-just logs                          # Watch controller logs
-
-# Verify cert-manager actually works:
-just cert-manager test             # Creates a self-signed ClusterIssuer + Certificate
-just cert-manager test-cleanup     # Remove test resources
-
-# Cleanup:
-just plugin-uninstall cert-manager
-just cluster-delete
-```
-
-### Available Commands
-
-| Command | Description |
-|---------|-------------|
-| `just cluster-create` | Create a K3D cluster for plugin development |
-| `just cluster-start` | Start the cluster (creates if it doesn't exist) |
-| `just cluster-stop` | Stop the cluster without deleting it |
-| `just cluster-delete` | Delete the cluster and registry |
-| `just dev` | Deploy plugin-controller with file watching (auto-rebuild) |
-| `just deploy` | Deploy plugin-controller (one-time) |
-| `just undeploy` | Remove the deployment |
-| `just plugin-install <plugin>` | Build plugin image, push to registry, apply CR |
-| `just plugin-uninstall <plugin>` | Delete PluginInstallation CR |
-| `just plugin-logs <plugin>` | Stream a specific plugin's logs |
-| `just plugin-status` | Show all PluginInstallation CRs |
-| `just logs` | Stream plugin-controller logs |
-| `just cert-manager test` | Verify cert-manager with a self-signed certificate |
-| `just cert-manager test-cleanup` | Remove cert-manager test resources |
+A self-contained development environment for plugin development. See [`plugins/README.md`](../plugins/README.md) for setup instructions and available commands.

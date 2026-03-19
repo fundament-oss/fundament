@@ -17,6 +17,9 @@ options:
       - arg: --disable=traefik
         nodeFilters:
           - server:*
+      - arg: --kube-apiserver-arg=feature-gates=WatchList=true
+        nodeFilters:
+          - server:*
 registries:
   create:
     name: "registry.localhost"

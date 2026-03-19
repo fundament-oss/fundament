@@ -1,6 +1,9 @@
+//go:generate controller-gen object paths=.
+
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,12 +28,14 @@ type PluginInstallation struct {
 	Status            PluginInstallationStatus `json:"status,omitempty"`
 }
 
+// +k8s:deepcopy-gen=true
 type PluginInstallationSpec struct {
-	Image        string            `json:"image"`
-	PluginName   string            `json:"pluginName"`
-	Version      string            `json:"version"`
-	ClusterRoles []string          `json:"clusterRoles,omitempty"`
-	Config       map[string]string `json:"config,omitempty"`
+	Image           string            `json:"image"`
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	PluginName      string            `json:"pluginName"`
+	Version         string            `json:"version"`
+	ClusterRoles    []string          `json:"clusterRoles,omitempty"`
+	Config          map[string]string `json:"config,omitempty"`
 }
 
 type PluginInstallationStatus struct {

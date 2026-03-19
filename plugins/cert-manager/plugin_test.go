@@ -3,13 +3,14 @@ package main
 import (
 	"testing"
 
-	pluginsdk "github.com/fundament-oss/fundament/plugin-sdk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
 func TestLoadDefinition(t *testing.T) {
-	def, err := pluginsdk.LoadDefinition("definition.yaml")
+	def, err := pluginruntime.LoadDefinition("definition.yaml")
 	require.NoError(t, err)
 
 	assert.Equal(t, "cert-manager", def.Metadata.Name)
@@ -26,22 +27,22 @@ func TestLoadDefinition(t *testing.T) {
 }
 
 func TestNewCertManagerPlugin(t *testing.T) {
-	def := pluginsdk.PluginDefinition{
-		Metadata: pluginsdk.PluginMetadata{
+	def := pluginruntime.PluginDefinition{
+		Metadata: pluginruntime.PluginMetadata{
 			Name:    "cert-manager",
 			Version: "v1.17.2",
 		},
 	}
 
-	plugin := NewCertManagerPlugin(def)
+	plugin := NewCertManagerPlugin(&def)
 	assert.Equal(t, def, plugin.Definition())
 }
 
 func TestDefinitionFields(t *testing.T) {
-	def, err := pluginsdk.LoadDefinition("definition.yaml")
+	def, err := pluginruntime.LoadDefinition("definition.yaml")
 	require.NoError(t, err)
 
-	plugin := NewCertManagerPlugin(def)
+	plugin := NewCertManagerPlugin(&def)
 	got := plugin.Definition()
 
 	assert.Equal(t, "cert-manager", got.Metadata.Name)
@@ -50,12 +51,13 @@ func TestDefinitionFields(t *testing.T) {
 }
 
 func TestPluginImplementsInterfaces(t *testing.T) {
-	def := pluginsdk.PluginDefinition{}
-	plugin := NewCertManagerPlugin(def)
+	t.Parallel()
+	def := pluginruntime.PluginDefinition{}
+	plugin := NewCertManagerPlugin(&def)
 
 	// Verify all expected interfaces are implemented.
-	var _ pluginsdk.Plugin = plugin
-	var _ pluginsdk.Installer = plugin
-	var _ pluginsdk.Reconciler = plugin
-	var _ pluginsdk.ConsoleProvider = plugin
+	var _ pluginruntime.Plugin = plugin
+	var _ pluginruntime.Installer = plugin
+	var _ pluginruntime.Reconciler = plugin
+	var _ pluginruntime.ConsoleProvider = plugin
 }

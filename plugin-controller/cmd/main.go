@@ -69,7 +69,7 @@ func run() error {
 		return fmt.Errorf("add readyz check: %w", err)
 	}
 
-	reconciler := controller.NewReconciler(mgr.GetClient(), logger, cfg)
+	reconciler := controller.NewReconciler(mgr.GetClient(), logger, &cfg)
 	if err := reconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup controller: %w", err)
 	}
@@ -79,5 +79,8 @@ func run() error {
 		"statusPollInterval", cfg.StatusPollInterval,
 	)
 
-	return mgr.Start(ctrl.SetupSignalHandler())
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+		return fmt.Errorf("start manager: %w", err)
+	}
+	return nil
 }

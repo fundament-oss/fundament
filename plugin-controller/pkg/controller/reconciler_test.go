@@ -110,7 +110,7 @@ func TestMutateDeployment(t *testing.T) {
 			foundClusterID = true
 			assert.Equal(t, "test-cluster", env.Value)
 		}
-		if env.Name == "LOG_LEVEL" {
+		if env.Name == "FUNP_LOG_LEVEL" {
 			foundLogLevel = true
 			assert.Equal(t, "debug", env.Value)
 		}
@@ -241,16 +241,33 @@ func TestReconcileChildren_CreatesClusterRoleBindings(t *testing.T) {
 }
 
 func TestMapPhase(t *testing.T) {
-	assert.Equal(t, pluginsv1.PluginPhaseRunning, mapPhase("running"))
-	assert.Equal(t, pluginsv1.PluginPhaseDeploying, mapPhase("installing"))
-	assert.Equal(t, pluginsv1.PluginPhaseDegraded, mapPhase("degraded"))
-	assert.Equal(t, pluginsv1.PluginPhaseFailed, mapPhase("failed"))
+	phase, err := mapPhase("running")
+	assert.NoError(t, err)
+	assert.Equal(t, pluginsv1.PluginPhaseRunning, phase)
+
+	phase, err = mapPhase("installing")
+	assert.NoError(t, err)
+	assert.Equal(t, pluginsv1.PluginPhaseDeploying, phase)
+
+	phase, err = mapPhase("degraded")
+	assert.NoError(t, err)
+	assert.Equal(t, pluginsv1.PluginPhaseDegraded, phase)
+
+	phase, err = mapPhase("failed")
+	assert.NoError(t, err)
+	assert.Equal(t, pluginsv1.PluginPhaseFailed, phase)
+
+	phase, err = mapPhase("uninstalling")
+	assert.NoError(t, err)
+	assert.Equal(t, pluginsv1.PluginPhaseTerminating, phase)
 }
 
-func TestMapPhase_UnknownPanics(t *testing.T) {
-	assert.Panics(t, func() {
-		mapPhase("unknown")
-	})
+func TestMapPhase_UnknownReturnsError(t *testing.T) {
+	_, err := mapPhase("unknown")
+	assert.Error(t, err)
+
+	_, err = mapPhase("")
+	assert.Error(t, err)
 }
 
 func TestHandleDeletion_CleansUpNamespace(t *testing.T) {

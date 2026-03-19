@@ -2,6 +2,8 @@ package controller
 
 import (
 	"fmt"
+	"regexp"
+	"sort"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +22,27 @@ const (
 	managedByValue             = "plugin-controller"
 )
 
+// dnsLabelRegex matches valid DNS label names (RFC 1123).
+var dnsLabelRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+
+// maxPluginNameLen is the maximum length for a plugin name.
+// Kubernetes names are max 63 chars; the "plugin-" prefix takes 7.
+const maxPluginNameLen = 56
+
+// validatePluginName checks that pluginName is a valid DNS label component.
+func validatePluginName(pluginName string) error {
+	if pluginName == "" {
+		return fmt.Errorf("pluginName must not be empty")
+	}
+	if len(pluginName) > maxPluginNameLen {
+		return fmt.Errorf("pluginName %q exceeds maximum length of %d characters", pluginName, maxPluginNameLen)
+	}
+	if !dnsLabelRegex.MatchString(pluginName) {
+		return fmt.Errorf("pluginName %q is not a valid DNS label (must be lowercase alphanumeric or '-', and must start and end with an alphanumeric character)", pluginName)
+	}
+	return nil
+}
+
 func childName(pluginName string) string {
 	return fmt.Sprintf("plugin-%s", pluginName)
 }
@@ -37,6 +60,18 @@ func childLabels(cr *pluginsv1.PluginInstallation) map[string]string {
 	}
 }
 
+// mergeLabels merges src labels into dst, initializing the map if needed.
+// Returns the (possibly new) map.
+func mergeLabels(dst, src map[string]string) map[string]string {
+	if dst == nil {
+		dst = make(map[string]string, len(src))
+	}
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
 func selectorLabels(cr *pluginsv1.PluginInstallation) map[string]string {
 	return map[string]string{
 		labelPlugin:           cr.Spec.PluginName,
@@ -46,12 +81,12 @@ func selectorLabels(cr *pluginsv1.PluginInstallation) map[string]string {
 
 // mutateNamespace applies the desired state to an existing or empty Namespace.
 func mutateNamespace(ns *corev1.Namespace, cr *pluginsv1.PluginInstallation) {
-	ns.Labels = childLabels(cr)
+	ns.Labels = mergeLabels(ns.Labels, childLabels(cr))
 }
 
 // mutateServiceAccount applies the desired state to an existing or empty ServiceAccount.
 func mutateServiceAccount(sa *corev1.ServiceAccount, cr *pluginsv1.PluginInstallation) {
-	sa.Labels = childLabels(cr)
+	sa.Labels = mergeLabels(sa.Labels, childLabels(cr))
 }
 
 // mutateRoleBinding binds the plugin's ServiceAccount to the built-in admin ClusterRole
@@ -102,8 +137,13 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 
 	envVars := make([]corev1.EnvVar, 0, len(cr.Spec.Config)+len(fundEnvVars))
 	envVars = append(envVars, fundEnvVars...)
-	for k, v := range cr.Spec.Config {
-		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
+	configKeys := make([]string, 0, len(cr.Spec.Config))
+	for k := range cr.Spec.Config {
+		configKeys = append(configKeys, k)
+	}
+	sort.Strings(configKeys)
+	for _, k := range configKeys {
+		envVars = append(envVars, corev1.EnvVar{Name: "FUNP_" + k, Value: cr.Spec.Config[k]})
 	}
 
 	deploy.Labels = labels
@@ -119,8 +159,9 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 			ServiceAccountName: childName(cr.Spec.PluginName),
 			Containers: []corev1.Container{
 				{
-					Name:  cr.Spec.PluginName,
-					Image: cr.Spec.Image,
+					Name:            cr.Spec.PluginName,
+					Image:           cr.Spec.Image,
+					ImagePullPolicy: cr.Spec.ImagePullPolicy,
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          "http",

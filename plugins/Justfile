@@ -73,7 +73,7 @@ plugin-uninstall plugin:
 
 # Stream logs for a specific plugin
 plugin-logs plugin:
-    kubectl --context {{ kube_context }} logs -l plugins.fundament.io/plugin={{ plugin }} --all-namespaces -f
+    kubectl --context {{ kube_context }} -n plugin-{{ plugin }} logs -l plugins.fundament.io/plugin={{ plugin }} -f
 
 # Show all PluginInstallation CRs
 plugin-status:

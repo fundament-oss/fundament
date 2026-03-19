@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 
-	pluginmetadatav1 "github.com/fundament-oss/fundament/plugin-sdk/metadata/proto/gen/v1"
-	"github.com/fundament-oss/fundament/plugin-sdk/metadata/proto/gen/v1/pluginmetadatav1connect"
+	pluginmetadatav1 "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 )
@@ -23,9 +24,13 @@ type statusPoller struct {
 }
 
 func newStatusPoller() *statusPoller {
-	return &statusPoller{
-		httpClient: http.DefaultClient,
-	}
+	return &statusPoller{httpClient: &http.Client{Timeout: 5 * time.Second}}
+}
+
+func (s *statusPoller) WithClient(client connect.HTTPClient) *statusPoller {
+	s.httpClient = client
+
+	return s
 }
 
 func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallation) pluginsv1.PluginInstallationStatus {
@@ -41,7 +46,15 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 		}
 	}
 
-	phase := mapPhase(resp.Msg.GetPhase())
+	phase, err := mapPhase(resp.Msg.GetPhase())
+	if err != nil {
+		return pluginsv1.PluginInstallationStatus{
+			Phase:              pluginsv1.PluginPhaseDegraded,
+			Message:            err.Error(),
+			ObservedGeneration: cr.Generation,
+			PluginVersion:      resp.Msg.GetVersion(),
+		}
+	}
 
 	return pluginsv1.PluginInstallationStatus{
 		Phase:              phase,
@@ -52,17 +65,21 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 	}
 }
 
-func mapPhase(phase string) pluginsv1.PluginPhase {
+func mapPhase(phase string) (pluginsv1.PluginPhase, error) {
 	switch phase {
 	case "running":
-		return pluginsv1.PluginPhaseRunning
+		return pluginsv1.PluginPhaseRunning, nil
 	case "installing":
-		return pluginsv1.PluginPhaseDeploying
+		return pluginsv1.PluginPhaseDeploying, nil
 	case "degraded":
-		return pluginsv1.PluginPhaseDegraded
+		return pluginsv1.PluginPhaseDegraded, nil
 	case "failed":
-		return pluginsv1.PluginPhaseFailed
+		return pluginsv1.PluginPhaseFailed, nil
+	case "uninstalling":
+		return pluginsv1.PluginPhaseTerminating, nil
 	default:
-		panic(fmt.Sprintf("unknown plugin phase: %q", phase))
+		// Not a panic: phase comes from external plugin input over the network,
+		// so unknown values are expected when plugins use a newer SDK version.
+		return "", fmt.Errorf("unknown plugin phase: %q", phase)
 	}
 }

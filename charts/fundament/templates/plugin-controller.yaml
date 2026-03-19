@@ -4,16 +4,14 @@ kind: ServiceAccount
 metadata:
   name: {{ $.Release.Name }}-plugin-controller
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: plugin-controller
+    {{- include "fundament.labels" (dict "root" $ "name" "plugin-controller" "component" "plugin-controller") | nindent 4 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: {{ $.Release.Name }}-plugin-controller
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: plugin-controller
+    {{- include "fundament.labels" (dict "root" $ "name" "plugin-controller" "component" "plugin-controller") | nindent 4 }}
 rules:
   - apiGroups:
       - plugins.fundament.io
@@ -99,8 +97,7 @@ kind: ClusterRoleBinding
 metadata:
   name: {{ $.Release.Name }}-plugin-controller
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: plugin-controller
+    {{- include "fundament.labels" (dict "root" $ "name" "plugin-controller" "component" "plugin-controller") | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -115,8 +112,7 @@ kind: Deployment
 metadata:
   name: {{ $.Release.Name }}-plugin-controller
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: plugin-controller
+    {{- include "fundament.labels" (dict "root" $ "name" "plugin-controller" "component" "plugin-controller") | nindent 4 }}
 spec:
   replicas: 1
   selector:
