@@ -6,23 +6,30 @@
 -- NOTE: Duplicated in authn-api/pkg/db/queries.sql — keep both in sync.
 SELECT
     CASE
-        WHEN tenant.organizations_users.permission = 'admin'
-            AND tenant.organizations_users.status = 'accepted'
-            AND tenant.organizations_users.deleted IS NULL
+        WHEN EXISTS (
+            SELECT 1
+            FROM tenant.organizations_users
+            WHERE tenant.organizations_users.organization_id = tenant.clusters.organization_id
+                AND tenant.organizations_users.user_id = @user_id
+                AND tenant.organizations_users.permission = 'admin'
+                AND tenant.organizations_users.status = 'accepted'
+                AND tenant.organizations_users.deleted IS NULL
+        )
             THEN 'admin'
-        WHEN tenant.project_members.id IS NOT NULL
-            AND tenant.project_members.deleted IS NULL
+        WHEN EXISTS (
+            SELECT 1
+            FROM tenant.projects
+            JOIN tenant.project_members
+                ON tenant.project_members.project_id = tenant.projects.id
+            WHERE tenant.projects.cluster_id = tenant.clusters.id
+                AND tenant.projects.deleted IS NULL
+                AND tenant.project_members.user_id = @user_id
+                AND tenant.project_members.deleted IS NULL
+        )
             THEN 'member'
         ELSE 'none'
     END AS access_level
 FROM tenant.clusters
-LEFT JOIN tenant.organizations_users
-    ON tenant.organizations_users.organization_id = tenant.clusters.organization_id
-    AND tenant.organizations_users.user_id = @user_id
-LEFT JOIN tenant.projects
-    ON tenant.projects.cluster_id = tenant.clusters.id AND tenant.projects.deleted IS NULL
-LEFT JOIN tenant.project_members
-    ON tenant.project_members.project_id = tenant.projects.id AND tenant.project_members.user_id = @user_id
 WHERE tenant.clusters.id = @cluster_id
 LIMIT 1;
 

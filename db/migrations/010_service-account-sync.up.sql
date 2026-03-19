@@ -57,11 +57,6 @@ ALTER TABLE "tenant"."cluster_outbox" ADD COLUMN "organization_user_id" uuid;
 
 ALTER TABLE "tenant"."cluster_outbox" ADD COLUMN "project_member_id" uuid;
 
-/* Hazards:
- - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
-*/
-GRANT INSERT ON "tenant"."cluster_outbox" TO "fun_authn_api";
-
 ALTER TABLE "tenant"."cluster_outbox" DROP CONSTRAINT "cluster_outbox_ck_event";
 
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_ck_event" CHECK((event = ANY (ARRAY['created'::text, 'updated'::text, 'deleted'::text, 'reconcile'::text, 'ready'::text]))) NOT VALID;

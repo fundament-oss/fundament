@@ -92,8 +92,9 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 			params.ApiServerUrl = pgtype.Text{String: shootStatus.APIServerURL, Valid: true}
 		}
 
-		// When transitioning to ready, extract the CA data from an admin kubeconfig.
-		if shootStatus.Status == gardener.StatusReady && oldStatus != gardener.StatusReady {
+		// Refresh CA data on the initial ready transition and keep retrying until
+		// it is stored, so transient Gardener failures do not wedge kubeconfig delivery.
+		if shouldRefreshShootCA(shootStatus.Status, oldStatus, cluster.ShootCaData.Valid) {
 			caData, err := h.extractShootCA(ctx, cluster.ID)
 			if err != nil {
 				h.logger.Warn("failed to extract shoot CA data",
@@ -155,6 +156,14 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func shouldRefreshShootCA(currentStatus, previousStatus gardener.ShootStatusType, hasStoredCA bool) bool {
+	if currentStatus != gardener.StatusReady {
+		return false
+	}
+
+	return previousStatus != gardener.StatusReady || !hasStoredCA
 }
 
 // pollDeletedClusters verifies that soft-deleted clusters have actually been removed from Gardener.

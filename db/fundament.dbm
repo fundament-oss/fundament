@@ -2444,11 +2444,6 @@ END;]]> </definition>
 	<privileges select="true" insert="true"/>
 </permission>
 <permission>
-	<object name="tenant.cluster_outbox" type="table"/>
-	<roles names="fun_authn_api"/>
-	<privileges insert="true"/>
-</permission>
-<permission>
 	<object name="tenant.clusters" type="table"/>
 	<roles names="fun_authn_api"/>
 	<privileges select="true"/>

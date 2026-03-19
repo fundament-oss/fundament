@@ -2346,14 +2346,6 @@ GRANT SELECT,INSERT
 -- ddl-end --
 
 
--- object: grant_a_e8b4c2d8ba | type: PERMISSION --
-GRANT INSERT
-   ON TABLE tenant.cluster_outbox
-   TO fun_authn_api;
-
--- ddl-end --
-
-
 -- object: grant_r_68731d4fef | type: PERMISSION --
 GRANT SELECT
    ON TABLE tenant.clusters
