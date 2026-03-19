@@ -175,12 +175,12 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 	return u, accessToken, nil
 }
 
-// toName converts a display name into a valid organization name.
+// toName converts an alias into a valid organization name.
 // Rules: lowercase, replace non-alphanumeric with hyphens, collapse consecutive hyphens,
 // strip leading/trailing hyphens, prepend "org-" if starts with digit, ensure min 2 chars.
-func toName(name string) string {
+func toName(alias string) string {
 	// Lowercase
-	s := strings.ToLower(name)
+	s := strings.ToLower(alias)
 
 	// Replace non-alphanumeric with hyphens
 	var result strings.Builder
@@ -224,12 +224,12 @@ func toName(name string) string {
 
 // handleNewUser creates a new organization and user for first-time registration.
 func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
-	displayName := claims.Name
-	if displayName == "" {
-		displayName = claims.Email
+	alias := claims.Name
+	if alias == "" {
+		alias = claims.Email
 	}
 
-	orgName := toName(displayName)
+	orgName := toName(alias)
 
 	tx, err := s.db.Pool.Begin(ctx)
 	if err != nil {
@@ -253,8 +253,8 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 			candidateName = base + suffix
 		}
 		organization, err = qtx.OrganizationCreate(ctx, db.OrganizationCreateParams{
-			Name:        candidateName,
-			DisplayName: displayName,
+			Name:  candidateName,
+			Alias: alias,
 		})
 		if err == nil {
 			break

@@ -43,13 +43,13 @@ SET search_path TO pg_catalog,public,tenant,appstore,authn,authz;
 CREATE TABLE tenant.organizations (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	name text NOT NULL,
-	display_name text NOT NULL,
+	alias text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT organizations_pk PRIMARY KEY (id),
 	CONSTRAINT organizations_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
 	CONSTRAINT organizations_ck_name CHECK (name ~ '^[a-z][a-z0-9-]*[a-z0-9]$'),
-	CONSTRAINT organizations_ck_display_name CHECK (char_length(display_name) >= 1 AND char_length(display_name) <= 255)
+	CONSTRAINT organizations_ck_alias CHECK (char_length(alias) >= 1 AND char_length(alias) <= 255)
 );
 -- ddl-end --
 ALTER TABLE tenant.organizations OWNER TO fun_owner;

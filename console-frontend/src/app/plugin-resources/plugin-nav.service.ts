@@ -23,7 +23,7 @@ export default class PluginNavService {
         }));
 
         if (items.length > 0) {
-          groups.push({ pluginName: plugin.name, displayName: plugin.displayName, items });
+          groups.push({ pluginName: plugin.name, alias: plugin.alias, items });
         }
         return groups;
       }, []);

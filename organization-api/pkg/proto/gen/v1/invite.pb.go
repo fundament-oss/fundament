@@ -260,14 +260,14 @@ func (b0 ListInvitationsResponse_builder) Build() *ListInvitationsResponse {
 
 // Invitation represents a pending organization invitation
 type Invitation struct {
-	state                              protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id                      string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_OrganizationId          string                 `protobuf:"bytes,20,opt,name=organization_id,json=organizationId"`
-	xxx_hidden_OrganizationDisplayName string                 `protobuf:"bytes,30,opt,name=organization_display_name,json=organizationDisplayName"`
-	xxx_hidden_Permission              string                 `protobuf:"bytes,40,opt,name=permission"`
-	xxx_hidden_Created                 *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=created"`
-	unknownFields                      protoimpl.UnknownFields
-	sizeCache                          protoimpl.SizeCache
+	state                        protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id                string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_OrganizationId    string                 `protobuf:"bytes,20,opt,name=organization_id,json=organizationId"`
+	xxx_hidden_OrganizationAlias string                 `protobuf:"bytes,30,opt,name=organization_alias,json=organizationAlias"`
+	xxx_hidden_Permission        string                 `protobuf:"bytes,40,opt,name=permission"`
+	xxx_hidden_Created           *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=created"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
 }
 
 func (x *Invitation) Reset() {
@@ -309,9 +309,9 @@ func (x *Invitation) GetOrganizationId() string {
 	return ""
 }
 
-func (x *Invitation) GetOrganizationDisplayName() string {
+func (x *Invitation) GetOrganizationAlias() string {
 	if x != nil {
-		return x.xxx_hidden_OrganizationDisplayName
+		return x.xxx_hidden_OrganizationAlias
 	}
 	return ""
 }
@@ -338,8 +338,8 @@ func (x *Invitation) SetOrganizationId(v string) {
 	x.xxx_hidden_OrganizationId = v
 }
 
-func (x *Invitation) SetOrganizationDisplayName(v string) {
-	x.xxx_hidden_OrganizationDisplayName = v
+func (x *Invitation) SetOrganizationAlias(v string) {
+	x.xxx_hidden_OrganizationAlias = v
 }
 
 func (x *Invitation) SetPermission(v string) {
@@ -364,11 +364,11 @@ func (x *Invitation) ClearCreated() {
 type Invitation_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id                      string
-	OrganizationId          string
-	OrganizationDisplayName string
-	Permission              string
-	Created                 *timestamppb.Timestamp
+	Id                string
+	OrganizationId    string
+	OrganizationAlias string
+	Permission        string
+	Created           *timestamppb.Timestamp
 }
 
 func (b0 Invitation_builder) Build() *Invitation {
@@ -377,7 +377,7 @@ func (b0 Invitation_builder) Build() *Invitation {
 	_, _ = b, x
 	x.xxx_hidden_Id = b.Id
 	x.xxx_hidden_OrganizationId = b.OrganizationId
-	x.xxx_hidden_OrganizationDisplayName = b.OrganizationDisplayName
+	x.xxx_hidden_OrganizationAlias = b.OrganizationAlias
 	x.xxx_hidden_Permission = b.Permission
 	x.xxx_hidden_Created = b.Created
 	return m0
@@ -604,13 +604,13 @@ const file_v1_invite_proto_rawDesc = "" +
 	"\x16ListInvitationsRequest\"X\n" +
 	"\x17ListInvitationsResponse\x12=\n" +
 	"\vinvitations\x18\n" +
-	" \x03(\v2\x1b.organization.v1.InvitationR\vinvitations\"\xd7\x01\n" +
+	" \x03(\v2\x1b.organization.v1.InvitationR\vinvitations\"\xca\x01\n" +
 	"\n" +
 	"Invitation\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12'\n" +
-	"\x0forganization_id\x18\x14 \x01(\tR\x0eorganizationId\x12:\n" +
-	"\x19organization_display_name\x18\x1e \x01(\tR\x17organizationDisplayName\x12\x1e\n" +
+	"\x0forganization_id\x18\x14 \x01(\tR\x0eorganizationId\x12-\n" +
+	"\x12organization_alias\x18\x1e \x01(\tR\x11organizationAlias\x12\x1e\n" +
 	"\n" +
 	"permission\x18( \x01(\tR\n" +
 	"permission\x124\n" +

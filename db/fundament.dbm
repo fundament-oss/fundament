@@ -77,7 +77,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
 	</column>
-	<column name="display_name" not-null="true">
+	<column name="alias" not-null="true">
 		<type name="text" length="0"/>
 	</column>
 	<column name="created" not-null="true" default-value="now()">
@@ -95,8 +95,8 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<constraint name="organizations_ck_name" type="ck-constr" table="tenant.organizations">
 			<expression> <![CDATA[name ~ '^[a-z][a-z0-9-]*[a-z0-9]$']]> </expression>
 	</constraint>
-	<constraint name="organizations_ck_display_name" type="ck-constr" table="tenant.organizations">
-			<expression> <![CDATA[char_length(display_name) >= 1 AND char_length(display_name) <= 255]]> </expression>
+	<constraint name="organizations_ck_alias" type="ck-constr" table="tenant.organizations">
+			<expression> <![CDATA[char_length(alias) >= 1 AND char_length(alias) <= 255]]> </expression>
 	</constraint>
 </table>
 

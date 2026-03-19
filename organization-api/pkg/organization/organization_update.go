@@ -25,8 +25,8 @@ func (s *Server) UpdateOrganization(
 	}
 
 	params := db.OrganizationUpdateParams{
-		ID:          organizationID,
-		DisplayName: req.Msg.GetDisplayName(),
+		ID:    organizationID,
+		Alias: req.Msg.GetAlias(),
 	}
 
 	organization, err := s.queries.OrganizationUpdate(ctx, params)
@@ -37,7 +37,7 @@ func (s *Server) UpdateOrganization(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update organization: %w", err))
 	}
 
-	s.logger.InfoContext(ctx, "organization updated", "organization_id", organization.ID, "name", organization.Name, "display_name", organization.DisplayName)
+	s.logger.InfoContext(ctx, "organization updated", "organization_id", organization.ID, "name", organization.Name, "alias", organization.Alias)
 
 	return connect.NewResponse(organizationv1.UpdateOrganizationResponse_builder{}.Build()), nil
 }

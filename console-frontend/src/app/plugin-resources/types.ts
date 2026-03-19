@@ -4,7 +4,7 @@ export interface PluginDefinition {
   apiVersion: string;
   kind: 'PluginDefinition';
   name: string;
-  displayName: string;
+  alias: string;
   version: string;
   description: string;
   author?: string;
@@ -82,7 +82,7 @@ export interface KubeResource {
 
 export interface PluginNavGroup {
   pluginName: string;
-  displayName: string;
+  alias: string;
   items: PluginNavItem[];
 }
 
@@ -98,7 +98,7 @@ export interface RawPluginYaml {
   apiVersion: string;
   kind: string;
   name: string;
-  displayName: string;
+  alias: string;
   version: string;
   description: string;
   author?: string;

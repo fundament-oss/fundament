@@ -23,6 +23,11 @@ RUN mv /tmp/docs/funs ./src/content/docs/funs \
 # Build the application
 RUN bun run build
 
+# Run pagefind explicitly via bunx to ensure the search index is generated.
+# Starlight's internal pagefind hook uses `npx` which may fail silently in bun
+# environments; bunx uses the already-installed package and fails the build loudly.
+RUN bunx pagefind --site dist
+
 # Production stage
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html

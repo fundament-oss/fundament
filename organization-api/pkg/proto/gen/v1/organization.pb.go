@@ -25,13 +25,13 @@ const (
 
 // Organization information
 type Organization struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_Name        string                 `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_DisplayName string                 `protobuf:"bytes,30,opt,name=display_name,json=displayName"`
-	xxx_hidden_Created     *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id      string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name    string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_Alias   string                 `protobuf:"bytes,30,opt,name=alias"`
+	xxx_hidden_Created *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *Organization) Reset() {
@@ -73,9 +73,9 @@ func (x *Organization) GetName() string {
 	return ""
 }
 
-func (x *Organization) GetDisplayName() string {
+func (x *Organization) GetAlias() string {
 	if x != nil {
-		return x.xxx_hidden_DisplayName
+		return x.xxx_hidden_Alias
 	}
 	return ""
 }
@@ -95,8 +95,8 @@ func (x *Organization) SetName(v string) {
 	x.xxx_hidden_Name = v
 }
 
-func (x *Organization) SetDisplayName(v string) {
-	x.xxx_hidden_DisplayName = v
+func (x *Organization) SetAlias(v string) {
+	x.xxx_hidden_Alias = v
 }
 
 func (x *Organization) SetCreated(v *timestamppb.Timestamp) {
@@ -121,8 +121,8 @@ type Organization_builder struct {
 	Id string
 	// Organization name (immutable, machine-readable identifier)
 	Name string
-	// Organization display name (human-readable label)
-	DisplayName string
+	// Organization alias (human-readable label)
+	Alias string
 	// Creation timestamp (RFC3339)
 	Created *timestamppb.Timestamp
 }
@@ -133,7 +133,7 @@ func (b0 Organization_builder) Build() *Organization {
 	_, _ = b, x
 	x.xxx_hidden_Id = b.Id
 	x.xxx_hidden_Name = b.Name
-	x.xxx_hidden_DisplayName = b.DisplayName
+	x.xxx_hidden_Alias = b.Alias
 	x.xxx_hidden_Created = b.Created
 	return m0
 }
@@ -269,11 +269,11 @@ func (b0 GetOrganizationResponse_builder) Build() *GetOrganizationResponse {
 
 // UpdateOrganization request
 type UpdateOrganizationRequest struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_DisplayName string                 `protobuf:"bytes,20,opt,name=display_name,json=displayName"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id    string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Alias string                 `protobuf:"bytes,20,opt,name=alias"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *UpdateOrganizationRequest) Reset() {
@@ -308,9 +308,9 @@ func (x *UpdateOrganizationRequest) GetId() string {
 	return ""
 }
 
-func (x *UpdateOrganizationRequest) GetDisplayName() string {
+func (x *UpdateOrganizationRequest) GetAlias() string {
 	if x != nil {
-		return x.xxx_hidden_DisplayName
+		return x.xxx_hidden_Alias
 	}
 	return ""
 }
@@ -319,8 +319,8 @@ func (x *UpdateOrganizationRequest) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
 
-func (x *UpdateOrganizationRequest) SetDisplayName(v string) {
-	x.xxx_hidden_DisplayName = v
+func (x *UpdateOrganizationRequest) SetAlias(v string) {
+	x.xxx_hidden_Alias = v
 }
 
 type UpdateOrganizationRequest_builder struct {
@@ -328,8 +328,8 @@ type UpdateOrganizationRequest_builder struct {
 
 	// ID of the organization to update
 	Id string
-	// New display name for the organization
-	DisplayName string
+	// New alias for the organization
+	Alias string
 }
 
 func (b0 UpdateOrganizationRequest_builder) Build() *UpdateOrganizationRequest {
@@ -337,7 +337,7 @@ func (b0 UpdateOrganizationRequest_builder) Build() *UpdateOrganizationRequest {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Id = b.Id
-	x.xxx_hidden_DisplayName = b.DisplayName
+	x.xxx_hidden_Alias = b.Alias
 	return m0
 }
 
@@ -494,24 +494,24 @@ var File_v1_organization_proto protoreflect.FileDescriptor
 
 const file_v1_organization_proto_rawDesc = "" +
 	"\n" +
-	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8b\x01\n" +
+	"\x15v1/organization.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"~\n" +
 	"\fOrganization\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x12!\n" +
-	"\fdisplay_name\x18\x1e \x01(\tR\vdisplayName\x124\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12\x14\n" +
+	"\x05alias\x18\x1e \x01(\tR\x05alias\x124\n" +
 	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"2\n" +
 	"\x16GetOrganizationRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\\\n" +
 	"\x17GetOrganizationResponse\x12A\n" +
 	"\forganization\x18\n" +
-	" \x01(\v2\x1d.organization.v1.OrganizationR\forganization\"d\n" +
+	" \x01(\v2\x1d.organization.v1.OrganizationR\forganization\"W\n" +
 	"\x19UpdateOrganizationRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12-\n" +
-	"\fdisplay_name\x18\x14 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\vdisplayName\"\x1c\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
+	"\x05alias\x18\x14 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x05alias\"\x1c\n" +
 	"\x1aUpdateOrganizationResponse\"\x1a\n" +
 	"\x18ListOrganizationsRequest\"`\n" +
 	"\x19ListOrganizationsResponse\x12C\n" +

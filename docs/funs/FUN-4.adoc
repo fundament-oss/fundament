@@ -29,7 +29,7 @@ Every resource has exactly one parent. There are no cross-cutting relationships,
 
 === Organization
 
-The organization is the top-level tenant boundary. It represents a company or team. Organizations have two name fields: an immutable `name` that serves as a machine-readable identifier (DNS-compatible, used in URLs and API references), and a mutable `display_name` for human consumption.
+The organization is the top-level tenant boundary. It represents a company or team. Organizations have two name fields: an immutable `name` that serves as a machine-readable identifier (DNS-compatible, used in URLs and API references), and a mutable `alias` for human consumption.
 
 Organizations own clusters and have members. That's it, they don't directly own projects or namespaces. Those are reached through the cluster.
 

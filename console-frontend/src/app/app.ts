@@ -378,9 +378,9 @@ export default class App implements OnInit {
       label = projectData?.project.name ?? 'Project';
     }
 
-    if (label === ':pluginDisplayName') {
+    if (label === ':pluginAlias') {
       const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
-      label = plugin?.displayName ?? params['pluginName'] ?? 'Plugin';
+      label = plugin?.alias ?? params['pluginName'] ?? 'Plugin';
     }
 
     if (label === ':resourceKindLabel') {
@@ -579,7 +579,7 @@ export default class App implements OnInit {
       .map((org) => {
         const detailed = detailedOrgs.find((d) => d.id === org.id);
         const projects = detailed ? detailed.clusters.flatMap((c) => c.projects) : [];
-        return { id: org.id, name: org.name, displayName: org.displayName, projects };
+        return { id: org.id, name: org.name, alias: org.alias, projects };
       });
   });
 
@@ -611,7 +611,7 @@ export default class App implements OnInit {
       if (orgId) {
         const org = this.organizationDataService.getOrganizationById(orgId);
         if (org) {
-          return { type: 'organization', name: org.displayName };
+          return { type: 'organization', name: org.alias };
         }
       }
     }

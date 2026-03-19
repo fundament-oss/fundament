@@ -229,7 +229,7 @@ const routes: Routes = [
                 (m) => m.default,
               ),
             data: {
-              breadcrumbs: [{ label: ':pluginDisplayName' }, { label: ':resourceKindLabel' }],
+              breadcrumbs: [{ label: ':pluginAlias' }, { label: ':resourceKindLabel' }],
             },
           },
           {
@@ -240,7 +240,7 @@ const routes: Routes = [
               ),
             data: {
               breadcrumbs: [
-                { label: ':pluginDisplayName' },
+                { label: ':pluginAlias' },
                 {
                   label: ':resourceKindLabel',
                   route: '/plugin-resources/:pluginName/:resourceKind',
@@ -264,7 +264,7 @@ const routes: Routes = [
             data: {
               breadcrumbs: [
                 { label: ':projectName', route: '/projects/:id' },
-                { label: ':pluginDisplayName' },
+                { label: ':pluginAlias' },
                 { label: ':resourceKindLabel' },
               ],
             },
@@ -278,7 +278,7 @@ const routes: Routes = [
             data: {
               breadcrumbs: [
                 { label: ':projectName', route: '/projects/:id' },
-                { label: ':pluginDisplayName' },
+                { label: ':pluginAlias' },
                 {
                   label: ':resourceKindLabel',
                   route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',

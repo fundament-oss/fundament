@@ -131,7 +131,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 
 	for id, name := range opts.organizations {
 		_, err = adminPool.Exec(t.Context(),
-			"INSERT INTO tenant.organizations (id, name, display_name) VALUES ($1, $2, $3)",
+			"INSERT INTO tenant.organizations (id, name, alias) VALUES ($1, $2, $3)",
 			id, name, name,
 		)
 		require.NoError(t, err)
@@ -229,11 +229,10 @@ func (e *testEnv) createAuthnToken(t *testing.T, userID uuid.UUID) string {
 	claims := auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "fundament-authn-api",
-			Subject:   "external-" + userID.String(),
+			Subject:   userID.String(),
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
 		},
-		UserID:          userID,
 		OrganizationIDs: user.OrgIDs,
 		Name:            user.Name,
 	}

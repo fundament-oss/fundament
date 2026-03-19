@@ -31,15 +31,17 @@ func (s *Server) authInterceptor() connect.UnaryInterceptorFunc {
 				return nil, connect.NewError(connect.CodeUnauthenticated, err)
 			}
 
+			// Parse user ID from JWT subject
+			userID := claims.UserID()
+
 			// Inject user info into context
-			ctx = WithUserID(ctx, claims.UserID)
-			ctx = WithClaims(ctx, claims)
+			ctx = WithUserID(ctx, userID)
 
 			// Skip organization header check for user-scoped endpoints
 			if s.isUserScopedEndpoint(req.Spec().Procedure) {
 				s.logger.DebugContext(ctx, "skipping organization check for user-scoped endpoint",
 					"procedure", req.Spec().Procedure,
-					"user_id", claims.UserID,
+					"user_id", userID,
 				)
 				return next(ctx, req)
 			}
@@ -65,7 +67,7 @@ func (s *Server) authInterceptor() connect.UnaryInterceptorFunc {
 
 			s.logger.DebugContext(ctx, "request authenticated",
 				"organization_id", organizationID,
-				"user_id", claims.UserID,
+				"user_id", userID,
 			)
 
 			// Call next handler with enriched context
