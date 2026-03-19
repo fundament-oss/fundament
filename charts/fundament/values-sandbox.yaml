@@ -21,6 +21,11 @@ authnApi:
   enabled: true
   replicas: 1
 
+kubeProxy:
+  enabled: true
+  logLevel: debug
+  mode: mock
+
 organizationApi:
   enabled: true
   replicas: 1

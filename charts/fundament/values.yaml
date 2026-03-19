@@ -23,6 +23,7 @@ images:
   docsFrontend: ghcr.io/fundament-oss/fundament/docs-frontend:latest
   clusterWorker: ghcr.io/fundament-oss/fundament/cluster-worker:latest
   authzWorker: ghcr.io/fundament-oss/fundament/authz-worker:latest
+  kubeProxy: ghcr.io/fundament-oss/fundament/kube-proxy:latest
   openfgaSetup: ghcr.io/fundament-oss/fundament/openfga-setup:latest
 
 # Database (CloudNativePG)
@@ -52,8 +53,6 @@ organizationApi:
   enabled: false
   replicas: 1
   logLevel: info
-  kubeProxyMode: mock # "mock" or "real"
-  kubeProxyKubeconfig: "" # path to kubeconfig file (only used when kubeProxyMode is "real")
   prometheusURL: mock # Prometheus URL for metrics; "mock" uses generated data
   httproute:
     enabled: false
@@ -62,6 +61,14 @@ organizationApi:
     #    namespace: gateway-ns
     hostnames: []
     #  - organization.example.com
+
+# Kube Proxy (Kubernetes API proxy for frontend)
+kubeProxy:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  mode: mock # "mock" or "real"
+  kubeProxyKubeconfig: "" # path to kubeconfig file (only used when mode is "real")
 
 # Cluster Worker
 clusterWorker:

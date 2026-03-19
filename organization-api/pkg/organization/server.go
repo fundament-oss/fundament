@@ -2,7 +2,6 @@ package organization
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/organization-api/pkg/organization/kube"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/rs/cors"
@@ -26,8 +24,6 @@ type Config struct {
 	JWTSecret            []byte
 	CORSAllowedOrigins   []string
 	Clock                clock.Clock
-	KubeProxyMode        string // "mock" (default) or "real"
-	KubeProxyKubeconfig  string // path to kubeconfig; only used when KubeProxyMode == "real"
 	MockPrometheusClient *prom.MockClient
 	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
 }
@@ -40,27 +36,12 @@ type Server struct {
 	authValidator  *auth.Validator
 	authz          *authz.Client
 	clock          clock.Clock
-	kubeClient     kube.KubeClient
 	handler        http.Handler
 	mockPromClient *prom.MockClient
 	prometheusURL  string
 }
 
-func newKubeClient(cfg *Config) kube.KubeClient {
-	if cfg.KubeProxyMode == "real" {
-		return &kube.RealKubeClient{KubeconfigPath: cfg.KubeProxyKubeconfig}
-	}
-	return &kube.MockKubeClient{}
-}
-
 func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client) (*Server, error) {
-	if cfg.KubeProxyMode == "" {
-		cfg.KubeProxyMode = "mock"
-	}
-	if cfg.KubeProxyMode != "mock" && cfg.KubeProxyMode != "real" {
-		return nil, fmt.Errorf(`invalid KubeProxyMode %q: must be "mock" or "real"`, cfg.KubeProxyMode)
-	}
-
 	clk := cfg.Clock
 	if clk == nil {
 		clk = clock.New()
@@ -74,7 +55,6 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		authValidator:  auth.NewValidator(cfg.JWTSecret, logger),
 		authz:          authzClient,
 		clock:          clk,
-		kubeClient:     newKubeClient(cfg),
 		mockPromClient: cfg.MockPrometheusClient,
 		prometheusURL:  cfg.PrometheusURL,
 	}
@@ -134,9 +114,6 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 	apiKeyPath, apiKeyHandler := organizationv1connect.NewAPIKeyServiceHandler(s, interceptors)
 	mux.Handle(apiKeyPath, apiKeyHandler)
 
-	mux.Handle("/k8s/", http.HandlerFunc(s.handleClusterProxy))
-
-	// TODO: add PATCH, PUT, DELETE to AllowedMethods when the k8s proxy gains write support.
 	metricsPath, metricsHandler := organizationv1connect.NewMetricsServiceHandler(s, interceptors)
 	mux.Handle(metricsPath, metricsHandler)
 

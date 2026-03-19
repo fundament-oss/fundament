@@ -1,43 +1,42 @@
-{{- if $.Values.organizationApi.enabled }}
+{{- if $.Values.kubeProxy.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: organization-api
+  name: kube-proxy
   labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "organization-api" "component" "backend") | nindent 4 }}
+    {{- include "fundament.labels" (dict "root" $ "name" "kube-proxy" "component" "backend") | nindent 4 }}
   annotations:
     reloader.stakater.com/auto: "true"
 spec:
-  replicas: {{ $.Values.organizationApi.replicas }}
+  replicas: {{ $.Values.kubeProxy.replicas }}
   selector:
     matchLabels:
-      {{- include "fundament.selectorLabels" (dict "root" $ "name" "organization-api") | nindent 6 }}
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "kube-proxy") | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "fundament.labels" (dict "root" $ "name" "organization-api" "component" "backend") | nindent 8 }}
+        {{- include "fundament.labels" (dict "root" $ "name" "kube-proxy" "component" "backend") | nindent 8 }}
     spec:
       containers:
-        - name: organization-api
-          image: {{ $.Values.images.organizationApi }}
+        - name: kube-proxy
+          image: {{ $.Values.images.kubeProxy }}
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: 8081
           env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: db-fun-fundament-api
-                  key: uri
             {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
             - name: LOG_LEVEL
-              value: {{ .Values.organizationApi.logLevel }}
-            - name: PROMETHEUS_URL
-              value: {{ $.Values.organizationApi.prometheusURL }}
+              value: {{ .Values.kubeProxy.logLevel }}
             {{- if $.Values.externalUrls.corsAllowedOrigins }}
             - name: CORS_ALLOWED_ORIGINS
               value: {{ $.Values.externalUrls.corsAllowedOrigins }}
+            {{- end }}
+            - name: KUBE_PROXY_MODE
+              value: {{ .Values.kubeProxy.mode | default "mock" }}
+            {{- if .Values.kubeProxy.kubeProxyKubeconfig }}
+            - name: KUBE_PROXY_KUBECONFIG
+              value: {{ .Values.kubeProxy.kubeProxyKubeconfig }}
             {{- end }}
             {{- if $.Values.openfga.enabled }}
             - name: OPENFGA_API_URL
@@ -58,28 +57,27 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: organization-api
+  name: kube-proxy
   labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "organization-api" "component" "backend") | nindent 4 }}
+    {{- include "fundament.labels" (dict "root" $ "name" "kube-proxy" "component" "backend") | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
-    - port: 8080
+    - port: 8081
       targetPort: http
       name: http
   selector:
-    {{- include "fundament.selectorLabels" (dict "root" $ "name" "organization-api") | nindent 4 }}
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "kube-proxy") | nindent 4 }}
 
 {{- if $.Values.ingress.enabled }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: organization-api
+  name: kube-proxy
   labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "organization-api" "component" "backend") | nindent 4 }}
+    {{- include "fundament.labels" (dict "root" $ "name" "kube-proxy" "component" "backend") | nindent 4 }}
   annotations:
-    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
     {{- if $.Values.ingress.tls.clusterIssuer }}
     cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
     {{- end }}
@@ -89,17 +87,17 @@ spec:
   tls:
     - hosts:
         - organization.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      secretName: organization-api-tls
+      secretName: kube-proxy-tls
   {{- end }}
   rules:
     - host: organization.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
       http:
         paths:
-          - path: /
+          - path: /k8s/
             pathType: Prefix
             backend:
               service:
-                name: organization-api
+                name: kube-proxy
                 port:
                   name: http
 {{- end }}

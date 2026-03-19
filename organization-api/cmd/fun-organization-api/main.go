@@ -29,8 +29,6 @@ type config struct {
 	ListenAddr          string     `env:"LISTEN_ADDR" envDefault:":8080"`
 	LogLevel            slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins  []string   `env:"CORS_ALLOWED_ORIGINS"`
-	KubeProxyMode       string     `env:"KUBE_PROXY_MODE" envDefault:"mock"`
-	KubeProxyKubeconfig string     `env:"KUBE_PROXY_KUBECONFIG"`
 	PrometheusURL       string     `env:"PROMETHEUS_URL" envDefault:"mock"`
 }
 
@@ -117,8 +115,6 @@ func run() error {
 		JWTSecret:            []byte(cfg.JWTSecret),
 		CORSAllowedOrigins:   cfg.CORSAllowedOrigins,
 		Clock:                clock.New(),
-		KubeProxyMode:        cfg.KubeProxyMode,
-		KubeProxyKubeconfig:  cfg.KubeProxyKubeconfig,
 		MockPrometheusClient: mockClient,
 		PrometheusURL:        cfg.PrometheusURL,
 	}, db, authzClient)

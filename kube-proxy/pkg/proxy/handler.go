@@ -1,4 +1,4 @@
-package organization
+package proxy
 
 import (
 	"errors"
@@ -9,21 +9,20 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 
 	"github.com/fundament-oss/fundament/common/authz"
-	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 )
+
+// OrganizationHeader is the header name for selecting the active organization.
+const OrganizationHeader = "Fun-Organization"
 
 // handleClusterProxy is a read-only HTTP proxy to the Kubernetes API for a specific cluster.
 // Path format: /k8s/{clusterID}/{...kubernetes_api_path}
 //
-// Authentication mirrors the Connect interceptor logic: JWT from Authorization header or
-// fundament_auth cookie, plus Fun-Organization header for org scoping.
-// Authorization: user must have can_view on the cluster.
+// Authentication: JWT from Authorization header or fundament_auth cookie,
+// plus Fun-Organization header for org scoping.
+// Authorization: user must have can_view on the cluster (via OpenFGA).
 func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
 	// Read-only: reject anything that is not a GET request.
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -55,10 +54,7 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enrich context for RLS (PrepareConn uses OrganizationIDFromContext / UserIDFromContext).
-	ctx = WithOrganizationID(ctx, organizationID)
-	ctx = WithUserID(ctx, claims.UserID)
-	ctx = WithClaims(ctx, claims)
+	ctx := WithUserID(r.Context(), claims.UserID())
 
 	// --- Parse cluster ID from URL ---
 	// Path: /k8s/{clusterID}/{...}
@@ -78,20 +74,11 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	// --- Authorization ---
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
-		http.Error(w, "permission denied", http.StatusForbidden)
-		return
-	}
-
-	// Confirm cluster exists and belongs to the organization. OpenFGA permissions can only exist
-	// for real clusters, but RLS ensures the query returns nothing if the cluster belongs to a
-	// different org, giving a clean 404 instead of proxying to an unauthorised cluster.
-	_, err = s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			http.Error(w, "cluster not found", http.StatusNotFound)
+		if errors.Is(err, errPermissionDenied) {
+			http.Error(w, "permission denied", http.StatusForbidden)
 			return
 		}
-		s.logger.ErrorContext(ctx, "failed to get cluster for proxy", "error", err)
+		s.logger.ErrorContext(ctx, "authorization check failed", "error", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -99,11 +86,8 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	// --- Proxy to Kubernetes API ---
 
 	k8sPath = "/" + k8sPath
-
-	// Only allow standard Kubernetes API paths to prevent proxying arbitrary backend endpoints.
-	if !strings.HasPrefix(k8sPath, "/api/") && !strings.HasPrefix(k8sPath, "/apis/") {
-		http.Error(w, "invalid kubernetes API path", http.StatusBadRequest)
-		return
+	if r.URL.RawQuery != "" {
+		k8sPath = k8sPath + "?" + r.URL.RawQuery
 	}
 
 	statusCode, body, err := s.kubeClient.Do(ctx, r.Method, k8sPath, r.Body)
