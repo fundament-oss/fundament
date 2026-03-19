@@ -2,26 +2,27 @@
 -- Determines the desired access level for a user on a cluster.
 -- Returns 'admin' if the user is an accepted org admin, 'member' if the user
 -- is a project member on any project in the cluster, or 'none' otherwise.
--- Used by both the write path (UserSyncHandler) and read path (authn-api token endpoint).
+-- Used by the write path (UserSyncHandler).
+-- NOTE: Duplicated in authn-api/pkg/db/queries.sql — keep both in sync.
 SELECT
     CASE
-        WHEN ou.permission = 'admin'
-            AND ou.status = 'accepted'
-            AND ou.deleted IS NULL
+        WHEN tenant.organizations_users.permission = 'admin'
+            AND tenant.organizations_users.status = 'accepted'
+            AND tenant.organizations_users.deleted IS NULL
             THEN 'admin'
-        WHEN pm.id IS NOT NULL
-            AND pm.deleted IS NULL
+        WHEN tenant.project_members.id IS NOT NULL
+            AND tenant.project_members.deleted IS NULL
             THEN 'member'
         ELSE 'none'
     END AS access_level
 FROM tenant.clusters
-LEFT JOIN tenant.organizations_users ou
-    ON ou.organization_id = tenant.clusters.organization_id
-    AND ou.user_id = @user_id
-LEFT JOIN tenant.projects p
-    ON p.cluster_id = tenant.clusters.id AND p.deleted IS NULL
-LEFT JOIN tenant.project_members pm
-    ON pm.project_id = p.id AND pm.user_id = @user_id
+LEFT JOIN tenant.organizations_users
+    ON tenant.organizations_users.organization_id = tenant.clusters.organization_id
+    AND tenant.organizations_users.user_id = @user_id
+LEFT JOIN tenant.projects
+    ON tenant.projects.cluster_id = tenant.clusters.id AND tenant.projects.deleted IS NULL
+LEFT JOIN tenant.project_members
+    ON tenant.project_members.project_id = tenant.projects.id AND tenant.project_members.user_id = @user_id
 WHERE tenant.clusters.id = @cluster_id
 LIMIT 1;
 
@@ -29,40 +30,40 @@ LIMIT 1;
 -- Returns all users who should have access to a cluster, with their access level.
 -- Used by the reconciliation loop to compare against actual state on the shoot.
 SELECT
-    u.id AS user_id,
-    u.email,
+    tenant.users.id AS user_id,
+    tenant.users.email,
     CASE
-        WHEN ou.permission = 'admin'
-            AND ou.status = 'accepted'
-            AND ou.deleted IS NULL
+        WHEN tenant.organizations_users.permission = 'admin'
+            AND tenant.organizations_users.status = 'accepted'
+            AND tenant.organizations_users.deleted IS NULL
             THEN 'admin'
         ELSE 'member'
     END AS access_level
 FROM tenant.clusters
-JOIN tenant.organizations_users ou
-    ON ou.organization_id = tenant.clusters.organization_id
-    AND ou.status = 'accepted'
-    AND ou.deleted IS NULL
-JOIN tenant.users u ON u.id = ou.user_id AND u.deleted IS NULL
+JOIN tenant.organizations_users
+    ON tenant.organizations_users.organization_id = tenant.clusters.organization_id
+    AND tenant.organizations_users.status = 'accepted'
+    AND tenant.organizations_users.deleted IS NULL
+JOIN tenant.users ON tenant.users.id = tenant.organizations_users.user_id AND tenant.users.deleted IS NULL
 WHERE tenant.clusters.id = @cluster_id
-    AND ou.permission = 'admin'
+    AND tenant.organizations_users.permission = 'admin'
 UNION
 SELECT
-    u.id AS user_id,
-    u.email,
+    tenant.users.id AS user_id,
+    tenant.users.email,
     'member' AS access_level
 FROM tenant.clusters
-JOIN tenant.projects p
-    ON p.cluster_id = tenant.clusters.id AND p.deleted IS NULL
-JOIN tenant.project_members pm
-    ON pm.project_id = p.id AND pm.deleted IS NULL
-JOIN tenant.users u ON u.id = pm.user_id AND u.deleted IS NULL
+JOIN tenant.projects
+    ON tenant.projects.cluster_id = tenant.clusters.id AND tenant.projects.deleted IS NULL
+JOIN tenant.project_members
+    ON tenant.project_members.project_id = tenant.projects.id AND tenant.project_members.deleted IS NULL
+JOIN tenant.users ON tenant.users.id = tenant.project_members.user_id AND tenant.users.deleted IS NULL
 WHERE tenant.clusters.id = @cluster_id
     AND NOT EXISTS (
-        SELECT 1 FROM tenant.organizations_users ou2
-        WHERE ou2.organization_id = tenant.clusters.organization_id
-            AND ou2.user_id = pm.user_id
-            AND ou2.permission = 'admin'
-            AND ou2.status = 'accepted'
-            AND ou2.deleted IS NULL
+        SELECT 1 FROM tenant.organizations_users
+        WHERE tenant.organizations_users.organization_id = tenant.clusters.organization_id
+            AND tenant.organizations_users.user_id = tenant.project_members.user_id
+            AND tenant.organizations_users.permission = 'admin'
+            AND tenant.organizations_users.status = 'accepted'
+            AND tenant.organizations_users.deleted IS NULL
     );

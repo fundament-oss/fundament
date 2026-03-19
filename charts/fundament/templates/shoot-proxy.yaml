@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: socat
-          image: alpine/socat:latest
+          image: alpine/socat:1.8.0.1
           args:
             - TCP-LISTEN:443,fork,reuseaddr
             - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.seedNodePort }}
@@ -74,7 +74,7 @@ spec:
     spec:
       containers:
         - name: socat
-          image: alpine/socat:latest
+          image: alpine/socat:1.8.0.1
           args:
             - TCP-LISTEN:443,fork,reuseaddr
             - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.gardenNodePort }}

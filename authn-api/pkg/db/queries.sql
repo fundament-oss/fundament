@@ -63,6 +63,7 @@ ORDER BY organizations_users.created ASC;
 -- Determines the access level for a user on a cluster.
 -- Returns 'admin' if the user is an accepted org admin, 'member' if the user
 -- is a project member on any project in the cluster, or 'none' otherwise.
+-- NOTE: Duplicated in cluster-worker/pkg/db/user_access.sql — keep both in sync.
 SELECT
     CASE
         WHEN tenant.organizations_users.permission = 'admin'

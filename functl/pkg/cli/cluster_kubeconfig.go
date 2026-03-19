@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"os"
 
@@ -62,13 +61,7 @@ func buildKubeconfig(clusterID, apiServerURL, caData, functlPath string) map[str
 	contextName := clusterName
 	userName := "fundament-user-" + clusterID
 
-	// caData from the API is already base64-encoded
-	caDataBytes, err := base64.StdEncoding.DecodeString(caData)
-	if err != nil {
-		// If it's not base64, use it as raw PEM and encode it
-		caDataBytes = []byte(caData)
-	}
-
+	// caData from the API is already base64-encoded (by extractShootCA in cluster-worker).
 	return map[string]any{
 		"apiVersion": "v1",
 		"kind":       "Config",
@@ -77,7 +70,7 @@ func buildKubeconfig(clusterID, apiServerURL, caData, functlPath string) map[str
 				"name": clusterName,
 				"cluster": map[string]any{
 					"server":                     apiServerURL,
-					"certificate-authority-data": base64.StdEncoding.EncodeToString(caDataBytes),
+					"certificate-authority-data": caData,
 				},
 			},
 		},

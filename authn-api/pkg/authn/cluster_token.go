@@ -2,11 +2,13 @@ package authn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -54,13 +56,16 @@ func (s *AuthnServer) HandleClusterToken(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	clusterUUID := clusterID
 	ctx := r.Context()
 
-	cluster, err := s.queries.ClusterGetForToken(ctx, db.ClusterGetForTokenParams{ClusterID: clusterUUID})
+	cluster, err := s.queries.ClusterGetForToken(ctx, db.ClusterGetForTokenParams{ClusterID: clusterID})
 	if err != nil {
-		s.logger.Debug("cluster not found", "cluster_id", clusterUUID, "error", err)
-		s.writeErrorJSON(w, http.StatusNotFound, "cluster not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.writeErrorJSON(w, http.StatusNotFound, "cluster not found")
+			return
+		}
+		s.logger.Error("failed to get cluster", "cluster_id", clusterID, "error", err)
+		s.writeErrorJSON(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
@@ -69,9 +74,9 @@ func (s *AuthnServer) HandleClusterToken(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	accessLevel, err := s.queries.ResolveUserAccess(ctx, db.ResolveUserAccessParams{UserID: claims.UserID(), ClusterID: clusterUUID})
+	accessLevel, err := s.queries.ResolveUserAccess(ctx, db.ResolveUserAccessParams{UserID: claims.UserID(), ClusterID: clusterID})
 	if err != nil {
-		s.logger.Error("failed to resolve user access", "error", err, "user_id", claims.UserID(), "cluster_id", clusterUUID)
+		s.logger.Error("failed to resolve user access", "error", err, "user_id", claims.UserID(), "cluster_id", clusterID)
 		s.writeErrorJSON(w, http.StatusInternalServerError, "internal error")
 		return
 	}
@@ -81,15 +86,15 @@ func (s *AuthnServer) HandleClusterToken(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	token, expiresAt, err := s.requestSAToken(ctx, clusterUUID, claims.UserID())
+	token, expiresAt, err := s.requestSAToken(ctx, clusterID, claims.UserID())
 	if err != nil {
-		s.logger.Error("failed to request SA token", "error", err, "cluster_id", clusterUUID, "user_id", claims.UserID())
+		s.logger.Error("failed to request SA token", "error", err, "cluster_id", clusterID, "user_id", claims.UserID())
 		s.writeErrorJSON(w, http.StatusServiceUnavailable, "sync pending, try again shortly")
 		return
 	}
 
 	s.logger.Info("cluster token issued",
-		"cluster_id", clusterUUID,
+		"cluster_id", clusterID,
 		"user_id", claims.UserID(),
 		"access_level", accessLevel,
 	)
