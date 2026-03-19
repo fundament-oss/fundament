@@ -72,13 +72,13 @@ func (w *Worker) Run(ctx context.Context) error {
 // runAllHandlers delegates status checking to each registered StatusHandler.
 func (w *Worker) runAllHandlers(ctx context.Context) error {
 	if ctx.Err() != nil {
-		return nil //nolint:nilerr // gracefull shutdown
+		return nil //nolint:nilerr // graceful shutdown
 	}
 
 	var errs []error
 	for _, h := range w.registry.StatusHandlers() {
 		if ctx.Err() != nil {
-			return nil //nolint:nilerr // gracefull shutdown
+			return nil //nolint:nilerr // graceful shutdown
 		}
 		if err := h.CheckStatus(ctx); err != nil {
 			w.logger.Error("status handler failed", "error", err)

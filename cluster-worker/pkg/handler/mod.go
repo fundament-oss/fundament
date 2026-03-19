@@ -11,13 +11,16 @@ import (
 type EntityType string
 
 const (
-	EntityCluster EntityType = "cluster"
+	EntityCluster       EntityType = "cluster"
+	EntityOrgUser       EntityType = "org_user"
+	EntityProjectMember EntityType = "project_member"
 )
 
 // SyncContext carries metadata from the outbox row to the sync handler.
 type SyncContext struct {
-	Event  string // created, updated, deleted, reconcile
-	Source string // trigger, reconcile, manual, node_pool
+	EntityType EntityType // which entity type this row represents
+	Event      string     // created, updated, deleted, reconcile, ready
+	Source     string     // trigger, reconcile, manual, node_pool, status
 }
 
 // SyncHandler processes an outbox row for a specific entity type.
@@ -50,13 +53,15 @@ type ReconcileHandler interface {
 // use this to discover which handlers exist and route work to them.
 type Registry struct {
 	syncHandlers      map[EntityType]SyncHandler
+	eventSyncHandlers map[string]SyncHandler // "entityType:event" → handler (overrides syncHandlers)
 	statusHandlers    []StatusHandler
 	reconcileHandlers []ReconcileHandler
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
-		syncHandlers: make(map[EntityType]SyncHandler),
+		syncHandlers:      make(map[EntityType]SyncHandler),
+		eventSyncHandlers: make(map[string]SyncHandler),
 	}
 }
 
@@ -79,11 +84,28 @@ func (r *Registry) RegisterReconcile(h ReconcileHandler) {
 	r.reconcileHandlers = append(r.reconcileHandlers, h)
 }
 
-// SyncHandlerFor returns the handler for an entity type, or an error if none is registered.
-func (r *Registry) SyncHandlerFor(entityType EntityType) (SyncHandler, error) {
+// RegisterSyncForEvent registers a SyncHandler for a specific entity type + event combination.
+// This takes precedence over the default entity-type handler.
+// Panics if a handler is already registered for that combination (catch wiring bugs early).
+func (r *Registry) RegisterSyncForEvent(entityType EntityType, event string, h SyncHandler) {
+	key := string(entityType) + ":" + event
+	if _, exists := r.eventSyncHandlers[key]; exists {
+		panic(fmt.Sprintf("duplicate event sync handler for %s:%s", entityType, event))
+	}
+	r.eventSyncHandlers[key] = h
+}
+
+// SyncHandlerFor returns the handler for an entity type and event.
+// Checks event-specific handlers first, then falls back to the default entity-type handler.
+func (r *Registry) SyncHandlerFor(entityType EntityType, event string) (SyncHandler, error) {
+	// Check event-specific handler first
+	key := string(entityType) + ":" + event
+	if h, ok := r.eventSyncHandlers[key]; ok {
+		return h, nil
+	}
 	h, ok := r.syncHandlers[entityType]
 	if !ok {
-		return nil, fmt.Errorf("no sync handler registered for %s", entityType)
+		return nil, fmt.Errorf("no sync handler registered for %s (event=%s)", entityType, event)
 	}
 	return h, nil
 }

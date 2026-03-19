@@ -141,6 +141,17 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 						"error", err)
 				}
 			}
+
+			// On transition to ready, insert outbox row to trigger initial user sync.
+			if shootStatus.Status == gardener.StatusReady {
+				if err := h.queries.OutboxInsertReady(ctx, db.OutboxInsertReadyParams{
+					ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
+				}); err != nil {
+					h.logger.Warn("failed to insert ready outbox row",
+						"cluster_id", cluster.ID,
+						"error", err)
+				}
+			}
 		}
 
 		h.logger.Info("updated shoot status",

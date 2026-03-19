@@ -74,7 +74,7 @@ func (w *Worker) Run(ctx context.Context) error {
 // Each handler owns its own re-enqueue and orphan-detection logic.
 func (w *Worker) reconcileAll(ctx context.Context) error {
 	if ctx.Err() != nil {
-		return nil //nolint:nilerr // gracefull shutdown
+		return nil //nolint:nilerr // graceful shutdown
 	}
 
 	w.logger.Info("starting reconciliation")

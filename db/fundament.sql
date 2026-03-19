@@ -128,7 +128,7 @@ CREATE OR REPLACE FUNCTION tenant.node_pool_outbox_trigger ()
 	LANGUAGE plpgsql
 	VOLATILE 
 	CALLED ON NULL INPUT
-	SECURITY INVOKER
+	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
 	AS 
@@ -158,7 +158,7 @@ CREATE OR REPLACE FUNCTION tenant.cluster_outbox_cluster_trigger ()
 	LANGUAGE plpgsql
 	VOLATILE 
 	CALLED ON NULL INPUT
-	SECURITY INVOKER
+	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
 	AS 
@@ -192,7 +192,7 @@ CREATE OR REPLACE FUNCTION tenant.cluster_outbox_organization_user_trigger ()
 	LANGUAGE plpgsql
 	VOLATILE 
 	CALLED ON NULL INPUT
-	SECURITY INVOKER
+	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
 	AS 
@@ -224,7 +224,7 @@ CREATE OR REPLACE FUNCTION tenant.cluster_outbox_project_member_trigger ()
 	LANGUAGE plpgsql
 	VOLATILE 
 	CALLED ON NULL INPUT
-	SECURITY INVOKER
+	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
 	AS 
@@ -1015,7 +1015,7 @@ CREATE TABLE tenant.cluster_events (
 	message text,
 	attempt integer,
 	CONSTRAINT cluster_events_pk PRIMARY KEY (id),
-	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted')),
+	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','user_sync_succeeded','user_sync_failed')),
 	CONSTRAINT cluster_events_ck_sync_action CHECK (sync_action IN ('sync','delete'))
 );
 -- ddl-end --
@@ -1589,6 +1589,33 @@ USING btree
 	user_id
 )
 WHERE (deleted IS NULL AND status NOT IN ('declined', 'revoked'));
+-- ddl-end --
+
+-- object: organizations_users_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_users_cluster_worker_policy ON tenant.organizations_users CASCADE;
+CREATE POLICY organizations_users_cluster_worker_policy ON tenant.organizations_users
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: project_members_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS project_members_cluster_worker_policy ON tenant.project_members CASCADE;
+CREATE POLICY project_members_cluster_worker_policy ON tenant.project_members
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: users_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS users_cluster_worker_policy ON tenant.users CASCADE;
+CREATE POLICY users_cluster_worker_policy ON tenant.users
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
 -- ddl-end --
 
 -- object: cluster_outbox_organization_user | type: TRIGGER --
@@ -2366,6 +2393,30 @@ GRANT SELECT
 GRANT SELECT
    ON TABLE tenant.project_members
    TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_3af5f26765 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organizations_users
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_0223382d53 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.project_members
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_4e91af4339 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.users
+   TO fun_cluster_worker;
 
 -- ddl-end --
 
