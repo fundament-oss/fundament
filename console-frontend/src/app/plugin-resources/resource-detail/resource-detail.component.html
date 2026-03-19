@@ -1,4 +1,11 @@
-@if (resource()) {
+@if (customUIUrl()) {
+  <app-plugin-iframe
+    [src]="customUIUrl()!"
+    [pluginName]="pluginName()"
+    [crdKind]="crdDef()!.kind"
+    view="detail"
+  />
+} @else if (resource()) {
   <div class="space-y-6">
     <!-- Header -->
     <div class="card">

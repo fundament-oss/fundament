@@ -56,6 +56,7 @@ function parsePluginYaml(yamlText: string): PluginDefinition {
     author: raw.author,
     menu: raw.menu,
     crds: parsedCrds,
+    customUI: raw.customUI,
   };
 }
 
@@ -68,6 +69,7 @@ export default class PluginRegistryService {
   private readonly pluginFiles = [
     '/plugins/cert-manager/cert-manager.plugin.yaml',
     '/plugins/cnpg/cnpg.plugin.yaml',
+    '/plugins/demo/demo.plugin.yaml',
   ];
 
   async loadPlugins(): Promise<void> {
