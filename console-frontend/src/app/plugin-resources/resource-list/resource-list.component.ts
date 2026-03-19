@@ -119,7 +119,7 @@ export default class ResourceListComponent implements OnInit {
       const clusterId = this.clusterContext.selectedClusterId();
       if (pluginName && resourceKind && clusterId) {
         untracked(() => {
-          this.loadCrdsAndResources(clusterId);
+          this.loadCrdsAndResources(pluginName, resourceKind, clusterId);
         });
       }
     });
@@ -137,7 +137,11 @@ export default class ResourceListComponent implements OnInit {
     this.clusterContext.onClusterChange(clusterId);
   }
 
-  private async loadCrdsAndResources(clusterId: string): Promise<void> {
+  private async loadCrdsAndResources(
+    pluginName: string,
+    resourceKind: string,
+    clusterId: string,
+  ): Promise<void> {
     const orgId = this.orgContext.currentOrganizationId();
     if (!orgId) return;
 
@@ -148,13 +152,13 @@ export default class ResourceListComponent implements OnInit {
     this.resources.set([]);
 
     try {
-      await this.registry.loadCrdsForPlugin(this.pluginName(), clusterId, orgApiUrl, orgId);
-      const crd = this.registry.getCrd(this.pluginName(), this.resourceKind());
+      await this.registry.loadCrdsForPlugin(pluginName, clusterId, orgApiUrl, orgId);
+      const crd = this.registry.getCrd(pluginName, resourceKind);
       this.crdDef.set(crd);
 
       if (crd) {
-        await this.store.loadResources(this.pluginName(), crd, clusterId, orgApiUrl, orgId);
-        this.resources.set(this.store.listResources(this.pluginName(), crd.kind, clusterId));
+        await this.store.loadResources(pluginName, crd, clusterId, orgApiUrl, orgId);
+        this.resources.set(this.store.listResources(pluginName, crd.kind, clusterId));
       }
     } catch (err) {
       this.errorMessage.set(`Failed to load resources: ${err}`);

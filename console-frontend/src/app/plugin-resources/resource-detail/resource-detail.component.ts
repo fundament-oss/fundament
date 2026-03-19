@@ -5,6 +5,7 @@ import {
   computed,
   signal,
   effect,
+  untracked,
   OnInit,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -101,6 +102,13 @@ export default class ResourceDetailComponent implements OnInit {
       const r = this.resource();
       this.titleService.setTitle(r?.metadata.name);
     });
+
+    effect(() => {
+      const clusterId = this.clusterContext.selectedClusterId();
+      if (clusterId) {
+        untracked(() => this.loadCrdAndResource(clusterId));
+      }
+    });
   }
 
   async ngOnInit(): Promise<void> {
@@ -108,11 +116,6 @@ export default class ResourceDetailComponent implements OnInit {
       await this.clusterContext.loadClusters();
     } catch {
       this.errorMessage.set('Failed to load clusters.');
-      return;
-    }
-    const clusterId = this.clusterContext.selectedClusterId();
-    if (clusterId) {
-      await this.loadCrdAndResource(clusterId);
     }
   }
 

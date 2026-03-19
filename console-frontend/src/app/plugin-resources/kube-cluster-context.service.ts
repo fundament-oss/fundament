@@ -1,4 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { CLUSTER } from '../../connect/tokens';
@@ -15,11 +15,14 @@ export default class KubeClusterContextService {
 
   isLoadingClusters = signal(true);
 
-  private loadStarted = signal(false);
+  private loadPromise: Promise<void> | null = null;
 
-  async loadClusters(): Promise<void> {
-    if (this.loadStarted()) return;
-    this.loadStarted.set(true);
+  loadClusters(): Promise<void> {
+    this.loadPromise ??= this.doLoad();
+    return this.loadPromise;
+  }
+
+  private async doLoad(): Promise<void> {
     try {
       const response = await firstValueFrom(
         this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),

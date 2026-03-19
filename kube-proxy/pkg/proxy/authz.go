@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -38,4 +39,4 @@ func (s *Server) checkPermission(ctx context.Context, action authz.Action, resou
 	return nil
 }
 
-var errPermissionDenied = fmt.Errorf("permission denied")
+var errPermissionDenied = errors.New("permission denied")

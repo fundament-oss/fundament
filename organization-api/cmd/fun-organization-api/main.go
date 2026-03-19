@@ -23,13 +23,13 @@ import (
 )
 
 type config struct {
-	Database            psqldb.Config
-	OpenFGA             authz.Config
-	JWTSecret           string     `env:"JWT_SECRET,required,notEmpty" `
-	ListenAddr          string     `env:"LISTEN_ADDR" envDefault:":8080"`
-	LogLevel            slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins  []string   `env:"CORS_ALLOWED_ORIGINS"`
-	PrometheusURL       string     `env:"PROMETHEUS_URL" envDefault:"mock"`
+	Database           psqldb.Config
+	OpenFGA            authz.Config
+	JWTSecret          string     `env:"JWT_SECRET,required,notEmpty" `
+	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
+	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
+	PrometheusURL      string     `env:"PROMETHEUS_URL" envDefault:"mock"`
 }
 
 func main() {

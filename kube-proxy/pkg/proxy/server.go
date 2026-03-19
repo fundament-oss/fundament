@@ -14,8 +14,8 @@ import (
 type Config struct {
 	JWTSecret          []byte
 	CORSAllowedOrigins []string
-	KubeProxyMode      string // "mock" (default) or "real"
-	KubeProxyKubeconfig string // path to kubeconfig; only used when KubeProxyMode == "real"
+	Mode               string // "mock" (default) or "real"
+	KubeconfigPath     string // path to kubeconfig; only used when Mode == "real"
 }
 
 type Server struct {
@@ -27,18 +27,18 @@ type Server struct {
 }
 
 func newKubeClient(cfg *Config) kube.Client {
-	if cfg.KubeProxyMode == "real" {
-		return &kube.RealClient{KubeconfigPath: cfg.KubeProxyKubeconfig}
+	if cfg.Mode == "real" {
+		return &kube.RealClient{KubeconfigPath: cfg.KubeconfigPath}
 	}
 	return &kube.MockClient{}
 }
 
 func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, error) {
-	if cfg.KubeProxyMode == "" {
-		cfg.KubeProxyMode = "mock"
+	if cfg.Mode == "" {
+		cfg.Mode = "mock"
 	}
-	if cfg.KubeProxyMode != "mock" && cfg.KubeProxyMode != "real" {
-		return nil, fmt.Errorf(`invalid KubeProxyMode %q: must be "mock" or "real"`, cfg.KubeProxyMode)
+	if cfg.Mode != "mock" && cfg.Mode != "real" {
+		return nil, fmt.Errorf(`invalid Mode %q: must be "mock" or "real"`, cfg.Mode)
 	}
 
 	s := &Server{

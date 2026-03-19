@@ -55,10 +55,10 @@ func run() error {
 	}
 
 	server, err := proxy.New(logger, &proxy.Config{
-		JWTSecret:           []byte(cfg.JWTSecret),
-		CORSAllowedOrigins:  cfg.CORSAllowedOrigins,
-		KubeProxyMode:       cfg.KubeProxyMode,
-		KubeProxyKubeconfig: cfg.KubeProxyKubeconfig,
+		JWTSecret:          []byte(cfg.JWTSecret),
+		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
+		Mode:               cfg.KubeProxyMode,
+		KubeconfigPath:     cfg.KubeProxyKubeconfig,
 	}, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create proxy server: %w", err)

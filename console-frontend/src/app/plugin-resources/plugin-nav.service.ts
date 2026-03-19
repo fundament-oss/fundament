@@ -15,17 +15,14 @@ export default class PluginNavService {
     return this.registry
       .allPlugins()
       .filter((plugin) => (plugin.menu[section]?.length ?? 0) > 0)
-      .reduce<PluginNavGroup[]>((groups, plugin) => {
-        const items: PluginNavItem[] = (plugin.menu[section] ?? []).map((menuItem) => ({
+      .map((plugin) => ({
+        pluginName: plugin.name,
+        alias: plugin.alias,
+        items: (plugin.menu[section] ?? []).map((menuItem) => ({
           label: kindToLabel(menuItem.crd),
           crdKind: menuItem.crd,
           icon: menuItem.icon,
-        }));
-
-        if (items.length > 0) {
-          groups.push({ pluginName: plugin.name, alias: plugin.alias, items });
-        }
-        return groups;
-      }, []);
+        })),
+      }));
   }
 }

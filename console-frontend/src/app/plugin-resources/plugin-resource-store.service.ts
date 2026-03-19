@@ -17,12 +17,12 @@ export default class PluginResourceStoreService {
     orgId: string,
   ): Promise<void> {
     const cacheKey = `${pluginName}/${crd.kind}/${clusterId}`;
-    if (this.resourceCache.has(cacheKey)) return undefined;
+    if (this.resourceCache.has(cacheKey)) return;
 
     const existing = this.inFlight.get(cacheKey);
     if (existing) {
       await existing;
-      return undefined;
+      return;
     }
 
     const base = orgApiUrl.replace(/\/$/, '');
