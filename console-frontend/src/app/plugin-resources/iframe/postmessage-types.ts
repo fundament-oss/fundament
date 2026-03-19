@@ -12,9 +12,6 @@ export type HostMessage =
   | {
       type: 'fundament:theme-changed';
       theme: 'light' | 'dark';
-    }
-  | {
-      type: 'fundament:resize-requested';
     };
 
 export type PluginMessage =

@@ -78,17 +78,7 @@ export default class PluginIframeComponent implements OnInit {
       this.handleMessage(event.data, iframe);
     };
 
-    const onResize = (): void => {
-      if (!this.iframeReady) return;
-      const iframe = this.iframeRef()?.nativeElement;
-      if (!iframe?.contentWindow) return;
-
-      const msg: HostMessage = { type: 'fundament:resize-requested' };
-      iframe.contentWindow.postMessage(msg, '*');
-    };
-
     window.addEventListener('message', onMessage);
-    window.addEventListener('resize', onResize);
 
     const observer = new MutationObserver(() => {
       if (!this.iframeReady) return;
@@ -109,7 +99,6 @@ export default class PluginIframeComponent implements OnInit {
 
     this.destroyRef.onDestroy(() => {
       window.removeEventListener('message', onMessage);
-      window.removeEventListener('resize', onResize);
       observer.disconnect();
     });
   }
