@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
-	"strings"
-	"sync"
-
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"net/http"
+	"strings"
 )
 
 // Client abstracts access to a Kubernetes API server.
@@ -18,40 +16,30 @@ type Interface interface {
 }
 
 // Client connects to a real Kubernetes API server using a kubeconfig.
-// The HTTP client and host URL are initialized lazily on the first request.
 // Auth is handled by the transport created via rest.HTTPClientFor, which supports
 // bearer tokens, client certificates, and basic auth from the kubeconfig.
 // Exec-based credential plugins (e.g. aws-iam-authenticator) are not supported.
 type Client struct {
-	KubeconfigPath string
-
-	once       sync.Once
 	httpClient *http.Client
 	host       string
-	initErr    error
 }
 
-func (r *Client) init() {
-	cfg, err := clientcmd.BuildConfigFromFlags("", r.KubeconfigPath)
+func New(kubeconfigPath string) (*Client, error) {
+	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
-		r.initErr = fmt.Errorf("load kubeconfig: %w", err)
-		return
+		return nil, fmt.Errorf("load kubeconfig: %w", err)
 	}
 	httpClient, err := rest.HTTPClientFor(cfg)
 	if err != nil {
-		r.initErr = fmt.Errorf("build http client: %w", err)
-		return
+		return nil, fmt.Errorf("build http client: %w", err)
 	}
-	r.httpClient = httpClient
-	r.host = strings.TrimRight(cfg.Host, "/")
+	return &Client{
+		httpClient: httpClient,
+		host:       strings.TrimRight(cfg.Host, "/"),
+	}, nil
 }
 
 func (r *Client) Do(ctx context.Context, method, path string, body io.Reader) (int, io.ReadCloser, error) {
-	r.once.Do(r.init)
-	if r.initErr != nil {
-		return 0, nil, r.initErr
-	}
-
 	url := r.host + path
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {

@@ -26,11 +26,11 @@ type Server struct {
 	handler       http.Handler
 }
 
-func newKubeClient(cfg *Config) kube.Interface {
+func newKubeClient(cfg *Config) (kube.Interface, error) {
 	if cfg.Mode == "real" {
-		return &kube.Client{KubeconfigPath: cfg.KubeconfigPath}
+		return kube.New(cfg.KubeconfigPath)
 	}
-	return &kube.MockClient{}
+	return &kube.MockClient{}, nil
 }
 
 func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, error) {
@@ -41,11 +41,16 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		return nil, fmt.Errorf(`invalid Mode %q: must be "mock" or "real"`, cfg.Mode)
 	}
 
+	kubeClient, err := newKubeClient(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("create kube client: %w", err)
+	}
+
 	s := &Server{
 		logger:        logger,
 		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
 		authz:         authzClient,
-		kubeClient:    newKubeClient(cfg),
+		kubeClient:    kubeClient,
 	}
 
 	mux := http.NewServeMux()
