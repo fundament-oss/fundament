@@ -69,9 +69,6 @@ export default class PluginRegistryService {
   // Secondary index for O(1) lookup by kind, scoped by cluster
   private parsedCrdByKind = new Map<string, ParsedCrd>(); // key: "${pluginName}/${clusterId}/${kind}"
 
-  // Tracks the currently active cluster so lookups use the right scope
-  private activeClusterId = '';
-
   private readonly pluginFiles = [
     '/plugins/cert-manager/cert-manager.plugin.yaml',
     '/plugins/cnpg/cnpg.plugin.yaml',
@@ -113,7 +110,6 @@ export default class PluginRegistryService {
     const plugin = this.getPlugin(pluginName);
     if (!plugin) return;
 
-    this.activeClusterId = clusterId;
     const base = orgApiUrl.replace(/\/$/, '');
 
     await Promise.allSettled(
@@ -144,8 +140,8 @@ export default class PluginRegistryService {
     return this.plugins().find((p) => p.name === name);
   }
 
-  getCrd(pluginName: string, kind: string): ParsedCrd | undefined {
-    return this.parsedCrdByKind.get(`${pluginName}/${this.activeClusterId}/${kind}`);
+  getCrd(pluginName: string, kind: string, clusterId: string): ParsedCrd | undefined {
+    return this.parsedCrdByKind.get(`${pluginName}/${clusterId}/${kind}`);
   }
 
   allPlugins = this.plugins.asReadonly();

@@ -52,6 +52,18 @@ spec:
                   name: openfga-config
                   key: authorization-model-id
             {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
 
 ---
 apiVersion: v1

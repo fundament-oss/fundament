@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -64,14 +68,26 @@ func run() error {
 		return fmt.Errorf("failed to create proxy server: %w", err)
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	httpServer := &http.Server{
 		Addr:              cfg.ListenAddr,
 		Handler:           h2c.NewHandler(server.Handler(), &http2.Server{}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			logger.Error("graceful shutdown failed", "error", err)
+		}
+	}()
+
 	logger.Info("server listening", "addr", cfg.ListenAddr)
-	if err := httpServer.ListenAndServe(); err != nil {
+	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("server failed: %w", err)
 	}
 

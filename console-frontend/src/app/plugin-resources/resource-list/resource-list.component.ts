@@ -11,7 +11,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerEye, tablerDatabaseOff } from '@ng-icons/tabler-icons';
+import { tablerEye, tablerDatabaseOff, tablerRefresh } from '@ng-icons/tabler-icons';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import PluginRegistryService from '../plugin-registry.service';
 import PluginResourceStoreService from '../plugin-resource-store.service';
@@ -47,6 +47,7 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
     provideIcons({
       tablerEye,
       tablerDatabaseOff,
+      tablerRefresh,
     }),
   ],
   templateUrl: './resource-list.component.html',
@@ -137,6 +138,18 @@ export default class ResourceListComponent implements OnInit {
     this.clusterContext.onClusterChange(clusterId);
   }
 
+  async onRefresh(): Promise<void> {
+    const crd = this.crdDef();
+    const clusterId = this.clusterContext.selectedClusterId();
+    const pluginName = this.pluginName();
+    if (crd && clusterId) {
+      this.store.clearResourceCache(pluginName, crd.kind, clusterId);
+    }
+    if (pluginName && this.resourceKind() && clusterId) {
+      await this.loadCrdsAndResources(pluginName, this.resourceKind(), clusterId);
+    }
+  }
+
   private async loadCrdsAndResources(
     pluginName: string,
     resourceKind: string,
@@ -153,7 +166,7 @@ export default class ResourceListComponent implements OnInit {
 
     try {
       await this.registry.loadCrdsForPlugin(pluginName, clusterId, orgApiUrl, orgId);
-      const crd = this.registry.getCrd(pluginName, resourceKind);
+      const crd = this.registry.getCrd(pluginName, resourceKind, clusterId);
       this.crdDef.set(crd);
 
       if (crd) {

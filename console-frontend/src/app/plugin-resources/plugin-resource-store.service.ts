@@ -59,4 +59,8 @@ export default class PluginResourceStoreService {
   ): KubeResource | undefined {
     return this.listResources(pluginName, kind, clusterId).find((r) => r.metadata.name === name);
   }
+
+  clearResourceCache(pluginName: string, kind: string, clusterId: string): void {
+    this.resourceCache.delete(`${pluginName}/${kind}/${clusterId}`);
+  }
 }
