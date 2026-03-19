@@ -57,6 +57,11 @@ ALTER TABLE "tenant"."cluster_outbox" ADD COLUMN "organization_user_id" uuid;
 
 ALTER TABLE "tenant"."cluster_outbox" ADD COLUMN "project_member_id" uuid;
 
+/* Hazards:
+ - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
+*/
+GRANT INSERT ON "tenant"."cluster_outbox" TO "fun_authn_api";
+
 ALTER TABLE "tenant"."cluster_outbox" DROP CONSTRAINT "cluster_outbox_ck_event";
 
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_ck_event" CHECK((event = ANY (ARRAY['created'::text, 'updated'::text, 'deleted'::text, 'reconcile'::text, 'ready'::text]))) NOT VALID;
@@ -79,17 +84,59 @@ ALTER TABLE "tenant"."clusters" ADD COLUMN "shoot_api_server_url" text COLLATE "
 
 ALTER TABLE "tenant"."clusters" ADD COLUMN "shoot_ca_data" text COLLATE "pg_catalog"."default";
 
+/* Hazards:
+ - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
+*/
+CREATE POLICY "clusters_authn_api_policy" ON "tenant"."clusters"
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_authn_api
+	USING (true);
+
+/* Hazards:
+ - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
+*/
+GRANT SELECT ON "tenant"."clusters" TO "fun_authn_api";
+
 CREATE TRIGGER cluster_outbox_organization_user AFTER INSERT OR UPDATE ON tenant.organizations_users FOR EACH ROW EXECUTE FUNCTION tenant.cluster_outbox_organization_user_trigger();
 
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_fk_organization_user" FOREIGN KEY (organization_user_id) REFERENCES tenant.organizations_users(id) NOT VALID;
 
 ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_fk_organization_user";
 
+/* Hazards:
+ - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
+*/
+CREATE POLICY "project_members_authn_api_policy" ON "tenant"."project_members"
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_authn_api
+	USING (true);
+
+/* Hazards:
+ - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
+*/
+GRANT SELECT ON "tenant"."project_members" TO "fun_authn_api";
+
 CREATE TRIGGER cluster_outbox_project_member AFTER INSERT OR UPDATE ON tenant.project_members FOR EACH ROW EXECUTE FUNCTION tenant.cluster_outbox_project_member_trigger();
 
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_fk_project_member" FOREIGN KEY (project_member_id) REFERENCES tenant.project_members(id) NOT VALID;
 
 ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_fk_project_member";
+
+/* Hazards:
+ - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
+*/
+CREATE POLICY "projects_authn_api_policy" ON "tenant"."projects"
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_authn_api
+	USING (true);
+
+/* Hazards:
+ - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
+*/
+GRANT SELECT ON "tenant"."projects" TO "fun_authn_api";
 
 
 -- Statements generated automatically, please review:

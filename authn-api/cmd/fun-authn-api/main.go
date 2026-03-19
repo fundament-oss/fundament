@@ -232,7 +232,7 @@ type gardenerAdapter struct {
 func (a *gardenerAdapter) RequestAdminKubeconfig(ctx context.Context, clusterID uuid.UUID, expirationSeconds int64) (*authn.AdminKubeconfig, error) {
 	kc, err := a.client.RequestAdminKubeconfig(ctx, clusterID, expirationSeconds)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("request admin kubeconfig: %w", err)
 	}
 	return &authn.AdminKubeconfig{
 		Kubeconfig: kc.Kubeconfig,

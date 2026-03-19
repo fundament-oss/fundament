@@ -54,7 +54,7 @@ func (s *AuthnServer) HandleClusterToken(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	clusterUUID := uuid.UUID(clusterID)
+	clusterUUID := clusterID
 	ctx := r.Context()
 
 	cluster, err := s.queries.ClusterGetForToken(ctx, db.ClusterGetForTokenParams{ClusterID: clusterUUID})
@@ -69,9 +69,9 @@ func (s *AuthnServer) HandleClusterToken(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	accessLevel, err := s.queries.ResolveUserAccess(ctx, db.ResolveUserAccessParams{UserID: claims.UserID, ClusterID: clusterUUID})
+	accessLevel, err := s.queries.ResolveUserAccess(ctx, db.ResolveUserAccessParams{UserID: claims.UserID(), ClusterID: clusterUUID})
 	if err != nil {
-		s.logger.Error("failed to resolve user access", "error", err, "user_id", claims.UserID, "cluster_id", clusterUUID)
+		s.logger.Error("failed to resolve user access", "error", err, "user_id", claims.UserID(), "cluster_id", clusterUUID)
 		s.writeErrorJSON(w, http.StatusInternalServerError, "internal error")
 		return
 	}
@@ -81,16 +81,16 @@ func (s *AuthnServer) HandleClusterToken(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	token, expiresAt, err := s.requestSAToken(ctx, clusterUUID, claims.UserID)
+	token, expiresAt, err := s.requestSAToken(ctx, clusterUUID, claims.UserID())
 	if err != nil {
-		s.logger.Error("failed to request SA token", "error", err, "cluster_id", clusterUUID, "user_id", claims.UserID)
+		s.logger.Error("failed to request SA token", "error", err, "cluster_id", clusterUUID, "user_id", claims.UserID())
 		s.writeErrorJSON(w, http.StatusServiceUnavailable, "sync pending, try again shortly")
 		return
 	}
 
 	s.logger.Info("cluster token issued",
 		"cluster_id", clusterUUID,
-		"user_id", claims.UserID,
+		"user_id", claims.UserID(),
 		"access_level", accessLevel,
 	)
 

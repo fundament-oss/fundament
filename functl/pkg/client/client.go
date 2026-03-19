@@ -176,14 +176,14 @@ type clusterTokenResponse struct {
 
 // ClusterToken requests a service account token for the given cluster.
 // This is a plain HTTP POST (not Connect RPC) to the authn-api.
-func (c *Client) ClusterToken(ctx context.Context, clusterID string) (token string, expiresAt string, err error) {
+func (c *Client) ClusterToken(ctx context.Context, clusterID string) (token, expiresAt string, err error) {
 	jwt, err := c.ensureToken(ctx)
 	if err != nil {
 		return "", "", err
 	}
 
 	url := c.authnURL + "/clusters/" + clusterID + "/token"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, http.NoBody)
 	if err != nil {
 		return "", "", fmt.Errorf("create request: %w", err)
 	}
@@ -193,7 +193,7 @@ func (c *Client) ClusterToken(ctx context.Context, clusterID string) (token stri
 	if err != nil {
 		return "", "", fmt.Errorf("request cluster token: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		var errResp struct {

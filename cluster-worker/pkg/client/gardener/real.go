@@ -47,10 +47,10 @@ func NewProviderConfig() ProviderConfig {
 	return ProviderConfig{
 		Type:                     "local",
 		CloudProfile:             "local",
-		CredentialsBindingName:   "local",                                  // Name of CredentialsBinding to create/reference
-		CredentialsRef:           "garden-local/local",                     // Shared WorkloadIdentity for local provider
-		CredentialsRefKind:       "WorkloadIdentity",                      // Local provider uses WorkloadIdentity
-		CredentialsRefAPIVersion: "security.gardener.cloud/v1alpha1",      // Gardener security API
+		CredentialsBindingName:   "local",                            // Name of CredentialsBinding to create/reference
+		CredentialsRef:           "garden-local/local",               // Shared WorkloadIdentity for local provider
+		CredentialsRefKind:       "WorkloadIdentity",                 // Local provider uses WorkloadIdentity
+		CredentialsRefAPIVersion: "security.gardener.cloud/v1alpha1", // Gardener security API
 		MachineImageName:         "local",
 		MachineImageVersion:      "1.0.0",
 		DefaultMachineType:       "local",
