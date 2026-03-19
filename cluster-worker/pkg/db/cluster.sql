@@ -152,7 +152,9 @@ UPDATE tenant.clusters
 SET
     shoot_status = @status,
     shoot_status_message = @message,
-    shoot_status_updated = now()
+    shoot_status_updated = now(),
+    shoot_api_server_url = COALESCE(@api_server_url, shoot_api_server_url),
+    shoot_ca_data = COALESCE(@ca_data, shoot_ca_data)
 WHERE
     id = @cluster_id;
 

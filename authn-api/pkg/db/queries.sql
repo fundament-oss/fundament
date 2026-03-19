@@ -59,6 +59,43 @@ WHERE organizations_users.user_id = $1
     AND organizations_users.deleted IS NULL
 ORDER BY organizations_users.created ASC;
 
+-- name: ResolveUserAccess :one
+-- Determines the access level for a user on a cluster.
+-- Returns 'admin' if the user is an accepted org admin, 'member' if the user
+-- is a project member on any project in the cluster, or 'none' otherwise.
+SELECT
+    CASE
+        WHEN tenant.organizations_users.permission = 'admin'
+            AND tenant.organizations_users.status = 'accepted'
+            AND tenant.organizations_users.deleted IS NULL
+            THEN 'admin'
+        WHEN tenant.project_members.id IS NOT NULL
+            AND tenant.project_members.deleted IS NULL
+            THEN 'member'
+        ELSE 'none'
+    END AS access_level
+FROM tenant.clusters
+LEFT JOIN tenant.organizations_users
+    ON tenant.organizations_users.organization_id = tenant.clusters.organization_id
+    AND tenant.organizations_users.user_id = @user_id
+LEFT JOIN tenant.projects
+    ON tenant.projects.cluster_id = tenant.clusters.id AND tenant.projects.deleted IS NULL
+LEFT JOIN tenant.project_members
+    ON tenant.project_members.project_id = tenant.projects.id AND tenant.project_members.user_id = @user_id
+WHERE tenant.clusters.id = @cluster_id
+LIMIT 1;
+
+-- name: ClusterGetForToken :one
+-- Returns cluster info needed for token issuance.
+SELECT
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_api_server_url,
+    tenant.clusters.shoot_ca_data,
+    tenant.clusters.organization_id
+FROM tenant.clusters
+WHERE tenant.clusters.id = @cluster_id
+    AND tenant.clusters.deleted IS NULL;
+
 -- name: APIKeyGetByHash :one
 -- Uses SECURITY DEFINER function to bypass RLS (we don't know org_id before lookup)
 SELECT id, organization_id, user_id, name, token_prefix, expires, revoked, last_used, created, deleted

@@ -34,5 +34,5 @@ func (h *Handler) Cluster(ctx context.Context, qtx *db.Queries, clusterID uuid.U
 		)
 	}
 
-	return h.writeTuples(ctx, tuple(orgObj, authz.ActionOwner, clusterObj))
+	return h.writeTuplesIfNotExist(ctx, tuple(orgObj, authz.ActionOwner, clusterObj))
 }

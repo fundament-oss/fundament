@@ -794,6 +794,10 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
+<policy name="clusters_authn_api_policy" table="tenant.clusters" command="SELECT" permissive="true">	<roles names="fun_authn_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <index name="clusters_idx_needs_sync" table="tenant.clusters"
 	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
 	 index-type="btree" factor="0">
@@ -1122,11 +1126,19 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)]]> </expression>
 </policy>
 
+<policy name="project_members_authn_api_policy" table="tenant.project_members" command="SELECT" permissive="true">	<roles names="fun_authn_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <policy name="projects_organization_policy" table="tenant.projects" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
 <policy name="projects_cluster_worker_policy" table="tenant.projects" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="projects_authn_api_policy" table="tenant.projects" command="SELECT" permissive="true">	<roles names="fun_authn_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
@@ -2430,6 +2442,26 @@ END;]]> </definition>
 	<object name="tenant.cluster_outbox" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true"/>
+</permission>
+<permission>
+	<object name="tenant.cluster_outbox" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
+	<object name="tenant.clusters" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.projects" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.project_members" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges select="true"/>
 </permission>
 <trigger name="cluster_outbox_organization_user" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"

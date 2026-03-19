@@ -281,10 +281,18 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 		case gardencorev1beta1.LastOperationStateError, gardencorev1beta1.LastOperationStateFailed:
 			return &ShootStatus{Status: StatusError, Message: op.Description}, nil
 		case gardencorev1beta1.LastOperationStateSucceeded:
-			if r.isShootHealthy(shoot) {
-				return &ShootStatus{Status: StatusReady, Message: MsgShootReady}, nil
+			msg := MsgShootReady
+			if !r.isShootHealthy(shoot) {
+				msg = "Shoot reconciled but not all conditions healthy"
+				r.logger.Warn("shoot succeeded but conditions unhealthy",
+					"shoot", shoot.Name,
+					"namespace", shoot.Namespace)
 			}
-			return &ShootStatus{Status: StatusProgressing, Message: "Shoot reconciled but not all conditions healthy"}, nil
+			return &ShootStatus{
+				Status:       StatusReady,
+				Message:      msg,
+				APIServerURL: shootAPIServerURL(shoot),
+			}, nil
 		case gardencorev1beta1.LastOperationStateAborted:
 			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description}, nil
 		}
@@ -472,14 +480,18 @@ func (r *RealClient) deleteShoot(ctx context.Context, shoot *gardencorev1beta1.S
 		shoot.Annotations = make(map[string]string)
 	}
 	shoot.Annotations["confirmation.gardener.cloud/deletion"] = "true"
+	if r.provider.Type == "local" {
+		shoot.Annotations["confirmation.gardener.cloud/force-deletion"] = "true"
+	}
 
 	if err := r.client.Update(ctx, shoot); err != nil {
-		return fmt.Errorf("failed to add deletion confirmation annotation: %w", err)
+		return fmt.Errorf("failed to add deletion annotations: %w", err)
 	}
 
 	r.logger.Info("deleting shoot",
 		"shoot", shoot.Name,
-		"namespace", shoot.Namespace)
+		"namespace", shoot.Namespace,
+		"force", r.provider.Type == "local")
 
 	if err := r.client.Delete(ctx, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -516,6 +528,34 @@ func (r *RealClient) isShootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 	return true
 }
 
+// shootAnnotations returns the base annotations for a new Shoot.
+// For the local provider, adds cleanup grace period annotations to speed up deletion.
+func (r *RealClient) shootAnnotations(clusterName string) map[string]string {
+	annotations := map[string]string{
+		AnnotationClusterName: clusterName,
+	}
+	if r.provider.Type == "local" {
+		annotations["shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds"] = "15"
+		annotations["shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds"] = "15"
+		annotations["shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds"] = "15"
+	}
+	return annotations
+}
+
+// shootAPIServerURL extracts the external API server URL from a Shoot's advertised addresses.
+func shootAPIServerURL(shoot *gardencorev1beta1.Shoot) string {
+	for _, addr := range shoot.Status.AdvertisedAddresses {
+		if addr.Name == "external" {
+			return addr.URL
+		}
+	}
+	// Fall back to the first advertised address if no "external" entry found.
+	if len(shoot.Status.AdvertisedAddresses) > 0 {
+		return shoot.Status.AdvertisedAddresses[0].URL
+	}
+	return ""
+}
+
 // buildShootSpec creates a new Shoot spec from cluster info using provider config.
 func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.Shoot {
 	shoot := &gardencorev1beta1.Shoot{
@@ -526,9 +566,7 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 				LabelClusterID:      cluster.ID.String(),
 				LabelOrganizationID: cluster.OrganizationID.String(),
 			},
-			Annotations: map[string]string{
-				AnnotationClusterName: cluster.Name,
-			},
+			Annotations: r.shootAnnotations(cluster.Name),
 		},
 		Spec: gardencorev1beta1.ShootSpec{
 			CloudProfile: &gardencorev1beta1.CloudProfileReference{
@@ -597,10 +635,19 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 		maxSurge := intstr.FromInt32(1)
 		maxUnavailable := intstr.FromInt32(0)
 		imageVersion := r.provider.MachineImageVersion
+
+		// The local Gardener provider only supports machine type "local", but the
+		// DB may contain cloud-specific types like "n1-standard-1". Override with
+		// the provider default when running against the local provider.
+		machineType := np.MachineType
+		if r.provider.Type == "local" {
+			machineType = r.provider.DefaultMachineType
+		}
+
 		workers[i] = gardencorev1beta1.Worker{
 			Name: np.Name,
 			Machine: gardencorev1beta1.Machine{
-				Type: np.MachineType,
+				Type: machineType,
 				Image: &gardencorev1beta1.ShootMachineImage{
 					Name:    r.provider.MachineImageName,
 					Version: &imageVersion,

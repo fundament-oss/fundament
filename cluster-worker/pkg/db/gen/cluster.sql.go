@@ -332,20 +332,30 @@ UPDATE tenant.clusters
 SET
     shoot_status = $1,
     shoot_status_message = $2,
-    shoot_status_updated = now()
+    shoot_status_updated = now(),
+    shoot_api_server_url = COALESCE($3, shoot_api_server_url),
+    shoot_ca_data = COALESCE($4, shoot_ca_data)
 WHERE
-    id = $3
+    id = $5
 `
 
 type ClusterUpdateShootStatusParams struct {
-	Status    pgtype.Text
-	Message   pgtype.Text
-	ClusterID uuid.UUID
+	Status       pgtype.Text
+	Message      pgtype.Text
+	ApiServerUrl pgtype.Text
+	CaData       pgtype.Text
+	ClusterID    uuid.UUID
 }
 
 // Update shoot status from Gardener polling.
 func (q *Queries) ClusterUpdateShootStatus(ctx context.Context, arg ClusterUpdateShootStatusParams) error {
-	_, err := q.db.Exec(ctx, clusterUpdateShootStatus, arg.Status, arg.Message, arg.ClusterID)
+	_, err := q.db.Exec(ctx, clusterUpdateShootStatus,
+		arg.Status,
+		arg.Message,
+		arg.ApiServerUrl,
+		arg.CaData,
+		arg.ClusterID,
+	)
 	return err
 }
 

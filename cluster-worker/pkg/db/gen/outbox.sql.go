@@ -20,7 +20,8 @@ SELECT id,
        status,
        retries
 FROM tenant.cluster_outbox
-WHERE status IN ('pending', 'retrying')
+WHERE cluster_id IS NOT NULL
+  AND status IN ('pending', 'retrying')
   AND (retry_after IS NULL OR retry_after <= now())
 ORDER BY id ASC
 LIMIT 1
@@ -36,7 +37,9 @@ type OutboxGetAndLockRow struct {
 	Retries   int32
 }
 
-// Claims the next pending/retryable outbox row.
+// Claims the next pending/retryable cluster outbox row.
+// Only picks up rows with cluster_id set; organization_user and project_member
+// rows are handled by the user sync handler (not yet implemented).
 // Uses FOR NO KEY UPDATE SKIP LOCKED for concurrent worker safety.
 func (q *Queries) OutboxGetAndLock(ctx context.Context) (OutboxGetAndLockRow, error) {
 	row := q.db.QueryRow(ctx, outboxGetAndLock)

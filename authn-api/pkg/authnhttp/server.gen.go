@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/oapi-codegen/runtime"
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
@@ -20,6 +21,15 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 	CookieAuthScopes = "cookieAuth.Scopes"
 )
+
+// ClusterTokenResponse defines model for ClusterTokenResponse.
+type ClusterTokenResponse struct {
+	// ExpiresAt Token expiration time
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// Token Service account token for the cluster
+	Token string `json:"token"`
+}
 
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
@@ -121,6 +131,9 @@ type ServerInterface interface {
 	// OIDC callback handler
 	// (GET /callback)
 	HandleCallback(w http.ResponseWriter, r *http.Request, params HandleCallbackParams)
+	// Request a cluster token
+	// (POST /clusters/{cluster_id}/token)
+	HandleClusterToken(w http.ResponseWriter, r *http.Request, clusterId openapi_types.UUID)
 	// Initiate OIDC login flow
 	// (GET /login)
 	HandleLogin(w http.ResponseWriter, r *http.Request, params HandleLoginParams)
@@ -200,6 +213,37 @@ func (siw *ServerInterfaceWrapper) HandleCallback(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.HandleCallback(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// HandleClusterToken operation middleware
+func (siw *ServerInterfaceWrapper) HandleClusterToken(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "cluster_id" -------------
+	var clusterId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cluster_id", r.PathValue("cluster_id"), &clusterId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cluster_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.HandleClusterToken(w, r, clusterId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -407,6 +451,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc("GET "+options.BaseURL+"/callback", wrapper.HandleCallback)
+	m.HandleFunc("POST "+options.BaseURL+"/clusters/{cluster_id}/token", wrapper.HandleClusterToken)
 	m.HandleFunc("GET "+options.BaseURL+"/login", wrapper.HandleLogin)
 	m.HandleFunc("POST "+options.BaseURL+"/login/password", wrapper.HandlePasswordLogin)
 	m.HandleFunc("POST "+options.BaseURL+"/logout", wrapper.HandleLogout)
@@ -472,6 +517,59 @@ type HandleCallback500JSONResponse struct {
 func (response HandleCallback500JSONResponse) VisitHandleCallbackResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type HandleClusterTokenRequestObject struct {
+	ClusterId openapi_types.UUID `json:"cluster_id"`
+}
+
+type HandleClusterTokenResponseObject interface {
+	VisitHandleClusterTokenResponse(w http.ResponseWriter) error
+}
+
+type HandleClusterToken200JSONResponse ClusterTokenResponse
+
+func (response HandleClusterToken200JSONResponse) VisitHandleClusterTokenResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type HandleClusterToken401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response HandleClusterToken401JSONResponse) VisitHandleClusterTokenResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type HandleClusterToken403JSONResponse ErrorResponse
+
+func (response HandleClusterToken403JSONResponse) VisitHandleClusterTokenResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type HandleClusterToken404JSONResponse ErrorResponse
+
+func (response HandleClusterToken404JSONResponse) VisitHandleClusterTokenResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type HandleClusterToken503JSONResponse ErrorResponse
+
+func (response HandleClusterToken503JSONResponse) VisitHandleClusterTokenResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -665,6 +763,9 @@ type StrictServerInterface interface {
 	// OIDC callback handler
 	// (GET /callback)
 	HandleCallback(ctx context.Context, request HandleCallbackRequestObject) (HandleCallbackResponseObject, error)
+	// Request a cluster token
+	// (POST /clusters/{cluster_id}/token)
+	HandleClusterToken(ctx context.Context, request HandleClusterTokenRequestObject) (HandleClusterTokenResponseObject, error)
 	// Initiate OIDC login flow
 	// (GET /login)
 	HandleLogin(ctx context.Context, request HandleLoginRequestObject) (HandleLoginResponseObject, error)
@@ -727,6 +828,32 @@ func (sh *strictHandler) HandleCallback(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(HandleCallbackResponseObject); ok {
 		if err := validResponse.VisitHandleCallbackResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// HandleClusterToken operation middleware
+func (sh *strictHandler) HandleClusterToken(w http.ResponseWriter, r *http.Request, clusterId openapi_types.UUID) {
+	var request HandleClusterTokenRequestObject
+
+	request.ClusterId = clusterId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.HandleClusterToken(ctx, request.(HandleClusterTokenRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "HandleClusterToken")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(HandleClusterTokenResponseObject); ok {
+		if err := validResponse.VisitHandleClusterTokenResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

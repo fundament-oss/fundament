@@ -158,6 +158,54 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /clusters/{cluster_id}/token:
+    post:
+      tags:
+        - Cluster
+      summary: Request a cluster token
+      description: |
+        Issues a short-lived token for the authenticated user's service account on the given cluster.
+        Each user has a dedicated service account (fundament-{user-id}) that is provisioned
+        automatically. The caller must have access to the cluster (admin or member).
+      operationId: handleClusterToken
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cluster_id
+          in: path
+          description: Cluster ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Token issued successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClusterTokenResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden - no access to this cluster
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Cluster not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Cluster not ready or service account not yet provisioned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /logout:
     post:
       tags:
@@ -323,6 +371,20 @@ components:
         status:
           type: string
           example: ok
+
+    ClusterTokenResponse:
+      type: object
+      required:
+        - token
+        - expires_at
+      properties:
+        token:
+          type: string
+          description: Service account token for the cluster
+        expires_at:
+          type: string
+          format: date-time
+          description: Token expiration time
 
     ErrorResponse:
       type: object
