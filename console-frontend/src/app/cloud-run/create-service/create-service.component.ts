@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, signal, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -11,14 +11,9 @@ import {
   tablerChevronUp,
 } from '@ng-icons/tabler-icons';
 
-const NAMESPACE_MAP: Record<string, string[]> = {
-  'cluster-1': ['default', 'production'],
-  'cluster-2': ['default', 'staging'],
-};
-
 @Component({
   selector: 'app-cloud-run-create-service',
-  imports: [ReactiveFormsModule, RouterLink, NgIcon],
+  imports: [ReactiveFormsModule, NgIcon],
   viewProviders: [
     provideIcons({
       tablerCloud,
@@ -50,8 +45,7 @@ export default class CreateServiceComponent {
     deploymentSource: ['container-image'],
     containerImageUrl: [''],
     serviceName: ['', [Validators.required, Validators.pattern(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/)]],
-    cluster: ['', Validators.required],
-    namespace: ['', Validators.required],
+    region: ['eu-west-1', Validators.required],
     authentication: ['public'],
     scaling: ['auto'],
     minInstances: [0],
@@ -70,31 +64,29 @@ export default class CreateServiceComponent {
     maxConcurrentRequests: [80],
   });
 
-  // Bridge cluster form control into signal graph for computed()
-  private clusterValue = toSignal(this.form.get('cluster')!.valueChanges, {
-    initialValue: this.form.get('cluster')!.value as string,
-  });
-
   private serviceNameValue = toSignal(this.form.get('serviceName')!.valueChanges, {
     initialValue: '',
   });
 
-  private namespaceValue = toSignal(this.form.get('namespace')!.valueChanges, {
-    initialValue: '',
+  private regionValue = toSignal(this.form.get('region')!.valueChanges, {
+    initialValue: this.form.get('region')!.value as string,
   });
-
-  // Derived namespace options based on selected cluster
-  availableNamespaces = computed<string[]>(() => NAMESPACE_MAP[this.clusterValue()] ?? []);
 
   // Computed endpoint URL
   endpointUrl = computed<string>(() => {
     const name = this.serviceNameValue();
-    const ns = this.namespaceValue();
-    if (!name || !ns) return '—';
-    return `https://${name}.${ns}.svc.cluster.local`;
+    const region = this.regionValue();
+    if (!name || !region) return '';
+    return `https://${name}.${region}.run.example.com`;
   });
 
-  readonly clusters = ['cluster-1', 'cluster-2'];
+  readonly regions = [
+    { value: 'eu-west-1', label: 'Europe (Amsterdam)' },
+    { value: 'eu-central-1', label: 'Europe (Frankfurt)' },
+    { value: 'us-east-1', label: 'US East (Virginia)' },
+    { value: 'us-west-1', label: 'US West (Oregon)' },
+    { value: 'ap-southeast-1', label: 'Asia Pacific (Singapore)' },
+  ];
 
   readonly memoryOptions = ['128Mi', '256Mi', '512Mi', '1Gi', '2Gi', '4Gi', '8Gi', '16Gi', '32Gi'];
 
@@ -102,10 +94,6 @@ export default class CreateServiceComponent {
 
   get serviceName() {
     return this.form.get('serviceName');
-  }
-
-  onClusterChange() {
-    this.form.get('namespace')!.reset('');
   }
 
   onSubmit(): void {

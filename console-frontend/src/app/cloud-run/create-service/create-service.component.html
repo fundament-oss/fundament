@@ -10,7 +10,9 @@
     <!-- Deployment source -->
     <div class="grid grid-cols-3 gap-4">
       <!-- Container image -->
-      <label class="card card-body cursor-pointer has-checked:ring-2 has-checked:ring-indigo-500">
+      <label
+        class="card card-body cursor-pointer has-checked:border-transparent! has-checked:ring-2 has-checked:ring-indigo-500"
+      >
         <input
           type="radio"
           formControlName="deploymentSource"
@@ -100,41 +102,14 @@
           }
         </div>
 
-        <!-- Cluster -->
+        <!-- Region -->
         <div>
-          <label for="cluster" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-            Cluster <span class="text-rose-500">*</span>
+          <label for="region" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+            Region <span class="text-rose-500">*</span>
           </label>
-          <select
-            id="cluster"
-            formControlName="cluster"
-            (change)="onClusterChange()"
-            class="w-full"
-          >
-            <option value="">Select a cluster</option>
-            @for (c of clusters; track c) {
-              <option [value]="c">{{ c }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- Namespace -->
-        <div>
-          <label
-            for="namespace"
-            class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-          >
-            Namespace <span class="text-rose-500">*</span>
-          </label>
-          <select
-            id="namespace"
-            formControlName="namespace"
-            class="w-full"
-            [attr.disabled]="availableNamespaces().length === 0 ? true : null"
-          >
-            <option value="">Select a namespace</option>
-            @for (ns of availableNamespaces(); track ns) {
-              <option [value]="ns">{{ ns }}</option>
+          <select id="region" formControlName="region" class="w-full">
+            @for (r of regions; track r.value) {
+              <option [value]="r.value">{{ r.label }}</option>
             }
           </select>
         </div>
@@ -142,7 +117,11 @@
         <!-- Endpoint URL -->
         <div>
           <p class="mb-1 text-sm font-medium text-gray-700 dark:text-white">Endpoint URL</p>
-          <p class="font-mono text-sm text-gray-600 dark:text-gray-300">{{ endpointUrl() }}</p>
+          <p
+            class="rounded-md bg-gray-100 px-3 py-1.5 font-mono text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          >
+            {{ endpointUrl() || 'Enter a service name first…' }}
+          </p>
         </div>
 
         <!-- Authentication -->
@@ -151,18 +130,26 @@
             Authentication
           </legend>
           <div class="space-y-2">
-            <label class="flex items-start gap-2 text-sm">
-              <input type="radio" formControlName="authentication" value="public" />
-              <span>
-                <span class="font-medium dark:text-white">Allow public access</span><br />
-                <span class="text-gray-500 dark:text-gray-400"
-                  >No authentication checks will be performed.</span
-                >
+            <label
+              class="radio-option has-checked:border-gray-300! has-checked:bg-transparent! dark:has-checked:border-gray-700!"
+            >
+              <span
+                class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white"
+              >
+                <input type="radio" formControlName="authentication" value="public" />
+                Allow public access
+              </span>
+              <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+                No authentication checks will be performed.
               </span>
             </label>
-            <label class="flex items-start gap-2 text-sm">
-              <input type="radio" formControlName="authentication" value="require" />
-              <span class="font-medium dark:text-white">Require authentication</span>
+            <label
+              class="radio-option has-checked:border-gray-300! has-checked:bg-transparent! dark:has-checked:border-gray-700!"
+            >
+              <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
+                <input type="radio" formControlName="authentication" value="require" />
+                Require authentication
+              </span>
             </label>
           </div>
         </fieldset>
@@ -172,85 +159,110 @@
           <legend class="mb-2 text-sm font-medium text-gray-700 dark:text-white">
             Service scaling
           </legend>
-          <div class="space-y-3">
-            <label class="flex items-center gap-2 text-sm font-medium dark:text-white">
-              <input type="radio" formControlName="scaling" value="auto" />
-              Auto-scaling
-            </label>
-            @if (form.get('scaling')?.value === 'auto') {
-              <div class="ml-6 flex gap-4">
-                <div class="flex-1">
-                  <label
-                    for="minInstances"
-                    class="mb-1 block text-xs text-gray-600 dark:text-gray-400"
-                    >Minimum number of instances</label
-                  >
-                  <input id="minInstances" type="number" formControlName="minInstances" min="0" />
+          <div class="space-y-2">
+            <label
+              class="radio-option has-checked:border-gray-300! has-checked:bg-transparent! dark:has-checked:border-gray-700!"
+            >
+              <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
+                <input type="radio" formControlName="scaling" value="auto" />
+                Auto-scaling
+              </span>
+              @if (form.get('scaling')?.value === 'auto') {
+                <div class="mt-1 ml-6 flex gap-4">
+                  <div class="flex-1">
+                    <label
+                      for="minInstances"
+                      class="mb-1 block text-xs text-gray-600 dark:text-gray-400"
+                      >Minimum number of instances</label
+                    >
+                    <input id="minInstances" type="number" formControlName="minInstances" min="0" />
+                  </div>
+                  <div class="flex-1">
+                    <label
+                      for="maxInstances"
+                      class="mb-1 block text-xs text-gray-600 dark:text-gray-400"
+                      >Maximum number of instances</label
+                    >
+                    <input
+                      id="maxInstances"
+                      type="number"
+                      formControlName="maxInstances"
+                      min="1"
+                      placeholder="No limit"
+                    />
+                  </div>
                 </div>
-                <div class="flex-1">
+              }
+            </label>
+
+            <label
+              class="radio-option has-checked:border-gray-300! has-checked:bg-transparent! dark:has-checked:border-gray-700!"
+            >
+              <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
+                <input type="radio" formControlName="scaling" value="manual" />
+                Manual scaling
+              </span>
+              @if (form.get('scaling')?.value === 'manual') {
+                <div class="mt-1 ml-6 w-48">
                   <label
-                    for="maxInstances"
+                    for="manualInstances"
                     class="mb-1 block text-xs text-gray-600 dark:text-gray-400"
-                    >Maximum number of instances</label
+                    >Number of instances</label
                   >
                   <input
-                    id="maxInstances"
+                    id="manualInstances"
                     type="number"
-                    formControlName="maxInstances"
+                    formControlName="manualInstances"
                     min="1"
-                    placeholder="No limit"
                   />
                 </div>
-              </div>
-            }
-            <label class="flex items-center gap-2 text-sm font-medium dark:text-white">
-              <input type="radio" formControlName="scaling" value="manual" />
-              Manual scaling
+              }
             </label>
-            @if (form.get('scaling')?.value === 'manual') {
-              <div class="ml-6 w-48">
-                <label
-                  for="manualInstances"
-                  class="mb-1 block text-xs text-gray-600 dark:text-gray-400"
-                  >Number of instances</label
-                >
-                <input
-                  id="manualInstances"
-                  type="number"
-                  formControlName="manualInstances"
-                  min="1"
-                />
-              </div>
-            }
           </div>
         </fieldset>
 
         <!-- Ingress -->
         <fieldset>
           <legend class="mb-2 text-sm font-medium text-gray-700 dark:text-white">Ingress</legend>
-          <div class="space-y-3">
-            <label class="flex items-start gap-2 text-sm">
-              <input type="radio" formControlName="ingress" value="internal" class="mt-0.5" />
-              <span>
-                <span class="font-medium dark:text-white">Internal</span><br />
-                <span class="text-gray-500 dark:text-gray-400"
-                  >Allow traffic from within the cluster only.</span
-                >
+          <div class="space-y-2">
+            <label
+              class="radio-option has-checked:border-gray-300! has-checked:bg-transparent! dark:has-checked:border-gray-700!"
+            >
+              <span
+                class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white"
+              >
+                <input type="radio" formControlName="ingress" value="internal" />
+                Internal
               </span>
+              <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+                Allow traffic from within the cluster only.
+              </span>
+              @if (form.get('ingress')?.value === 'internal') {
+                <label class="ml-6 inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    formControlName="ingressAllowLoadBalancers"
+                    class="peer sr-only"
+                  />
+                  <span class="switch"></span>
+                  <span class="ml-3 text-sm font-medium dark:text-gray-300"
+                    >Allow traffic from external application load balancers</span
+                  >
+                </label>
+              }
             </label>
-            @if (form.get('ingress')?.value === 'internal') {
-              <label class="ml-6 flex items-center gap-2 text-sm dark:text-gray-300">
-                <input type="checkbox" formControlName="ingressAllowLoadBalancers" />
-                Allow traffic from external application load balancers
-              </label>
-            }
-            <label class="flex items-start gap-2 text-sm">
-              <input type="radio" formControlName="ingress" value="all" class="mt-0.5" />
-              <span>
-                <span class="font-medium dark:text-white">All</span><br />
-                <span class="text-gray-500 dark:text-gray-400"
-                  >Allow direct access to your service from the internet.</span
-                >
+
+            <label
+              class="radio-option has-checked:border-gray-300! has-checked:bg-transparent! dark:has-checked:border-gray-700!"
+            >
+              <span
+                class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white"
+              >
+                <input type="radio" formControlName="ingress" value="all" />
+                All
+              </span>
+              <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
+                Allow direct access to your service from the internet.
               </span>
             </label>
           </div>
@@ -276,9 +288,10 @@
       @if (panelOpen()) {
         <div class="card-body">
           <!-- Tabs -->
-          <div class="tabs">
+          <div class="tabs border-b border-gray-200 dark:border-gray-800">
             <button
               type="button"
+              class="-mb-px cursor-pointer"
               [class.active]="activeTab() === 'containers'"
               (click)="activeTab.set('containers')"
             >
@@ -286,6 +299,7 @@
             </button>
             <button
               type="button"
+              class="-mb-px cursor-pointer"
               [class.active]="activeTab() === 'networking'"
               (click)="activeTab.set('networking')"
             >
@@ -293,6 +307,7 @@
             </button>
             <button
               type="button"
+              class="-mb-px cursor-pointer"
               [class.active]="activeTab() === 'security'"
               (click)="activeTab.set('security')"
             >
@@ -397,9 +412,12 @@
               </div>
 
               <!-- GPU -->
-              <label class="flex items-center gap-2 text-sm dark:text-gray-300">
-                <input type="checkbox" formControlName="gpu" />
-                Attach GPUs to this container
+              <label class="inline-flex cursor-pointer items-center">
+                <input type="checkbox" formControlName="gpu" class="peer sr-only" />
+                <span class="switch"></span>
+                <span class="ml-3 text-sm font-medium dark:text-gray-300"
+                  >Attach GPUs to this container</span
+                >
               </label>
 
               <!-- Health checks -->
