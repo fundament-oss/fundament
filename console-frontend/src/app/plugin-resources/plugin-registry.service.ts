@@ -117,10 +117,10 @@ export default class PluginRegistryService {
         const cacheKey = `${pluginName}/${clusterId}/${crdName}`;
         if (this.parsedCrdCache.has(cacheKey)) return;
 
-        const url = `${base}/k8sproxy/${clusterId}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
+        const url = `${base}/k8sproxy/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
         const response = await fetch(url, {
           credentials: 'include',
-          headers: { 'Fun-Organization': orgId },
+          headers: { 'Fun-Organization': orgId, 'Fun-Cluster': clusterId },
         });
         if (!response.ok) {
           // eslint-disable-next-line no-console

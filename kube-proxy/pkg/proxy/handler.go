@@ -16,8 +16,11 @@ import (
 // OrganizationHeader is the header name for selecting the active organization.
 const OrganizationHeader = "Fun-Organization"
 
+// ClusterHeader is the header name for selecting the target cluster.
+const ClusterHeader = "Fun-Cluster"
+
 // handleClusterProxy is a read-only HTTP proxy to the Kubernetes API for a specific cluster.
-// Path format: /k8sproxy/{clusterID}/{...kubernetes_api_path}
+// Path format: /k8sproxy/{...kubernetes_api_path}
 //
 // Authentication: JWT from Authorization header or fundament_auth cookie,
 // plus Fun-Organization header for org scoping.
@@ -56,16 +59,14 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 
 	ctx := WithUserID(r.Context(), claims.UserID())
 
-	// --- Parse cluster ID from URL ---
-	// Path: /k8sproxy/{clusterID}/{...}
-	rest := strings.TrimPrefix(r.URL.Path, "/k8sproxy/")
-	clusterIDStr, k8sPath, _ := strings.Cut(rest, "/")
-	if clusterIDStr == "" {
-		http.Error(w, "missing cluster ID in path", http.StatusBadRequest)
+	// --- Read cluster ID from header ---
+	clusterHeader := r.Header.Get(ClusterHeader)
+	if clusterHeader == "" {
+		http.Error(w, fmt.Sprintf("missing %s header", ClusterHeader), http.StatusBadRequest)
 		return
 	}
 
-	clusterID, err := uuid.Parse(clusterIDStr)
+	clusterID, err := uuid.Parse(clusterHeader)
 	if err != nil {
 		http.Error(w, "invalid cluster ID", http.StatusBadRequest)
 		return
@@ -85,7 +86,7 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 
 	// --- Proxy to Kubernetes API ---
 
-	k8sPath = "/" + k8sPath
+	k8sPath := strings.TrimPrefix(r.URL.Path, "/k8sproxy")
 
 	// Only allow standard Kubernetes API paths to prevent SSRF.
 	if !strings.HasPrefix(k8sPath, "/apis/") && !strings.HasPrefix(k8sPath, "/api/") {

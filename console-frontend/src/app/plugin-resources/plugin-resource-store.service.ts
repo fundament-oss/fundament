@@ -26,11 +26,11 @@ export default class PluginResourceStoreService {
     }
 
     const base = orgApiUrl.replace(/\/$/, '');
-    const url = `${base}/k8sproxy/${clusterId}/apis/${crd.group}/${crd.version}/${crd.plural}`;
+    const url = `${base}/k8sproxy/apis/${crd.group}/${crd.version}/${crd.plural}`;
 
     const promise = fetch(url, {
       credentials: 'include',
-      headers: { 'Fun-Organization': orgId },
+      headers: { 'Fun-Organization': orgId, 'Fun-Cluster': clusterId },
     })
       .then(async (response) => {
         if (!response.ok) {

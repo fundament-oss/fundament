@@ -56,6 +56,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 				req.Header.Del("Authorization")
 				req.Header.Del("Cookie")
 				req.Header.Del(OrganizationHeader)
+				req.Header.Del(ClusterHeader)
 			},
 			ErrorHandler: func(w http.ResponseWriter, req *http.Request, err error) {
 				logger.ErrorContext(req.Context(), "kubernetes proxy error", "error", err)
@@ -75,7 +76,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/k8sproxy/", http.HandlerFunc(s.handleClusterProxy))
+	mux.Handle("/k8sproxy/", http.HandlerFunc(s.handleClusterProxy)) // cluster ID via Fun-Cluster header
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
@@ -88,7 +89,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{"GET", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization", OrganizationHeader},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", OrganizationHeader, ClusterHeader},
 		AllowCredentials: true,
 	})
 
