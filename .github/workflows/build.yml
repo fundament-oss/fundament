@@ -191,7 +191,7 @@ jobs:
           URL="https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
           echo "Waiting for ${URL} to be ready..."
           for i in $(seq 1 30); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
+            STATUS=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
             if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "401" ] || [ "${STATUS}" = "404" ]; then
               echo "Organization API is ready (HTTP ${STATUS})"
               exit 0
@@ -211,6 +211,7 @@ jobs:
         run: |
           cd terraform-provider
           FUNDAMENT_ENDPOINT="https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+          SSL_CERT_FILE=/dev/null \
           TF_ACC=1 \
           TF_ACC_TERRAFORM_PATH="$(which tofu)" \
           TF_ACC_PROVIDER_HOST=registry.opentofu.org \
@@ -239,7 +240,7 @@ jobs:
           URL="https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
           echo "Waiting for ${URL} to be ready..."
           for i in $(seq 1 30); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
+            STATUS=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
             if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "401" ] || [ "${STATUS}" = "404" ]; then
               echo "Console is ready (HTTP ${STATUS})"
               exit 0
@@ -258,6 +259,7 @@ jobs:
       - name: Run E2E tests
         run: |
           cd e2e
+          NODE_TLS_REJECT_UNAUTHORIZED=0 \
           BASE_URL="https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           ORGANIZATION_API_URL="https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           AUTHN_API_URL="https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
