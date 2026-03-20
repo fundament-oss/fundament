@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	rbacv1 "k8s.io/api/rbac/v1"
 )
 
 // MockShootAccess implements ShootAccess with in-memory state for testing and mock mode.
@@ -13,10 +14,10 @@ type MockShootAccess struct {
 	mu     sync.RWMutex
 	logger *slog.Logger
 
-	// Per-cluster state: clusterID → namespace → SA name → labels
-	ServiceAccounts map[uuid.UUID]map[string]map[string]map[string]string
-	// Per-cluster CRBs: clusterID → CRB name → labels
-	ClusterRoleBindings map[uuid.UUID]map[string]map[string]string
+	// Per-cluster state: clusterID → namespace → SA name → resource metadata
+	ServiceAccounts map[uuid.UUID]map[string]map[string]ResourceInfo
+	// Per-cluster CRBs: clusterID → CRB name → resource metadata
+	ClusterRoleBindings map[uuid.UUID]map[string]ResourceInfo
 	// Namespaces: clusterID → namespace names
 	Namespaces map[uuid.UUID]map[string]bool
 
@@ -33,8 +34,8 @@ type MockShootAccess struct {
 func NewMockShootAccess(logger *slog.Logger) *MockShootAccess {
 	return &MockShootAccess{
 		logger:              logger.With("component", "mock-shoot-access"),
-		ServiceAccounts:     make(map[uuid.UUID]map[string]map[string]map[string]string),
-		ClusterRoleBindings: make(map[uuid.UUID]map[string]map[string]string),
+		ServiceAccounts:     make(map[uuid.UUID]map[string]map[string]ResourceInfo),
+		ClusterRoleBindings: make(map[uuid.UUID]map[string]ResourceInfo),
 		Namespaces:          make(map[uuid.UUID]map[string]bool),
 	}
 }
@@ -55,7 +56,7 @@ func (m *MockShootAccess) EnsureNamespace(_ context.Context, clusterID uuid.UUID
 	return nil
 }
 
-func (m *MockShootAccess) EnsureServiceAccount(_ context.Context, clusterID uuid.UUID, namespace, name string, labels, _ map[string]string) error {
+func (m *MockShootAccess) EnsureServiceAccount(_ context.Context, clusterID uuid.UUID, namespace, name string, labels, annotations map[string]string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -64,21 +65,21 @@ func (m *MockShootAccess) EnsureServiceAccount(_ context.Context, clusterID uuid
 	}
 
 	if m.ServiceAccounts[clusterID] == nil {
-		m.ServiceAccounts[clusterID] = make(map[string]map[string]map[string]string)
+		m.ServiceAccounts[clusterID] = make(map[string]map[string]ResourceInfo)
 	}
 	if m.ServiceAccounts[clusterID][namespace] == nil {
-		m.ServiceAccounts[clusterID][namespace] = make(map[string]map[string]string)
+		m.ServiceAccounts[clusterID][namespace] = make(map[string]ResourceInfo)
 	}
-	labelsCopy := make(map[string]string, len(labels))
-	for k, v := range labels {
-		labelsCopy[k] = v
+	m.ServiceAccounts[clusterID][namespace][name] = ResourceInfo{
+		Name:        name,
+		Labels:      cloneStringMap(labels),
+		Annotations: cloneStringMap(annotations),
 	}
-	m.ServiceAccounts[clusterID][namespace][name] = labelsCopy
 	m.logger.Debug("MOCK: ensured SA", "cluster_id", clusterID, "namespace", namespace, "name", name)
 	return nil
 }
 
-func (m *MockShootAccess) EnsureClusterRoleBinding(_ context.Context, clusterID uuid.UUID, name, _, _ string, labels, _ map[string]string) error {
+func (m *MockShootAccess) EnsureClusterRoleBinding(_ context.Context, clusterID uuid.UUID, name, saNamespace, saName string, labels, annotations map[string]string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -87,13 +88,23 @@ func (m *MockShootAccess) EnsureClusterRoleBinding(_ context.Context, clusterID 
 	}
 
 	if m.ClusterRoleBindings[clusterID] == nil {
-		m.ClusterRoleBindings[clusterID] = make(map[string]map[string]string)
+		m.ClusterRoleBindings[clusterID] = make(map[string]ResourceInfo)
 	}
-	labelsCopy := make(map[string]string, len(labels))
-	for k, v := range labels {
-		labelsCopy[k] = v
+	m.ClusterRoleBindings[clusterID][name] = ResourceInfo{
+		Name:        name,
+		Labels:      cloneStringMap(labels),
+		Annotations: cloneStringMap(annotations),
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "cluster-admin",
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      saName,
+			Namespace: saNamespace,
+		}},
 	}
-	m.ClusterRoleBindings[clusterID][name] = labelsCopy
 	m.logger.Debug("MOCK: ensured CRB", "cluster_id", clusterID, "name", name)
 	return nil
 }
@@ -138,8 +149,8 @@ func (m *MockShootAccess) ListServiceAccounts(_ context.Context, clusterID uuid.
 
 	var result []ResourceInfo
 	if m.ServiceAccounts[clusterID] != nil && m.ServiceAccounts[clusterID][namespace] != nil {
-		for name, labels := range m.ServiceAccounts[clusterID][namespace] {
-			result = append(result, ResourceInfo{Name: name, Labels: labels})
+		for _, resource := range m.ServiceAccounts[clusterID][namespace] {
+			result = append(result, resource)
 		}
 	}
 	return result, nil
@@ -155,8 +166,8 @@ func (m *MockShootAccess) ListClusterRoleBindings(_ context.Context, clusterID u
 
 	var result []ResourceInfo
 	if m.ClusterRoleBindings[clusterID] != nil {
-		for name, labels := range m.ClusterRoleBindings[clusterID] {
-			result = append(result, ResourceInfo{Name: name, Labels: labels})
+		for _, resource := range m.ClusterRoleBindings[clusterID] {
+			result = append(result, resource)
 		}
 	}
 	return result, nil
@@ -188,8 +199,8 @@ func (m *MockShootAccess) HasCRB(clusterID, userID uuid.UUID) bool {
 func (m *MockShootAccess) Reset() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.ServiceAccounts = make(map[uuid.UUID]map[string]map[string]map[string]string)
-	m.ClusterRoleBindings = make(map[uuid.UUID]map[string]map[string]string)
+	m.ServiceAccounts = make(map[uuid.UUID]map[string]map[string]ResourceInfo)
+	m.ClusterRoleBindings = make(map[uuid.UUID]map[string]ResourceInfo)
 	m.Namespaces = make(map[uuid.UUID]map[string]bool)
 }
 

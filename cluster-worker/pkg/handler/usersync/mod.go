@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
@@ -211,7 +213,7 @@ func (h *Handler) applyUserAccess(ctx context.Context, clusterID, userID uuid.UU
 		LabelUserID: userID.String(),
 	}
 	annotations := map[string]string{
-		LabelUserName: email,
+		AnnotationUserName: email,
 	}
 
 	switch accessLevel {
@@ -318,72 +320,68 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 		return fmt.Errorf("list CRBs: %w", err)
 	}
 
-	// Build actual state maps (userID → exists).
-	actualSAsByUserID := make(map[uuid.UUID]bool)
-	for _, sa := range actualSAs {
-		if uid, ok := sa.Labels[LabelUserID]; ok {
-			if parsed, err := uuid.Parse(uid); err == nil {
-				actualSAsByUserID[parsed] = true
-			}
-		}
-	}
-
-	actualCRBsByUserID := make(map[uuid.UUID]bool)
-	for _, crb := range actualCRBs {
-		if uid, ok := crb.Labels[LabelUserID]; ok {
-			if parsed, err := uuid.Parse(uid); err == nil {
-				actualCRBsByUserID[parsed] = true
-			}
-		}
-	}
+	actualSAsByUserID, orphanSANames := groupResourcesByUserID(actualSAs)
+	actualCRBsByUserID, orphanCRBNames := groupResourcesByUserID(actualCRBs)
 
 	var reconcileErrs []error
 
-	// 4. Create missing / fix mismatched.
+	// 4. Create missing / fix mismatched, then delete duplicates.
 	for userID, desired := range desiredByUserID {
 		email := ""
 		if desired.Email.Valid {
 			email = desired.Email.String
 		}
 
-		hasSA := actualSAsByUserID[userID]
-		hasCRB := actualCRBsByUserID[userID]
+		labels := map[string]string{
+			LabelUserID: userID.String(),
+		}
+		annotations := map[string]string{
+			AnnotationUserName: email,
+		}
+
+		hasHealthySA, duplicateSANames := classifyServiceAccounts(actualSAsByUserID[userID], userID, labels, annotations)
+		hasHealthyCRB, duplicateCRBNames := classifyClusterRoleBindings(actualCRBsByUserID[userID], userID, labels, annotations)
 
 		switch desired.AccessLevel {
 		case "admin":
-			if !hasSA || !hasCRB {
+			if !hasHealthySA || !hasHealthyCRB {
 				if err := h.applyUserAccess(ctx, clusterID, userID, email, "admin"); err != nil {
 					reconcileErrs = append(reconcileErrs, err)
 				}
 			}
+
+			reconcileErrs = append(reconcileErrs, h.deleteServiceAccounts(ctx, clusterID, duplicateSANames)...)
+			reconcileErrs = append(reconcileErrs, h.deleteClusterRoleBindings(ctx, clusterID, duplicateCRBNames)...)
+			delete(orphanCRBNames, CRBName(userID))
 		case "member":
-			if !hasSA || hasCRB {
+			if !hasHealthySA {
 				if err := h.applyUserAccess(ctx, clusterID, userID, email, "member"); err != nil {
 					reconcileErrs = append(reconcileErrs, err)
 				}
 			}
+
+			reconcileErrs = append(reconcileErrs, h.deleteServiceAccounts(ctx, clusterID, duplicateSANames)...)
+			reconcileErrs = append(reconcileErrs, h.deleteClusterRoleBindings(ctx, clusterID, resourceNames(actualCRBsByUserID[userID]))...)
 		}
 
-		// Remove from actual maps so we can detect orphans.
+		delete(orphanSANames, SAName(userID))
 		delete(actualSAsByUserID, userID)
 		delete(actualCRBsByUserID, userID)
 	}
 
-	// 5. Delete orphaned SAs (in actual but not desired).
-	for userID := range actualSAsByUserID {
-		h.logger.Warn("deleting orphaned SA", "user_id", userID, "cluster_id", clusterID)
-		if err := h.shoot.DeleteServiceAccount(ctx, clusterID, FundamentNamespace, SAName(userID)); err != nil {
-			reconcileErrs = append(reconcileErrs, err)
-		}
+	// 5. Delete orphaned SAs (remaining grouped resources + invalid metadata).
+	for userID, resources := range actualSAsByUserID {
+		h.logger.Warn("deleting orphaned SAs", "user_id", userID, "cluster_id", clusterID, "count", len(resources))
+		reconcileErrs = append(reconcileErrs, h.deleteServiceAccounts(ctx, clusterID, resourceNames(resources))...)
 	}
+	reconcileErrs = append(reconcileErrs, h.deleteServiceAccounts(ctx, clusterID, sortedResourceNames(orphanSANames))...)
 
 	// 6. Delete orphaned CRBs.
-	for userID := range actualCRBsByUserID {
-		h.logger.Warn("deleting orphaned CRB", "user_id", userID, "cluster_id", clusterID)
-		if err := h.shoot.DeleteClusterRoleBinding(ctx, clusterID, CRBName(userID)); err != nil {
-			reconcileErrs = append(reconcileErrs, err)
-		}
+	for userID, resources := range actualCRBsByUserID {
+		h.logger.Warn("deleting orphaned CRBs", "user_id", userID, "cluster_id", clusterID, "count", len(resources))
+		reconcileErrs = append(reconcileErrs, h.deleteClusterRoleBindings(ctx, clusterID, resourceNames(resources))...)
 	}
+	reconcileErrs = append(reconcileErrs, h.deleteClusterRoleBindings(ctx, clusterID, sortedResourceNames(orphanCRBNames))...)
 
 	if err := errors.Join(reconcileErrs...); err != nil {
 		return fmt.Errorf("reconcile cluster %s: %w", clusterID, err)
@@ -404,4 +402,138 @@ func (h *Handler) createUserSyncEvent(ctx context.Context, clusterID uuid.UUID, 
 			"event_type", eventType,
 			"error", err)
 	}
+}
+
+func groupResourcesByUserID(resources []ResourceInfo) (map[uuid.UUID][]ResourceInfo, map[string]struct{}) {
+	grouped := make(map[uuid.UUID][]ResourceInfo)
+	orphans := make(map[string]struct{})
+
+	for _, resource := range resources {
+		uid, ok := resource.Labels[LabelUserID]
+		if !ok {
+			orphans[resource.Name] = struct{}{}
+			continue
+		}
+
+		userID, err := uuid.Parse(uid)
+		if err != nil {
+			orphans[resource.Name] = struct{}{}
+			continue
+		}
+
+		grouped[userID] = append(grouped[userID], resource)
+	}
+
+	return grouped, orphans
+}
+
+func classifyServiceAccounts(resources []ResourceInfo, userID uuid.UUID, labels, annotations map[string]string) (bool, []string) {
+	canonicalName := SAName(userID)
+	hasCanonical := false
+	var duplicates []string
+
+	for _, resource := range resources {
+		if resource.Name == canonicalName {
+			hasCanonical = serviceAccountMatches(resource, labels, annotations)
+			continue
+		}
+		duplicates = append(duplicates, resource.Name)
+	}
+
+	return hasCanonical, duplicates
+}
+
+func classifyClusterRoleBindings(resources []ResourceInfo, userID uuid.UUID, labels, annotations map[string]string) (bool, []string) {
+	canonicalName := CRBName(userID)
+	hasCanonical := false
+	var duplicates []string
+
+	for _, resource := range resources {
+		if resource.Name == canonicalName {
+			hasCanonical = clusterRoleBindingMatches(resource, userID, labels, annotations)
+			continue
+		}
+		duplicates = append(duplicates, resource.Name)
+	}
+
+	return hasCanonical, duplicates
+}
+
+func serviceAccountMatches(resource ResourceInfo, labels, annotations map[string]string) bool {
+	return metadataContains(resource, labels, annotations)
+}
+
+func clusterRoleBindingMatches(resource ResourceInfo, userID uuid.UUID, labels, annotations map[string]string) bool {
+	if !metadataContains(resource, labels, annotations) {
+		return false
+	}
+
+	expectedSubject := rbacv1.Subject{
+		Kind:      "ServiceAccount",
+		Name:      SAName(userID),
+		Namespace: FundamentNamespace,
+	}
+	expectedRoleRef := rbacv1.RoleRef{
+		APIGroup: "rbac.authorization.k8s.io",
+		Kind:     "ClusterRole",
+		Name:     "cluster-admin",
+	}
+
+	return resource.RoleRef == expectedRoleRef &&
+		len(resource.Subjects) == 1 &&
+		resource.Subjects[0] == expectedSubject
+}
+
+func metadataContains(resource ResourceInfo, labels, annotations map[string]string) bool {
+	for k, v := range labels {
+		if resource.Labels[k] != v {
+			return false
+		}
+	}
+
+	for k, v := range annotations {
+		if resource.Annotations[k] != v {
+			return false
+		}
+	}
+
+	return true
+}
+
+func resourceNames(resources []ResourceInfo) []string {
+	names := make([]string, 0, len(resources))
+	for _, resource := range resources {
+		names = append(names, resource.Name)
+	}
+	slices.Sort(names)
+	return names
+}
+
+func sortedResourceNames(names map[string]struct{}) []string {
+	result := make([]string, 0, len(names))
+	for name := range names {
+		result = append(result, name)
+	}
+	slices.Sort(result)
+	return result
+}
+
+func (h *Handler) deleteServiceAccounts(ctx context.Context, clusterID uuid.UUID, names []string) []error {
+	var errs []error
+	for _, name := range names {
+		if err := h.shoot.DeleteServiceAccount(ctx, clusterID, FundamentNamespace, name); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errs
+}
+
+func (h *Handler) deleteClusterRoleBindings(ctx context.Context, clusterID uuid.UUID, names []string) []error {
+	var errs []error
+	for _, name := range names {
+		if err := h.shoot.DeleteClusterRoleBinding(ctx, clusterID, name); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errs
 }

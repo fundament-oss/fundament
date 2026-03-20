@@ -20,9 +20,9 @@ const (
 	// Namespace where all fundament ServiceAccounts are created.
 	FundamentNamespace = "fundament-system"
 
-	// Label keys for fundament-managed resources.
-	LabelUserID   = "fundament.io/user-id"
-	LabelUserName = "fundament.io/user-name"
+	// Metadata keys for fundament-managed resources.
+	LabelUserID        = "fundament.io/user-id"
+	AnnotationUserName = "fundament.io/user-name"
 )
 
 // SAName returns the ServiceAccount name for a user.
@@ -35,10 +35,13 @@ func CRBName(userID uuid.UUID) string {
 	return "fundament:admin:" + userID.String()
 }
 
-// ResourceInfo contains the name and labels of a k8s resource.
+// ResourceInfo contains the metadata needed by reconciliation.
 type ResourceInfo struct {
-	Name   string
-	Labels map[string]string
+	Name        string
+	Labels      map[string]string
+	Annotations map[string]string
+	RoleRef     rbacv1.RoleRef
+	Subjects    []rbacv1.Subject
 }
 
 // ShootAccess provides operations on shoot clusters for user access management.
@@ -181,10 +184,20 @@ func (r *RealShootAccess) EnsureClusterRoleBinding(ctx context.Context, clusterI
 		if getErr != nil {
 			return fmt.Errorf("get existing CRB %s: %w", name, getErr)
 		}
+
+		if clusterRoleBindingNeedsRecreate(existing, crb) {
+			if err := cs.RbacV1().ClusterRoleBindings().Delete(ctx, name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+				return fmt.Errorf("delete existing CRB %s before recreate: %w", name, err)
+			}
+			if _, err := cs.RbacV1().ClusterRoleBindings().Create(ctx, crb, metav1.CreateOptions{}); err != nil {
+				return fmt.Errorf("recreate CRB %s: %w", name, err)
+			}
+			return nil
+		}
+
 		existing.Labels = labels
 		existing.Annotations = annotations
 		existing.Subjects = crb.Subjects
-		existing.RoleRef = crb.RoleRef
 		_, err = cs.RbacV1().ClusterRoleBindings().Update(ctx, existing, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("update CRB %s: %w", name, err)
@@ -242,7 +255,11 @@ func (r *RealShootAccess) ListServiceAccounts(ctx context.Context, clusterID uui
 
 	result := make([]ResourceInfo, len(list.Items))
 	for i := range list.Items {
-		result[i] = ResourceInfo{Name: list.Items[i].Name, Labels: list.Items[i].Labels}
+		result[i] = ResourceInfo{
+			Name:        list.Items[i].Name,
+			Labels:      cloneStringMap(list.Items[i].Labels),
+			Annotations: cloneStringMap(list.Items[i].Annotations),
+		}
 	}
 	return result, nil
 }
@@ -260,7 +277,29 @@ func (r *RealShootAccess) ListClusterRoleBindings(ctx context.Context, clusterID
 
 	result := make([]ResourceInfo, len(list.Items))
 	for i := range list.Items {
-		result[i] = ResourceInfo{Name: list.Items[i].Name, Labels: list.Items[i].Labels}
+		result[i] = ResourceInfo{
+			Name:        list.Items[i].Name,
+			Labels:      cloneStringMap(list.Items[i].Labels),
+			Annotations: cloneStringMap(list.Items[i].Annotations),
+			RoleRef:     list.Items[i].RoleRef,
+			Subjects:    append([]rbacv1.Subject(nil), list.Items[i].Subjects...),
+		}
 	}
 	return result, nil
+}
+
+func clusterRoleBindingNeedsRecreate(existing, desired *rbacv1.ClusterRoleBinding) bool {
+	return existing.RoleRef != desired.RoleRef
+}
+
+func cloneStringMap(src map[string]string) map[string]string {
+	if src == nil {
+		return nil
+	}
+
+	dst := make(map[string]string, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
 }
