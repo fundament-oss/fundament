@@ -93,6 +93,16 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.kubeProxy != nil {
+		// Real mode: let httputil.ReverseProxy forward to the K8s API.
+		// It handles response headers, streaming, and transport-level auth.
+		r.URL.Path = k8sPath
+		r.URL.RawPath = ""
+		s.kubeProxy.ServeHTTP(w, r)
+		return
+	}
+
+	// Mock mode: use the in-process mock client.
 	if r.URL.RawQuery != "" {
 		k8sPath = k8sPath + "?" + r.URL.RawQuery
 	}

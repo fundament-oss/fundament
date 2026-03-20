@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
+	"net/url"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -22,7 +22,7 @@ type Interface interface {
 // Exec-based credential plugins (e.g. aws-iam-authenticator) are not supported.
 type Client struct {
 	httpClient *http.Client
-	host       string
+	host       *url.URL
 }
 
 func New(kubeconfigPath string) (*Client, error) {
@@ -36,20 +36,37 @@ func New(kubeconfigPath string) (*Client, error) {
 		return nil, fmt.Errorf("build http client: %w", err)
 	}
 
+	host, err := url.Parse(cfg.Host)
+	if err != nil {
+		return nil, fmt.Errorf("parse kubeconfig host: %w", err)
+	}
+	host.Path = ""
+	host.RawQuery = ""
+
 	return &Client{
 		httpClient: httpClient,
-		host:       strings.TrimRight(cfg.Host, "/"),
+		host:       host,
 	}, nil
 }
 
-func (r *Client) Do(ctx context.Context, method, path string, body io.Reader) (int, io.ReadCloser, error) {
-	url := r.host + path
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
+// Host returns the parsed base URL of the Kubernetes API server.
+func (c *Client) Host() *url.URL {
+	return c.host
+}
+
+// Transport returns the http.RoundTripper configured for the Kubernetes API server.
+func (c *Client) Transport() http.RoundTripper {
+	return c.httpClient.Transport
+}
+
+func (c *Client) Do(ctx context.Context, method, path string, body io.Reader) (int, io.ReadCloser, error) {
+	u := c.host.String() + path
+	req, err := http.NewRequestWithContext(ctx, method, u, body)
 	if err != nil {
 		return 0, nil, fmt.Errorf("build request: %w", err)
 	}
 
-	resp, err := r.httpClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return 0, nil, fmt.Errorf("kubernetes request: %w", err)
 	}
