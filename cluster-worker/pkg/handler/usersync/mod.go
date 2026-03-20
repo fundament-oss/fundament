@@ -310,7 +310,7 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 	}
 
 	// 3. Get actual state from shoot.
-	actualSAs, err := h.shoot.ListServiceAccounts(ctx, clusterID, FundamentNamespace)
+	actualSAs, err := h.shoot.ListServiceAccounts(ctx, clusterID, FundamentNamespace, LabelUserID)
 	if err != nil {
 		return fmt.Errorf("list SAs: %w", err)
 	}

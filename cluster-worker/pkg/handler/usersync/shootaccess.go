@@ -61,8 +61,8 @@ type ShootAccess interface {
 	// DeleteClusterRoleBinding deletes a ClusterRoleBinding (no-op if absent).
 	DeleteClusterRoleBinding(ctx context.Context, clusterID uuid.UUID, name string) error
 
-	// ListServiceAccounts lists all ServiceAccounts in a namespace.
-	ListServiceAccounts(ctx context.Context, clusterID uuid.UUID, namespace string) ([]ResourceInfo, error)
+	// ListServiceAccounts lists ServiceAccounts in a namespace matching the given label selector.
+	ListServiceAccounts(ctx context.Context, clusterID uuid.UUID, namespace, labelSelector string) ([]ResourceInfo, error)
 
 	// ListClusterRoleBindings lists ClusterRoleBindings matching the given label selector.
 	ListClusterRoleBindings(ctx context.Context, clusterID uuid.UUID, labelSelector string) ([]ResourceInfo, error)
@@ -138,8 +138,8 @@ func (r *RealShootAccess) EnsureServiceAccount(ctx context.Context, clusterID uu
 		if getErr != nil {
 			return fmt.Errorf("get existing SA %s/%s: %w", namespace, name, getErr)
 		}
-		existing.Labels = labels
-		existing.Annotations = annotations
+		mergeStringMap(existing.Labels, labels)
+		mergeStringMap(existing.Annotations, annotations)
 		_, err = cs.CoreV1().ServiceAccounts(namespace).Update(ctx, existing, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("update SA %s/%s: %w", namespace, name, err)
@@ -195,8 +195,8 @@ func (r *RealShootAccess) EnsureClusterRoleBinding(ctx context.Context, clusterI
 			return nil
 		}
 
-		existing.Labels = labels
-		existing.Annotations = annotations
+		mergeStringMap(existing.Labels, labels)
+		mergeStringMap(existing.Annotations, annotations)
 		existing.Subjects = crb.Subjects
 		_, err = cs.RbacV1().ClusterRoleBindings().Update(ctx, existing, metav1.UpdateOptions{})
 		if err != nil {
@@ -242,13 +242,13 @@ func (r *RealShootAccess) DeleteClusterRoleBinding(ctx context.Context, clusterI
 	return nil
 }
 
-func (r *RealShootAccess) ListServiceAccounts(ctx context.Context, clusterID uuid.UUID, namespace string) ([]ResourceInfo, error) {
+func (r *RealShootAccess) ListServiceAccounts(ctx context.Context, clusterID uuid.UUID, namespace, labelSelector string) ([]ResourceInfo, error) {
 	cs, err := r.clientForCluster(ctx, clusterID)
 	if err != nil {
 		return nil, err
 	}
 
-	list, err := cs.CoreV1().ServiceAccounts(namespace).List(ctx, metav1.ListOptions{})
+	list, err := cs.CoreV1().ServiceAccounts(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return nil, fmt.Errorf("list SAs in %s: %w", namespace, err)
 	}
@@ -290,6 +290,14 @@ func (r *RealShootAccess) ListClusterRoleBindings(ctx context.Context, clusterID
 
 func clusterRoleBindingNeedsRecreate(existing, desired *rbacv1.ClusterRoleBinding) bool {
 	return existing.RoleRef != desired.RoleRef
+}
+
+// mergeStringMap copies all entries from src into dst, overwriting existing keys.
+// Existing keys in dst that are not in src are preserved.
+func mergeStringMap(dst, src map[string]string) {
+	for k, v := range src {
+		dst[k] = v
+	}
 }
 
 func cloneStringMap(src map[string]string) map[string]string {

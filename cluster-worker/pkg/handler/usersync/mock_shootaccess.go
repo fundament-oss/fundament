@@ -139,7 +139,7 @@ func (m *MockShootAccess) DeleteClusterRoleBinding(_ context.Context, clusterID 
 	return nil
 }
 
-func (m *MockShootAccess) ListServiceAccounts(_ context.Context, clusterID uuid.UUID, namespace string) ([]ResourceInfo, error) {
+func (m *MockShootAccess) ListServiceAccounts(_ context.Context, clusterID uuid.UUID, namespace, _ string) ([]ResourceInfo, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
