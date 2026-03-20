@@ -54,7 +54,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/k8s/", http.HandlerFunc(s.handleClusterProxy))
+	mux.Handle("/k8sproxy/", http.HandlerFunc(s.handleClusterProxy))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))

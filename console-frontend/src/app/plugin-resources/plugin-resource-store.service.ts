@@ -26,7 +26,7 @@ export default class PluginResourceStoreService {
     }
 
     const base = orgApiUrl.replace(/\/$/, '');
-    const url = `${base}/k8s/${clusterId}/apis/${crd.group}/${crd.version}/${crd.plural}`;
+    const url = `${base}/k8sproxy/${clusterId}/apis/${crd.group}/${crd.version}/${crd.plural}`;
 
     const promise = fetch(url, {
       credentials: 'include',

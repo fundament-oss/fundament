@@ -105,7 +105,7 @@ spec:
     - host: organization.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
       http:
         paths:
-          - path: /k8s/
+          - path: /k8sproxy/
             pathType: Prefix
             backend:
               service:

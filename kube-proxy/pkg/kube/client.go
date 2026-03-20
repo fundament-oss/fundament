@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
 	"strings"
+
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // Client abstracts access to a Kubernetes API server.
@@ -29,10 +30,12 @@ func New(kubeconfigPath string) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load kubeconfig: %w", err)
 	}
+
 	httpClient, err := rest.HTTPClientFor(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("build http client: %w", err)
 	}
+
 	return &Client{
 		httpClient: httpClient,
 		host:       strings.TrimRight(cfg.Host, "/"),
