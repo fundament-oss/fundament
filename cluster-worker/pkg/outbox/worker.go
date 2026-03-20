@@ -200,7 +200,7 @@ func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 		return true, nil
 	}
 
-	w.logger.Info("processing outbox row",
+	w.logger.Debug("processing outbox row",
 		"outbox_id", row.ID,
 		"entity_type", entityType,
 		"entity_id", entityID,
@@ -225,10 +225,6 @@ func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 		return true, nil
 	}
 
-	w.logger.Info("dispatching to handler",
-		"outbox_id", row.ID,
-		"entity_type", entityType,
-		"event", row.Event)
 	err = h.Sync(ctx, entityID, handler.SyncContext{EntityType: entityType, Event: row.Event, Source: row.Source})
 	if err != nil {
 		w.logger.Warn("handler returned error",
@@ -254,7 +250,7 @@ func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 		return false, fmt.Errorf("commit: %w", err)
 	}
 
-	w.logger.Info("outbox row processed",
+	w.logger.Debug("outbox row processed",
 		"outbox_id", row.ID,
 		"entity_type", entityType,
 		"entity_id", entityID)

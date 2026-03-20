@@ -1,6 +1,8 @@
 -- name: OrgUserGetForSync :one
 -- Get the user_id and organization_id for an organizations_users row.
 -- Used by the UserSyncHandler to fan out across all org clusters.
+-- Includes soft-deleted rows: the trigger fires on delete UPDATEs too,
+-- and syncUserToCluster re-resolves access via ResolveUserAccess.
 SELECT
     tenant.organizations_users.user_id,
     tenant.organizations_users.organization_id

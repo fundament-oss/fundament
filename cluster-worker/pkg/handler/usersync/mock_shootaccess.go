@@ -139,7 +139,7 @@ func (m *MockShootAccess) DeleteClusterRoleBinding(_ context.Context, clusterID 
 	return nil
 }
 
-func (m *MockShootAccess) ListServiceAccounts(_ context.Context, clusterID uuid.UUID, namespace, _ string) ([]ResourceInfo, error) {
+func (m *MockShootAccess) ListServiceAccounts(_ context.Context, clusterID uuid.UUID, namespace, labelKey string) ([]ResourceInfo, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -150,13 +150,18 @@ func (m *MockShootAccess) ListServiceAccounts(_ context.Context, clusterID uuid.
 	var result []ResourceInfo
 	if m.ServiceAccounts[clusterID] != nil && m.ServiceAccounts[clusterID][namespace] != nil {
 		for _, resource := range m.ServiceAccounts[clusterID][namespace] {
+			if labelKey != "" {
+				if _, ok := resource.Labels[labelKey]; !ok {
+					continue
+				}
+			}
 			result = append(result, resource)
 		}
 	}
 	return result, nil
 }
 
-func (m *MockShootAccess) ListClusterRoleBindings(_ context.Context, clusterID uuid.UUID, _ string) ([]ResourceInfo, error) {
+func (m *MockShootAccess) ListClusterRoleBindings(_ context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -167,6 +172,11 @@ func (m *MockShootAccess) ListClusterRoleBindings(_ context.Context, clusterID u
 	var result []ResourceInfo
 	if m.ClusterRoleBindings[clusterID] != nil {
 		for _, resource := range m.ClusterRoleBindings[clusterID] {
+			if labelKey != "" {
+				if _, ok := resource.Labels[labelKey]; !ok {
+					continue
+				}
+			}
 			result = append(result, resource)
 		}
 	}
