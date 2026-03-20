@@ -1,11 +1,117 @@
 package usersync
 
 import (
+	"context"
+	"log/slog"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
+
+func newTestShootAccess(t *testing.T) *MockShootAccess {
+	t.Helper()
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	return NewMockShootAccess(logger)
+}
+
+func TestApplyUserAccessAdmin(t *testing.T) {
+	t.Parallel()
+
+	mock := newTestShootAccess(t)
+	h := &Handler{shoot: mock, logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))}
+
+	clusterID := uuid.New()
+	userID := uuid.New()
+
+	err := h.applyUserAccess(context.Background(), clusterID, userID, "admin@example.com", "admin")
+	require.NoError(t, err)
+
+	require.True(t, mock.HasSA(clusterID, userID), "SA should exist")
+	require.True(t, mock.HasCRB(clusterID, userID), "CRB should exist")
+}
+
+func TestApplyUserAccessMember(t *testing.T) {
+	t.Parallel()
+
+	mock := newTestShootAccess(t)
+	h := &Handler{shoot: mock, logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))}
+
+	clusterID := uuid.New()
+	userID := uuid.New()
+
+	err := h.applyUserAccess(context.Background(), clusterID, userID, "member@example.com", "member")
+	require.NoError(t, err)
+
+	require.True(t, mock.HasSA(clusterID, userID), "SA should exist")
+	require.False(t, mock.HasCRB(clusterID, userID), "CRB should not exist for member")
+}
+
+func TestApplyUserAccessNone(t *testing.T) {
+	t.Parallel()
+
+	mock := newTestShootAccess(t)
+	h := &Handler{shoot: mock, logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))}
+
+	clusterID := uuid.New()
+	userID := uuid.New()
+
+	// Pre-populate SA + CRB to verify they get deleted.
+	_ = mock.EnsureServiceAccount(context.Background(), clusterID, FundamentNamespace, SAName(userID), nil, nil)
+	_ = mock.EnsureClusterRoleBinding(context.Background(), clusterID, CRBName(userID), "", "", nil, nil)
+	require.True(t, mock.HasSA(clusterID, userID))
+	require.True(t, mock.HasCRB(clusterID, userID))
+
+	err := h.applyUserAccess(context.Background(), clusterID, userID, "removed@example.com", "none")
+	require.NoError(t, err)
+
+	require.False(t, mock.HasSA(clusterID, userID), "SA should be deleted")
+	require.False(t, mock.HasCRB(clusterID, userID), "CRB should be deleted")
+}
+
+func TestApplyUserAccessIdempotent(t *testing.T) {
+	t.Parallel()
+
+	mock := newTestShootAccess(t)
+	h := &Handler{shoot: mock, logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))}
+
+	clusterID := uuid.New()
+	userID := uuid.New()
+
+	// Apply admin twice — should succeed both times with same result.
+	err := h.applyUserAccess(context.Background(), clusterID, userID, "admin@example.com", "admin")
+	require.NoError(t, err)
+
+	err = h.applyUserAccess(context.Background(), clusterID, userID, "admin@example.com", "admin")
+	require.NoError(t, err)
+
+	require.True(t, mock.HasSA(clusterID, userID))
+	require.True(t, mock.HasCRB(clusterID, userID))
+}
+
+func TestApplyUserAccessDemotionAdminToMember(t *testing.T) {
+	t.Parallel()
+
+	mock := newTestShootAccess(t)
+	h := &Handler{shoot: mock, logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))}
+
+	clusterID := uuid.New()
+	userID := uuid.New()
+
+	// Start as admin.
+	err := h.applyUserAccess(context.Background(), clusterID, userID, "user@example.com", "admin")
+	require.NoError(t, err)
+	require.True(t, mock.HasSA(clusterID, userID))
+	require.True(t, mock.HasCRB(clusterID, userID))
+
+	// Demote to member.
+	err = h.applyUserAccess(context.Background(), clusterID, userID, "user@example.com", "member")
+	require.NoError(t, err)
+	require.True(t, mock.HasSA(clusterID, userID), "SA should be kept")
+	require.False(t, mock.HasCRB(clusterID, userID), "CRB should be deleted")
+}
 
 func TestGroupResourcesByUserIDSeparatesOrphans(t *testing.T) {
 	userID := uuid.New()
