@@ -61,11 +61,11 @@ type ShootAccess interface {
 	// DeleteClusterRoleBinding deletes a ClusterRoleBinding (no-op if absent).
 	DeleteClusterRoleBinding(ctx context.Context, clusterID uuid.UUID, name string) error
 
-	// ListServiceAccounts lists ServiceAccounts in a namespace matching the given label selector.
-	ListServiceAccounts(ctx context.Context, clusterID uuid.UUID, namespace, labelSelector string) ([]ResourceInfo, error)
+	// ListServiceAccounts lists ServiceAccounts in a namespace filtered by label key existence.
+	ListServiceAccounts(ctx context.Context, clusterID uuid.UUID, namespace, labelKey string) ([]ResourceInfo, error)
 
-	// ListClusterRoleBindings lists ClusterRoleBindings matching the given label selector.
-	ListClusterRoleBindings(ctx context.Context, clusterID uuid.UUID, labelSelector string) ([]ResourceInfo, error)
+	// ListClusterRoleBindings lists ClusterRoleBindings filtered by label key existence.
+	ListClusterRoleBindings(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error)
 }
 
 // RealShootAccess implements ShootAccess using AdminKubeconfigRequest to access shoot clusters.
@@ -242,13 +242,13 @@ func (r *RealShootAccess) DeleteClusterRoleBinding(ctx context.Context, clusterI
 	return nil
 }
 
-func (r *RealShootAccess) ListServiceAccounts(ctx context.Context, clusterID uuid.UUID, namespace, labelSelector string) ([]ResourceInfo, error) {
+func (r *RealShootAccess) ListServiceAccounts(ctx context.Context, clusterID uuid.UUID, namespace, labelKey string) ([]ResourceInfo, error) {
 	cs, err := r.clientForCluster(ctx, clusterID)
 	if err != nil {
 		return nil, err
 	}
 
-	list, err := cs.CoreV1().ServiceAccounts(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+	list, err := cs.CoreV1().ServiceAccounts(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelKey})
 	if err != nil {
 		return nil, fmt.Errorf("list SAs in %s: %w", namespace, err)
 	}
@@ -264,13 +264,13 @@ func (r *RealShootAccess) ListServiceAccounts(ctx context.Context, clusterID uui
 	return result, nil
 }
 
-func (r *RealShootAccess) ListClusterRoleBindings(ctx context.Context, clusterID uuid.UUID, labelSelector string) ([]ResourceInfo, error) {
+func (r *RealShootAccess) ListClusterRoleBindings(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error) {
 	cs, err := r.clientForCluster(ctx, clusterID)
 	if err != nil {
 		return nil, err
 	}
 
-	list, err := cs.RbacV1().ClusterRoleBindings().List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+	list, err := cs.RbacV1().ClusterRoleBindings().List(ctx, metav1.ListOptions{LabelSelector: labelKey})
 	if err != nil {
 		return nil, fmt.Errorf("list CRBs: %w", err)
 	}

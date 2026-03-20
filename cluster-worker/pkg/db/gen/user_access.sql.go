@@ -32,7 +32,7 @@ JOIN tenant.users ON tenant.users.id = tenant.organizations_users.user_id AND te
 WHERE tenant.clusters.id = $1
     AND tenant.organizations_users.permission = 'admin'
 UNION ALL
-SELECT
+SELECT DISTINCT
     tenant.users.id AS user_id,
     tenant.users.email,
     'member' AS access_level

@@ -353,3 +353,120 @@ func TestOutboxRowEntityDetection(t *testing.T) {
 	// or an org_user row. Just verify we can read it without error.
 	require.NotEqual(t, uuid.Nil, row.ID, "should get a valid outbox row")
 }
+
+// --- Reconciliation integration tests ---
+
+func TestReconcileMissingSACreated(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMockShootAccess(t)
+	h := newUserSyncHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "reconcile-missing")
+	makeClusterReady(t, db, clusterID)
+	markOutboxCompleted(t, db, clusterID)
+
+	adminID := insertUser(t, db, "Reconcile Admin")
+	memberID := insertUser(t, db, "Reconcile Member")
+	projectAdminID := insertUser(t, db, "Reconcile ProjAdmin")
+
+	insertOrgUser(t, db, acmeCorpOrgID, adminID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, memberID, "viewer", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin", "accepted")
+
+	insertProjectWithMembers(t, db, clusterID,
+		projectMember{UserID: projectAdminID, Role: "admin"},
+		projectMember{UserID: memberID, Role: "viewer"},
+	)
+
+	// Shoot is empty — reconcile should create everything from scratch.
+	err := h.Reconcile(t.Context())
+	require.NoError(t, err)
+
+	require.True(t, mock.HasSA(clusterID, adminID), "admin SA should be created")
+	require.True(t, mock.HasCRB(clusterID, adminID), "admin CRB should be created")
+	require.True(t, mock.HasSA(clusterID, projectAdminID), "project admin SA should be created")
+	require.True(t, mock.HasCRB(clusterID, projectAdminID), "project admin CRB should be created")
+	require.True(t, mock.HasSA(clusterID, memberID), "member SA should be created")
+	require.False(t, mock.HasCRB(clusterID, memberID), "member should not have CRB")
+}
+
+func TestReconcileOrphanedSADeleted(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMockShootAccess(t)
+	h := newUserSyncHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "reconcile-orphan")
+	makeClusterReady(t, db, clusterID)
+	markOutboxCompleted(t, db, clusterID)
+
+	// No users should have access, but an orphaned SA+CRB exists on the shoot.
+	orphanUserID := uuid.New()
+	_ = mock.EnsureNamespace(t.Context(), clusterID, usersync.FundamentNamespace)
+	_ = mock.EnsureServiceAccount(t.Context(), clusterID, usersync.FundamentNamespace,
+		usersync.SAName(orphanUserID),
+		map[string]string{usersync.LabelUserID: orphanUserID.String()},
+		map[string]string{usersync.AnnotationUserName: "orphan@example.com"},
+	)
+	_ = mock.EnsureClusterRoleBinding(t.Context(), clusterID,
+		usersync.CRBName(orphanUserID), usersync.FundamentNamespace, usersync.SAName(orphanUserID),
+		map[string]string{usersync.LabelUserID: orphanUserID.String()},
+		map[string]string{usersync.AnnotationUserName: "orphan@example.com"},
+	)
+
+	require.True(t, mock.HasSA(clusterID, orphanUserID), "precondition: orphan SA exists")
+	require.True(t, mock.HasCRB(clusterID, orphanUserID), "precondition: orphan CRB exists")
+
+	err := h.Reconcile(t.Context())
+	require.NoError(t, err)
+
+	require.False(t, mock.HasSA(clusterID, orphanUserID), "orphaned SA should be deleted")
+	require.False(t, mock.HasCRB(clusterID, orphanUserID), "orphaned CRB should be deleted")
+}
+
+func TestReconcileCRBMismatchFixed(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMockShootAccess(t)
+	h := newUserSyncHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "reconcile-crb-fix")
+	makeClusterReady(t, db, clusterID)
+	markOutboxCompleted(t, db, clusterID)
+
+	// User was admin, got demoted to member (viewer in org, still project member).
+	userID := insertUser(t, db, "CRB Mismatch User")
+	projectAdminID := insertUser(t, db, "CRB Fix ProjAdmin")
+
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin", "accepted")
+	insertProjectWithMembers(t, db, clusterID,
+		projectMember{UserID: projectAdminID, Role: "admin"},
+		projectMember{UserID: userID, Role: "viewer"},
+	)
+
+	// Stale state on shoot: user still has CRB from when they were admin.
+	_ = mock.EnsureNamespace(t.Context(), clusterID, usersync.FundamentNamespace)
+	_ = mock.EnsureServiceAccount(t.Context(), clusterID, usersync.FundamentNamespace,
+		usersync.SAName(userID),
+		map[string]string{usersync.LabelUserID: userID.String()},
+		map[string]string{usersync.AnnotationUserName: "user@example.com"},
+	)
+	_ = mock.EnsureClusterRoleBinding(t.Context(), clusterID,
+		usersync.CRBName(userID), usersync.FundamentNamespace, usersync.SAName(userID),
+		map[string]string{usersync.LabelUserID: userID.String()},
+		map[string]string{usersync.AnnotationUserName: "user@example.com"},
+	)
+
+	require.True(t, mock.HasCRB(clusterID, userID), "precondition: stale CRB exists")
+
+	err := h.Reconcile(t.Context())
+	require.NoError(t, err)
+
+	require.True(t, mock.HasSA(clusterID, userID), "SA should be kept (still project member)")
+	require.False(t, mock.HasCRB(clusterID, userID), "stale CRB should be deleted (no longer admin)")
+}
