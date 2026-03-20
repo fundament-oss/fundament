@@ -44,7 +44,7 @@ export default class PluginResourceStoreService {
       });
 
     this.inFlight.set(cacheKey, promise);
-    return promise;
+    await promise;
   }
 
   listResources(pluginName: string, kind: string, clusterId: string): KubeResource[] {

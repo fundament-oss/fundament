@@ -2,7 +2,7 @@ apiVersion: fundament.io/v1
 kind: PluginDefinition
 
 name: cert-manager
-alias: Cert Manager
+label: Cert Manager
 version: v1.19.3
 description: Automatic TLS certificate management using cert-manager. Supports ACME, CA, and self-signed issuers.
 author: Fundament Team

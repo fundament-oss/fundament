@@ -1,6 +1,6 @@
 import { Injectable, inject, computed } from '@angular/core';
 import PluginRegistryService from './plugin-registry.service';
-import type { PluginNavGroup, PluginNavItem } from './types';
+import type { PluginNavGroup } from './types';
 import { kindToLabel } from './crd-schema.utils';
 
 @Injectable({ providedIn: 'root' })
@@ -17,9 +17,9 @@ export default class PluginNavService {
       .filter((plugin) => (plugin.menu[section]?.length ?? 0) > 0)
       .map((plugin) => ({
         pluginName: plugin.name,
-        alias: plugin.alias,
+        label: plugin.label,
         items: (plugin.menu[section] ?? []).map((menuItem) => ({
-          label: kindToLabel(menuItem.crd),
+          label: menuItem.label ?? kindToLabel(menuItem.crd),
           crdKind: menuItem.crd,
           icon: menuItem.icon,
         })),

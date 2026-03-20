@@ -380,7 +380,7 @@ export default class App implements OnInit {
 
     if (label === ':pluginAlias') {
       const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
-      label = plugin?.alias ?? params['pluginName'] ?? 'Plugin';
+      label = plugin?.label ?? params['pluginName'] ?? 'Plugin';
     }
 
     if (label === ':resourceKindLabel') {
