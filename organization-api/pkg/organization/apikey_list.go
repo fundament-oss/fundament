@@ -24,14 +24,14 @@ func (s *Server) ListAPIKeys(
 		return nil, err
 	}
 
-	claims, ok := ClaimsFromContext(ctx)
+	userID, ok := UserIDFromContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("claims missing from context"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
 	}
 
 	keys, err := s.queries.APIKeyListByOrganizationID(ctx, db.APIKeyListByOrganizationIDParams{
 		OrganizationID: organizationID,
-		UserID:         claims.UserID,
+		UserID:         userID,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list api keys: %w", err))

@@ -33,7 +33,7 @@ func protoUserFromClaims(claims *auth.Claims) *authnv1.User {
 	}
 
 	return authnv1.User_builder{
-		Id:              claims.UserID.String(),
+		Id:              claims.Subject,
 		OrganizationIds: organizationIds,
 		Name:            claims.Name,
 		Groups:          claims.Groups,

@@ -1,16 +1,29 @@
 {{/*
-Common labels
+Selector labels for a component.
+Usage: include "fundament.selectorLabels" (dict "root" $ "name" "authn-api")
+*/}}
+{{- define "fundament.selectorLabels" -}}
+app.kubernetes.io/name: {{ .name }}
+app.kubernetes.io/instance: {{ .root.Release.Name }}-{{ .name }}
+{{- end }}
+
+{{/*
+Common labels applied to all resources.
+Usage: include "fundament.labels" (dict "root" $ "name" "authn-api" "component" "backend")
 */}}
 {{- define "fundament.labels" -}}
-app.kubernetes.io/part-of: {{ $.Release.Name }}
-app.kubernetes.io/managed-by: {{ $.Release.Service }}
+{{ include "fundament.selectorLabels" . }}
+app.kubernetes.io/part-of: fundament
+app.kubernetes.io/component: {{ .component }}
+app.kubernetes.io/managed-by: {{ .root.Release.Service }}
+helm.sh/chart: {{ .root.Chart.Name }}-{{ .root.Chart.Version | replace "+" "_" }}
 {{- end }}
 
 {{/*
 Database name
 */}}
 {{- define "fundament.db.name" -}}
-{{ $.Release.Name }}-db
+db
 {{- end }}
 
 {{/*
