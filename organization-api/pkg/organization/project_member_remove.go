@@ -10,6 +10,8 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -22,7 +24,15 @@ func (s *Server) RemoveProjectMember(
 ) (*connect.Response[organizationv1.RemoveProjectMemberResponse], error) {
 	memberID := uuid.MustParse(req.Msg.GetMemberId())
 
-	if err := s.checkPermission(ctx, authz.CanDelete(), authz.ProjectMember(memberID)); err != nil {
+	member, err := s.queries.ProjectMemberGetByID(ctx, db.ProjectMemberGetByIDParams{ID: memberID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project member not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project member: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanDeleteProjectMember(), authz.Project(member.ProjectID)); err != nil {
 		return nil, err
 	}
 

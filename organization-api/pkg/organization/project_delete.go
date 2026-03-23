@@ -2,10 +2,12 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -18,7 +20,15 @@ func (s *Server) DeleteProject(
 ) (*connect.Response[organizationv1.DeleteProjectResponse], error) {
 	projectID := uuid.MustParse(req.Msg.GetProjectId())
 
-	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Project(projectID)); err != nil {
+	project, err := s.queries.ProjectGetByID(ctx, db.ProjectGetByIDParams{ID: projectID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanDeleteProject(), authz.Cluster(project.ClusterID)); err != nil {
 		return nil, err
 	}
 

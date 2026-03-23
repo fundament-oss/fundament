@@ -2,10 +2,12 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -18,7 +20,15 @@ func (s *Server) DeleteNodePool(
 ) (*connect.Response[organizationv1.DeleteNodePoolResponse], error) {
 	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
 
-	if err := s.checkPermission(ctx, authz.CanDelete(), authz.NodePool(nodePoolID)); err != nil {
+	nodePool, err := s.queries.NodePoolGetByID(ctx, db.NodePoolGetByIDParams{ID: nodePoolID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("node pool not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pool: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanDeleteNodePool(), authz.Cluster(nodePool.ClusterID)); err != nil {
 		return nil, err
 	}
 

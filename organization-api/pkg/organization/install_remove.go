@@ -2,10 +2,12 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -18,7 +20,15 @@ func (s *Server) RemoveInstall(
 ) (*connect.Response[organizationv1.RemoveInstallResponse], error) {
 	installID := uuid.MustParse(req.Msg.GetInstallId())
 
-	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Install(installID)); err != nil {
+	install, err := s.queries.InstallGetByID(ctx, db.InstallGetByIDParams{ID: installID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("install not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get install: %w", err))
+	}
+
+	if err := s.checkPermission(ctx, authz.CanDeleteInstall(), authz.Cluster(install.ClusterID)); err != nil {
 		return nil, err
 	}
 
