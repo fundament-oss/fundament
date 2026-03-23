@@ -1,0 +1,86 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+spec:
+  metadata:
+    name: cert-manager
+    displayName: Cert Manager
+    version: v1.17.2
+    description: Automated TLS certificate management for Kubernetes using cert-manager.
+    author: Fundament
+    license: Apache-2.0
+    icon: shield-check
+    urls:
+      homepage: https://cert-manager.io
+      repository: https://github.com/cert-manager/cert-manager
+      documentation: https://cert-manager.io/docs
+    tags:
+      - certificates
+      - tls
+      - security
+  permissions:
+    capabilities:
+      - internet_access
+    rbac:
+      - apiGroups:
+          - cert-manager.io
+        resources:
+          - certificates
+          - issuers
+          - clusterissuers
+          - certificaterequests
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - acme.cert-manager.io
+        resources:
+          - orders
+          - challenges
+        verbs:
+          - get
+          - list
+          - watch
+  menu:
+    organization:
+      - crd: clusterissuers.cert-manager.io
+        list: true
+        detail: true
+        create: true
+        icon: globe
+    project:
+      - crd: certificates.cert-manager.io
+        list: true
+        detail: true
+        create: true
+        icon: file-lock
+      - crd: certificaterequests.cert-manager.io
+        list: true
+        detail: true
+        create: false
+        icon: file-search
+  uiHints:
+    certificates.cert-manager.io:
+      statusMapping:
+        jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
+        values:
+          "True":
+            badge: success
+            label: Ready
+          "False":
+            badge: danger
+            label: Not Ready
+    clusterissuers.cert-manager.io:
+      statusMapping:
+        jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
+        values:
+          "True":
+            badge: success
+            label: Ready
+          "False":
+            badge: danger
+            label: Not Ready

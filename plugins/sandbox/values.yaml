@@ -1,0 +1,36 @@
+# Plugin Sandbox - minimal values for plugin development
+# Only enables the plugin controller; all other components stay disabled.
+
+db:
+  enabled: false
+
+authnApi:
+  enabled: false
+
+organizationApi:
+  enabled: false
+
+consoleFrontend:
+  enabled: false
+
+docsFrontend:
+  enabled: false
+
+clusterWorker:
+  enabled: false
+
+authzWorker:
+  enabled: false
+
+openfga:
+  enabled: false
+
+dex:
+  enabled: false
+
+ingress:
+  enabled: false
+
+pluginController:
+  enabled: true
+  logLevel: debug
