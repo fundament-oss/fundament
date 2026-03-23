@@ -17,6 +17,9 @@ options:
       - arg: --disable=traefik
         nodeFilters:
           - server:*
+      - arg: --kube-apiserver-arg=feature-gates=WatchList=true
+        nodeFilters:
+          - server:*
 registries:
   create:
     name: "registry.localhost"
@@ -32,3 +35,4 @@ volumes:
   - volume: ${PWD}/deploy/k3d/resources/cert-manager.yaml:/var/lib/rancher/k3s/server/manifests/cert-manager.yaml
   - volume: ${PWD}/deploy/k3d/resources/ingress-nginx.yaml:/var/lib/rancher/k3s/server/manifests/ingress-nginx.yaml
   - volume: ${PWD}/deploy/k3d/resources/reloader.yaml:/var/lib/rancher/k3s/server/manifests/reloader.yaml
+  - volume: ${PWD}/charts/fundament/crds/plugininstallations.plugins.fundament.io.yaml:/var/lib/rancher/k3s/server/manifests/plugininstallations.plugins.fundament.io.yaml

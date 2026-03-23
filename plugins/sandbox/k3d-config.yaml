@@ -1,0 +1,27 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: fundament-plugin
+servers: 1
+agents: 0
+options:
+  k3s:
+    extraArgs:
+      - arg: --disable=traefik
+        nodeFilters:
+          - server:*
+      - arg: --kube-apiserver-arg=feature-gates=WatchList=true
+        nodeFilters:
+          - server:*
+registries:
+  create:
+    name: "plugin-registry.localhost"
+    host: "0.0.0.0"
+    hostPort: "5112"
+  config: |
+    mirrors:
+      "localhost:5112":
+        endpoint:
+          - http://plugin-registry.localhost:5000
+volumes:
+  - volume: ${PWD}/../charts/fundament/crds/plugininstallations.plugins.fundament.io.yaml:/var/lib/rancher/k3s/server/manifests/plugininstallations.plugins.fundament.io.yaml
