@@ -15,6 +15,7 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
+import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER, PLUGIN } from '../../connect/tokens';
 import {
   CreateClusterRequestSchema,
@@ -75,6 +76,8 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
   private pluginClient = inject(PLUGIN);
 
   protected stateService = inject(ClusterWizardStateService);
+
+  private organizationDataService = inject(OrganizationDataService);
 
   protected state = computed(() => this.stateService.getState());
 
@@ -266,6 +269,7 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
         syncStatus: 'syncing',
         createdId: response.clusterId,
       });
+      this.organizationDataService.addCluster(response.clusterId, this.clusterConfig.name);
 
       // Reset wizard state since we have the cluster now
       this.stateService.reset();

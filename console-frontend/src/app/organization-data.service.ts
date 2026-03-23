@@ -6,8 +6,10 @@ import { ORGANIZATION, CLUSTER, PROJECT } from '../connect/tokens';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
 import {
   ListClustersRequestSchema,
+  ListClustersResponse_ClusterSummarySchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../generated/v1/cluster_pb';
+import { ClusterStatus } from '../generated/v1/common_pb';
 import { ListProjectsRequestSchema } from '../generated/v1/project_pb';
 
 export interface ProjectData {
@@ -214,6 +216,36 @@ export class OrganizationDataService {
    */
   getOrganizationById(organizationId: string) {
     return this.organizations().find((org) => org.id === organizationId);
+  }
+
+  /**
+   * Add a newly created cluster to the cache immediately (before a full reload).
+   * This ensures other views (e.g. Projects, plugins) reflect the new cluster right away.
+   */
+  addCluster(id: string, name: string) {
+    this.organizations.update((orgs) =>
+      orgs.map((org, i) =>
+        i === 0 ? { ...org, clusters: [...org.clusters, { id, name, projects: [] }] } : org,
+      ),
+    );
+    this.clusterSummaries.update((summaries) => [
+      ...summaries,
+      create(ListClustersResponse_ClusterSummarySchema, {
+        id,
+        name,
+        status: ClusterStatus.PROVISIONING,
+      }),
+    ]);
+  }
+
+  /**
+   * Remove a deleted cluster from the cache immediately.
+   */
+  removeCluster(id: string) {
+    this.organizations.update((orgs) =>
+      orgs.map((org) => ({ ...org, clusters: org.clusters.filter((c) => c.id !== id) })),
+    );
+    this.clusterSummaries.update((summaries) => summaries.filter((c) => c.id !== id));
   }
 
   /**
