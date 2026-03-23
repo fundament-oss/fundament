@@ -2,14 +2,14 @@
   <!-- Header -->
   <div class="card-header">
     <h1 class="text-2xl font-semibold">Clusters</h1>
-    <p class="mt-1 mb-4 text-sm text-gray-600 dark:text-gray-300">
-      Manage your Kubernetes clusters
-    </p>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Manage your Kubernetes clusters</p>
 
-    <a routerLink="/clusters/add" class="btn-primary inline-flex items-center">
-      <ng-icon name="tablerPlus" class="mr-1.5" size="0.875rem" />
-      Add cluster
-    </a>
+    @if (clusters().length > 0) {
+      <a routerLink="/clusters/add" class="btn-primary mt-4 inline-flex items-center">
+        <ng-icon name="tablerPlus" class="mr-1.5" size="0.875rem" />
+        Add cluster
+      </a>
+    }
   </div>
 
   <div class="card-body-lg">
@@ -85,8 +85,8 @@
       <div
         class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-16 text-center dark:border-gray-800 dark:bg-gray-900/30"
       >
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No clusters yet</p>
-        <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">
+        <p class="text-sm font-medium text-gray-600 dark:text-gray-300">No clusters yet</p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Add your first Kubernetes cluster to get started.
         </p>
         <a routerLink="/clusters/add" class="btn-primary mt-5 inline-flex items-center">
