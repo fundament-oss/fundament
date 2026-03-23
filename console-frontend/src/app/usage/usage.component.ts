@@ -16,6 +16,7 @@ import { firstValueFrom } from 'rxjs';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerTableDown } from '@ng-icons/tabler-icons';
+import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';
@@ -102,6 +103,7 @@ function formatTimestamp(ts: Timestamp | undefined): string {
   viewProviders: [
     provideIcons({
       tablerTableDown,
+      tablerCircleXFill,
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

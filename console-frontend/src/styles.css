@@ -45,6 +45,10 @@
   }
 }
 
+body {
+  @apply min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-white;
+}
+
 /* Form validation */
 
 input.ng-invalid.ng-dirty:not([type='email']), /* Exclude email inputs to avoid instant validation while typing */
@@ -56,11 +60,11 @@ input.validate-on-touch.ng-invalid.ng-touched {
 /* Card styles */
 
 .card {
-  @apply rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950;
+  @apply rounded-lg border border-gray-200 bg-white shadow-xs dark:border-gray-800 dark:bg-gray-950;
 }
 
 .card-header {
-  @apply border-b border-gray-200 px-6 py-4 dark:border-gray-800;
+  @apply border-b border-gray-100 px-6 py-4 dark:border-gray-900;
 }
 
 .card-body-lg {
@@ -86,7 +90,7 @@ input.validate-on-touch.ng-invalid.ng-touched {
 }
 
 .badge-md {
-  @apply inline-flex items-center rounded-md px-2 py-1 text-xs font-medium;
+  @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium;
 }
 
 /* Badge color variants */
@@ -125,7 +129,7 @@ input.validate-on-touch.ng-invalid.ng-touched {
 }
 
 .btn-secondary {
-  @apply cursor-pointer rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-indigo-500 hover:bg-gray-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950 dark:hover:bg-gray-700;
+  @apply cursor-pointer rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-xs ring-indigo-500 hover:bg-gray-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950 dark:hover:bg-gray-700;
 }
 
 .btn-light {
@@ -209,7 +213,7 @@ select {
 /* Navigation link styles */
 
 .nav-link {
-  @apply flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800;
+  @apply flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-200;
 }
 
 .nav-link.active {

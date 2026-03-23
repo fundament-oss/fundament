@@ -2,7 +2,6 @@ import { Component, inject, computed, OnInit, ChangeDetectionStrategy } from '@a
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerChevronRight } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { LoadingIndicatorComponent } from '../icons';
 import { TitleService } from '../title.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -13,7 +12,6 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
   imports: [RouterLink, NgIcon, LoadingIndicatorComponent],
   viewProviders: [
     provideIcons({
-      tablerCircleXFill,
       tablerPlus,
       tablerChevronRight,
     }),

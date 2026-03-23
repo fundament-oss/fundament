@@ -1,19 +1,21 @@
 <!-- Error Message -->
 @if (errorMessage()) {
-  <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
+  <div
+    class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+  >
     <ng-icon
       name="tablerCircleXFill"
-      size="1.25rem"
-      class="mr-3 shrink-0 text-rose-400! dark:text-rose-500!"
+      class="shrink-0 text-rose-500! dark:text-rose-400!"
+      size="1.125rem"
     />
-    <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
+    <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
 
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-bold dark:text-white">Add project</h1>
+    <h1 class="text-2xl font-semibold dark:text-white">Add project</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
       Create a new project to organize your namespaces and resources.
     </p>
