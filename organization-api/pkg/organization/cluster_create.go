@@ -2,9 +2,11 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -33,6 +35,10 @@ func (s *Server) CreateCluster(
 
 	clusterID, err := s.queries.ClusterCreate(ctx, params)
 	if err != nil {
+		// ErrNoRows means the WHERE NOT EXISTS condition was false: a cluster with this name already exists
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("a cluster with the name %q already exists", req.Msg.GetName()))
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
 	}
 
