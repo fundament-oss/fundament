@@ -1,0 +1,14 @@
+kube_context := env("kube_context", "k3d-fundament-plugin")
+
+# Apply test resources (self-signed ClusterIssuer + Certificate) to verify cert-manager works
+test:
+    kubectl --context {{ kube_context }} apply -f test-resources.yaml
+    @echo "Waiting for certificate to become ready..."
+    kubectl --context {{ kube_context }} wait --for=condition=Ready certificate/test-cert -n fundament --timeout=60s
+    kubectl --context {{ kube_context }} get certificate -n fundament test-cert
+    kubectl --context {{ kube_context }} get secret -n fundament test-cert-tls
+
+# Remove test resources
+test-cleanup:
+    kubectl --context {{ kube_context }} delete -f test-resources.yaml --ignore-not-found
+    kubectl --context {{ kube_context }} delete secret -n fundament test-cert-tls --ignore-not-found

@@ -101,6 +101,10 @@ dex:
       username: Grace
       userID: "019b4000-1000-7000-8000-000000000007"
 
+pluginController:
+  enabled: true
+  logLevel: debug
+
 authzWorker:
   enabled: true
   replicas: 1

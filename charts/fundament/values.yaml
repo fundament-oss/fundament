@@ -25,6 +25,7 @@ images:
   authzWorker: ghcr.io/fundament-oss/fundament/authz-worker:latest
   kubeProxy: ghcr.io/fundament-oss/fundament/kube-proxy:latest
   openfgaSetup: ghcr.io/fundament-oss/fundament/openfga-setup:latest
+  pluginController: ghcr.io/fundament-oss/fundament/plugin-controller:latest
 
 # Database (CloudNativePG)
 db:
@@ -118,6 +119,11 @@ openfga:
   replicas: 1
   playground:
     enabled: false
+
+# Plugin Controller
+pluginController:
+  enabled: false
+  logLevel: info
 
 # Dex (OIDC Identity Provider)
 dex:
