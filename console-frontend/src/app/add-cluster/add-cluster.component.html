@@ -19,9 +19,20 @@
       formControlName="clusterName"
       type="text"
       placeholder="E.g. my-production-cluster"
+      (blur)="onClusterNameBlur()"
+      (input)="onClusterNameInput()"
+      class="validate-on-touch"
+      [class.ng-invalid]="
+        (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) || clusterNameExists()
+      "
     />
-    @if (clusterName?.invalid && clusterName?.dirty) {
+    @if (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) {
       <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getClusterNameError() }}</p>
+    }
+    @if (clusterNameExists()) {
+      <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+        A cluster with this name already exists.
+      </p>
     }
   </div>
 

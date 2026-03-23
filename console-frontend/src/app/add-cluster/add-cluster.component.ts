@@ -6,11 +6,13 @@ import {
   inject,
   OnInit,
   ChangeDetectionStrategy,
+  signal,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
+import { OrganizationDataService } from '../organization-data.service';
 
 @Component({
   selector: 'app-add-cluster',
@@ -28,6 +30,12 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
   private fb = inject(FormBuilder);
 
   private stateService = inject(ClusterWizardStateService);
+
+  private orgDataService = inject(OrganizationDataService);
+
+  formSubmitted = signal(false);
+
+  clusterNameExists = signal(false);
 
   // Form
   clusterForm: FormGroup;
@@ -89,8 +97,22 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
     return '';
   }
 
+  onClusterNameBlur() {
+    const name = this.clusterName?.value as string;
+    if (!name) {
+      return;
+    }
+    const exists = this.orgDataService.clusterSummaries().some((c) => c.name === name);
+    this.clusterNameExists.set(exists);
+  }
+
+  onClusterNameInput() {
+    this.clusterNameExists.set(false);
+  }
+
   onSubmit() {
-    if (this.clusterForm.invalid) {
+    this.formSubmitted.set(true);
+    if (this.clusterForm.invalid || this.clusterNameExists()) {
       this.clusterForm.markAllAsTouched();
       AddClusterComponent.scrollToFirstError();
       return;
