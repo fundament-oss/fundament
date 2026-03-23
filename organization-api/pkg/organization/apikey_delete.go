@@ -2,10 +2,12 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -18,8 +20,23 @@ func (s *Server) DeleteAPIKey(
 ) (*connect.Response[organizationv1.DeleteAPIKeyResponse], error) {
 	apiKeyID := uuid.MustParse(req.Msg.GetApiKeyId())
 
-	if err := s.checkPermission(ctx, authz.CanDelete(), authz.ApiKey(apiKeyID)); err != nil {
-		return nil, err
+	key, err := s.queries.APIKeyGetByID(ctx, db.APIKeyGetByIDParams{ID: apiKeyID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("api key not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get api key: %w", err))
+	}
+
+	userID, ok := UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
+	}
+
+	if key.UserID != userID {
+		if err := s.checkPermission(ctx, authz.CanDeleteApikey(), authz.Organization(key.OrganizationID)); err != nil {
+			return nil, err
+		}
 	}
 
 	rowsAffected, err := s.queries.APIKeyDelete(ctx, db.APIKeyDeleteParams{ID: apiKeyID})

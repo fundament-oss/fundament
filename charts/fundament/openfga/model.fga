@@ -10,6 +10,9 @@ type organization
     define can_view: viewer
     define can_edit: admin
     define can_create_apikey: viewer
+    define can_view_apikey: admin
+    define can_edit_apikey: admin
+    define can_delete_apikey: admin
     define can_list_apikeys: viewer
     define can_create_cluster: admin
     define can_view_cluster: admin or viewer

@@ -28,6 +28,9 @@ const (
 	ActionCanView              ActionName = "can_view"
 	ActionCanEdit              ActionName = "can_edit"
 	ActionCanCreateApikey      ActionName = "can_create_apikey"
+	ActionCanViewApikey        ActionName = "can_view_apikey"
+	ActionCanEditApikey        ActionName = "can_edit_apikey"
+	ActionCanDeleteApikey      ActionName = "can_delete_apikey"
 	ActionCanListApikeys       ActionName = "can_list_apikeys"
 	ActionCanCreateCluster     ActionName = "can_create_cluster"
 	ActionCanViewCluster       ActionName = "can_view_cluster"
@@ -234,6 +237,21 @@ func CanEdit() Action {
 // CanCreateApikey creates an Action for the can_create_apikey relation.
 func CanCreateApikey() Action {
 	return Action{Name: ActionCanCreateApikey}
+}
+
+// CanViewApikey creates an Action for the can_view_apikey relation.
+func CanViewApikey() Action {
+	return Action{Name: ActionCanViewApikey}
+}
+
+// CanEditApikey creates an Action for the can_edit_apikey relation.
+func CanEditApikey() Action {
+	return Action{Name: ActionCanEditApikey}
+}
+
+// CanDeleteApikey creates an Action for the can_delete_apikey relation.
+func CanDeleteApikey() Action {
+	return Action{Name: ActionCanDeleteApikey}
 }
 
 // CanListApikeys creates an Action for the can_list_apikeys relation.

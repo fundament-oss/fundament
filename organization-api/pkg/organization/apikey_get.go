@@ -20,10 +20,6 @@ func (s *Server) GetAPIKey(
 ) (*connect.Response[organizationv1.GetAPIKeyResponse], error) {
 	apiKeyID := uuid.MustParse(req.Msg.GetApiKeyId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.ApiKey(apiKeyID)); err != nil {
-		return nil, err
-	}
-
 	key, err := s.queries.APIKeyGetByID(ctx, db.APIKeyGetByIDParams{
 		ID: apiKeyID,
 	})
@@ -32,6 +28,17 @@ func (s *Server) GetAPIKey(
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("api key not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get api key: %w", err))
+	}
+
+	userID, ok := UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
+	}
+
+	if key.UserID != userID {
+		if err := s.checkPermission(ctx, authz.CanViewApikey(), authz.Organization(key.OrganizationID)); err != nil {
+			return nil, err
+		}
 	}
 
 	return connect.NewResponse(organizationv1.GetAPIKeyResponse_builder{
