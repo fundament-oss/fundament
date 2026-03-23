@@ -7,7 +7,7 @@
       />
       <span class="sr-only">Loading...</span>
     </div>
-    <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading projects...</p>
+    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading projects...</p>
   </div>
 }
 
@@ -16,61 +16,90 @@
   <div class="card">
     <!-- Header -->
     <div class="card-header">
-      <h1 class="text-2xl font-semibold dark:text-white">Projects</h1>
+      <h1 class="text-2xl font-semibold">Projects</h1>
+      <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        Manage projects across your clusters
+      </p>
+
+      @if (clusters().length > 0) {
+        <a routerLink="/projects/add" class="btn-primary mt-4 inline-flex items-center">
+          <ng-icon name="tablerPlus" class="mr-1.5" size="0.875rem" />
+          Add project
+        </a>
+      }
     </div>
 
     <!-- Content -->
-    <div class="p-6">
-      <!-- Add Project Button -->
-      <div class="mb-6">
-        <a routerLink="/projects/add" class="btn-primary inline-flex items-center">
-          <ng-icon name="tablerPlus" class="mr-1.5" />
-          Add project
-        </a>
-      </div>
-
-      <!-- Projects by Cluster -->
+    <div class="card-body-lg">
+      <!-- No clusters -->
       @if (clusters().length === 0) {
-        <p class="text-sm text-gray-600 dark:text-gray-400">
-          No clusters found.
-          <a routerLink="/clusters/add" class="link">Create a cluster first</a> to add projects.
-        </p>
+        <div
+          class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-16 text-center dark:border-gray-800 dark:bg-gray-900/30"
+        >
+          <p class="text-sm font-medium text-gray-600 dark:text-gray-300">No clusters found</p>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <a routerLink="/clusters/add" class="link">Create a cluster first</a> to add projects.
+          </p>
+        </div>
       } @else {
-        <div class="space-y-6">
+        <div class="space-y-8">
           @for (cluster of clusters(); track cluster.id) {
             <div>
-              <h2 class="mb-3 font-medium">
-                Projects for cluster
-                <a routerLink="/clusters/{{ cluster.id }}" class="link">{{ cluster.name }}</a
-                >:
-              </h2>
-              <div
-                class="divide-y divide-gray-200 overflow-hidden rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
-              >
-                @if (cluster.projects.length === 0) {
-                  <div class="px-6 py-5 text-center">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                      No projects in this cluster.
-                    </p>
-                  </div>
-                } @else {
+              <!-- Cluster label -->
+              <div class="mb-3 flex items-center gap-2.5">
+                <h2 class="text-sm font-semibold">
+                  <a routerLink="/clusters/{{ cluster.id }}" class="link"
+                    >Cluster: {{ cluster.name }}</a
+                  >
+                </h2>
+                <span
+                  class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                >
+                  {{ cluster.projects.length }}
+                  {{ cluster.projects.length === 1 ? 'project' : 'projects' }}
+                </span>
+              </div>
+
+              <!-- Projects list -->
+              @if (cluster.projects.length === 0) {
+                <div
+                  class="flex items-center gap-3 rounded-lg border border-dashed border-gray-200 px-5 py-4 dark:border-gray-800"
+                >
+                  <ng-icon
+                    name="tablerFolders"
+                    size="1.125rem"
+                    class="shrink-0 text-gray-300 dark:text-gray-600"
+                  />
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    No projects in this cluster yet.
+                  </p>
+                </div>
+              } @else {
+                <div
+                  class="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
+                >
                   @for (project of cluster.projects; track project.id) {
                     <a
                       [routerLink]="['/projects', project.id]"
-                      class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-900"
+                      class="group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-900/60"
                     >
-                      <div>
-                        <h3 class="font-medium dark:text-white">{{ project.name }}</h3>
+                      <div
+                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+                      >
+                        <ng-icon name="tablerFolder" />
                       </div>
+                      <span class="min-w-0 flex-1 text-sm font-medium">
+                        {{ project.name }}
+                      </span>
                       <ng-icon
                         name="tablerChevronRight"
-                        size="1.25rem"
-                        class="text-gray-400! dark:text-gray-500!"
+                        size="1.125rem"
+                        class="shrink-0 text-gray-300 group-hover:text-gray-400 dark:text-gray-600 dark:group-hover:text-gray-500"
                       />
                     </a>
                   }
-                }
-              </div>
+                </div>
+              }
             </div>
           }
         </div>

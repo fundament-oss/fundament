@@ -1,7 +1,12 @@
 import { Component, inject, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerChevronRight } from '@ng-icons/tabler-icons';
+import {
+  tablerPlus,
+  tablerChevronRight,
+  tablerFolder,
+  tablerFolders,
+} from '@ng-icons/tabler-icons';
 import { LoadingIndicatorComponent } from '../icons';
 import { TitleService } from '../title.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -14,6 +19,8 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
     provideIcons({
       tablerPlus,
       tablerChevronRight,
+      tablerFolder,
+      tablerFolders,
     }),
   ],
   templateUrl: './projects.component.html',
