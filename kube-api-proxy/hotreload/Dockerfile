@@ -3,6 +3,6 @@ RUN go install github.com/air-verse/air@latest
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
-COPY kube-proxy/ ./kube-proxy/
+COPY kube-api-proxy/ ./kube-api-proxy/
 COPY common/ ./common/
-CMD ["air", "-c", "kube-proxy/hotreload/.air.toml"]
+CMD ["air", "-c", "kube-api-proxy/hotreload/.air.toml"]

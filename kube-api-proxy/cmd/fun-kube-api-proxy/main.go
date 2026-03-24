@@ -17,7 +17,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/fundament-oss/fundament/common/authz"
-	"github.com/fundament-oss/fundament/kube-proxy/pkg/proxy"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/proxy"
 )
 
 type config struct {
@@ -26,8 +26,8 @@ type config struct {
 	ListenAddr          string     `env:"LISTEN_ADDR" envDefault:":8081"`
 	LogLevel            slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins  []string   `env:"CORS_ALLOWED_ORIGINS"`
-	KubeProxyMode       string     `env:"KUBE_PROXY_MODE" envDefault:"mock"`
-	KubeProxyKubeconfig string     `env:"KUBE_PROXY_KUBECONFIG"`
+	KubeProxyMode       string     `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
+	KubeProxyKubeconfig string     `env:"KUBE_API_PROXY_KUBECONFIG"`
 }
 
 func main() {
@@ -47,10 +47,10 @@ func run() error {
 	}))
 	slog.SetDefault(logger)
 
-	logger.Info("starting kube-proxy",
+	logger.Info("starting kube-api-proxy",
 		"listen_addr", cfg.ListenAddr,
 		"log_level", cfg.LogLevel.String(),
-		"kube_proxy_mode", cfg.KubeProxyMode,
+		"mode", cfg.KubeProxyMode,
 	)
 
 	authzClient, err := authz.New(cfg.OpenFGA)

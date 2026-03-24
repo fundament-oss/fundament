@@ -7,7 +7,7 @@ import (
 
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
-	"github.com/fundament-oss/fundament/kube-proxy/pkg/kube"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
 	"github.com/rs/cors"
 )
 
@@ -49,7 +49,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/k8sproxy/", http.HandlerFunc(s.handleClusterProxy)) // cluster ID via Fun-Cluster header
+	mux.Handle("/k8s-api/", http.HandlerFunc(s.handleClusterProxy)) // cluster ID via Fun-Cluster header
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))

@@ -10,7 +10,7 @@ jwtSecretRef:
 externalUrls:
   authn: "" # e.g., https://authn.example.com
   organization: "" # e.g., https://organization.example.com
-  kubeProxy: "" # e.g., https://k8sproxy.example.com
+  kubeApiProxy: "" # e.g., https://k8s-api.example.com
   console: "" # e.g., https://app.example.com
   docs: "" # e.g., https://docs.example.com
   cookieDomain: "" # e.g., example.com
@@ -24,7 +24,7 @@ images:
   docsFrontend: ghcr.io/fundament-oss/fundament/docs-frontend:latest
   clusterWorker: ghcr.io/fundament-oss/fundament/cluster-worker:latest
   authzWorker: ghcr.io/fundament-oss/fundament/authz-worker:latest
-  kubeProxy: ghcr.io/fundament-oss/fundament/kube-proxy:latest
+  kubeApiProxy: ghcr.io/fundament-oss/fundament/kube-api-proxy:latest
   openfgaSetup: ghcr.io/fundament-oss/fundament/openfga-setup:latest
   pluginController: ghcr.io/fundament-oss/fundament/plugin-controller:latest
 
@@ -65,12 +65,12 @@ organizationApi:
     #  - organization.example.com
 
 # Kube Proxy (Kubernetes API proxy for frontend)
-kubeProxy:
+kubeApiProxy:
   enabled: false
   replicas: 1
   logLevel: info
   mode: mock # "mock" or "real"
-  kubeProxyKubeconfig: "" # path to kubeconfig file (only used when mode is "real")
+  kubeApiProxyKubeconfig: "" # path to kubeconfig file (only used when mode is "real")
 
 # Cluster Worker
 clusterWorker:

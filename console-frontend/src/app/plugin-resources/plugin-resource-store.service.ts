@@ -13,7 +13,7 @@ export default class PluginResourceStoreService {
     pluginName: string,
     crd: ParsedCrd,
     clusterId: string,
-    kubeProxyUrl: string,
+    kubeApiProxyUrl: string,
     orgId: string,
   ): Promise<void> {
     const cacheKey = `${pluginName}/${crd.kind}/${clusterId}`;
@@ -25,10 +25,10 @@ export default class PluginResourceStoreService {
       return;
     }
 
-    const base = kubeProxyUrl.replace(/\/$/, '');
+    const base = kubeApiProxyUrl.replace(/\/$/, '');
     // TODO: Support namespaced resources by adding /namespaces/{ns}/ when crd.scope === 'Namespaced'.
     // Currently fetches cluster-scoped list; real mode will return 404 for namespaced CRDs.
-    const url = `${base}/k8sproxy/apis/${crd.group}/${crd.version}/${crd.plural}`;
+    const url = `${base}/k8s-api/apis/${crd.group}/${crd.version}/${crd.plural}`;
 
     const promise = fetch(url, {
       credentials: 'include',

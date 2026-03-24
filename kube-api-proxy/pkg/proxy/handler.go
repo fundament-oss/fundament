@@ -19,7 +19,7 @@ const OrganizationHeader = "Fun-Organization"
 const ClusterHeader = "Fun-Cluster"
 
 // handleClusterProxy is a read-only HTTP proxy to the Kubernetes API for a specific cluster.
-// Path format: /k8sproxy/{...kubernetes_api_path}
+// Path format: /k8s-api/{...kubernetes_api_path}
 //
 // Authentication: JWT from Authorization header or fundament_auth cookie,
 // plus Fun-Organization header for org scoping.
@@ -85,7 +85,7 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 
 	// --- Proxy to Kubernetes API ---
 
-	k8sPath := strings.TrimPrefix(r.URL.Path, "/k8sproxy")
+	k8sPath := strings.TrimPrefix(r.URL.Path, "/k8s-api")
 
 	// Only allow standard Kubernetes API paths to prevent SSRF.
 	if !strings.HasPrefix(k8sPath, "/apis/") && !strings.HasPrefix(k8sPath, "/api/") {

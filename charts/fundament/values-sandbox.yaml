@@ -5,7 +5,7 @@ jwtSecretRef:
 externalUrls:
   authn: https://authn.fundament.apps.digilab.network
   organization: https://organization.fundament.apps.digilab.network
-  kubeProxy: https://k8sproxy.fundament.apps.digilab.network
+  kubeApiProxy: https://k8s-api.fundament.apps.digilab.network
   console: https://console.fundament.apps.digilab.network
   docs: https://docs.fundament.apps.digilab.network
   cookieDomain: fundament.apps.digilab.network
@@ -22,7 +22,7 @@ authnApi:
   enabled: true
   replicas: 1
 
-kubeProxy:
+kubeApiProxy:
   enabled: true
   logLevel: info
   mode: mock

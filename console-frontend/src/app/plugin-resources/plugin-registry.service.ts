@@ -107,13 +107,13 @@ export default class PluginRegistryService {
   async loadCrdsForPlugin(
     pluginName: string,
     clusterId: string,
-    kubeProxyUrl: string,
+    kubeApiProxyUrl: string,
     orgId: string,
   ): Promise<void> {
     const plugin = this.getPlugin(pluginName);
     if (!plugin) return;
 
-    const base = kubeProxyUrl.replace(/\/$/, '');
+    const base = kubeApiProxyUrl.replace(/\/$/, '');
 
     await Promise.allSettled(
       plugin.crds.map(async (crdName) => {
@@ -127,7 +127,7 @@ export default class PluginRegistryService {
         }
 
         const promise = (async () => {
-          const url = `${base}/k8sproxy/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
+          const url = `${base}/k8s-api/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
           const response = await fetch(url, {
             credentials: 'include',
             headers: { 'Fun-Organization': orgId, 'Fun-Cluster': clusterId },

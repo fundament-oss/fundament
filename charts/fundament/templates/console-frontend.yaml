@@ -11,7 +11,7 @@ data:
     {
       "authnApiUrl": "{{ $.Values.externalUrls.authn }}",
       "organizationApiUrl": "{{ $.Values.externalUrls.organization }}",
-      "kubeProxyUrl": "{{ $.Values.externalUrls.kubeProxy }}"
+      "kubeApiProxyUrl": "{{ $.Values.externalUrls.kubeApiProxy }}"
     }
 
 ---
@@ -36,7 +36,7 @@ spec:
           image: {{ $.Values.images.consoleFrontend }}
           env:
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeProxy }}"
+              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeApiProxy }}"
           ports:
             - name: http
               containerPort: 80
