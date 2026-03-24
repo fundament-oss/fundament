@@ -55,7 +55,6 @@ import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
-import { kindToLabel } from './plugin-resources/crd-schema.utils';
 
 const reloadApp = () => {
   window.location.reload();
@@ -387,7 +386,7 @@ export default class App implements OnInit {
       const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
       const allMenuItems = [...(plugin?.menu.organization ?? []), ...(plugin?.menu.project ?? [])];
       const menuItem = allMenuItems.find((m) => m.crd === params['resourceKind']);
-      label = menuItem ? kindToLabel(menuItem.crd) : (params['resourceKind'] ?? 'Resources');
+      label = menuItem ? (menuItem.label ?? menuItem.crd) : (params['resourceKind'] ?? 'Resources');
     }
 
     if (label === ':resourceName') {

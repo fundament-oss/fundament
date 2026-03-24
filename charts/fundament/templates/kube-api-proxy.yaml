@@ -34,9 +34,9 @@ spec:
             {{- end }}
             - name: KUBE_API_PROXY_MODE
               value: "{{ .Values.kubeApiProxy.mode }}"
-            {{- if .Values.kubeApiProxy.kubeApiProxyKubeconfig }}
+            {{- if .Values.kubeApiProxy.kubeconfigSecret }}
             - name: KUBE_API_PROXY_KUBECONFIG
-              value: "{{ .Values.kubeApiProxy.kubeApiProxyKubeconfig }}"
+              value: /etc/kube-api-proxy/kubeconfig
             {{- end }}
             {{- if $.Values.openfga.enabled }}
             - name: OPENFGA_API_URL
@@ -52,6 +52,24 @@ spec:
                   name: openfga-config
                   key: authorization-model-id
             {{- end }}
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          {{- if .Values.kubeApiProxy.kubeconfigSecret }}
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: /etc/kube-api-proxy
+              readOnly: true
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -64,6 +82,12 @@ spec:
               port: http
             initialDelaySeconds: 3
             periodSeconds: 5
+      {{- if .Values.kubeApiProxy.kubeconfigSecret }}
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: {{ .Values.kubeApiProxy.kubeconfigSecret }}
+      {{- end }}
 
 ---
 apiVersion: v1

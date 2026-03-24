@@ -9,20 +9,20 @@ author: Fundament Team
 
 menu:
   organization:
-    - crd: ClusterIssuer
+    - crd: clusterissuers
       label: Cluster issuers
       icon: tablerShieldCheck
-    - crd: Certificate
+    - crd: certificates
       label: Certificates
       icon: tablerCertificate
-    - crd: Issuer
+    - crd: issuers
       label: Issuers
       icon: tablerUserCircle
   project:
-    - crd: Certificate
+    - crd: certificates
       label: Certificates
       icon: tablerCertificate
-    - crd: Issuer
+    - crd: issuers
       label: Issuers
       icon: tablerUserCircle
 

@@ -9,17 +9,17 @@ author: Fundament Team
 
 menu:
   organization:
-    - crd: Database
+    - crd: databases
       label: Databases
       icon: tablerDatabase
-    - crd: Backup
+    - crd: backups
       label: Backups
       icon: tablerCloudUpload
-    - crd: Subscription
+    - crd: subscriptions
       label: Subscriptions
       icon: tablerRefresh
   project:
-    - crd: Database
+    - crd: databases
       label: Databases
       icon: tablerDatabase
 

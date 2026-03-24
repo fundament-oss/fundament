@@ -70,7 +70,7 @@ kubeApiProxy:
   replicas: 1
   logLevel: info
   mode: mock # "mock" or "real"
-  kubeApiProxyKubeconfig: "" # path to kubeconfig file (only used when mode is "real")
+  kubeconfigSecret: "" # Secret name containing a kubeconfig key (only used when mode is "real")
 
 # Cluster Worker
 clusterWorker:

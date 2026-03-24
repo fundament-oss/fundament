@@ -7,6 +7,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"sync"
+
+	"golang.org/x/sync/singleflight"
 )
 
 // MultiClusterProxy routes Kubernetes API requests to the correct cluster
@@ -17,7 +19,8 @@ import (
 type MultiClusterProxy struct {
 	kubeconfigPath string
 	logger         *slog.Logger
-	proxies        sync.Map // string(clusterID) → *httputil.ReverseProxy
+	proxies        sync.Map          // string(clusterID) → *httputil.ReverseProxy
+	group          singleflight.Group // deduplicates concurrent proxy construction for the same cluster
 }
 
 // NewMultiClusterProxy returns a MultiClusterProxy backed by the merged kubeconfig at path.
@@ -51,16 +54,19 @@ func (m *MultiClusterProxy) proxyFor(contextName string) (*httputil.ReverseProxy
 		return v.(*httputil.ReverseProxy), nil
 	}
 
-	c, err := NewForContext(m.kubeconfigPath, contextName)
+	v, err, _ := m.group.Do(contextName, func() (any, error) {
+		c, err := NewForContext(m.kubeconfigPath, contextName)
+		if err != nil {
+			return nil, fmt.Errorf("load context %q: %w", contextName, err)
+		}
+		proxy := buildReverseProxy(c.Host(), c.Transport(), m.logger)
+		m.proxies.Store(contextName, proxy)
+		return proxy, nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("load context %q: %w", contextName, err)
+		return nil, err
 	}
-
-	target := c.Host()
-	proxy := buildReverseProxy(target, c.Transport(), m.logger)
-
-	actual, _ := m.proxies.LoadOrStore(contextName, proxy)
-	return actual.(*httputil.ReverseProxy), nil
+	return v.(*httputil.ReverseProxy), nil
 }
 
 func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slog.Logger) *httputil.ReverseProxy {

@@ -20,7 +20,7 @@ export default class PluginNavService {
         label: plugin.label,
         items: (plugin.menu[section] ?? []).map((menuItem) => ({
           label: menuItem.label ?? kindToLabel(menuItem.crd),
-          crdKind: menuItem.crd,
+          crdPlural: menuItem.crd,
           icon: menuItem.icon,
         })),
       }));

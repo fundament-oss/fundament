@@ -104,7 +104,7 @@ export default class ResourceListComponent implements OnInit {
     if (plugin) {
       const allItems = [...(plugin.menu.organization ?? []), ...(plugin.menu.project ?? [])];
       const item = allItems.find((i) => i.crd === resourceKind);
-      if (item) return kindToLabel(item.crd);
+      if (item) return item.label ?? item.crd;
     }
     return kindToLabel(resourceKind);
   });
@@ -142,6 +142,9 @@ export default class ResourceListComponent implements OnInit {
     const crd = this.crdDef();
     const clusterId = this.clusterContext.selectedClusterId();
     const pluginName = this.pluginName();
+    if (clusterId) {
+      this.registry.clearCrdCache(pluginName, clusterId);
+    }
     if (crd && clusterId) {
       this.store.clearResourceCache(pluginName, crd.kind, clusterId);
     }
