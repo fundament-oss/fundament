@@ -13,7 +13,7 @@ export default class PluginResourceStoreService {
     pluginName: string,
     crd: ParsedCrd,
     clusterId: string,
-    orgApiUrl: string,
+    kubeProxyUrl: string,
     orgId: string,
   ): Promise<void> {
     const cacheKey = `${pluginName}/${crd.kind}/${clusterId}`;
@@ -25,7 +25,7 @@ export default class PluginResourceStoreService {
       return;
     }
 
-    const base = orgApiUrl.replace(/\/$/, '');
+    const base = kubeProxyUrl.replace(/\/$/, '');
     const url = `${base}/k8sproxy/apis/${crd.group}/${crd.version}/${crd.plural}`;
 
     const promise = fetch(url, {

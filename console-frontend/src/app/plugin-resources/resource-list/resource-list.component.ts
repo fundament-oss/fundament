@@ -158,19 +158,19 @@ export default class ResourceListComponent implements OnInit {
     const orgId = this.orgContext.currentOrganizationId();
     if (!orgId) return;
 
-    const orgApiUrl = this.configService.getConfig().organizationApiUrl;
+    const kubeProxyUrl = this.configService.getConfig().kubeProxyUrl;
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.crdDef.set(undefined);
     this.resources.set([]);
 
     try {
-      await this.registry.loadCrdsForPlugin(pluginName, clusterId, orgApiUrl, orgId);
+      await this.registry.loadCrdsForPlugin(pluginName, clusterId, kubeProxyUrl, orgId);
       const crd = this.registry.getCrd(pluginName, resourceKind, clusterId);
       this.crdDef.set(crd);
 
       if (crd) {
-        await this.store.loadResources(pluginName, crd, clusterId, orgApiUrl, orgId);
+        await this.store.loadResources(pluginName, crd, clusterId, kubeProxyUrl, orgId);
         this.resources.set(this.store.listResources(pluginName, crd.kind, clusterId));
       }
     } catch (err) {

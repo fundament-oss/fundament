@@ -104,13 +104,13 @@ export default class PluginRegistryService {
   async loadCrdsForPlugin(
     pluginName: string,
     clusterId: string,
-    orgApiUrl: string,
+    kubeProxyUrl: string,
     orgId: string,
   ): Promise<void> {
     const plugin = this.getPlugin(pluginName);
     if (!plugin) return;
 
-    const base = orgApiUrl.replace(/\/$/, '');
+    const base = kubeProxyUrl.replace(/\/$/, '');
 
     await Promise.allSettled(
       plugin.crds.map(async (crdName) => {

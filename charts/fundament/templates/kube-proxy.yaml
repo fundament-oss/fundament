@@ -98,14 +98,14 @@ spec:
   {{- if $.Values.ingress.tls.clusterIssuer }}
   tls:
     - hosts:
-        - organization.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+        - k8sproxy.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
       secretName: kube-proxy-tls
   {{- end }}
   rules:
-    - host: organization.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+    - host: k8sproxy.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
       http:
         paths:
-          - path: /k8sproxy/
+          - path: /
             pathType: Prefix
             backend:
               service:

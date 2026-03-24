@@ -1,4 +1,5 @@
 {
   "authnApiUrl": "",
-  "organizationApiUrl": ""
+  "organizationApiUrl": "",
+  "kubeProxyUrl": ""
 }

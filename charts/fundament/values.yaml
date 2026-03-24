@@ -10,6 +10,7 @@ jwtSecretRef:
 externalUrls:
   authn: "" # e.g., https://authn.example.com
   organization: "" # e.g., https://organization.example.com
+  kubeProxy: "" # e.g., https://k8sproxy.example.com
   console: "" # e.g., https://app.example.com
   docs: "" # e.g., https://docs.example.com
   cookieDomain: "" # e.g., example.com

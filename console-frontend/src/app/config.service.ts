@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 export interface AppConfiguration {
   authnApiUrl: string;
   organizationApiUrl: string;
+  kubeProxyUrl: string;
 }
 
 @Injectable({
@@ -30,6 +31,7 @@ export class ConfigService {
       this.config = {
         authnApiUrl: '',
         organizationApiUrl: '',
+        kubeProxyUrl: '',
       };
 
       return this.config;

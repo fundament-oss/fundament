@@ -5,6 +5,7 @@ jwtSecret: "local-dev-jwt-secret"
 externalUrls:
   authn: http://authn.fundament.localhost:8080
   organization: http://organization.fundament.localhost:8080
+  kubeProxy: http://k8sproxy.fundament.localhost:8080
   console: http://console.fundament.localhost:8080
   docs: http://docs.fundament.localhost:8080
   cookieDomain: fundament.localhost

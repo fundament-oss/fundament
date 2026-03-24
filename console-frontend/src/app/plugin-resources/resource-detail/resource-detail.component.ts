@@ -123,17 +123,17 @@ export default class ResourceDetailComponent implements OnInit {
     const orgId = this.orgContext.currentOrganizationId();
     if (!orgId) return;
 
-    const orgApiUrl = this.configService.getConfig().organizationApiUrl;
+    const kubeProxyUrl = this.configService.getConfig().kubeProxyUrl;
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
     try {
-      await this.registry.loadCrdsForPlugin(this.pluginName(), clusterId, orgApiUrl, orgId);
+      await this.registry.loadCrdsForPlugin(this.pluginName(), clusterId, kubeProxyUrl, orgId);
       const crd = this.registry.getCrd(this.pluginName(), this.resourceKind(), clusterId);
       this.crdDef.set(crd);
 
       if (crd) {
-        await this.store.loadResources(this.pluginName(), crd, clusterId, orgApiUrl, orgId);
+        await this.store.loadResources(this.pluginName(), crd, clusterId, kubeProxyUrl, orgId);
         this.resource.set(
           this.store.getResource(this.pluginName(), crd.kind, this.resourceId(), clusterId),
         );
