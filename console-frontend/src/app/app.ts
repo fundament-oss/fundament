@@ -53,8 +53,10 @@ import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
+import KubeClusterContextService from './plugin-resources/kube-cluster-context.service';
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
+import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
 
 const reloadApp = () => {
   window.location.reload();
@@ -118,6 +120,10 @@ export default class App implements OnInit {
   protected pluginNavService = inject(PluginNavService);
 
   private pluginRegistry = inject(PluginRegistryService);
+
+  private pluginStore = inject(PluginResourceStoreService);
+
+  private clusterContext = inject(KubeClusterContextService);
 
   private organizationClient = inject(ORGANIZATION);
 
@@ -390,7 +396,19 @@ export default class App implements OnInit {
     }
 
     if (label === ':resourceName') {
-      label = params['resourceId'] ?? 'Resource';
+      const clusterId = this.clusterContext.selectedClusterId();
+      const crd = clusterId
+        ? this.pluginRegistry.getCrd(params['pluginName'], params['resourceKind'], clusterId)
+        : undefined;
+      const resource = crd
+        ? this.pluginStore.getResource(
+            params['pluginName'],
+            crd.kind,
+            params['resourceId'],
+            clusterId,
+          )
+        : undefined;
+      label = resource?.metadata.name ?? params['resourceId'] ?? 'Resource';
     }
 
     if (label === ':clusterName') {

@@ -19,7 +19,7 @@ import (
 type MultiClusterProxy struct {
 	kubeconfigPath string
 	logger         *slog.Logger
-	proxies        sync.Map          // string(clusterID) → *httputil.ReverseProxy
+	proxies        sync.Map           // string(clusterID) → *httputil.ReverseProxy
 	group          singleflight.Group // deduplicates concurrent proxy construction for the same cluster
 }
 
