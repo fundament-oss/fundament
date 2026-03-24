@@ -27,16 +27,16 @@ spec:
           env:
             {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
             - name: LOG_LEVEL
-              value: {{ .Values.kubeProxy.logLevel }}
+              value: "{{ .Values.kubeProxy.logLevel }}"
             {{- if $.Values.externalUrls.corsAllowedOrigins }}
             - name: CORS_ALLOWED_ORIGINS
-              value: {{ $.Values.externalUrls.corsAllowedOrigins }}
+              value: "{{ $.Values.externalUrls.corsAllowedOrigins }}"
             {{- end }}
             - name: KUBE_PROXY_MODE
-              value: {{ .Values.kubeProxy.mode | default "mock" }}
+              value: "{{ .Values.kubeProxy.mode }}"
             {{- if .Values.kubeProxy.kubeProxyKubeconfig }}
             - name: KUBE_PROXY_KUBECONFIG
-              value: {{ .Values.kubeProxy.kubeProxyKubeconfig }}
+              value: "{{ .Values.kubeProxy.kubeProxyKubeconfig }}"
             {{- end }}
             {{- if $.Values.openfga.enabled }}
             - name: OPENFGA_API_URL

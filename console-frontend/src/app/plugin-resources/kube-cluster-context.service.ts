@@ -31,6 +31,10 @@ export default class KubeClusterContextService {
       if (response.clusters.length > 0) {
         this.selectedClusterId.set(response.clusters[0].id);
       }
+    } catch (err) {
+      // Reset so the next call can retry instead of re-using the rejected promise.
+      this.loadPromise = null;
+      throw err;
     } finally {
       this.isLoadingClusters.set(false);
     }

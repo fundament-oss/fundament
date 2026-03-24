@@ -24,7 +24,7 @@ authnApi:
 
 kubeProxy:
   enabled: true
-  logLevel: debug
+  logLevel: info
   mode: mock
 
 organizationApi:

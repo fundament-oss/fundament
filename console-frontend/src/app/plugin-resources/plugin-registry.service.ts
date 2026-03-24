@@ -66,6 +66,9 @@ export default class PluginRegistryService {
   // Tracks which CRDs have already been fetched; key: "${pluginName}/${clusterId}/${crdK8sName}"
   private fetchedCrdKeys = new Set<string>();
 
+  // In-flight fetch promises to prevent duplicate concurrent requests; same key scheme
+  private inFlightCrdKeys = new Map<string, Promise<void>>();
+
   // Parsed CRDs indexed for O(1) lookup by kind; key: "${pluginName}/${clusterId}/${kind}"
   private parsedCrdByKind = new Map<string, ParsedCrd>();
 
@@ -117,21 +120,34 @@ export default class PluginRegistryService {
         const cacheKey = `${pluginName}/${clusterId}/${crdName}`;
         if (this.fetchedCrdKeys.has(cacheKey)) return;
 
-        const url = `${base}/k8sproxy/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
-        const response = await fetch(url, {
-          credentials: 'include',
-          headers: { 'Fun-Organization': orgId, 'Fun-Cluster': clusterId },
-        });
-        if (!response.ok) {
-          // eslint-disable-next-line no-console
-          console.error(`[PluginRegistry] Failed to fetch CRD ${crdName}: ${response.status}`);
+        const existing = this.inFlightCrdKeys.get(cacheKey);
+        if (existing) {
+          await existing;
           return;
         }
 
-        const raw = (await response.json()) as RawCrdYaml;
-        const parsed = parseCrd(raw);
-        this.fetchedCrdKeys.add(cacheKey);
-        this.parsedCrdByKind.set(`${pluginName}/${clusterId}/${parsed.kind}`, parsed);
+        const promise = (async () => {
+          const url = `${base}/k8sproxy/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
+          const response = await fetch(url, {
+            credentials: 'include',
+            headers: { 'Fun-Organization': orgId, 'Fun-Cluster': clusterId },
+          });
+          if (!response.ok) {
+            // eslint-disable-next-line no-console
+            console.error(`[PluginRegistry] Failed to fetch CRD ${crdName}: ${response.status}`);
+            return;
+          }
+
+          const raw = (await response.json()) as RawCrdYaml;
+          const parsed = parseCrd(raw);
+          this.fetchedCrdKeys.add(cacheKey);
+          this.parsedCrdByKind.set(`${pluginName}/${clusterId}/${parsed.kind}`, parsed);
+        })().finally(() => {
+          this.inFlightCrdKeys.delete(cacheKey);
+        });
+
+        this.inFlightCrdKeys.set(cacheKey, promise);
+        await promise;
       }),
     );
   }

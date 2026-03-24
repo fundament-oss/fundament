@@ -174,7 +174,9 @@ export default class ResourceListComponent implements OnInit {
         this.resources.set(this.store.listResources(pluginName, crd.kind, clusterId));
       }
     } catch (err) {
-      this.errorMessage.set(`Failed to load resources: ${err}`);
+      // eslint-disable-next-line no-console
+      console.error('[ResourceList] Failed to load resources:', err);
+      this.errorMessage.set('Failed to load resources. Please try again.');
     } finally {
       this.isLoading.set(false);
     }

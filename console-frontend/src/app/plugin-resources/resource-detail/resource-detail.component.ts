@@ -139,7 +139,9 @@ export default class ResourceDetailComponent implements OnInit {
         );
       }
     } catch (err) {
-      this.errorMessage.set(`Failed to load resource: ${err}`);
+      // eslint-disable-next-line no-console
+      console.error('[ResourceDetail] Failed to load resource:', err);
+      this.errorMessage.set('Failed to load resource. Please try again.');
     } finally {
       this.isLoading.set(false);
     }
