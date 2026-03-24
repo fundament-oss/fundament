@@ -63,11 +63,11 @@ export default class PluginRegistryService {
 
   private loaded = signal(false);
 
-  // Keyed by "${pluginName}/${clusterId}/${crdK8sName}"
-  private parsedCrdCache = new Map<string, ParsedCrd>();
+  // Tracks which CRDs have already been fetched; key: "${pluginName}/${clusterId}/${crdK8sName}"
+  private fetchedCrdKeys = new Set<string>();
 
-  // Secondary index for O(1) lookup by kind, scoped by cluster
-  private parsedCrdByKind = new Map<string, ParsedCrd>(); // key: "${pluginName}/${clusterId}/${kind}"
+  // Parsed CRDs indexed for O(1) lookup by kind; key: "${pluginName}/${clusterId}/${kind}"
+  private parsedCrdByKind = new Map<string, ParsedCrd>();
 
   private readonly pluginFiles = [
     '/plugins/cert-manager/cert-manager.plugin.yaml',
@@ -115,7 +115,7 @@ export default class PluginRegistryService {
     await Promise.allSettled(
       plugin.crds.map(async (crdName) => {
         const cacheKey = `${pluginName}/${clusterId}/${crdName}`;
-        if (this.parsedCrdCache.has(cacheKey)) return;
+        if (this.fetchedCrdKeys.has(cacheKey)) return;
 
         const url = `${base}/k8sproxy/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
         const response = await fetch(url, {
@@ -130,7 +130,7 @@ export default class PluginRegistryService {
 
         const raw = (await response.json()) as RawCrdYaml;
         const parsed = parseCrd(raw);
-        this.parsedCrdCache.set(cacheKey, parsed);
+        this.fetchedCrdKeys.add(cacheKey);
         this.parsedCrdByKind.set(`${pluginName}/${clusterId}/${parsed.kind}`, parsed);
       }),
     );

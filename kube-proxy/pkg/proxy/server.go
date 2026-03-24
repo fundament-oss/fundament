@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/http/httputil"
 
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
@@ -23,8 +22,7 @@ type Server struct {
 	logger        *slog.Logger
 	authValidator *auth.Validator
 	authz         *authz.Client
-	kubeClient    kube.Interface         // non-nil in mock mode
-	kubeProxy     *httputil.ReverseProxy // non-nil in real mode
+	kubeHandler   http.Handler
 	handler       http.Handler
 }
 
@@ -32,47 +30,22 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 	if cfg.Mode == "" {
 		cfg.Mode = "mock"
 	}
-	if cfg.Mode != "mock" && cfg.Mode != "real" {
-		return nil, fmt.Errorf(`invalid Mode %q: must be "mock" or "real"`, cfg.Mode)
-	}
 
-	var (
-		kubeClient kube.Interface
-		kubeProxy  *httputil.ReverseProxy
-	)
-	if cfg.Mode == "real" {
-		c, err := kube.New(cfg.KubeconfigPath)
-		if err != nil {
-			return nil, fmt.Errorf("create kube client: %w", err)
-		}
-		target := c.Host()
-		kubeProxy = &httputil.ReverseProxy{
-			Transport: c.Transport(),
-			Director: func(req *http.Request) {
-				req.URL.Scheme = target.Scheme
-				req.URL.Host = target.Host
-				req.Host = target.Host
-				// Strip client auth headers so the kubeconfig transport supplies its own.
-				req.Header.Del("Authorization")
-				req.Header.Del("Cookie")
-				req.Header.Del(OrganizationHeader)
-				req.Header.Del(ClusterHeader)
-			},
-			ErrorHandler: func(w http.ResponseWriter, req *http.Request, err error) {
-				logger.ErrorContext(req.Context(), "kubernetes proxy error", "error", err)
-				http.Error(w, "failed to contact kubernetes API", http.StatusBadGateway)
-			},
-		}
-	} else {
-		kubeClient = &kube.MockClient{}
+	var kubeHandler http.Handler
+	switch cfg.Mode {
+	case "real":
+		kubeHandler = kube.NewMultiClusterProxy(cfg.KubeconfigPath, logger)
+	case "mock":
+		kubeHandler = &kube.MockClient{}
+	default:
+		return nil, fmt.Errorf("invalid Mode %q: must be \"mock\" or \"real\"", cfg.Mode)
 	}
 
 	s := &Server{
 		logger:        logger,
 		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
 		authz:         authzClient,
-		kubeClient:    kubeClient,
-		kubeProxy:     kubeProxy,
+		kubeHandler:   kubeHandler,
 	}
 
 	mux := http.NewServeMux()

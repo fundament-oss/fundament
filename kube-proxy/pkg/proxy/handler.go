@@ -3,7 +3,6 @@ package proxy
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"slices"
 	"strings"
@@ -94,29 +93,7 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.kubeProxy != nil {
-		// Real mode: let httputil.ReverseProxy forward to the K8s API.
-		// It handles response headers, streaming, and transport-level auth.
-		r.URL.Path = k8sPath
-		r.URL.RawPath = ""
-		s.kubeProxy.ServeHTTP(w, r)
-		return
-	}
-
-	// Mock mode: use the in-process mock client.
-	if r.URL.RawQuery != "" {
-		k8sPath = k8sPath + "?" + r.URL.RawQuery
-	}
-
-	statusCode, body, err := s.kubeClient.Do(ctx, r.Method, k8sPath, r.Body)
-	if err != nil {
-		s.logger.ErrorContext(ctx, "kubernetes client error", "error", err, "path", k8sPath)
-		http.Error(w, "failed to contact kubernetes API", http.StatusBadGateway)
-		return
-	}
-	defer body.Close()
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	_, _ = io.Copy(w, body)
+	r.URL.Path = k8sPath
+	r.URL.RawPath = ""
+	s.kubeHandler.ServeHTTP(w, r)
 }

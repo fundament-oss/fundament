@@ -2,23 +2,25 @@ package kube
 
 import "strings"
 
-// mockCRDForName returns the JSON for a specific CRD by its k8s metadata.name, or empty string if unknown.
-func mockCRDForName(name string) string {
+// mockCRDForName returns the JSON for a specific CRD by its k8s metadata.name.
+// Returns ("", false) for unknown names so callers can return a proper 404.
+// If you add a CRD to mockCRDListJSON, add the corresponding case here too.
+func mockCRDForName(name string) (string, bool) {
 	switch name {
 	case "certificates.cert-manager.io":
-		return mockCertificateCRD
+		return mockCertificateCRD, true
 	case "issuers.cert-manager.io":
-		return mockIssuerCRD
+		return mockIssuerCRD, true
 	case "clusterissuers.cert-manager.io":
-		return mockClusterIssuerCRD
+		return mockClusterIssuerCRD, true
 	case "databases.postgresql.cnpg.io":
-		return mockDatabaseCRD
+		return mockDatabaseCRD, true
 	case "backups.postgresql.cnpg.io":
-		return mockBackupCRD
+		return mockBackupCRD, true
 	case "subscriptions.postgresql.cnpg.io":
-		return mockSubscriptionCRD
+		return mockSubscriptionCRD, true
 	default:
-		return ""
+		return "", false
 	}
 }
 

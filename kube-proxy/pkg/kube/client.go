@@ -25,10 +25,24 @@ type Client struct {
 	host       *url.URL
 }
 
+// New creates a Client using the default context in the kubeconfig at kubeconfigPath.
 func New(kubeconfigPath string) (*Client, error) {
-	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	return NewForContext(kubeconfigPath, "")
+}
+
+// NewForContext creates a Client using a specific context from a merged kubeconfig.
+// If contextName is empty, the current-context is used.
+func NewForContext(kubeconfigPath, contextName string) (*Client, error) {
+	loadingRules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath}
+	overrides := &clientcmd.ConfigOverrides{}
+	if contextName != "" {
+		overrides.CurrentContext = contextName
+	}
+	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, overrides)
+
+	cfg, err := clientConfig.ClientConfig()
 	if err != nil {
-		return nil, fmt.Errorf("load kubeconfig: %w", err)
+		return nil, fmt.Errorf("load kubeconfig (context %q): %w", contextName, err)
 	}
 
 	httpClient, err := rest.HTTPClientFor(cfg)
