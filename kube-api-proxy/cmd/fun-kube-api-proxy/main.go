@@ -27,8 +27,8 @@ type config struct {
 	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8081"`
 	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
-	KubeProxyMode      string `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
-	GardenerKubeconfig string `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
+	KubeProxyMode      string     `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
+	GardenerKubeconfig string     `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
 }
 
 func main() {
