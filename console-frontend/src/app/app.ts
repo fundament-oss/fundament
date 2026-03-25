@@ -53,10 +53,10 @@ import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
+import KubeClusterContextService from './plugin-resources/kube-cluster-context.service';
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
-import { kindToLabel } from './plugin-resources/crd-schema.utils';
 
 const reloadApp = () => {
   window.location.reload();
@@ -122,6 +122,8 @@ export default class App implements OnInit {
   private pluginRegistry = inject(PluginRegistryService);
 
   private pluginStore = inject(PluginResourceStoreService);
+
+  private clusterContext = inject(KubeClusterContextService);
 
   private organizationClient = inject(ORGANIZATION);
 
@@ -383,28 +385,30 @@ export default class App implements OnInit {
 
     if (label === ':pluginAlias') {
       const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
-      label = plugin?.alias ?? params['pluginName'] ?? 'Plugin';
+      label = plugin?.label ?? params['pluginName'] ?? 'Plugin';
     }
 
     if (label === ':resourceKindLabel') {
       const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
-      const crd = plugin?.crds.find((c) => c.plural === params['resourceKind']);
-      label = crd ? kindToLabel(crd.kind) : (params['resourceKind'] ?? 'Resources');
+      const allMenuItems = [...(plugin?.menu.organization ?? []), ...(plugin?.menu.project ?? [])];
+      const menuItem = allMenuItems.find((m) => m.crd === params['resourceKind']);
+      label = menuItem ? (menuItem.label ?? menuItem.crd) : (params['resourceKind'] ?? 'Resources');
     }
 
     if (label === ':resourceName') {
-      const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
-      const crd = plugin?.crds.find((c) => c.plural === params['resourceKind']);
-      if (crd && params['resourceId']) {
-        const resource = this.pluginStore.getResource(
-          params['pluginName'],
-          crd.kind,
-          params['resourceId'],
-        );
-        label = resource?.metadata.name ?? params['resourceId'] ?? 'Resource';
-      } else {
-        label = params['resourceId'] ?? 'Resource';
-      }
+      const clusterId = this.clusterContext.selectedClusterId();
+      const crd = clusterId
+        ? this.pluginRegistry.getCrd(params['pluginName'], params['resourceKind'], clusterId)
+        : undefined;
+      const resource = crd
+        ? this.pluginStore.getResource(
+            params['pluginName'],
+            crd.kind,
+            params['resourceId'],
+            clusterId,
+          )
+        : undefined;
+      label = resource?.metadata.name ?? params['resourceId'] ?? 'Resource';
     }
 
     if (label === ':clusterName') {

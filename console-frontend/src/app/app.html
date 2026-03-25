@@ -245,7 +245,7 @@
             </div>
           }
 
-          <ul class="space-y-0.5">
+          <ul class="space-y-2">
             @if (selectedType() === 'organization') {
               <li>
                 <a
@@ -319,9 +319,9 @@
               @for (group of pluginNavService.organizationNav(); track group.pluginName) {
                 <li class="mt-2">
                   <p
-                    class="px-3 pt-3 text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                    class="px-3 pt-3 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
                   >
-                    {{ group.alias }}
+                    {{ group.label }}
                   </p>
                   <ul class="mt-1 space-y-1">
                     @for (item of group.items; track item.crdPlural) {
@@ -415,9 +415,9 @@
               @for (group of pluginNavService.projectNav(); track group.pluginName) {
                 <li class="mt-2">
                   <p
-                    class="px-3 pt-3 text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                    class="px-3 pt-3 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
                   >
-                    {{ group.alias }}
+                    {{ group.label }}
                   </p>
                   <ul class="mt-1 space-y-1">
                     @for (item of group.items; track item.crdPlural) {
@@ -451,7 +451,7 @@
     }
 
     <!-- Main Content (deferred until an organization is selected, to avoid API calls without Fun-Organization header) -->
-    <main class="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+    <main class="mx-auto max-w-7xl min-w-0 flex-1 px-4 py-6 sm:px-6">
       @if (isLoginPage() || selectedOrgId() || selectedProjectId()) {
         @if (!isLoginPage()) {
           <app-breadcrumb [segments]="breadcrumbSegments()" />

@@ -4,12 +4,12 @@ export interface PluginDefinition {
   apiVersion: string;
   kind: 'PluginDefinition';
   name: string;
-  alias: string;
+  label: string;
   version: string;
   description: string;
   author?: string;
   menu: PluginMenu;
-  crds: ParsedCrd[];
+  crds: string[];
 }
 
 export interface PluginMenu {
@@ -19,6 +19,7 @@ export interface PluginMenu {
 
 export interface PluginMenuItem {
   crd: string;
+  label?: string;
   icon?: string;
 }
 
@@ -81,13 +82,12 @@ export interface KubeResource {
 
 export interface PluginNavGroup {
   pluginName: string;
-  alias: string;
+  label: string;
   items: PluginNavItem[];
 }
 
 export interface PluginNavItem {
   label: string;
-  crdKind: string;
   crdPlural: string;
   icon?: string;
 }
@@ -98,7 +98,7 @@ export interface RawPluginYaml {
   apiVersion: string;
   kind: string;
   name: string;
-  alias: string;
+  label: string;
   version: string;
   description: string;
   author?: string;

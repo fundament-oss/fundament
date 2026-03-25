@@ -3,8 +3,7 @@ import * as yaml from 'js-yaml';
 import type { PluginDefinition, ParsedCrd, RawPluginYaml, RawCrdYaml } from './types';
 import { parseObjectSchema } from './crd-schema.utils';
 
-function parseCrd(crdYamlStr: string): ParsedCrd {
-  const raw = yaml.load(crdYamlStr) as RawCrdYaml;
+function parseCrd(raw: RawCrdYaml): ParsedCrd {
   const version = raw.spec.versions.find((v) => v.storage) ?? raw.spec.versions[0];
 
   const specRaw = version.schema.openAPIV3Schema.properties?.['spec'] as
@@ -44,18 +43,17 @@ function parseCrd(crdYamlStr: string): ParsedCrd {
 
 function parsePluginYaml(yamlText: string): PluginDefinition {
   const raw = yaml.load(yamlText) as RawPluginYaml;
-  const parsedCrds: ParsedCrd[] = raw.crds.map((crdStr) => parseCrd(crdStr));
 
   return {
     apiVersion: raw.apiVersion,
     kind: 'PluginDefinition',
     name: raw.name,
-    alias: raw.alias,
+    label: raw.label,
     version: raw.version,
     description: raw.description,
     author: raw.author,
     menu: raw.menu,
-    crds: parsedCrds,
+    crds: raw.crds,
   };
 }
 
@@ -64,6 +62,9 @@ export default class PluginRegistryService {
   private plugins = signal<PluginDefinition[]>([]);
 
   private loaded = signal(false);
+
+  // Parsed CRDs indexed by plural; key: "${pluginName}/${clusterId}/${plural}"
+  private parsedCrdByPlural = new Map<string, ParsedCrd>();
 
   private readonly pluginFiles = [
     '/plugins/cert-manager/cert-manager.plugin.yaml',
@@ -97,18 +98,43 @@ export default class PluginRegistryService {
     this.loaded.set(true);
   }
 
+  async loadCrdsForPlugin(
+    pluginName: string,
+    clusterId: string,
+    kubeApiProxyUrl: string,
+    orgId: string,
+  ): Promise<void> {
+    const plugin = this.getPlugin(pluginName);
+    if (!plugin) return;
+
+    const base = kubeApiProxyUrl.replace(/\/$/, '');
+
+    await Promise.allSettled(
+      plugin.crds.map(async (crdName) => {
+        const url = `${base}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
+        const response = await fetch(url, {
+          credentials: 'include',
+          headers: { 'Fun-Organization': orgId, 'Fun-Cluster': clusterId },
+        });
+        if (!response.ok) {
+          // eslint-disable-next-line no-console
+          console.error(`[PluginRegistry] Failed to fetch CRD ${crdName}: ${response.status}`);
+          return;
+        }
+
+        const raw = (await response.json()) as RawCrdYaml;
+        const parsed = parseCrd(raw);
+        this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.plural}`, parsed);
+      }),
+    );
+  }
+
   getPlugin(name: string): PluginDefinition | undefined {
     return this.plugins().find((p) => p.name === name);
   }
 
-  getCrd(pluginName: string, kind: string): ParsedCrd | undefined {
-    const plugin = this.getPlugin(pluginName);
-    return plugin?.crds.find((c) => c.kind === kind);
-  }
-
-  getCrdByPlural(pluginName: string, plural: string): ParsedCrd | undefined {
-    const plugin = this.getPlugin(pluginName);
-    return plugin?.crds.find((c) => c.plural === plural);
+  getCrd(pluginName: string, plural: string, clusterId: string): ParsedCrd | undefined {
+    return this.parsedCrdByPlural.get(`${pluginName}/${clusterId}/${plural}`);
   }
 
   allPlugins = this.plugins.asReadonly();

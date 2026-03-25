@@ -1,6 +1,6 @@
 import { Injectable, inject, computed } from '@angular/core';
 import PluginRegistryService from './plugin-registry.service';
-import type { PluginNavGroup, PluginNavItem } from './types';
+import type { PluginNavGroup } from './types';
 import { kindToLabel } from './crd-schema.utils';
 
 @Injectable({ providedIn: 'root' })
@@ -15,23 +15,14 @@ export default class PluginNavService {
     return this.registry
       .allPlugins()
       .filter((plugin) => (plugin.menu[section]?.length ?? 0) > 0)
-      .reduce<PluginNavGroup[]>((groups, plugin) => {
-        const items: PluginNavItem[] = (plugin.menu[section] ?? [])
-          .filter((menuItem) => plugin.crds.find((c) => c.kind === menuItem.crd))
-          .map((menuItem) => {
-            const crd = plugin.crds.find((c) => c.kind === menuItem.crd)!;
-            return {
-              label: kindToLabel(crd.kind),
-              crdKind: crd.kind,
-              crdPlural: crd.plural,
-              icon: menuItem.icon,
-            };
-          });
-
-        if (items.length > 0) {
-          groups.push({ pluginName: plugin.name, alias: plugin.alias, items });
-        }
-        return groups;
-      }, []);
+      .map((plugin) => ({
+        pluginName: plugin.name,
+        label: plugin.label,
+        items: (plugin.menu[section] ?? []).map((menuItem) => ({
+          label: menuItem.label ?? kindToLabel(menuItem.crd),
+          crdPlural: menuItem.crd,
+          icon: menuItem.icon,
+        })),
+      }));
   }
 }

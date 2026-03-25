@@ -49,6 +49,11 @@ build:
       docker:
         dockerfile: authz-worker/Dockerfile
 
+    - image: kube-api-proxy
+      context: .
+      docker:
+        dockerfile: kube-api-proxy/Dockerfile
+
     - image: openfga-setup
       context: openfga/setup
       docker:
@@ -78,6 +83,7 @@ deploy:
           images.clusterWorker: "{{.IMAGE_FULLY_QUALIFIED_cluster_worker}}"
           images.docsFrontend: "{{.IMAGE_FULLY_QUALIFIED_docs_frontend}}"
           images.authzWorker: "{{.IMAGE_FULLY_QUALIFIED_authz_worker}}"
+          images.kubeApiProxy: "{{.IMAGE_FULLY_QUALIFIED_kube_api_proxy}}"
           images.openfgaSetup: "{{.IMAGE_FULLY_QUALIFIED_openfga_setup}}"
           images.pluginController: "{{.IMAGE_FULLY_QUALIFIED_plugin_controller}}"
 
@@ -147,4 +153,10 @@ profiles:
         value: authz-worker/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/6/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/7/docker/dockerfile
+        value: kube-api-proxy/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/7/sync
         value: {}
