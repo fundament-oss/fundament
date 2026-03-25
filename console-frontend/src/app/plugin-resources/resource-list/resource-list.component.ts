@@ -58,8 +58,6 @@ export default class ResourceListComponent implements OnInit {
 
   private registry = inject(PluginRegistryService);
 
-  private store = inject(PluginResourceStoreService);
-
   private titleService = inject(TitleService);
 
   protected clusterContext = inject(KubeClusterContextService);
@@ -67,6 +65,8 @@ export default class ResourceListComponent implements OnInit {
   private configService = inject(ConfigService);
 
   private orgContext = inject(OrganizationContextService);
+
+  private pluginStore = inject(PluginResourceStoreService);
 
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -139,15 +139,8 @@ export default class ResourceListComponent implements OnInit {
   }
 
   async onRefresh(): Promise<void> {
-    const crd = this.crdDef();
     const clusterId = this.clusterContext.selectedClusterId();
     const pluginName = this.pluginName();
-    if (clusterId) {
-      this.registry.clearCrdCache(pluginName, clusterId);
-    }
-    if (crd && clusterId) {
-      this.store.clearResourceCache(pluginName, crd.kind, clusterId);
-    }
     if (pluginName && this.resourceKind() && clusterId) {
       await this.loadCrdsAndResources(pluginName, this.resourceKind(), clusterId);
     }
@@ -173,8 +166,9 @@ export default class ResourceListComponent implements OnInit {
       this.crdDef.set(crd);
 
       if (crd) {
-        await this.store.loadResources(pluginName, crd, clusterId, kubeApiProxyUrl, orgId);
-        this.resources.set(this.store.listResources(pluginName, crd.kind, clusterId));
+        this.resources.set(
+          await this.pluginStore.loadResources(crd, clusterId, kubeApiProxyUrl, orgId, pluginName),
+        );
       }
     } catch (err) {
       // eslint-disable-next-line no-console

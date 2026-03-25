@@ -63,16 +63,7 @@ export default class PluginRegistryService {
 
   private loaded = signal(false);
 
-  // Tracks which CRDs have already been fetched successfully; key: "${pluginName}/${clusterId}/${crdK8sName}"
-  private fetchedCrdKeys = new Set<string>();
-
-  // Tracks CRDs that failed to fetch, to avoid retrying on every navigation; same key scheme
-  private failedCrdKeys = new Set<string>();
-
-  // In-flight fetch promises to prevent duplicate concurrent requests; same key scheme
-  private inFlightCrdKeys = new Map<string, Promise<void>>();
-
-  // Parsed CRDs indexed for O(1) lookup by plural; key: "${pluginName}/${clusterId}/${plural}"
+  // Parsed CRDs indexed by plural; key: "${pluginName}/${clusterId}/${plural}"
   private parsedCrdByPlural = new Map<string, ParsedCrd>();
 
   private readonly pluginFiles = [
@@ -120,38 +111,20 @@ export default class PluginRegistryService {
 
     await Promise.allSettled(
       plugin.crds.map(async (crdName) => {
-        const cacheKey = `${pluginName}/${clusterId}/${crdName}`;
-        if (this.fetchedCrdKeys.has(cacheKey) || this.failedCrdKeys.has(cacheKey)) return;
-
-        const existing = this.inFlightCrdKeys.get(cacheKey);
-        if (existing) {
-          await existing;
+        const url = `${base}/k8s-api/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
+        const response = await fetch(url, {
+          credentials: 'include',
+          headers: { 'Fun-Organization': orgId, 'Fun-Cluster': clusterId },
+        });
+        if (!response.ok) {
+          // eslint-disable-next-line no-console
+          console.error(`[PluginRegistry] Failed to fetch CRD ${crdName}: ${response.status}`);
           return;
         }
 
-        const promise = (async () => {
-          const url = `${base}/k8s-api/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
-          const response = await fetch(url, {
-            credentials: 'include',
-            headers: { 'Fun-Organization': orgId, 'Fun-Cluster': clusterId },
-          });
-          if (!response.ok) {
-            // eslint-disable-next-line no-console
-            console.error(`[PluginRegistry] Failed to fetch CRD ${crdName}: ${response.status}`);
-            this.failedCrdKeys.add(cacheKey);
-            return;
-          }
-
-          const raw = (await response.json()) as RawCrdYaml;
-          const parsed = parseCrd(raw);
-          this.fetchedCrdKeys.add(cacheKey);
-          this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.plural}`, parsed);
-        })().finally(() => {
-          this.inFlightCrdKeys.delete(cacheKey);
-        });
-
-        this.inFlightCrdKeys.set(cacheKey, promise);
-        await promise;
+        const raw = (await response.json()) as RawCrdYaml;
+        const parsed = parseCrd(raw);
+        this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.plural}`, parsed);
       }),
     );
   }
@@ -162,20 +135,6 @@ export default class PluginRegistryService {
 
   getCrd(pluginName: string, plural: string, clusterId: string): ParsedCrd | undefined {
     return this.parsedCrdByPlural.get(`${pluginName}/${clusterId}/${plural}`);
-  }
-
-  // Clears all cached CRD data for a plugin+cluster, so the next load re-fetches fresh schemas.
-  clearCrdCache(pluginName: string, clusterId: string): void {
-    const prefix = `${pluginName}/${clusterId}/`;
-    this.fetchedCrdKeys.forEach((key) => {
-      if (key.startsWith(prefix)) this.fetchedCrdKeys.delete(key);
-    });
-    this.failedCrdKeys.forEach((key) => {
-      if (key.startsWith(prefix)) this.failedCrdKeys.delete(key);
-    });
-    this.parsedCrdByPlural.forEach((_, key) => {
-      if (key.startsWith(prefix)) this.parsedCrdByPlural.delete(key);
-    });
   }
 
   allPlugins = this.plugins.asReadonly();

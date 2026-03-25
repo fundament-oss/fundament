@@ -56,8 +56,6 @@ export default class ResourceDetailComponent implements OnInit {
 
   private registry = inject(PluginRegistryService);
 
-  private store = inject(PluginResourceStoreService);
-
   private titleService = inject(TitleService);
 
   private clusterContext = inject(KubeClusterContextService);
@@ -65,6 +63,8 @@ export default class ResourceDetailComponent implements OnInit {
   private configService = inject(ConfigService);
 
   private orgContext = inject(OrganizationContextService);
+
+  private pluginStore = inject(PluginResourceStoreService);
 
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -133,10 +133,14 @@ export default class ResourceDetailComponent implements OnInit {
       this.crdDef.set(crd);
 
       if (crd) {
-        await this.store.loadResources(this.pluginName(), crd, clusterId, kubeApiProxyUrl, orgId);
-        this.resource.set(
-          this.store.getResource(this.pluginName(), crd.kind, this.resourceId(), clusterId),
+        const resources = await this.pluginStore.loadResources(
+          crd,
+          clusterId,
+          kubeApiProxyUrl,
+          orgId,
+          this.pluginName(),
         );
+        this.resource.set(resources.find((r) => r.metadata.name === this.resourceId()));
       }
     } catch (err) {
       // eslint-disable-next-line no-console
