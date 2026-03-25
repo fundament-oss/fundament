@@ -24,6 +24,7 @@ import (
 
 type testEnv struct {
 	server    *httptest.Server
+	adminPool *pgxpool.Pool
 	jwtSecret []byte
 	orgs      map[uuid.UUID]string
 	users     map[uuid.UUID]testUser
@@ -156,6 +157,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 
 	return &testEnv{
 		server:    ts,
+		adminPool: adminPool,
 		jwtSecret: jwtSecret,
 		orgs:      opts.organizations,
 		users:     opts.users,

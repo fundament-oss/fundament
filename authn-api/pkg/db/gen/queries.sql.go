@@ -58,7 +58,6 @@ const clusterGetForToken = `-- name: ClusterGetForToken :one
 SELECT
     tenant.clusters.shoot_status,
     tenant.clusters.shoot_api_server_url,
-    tenant.clusters.shoot_ca_data,
     tenant.clusters.organization_id
 FROM tenant.clusters
 WHERE tenant.clusters.id = $1
@@ -72,7 +71,6 @@ type ClusterGetForTokenParams struct {
 type ClusterGetForTokenRow struct {
 	ShootStatus       pgtype.Text
 	ShootApiServerUrl pgtype.Text
-	ShootCaData       pgtype.Text
 	OrganizationID    uuid.UUID
 }
 
@@ -80,12 +78,7 @@ type ClusterGetForTokenRow struct {
 func (q *Queries) ClusterGetForToken(ctx context.Context, arg ClusterGetForTokenParams) (ClusterGetForTokenRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetForToken, arg.ClusterID)
 	var i ClusterGetForTokenRow
-	err := row.Scan(
-		&i.ShootStatus,
-		&i.ShootApiServerUrl,
-		&i.ShootCaData,
-		&i.OrganizationID,
-	)
+	err := row.Scan(&i.ShootStatus, &i.ShootApiServerUrl, &i.OrganizationID)
 	return i, err
 }
 

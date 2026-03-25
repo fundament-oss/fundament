@@ -2,6 +2,7 @@ package gardener
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -334,7 +335,11 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 				Message: fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
 			}
 		default:
-			status = &ShootStatus{Status: StatusReady, Message: MsgShootReady}
+			status = &ShootStatus{
+				Status:       StatusReady,
+				Message:      MsgShootReady,
+				APIServerURL: fmt.Sprintf("https://api.mock-shoot-%s.example.com", cluster.ID),
+			}
 		}
 	}
 
@@ -465,12 +470,14 @@ func (m *MockClient) RequestAdminKubeconfig(_ context.Context, clusterID uuid.UU
 	}
 
 	now := m.clock()
+	mockCAData := base64.StdEncoding.EncodeToString([]byte("MOCK CA - not a real certificate"))
 	return &AdminKubeconfig{
 		Kubeconfig: []byte(fmt.Sprintf(`apiVersion: v1
 kind: Config
 clusters:
 - cluster:
-    server: https://mock-shoot-%s.example.com
+    server: https://api.mock-shoot-%s.example.com
+    certificate-authority-data: %s
   name: mock
 contexts:
 - context:
@@ -482,7 +489,7 @@ users:
 - name: mock
   user:
     token: mock-admin-token-%s
-`, clusterID, clusterID)),
+`, clusterID, mockCAData, clusterID)),
 		ExpiresAt: now.Add(time.Duration(expirationSeconds) * time.Second),
 	}, nil
 }

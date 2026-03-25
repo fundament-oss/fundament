@@ -336,7 +336,7 @@ func TestTriggerProjectMemberInsertCreatesOutboxRow(t *testing.T) {
 
 // --- Outbox routing tests ---
 
-func TestOutboxRowEntityDetection(t *testing.T) {
+func TestOutboxRowCanBeLocked(t *testing.T) {
 	t.Parallel()
 
 	db := createTestDB(t)
@@ -345,12 +345,9 @@ func TestOutboxRowEntityDetection(t *testing.T) {
 	userID := insertUser(t, db, "Entity Detect User")
 	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin", "accepted")
 
-	// The outbox should have rows with different FK columns set.
-	// Verify we can read them with the updated OutboxGetAndLock query.
+	// Verify OutboxGetAndLock can read and lock rows with different FK columns set.
 	row, err := queries.OutboxGetAndLock(t.Context())
 	require.NoError(t, err)
-	// The first row might be a cluster row (from insertCluster in test data)
-	// or an org_user row. Just verify we can read it without error.
 	require.NotEqual(t, uuid.Nil, row.ID, "should get a valid outbox row")
 }
 

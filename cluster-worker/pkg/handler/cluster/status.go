@@ -154,7 +154,7 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 			}
 		}
 
-		h.logger.Info("updated shoot status",
+		h.logger.Debug("updated shoot status",
 			"cluster_id", cluster.ID,
 			"name", cluster.Name,
 			"status", shootStatus.Status)
