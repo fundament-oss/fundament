@@ -71,7 +71,7 @@ kubeApiProxy:
   replicas: 1
   logLevel: info
   mode: mock # "mock" or "real"
-  kubeconfigSecret: "" # Secret name containing a kubeconfig key (only used when mode is "real")
+  gardenerKubeconfigSecret: "" # Secret name containing a Gardener kubeconfig (only used when mode is "real")
 
 # Cluster Worker
 clusterWorker:

@@ -7,6 +7,7 @@ import (
 
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
 	"github.com/rs/cors"
 )
@@ -15,7 +16,7 @@ type Config struct {
 	JWTSecret          []byte
 	CORSAllowedOrigins []string
 	Mode               string // "mock" (default) or "real"
-	KubeconfigPath     string // path to kubeconfig; only used when Mode == "real"
+	GardenerClient     *gardener.Client
 }
 
 type Server struct {
@@ -34,7 +35,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 	var kubeHandler http.Handler
 	switch cfg.Mode {
 	case "real":
-		kubeHandler = kube.NewMultiClusterProxy(cfg.KubeconfigPath, logger)
+		kubeHandler = kube.NewMultiClusterProxy(cfg.GardenerClient, logger)
 	case "mock":
 		kubeHandler = &kube.MockClient{}
 	default:

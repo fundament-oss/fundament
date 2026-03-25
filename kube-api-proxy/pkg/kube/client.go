@@ -30,6 +30,36 @@ func New(kubeconfigPath string) (*Client, error) {
 	return NewForContext(kubeconfigPath, "")
 }
 
+// NewFromBytes creates a Client from in-memory kubeconfig data.
+func NewFromBytes(kubeconfigData []byte) (*Client, error) {
+	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfigData)
+	if err != nil {
+		return nil, fmt.Errorf("parse kubeconfig: %w", err)
+	}
+
+	cfg, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, fmt.Errorf("build rest config: %w", err)
+	}
+
+	httpClient, err := rest.HTTPClientFor(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("build http client: %w", err)
+	}
+
+	host, err := url.Parse(cfg.Host)
+	if err != nil {
+		return nil, fmt.Errorf("parse kubeconfig host: %w", err)
+	}
+	host.Path = ""
+	host.RawQuery = ""
+
+	return &Client{
+		httpClient: httpClient,
+		host:       host,
+	}, nil
+}
+
 // NewForContext creates a Client using a specific context from a merged kubeconfig.
 // If contextName is empty, the current-context is used.
 func NewForContext(kubeconfigPath, contextName string) (*Client, error) {

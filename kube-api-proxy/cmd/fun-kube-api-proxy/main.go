@@ -17,17 +17,18 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/proxy"
 )
 
 type config struct {
-	OpenFGA             authz.Config
-	JWTSecret           string     `env:"JWT_SECRET,required,notEmpty"`
-	ListenAddr          string     `env:"LISTEN_ADDR" envDefault:":8081"`
-	LogLevel            slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins  []string   `env:"CORS_ALLOWED_ORIGINS"`
-	KubeProxyMode       string     `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
-	KubeProxyKubeconfig string     `env:"KUBE_API_PROXY_KUBECONFIG"`
+	OpenFGA            authz.Config
+	JWTSecret          string     `env:"JWT_SECRET,required,notEmpty"`
+	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8081"`
+	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
+	KubeProxyMode      string `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
+	GardenerKubeconfig string `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
 }
 
 func main() {
@@ -58,11 +59,23 @@ func run() error {
 		return fmt.Errorf("failed to create OpenFGA client: %w", err)
 	}
 
+	var gardenerClient *gardener.Client
+	if cfg.KubeProxyMode == "real" {
+		if cfg.GardenerKubeconfig == "" {
+			return fmt.Errorf("GARDENER_KUBECONFIG required for real mode")
+		}
+		var err error
+		gardenerClient, err = gardener.New(cfg.GardenerKubeconfig, logger)
+		if err != nil {
+			return fmt.Errorf("create gardener client: %w", err)
+		}
+	}
+
 	server, err := proxy.New(logger, &proxy.Config{
 		JWTSecret:          []byte(cfg.JWTSecret),
 		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
 		Mode:               cfg.KubeProxyMode,
-		KubeconfigPath:     cfg.KubeProxyKubeconfig,
+		GardenerClient:     gardenerClient,
 	}, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create proxy server: %w", err)

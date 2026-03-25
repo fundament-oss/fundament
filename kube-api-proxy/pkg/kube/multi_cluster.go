@@ -1,45 +1,55 @@
 package kube
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"sync"
+	"time"
 
 	"golang.org/x/sync/singleflight"
+
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 )
+
+const kubeconfigCacheTTL = 45 * time.Minute
 
 // MultiClusterProxy routes Kubernetes API requests to the correct cluster
 // based on the Fun-Cluster header. It lazily creates one httputil.ReverseProxy
-// per cluster context, caching them for subsequent requests.
-//
-// The kubeconfig must be a merged kubeconfig where context names equal cluster UUIDs.
+// per cluster by fetching a short-lived admin kubeconfig from Gardener,
+// caching it for kubeconfigCacheTTL before re-fetching.
 type MultiClusterProxy struct {
-	kubeconfigPath string
-	logger         *slog.Logger
-	proxies        sync.Map           // string(clusterID) → *httputil.ReverseProxy
-	group          singleflight.Group // deduplicates concurrent proxy construction for the same cluster
+	gardener *gardener.Client
+	logger   *slog.Logger
+	proxies  sync.Map           // string(clusterID) → *cachedProxy
+	group    singleflight.Group // deduplicates concurrent proxy construction for the same cluster
 }
 
-// NewMultiClusterProxy returns a MultiClusterProxy backed by the merged kubeconfig at path.
-func NewMultiClusterProxy(kubeconfigPath string, logger *slog.Logger) *MultiClusterProxy {
+type cachedProxy struct {
+	proxy     *httputil.ReverseProxy
+	expiresAt time.Time
+}
+
+// NewMultiClusterProxy returns a MultiClusterProxy that fetches kubeconfigs
+// from Gardener on demand using the provided gardener.Client.
+func NewMultiClusterProxy(gc *gardener.Client, logger *slog.Logger) *MultiClusterProxy {
 	return &MultiClusterProxy{
-		kubeconfigPath: kubeconfigPath,
-		logger:         logger,
+		gardener: gc,
+		logger:   logger,
 	}
 }
 
 func (m *MultiClusterProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Fun-Cluster header is already validated by handler.go before reaching here.
 	clusterID := r.Header.Get("Fun-Cluster")
 	if clusterID == "" {
 		http.Error(w, "missing cluster header", http.StatusBadRequest)
 		return
 	}
 
-	proxy, err := m.proxyFor(clusterID)
+	proxy, err := m.proxyFor(r.Context(), clusterID)
 	if err != nil {
 		m.logger.ErrorContext(r.Context(), "failed to build proxy for cluster", "cluster", clusterID, "error", err)
 		http.Error(w, "failed to contact kubernetes API", http.StatusBadGateway)
@@ -49,24 +59,40 @@ func (m *MultiClusterProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	proxy.ServeHTTP(w, r)
 }
 
-func (m *MultiClusterProxy) proxyFor(contextName string) (*httputil.ReverseProxy, error) {
-	if v, ok := m.proxies.Load(contextName); ok {
-		return v.(*httputil.ReverseProxy), nil
+func (m *MultiClusterProxy) proxyFor(ctx context.Context, clusterID string) (*httputil.ReverseProxy, error) {
+	if v, ok := m.proxies.Load(clusterID); ok {
+		cp := v.(*cachedProxy)
+		if time.Now().Before(cp.expiresAt) {
+			return cp.proxy, nil
+		}
 	}
 
-	v, err, _ := m.group.Do(contextName, func() (any, error) {
-		c, err := NewForContext(m.kubeconfigPath, contextName)
-		if err != nil {
-			return nil, fmt.Errorf("load context %q: %w", contextName, err)
-		}
-		proxy := buildReverseProxy(c.Host(), c.Transport(), m.logger)
-		m.proxies.Store(contextName, proxy)
-		return proxy, nil
+	v, err, _ := m.group.Do(clusterID, func() (any, error) {
+		return m.buildProxy(ctx, clusterID)
 	})
 	if err != nil {
 		return nil, err
 	}
 	return v.(*httputil.ReverseProxy), nil
+}
+
+func (m *MultiClusterProxy) buildProxy(ctx context.Context, clusterID string) (*httputil.ReverseProxy, error) {
+	kubeconfigData, err := m.gardener.GetAdminKubeconfig(ctx, clusterID, 0)
+	if err != nil {
+		return nil, fmt.Errorf("get admin kubeconfig for cluster %s: %w", clusterID, err)
+	}
+
+	c, err := NewFromBytes(kubeconfigData)
+	if err != nil {
+		return nil, fmt.Errorf("build client for cluster %s: %w", clusterID, err)
+	}
+
+	proxy := buildReverseProxy(c.Host(), c.Transport(), m.logger)
+	m.proxies.Store(clusterID, &cachedProxy{
+		proxy:     proxy,
+		expiresAt: time.Now().Add(kubeconfigCacheTTL),
+	})
+	return proxy, nil
 }
 
 func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slog.Logger) *httputil.ReverseProxy {

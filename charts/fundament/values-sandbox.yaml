@@ -24,6 +24,7 @@ authnApi:
 
 kubeApiProxy:
   enabled: true
+  replicas: 1
   logLevel: info
   mode: mock
 

@@ -38,6 +38,7 @@ organizationApi:
 
 kubeApiProxy:
   enabled: true
+  replicas: 1
   logLevel: debug
   mode: mock
 
