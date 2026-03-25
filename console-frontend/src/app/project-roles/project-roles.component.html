@@ -1,7 +1,7 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-bold dark:text-white">Project roles</h1>
+    <h1 class="text-2xl font-semibold dark:text-white">Project roles</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
       Manage roles for members of this project
     </p>
@@ -140,9 +140,7 @@
       } @else {
         <div class="space-y-2">
           <!-- All namespaces -->
-          <label
-            class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
-          >
+          <label class="radio-option">
             <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
               <input
                 name="namespaceMode"
@@ -150,7 +148,6 @@
                 value="all"
                 [ngModel]="namespaceMode()"
                 (ngModelChange)="onNamespaceModeChange($event)"
-                class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
               />
               All namespaces
             </span>
@@ -160,9 +157,7 @@
           </label>
 
           <!-- Specific namespace -->
-          <label
-            class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
-          >
+          <label class="radio-option">
             <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
               <input
                 name="namespaceMode"
@@ -170,7 +165,6 @@
                 value="specific"
                 [ngModel]="namespaceMode()"
                 (ngModelChange)="onNamespaceModeChange($event)"
-                class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
               />
               Specific namespace
             </span>
@@ -193,9 +187,7 @@
           </label>
 
           <!-- Custom namespace -->
-          <label
-            class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
-          >
+          <label class="radio-option">
             <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
               <input
                 name="namespaceMode"
@@ -203,7 +195,6 @@
                 value="custom"
                 [ngModel]="namespaceMode()"
                 (ngModelChange)="onNamespaceModeChange($event)"
-                class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
               />
               Custom pattern
             </span>

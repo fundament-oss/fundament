@@ -3,7 +3,7 @@
 :numbered:
 :icons: font
 :sidebar-order: 10
-:state: prediscussion
+:state: published
 
 = FUN-10 Console frontend styling
 
@@ -68,7 +68,7 @@ Input fields should use `bg-gray-900` in dark mode to provide a subtle contrast 
 
 == Typography
 
-The default body text size is `text-sm`. Use `text-2xl font-bold` for page titles, `text-lg` for section headings, and `text-xs` for badges and helper text. Use `font-mono` for technical identifiers such as UUIDs and tokens.
+The default body text size is `text-sm`. Use `text-2xl font-semibold` for page titles, `text-lg` for section headings, and `text-xs` for badges and helper text. Use `font-mono` for technical identifiers such as UUIDs and tokens.
 
 == Headers
 

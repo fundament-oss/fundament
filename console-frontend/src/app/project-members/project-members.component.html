@@ -1,7 +1,7 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-bold dark:text-white">Project members</h1>
+    <h1 class="text-2xl font-semibold dark:text-white">Project members</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
       Manage members and their permissions for this project
     </p>
@@ -208,34 +208,18 @@
     <div class="mb-4">
       <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
       <div class="space-y-2">
-        <label
-          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
-        >
+        <label class="radio-option">
           <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-            <input
-              name="permission"
-              type="radio"
-              value="viewer"
-              formControlName="permission"
-              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
-            />
+            <input name="permission" type="radio" value="viewer" formControlName="permission" />
             Project viewer
           </span>
           <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
             Read access to project resources
           </span>
         </label>
-        <label
-          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950"
-        >
+        <label class="radio-option">
           <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-            <input
-              name="permission"
-              type="radio"
-              value="admin"
-              formControlName="permission"
-              class="mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600"
-            />
+            <input name="permission" type="radio" value="admin" formControlName="permission" />
             Project admin
           </span>
           <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
