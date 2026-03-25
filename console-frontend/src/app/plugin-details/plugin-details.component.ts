@@ -146,7 +146,7 @@ export default class PluginDetailsComponent implements OnInit {
 
     // Simple markdown to HTML conversion
     let html = description
-      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mb-3 dark:text-white">$1</h1>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-semibold mb-3 dark:text-white">$1</h1>')
       .replace(
         /^## (.*$)/gim,
         '<h2 class="text-xl font-semibold mb-2 mt-4 dark:text-white">$1</h2>',

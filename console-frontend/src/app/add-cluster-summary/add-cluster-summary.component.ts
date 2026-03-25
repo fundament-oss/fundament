@@ -9,12 +9,13 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleCheck, tablerArrowBackUp } from '@ng-icons/tabler-icons';
+import { tablerCircleCheck, tablerArrowBackUp, tablerAlertTriangle } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
+import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER, PLUGIN } from '../../connect/tokens';
 import {
   CreateClusterRequestSchema,
@@ -59,6 +60,7 @@ interface ProgressItem {
       tablerCircleXFill,
       tablerCircleCheck,
       tablerArrowBackUp,
+      tablerAlertTriangle,
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,6 +76,8 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
   private pluginClient = inject(PLUGIN);
 
   protected stateService = inject(ClusterWizardStateService);
+
+  private organizationDataService = inject(OrganizationDataService);
 
   protected state = computed(() => this.stateService.getState());
 
@@ -94,6 +98,32 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
   protected progressItems = signal<ProgressItem[]>([]);
 
   protected clusterId = signal<string | null>(null);
+
+  protected clusterDisplayName = signal<string>('');
+
+  protected hasCreationStarted = computed(() => this.progressItems().length > 0);
+
+  protected bannerState = computed(
+    (): 'creating' | 'provisioning' | 'partial' | 'ready' | 'failed' => {
+      if (this.isCreating()) return 'creating';
+
+      const items = this.progressItems();
+      const clusterItem = items.find((i) => i.key === 'cluster');
+      if (clusterItem?.requestStatus === 'failed') return 'failed';
+
+      const hasAnyInProgress = items.some(
+        (i) => i.requestStatus === 'in_progress' || i.syncStatus === 'syncing',
+      );
+      if (hasAnyInProgress) return 'provisioning';
+
+      const hasAnyFailed = items.some(
+        (i) => i.requestStatus === 'failed' || i.syncStatus === 'failed',
+      );
+      if (hasAnyFailed) return 'partial';
+
+      return 'ready';
+    },
+  );
 
   private clusterConfig?: { name: string; region: string; kubernetesVersion: string };
 
@@ -170,6 +200,7 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
       region: wizardState.region,
       kubernetesVersion: wizardState.kubernetesVersion,
     };
+    this.clusterDisplayName.set(wizardState.clusterName);
 
     // Clear previous errors and set loading state
     this.errorMessage.set(null);
@@ -238,6 +269,7 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
         syncStatus: 'syncing',
         createdId: response.clusterId,
       });
+      this.organizationDataService.addCluster(response.clusterId, this.clusterConfig.name);
 
       // Reset wizard state since we have the cluster now
       this.stateService.reset();
@@ -361,7 +393,7 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
           });
         } else {
           this.updateItem('cluster', {
-            shootStatus: syncState?.shootStatus || 'Pending',
+            shootStatus: syncState?.shootStatus || 'pending',
           });
         }
       } catch {
@@ -439,8 +471,12 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     const hasInProgress = this.progressItems().some((i) => i.requestStatus === 'in_progress');
     if (!hasInProgress) {
       this.showModal.set(false);
-      this.stopPolling();
+      // Keep polling in the background so the banner stays up to date
     }
+  }
+
+  protected reopenModal() {
+    this.showModal.set(true);
   }
 
   protected navigateToCluster() {

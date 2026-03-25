@@ -3,7 +3,7 @@
 :numbered:
 :icons: font
 :sidebar-order: 6
-:state: prediscussion
+:state: committed
 
 = FUN-6 API-First Design
 

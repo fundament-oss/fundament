@@ -3,7 +3,7 @@
 :numbered:
 :icons: font
 :sidebar-order: 8
-:state: prediscussion
+:state: committed
 
 = FUN-8 funops - Operator CLI
 

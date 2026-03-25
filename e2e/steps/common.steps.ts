@@ -74,7 +74,22 @@ Given('I have no authentication', async function (this: ICustomWorld) {
 });
 
 Given('I have created an API key named {string}', async function (this: ICustomWorld, name: string) {
-  const response = await this.apiKeyService!.createAPIKey({ name });
+  let response;
+  try {
+    response = await this.apiKeyService!.createAPIKey({ name });
+  } catch (err) {
+    if (err instanceof ConnectRpcError && err.code === 'already_exists') {
+      // A leftover key from a previous test run. Delete it and retry.
+      const list = await this.apiKeyService!.listAPIKeys();
+      const existing = list.apiKeys.find((k) => k.name === name);
+      if (existing) {
+        await this.apiKeyService!.deleteAPIKey(existing.id);
+      }
+      response = await this.apiKeyService!.createAPIKey({ name });
+    } else {
+      throw err;
+    }
+  }
   currentApiKey = response;
 
   this.createdApiKeys.set(name, response);

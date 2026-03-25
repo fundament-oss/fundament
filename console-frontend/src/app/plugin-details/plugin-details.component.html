@@ -15,13 +15,15 @@
 
 <!-- Error State -->
 @if (errorMessage() && !isLoading()) {
-  <div class="rounded-md border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950">
-    <div class="flex items-center">
-      <ng-icon name="tablerCircleXFill" size="1.25rem" class="text-red-600! dark:text-red-400!" />
-      <h3 class="ml-3 text-sm font-medium text-red-800 dark:text-red-200">
-        {{ errorMessage() }}
-      </h3>
-    </div>
+  <div
+    class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+  >
+    <ng-icon
+      name="tablerCircleXFill"
+      class="shrink-0 text-rose-500! dark:text-rose-400!"
+      size="1.125rem"
+    />
+    <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
 

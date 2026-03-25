@@ -3,7 +3,7 @@
   <div class="card-header">
     <div class="grid items-center gap-3 sm:grid-cols-2">
       <div>
-        <h1 class="text-2xl font-bold dark:text-white">Usage</h1>
+        <h1 class="text-2xl font-semibold dark:text-white">Usage</h1>
         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
           @if (viewMode() === 'project') {
             Monitor resource usage for this project
@@ -96,9 +96,14 @@
     <!-- Error message -->
     @if (errorMessage()) {
       <div
-        class="rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20"
+        class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
       >
-        <p class="text-sm text-red-700 dark:text-red-400">{{ errorMessage() }}</p>
+        <ng-icon
+          name="tablerCircleXFill"
+          class="shrink-0 text-rose-500! dark:text-rose-400!"
+          size="1.125rem"
+        />
+        <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
       </div>
     }
 
