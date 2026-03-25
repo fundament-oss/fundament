@@ -111,7 +111,7 @@ export default class PluginRegistryService {
 
     await Promise.allSettled(
       plugin.crds.map(async (crdName) => {
-        const url = `${base}/k8s-api/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
+        const url = `${base}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
         const response = await fetch(url, {
           credentials: 'include',
           headers: { 'Fun-Organization': orgId, 'Fun-Cluster': clusterId },

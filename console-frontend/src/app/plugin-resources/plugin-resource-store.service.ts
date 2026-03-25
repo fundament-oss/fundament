@@ -16,7 +16,7 @@ export default class PluginResourceStoreService {
     const base = kubeApiProxyUrl.replace(/\/$/, '');
     // TODO: Support namespaced resources by adding /namespaces/{ns}/ when crd.scope === 'Namespaced'.
     // Currently fetches cluster-scoped list; real mode will return 404 for namespaced CRDs.
-    const url = `${base}/k8s-api/apis/${crd.group}/${crd.version}/${crd.plural}`;
+    const url = `${base}/apis/${crd.group}/${crd.version}/${crd.plural}`;
 
     const response = await fetch(url, {
       credentials: 'include',

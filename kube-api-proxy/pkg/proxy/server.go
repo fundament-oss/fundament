@@ -50,7 +50,11 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/k8s-api/", http.HandlerFunc(s.handleClusterProxy)) // cluster ID via Fun-Cluster header
+	// /api/ = core resources (Pods, Services, …)
+	// /apis/ = API groups (apps, CRDs, …)
+	// Both prefixes are registered explicitly to prevent SSRF — only these paths reach the proxy
+	mux.Handle("/apis/", http.HandlerFunc(s.handleClusterProxy))
+	mux.Handle("/api/", http.HandlerFunc(s.handleClusterProxy))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))

@@ -49,7 +49,7 @@ func (m *MockClient) Do(_ context.Context, _, path string, _ io.Reader) (int, io
 
 // ServeHTTP implements http.Handler so MockClient can be used in place of MultiClusterProxy.
 func (m *MockClient) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/k8s-api")
+	path := r.URL.Path
 	if r.URL.RawQuery != "" {
 		path = path + "?" + r.URL.RawQuery
 	}
