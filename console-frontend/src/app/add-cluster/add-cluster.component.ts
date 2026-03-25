@@ -112,6 +112,7 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
 
   onSubmit() {
     this.formSubmitted.set(true);
+    this.onClusterNameBlur();
     if (this.clusterForm.invalid || this.clusterNameExists()) {
       this.clusterForm.markAllAsTouched();
       AddClusterComponent.scrollToFirstError();

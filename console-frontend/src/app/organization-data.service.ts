@@ -223,9 +223,12 @@ export class OrganizationDataService {
    * This ensures other views (e.g. Projects, plugins) reflect the new cluster right away.
    */
   addCluster(id: string, name: string) {
+    const activeOrgId = this.cachedOrganizationId;
     this.organizations.update((orgs) =>
-      orgs.map((org, i) =>
-        i === 0 ? { ...org, clusters: [...org.clusters, { id, name, projects: [] }] } : org,
+      orgs.map((org) =>
+        org.id === activeOrgId
+          ? { ...org, clusters: [...org.clusters, { id, name, projects: [] }] }
+          : org,
       ),
     );
     this.clusterSummaries.update((summaries) => [
