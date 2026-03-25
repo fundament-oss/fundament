@@ -13,10 +13,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerEye, tablerDatabaseOff, tablerRefresh } from '@ng-icons/tabler-icons';
 import KubeClusterContextService from '../kube-cluster-context.service';
+import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
-import PluginResourceStoreService from '../plugin-resource-store.service';
-import { ConfigService } from '../../config.service';
-import OrganizationContextService from '../../organization-context.service';
 import { TitleService } from '../../title.service';
 import type { ParsedCrd, AdditionalPrinterColumn, KubeResource } from '../types';
 import {
@@ -62,11 +60,7 @@ export default class ResourceListComponent implements OnInit {
 
   protected clusterContext = inject(KubeClusterContextService);
 
-  private configService = inject(ConfigService);
-
-  private orgContext = inject(OrganizationContextService);
-
-  private pluginStore = inject(PluginResourceStoreService);
+  private loader = inject(KubePluginLoaderService);
 
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -98,15 +92,11 @@ export default class ResourceListComponent implements OnInit {
     const crd = this.crdDef();
     if (crd) return kindToLabel(crd.kind);
 
-    // Fallback: look up the menu entry by CRD kind to get the proper PascalCase CRD name
     const plugin = this.plugin();
     const resourceKind = this.resourceKind();
-    if (plugin) {
-      const allItems = [...(plugin.menu.organization ?? []), ...(plugin.menu.project ?? [])];
-      const item = allItems.find((i) => i.crd === resourceKind);
-      if (item) return item.label ?? item.crd;
-    }
-    return kindToLabel(resourceKind);
+    const allItems = [...(plugin?.menu.organization ?? []), ...(plugin?.menu.project ?? [])];
+    const item = allItems.find((i) => i.crd === resourceKind);
+    return item?.label ?? kindToLabel(resourceKind);
   });
 
   constructor() {
@@ -114,11 +104,12 @@ export default class ResourceListComponent implements OnInit {
       this.titleService.setTitle(this.kindLabel());
     });
 
+    // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
     effect(() => {
       const pluginName = this.pluginName();
       const resourceKind = this.resourceKind();
       const clusterId = this.clusterContext.selectedClusterId();
-      if (pluginName && resourceKind && clusterId) {
+      if (pluginName && resourceKind && clusterId !== null) {
         untracked(() => {
           this.loadCrdsAndResources(pluginName, resourceKind, clusterId);
         });
@@ -128,6 +119,7 @@ export default class ResourceListComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
+      // Sets selectedClusterId on completion, triggering the effect above.
       await this.clusterContext.loadClusters();
     } catch {
       this.errorMessage.set('Failed to load clusters.');
@@ -141,7 +133,7 @@ export default class ResourceListComponent implements OnInit {
   async onRefresh(): Promise<void> {
     const clusterId = this.clusterContext.selectedClusterId();
     const pluginName = this.pluginName();
-    if (pluginName && this.resourceKind() && clusterId) {
+    if (pluginName && this.resourceKind() && clusterId !== null) {
       await this.loadCrdsAndResources(pluginName, this.resourceKind(), clusterId);
     }
   }
@@ -151,25 +143,19 @@ export default class ResourceListComponent implements OnInit {
     resourceKind: string,
     clusterId: string,
   ): Promise<void> {
-    const orgId = this.orgContext.currentOrganizationId();
-    if (!orgId) return;
-
-    const kubeApiProxyUrl = this.configService.getConfig().kubeApiProxyUrl;
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.crdDef.set(undefined);
     this.resources.set([]);
 
     try {
-      await this.registry.loadCrdsForPlugin(pluginName, clusterId, kubeApiProxyUrl, orgId);
-      const crd = this.registry.getCrd(pluginName, resourceKind, clusterId);
+      const { crd, resources } = await this.loader.loadCrdAndResources(
+        pluginName,
+        resourceKind,
+        clusterId,
+      );
       this.crdDef.set(crd);
-
-      if (crd) {
-        this.resources.set(
-          await this.pluginStore.loadResources(crd, clusterId, kubeApiProxyUrl, orgId, pluginName),
-        );
-      }
+      this.resources.set(resources);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[ResourceList] Failed to load resources:', err);

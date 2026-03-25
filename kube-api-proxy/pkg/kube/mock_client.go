@@ -30,17 +30,17 @@ func (m *MockClient) Do(_ context.Context, _, path string, _ io.Reader) (int, io
 		return 404, r(`{"message":"not found"}`), nil
 	case path == crdBasePath:
 		return 200, r(mockCRDListJSON), nil
-	case strings.HasPrefix(path, "/apis/cert-manager.io/v1/") && strings.HasSuffix(path, "/certificates"):
+	case isResourceList(path, "cert-manager.io", "v1", "certificates"):
 		return 200, r(mockCertificateListJSON), nil
-	case strings.HasPrefix(path, "/apis/cert-manager.io/v1/") && strings.HasSuffix(path, "/clusterissuers"):
+	case isResourceList(path, "cert-manager.io", "v1", "clusterissuers"):
 		return 200, r(mockClusterIssuerListJSON), nil
-	case strings.HasPrefix(path, "/apis/cert-manager.io/v1/") && strings.HasSuffix(path, "/issuers"):
+	case isResourceList(path, "cert-manager.io", "v1", "issuers"):
 		return 200, r(mockIssuerListJSON), nil
-	case strings.HasPrefix(path, "/apis/postgresql.cnpg.io/v1/") && strings.HasSuffix(path, "/databases"):
+	case isResourceList(path, "postgresql.cnpg.io", "v1", "databases"):
 		return 200, r(mockDatabaseListJSON), nil
-	case strings.HasPrefix(path, "/apis/postgresql.cnpg.io/v1/") && strings.HasSuffix(path, "/backups"):
+	case isResourceList(path, "postgresql.cnpg.io", "v1", "backups"):
 		return 200, r(mockBackupListJSON), nil
-	case strings.HasPrefix(path, "/apis/postgresql.cnpg.io/v1/") && strings.HasSuffix(path, "/subscriptions"):
+	case isResourceList(path, "postgresql.cnpg.io", "v1", "subscriptions"):
 		return 200, r(mockSubscriptionListJSON), nil
 	default:
 		return 200, r(mockEmptyList), nil
@@ -67,3 +67,22 @@ func (m *MockClient) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 const mockEmptyList = `{"apiVersion":"v1","kind":"List","metadata":{"resourceVersion":""},"items":[]}`
+
+// isResourceList reports whether path is a Kubernetes list request for the given group/version/plural.
+// Matches both cluster-scoped (/apis/{g}/{v}/{plural}) and namespaced
+// (/apis/{g}/{v}/namespaces/{ns}/{plural}) list paths.
+func isResourceList(path, group, version, plural string) bool {
+	prefix := "/apis/" + group + "/" + version + "/"
+	if !strings.HasPrefix(path, prefix) {
+		return false
+	}
+	rest := path[len(prefix):]
+	// Cluster-scoped: exactly the plural segment.
+	if rest == plural {
+		return true
+	}
+	// Namespaced: "namespaces/{ns}/{plural}" — exactly three segments.
+	return strings.HasPrefix(rest, "namespaces/") &&
+		strings.HasSuffix(rest, "/"+plural) &&
+		strings.Count(rest, "/") == 2
+}

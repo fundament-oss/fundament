@@ -11,7 +11,7 @@ export default class KubeClusterContextService {
 
   clusters = signal<ClusterSummary[]>([]);
 
-  selectedClusterId = signal<string>('');
+  selectedClusterId = signal<string | null>(null);
 
   isLoadingClusters = signal(true);
 

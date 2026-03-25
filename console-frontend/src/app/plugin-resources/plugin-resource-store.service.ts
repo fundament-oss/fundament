@@ -37,7 +37,7 @@ export default class PluginResourceStoreService {
     pluginName: string,
     kind: string,
     resourceId: string,
-    clusterId: string | undefined,
+    clusterId: string | null | undefined,
   ): KubeResource | undefined {
     if (!clusterId) return undefined;
     const key = `${pluginName}/${kind}/${clusterId}`;

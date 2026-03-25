@@ -14,10 +14,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerArrowLeft } from '@ng-icons/tabler-icons';
 import FieldRendererComponent from '../field-renderers/field-renderer.component';
 import KubeClusterContextService from '../kube-cluster-context.service';
-import PluginRegistryService from '../plugin-registry.service';
-import PluginResourceStoreService from '../plugin-resource-store.service';
-import { ConfigService } from '../../config.service';
-import OrganizationContextService from '../../organization-context.service';
+import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
@@ -54,17 +51,11 @@ function toRecord(val: unknown): Record<string, unknown> {
 export default class ResourceDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
-  private registry = inject(PluginRegistryService);
-
   private titleService = inject(TitleService);
 
   private clusterContext = inject(KubeClusterContextService);
 
-  private configService = inject(ConfigService);
-
-  private orgContext = inject(OrganizationContextService);
-
-  private pluginStore = inject(PluginResourceStoreService);
+  private loader = inject(KubePluginLoaderService);
 
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -103,9 +94,10 @@ export default class ResourceDetailComponent implements OnInit {
       this.titleService.setTitle(r?.metadata.name);
     });
 
+    // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
     effect(() => {
       const clusterId = this.clusterContext.selectedClusterId();
-      if (clusterId) {
+      if (clusterId !== null) {
         untracked(() => this.loadCrdAndResource(clusterId));
       }
     });
@@ -113,6 +105,7 @@ export default class ResourceDetailComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
+      // Sets selectedClusterId on completion, triggering the effect above.
       await this.clusterContext.loadClusters();
     } catch {
       this.errorMessage.set('Failed to load clusters.');
@@ -120,26 +113,17 @@ export default class ResourceDetailComponent implements OnInit {
   }
 
   private async loadCrdAndResource(clusterId: string): Promise<void> {
-    const orgId = this.orgContext.currentOrganizationId();
-    if (!orgId) return;
-
-    const kubeApiProxyUrl = this.configService.getConfig().kubeApiProxyUrl;
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
     try {
-      await this.registry.loadCrdsForPlugin(this.pluginName(), clusterId, kubeApiProxyUrl, orgId);
-      const crd = this.registry.getCrd(this.pluginName(), this.resourceKind(), clusterId);
+      const { crd, resources } = await this.loader.loadCrdAndResources(
+        this.pluginName(),
+        this.resourceKind(),
+        clusterId,
+      );
       this.crdDef.set(crd);
-
       if (crd) {
-        const resources = await this.pluginStore.loadResources(
-          crd,
-          clusterId,
-          kubeApiProxyUrl,
-          orgId,
-          this.pluginName(),
-        );
         this.resource.set(resources.find((r) => r.metadata.name === this.resourceId()));
       }
     } catch (err) {
