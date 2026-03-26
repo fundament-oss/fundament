@@ -5,8 +5,7 @@ kind: HTTPRoute
 metadata:
   name: {{ $.Release.Name }}-dex
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: dex
+    {{- include "fundament.labels" (dict "root" $ "name" "dex" "component" "gateway") | nindent 4 }}
 spec:
   parentRefs:
     {{- toYaml $.Values.dex.httproute.parentRefs | nindent 4 }}
