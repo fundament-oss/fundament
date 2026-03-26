@@ -5,8 +5,7 @@ kind: HTTPRoute
 metadata:
   name: {{ $.Release.Name }}-authn-api
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: authn-api
+    {{- include "fundament.labels" (dict "root" $ "name" "authn-api" "component" "gateway") | nindent 4 }}
 spec:
   parentRefs:
     {{- toYaml $.Values.authnApi.httproute.parentRefs | nindent 4 }}
