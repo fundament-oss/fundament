@@ -69,6 +69,17 @@ clusterWorker:
   logLevel: info
   gardenerMode: mock # mock or real
   gardenerKubeconfigSecret: "" # Secret name containing kubeconfig for real mode
+  # Provider config for real Gardener mode
+  gardenerProviderType: ""
+  gardenerCloudProfile: ""
+  gardenerCredentialsBindingName: ""
+  gardenerCredentialsSecretRef: ""
+  gardenerMachineImageName: ""
+  gardenerMachineImageVersion: ""
+  gardenerDefaultMachineType: ""
+  gardenerNetworkingType: ""
+  gardenerInfrastructureConfig: "" # Multi-line JSON string for Provider.InfrastructureConfig
+  gardenerControlPlaneConfig: "" # Multi-line JSON string for Provider.ControlPlaneConfig
 
 # Console Frontend
 consoleFrontend:

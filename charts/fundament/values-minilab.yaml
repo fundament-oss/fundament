@@ -1,0 +1,41 @@
+# mini-lab Gardener overlay values
+# Use with: skaffold dev -p env-local -p minilab-gardener
+#
+# Prerequisites:
+#   1. mini-lab running with MINI_LAB_FLAVOR=gardener make
+#   2. just cluster-worker minilab-connect-k3d
+#   3. just cluster-worker minilab-secret
+#
+# These values may need adjustment based on your mini-lab setup.
+# Inspect your mini-lab Gardener to find correct cloud profile, machine types, etc:
+#   docker exec -it gardener-control-plane kubectl get cloudprofiles -o yaml
+
+clusterWorker:
+  gardenerMode: real
+  gardenerKubeconfigSecret: gardener-kubeconfig
+  gardenerProviderType: metal
+  gardenerCloudProfile: metal
+  gardenerCredentialsBindingName: metal-credentials
+  gardenerCredentialsSecretRef: garden/metal-secret
+  gardenerMachineImageName: ubuntu
+  gardenerMachineImageVersion: "24.4"
+  gardenerDefaultMachineType: v1-small-x86
+  gardenerNetworkingType: calico
+  gardenerNetworkingNodes: auto
+  gardenerShootAnnotations: "cluster.metal-stack.io/tenant:test"
+  gardenerInfrastructureConfig: |
+    {
+      "apiVersion": "metal.provider.extensions.gardener.cloud/v1alpha1",
+      "kind": "InfrastructureConfig",
+      "firewall": {
+        "size": "v1-small-x86",
+        "image": "firewall-ubuntu-3.0",
+        "networks": ["internet-mini-lab"]
+      },
+      "projectID": "00000000-0000-0000-0000-000000000001"
+    }
+  gardenerControlPlaneConfig: |
+    {
+      "apiVersion": "metal.provider.extensions.gardener.cloud/v1alpha1",
+      "kind": "ControlPlaneConfig"
+    }

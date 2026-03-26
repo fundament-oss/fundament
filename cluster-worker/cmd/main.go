@@ -63,6 +63,29 @@ type config struct {
 	// ProviderDefaultMachineType is the fallback machine type when a cluster has no node pools
 	// (e.g., "local", "n1-standard-4").
 	ProviderDefaultMachineType string `env:"GARDENER_DEFAULT_MACHINE_TYPE"`
+
+	// ProviderInfrastructureConfigFile is the path to a JSON file containing raw
+	// Provider.InfrastructureConfig for Shoot specs (e.g., metal-stack partition config).
+	ProviderInfrastructureConfigFile string `env:"GARDENER_INFRASTRUCTURE_CONFIG_FILE"`
+
+	// ProviderControlPlaneConfigFile is the path to a JSON file containing raw
+	// Provider.ControlPlaneConfig for Shoot specs.
+	ProviderControlPlaneConfigFile string `env:"GARDENER_CONTROLPLANE_CONFIG_FILE"`
+
+	// ProviderNetworkingType overrides the default CNI type ("calico").
+	ProviderNetworkingType string `env:"GARDENER_NETWORKING_TYPE"`
+
+	// ProviderNetworkingNodes overrides the default nodes CIDR ("10.0.0.0/16").
+	// For metal-stack, this must be a child prefix of the tenant super network.
+	ProviderNetworkingNodes string `env:"GARDENER_NETWORKING_NODES"`
+
+	// ProviderCredentialsSecretRef overrides the default credentials secret reference.
+	// Format: "namespace/name" (e.g., "garden/my-secret").
+	ProviderCredentialsSecretRef string `env:"GARDENER_CREDENTIALS_SECRET_REF"`
+
+	// ProviderShootAnnotations adds extra annotations to all Shoot resources.
+	// Format: "key:value,key2:value2" (e.g., "cluster.metal-stack.io/tenant:test").
+	ProviderShootAnnotations map[string]string `env:"GARDENER_SHOOT_ANNOTATIONS" envSeparator:","`
 }
 
 // ReadyChecker reports whether a worker is ready to serve traffic.
@@ -194,6 +217,32 @@ func createGardenerClient(cfg *config, logger *slog.Logger) (gardener.Client, er
 		}
 		if cfg.ProviderDefaultMachineType != "" {
 			providerCfg.DefaultMachineType = cfg.ProviderDefaultMachineType
+		}
+		if cfg.ProviderCredentialsSecretRef != "" {
+			providerCfg.CredentialsSecretRef = cfg.ProviderCredentialsSecretRef
+		}
+		if cfg.ProviderNetworkingType != "" {
+			providerCfg.NetworkingType = cfg.ProviderNetworkingType
+		}
+		if cfg.ProviderNetworkingNodes != "" {
+			providerCfg.NetworkingNodes = cfg.ProviderNetworkingNodes
+		}
+		if cfg.ProviderInfrastructureConfigFile != "" {
+			data, err := os.ReadFile(cfg.ProviderInfrastructureConfigFile)
+			if err != nil {
+				return nil, fmt.Errorf("read infrastructure config file: %w", err)
+			}
+			providerCfg.InfrastructureConfigRaw = data
+		}
+		if cfg.ProviderControlPlaneConfigFile != "" {
+			data, err := os.ReadFile(cfg.ProviderControlPlaneConfigFile)
+			if err != nil {
+				return nil, fmt.Errorf("read controlplane config file: %w", err)
+			}
+			providerCfg.ControlPlaneConfigRaw = data
+		}
+		if len(cfg.ProviderShootAnnotations) > 0 {
+			providerCfg.ShootAnnotations = cfg.ProviderShootAnnotations
 		}
 
 		logger.Info("using real Gardener client",

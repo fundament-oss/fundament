@@ -33,7 +33,7 @@ export function extractOrganizationId(token: string): string {
  * Authenticate via password login and get JWT.
  */
 export async function authenticateWithPassword(email: string): Promise<string> {
-  const authnApiUrl = process.env.AUTHN_API_URL || 'http://authn.fundament.localhost:8080';
+  const authnApiUrl = process.env.AUTHN_API_URL || 'http://authn.fundament.localhost:10080';
   const password = 'password';
 
   const response = await fetch(`${authnApiUrl}/login/password`, {

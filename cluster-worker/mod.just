@@ -274,6 +274,220 @@ gardener-secret: gardener-connect-k3d
     echo "Secret created: gardener-kubeconfig"
 
 # ============================================================================
+# mini-lab (metal-stack Gardener)
+# ============================================================================
+
+MINILAB_DIR := env_var_or_default("MINILAB_DIR", justfile_directory() + "/.dev/mini-lab")
+MINILAB_CONTAINER := "metal-control-plane-control-plane"
+
+# Connect mini-lab Docker containers to k3d-fundament network
+minilab-connect-k3d:
+    #!/usr/bin/env bash
+    set -e
+    K3D_NETWORK="k3d-fundament"
+
+    if ! docker ps --format '{{{{.Names}}' | grep -q "^{{MINILAB_CONTAINER}}$"; then
+        echo "Error: mini-lab not running (container {{MINILAB_CONTAINER}} not found)"
+        echo "Start with: cd {{MINILAB_DIR}} && MINI_LAB_FLAVOR=gardener make"
+        exit 1
+    fi
+
+    if ! docker network ls --format '{{{{.Name}}' | grep -q "^${K3D_NETWORK}$"; then
+        echo "Error: k3d network not found. Is the k3d cluster running?"
+        exit 1
+    fi
+
+    # Connect mini-lab kind container to k3d network
+    if docker network inspect "$K3D_NETWORK" --format '{{{{range .Containers}}{{{{.Name}} {{{{end}}' | grep -q "{{MINILAB_CONTAINER}}"; then
+        echo "- {{MINILAB_CONTAINER}} already connected to $K3D_NETWORK"
+    else
+        docker network connect "$K3D_NETWORK" "{{MINILAB_CONTAINER}}"
+        echo "- Connected {{MINILAB_CONTAINER}} to $K3D_NETWORK"
+    fi
+
+    K3D_IP=$(docker inspect "{{MINILAB_CONTAINER}}" --format '{{{{index .NetworkSettings.Networks "k3d-fundament" "IPAddress"}}')
+
+    # Start socat proxy for virtual garden API if not already running
+    # The virtual garden kube-apiserver is a ClusterIP service, so we proxy through socat
+    VGARDEN_CLUSTERIP=$(docker exec "{{MINILAB_CONTAINER}}" kubectl get svc virtual-garden-kube-apiserver -n garden -o jsonpath='{.spec.clusterIP}')
+    if ! docker exec "{{MINILAB_CONTAINER}}" pgrep -f "socat.*TCP-LISTEN:30443" > /dev/null 2>&1; then
+        echo "- Starting socat proxy for virtual garden API (port 30443)..."
+        docker exec "{{MINILAB_CONTAINER}}" bash -c "apt-get update -qq && apt-get install -qq -y socat >/dev/null 2>&1" || true
+        docker exec -d "{{MINILAB_CONTAINER}}" socat TCP-LISTEN:30443,fork,reuseaddr TCP:$VGARDEN_CLUSTERIP:443
+        sleep 1
+    else
+        echo "- socat proxy already running on port 30443"
+    fi
+
+    echo ""
+    echo "mini-lab virtual garden API: https://$K3D_IP:30443"
+
+# Create kubeconfig + credentials secrets for cluster-worker to connect to mini-lab virtual garden
+minilab-secret: minilab-connect-k3d
+    #!/usr/bin/env bash
+    set -e
+
+    KIND_KUBECONFIG=$(mktemp)
+    kind get kubeconfig --name metal-control-plane > "$KIND_KUBECONFIG"
+
+    # Get virtual garden token and CA from the kind cluster
+    echo "Extracting virtual garden kubeconfig..."
+    SECRET_NAME=$(kubectl --kubeconfig="$KIND_KUBECONFIG" get secret -n garden \
+        -l managed-by=secrets-manager,manager-identity=gardener-operator,name=generic-token-kubeconfig \
+        --no-headers -o custom-columns=NAME:.metadata.name | head -1)
+    if [ -z "$SECRET_NAME" ]; then
+        echo "Error: Could not find generic-token-kubeconfig secret. Is Gardener running?"
+        rm "$KIND_KUBECONFIG"
+        exit 1
+    fi
+
+    VIRTUAL_KUBECONFIG=$(mktemp)
+    kubectl --kubeconfig="$KIND_KUBECONFIG" get secret -n garden "$SECRET_NAME" \
+        -o jsonpath='{.data.kubeconfig}' | base64 -d > "$VIRTUAL_KUBECONFIG"
+
+    # Set token from shoot-access-virtual-garden
+    TOKEN=$(kubectl --kubeconfig="$KIND_KUBECONFIG" get secret -n garden shoot-access-virtual-garden \
+        -o jsonpath='{.data.token}' | base64 -d)
+    kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" config set-credentials garden --token="$TOKEN"
+
+    # Rewrite server URL to the k3d-fundament network IP (port 30443 = socat proxy to virtual garden API)
+    K3D_IP=$(docker inspect "{{MINILAB_CONTAINER}}" --format '{{{{index .NetworkSettings.Networks "k3d-fundament" "IPAddress"}}')
+    kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" config set-cluster garden \
+        --server="https://$K3D_IP:30443" \
+        --insecure-skip-tls-verify=true
+
+    # Ensure fundament namespace exists
+    kubectl create namespace fundament --dry-run=client -o yaml | kubectl apply -f -
+
+    echo "Creating gardener-kubeconfig secret (server: https://$K3D_IP:30443)..."
+    kubectl create secret generic gardener-kubeconfig \
+        --from-file=kubeconfig="$VIRTUAL_KUBECONFIG" \
+        -n fundament --dry-run=client -o yaml | kubectl apply -f -
+
+    # Create metal-api credentials secret in the virtual garden
+    # The extension-provider-metal reads metalAPIURL/metalAPIHMac from this secret
+    METAL_API_URL="http://metal-api.metal-control-plane.svc.cluster.local:8080/metal"
+    METAL_API_HMAC=$(kubectl --kubeconfig="$KIND_KUBECONFIG" get secret -n metal-control-plane metal-api \
+        -o jsonpath='{.data.admin_key}' | base64 -d)
+
+    echo "Creating metal-credentials secret in virtual garden..."
+    kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" create secret generic metal-credentials \
+        -n garden \
+        --from-literal=metalAPIURL="$METAL_API_URL" \
+        --from-literal=metalAPIHMac="$METAL_API_HMAC" \
+        --from-literal=metalAPIKey="" \
+        --dry-run=client -o yaml | kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" apply --validate=false -f -
+
+    # Create seed-api-server ConfigMap so the ControlPlane reconciler accepts the
+    # Kind cluster's IP-based API server URL instead of panicking.
+    echo ""
+    echo "Creating seed-api-server ConfigMap..."
+    kubectl --kubeconfig="$KIND_KUBECONFIG" create configmap seed-api-server \
+        -n garden \
+        --from-literal=url=https://metal-control-plane-control-plane:6443 \
+        --dry-run=client -o yaml | kubectl --kubeconfig="$KIND_KUBECONFIG" apply -f - 2>/dev/null \
+        && echo "  seed-api-server ConfigMap ready" || echo "  Warning: Could not create seed-api-server ConfigMap"
+
+    # Create project, copy credentials, create SecretBinding
+    echo ""
+    echo "Creating project 'test' and SecretBinding..."
+    kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" apply --validate=false -f - <<PROJEOF 2>/dev/null
+    apiVersion: core.gardener.cloud/v1beta1
+    kind: Project
+    metadata:
+      name: test
+    spec:
+      namespace: garden-test
+    PROJEOF
+    sleep 3
+
+    # Copy credentials to project namespace
+    kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" get secret metal-credentials -n garden -o json 2>/dev/null | \
+        jq '.metadata.namespace = "garden-test" | del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.managedFields)' | \
+        kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" apply --validate=false -f - 2>/dev/null || true
+
+    # Create SecretBinding
+    kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" apply --validate=false -f - <<SBEOF 2>/dev/null || true
+    apiVersion: core.gardener.cloud/v1beta1
+    kind: SecretBinding
+    metadata:
+      name: metal-credentials
+      namespace: garden-test
+    provider:
+      type: metal
+    secretRef:
+      name: metal-credentials
+      namespace: garden-test
+    SBEOF
+    echo "  Project, credentials, and SecretBinding ready"
+
+    rm "$KIND_KUBECONFIG" "$VIRTUAL_KUBECONFIG"
+    echo ""
+    echo "Setup complete:"
+    echo "  - gardener-kubeconfig secret (in k3d fundament namespace)"
+    echo "  - metal-credentials secret (in virtual garden)"
+    echo "  - seed-api-server ConfigMap (in Kind garden namespace)"
+    echo "  - Project 'test' with SecretBinding ready"
+
+# Check mini-lab Gardener connectivity and status
+minilab-status:
+    #!/usr/bin/env bash
+    echo "=== mini-lab Gardener Status ==="
+    echo ""
+
+    if ! docker ps --format '{{{{.Names}}' | grep -q "^{{MINILAB_CONTAINER}}$"; then
+        echo "Status: NOT RUNNING"
+        echo "Start with: cd {{MINILAB_DIR}} && MINI_LAB_FLAVOR=gardener make"
+        exit 1
+    fi
+
+    echo "Status: RUNNING"
+
+    K3D_NETWORK="k3d-fundament"
+    if docker network inspect "$K3D_NETWORK" --format '{{{{range .Containers}}{{{{.Name}} {{{{end}}' 2>/dev/null | grep -q "{{MINILAB_CONTAINER}}"; then
+        K3D_IP=$(docker inspect "{{MINILAB_CONTAINER}}" --format '{{{{index .NetworkSettings.Networks "k3d-fundament" "IPAddress"}}' 2>/dev/null)
+        echo "k3d network: Connected (virtual garden API: https://$K3D_IP:30443)"
+    else
+        echo "k3d network: NOT connected (run: just cluster-worker minilab-connect-k3d)"
+    fi
+    echo ""
+
+    echo "=== Virtual Garden ==="
+    KIND_KUBECONFIG=$(mktemp)
+    kind get kubeconfig --name metal-control-plane > "$KIND_KUBECONFIG" 2>/dev/null
+    SECRET_NAME=$(kubectl --kubeconfig="$KIND_KUBECONFIG" get secret -n garden \
+        -l managed-by=secrets-manager,manager-identity=gardener-operator,name=generic-token-kubeconfig \
+        --no-headers -o custom-columns=NAME:.metadata.name 2>/dev/null | head -1)
+    if [ -n "$SECRET_NAME" ]; then
+        VIRTUAL_KUBECONFIG=$(mktemp)
+        kubectl --kubeconfig="$KIND_KUBECONFIG" get secret -n garden "$SECRET_NAME" \
+            -o jsonpath='{.data.kubeconfig}' | base64 -d > "$VIRTUAL_KUBECONFIG"
+        TOKEN=$(kubectl --kubeconfig="$KIND_KUBECONFIG" get secret -n garden shoot-access-virtual-garden \
+            -o jsonpath='{.data.token}' | base64 -d 2>/dev/null)
+        kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" config set-credentials garden --token="$TOKEN" > /dev/null 2>&1
+        K3D_IP=$(docker inspect "{{MINILAB_CONTAINER}}" --format '{{{{index .NetworkSettings.Networks "k3d-fundament" "IPAddress"}}' 2>/dev/null)
+        kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" config set-cluster garden \
+            --server="https://$K3D_IP:30443" --insecure-skip-tls-verify=true > /dev/null 2>&1
+
+        echo "Seeds:"
+        kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" get seeds 2>/dev/null || echo "  Could not list seeds"
+        echo ""
+        echo "Cloud Profiles:"
+        kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" get cloudprofiles 2>/dev/null || echo "  Could not list cloud profiles"
+        echo ""
+        echo "Projects:"
+        kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" get projects 2>/dev/null || echo "  None"
+        echo ""
+        echo "Shoots:"
+        kubectl --kubeconfig="$VIRTUAL_KUBECONFIG" get shoots -A 2>/dev/null || echo "  None"
+
+        rm "$VIRTUAL_KUBECONFIG"
+    else
+        echo "  Could not get virtual garden kubeconfig"
+    fi
+    rm -f "$KIND_KUBECONFIG"
+
+# ============================================================================
 # Testing Helpers
 # ============================================================================
 
@@ -290,6 +504,24 @@ create-test-cluster name:
     echo ""
     if echo "$result" | grep -q '{{name}}'; then
         echo "Cluster '{{name}}' created. Watch progress:"
+    else
+        echo "Cluster '{{name}}' already exists. Watch progress:"
+    fi
+    echo "  just cluster-worker shoots"
+
+# Create a test cluster targeting mini-lab metal partition
+create-test-cluster-metal name:
+    #!/usr/bin/env bash
+    set -e
+    name="{{name}}"
+    if [ ${#name} -gt 10 ]; then
+        echo "Error: Name '$name' is too long. Use ≤10 chars (shoot names have 21-char limit)"
+        exit 1
+    fi
+    result=$(kubectl exec -n fundament fundament-db-1 -- psql -U postgres -d fundament -t -c "INSERT INTO tenant.clusters (name, organization_id, region, kubernetes_version, status) SELECT '{{name}}', id, 'mini-lab', '1.30.8', 'unspecified' FROM tenant.organizations LIMIT 1 ON CONFLICT (organization_id, name, deleted) DO NOTHING RETURNING id, name;")
+    echo ""
+    if echo "$result" | grep -q '{{name}}'; then
+        echo "Cluster '{{name}}' created with region 'mini-lab'. Watch progress:"
     else
         echo "Cluster '{{name}}' already exists. Watch progress:"
     fi

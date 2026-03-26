@@ -3,18 +3,18 @@
 jwtSecret: "local-dev-jwt-secret"
 
 externalUrls:
-  authn: http://authn.fundament.localhost:8080
-  organization: http://organization.fundament.localhost:8080
-  console: http://console.fundament.localhost:8080
-  docs: http://docs.fundament.localhost:8080
+  authn: http://authn.fundament.localhost:10080
+  organization: http://organization.fundament.localhost:10080
+  console: http://console.fundament.localhost:10080
+  docs: http://docs.fundament.localhost:10080
   cookieDomain: fundament.localhost
-  corsAllowedOrigins: "http://console.fundament.localhost:8080,http://localhost:4200,http://localhost:5173"
+  corsAllowedOrigins: "http://console.fundament.localhost:10080,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true
   instances: 1
   storageSize: 1Gi
-  reset: false
+  reset: true
   insertTestData: true
   exposePort: 54328
   postgresql:
@@ -50,13 +50,13 @@ docsFrontend:
 
 dex:
   enabled: true
-  issuer: http://dex.fundament.localhost:8080
+  issuer: http://dex.fundament.localhost:10080
   discoveryUrl: http://dex:5556
   staticClients:
     - id: fundament
       name: "Fundament Auth API"
       redirectURIs:
-        - http://authn.fundament.localhost:8080/callback
+        - http://authn.fundament.localhost:10080/callback
       public: true
   staticPasswords:
     # All passwords are 'password' (echo 'password' | htpasswd -BinC 10 user)
@@ -109,7 +109,7 @@ authzWorker:
 
 openfga:
   enabled: true
-  # Use a non-standard API port since 8080 is used by ingress.
+  # Use a non-standard API port since 10080 is used by ingress.
   # The playground auto-detects the API port from the URL it's served from.
   apiPort: 18080
   playground:

@@ -25,8 +25,8 @@ type Credentials struct {
 // DefaultConfig returns the default configuration.
 func DefaultConfig() *Config {
 	return &Config{
-		APIEndpoint: "http://organization.fundament.localhost:8080",
-		AuthnURL:    "http://authn.fundament.localhost:8080",
+		APIEndpoint: "http://organization.fundament.localhost:10080",
+		AuthnURL:    "http://authn.fundament.localhost:10080",
 		Output:      "table",
 	}
 }
