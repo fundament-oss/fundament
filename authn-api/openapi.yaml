@@ -7,7 +7,7 @@ info:
     name: Fundament OSS
 
 servers:
-  - url: http://authn.fundament.localhost:8080
+  - url: http://authn.fundament.localhost:10080
     description: Local development server
 
 tags:

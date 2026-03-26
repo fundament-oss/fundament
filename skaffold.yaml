@@ -106,8 +106,14 @@ profiles:
         value:
           - charts/fundament/values-production.yaml
 
-  # Local Gardener profile - use real local Gardener instead of mock.
-  # Requires: just cluster-worker gardener-up (generates values-gardener-local.yaml)
+  # mini-lab Gardener profile - use real metal-stack Gardener from mini-lab
+  - name: minilab-gardener
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/valuesFiles/-
+        value: charts/fundament/values-minilab.yaml
+
+  # Local Gardener profile - use real local Gardener instead of mock
   - name: local-gardener
     patches:
       - op: add

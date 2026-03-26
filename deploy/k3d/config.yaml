@@ -5,7 +5,7 @@ metadata:
 servers: 1
 agents: 0
 ports:
-  - port: 8080:80
+  - port: 10080:80
     nodeFilters:
       - loadbalancer
   - port: 8443:30443

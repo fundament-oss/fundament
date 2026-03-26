@@ -54,7 +54,7 @@ When(
 
 When('I trigger a token refresh', async function (this: ICustomWorld) {
   const authnApiUrl =
-    process.env.AUTHN_API_URL || 'https://authn.fundament.localhost:8443';
+    process.env.AUTHN_API_URL || 'https://authn.fundament.localhost:10443';
 
   // Trigger refresh by calling the refresh endpoint via the page context
   const response = await this.page!.evaluate(async (url: string) => {
@@ -276,7 +276,7 @@ When(
 
     // Make API request via the organization API
     const orgApiUrl =
-      process.env.ORGANIZATION_API_URL || 'https://organization.fundament.localhost:8443';
+      process.env.ORGANIZATION_API_URL || 'https://organization.fundament.localhost:10443';
 
     const response = await this.page!.evaluate(async (url: string) => {
       try {
