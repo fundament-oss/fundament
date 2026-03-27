@@ -186,6 +186,9 @@ CAUTION: Do not modify this file unless you know what you are doing.
 END;]]> </definition>
 </function>
 
+<!-- SECURITY DEFINER: these trigger functions run as fun_owner so that tables
+     using RLS (e.g. clusters, organizations_users, project_members) can INSERT
+     into tenant.cluster_outbox without granting direct INSERT to each calling role. -->
 <function name="node_pool_outbox_trigger"
 		window-func="false"
 		returns-setof="false"

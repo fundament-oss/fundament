@@ -174,7 +174,7 @@ func shouldRefreshShootCA(currentStatus, previousStatus gardener.ShootStatusType
 		return false
 	}
 
-	return previousStatus != gardener.StatusReady || !hasStoredCA
+	return (previousStatus != gardener.StatusReady) || !hasStoredCA
 }
 
 // pollDeletedClusters verifies that soft-deleted clusters have actually been removed from Gardener.

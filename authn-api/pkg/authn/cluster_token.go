@@ -32,6 +32,9 @@ const (
 	fundamentSystemNamespace = "fundament-system"
 )
 
+// errSyncPending indicates the service account has not been provisioned yet.
+var errSyncPending = errors.New("service account sync pending")
+
 // AdminKubeconfig holds the result of an AdminKubeconfigRequest.
 type AdminKubeconfig struct {
 	Kubeconfig []byte
@@ -58,6 +61,19 @@ func (s *AuthnServer) HandleClusterToken(w http.ResponseWriter, r *http.Request,
 
 	ctx := r.Context()
 
+	// Check access before revealing cluster existence or readiness state.
+	accessLevel, err := s.queries.ResolveUserAccess(ctx, db.ResolveUserAccessParams{UserID: claims.UserID(), ClusterID: clusterID})
+	if err != nil {
+		s.logger.Error("failed to resolve user access", "error", err, "user_id", claims.UserID(), "cluster_id", clusterID)
+		s.writeErrorJSON(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	if accessLevel == "none" {
+		s.writeErrorJSON(w, http.StatusForbidden, "no access to this cluster")
+		return
+	}
+
 	cluster, err := s.queries.ClusterGetForToken(ctx, db.ClusterGetForTokenParams{ClusterID: clusterID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -74,22 +90,14 @@ func (s *AuthnServer) HandleClusterToken(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	accessLevel, err := s.queries.ResolveUserAccess(ctx, db.ResolveUserAccessParams{UserID: claims.UserID(), ClusterID: clusterID})
-	if err != nil {
-		s.logger.Error("failed to resolve user access", "error", err, "user_id", claims.UserID(), "cluster_id", clusterID)
-		s.writeErrorJSON(w, http.StatusInternalServerError, "internal error")
-		return
-	}
-
-	if accessLevel == "none" {
-		s.writeErrorJSON(w, http.StatusForbidden, "no access to this cluster")
-		return
-	}
-
 	token, expiresAt, err := s.requestSAToken(ctx, clusterID, claims.UserID())
 	if err != nil {
 		s.logger.Error("failed to request SA token", "error", err, "cluster_id", clusterID, "user_id", claims.UserID())
-		s.writeErrorJSON(w, http.StatusServiceUnavailable, "sync pending, try again shortly")
+		if errors.Is(err, errSyncPending) {
+			s.writeErrorJSON(w, http.StatusServiceUnavailable, "sync pending, try again shortly")
+		} else {
+			s.writeErrorJSON(w, http.StatusInternalServerError, "internal error")
+		}
 		return
 	}
 
@@ -132,7 +140,7 @@ func (s *AuthnServer) requestSAToken(ctx context.Context, clusterID, userID uuid
 	result, err := shootClient.CoreV1().ServiceAccounts(fundamentSystemNamespace).CreateToken(ctx, saName, tokenReq, metav1.CreateOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return "", time.Time{}, fmt.Errorf("service account %s not found (sync pending)", saName)
+			return "", time.Time{}, fmt.Errorf("service account %s not found: %w", saName, errSyncPending)
 		}
 		return "", time.Time{}, fmt.Errorf("create token for SA %s: %w", saName, err)
 	}
