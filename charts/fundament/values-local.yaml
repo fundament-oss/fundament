@@ -49,6 +49,7 @@ consoleFrontend:
 clusterWorker:
   enabled: true
   replicas: 1
+  logLevel: debug
   gardenerMode: mock
 
 # Shoot proxy for local Gardener development (enabled by local-gardener profile).

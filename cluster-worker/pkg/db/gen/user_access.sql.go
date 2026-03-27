@@ -12,79 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const listUsersForCluster = `-- name: ListUsersForCluster :many
-SELECT
-    tenant.users.id AS user_id,
-    tenant.users.email,
-    CASE
-        WHEN tenant.organizations_users.permission = 'admin'
-            AND tenant.organizations_users.status = 'accepted'
-            AND tenant.organizations_users.deleted IS NULL
-            THEN 'admin'
-        ELSE 'member'
-    END AS access_level
-FROM tenant.clusters
-JOIN tenant.organizations_users
-    ON tenant.organizations_users.organization_id = tenant.clusters.organization_id
-    AND tenant.organizations_users.status = 'accepted'
-    AND tenant.organizations_users.deleted IS NULL
-JOIN tenant.users ON tenant.users.id = tenant.organizations_users.user_id AND tenant.users.deleted IS NULL
-WHERE tenant.clusters.id = $1
-    AND tenant.organizations_users.permission = 'admin'
-UNION ALL
-SELECT DISTINCT
-    tenant.users.id AS user_id,
-    tenant.users.email,
-    'member' AS access_level
-FROM tenant.clusters
-JOIN tenant.projects
-    ON tenant.projects.cluster_id = tenant.clusters.id AND tenant.projects.deleted IS NULL
-JOIN tenant.project_members
-    ON tenant.project_members.project_id = tenant.projects.id AND tenant.project_members.deleted IS NULL
-JOIN tenant.users ON tenant.users.id = tenant.project_members.user_id AND tenant.users.deleted IS NULL
-WHERE tenant.clusters.id = $1
-    AND NOT EXISTS (
-        SELECT 1 FROM tenant.organizations_users
-        WHERE tenant.organizations_users.organization_id = tenant.clusters.organization_id
-            AND tenant.organizations_users.user_id = tenant.project_members.user_id
-            AND tenant.organizations_users.permission = 'admin'
-            AND tenant.organizations_users.status = 'accepted'
-            AND tenant.organizations_users.deleted IS NULL
-    )
-`
-
-type ListUsersForClusterParams struct {
-	ClusterID uuid.UUID
-}
-
-type ListUsersForClusterRow struct {
-	UserID      uuid.UUID
-	Email       pgtype.Text
-	AccessLevel string
-}
-
-// Returns all users who should have access to a cluster, with their access level.
-// Used by the reconciliation loop to compare against actual state on the shoot.
-func (q *Queries) ListUsersForCluster(ctx context.Context, arg ListUsersForClusterParams) ([]ListUsersForClusterRow, error) {
-	rows, err := q.db.Query(ctx, listUsersForCluster, arg.ClusterID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListUsersForClusterRow
-	for rows.Next() {
-		var i ListUsersForClusterRow
-		if err := rows.Scan(&i.UserID, &i.Email, &i.AccessLevel); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const resolveUserAccess = `-- name: ResolveUserAccess :one
 SELECT
     CASE
@@ -131,4 +58,77 @@ func (q *Queries) ResolveUserAccess(ctx context.Context, arg ResolveUserAccessPa
 	var access_level string
 	err := row.Scan(&access_level)
 	return access_level, err
+}
+
+const userListForCluster = `-- name: UserListForCluster :many
+SELECT
+    tenant.users.id AS user_id,
+    tenant.users.email,
+    CASE
+        WHEN tenant.organizations_users.permission = 'admin'
+            AND tenant.organizations_users.status = 'accepted'
+            AND tenant.organizations_users.deleted IS NULL
+            THEN 'admin'
+        ELSE 'member'
+    END AS access_level
+FROM tenant.clusters
+JOIN tenant.organizations_users
+    ON tenant.organizations_users.organization_id = tenant.clusters.organization_id
+    AND tenant.organizations_users.status = 'accepted'
+    AND tenant.organizations_users.deleted IS NULL
+JOIN tenant.users ON tenant.users.id = tenant.organizations_users.user_id AND tenant.users.deleted IS NULL
+WHERE tenant.clusters.id = $1
+    AND tenant.organizations_users.permission = 'admin'
+UNION ALL
+SELECT DISTINCT
+    tenant.users.id AS user_id,
+    tenant.users.email,
+    'member' AS access_level
+FROM tenant.clusters
+JOIN tenant.projects
+    ON tenant.projects.cluster_id = tenant.clusters.id AND tenant.projects.deleted IS NULL
+JOIN tenant.project_members
+    ON tenant.project_members.project_id = tenant.projects.id AND tenant.project_members.deleted IS NULL
+JOIN tenant.users ON tenant.users.id = tenant.project_members.user_id AND tenant.users.deleted IS NULL
+WHERE tenant.clusters.id = $1
+    AND NOT EXISTS (
+        SELECT 1 FROM tenant.organizations_users
+        WHERE tenant.organizations_users.organization_id = tenant.clusters.organization_id
+            AND tenant.organizations_users.user_id = tenant.project_members.user_id
+            AND tenant.organizations_users.permission = 'admin'
+            AND tenant.organizations_users.status = 'accepted'
+            AND tenant.organizations_users.deleted IS NULL
+    )
+`
+
+type UserListForClusterParams struct {
+	ClusterID uuid.UUID
+}
+
+type UserListForClusterRow struct {
+	UserID      uuid.UUID
+	Email       pgtype.Text
+	AccessLevel string
+}
+
+// Returns all users who should have access to a cluster, with their access level.
+// Used by the reconciliation loop to compare against actual state on the shoot.
+func (q *Queries) UserListForCluster(ctx context.Context, arg UserListForClusterParams) ([]UserListForClusterRow, error) {
+	rows, err := q.db.Query(ctx, userListForCluster, arg.ClusterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UserListForClusterRow
+	for rows.Next() {
+		var i UserListForClusterRow
+		if err := rows.Scan(&i.UserID, &i.Email, &i.AccessLevel); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

@@ -9,12 +9,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 )
 
-func newTestShootAccess(t *testing.T) *MockShootAccess {
+func newTestShootAccess(t *testing.T) *shoot.MockShootAccess {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	return NewMockShootAccess(logger)
+	return shoot.NewMockShootAccess(logger)
 }
 
 func TestApplyUserAccessAdmin(t *testing.T) {
@@ -59,8 +61,8 @@ func TestApplyUserAccessNone(t *testing.T) {
 	userID := uuid.New()
 
 	// Pre-populate SA + CRB to verify they get deleted.
-	_ = mock.EnsureServiceAccount(context.Background(), clusterID, FundamentNamespace, SAName(userID), nil, nil)
-	_ = mock.EnsureClusterRoleBinding(context.Background(), clusterID, CRBName(userID), "", "", nil, nil)
+	_ = mock.EnsureServiceAccount(context.Background(), clusterID, shoot.FundamentNamespace, shoot.SAName(userID), nil, nil)
+	_ = mock.EnsureClusterRoleBinding(context.Background(), clusterID, shoot.CRBName(userID), "", "", nil, nil)
 	require.True(t, mock.HasSA(clusterID, userID))
 	require.True(t, mock.HasCRB(clusterID, userID))
 
@@ -115,10 +117,10 @@ func TestApplyUserAccessDemotionAdminToMember(t *testing.T) {
 
 func TestGroupResourcesByUserIDSeparatesOrphans(t *testing.T) {
 	userID := uuid.New()
-	resources := []ResourceInfo{
-		{Name: SAName(userID), Labels: map[string]string{LabelUserID: userID.String()}},
+	resources := []shoot.ResourceInfo{
+		{Name: shoot.SAName(userID), Labels: map[string]string{shoot.LabelUserID: userID.String()}},
 		{Name: "orphan-missing-label"},
-		{Name: "orphan-invalid-label", Labels: map[string]string{LabelUserID: "not-a-uuid"}},
+		{Name: "orphan-invalid-label", Labels: map[string]string{shoot.LabelUserID: "not-a-uuid"}},
 	}
 
 	grouped, orphans := groupResourcesByUserID(resources)
@@ -136,19 +138,19 @@ func TestGroupResourcesByUserIDSeparatesOrphans(t *testing.T) {
 
 func TestClassifyServiceAccountsDetectsDuplicates(t *testing.T) {
 	userID := uuid.New()
-	labels := map[string]string{LabelUserID: userID.String()}
-	annotations := map[string]string{AnnotationUserName: "user@example.com"}
+	labels := map[string]string{shoot.LabelUserID: userID.String()}
+	annotations := map[string]string{shoot.AnnotationUserName: "user@example.com"}
 
-	resources := []ResourceInfo{
+	resources := []shoot.ResourceInfo{
 		{
-			Name:        SAName(userID),
-			Labels:      cloneStringMap(labels),
-			Annotations: cloneStringMap(annotations),
+			Name:        shoot.SAName(userID),
+			Labels:      shoot.CloneStringMap(labels),
+			Annotations: shoot.CloneStringMap(annotations),
 		},
 		{
 			Name:        "fundament-duplicate",
-			Labels:      cloneStringMap(labels),
-			Annotations: cloneStringMap(annotations),
+			Labels:      shoot.CloneStringMap(labels),
+			Annotations: shoot.CloneStringMap(annotations),
 		},
 	}
 
@@ -164,14 +166,14 @@ func TestClassifyServiceAccountsDetectsDuplicates(t *testing.T) {
 
 func TestClassifyClusterRoleBindingsDetectsDriftAndDuplicates(t *testing.T) {
 	userID := uuid.New()
-	labels := map[string]string{LabelUserID: userID.String()}
-	annotations := map[string]string{AnnotationUserName: "user@example.com"}
+	labels := map[string]string{shoot.LabelUserID: userID.String()}
+	annotations := map[string]string{shoot.AnnotationUserName: "user@example.com"}
 
-	resources := []ResourceInfo{
+	resources := []shoot.ResourceInfo{
 		{
-			Name:        CRBName(userID),
-			Labels:      cloneStringMap(labels),
-			Annotations: cloneStringMap(annotations),
+			Name:        shoot.CRBName(userID),
+			Labels:      shoot.CloneStringMap(labels),
+			Annotations: shoot.CloneStringMap(annotations),
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "ClusterRole",
@@ -179,14 +181,14 @@ func TestClassifyClusterRoleBindingsDetectsDriftAndDuplicates(t *testing.T) {
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      "ServiceAccount",
-				Name:      SAName(userID),
-				Namespace: FundamentNamespace,
+				Name:      shoot.SAName(userID),
+				Namespace: shoot.FundamentNamespace,
 			}},
 		},
 		{
 			Name:        "fundament:admin:duplicate",
-			Labels:      cloneStringMap(labels),
-			Annotations: cloneStringMap(annotations),
+			Labels:      shoot.CloneStringMap(labels),
+			Annotations: shoot.CloneStringMap(annotations),
 		},
 	}
 
@@ -216,7 +218,7 @@ func TestClusterRoleBindingNeedsRecreateWhenRoleRefDrifts(t *testing.T) {
 		},
 	}
 
-	if !clusterRoleBindingNeedsRecreate(existing, desired) {
+	if !shoot.ClusterRoleBindingNeedsRecreate(existing, desired) {
 		t.Fatalf("expected changed roleRef to require recreate")
 	}
 }

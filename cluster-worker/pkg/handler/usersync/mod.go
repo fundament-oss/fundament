@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	rbacv1 "k8s.io/api/rbac/v1"
 
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -22,15 +23,15 @@ import (
 type Handler struct {
 	pool    *pgxpool.Pool
 	queries *db.Queries
-	shoot   ShootAccess
+	shoot   shoot.ShootAccess
 	logger  *slog.Logger
 }
 
-func New(pool *pgxpool.Pool, shoot ShootAccess, logger *slog.Logger) *Handler {
+func New(pool *pgxpool.Pool, shootAccess shoot.ShootAccess, logger *slog.Logger) *Handler {
 	return &Handler{
 		pool:    pool,
 		queries: db.New(pool),
-		shoot:   shoot,
+		shoot:   shootAccess,
 		logger:  logger.With("handler", "usersync"),
 	}
 }
@@ -118,14 +119,14 @@ func (h *Handler) syncProjectMember(ctx context.Context, projectMemberID uuid.UU
 
 // syncClusterReady handles a cluster becoming ready: provision all users.
 func (h *Handler) syncClusterReady(ctx context.Context, clusterID uuid.UUID) error {
-	users, err := h.queries.ListUsersForCluster(ctx, db.ListUsersForClusterParams{ClusterID: clusterID})
+	users, err := h.queries.UserListForCluster(ctx, db.UserListForClusterParams{ClusterID: clusterID})
 	if err != nil {
 		return fmt.Errorf("list users for cluster: %w", err)
 	}
 
 	if len(users) == 0 {
 		h.logger.Debug("no users for cluster, ensuring namespace only", "cluster_id", clusterID)
-		if err := h.shoot.EnsureNamespace(ctx, clusterID, FundamentNamespace); err != nil {
+		if err := h.shoot.EnsureNamespace(ctx, clusterID, shoot.FundamentNamespace); err != nil {
 			return fmt.Errorf("ensure namespace: %w", err)
 		}
 		h.createUserSyncEvent(ctx, clusterID, dbconst.ClusterEventEventType_UserSyncSucceeded, "No users to provision")
@@ -133,7 +134,7 @@ func (h *Handler) syncClusterReady(ctx context.Context, clusterID uuid.UUID) err
 	}
 
 	// Ensure namespace exists before creating SAs.
-	if err := h.shoot.EnsureNamespace(ctx, clusterID, FundamentNamespace); err != nil {
+	if err := h.shoot.EnsureNamespace(ctx, clusterID, shoot.FundamentNamespace); err != nil {
 		h.createUserSyncEvent(ctx, clusterID, dbconst.ClusterEventEventType_UserSyncFailed, "ensure namespace: "+err.Error())
 		return fmt.Errorf("ensure namespace: %w", err)
 	}
@@ -197,7 +198,7 @@ func (h *Handler) syncUserToCluster(ctx context.Context, userID, clusterID uuid.
 
 	// Ensure namespace exists before creating resources.
 	if accessLevel != "none" {
-		if err := h.shoot.EnsureNamespace(ctx, clusterID, FundamentNamespace); err != nil {
+		if err := h.shoot.EnsureNamespace(ctx, clusterID, shoot.FundamentNamespace); err != nil {
 			return fmt.Errorf("ensure namespace: %w", err)
 		}
 	}
@@ -207,22 +208,22 @@ func (h *Handler) syncUserToCluster(ctx context.Context, userID, clusterID uuid.
 
 // applyUserAccess converges the SA and CRB state based on the desired access level.
 func (h *Handler) applyUserAccess(ctx context.Context, clusterID, userID uuid.UUID, email, accessLevel string) error {
-	saName := SAName(userID)
-	crbName := CRBName(userID)
+	saName := shoot.SAName(userID)
+	crbName := shoot.CRBName(userID)
 	labels := map[string]string{
-		LabelUserID: userID.String(),
+		shoot.LabelUserID: userID.String(),
 	}
 	annotations := map[string]string{
-		AnnotationUserName: email,
+		shoot.AnnotationUserName: email,
 	}
 
 	switch accessLevel {
 	case "admin":
 		// Ensure SA + CRB
-		if err := h.shoot.EnsureServiceAccount(ctx, clusterID, FundamentNamespace, saName, labels, annotations); err != nil {
+		if err := h.shoot.EnsureServiceAccount(ctx, clusterID, shoot.FundamentNamespace, saName, labels, annotations); err != nil {
 			return fmt.Errorf("ensure SA for admin: %w", err)
 		}
-		if err := h.shoot.EnsureClusterRoleBinding(ctx, clusterID, crbName, FundamentNamespace, saName, labels, annotations); err != nil {
+		if err := h.shoot.EnsureClusterRoleBinding(ctx, clusterID, crbName, shoot.FundamentNamespace, saName, labels, annotations); err != nil {
 			return fmt.Errorf("ensure CRB for admin: %w", err)
 		}
 		h.logger.Info("synced admin access",
@@ -230,7 +231,7 @@ func (h *Handler) applyUserAccess(ctx context.Context, clusterID, userID uuid.UU
 
 	case "member":
 		// Ensure SA, delete CRB if exists
-		if err := h.shoot.EnsureServiceAccount(ctx, clusterID, FundamentNamespace, saName, labels, annotations); err != nil {
+		if err := h.shoot.EnsureServiceAccount(ctx, clusterID, shoot.FundamentNamespace, saName, labels, annotations); err != nil {
 			return fmt.Errorf("ensure SA for member: %w", err)
 		}
 		if err := h.shoot.DeleteClusterRoleBinding(ctx, clusterID, crbName); err != nil {
@@ -241,7 +242,7 @@ func (h *Handler) applyUserAccess(ctx context.Context, clusterID, userID uuid.UU
 
 	case "none":
 		// Delete both SA and CRB
-		if err := h.shoot.DeleteServiceAccount(ctx, clusterID, FundamentNamespace, saName); err != nil {
+		if err := h.shoot.DeleteServiceAccount(ctx, clusterID, shoot.FundamentNamespace, saName); err != nil {
 			return fmt.Errorf("delete SA: %w", err)
 		}
 		if err := h.shoot.DeleteClusterRoleBinding(ctx, clusterID, crbName); err != nil {
@@ -294,97 +295,66 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 
 func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) error {
 	// 1. Ensure namespace exists.
-	if err := h.shoot.EnsureNamespace(ctx, clusterID, FundamentNamespace); err != nil {
+	if err := h.shoot.EnsureNamespace(ctx, clusterID, shoot.FundamentNamespace); err != nil {
 		return fmt.Errorf("ensure namespace: %w", err)
 	}
 
 	// 2. Get desired state from DB.
-	desiredUsers, err := h.queries.ListUsersForCluster(ctx, db.ListUsersForClusterParams{ClusterID: clusterID})
+	desiredUsers, err := h.queries.UserListForCluster(ctx, db.UserListForClusterParams{ClusterID: clusterID})
 	if err != nil {
 		return fmt.Errorf("list users for cluster: %w", err)
 	}
 
-	desiredByUserID := make(map[uuid.UUID]db.ListUsersForClusterRow, len(desiredUsers))
-	for _, u := range desiredUsers {
-		desiredByUserID[u.UserID] = u
-	}
-
 	// 3. Get actual state from shoot.
-	actualSAs, err := h.shoot.ListServiceAccounts(ctx, clusterID, FundamentNamespace, LabelUserID)
+	actualSAs, err := h.shoot.ListServiceAccounts(ctx, clusterID, shoot.FundamentNamespace, shoot.LabelUserID)
 	if err != nil {
 		return fmt.Errorf("list SAs: %w", err)
 	}
 
-	actualCRBs, err := h.shoot.ListClusterRoleBindings(ctx, clusterID, LabelUserID)
+	actualCRBs, err := h.shoot.ListClusterRoleBindings(ctx, clusterID, shoot.LabelUserID)
 	if err != nil {
 		return fmt.Errorf("list CRBs: %w", err)
 	}
 
-	actualSAsByUserID, orphanSANames := groupResourcesByUserID(actualSAs)
-	actualCRBsByUserID, orphanCRBNames := groupResourcesByUserID(actualCRBs)
-
-	var reconcileErrs []error
-
-	// 4. Create missing / fix mismatched, then delete duplicates.
-	for userID, desired := range desiredByUserID {
-		email := ""
-		if desired.Email.Valid {
-			email = desired.Email.String
-		}
-
-		labels := map[string]string{
-			LabelUserID: userID.String(),
-		}
-		annotations := map[string]string{
-			AnnotationUserName: email,
-		}
-
-		hasHealthySA, duplicateSANames := classifyServiceAccounts(actualSAsByUserID[userID], userID, labels, annotations)
-		hasHealthyCRB, duplicateCRBNames := classifyClusterRoleBindings(actualCRBsByUserID[userID], userID, labels, annotations)
-
-		switch desired.AccessLevel {
-		case "admin":
-			if !hasHealthySA || !hasHealthyCRB {
-				if err := h.applyUserAccess(ctx, clusterID, userID, email, "admin"); err != nil {
-					reconcileErrs = append(reconcileErrs, err)
-				}
-			}
-
-			reconcileErrs = append(reconcileErrs, h.deleteServiceAccounts(ctx, clusterID, duplicateSANames)...)
-			reconcileErrs = append(reconcileErrs, h.deleteClusterRoleBindings(ctx, clusterID, duplicateCRBNames)...)
-			delete(orphanCRBNames, CRBName(userID))
-		case "member":
-			if !hasHealthySA {
-				if err := h.applyUserAccess(ctx, clusterID, userID, email, "member"); err != nil {
-					reconcileErrs = append(reconcileErrs, err)
-				}
-			}
-
-			reconcileErrs = append(reconcileErrs, h.deleteServiceAccounts(ctx, clusterID, duplicateSANames)...)
-			reconcileErrs = append(reconcileErrs, h.deleteClusterRoleBindings(ctx, clusterID, resourceNames(actualCRBsByUserID[userID]))...)
-		}
-
-		delete(orphanSANames, SAName(userID))
-		delete(actualSAsByUserID, userID)
-		delete(actualCRBsByUserID, userID)
-	}
-
-	// 5. Delete orphaned SAs (remaining grouped resources + invalid metadata).
-	for userID, resources := range actualSAsByUserID {
-		h.logger.Warn("deleting orphaned SAs", "user_id", userID, "cluster_id", clusterID, "count", len(resources))
-		reconcileErrs = append(reconcileErrs, h.deleteServiceAccounts(ctx, clusterID, resourceNames(resources))...)
-	}
-	reconcileErrs = append(reconcileErrs, h.deleteServiceAccounts(ctx, clusterID, sortedResourceNames(orphanSANames))...)
-
-	// 6. Delete orphaned CRBs.
-	for userID, resources := range actualCRBsByUserID {
-		h.logger.Warn("deleting orphaned CRBs", "user_id", userID, "cluster_id", clusterID, "count", len(resources))
-		reconcileErrs = append(reconcileErrs, h.deleteClusterRoleBindings(ctx, clusterID, resourceNames(resources))...)
-	}
-	reconcileErrs = append(reconcileErrs, h.deleteClusterRoleBindings(ctx, clusterID, sortedResourceNames(orphanCRBNames))...)
-
-	if err := errors.Join(reconcileErrs...); err != nil {
+	// 4. Build plan, then apply.
+	plan := buildReconcilePlan(desiredUsers, actualSAs, actualCRBs)
+	if err := h.applyReconcilePlan(ctx, clusterID, plan); err != nil {
 		return fmt.Errorf("reconcile cluster %s: %w", clusterID, err)
+	}
+	return nil
+}
+
+// applyReconcilePlan executes the reconciliation actions via ShootAccess.
+func (h *Handler) applyReconcilePlan(ctx context.Context, clusterID uuid.UUID, plan ReconcilePlan) error {
+	var errs []error
+	for _, action := range plan {
+		switch action.Type {
+		case ActionEnsureSA:
+			labels := map[string]string{shoot.LabelUserID: action.UserID.String()}
+			annotations := map[string]string{shoot.AnnotationUserName: action.Email}
+			if err := h.shoot.EnsureServiceAccount(ctx, clusterID, shoot.FundamentNamespace, shoot.SAName(action.UserID), labels, annotations); err != nil {
+				errs = append(errs, err)
+			}
+		case ActionDeleteSA:
+			if err := h.shoot.DeleteServiceAccount(ctx, clusterID, shoot.FundamentNamespace, action.Name); err != nil {
+				errs = append(errs, err)
+			}
+		case ActionEnsureCRB:
+			labels := map[string]string{shoot.LabelUserID: action.UserID.String()}
+			annotations := map[string]string{shoot.AnnotationUserName: action.Email}
+			saName := shoot.SAName(action.UserID)
+			crbName := shoot.CRBName(action.UserID)
+			if err := h.shoot.EnsureClusterRoleBinding(ctx, clusterID, crbName, shoot.FundamentNamespace, saName, labels, annotations); err != nil {
+				errs = append(errs, err)
+			}
+		case ActionDeleteCRB:
+			if err := h.shoot.DeleteClusterRoleBinding(ctx, clusterID, action.Name); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("apply reconcile plan: %w", err)
 	}
 	return nil
 }
@@ -404,12 +374,12 @@ func (h *Handler) createUserSyncEvent(ctx context.Context, clusterID uuid.UUID, 
 	}
 }
 
-func groupResourcesByUserID(resources []ResourceInfo) (map[uuid.UUID][]ResourceInfo, map[string]struct{}) {
-	grouped := make(map[uuid.UUID][]ResourceInfo)
+func groupResourcesByUserID(resources []shoot.ResourceInfo) (map[uuid.UUID][]shoot.ResourceInfo, map[string]struct{}) {
+	grouped := make(map[uuid.UUID][]shoot.ResourceInfo)
 	orphans := make(map[string]struct{})
 
 	for _, resource := range resources {
-		uid, ok := resource.Labels[LabelUserID]
+		uid, ok := resource.Labels[shoot.LabelUserID]
 		if !ok {
 			orphans[resource.Name] = struct{}{}
 			continue
@@ -427,51 +397,51 @@ func groupResourcesByUserID(resources []ResourceInfo) (map[uuid.UUID][]ResourceI
 	return grouped, orphans
 }
 
-func classifyServiceAccounts(resources []ResourceInfo, userID uuid.UUID, labels, annotations map[string]string) (bool, []string) {
-	canonicalName := SAName(userID)
+func classifyServiceAccounts(resources []shoot.ResourceInfo, userID uuid.UUID, labels, annotations map[string]string) (bool, []string) {
+	canonicalName := shoot.SAName(userID)
 	hasCanonical := false
 	var duplicates []string
 
-	for _, resource := range resources {
-		if resource.Name == canonicalName {
-			hasCanonical = serviceAccountMatches(resource, labels, annotations)
+	for i := range resources {
+		if resources[i].Name == canonicalName {
+			hasCanonical = serviceAccountMatches(&resources[i], labels, annotations)
 			continue
 		}
-		duplicates = append(duplicates, resource.Name)
+		duplicates = append(duplicates, resources[i].Name)
 	}
 
 	return hasCanonical, duplicates
 }
 
-func classifyClusterRoleBindings(resources []ResourceInfo, userID uuid.UUID, labels, annotations map[string]string) (bool, []string) {
-	canonicalName := CRBName(userID)
+func classifyClusterRoleBindings(resources []shoot.ResourceInfo, userID uuid.UUID, labels, annotations map[string]string) (bool, []string) {
+	canonicalName := shoot.CRBName(userID)
 	hasCanonical := false
 	var duplicates []string
 
-	for _, resource := range resources {
-		if resource.Name == canonicalName {
-			hasCanonical = clusterRoleBindingMatches(resource, userID, labels, annotations)
+	for i := range resources {
+		if resources[i].Name == canonicalName {
+			hasCanonical = clusterRoleBindingMatches(&resources[i], userID, labels, annotations)
 			continue
 		}
-		duplicates = append(duplicates, resource.Name)
+		duplicates = append(duplicates, resources[i].Name)
 	}
 
 	return hasCanonical, duplicates
 }
 
-func serviceAccountMatches(resource ResourceInfo, labels, annotations map[string]string) bool {
+func serviceAccountMatches(resource *shoot.ResourceInfo, labels, annotations map[string]string) bool {
 	return metadataContains(resource, labels, annotations)
 }
 
-func clusterRoleBindingMatches(resource ResourceInfo, userID uuid.UUID, labels, annotations map[string]string) bool {
+func clusterRoleBindingMatches(resource *shoot.ResourceInfo, userID uuid.UUID, labels, annotations map[string]string) bool {
 	if !metadataContains(resource, labels, annotations) {
 		return false
 	}
 
 	expectedSubject := rbacv1.Subject{
 		Kind:      "ServiceAccount",
-		Name:      SAName(userID),
-		Namespace: FundamentNamespace,
+		Name:      shoot.SAName(userID),
+		Namespace: shoot.FundamentNamespace,
 	}
 	expectedRoleRef := rbacv1.RoleRef{
 		APIGroup: "rbac.authorization.k8s.io",
@@ -484,7 +454,7 @@ func clusterRoleBindingMatches(resource ResourceInfo, userID uuid.UUID, labels, 
 		resource.Subjects[0] == expectedSubject
 }
 
-func metadataContains(resource ResourceInfo, labels, annotations map[string]string) bool {
+func metadataContains(resource *shoot.ResourceInfo, labels, annotations map[string]string) bool {
 	for k, v := range labels {
 		if resource.Labels[k] != v {
 			return false
@@ -500,7 +470,7 @@ func metadataContains(resource ResourceInfo, labels, annotations map[string]stri
 	return true
 }
 
-func resourceNames(resources []ResourceInfo) []string {
+func resourceNames(resources []shoot.ResourceInfo) []string {
 	names := make([]string, 0, len(resources))
 	for _, resource := range resources {
 		names = append(names, resource.Name)
@@ -516,24 +486,4 @@ func sortedResourceNames(names map[string]struct{}) []string {
 	}
 	slices.Sort(result)
 	return result
-}
-
-func (h *Handler) deleteServiceAccounts(ctx context.Context, clusterID uuid.UUID, names []string) []error {
-	var errs []error
-	for _, name := range names {
-		if err := h.shoot.DeleteServiceAccount(ctx, clusterID, FundamentNamespace, name); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	return errs
-}
-
-func (h *Handler) deleteClusterRoleBindings(ctx context.Context, clusterID uuid.UUID, names []string) []error {
-	var errs []error
-	for _, name := range names {
-		if err := h.shoot.DeleteClusterRoleBinding(ctx, clusterID, name); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	return errs
 }

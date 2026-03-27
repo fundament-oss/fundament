@@ -2,11 +2,14 @@ package cluster
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
@@ -44,8 +47,7 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 		}
 		cluster := &clusters[i]
 
-		projectName := gardener.ProjectName(cluster.OrganizationName)
-		namespace, err := h.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
+		namespace, err := h.resolveProjectNamespace(ctx, cluster.OrganizationName, cluster.OrganizationID)
 		if err != nil {
 			h.logger.Error("failed to get project namespace",
 				"cluster_id", cluster.ID,
@@ -56,17 +58,9 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 			continue
 		}
 
-		clusterToSync := &gardener.ClusterToSync{
-			ID:                cluster.ID,
-			Name:              cluster.Name,
-			OrganizationID:    cluster.OrganizationID,
-			OrganizationName:  cluster.OrganizationName,
-			Namespace:         namespace,
-			Region:            cluster.Region,
-			KubernetesVersion: cluster.KubernetesVersion,
-		}
+		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
 
-		shootStatus, err := h.gardener.GetShootStatus(ctx, clusterToSync)
+		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
 		if err != nil {
 			h.logger.Error("failed to get shoot status",
 				"cluster_id", cluster.ID,
@@ -169,8 +163,7 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 			deleted = &cluster.Deleted.Time
 		}
 
-		projectName := gardener.ProjectName(cluster.OrganizationName)
-		namespace, err := h.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
+		namespace, err := h.resolveProjectNamespace(ctx, cluster.OrganizationName, cluster.OrganizationID)
 		if err != nil {
 			h.logger.Error("failed to get project namespace",
 				"cluster_id", cluster.ID,
@@ -181,18 +174,10 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 			continue
 		}
 
-		clusterToSync := &gardener.ClusterToSync{
-			ID:                cluster.ID,
-			Name:              cluster.Name,
-			OrganizationID:    cluster.OrganizationID,
-			OrganizationName:  cluster.OrganizationName,
-			Namespace:         namespace,
-			Region:            cluster.Region,
-			KubernetesVersion: cluster.KubernetesVersion,
-			Deleted:           deleted,
-		}
+		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
+		clusterToSync.Deleted = deleted
 
-		shootStatus, err := h.gardener.GetShootStatus(ctx, clusterToSync)
+		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
 		if err != nil {
 			h.logger.Error("failed to check deleted shoot status",
 				"cluster_id", cluster.ID,
@@ -241,4 +226,26 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// extractShootCA requests a short-lived admin kubeconfig and extracts the CA certificate data.
+// Returns base64-encoded CA data suitable for kubeconfig certificate-authority-data.
+func (h *Handler) extractShootCA(ctx context.Context, clusterID uuid.UUID) (string, error) {
+	adminKC, err := h.statusChecker.RequestAdminKubeconfig(ctx, clusterID, 600)
+	if err != nil {
+		return "", fmt.Errorf("request admin kubeconfig: %w", err)
+	}
+
+	cfg, err := clientcmd.Load(adminKC.Kubeconfig)
+	if err != nil {
+		return "", fmt.Errorf("parse kubeconfig: %w", err)
+	}
+
+	for _, cluster := range cfg.Clusters {
+		if len(cluster.CertificateAuthorityData) > 0 {
+			return base64.StdEncoding.EncodeToString(cluster.CertificateAuthorityData), nil
+		}
+	}
+
+	return "", fmt.Errorf("no CA data found in admin kubeconfig")
 }

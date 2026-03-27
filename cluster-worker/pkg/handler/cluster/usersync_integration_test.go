@@ -8,21 +8,23 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	dbgen "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/usersync"
+	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
-func newUserSyncHandler(t *testing.T, db *testDB, mock *usersync.MockShootAccess) *usersync.Handler {
+func newUserSyncHandler(t *testing.T, db *testDB, mock *shoot.MockShootAccess) *usersync.Handler {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	return usersync.New(db.workerPool, mock, logger)
 }
 
-func newMockShootAccess(t *testing.T) *usersync.MockShootAccess {
+func newMockShootAccess(t *testing.T) *shoot.MockShootAccess {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	return usersync.NewMockShootAccess(logger)
+	return shoot.NewMockShootAccess(logger)
 }
 
 // makeClusterReady sets a cluster to ready.
@@ -85,8 +87,8 @@ func TestSyncOrgAdminAdded(t *testing.T) {
 
 	err := h.Sync(t.Context(), orgUserID, handler.SyncContext{
 		EntityType: handler.EntityOrgUser,
-		Event:      "created",
-		Source:     "trigger",
+		Event:      dbconst.ClusterOutboxEvent_Created,
+		Source:     dbconst.ClusterOutboxSource_Trigger,
 	})
 	require.NoError(t, err)
 
@@ -120,8 +122,8 @@ func TestSyncProjectMemberAdded(t *testing.T) {
 
 	err := h.Sync(t.Context(), pmID, handler.SyncContext{
 		EntityType: handler.EntityProjectMember,
-		Event:      "created",
-		Source:     "trigger",
+		Event:      dbconst.ClusterOutboxEvent_Created,
+		Source:     dbconst.ClusterOutboxSource_Trigger,
 	})
 	require.NoError(t, err)
 
@@ -157,8 +159,8 @@ func TestSyncAdminRemovedStillProjectMember(t *testing.T) {
 	orgUserID := getOrgUserID(t, db, acmeCorpOrgID, userID)
 	err := h.Sync(t.Context(), orgUserID, handler.SyncContext{
 		EntityType: handler.EntityOrgUser,
-		Event:      "created",
-		Source:     "trigger",
+		Event:      dbconst.ClusterOutboxEvent_Created,
+		Source:     dbconst.ClusterOutboxSource_Trigger,
 	})
 	require.NoError(t, err)
 	require.True(t, mock.HasSA(clusterID, userID))
@@ -179,8 +181,8 @@ func TestSyncAdminRemovedStillProjectMember(t *testing.T) {
 	// Sync the updated org user row.
 	err = h.Sync(t.Context(), newOrgUserID, handler.SyncContext{
 		EntityType: handler.EntityOrgUser,
-		Event:      "updated",
-		Source:     "trigger",
+		Event:      dbconst.ClusterOutboxEvent_Updated,
+		Source:     dbconst.ClusterOutboxSource_Trigger,
 	})
 	require.NoError(t, err)
 
@@ -208,8 +210,8 @@ func TestSyncOrgUserAllClustersNotReady(t *testing.T) {
 
 	err := h.Sync(t.Context(), orgUserID, handler.SyncContext{
 		EntityType: handler.EntityOrgUser,
-		Event:      "created",
-		Source:     "trigger",
+		Event:      dbconst.ClusterOutboxEvent_Created,
+		Source:     dbconst.ClusterOutboxSource_Trigger,
 	})
 	require.NoError(t, err, "should succeed without error even with no ready clusters")
 	require.False(t, mock.HasSA(clusterID, userID), "no SA should be created on non-ready cluster")
@@ -238,8 +240,8 @@ func TestSyncProjectMemberClusterNotReady(t *testing.T) {
 
 	err := h.Sync(t.Context(), pmID, handler.SyncContext{
 		EntityType: handler.EntityProjectMember,
-		Event:      "created",
-		Source:     "trigger",
+		Event:      dbconst.ClusterOutboxEvent_Created,
+		Source:     dbconst.ClusterOutboxSource_Trigger,
 	})
 	require.NoError(t, err, "should succeed without error for non-ready cluster")
 	require.False(t, mock.HasSA(clusterID, userID), "no SA should be created on non-ready cluster")
@@ -273,8 +275,8 @@ func TestSyncClusterReady(t *testing.T) {
 
 	err := h.Sync(t.Context(), clusterID, handler.SyncContext{
 		EntityType: handler.EntityCluster,
-		Event:      "ready",
-		Source:     "status",
+		Event:      dbconst.ClusterOutboxEvent_Ready,
+		Source:     dbconst.ClusterOutboxSource_Status,
 	})
 	require.NoError(t, err)
 
@@ -400,16 +402,16 @@ func TestReconcileOrphanedSADeleted(t *testing.T) {
 
 	// No users should have access, but an orphaned SA+CRB exists on the shoot.
 	orphanUserID := uuid.New()
-	_ = mock.EnsureNamespace(t.Context(), clusterID, usersync.FundamentNamespace)
-	_ = mock.EnsureServiceAccount(t.Context(), clusterID, usersync.FundamentNamespace,
-		usersync.SAName(orphanUserID),
-		map[string]string{usersync.LabelUserID: orphanUserID.String()},
-		map[string]string{usersync.AnnotationUserName: "orphan@example.com"},
+	_ = mock.EnsureNamespace(t.Context(), clusterID, shoot.FundamentNamespace)
+	_ = mock.EnsureServiceAccount(t.Context(), clusterID, shoot.FundamentNamespace,
+		shoot.SAName(orphanUserID),
+		map[string]string{shoot.LabelUserID: orphanUserID.String()},
+		map[string]string{shoot.AnnotationUserName: "orphan@example.com"},
 	)
 	_ = mock.EnsureClusterRoleBinding(t.Context(), clusterID,
-		usersync.CRBName(orphanUserID), usersync.FundamentNamespace, usersync.SAName(orphanUserID),
-		map[string]string{usersync.LabelUserID: orphanUserID.String()},
-		map[string]string{usersync.AnnotationUserName: "orphan@example.com"},
+		shoot.CRBName(orphanUserID), shoot.FundamentNamespace, shoot.SAName(orphanUserID),
+		map[string]string{shoot.LabelUserID: orphanUserID.String()},
+		map[string]string{shoot.AnnotationUserName: "orphan@example.com"},
 	)
 
 	require.True(t, mock.HasSA(clusterID, orphanUserID), "precondition: orphan SA exists")
@@ -445,16 +447,16 @@ func TestReconcileCRBMismatchFixed(t *testing.T) {
 	)
 
 	// Stale state on shoot: user still has CRB from when they were admin.
-	_ = mock.EnsureNamespace(t.Context(), clusterID, usersync.FundamentNamespace)
-	_ = mock.EnsureServiceAccount(t.Context(), clusterID, usersync.FundamentNamespace,
-		usersync.SAName(userID),
-		map[string]string{usersync.LabelUserID: userID.String()},
-		map[string]string{usersync.AnnotationUserName: "user@example.com"},
+	_ = mock.EnsureNamespace(t.Context(), clusterID, shoot.FundamentNamespace)
+	_ = mock.EnsureServiceAccount(t.Context(), clusterID, shoot.FundamentNamespace,
+		shoot.SAName(userID),
+		map[string]string{shoot.LabelUserID: userID.String()},
+		map[string]string{shoot.AnnotationUserName: "user@example.com"},
 	)
 	_ = mock.EnsureClusterRoleBinding(t.Context(), clusterID,
-		usersync.CRBName(userID), usersync.FundamentNamespace, usersync.SAName(userID),
-		map[string]string{usersync.LabelUserID: userID.String()},
-		map[string]string{usersync.AnnotationUserName: "user@example.com"},
+		shoot.CRBName(userID), shoot.FundamentNamespace, shoot.SAName(userID),
+		map[string]string{shoot.LabelUserID: userID.String()},
+		map[string]string{shoot.AnnotationUserName: "user@example.com"},
 	)
 
 	require.True(t, mock.HasCRB(clusterID, userID), "precondition: stale CRB exists")
