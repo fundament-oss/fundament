@@ -474,13 +474,16 @@ func (r *RealClient) getShootByClusterID(ctx context.Context, clusterID uuid.UUI
 }
 
 // deleteShoot deletes a shoot, adding the required confirmation annotation.
+// Force-deletion is only set on shoots that are already being deleted (have a
+// deletionTimestamp), since Gardener rejects it on non-deleting shoots.
 func (r *RealClient) deleteShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
-	// Add the required confirmation annotation
 	if shoot.Annotations == nil {
 		shoot.Annotations = make(map[string]string)
 	}
 	shoot.Annotations["confirmation.gardener.cloud/deletion"] = "true"
-	if r.provider.Type == "local" {
+
+	// Force-deletion can only be set when the shoot already has a deletionTimestamp.
+	if r.provider.Type == "local" && shoot.DeletionTimestamp != nil {
 		shoot.Annotations["confirmation.gardener.cloud/force-deletion"] = "true"
 	}
 
@@ -491,7 +494,7 @@ func (r *RealClient) deleteShoot(ctx context.Context, shoot *gardencorev1beta1.S
 	r.logger.Info("deleting shoot",
 		"shoot", shoot.Name,
 		"namespace", shoot.Namespace,
-		"force", r.provider.Type == "local")
+		"force", r.provider.Type == "local" && shoot.DeletionTimestamp != nil)
 
 	if err := r.client.Delete(ctx, shoot); err != nil {
 		if apierrors.IsNotFound(err) {

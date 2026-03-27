@@ -31,8 +31,8 @@ JOIN tenant.organizations_users
 JOIN tenant.users ON tenant.users.id = tenant.organizations_users.user_id AND tenant.users.deleted IS NULL
 WHERE tenant.clusters.id = $1
     AND tenant.organizations_users.permission = 'admin'
-UNION
-SELECT
+UNION ALL
+SELECT DISTINCT
     tenant.users.id AS user_id,
     tenant.users.email,
     'member' AS access_level

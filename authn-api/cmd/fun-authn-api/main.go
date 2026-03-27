@@ -48,8 +48,8 @@ type config struct {
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,http://console.fundament.localhost:8080"`
 
-	GardenerMode       string `env:"GARDENER_MODE"`       // "real" or empty (disabled)
-	GardenerKubeconfig string `env:"GARDENER_KUBECONFIG"` // path to Gardener kubeconfig
+	GardenerMode       string `env:"GARDENER_MODE" envDefault:"mock"` // "real" or "mock" (disabled)
+	GardenerKubeconfig string `env:"GARDENER_KUBECONFIG"`             // path to Gardener kubeconfig
 }
 
 func main() {
@@ -149,10 +149,10 @@ func run() error {
 		}
 		gardenerClient = &gardenerAdapter{client: realClient}
 		logger.Info("gardener client enabled", "mode", cfg.GardenerMode)
-	case "":
+	case "mock":
 		logger.Info("gardener client disabled (cluster token endpoint unavailable)")
 	default:
-		return fmt.Errorf("invalid GARDENER_MODE: %s (must be 'real' or empty)", cfg.GardenerMode)
+		return fmt.Errorf("invalid GARDENER_MODE: %s (must be 'real' or 'mock')", cfg.GardenerMode)
 	}
 
 	authnCfg := &authn.Config{

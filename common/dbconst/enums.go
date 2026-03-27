@@ -14,6 +14,8 @@ const (
 	ClusterEventEventType_StatusReady       ClusterEventEventType = "status_ready"
 	ClusterEventEventType_StatusError       ClusterEventEventType = "status_error"
 	ClusterEventEventType_StatusDeleted     ClusterEventEventType = "status_deleted"
+	ClusterEventEventType_UserSyncSucceeded ClusterEventEventType = "user_sync_succeeded"
+	ClusterEventEventType_UserSyncFailed    ClusterEventEventType = "user_sync_failed"
 )
 
 // ClusterEventSyncAction represents valid values for tenant.cluster_events.sync_action.

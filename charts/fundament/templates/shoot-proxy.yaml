@@ -13,8 +13,7 @@ kind: Deployment
 metadata:
   name: {{ $.Release.Name }}-shoot-proxy
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: shoot-proxy
+    {{- include "fundament.labels" (dict "root" $ "name" "shoot-proxy" "component" "shoot-proxy") | nindent 4 }}
 spec:
   replicas: 1
   selector:
@@ -23,8 +22,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "fundament.labels" . | nindent 8 }}
-        app.kubernetes.io/component: shoot-proxy
+        {{- include "fundament.labels" (dict "root" $ "name" "shoot-proxy" "component" "shoot-proxy") | nindent 8 }}
     spec:
       containers:
         - name: socat
@@ -41,8 +39,7 @@ kind: Service
 metadata:
   name: {{ $.Release.Name }}-shoot-proxy
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: shoot-proxy
+    {{- include "fundament.labels" (dict "root" $ "name" "shoot-proxy" "component" "shoot-proxy") | nindent 4 }}
 spec:
   clusterIP: {{ $.Values.shootProxy.clusterIP }}
   selector:
@@ -59,8 +56,7 @@ kind: Deployment
 metadata:
   name: {{ $.Release.Name }}-garden-proxy
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: garden-proxy
+    {{- include "fundament.labels" (dict "root" $ "name" "garden-proxy" "component" "garden-proxy") | nindent 4 }}
 spec:
   replicas: 1
   selector:
@@ -69,8 +65,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "fundament.labels" . | nindent 8 }}
-        app.kubernetes.io/component: garden-proxy
+        {{- include "fundament.labels" (dict "root" $ "name" "garden-proxy" "component" "garden-proxy") | nindent 8 }}
     spec:
       containers:
         - name: socat
@@ -87,8 +82,7 @@ kind: Service
 metadata:
   name: {{ $.Release.Name }}-garden-proxy
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: garden-proxy
+    {{- include "fundament.labels" (dict "root" $ "name" "garden-proxy" "component" "garden-proxy") | nindent 4 }}
 spec:
   clusterIP: {{ $.Values.shootProxy.gardenClusterIP }}
   selector:
@@ -108,8 +102,7 @@ metadata:
   name: coredns-custom
   namespace: kube-system
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: shoot-proxy
+    {{- include "fundament.labels" (dict "root" $ "name" "shoot-proxy" "component" "shoot-proxy") | nindent 4 }}
 data:
   gardener.server: |
     local.gardener.cloud:53 {

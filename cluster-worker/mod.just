@@ -243,7 +243,7 @@ gardener-connect:
         SVC_CIDR=$(docker exec "$KIND_CONTAINER" kubectl get cm -n kube-system kubeadm-config -o jsonpath='{.data.ClusterConfiguration}' | grep serviceSubnet | awk '{print $2}')
         docker exec "$KIND_CONTAINER" sh -c "
             rm -f /etc/kubernetes/pki/apiserver.crt /etc/kubernetes/pki/apiserver.key
-            kubeadm init phase certs apiserver --apiserver-cert-extra-sans=$K3D_IP,$KIND_IP --service-cidr=$SVC_CIDR
+            kubeadm init phase certs apiserver --apiserver-cert-extra-sans=$K3D_IP,$KIND_IP,127.0.0.1,localhost --service-cidr=$SVC_CIDR
         "
         # Restart the API server so it picks up the new cert.
         # Killing it is safe — kubelet will restart it immediately.
@@ -352,4 +352,4 @@ shoots:
 
 # Follow cluster-worker logs
 logs:
-    kubectl logs -n fundament deploy/fundament-cluster-worker -f
+    kubectl logs -n fundament deploy/cluster-worker -f

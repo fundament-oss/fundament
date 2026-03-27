@@ -1,17 +1,17 @@
 -- name: OutboxGetAndLock :one
 -- Claims the next pending/retryable cluster outbox row.
--- Only picks up rows with cluster_id set; organization_user and project_member
--- rows are handled by the user sync handler (not yet implemented).
+-- Picks up all entity types: cluster, organization_user, and project_member.
 -- Uses FOR NO KEY UPDATE SKIP LOCKED for concurrent worker safety.
 SELECT id,
        cluster_id,
+       organization_user_id,
+       project_member_id,
        event,
        source,
        status,
        retries
 FROM tenant.cluster_outbox
-WHERE cluster_id IS NOT NULL
-  AND status IN ('pending', 'retrying')
+WHERE status IN ('pending', 'retrying')
   AND (retry_after IS NULL OR retry_after <= now())
 ORDER BY id ASC
 LIMIT 1
@@ -46,6 +46,19 @@ RETURNING retries;
 UPDATE tenant.cluster_outbox
 SET status = 'failed', failed = now(), status_info = @status_info
 WHERE id = @id;
+
+-- name: OutboxInsertReady :exec
+-- Insert a 'ready' event outbox row for a cluster.
+-- Used by the status worker when a shoot transitions to ready.
+-- Skips insert if there's already a pending/retrying ready row for this cluster.
+INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+SELECT @cluster_id, 'ready', 'status'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = @cluster_id
+      AND tenant.cluster_outbox.event = 'ready'
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+);
 
 -- name: OutboxInsertReconcile :exec
 -- Conditionally insert a reconcile outbox row for a cluster.

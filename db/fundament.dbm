@@ -186,12 +186,15 @@ CAUTION: Do not modify this file unless you know what you are doing.
 END;]]> </definition>
 </function>
 
+<!-- SECURITY DEFINER: these trigger functions run as fun_owner so that tables
+     using RLS (e.g. clusters, organizations_users, project_members) can INSERT
+     into tenant.cluster_outbox without granting direct INSERT to each calling role. -->
 <function name="node_pool_outbox_trigger"
 		window-func="false"
 		returns-setof="false"
 		behavior-type="CALLED ON NULL INPUT"
 		function-type="VOLATILE"
-		security-type="SECURITY INVOKER"
+		security-type="SECURITY DEFINER"
 		parallel-type="PARALLEL UNSAFE"
 		execution-cost="1"
 		row-amount="0">
@@ -221,7 +224,7 @@ END;]]> </definition>
 		returns-setof="false"
 		behavior-type="CALLED ON NULL INPUT"
 		function-type="VOLATILE"
-		security-type="SECURITY INVOKER"
+		security-type="SECURITY DEFINER"
 		parallel-type="PARALLEL UNSAFE"
 		execution-cost="1"
 		row-amount="0">
@@ -255,7 +258,7 @@ END;]]> </definition>
 		returns-setof="false"
 		behavior-type="CALLED ON NULL INPUT"
 		function-type="VOLATILE"
-		security-type="SECURITY INVOKER"
+		security-type="SECURITY DEFINER"
 		parallel-type="PARALLEL UNSAFE"
 		execution-cost="1"
 		row-amount="0">
@@ -287,7 +290,7 @@ END;]]> </definition>
 		returns-setof="false"
 		behavior-type="CALLED ON NULL INPUT"
 		function-type="VOLATILE"
-		security-type="SECURITY INVOKER"
+		security-type="SECURITY DEFINER"
 		parallel-type="PARALLEL UNSAFE"
 		execution-cost="1"
 		row-amount="0">
@@ -1191,7 +1194,7 @@ END;]]> </definition>
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="cluster_events_ck_event_type" type="ck-constr" table="tenant.cluster_events">
-			<expression> <![CDATA[event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted')]]> </expression>
+			<expression> <![CDATA[event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','user_sync_succeeded','user_sync_failed')]]> </expression>
 	</constraint>
 	<constraint name="cluster_events_ck_sync_action" type="ck-constr" table="tenant.cluster_events">
 			<expression> <![CDATA[sync_action IN ('sync','delete')]]> </expression>
@@ -2458,6 +2461,30 @@ END;]]> </definition>
 	<roles names="fun_authn_api"/>
 	<privileges select="true"/>
 </permission>
+<permission>
+	<object name="tenant.organizations_users" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.project_members" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.users" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
+</permission>
+<policy name="organizations_users_cluster_worker_policy" table="tenant.organizations_users" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+<policy name="project_members_cluster_worker_policy" table="tenant.project_members" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+<policy name="users_cluster_worker_policy" table="tenant.users" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
 <trigger name="cluster_outbox_organization_user" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.organizations_users">

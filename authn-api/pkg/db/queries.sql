@@ -98,7 +98,6 @@ LIMIT 1;
 SELECT
     tenant.clusters.shoot_status,
     tenant.clusters.shoot_api_server_url,
-    tenant.clusters.shoot_ca_data,
     tenant.clusters.organization_id
 FROM tenant.clusters
 WHERE tenant.clusters.id = @cluster_id

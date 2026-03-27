@@ -15,13 +15,14 @@ import (
 const outboxGetAndLock = `-- name: OutboxGetAndLock :one
 SELECT id,
        cluster_id,
+       organization_user_id,
+       project_member_id,
        event,
        source,
        status,
        retries
 FROM tenant.cluster_outbox
-WHERE cluster_id IS NOT NULL
-  AND status IN ('pending', 'retrying')
+WHERE status IN ('pending', 'retrying')
   AND (retry_after IS NULL OR retry_after <= now())
 ORDER BY id ASC
 LIMIT 1
@@ -29,17 +30,18 @@ FOR NO KEY UPDATE SKIP LOCKED
 `
 
 type OutboxGetAndLockRow struct {
-	ID        uuid.UUID
-	ClusterID pgtype.UUID
-	Event     string
-	Source    string
-	Status    string
-	Retries   int32
+	ID                 uuid.UUID
+	ClusterID          pgtype.UUID
+	OrganizationUserID pgtype.UUID
+	ProjectMemberID    pgtype.UUID
+	Event              string
+	Source             string
+	Status             string
+	Retries            int32
 }
 
 // Claims the next pending/retryable cluster outbox row.
-// Only picks up rows with cluster_id set; organization_user and project_member
-// rows are handled by the user sync handler (not yet implemented).
+// Picks up all entity types: cluster, organization_user, and project_member.
 // Uses FOR NO KEY UPDATE SKIP LOCKED for concurrent worker safety.
 func (q *Queries) OutboxGetAndLock(ctx context.Context) (OutboxGetAndLockRow, error) {
 	row := q.db.QueryRow(ctx, outboxGetAndLock)
@@ -47,12 +49,37 @@ func (q *Queries) OutboxGetAndLock(ctx context.Context) (OutboxGetAndLockRow, er
 	err := row.Scan(
 		&i.ID,
 		&i.ClusterID,
+		&i.OrganizationUserID,
+		&i.ProjectMemberID,
 		&i.Event,
 		&i.Source,
 		&i.Status,
 		&i.Retries,
 	)
 	return i, err
+}
+
+const outboxInsertReady = `-- name: OutboxInsertReady :exec
+INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+SELECT $1, 'ready', 'status'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = $1
+      AND tenant.cluster_outbox.event = 'ready'
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+)
+`
+
+type OutboxInsertReadyParams struct {
+	ClusterID pgtype.UUID
+}
+
+// Insert a 'ready' event outbox row for a cluster.
+// Used by the status worker when a shoot transitions to ready.
+// Skips insert if there's already a pending/retrying ready row for this cluster.
+func (q *Queries) OutboxInsertReady(ctx context.Context, arg OutboxInsertReadyParams) error {
+	_, err := q.db.Exec(ctx, outboxInsertReady, arg.ClusterID)
+	return err
 }
 
 const outboxInsertReconcile = `-- name: OutboxInsertReconcile :exec
