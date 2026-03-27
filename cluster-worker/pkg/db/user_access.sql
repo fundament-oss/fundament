@@ -33,7 +33,7 @@ FROM tenant.clusters
 WHERE tenant.clusters.id = @cluster_id
 LIMIT 1;
 
--- name: ListUsersForCluster :many
+-- name: UserListForCluster :many
 -- Returns all users who should have access to a cluster, with their access level.
 -- Used by the reconciliation loop to compare against actual state on the shoot.
 SELECT

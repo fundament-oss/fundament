@@ -80,7 +80,7 @@ func newTestHandler(t *testing.T, db *testDB, mock *gardener.MockClient) *cluste
 		StatusBatchSize: 50,
 		MaxRetries:      10,
 	}
-	return cluster.New(db.workerPool, mock, logger, cfg)
+	return cluster.New(db.workerPool, mock, mock, logger, cfg)
 }
 
 func newMock(t *testing.T) *gardener.MockClient {

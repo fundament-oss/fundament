@@ -8,6 +8,7 @@ import (
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
 func TestSyncCreateHappyPath(t *testing.T) {
@@ -21,7 +22,7 @@ func TestSyncCreateHappyPath(t *testing.T) {
 	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
 	insertNodePool(t, db, clusterID, "gpu", "n1-highmem-8", 0, 3)
 
-	sc := handler.SyncContext{Event: "created", Source: "trigger"}
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
 	err := h.Sync(t.Context(), clusterID, sc)
 	require.NoError(t, err)
 
@@ -51,7 +52,7 @@ func TestSyncDeleteHappyPath(t *testing.T) {
 
 	clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, "sync-delete")
 
-	sc := handler.SyncContext{Event: "deleted", Source: "trigger"}
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Deleted, Source: dbconst.ClusterOutboxSource_Trigger}
 	err := h.Sync(t.Context(), clusterID, sc)
 	require.NoError(t, err)
 
@@ -74,7 +75,7 @@ func TestSyncClusterNotFound(t *testing.T) {
 	h := newTestHandler(t, db, mock)
 
 	nonExistentID := uuid.New()
-	sc := handler.SyncContext{Event: "created", Source: "trigger"}
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
 	err := h.Sync(t.Context(), nonExistentID, sc)
 	require.NoError(t, err, "Sync should return nil for non-existent cluster")
 
@@ -93,7 +94,7 @@ func TestSyncApplyShootError(t *testing.T) {
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "sync-error")
 	mock.SetApplyError(gardener.ErrMockApplyFailed)
 
-	sc := handler.SyncContext{Event: "created", Source: "trigger"}
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
 	err := h.Sync(t.Context(), clusterID, sc)
 	require.Error(t, err)
 	require.ErrorIs(t, err, gardener.ErrMockApplyFailed)
