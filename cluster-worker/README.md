@@ -19,7 +19,9 @@ The cluster-worker watches for changes to the `tenant.clusters` table and ensure
 - **Updates**: When cluster configuration changes, update the Shoot (future scope)
 - **Deletion**: When a cluster is soft-deleted, delete the Shoot from Gardener
 
-The worker also monitors Gardener to track the reconciliation status of each Shoot (pending, progressing, ready, error) and stores this in the `shoot_status` column.
+The worker also monitors Gardener to track the reconciliation status of each Shoot (pending, progressing, ready, error) and stores this in the `shoot_status` column. When a shoot becomes ready, the worker extracts connection data (`shoot_api_server_url`, `shoot_ca_data`) via an AdminKubeconfigRequest so that users can generate kubeconfigs.
+
+The `tenant.cluster_outbox` table also tracks changes to `organizations_users` and `project_members` via database triggers, laying the groundwork for a future UserSyncHandler that will reconcile service accounts and RBAC on shoot clusters.
 
 ## Why
 
@@ -60,6 +62,7 @@ Gardener Shoot reconciliation is asynchronous - applying a manifest returns imme
 - Users can see `shoot_status` to know if their cluster is actually ready
 - We can detect and alert on failed reconciliations
 - Deletion verification confirms Shoots are actually gone
+- Connection data (API server URL, CA cert) is extracted when a shoot becomes ready, enabling kubeconfig generation
 
 ## How
 
@@ -77,15 +80,13 @@ sequenceDiagram
     User->>Frontend: Create/Update/Delete cluster
     Frontend->>API: POST/PUT/DELETE /clusters
     API->>DB: INSERT/UPDATE tenant.clusters
-    API->>DB: INSERT cluster_events (sync_requested)
 
     Note over DB: Trigger fires
-    DB->>DB: SET synced = NULL on clusters row
+    DB->>DB: INSERT into cluster_outbox
     DB-->>Worker: NOTIFY cluster_sync
 
-    Worker->>DB: Claim with visibility timeout
-    DB-->>Worker: Claimed cluster row
-    Worker->>DB: INSERT cluster_events (sync_claimed)
+    Worker->>DB: Claim outbox row (SKIP LOCKED)
+    DB-->>Worker: Claimed outbox row
 
     alt Cluster created/updated
         Worker->>Gardener: ApplyShoot(manifest)
@@ -96,10 +97,10 @@ sequenceDiagram
     end
 
     alt Success
-        Worker->>DB: synced = now(), clear claim
+        Worker->>DB: outbox_status = completed
         Worker->>DB: INSERT cluster_events (sync_succeeded)
     else Error
-        Worker->>DB: sync_error = msg, sync_attempts++
+        Worker->>DB: outbox_status = retrying, retries++
         Worker->>DB: INSERT cluster_events (sync_failed)
     end
 
@@ -107,10 +108,15 @@ sequenceDiagram
 
     loop Every 30s
         Worker->>Gardener: GetShootStatus(clusters...)
-        Gardener-->>Worker: Status (progressing/ready/error/deleted)
+        Gardener-->>Worker: Status + API server URL
         Worker->>DB: UPDATE shoot_status, shoot_status_message
-        opt Status changed (progressing/ready/error/deleted)
-            Worker->>DB: INSERT cluster_events (status_progressing/status_ready/status_error/status_deleted)
+        opt Transition to ready
+            Worker->>Gardener: RequestAdminKubeconfig(shoot)
+            Gardener-->>Worker: Short-lived kubeconfig
+            Worker->>DB: UPDATE shoot_api_server_url, shoot_ca_data
+        end
+        opt Status changed
+            Worker->>DB: INSERT cluster_events
         end
     end
 
@@ -133,20 +139,20 @@ The cluster-worker has two goroutines managing related but distinct state machin
 stateDiagram-v2
     direction TB
 
-    state "Sync Worker → clusters table" as db {
-        [*] --> Pending: User creates cluster
-        Synced --> Pending: User modifies/deletes cluster
+    state "Sync Worker → cluster_outbox table" as db {
+        [*] --> Pending: Trigger fires on clusters/org_users/project_members
+        Completed --> Pending: New change detected
 
-        Pending --> Claimed: Worker claims
-        Claimed --> Synced: sync succeeded
-        Claimed --> Failed: sync failed
-        Failed --> Pending: backoff elapsed
-        Claimed --> Pending: visibility timeout (worker died)
+        Pending --> InProgress: Worker claims (SKIP LOCKED)
+        InProgress --> Completed: sync succeeded
+        InProgress --> Retrying: sync failed
+        Retrying --> Pending: backoff elapsed
+        InProgress --> Pending: visibility timeout (worker died)
 
-        Pending: synced = NULL, unclaimed
-        Claimed: synced = NULL, sync_claimed_at set
-        Failed: synced = NULL, sync_error set
-        Synced: synced = timestamp
+        Pending: status = pending
+        InProgress: status = pending, claimed
+        Retrying: status = retrying
+        Completed: status = completed
     }
 
     state "Status Poller → shoot_status column" as poller {
@@ -161,7 +167,7 @@ stateDiagram-v2
 
         Pending2: pending
         Progressing: progressing
-        Ready: ready
+        Ready: ready (+ extract API server URL, CA data)
         Error: error
         Deleting: deleting
         Deleted: deleted
@@ -186,22 +192,43 @@ All sync and status changes are recorded in the `cluster_events` table for debug
 | `sync_requested` | Cluster created/updated/deleted via API, needs sync |
 | `sync_claimed` | Worker claimed the cluster for processing |
 | `sync_succeeded` | Gardener accepted the Shoot manifest |
-| `status_progressing` | Shoot reconciliation in progress |
 | `sync_failed` | Sync failed (with error message and attempt count) |
+| `status_progressing` | Shoot reconciliation in progress |
 | `status_ready` | Shoot reconciliation completed successfully |
 | `status_error` | Shoot reconciliation failed |
 | `status_deleted` | Shoot confirmed deleted from Gardener |
 
+### Outbox Sources
+
+The `cluster_outbox` table tracks changes from multiple sources:
+
+| Source | Trigger |
+|--------|---------|
+| `trigger` | Database trigger on `clusters`, `organizations_users`, or `project_members` |
+| `reconcile` | Periodic reconciliation loop |
+| `manual` | Manual intervention |
+| `node_pool` | Node pool configuration change |
+| `status` | Status poller detected a state change |
+
+### Connection Data
+
+When the status poller detects a shoot has become ready, it requests a short-lived admin kubeconfig from Gardener via `AdminKubeconfigRequest` and extracts:
+
+- `shoot_api_server_url` — the external API server URL from the shoot's advertised addresses
+- `shoot_ca_data` — base64-encoded CA certificate for TLS verification
+
+This data is stored in the `tenant.clusters` table and used by `authn-api` and `functl` to generate kubeconfigs. If the CA extraction fails (transient Gardener error), the poller retries on subsequent polls until the data is stored.
+
 
 ## Quick Start: Full Local Development
 
-Run the complete stack with local Gardener:
+Run the complete stack with local Gardener (gardener-operator path):
 
 ```bash
 # 1. Start k3d cluster
 just cluster-start
 
-# 2. Start local Gardener (first time ~15 min)
+# 2. Start local Gardener via gardener-operator (first time ~15 min)
 just cluster-worker gardener-up
 
 # 3. Deploy all services with local Gardener mode
@@ -215,7 +242,17 @@ just cluster-worker create-test-cluster t1
 
 # Watch progress:
 just cluster-worker shoots    # shoots in Gardener
+just cluster-worker logs      # cluster-worker logs
 just cluster-worker gardener-status # overall status
+```
+
+**Troubleshooting:**
+```bash
+# Re-connect Docker networks (if k3d can't reach Gardener after restart)
+just cluster-worker gardener-connect
+
+# Re-create the kubeconfig secret (if cluster-worker can't authenticate to Gardener)
+just cluster-worker gardener-secret
 ```
 
 **Prerequisites:**
@@ -224,7 +261,7 @@ just cluster-worker gardener-status # overall status
 - macOS only: GNU tools (`brew install gnu-sed gnu-tar iproute2mac`)
 
 **Pinned versions** (for team consistency):
-- Gardener: `v1.117.0` (see `GARDENER_VERSION` in Justfile)
+- Gardener: `v1.138.0` (see `GARDENER_VERSION` in mod.just)
 - Other tools: see `mise.toml`
 
 **Skaffold profiles:**

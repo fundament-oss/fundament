@@ -51,7 +51,24 @@ spec:
               value: {{ .Values.authnApi.logLevel }}
             - name: CORS_ALLOWED_ORIGINS
               value: {{ .Values.externalUrls.corsAllowedOrigins | default .Values.externalUrls.console }}
-
+            {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+            - name: GARDENER_MODE
+              value: real
+            - name: GARDENER_KUBECONFIG
+              value: /etc/gardener/kubeconfig
+            {{- end }}
+          {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+          volumeMounts:
+            - name: gardener-kubeconfig
+              mountPath: /etc/gardener
+              readOnly: true
+          {{- end }}
+      {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+      volumes:
+        - name: gardener-kubeconfig
+          secret:
+            secretName: {{ $.Values.clusterWorker.gardenerKubeconfigSecret }}
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service

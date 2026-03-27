@@ -454,6 +454,39 @@ func (m *MockClient) GetEventHistoryForCluster(clusterID uuid.UUID) []MockEvent 
 	return events
 }
 
+// RequestAdminKubeconfig returns a fake admin kubeconfig for testing.
+func (m *MockClient) RequestAdminKubeconfig(_ context.Context, clusterID uuid.UUID, expirationSeconds int64) (*AdminKubeconfig, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	shoot, _ := m.findShootByClusterID(clusterID)
+	if shoot == nil {
+		return nil, fmt.Errorf("shoot not found for cluster %s", clusterID)
+	}
+
+	now := m.clock()
+	return &AdminKubeconfig{
+		Kubeconfig: []byte(fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://mock-shoot-%s.example.com
+  name: mock
+contexts:
+- context:
+    cluster: mock
+    user: mock
+  name: mock
+current-context: mock
+users:
+- name: mock
+  user:
+    token: mock-admin-token-%s
+`, clusterID, clusterID)),
+		ExpiresAt: now.Add(time.Duration(expirationSeconds) * time.Second),
+	}, nil
+}
+
 // Verify MockClient implements Client interface.
 var _ Client = (*MockClient)(nil)
 

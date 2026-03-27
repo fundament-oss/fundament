@@ -75,8 +75,9 @@ ORDER BY
 
 -- name: ClusterListNeedingStatusCheck :many
 -- Get clusters where we need to check Gardener status (active clusters).
--- Polls clusters in non-terminal states: NULL (never checked), pending, progressing, error.
--- Does NOT poll clusters in terminal state: ready.
+-- Polls clusters in non-terminal states: NULL (never checked), pending,
+-- progressing, error. Also polls ready clusters that are still missing shoot
+-- connection data so kubeconfig delivery can recover from transient failures.
 SELECT
     tenant.clusters.id,
     tenant.clusters.name,
@@ -84,6 +85,8 @@ SELECT
     tenant.clusters.kubernetes_version,
     tenant.clusters.deleted,
     tenant.clusters.shoot_status,
+    tenant.clusters.shoot_api_server_url,
+    tenant.clusters.shoot_ca_data,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name
@@ -101,6 +104,13 @@ WHERE
         OR tenant.clusters.shoot_status = 'pending' -- Shoot not yet visible in Gardener
         OR tenant.clusters.shoot_status = 'progressing' -- Gardener creating/updating
         OR tenant.clusters.shoot_status = 'error'
+        OR (
+            tenant.clusters.shoot_status = 'ready'
+            AND (
+                tenant.clusters.shoot_api_server_url IS NULL
+                OR tenant.clusters.shoot_ca_data IS NULL
+            )
+        )
     ) -- Failed, might recover
     AND (
         tenant.clusters.shoot_status_updated IS NULL -- Never checked
@@ -152,7 +162,9 @@ UPDATE tenant.clusters
 SET
     shoot_status = @status,
     shoot_status_message = @message,
-    shoot_status_updated = now()
+    shoot_status_updated = now(),
+    shoot_api_server_url = COALESCE(@api_server_url, shoot_api_server_url),
+    shoot_ca_data = COALESCE(@ca_data, shoot_ca_data)
 WHERE
     id = @cluster_id;
 

@@ -250,6 +250,70 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="cluster_outbox_organization_user_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO tenant.cluster_outbox (organization_user_id, event, source)
+        VALUES (
+            COALESCE(NEW.id, OLD.id),
+            CASE
+                WHEN TG_OP = 'INSERT' THEN 'created'
+                WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                ELSE 'updated'
+            END,
+            'trigger'
+        );
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
+<function name="cluster_outbox_project_member_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO tenant.cluster_outbox (project_member_id, event, source)
+        VALUES (
+            COALESCE(NEW.id, OLD.id),
+            CASE
+                WHEN TG_OP = 'INSERT' THEN 'created'
+                WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                ELSE 'updated'
+            END,
+            'trigger'
+        );
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
 <function name="cluster_outbox_notify"
 		window-func="false"
 		returns-setof="false"
@@ -701,6 +765,12 @@ END;]]> </definition>
 	<column name="outbox_error">
 		<type name="text" length="0"/>
 	</column>
+	<column name="shoot_api_server_url">
+		<type name="text" length="0"/>
+	</column>
+	<column name="shoot_ca_data">
+		<type name="text" length="0"/>
+	</column>
 
 	<constraint name="clusters_pk" type="pk-constr" table="tenant.clusters">
 		<columns names="id" ref-type="src-columns"/>
@@ -721,6 +791,10 @@ END;]]> </definition>
 </policy>
 
 <policy name="cluster_worker_all_access" table="tenant.clusters" command="ALL" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="clusters_authn_api_policy" table="tenant.clusters" command="SELECT" permissive="true">	<roles names="fun_authn_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
@@ -1052,11 +1126,19 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)]]> </expression>
 </policy>
 
+<policy name="project_members_authn_api_policy" table="tenant.project_members" command="SELECT" permissive="true">	<roles names="fun_authn_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <policy name="projects_organization_policy" table="tenant.projects" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
 </policy>
 
 <policy name="projects_cluster_worker_policy" table="tenant.projects" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="projects_authn_api_policy" table="tenant.projects" command="SELECT" permissive="true">	<roles names="fun_authn_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
@@ -1176,20 +1258,26 @@ END;]]> </definition>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
+	<column name="organization_user_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="project_member_id">
+		<type name="uuid" length="0"/>
+	</column>
 	<constraint name="cluster_outbox_pk" type="pk-constr" table="tenant.cluster_outbox">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="cluster_outbox_ck_single_fk" type="ck-constr" table="tenant.cluster_outbox">
-			<expression> <![CDATA[num_nonnulls(cluster_id) = 1]]> </expression>
+			<expression> <![CDATA[num_nonnulls(cluster_id, organization_user_id, project_member_id) = 1]]> </expression>
 	</constraint>
 	<constraint name="cluster_outbox_ck_status" type="ck-constr" table="tenant.cluster_outbox">
 			<expression> <![CDATA[status IN ('pending', 'completed', 'retrying', 'failed')]]> </expression>
 	</constraint>
 	<constraint name="cluster_outbox_ck_event" type="ck-constr" table="tenant.cluster_outbox">
-			<expression> <![CDATA[event IN ('created', 'updated', 'deleted', 'reconcile')]]> </expression>
+			<expression> <![CDATA[event IN ('created', 'updated', 'deleted', 'reconcile', 'ready')]]> </expression>
 	</constraint>
 	<constraint name="cluster_outbox_ck_source" type="ck-constr" table="tenant.cluster_outbox">
-			<expression> <![CDATA[source IN ('trigger', 'reconcile', 'manual', 'node_pool')]]> </expression>
+			<expression> <![CDATA[source IN ('trigger', 'reconcile', 'manual', 'node_pool', 'status')]]> </expression>
 	</constraint>
 </table>
 
@@ -1603,7 +1691,6 @@ END;]]> </definition>
 		<function signature="tenant.cluster_outbox_update_cluster_status()"/>
 </trigger>
 
-
 <table name="organizations_users" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
@@ -1818,6 +1905,18 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="cluster_outbox_fk_organization_user" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations_users" table="tenant.cluster_outbox">
+	<columns names="organization_user_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="cluster_outbox_fk_project_member" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.project_members" table="tenant.cluster_outbox">
+	<columns names="project_member_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="outbox_fk_node_pool" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.node_pools" table="authz.outbox">
 	<columns names="node_pool_id" ref-type="src-columns"/>
@@ -1997,6 +2096,16 @@ END;]]> </definition>
 <relationship name="rel_cluster_outbox_clusters" type="relfk" layers="0"
 	 src-table="tenant.cluster_outbox"
 	 dst-table="tenant.clusters" reference-fk="cluster_outbox_fk_cluster"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_cluster_outbox_organizations_users" type="relfk" layers="0"
+	 src-table="tenant.cluster_outbox"
+	 dst-table="tenant.organizations_users" reference-fk="cluster_outbox_fk_organization_user"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_cluster_outbox_project_members" type="relfk" layers="0"
+	 src-table="tenant.cluster_outbox"
+	 dst-table="tenant.project_members" reference-fk="cluster_outbox_fk_project_member"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_organizations_users_organizations" type="relfk" layers="0"
@@ -2334,4 +2443,31 @@ END;]]> </definition>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true"/>
 </permission>
+<permission>
+	<object name="tenant.clusters" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.projects" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.project_members" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<trigger name="cluster_outbox_organization_user" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.organizations_users">
+		<function signature="tenant.cluster_outbox_organization_user_trigger()"/>
+</trigger>
+
+<trigger name="cluster_outbox_project_member" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.project_members">
+		<function signature="tenant.cluster_outbox_project_member_trigger()"/>
+</trigger>
+
 </dbmodel>

@@ -153,3 +153,7 @@ ingress:
   subdomainInfix: "" # e.g., "pr123." for PR environments → console.pr123.domain
   tls:
     clusterIssuer: ""
+
+# Gardener shoot proxy (local development only)
+shootProxy:
+  enabled: false

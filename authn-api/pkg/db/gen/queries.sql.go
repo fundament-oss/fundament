@@ -54,6 +54,41 @@ func (q *Queries) APIKeyGetByHash(ctx context.Context, arg APIKeyGetByHashParams
 	return i, err
 }
 
+const clusterGetForToken = `-- name: ClusterGetForToken :one
+SELECT
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_api_server_url,
+    tenant.clusters.shoot_ca_data,
+    tenant.clusters.organization_id
+FROM tenant.clusters
+WHERE tenant.clusters.id = $1
+    AND tenant.clusters.deleted IS NULL
+`
+
+type ClusterGetForTokenParams struct {
+	ClusterID uuid.UUID
+}
+
+type ClusterGetForTokenRow struct {
+	ShootStatus       pgtype.Text
+	ShootApiServerUrl pgtype.Text
+	ShootCaData       pgtype.Text
+	OrganizationID    uuid.UUID
+}
+
+// Returns cluster info needed for token issuance.
+func (q *Queries) ClusterGetForToken(ctx context.Context, arg ClusterGetForTokenParams) (ClusterGetForTokenRow, error) {
+	row := q.db.QueryRow(ctx, clusterGetForToken, arg.ClusterID)
+	var i ClusterGetForTokenRow
+	err := row.Scan(
+		&i.ShootStatus,
+		&i.ShootApiServerUrl,
+		&i.ShootCaData,
+		&i.OrganizationID,
+	)
+	return i, err
+}
+
 const organizationCreate = `-- name: OrganizationCreate :one
 INSERT INTO tenant.organizations (name, alias)
 VALUES ($1, $2)
@@ -124,6 +159,53 @@ func (q *Queries) OrganizationUserCreate(ctx context.Context, arg OrganizationUs
 		&i.Created,
 	)
 	return i, err
+}
+
+const resolveUserAccess = `-- name: ResolveUserAccess :one
+SELECT
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM tenant.organizations_users
+            WHERE tenant.organizations_users.organization_id = tenant.clusters.organization_id
+                AND tenant.organizations_users.user_id = $1
+                AND tenant.organizations_users.permission = 'admin'
+                AND tenant.organizations_users.status = 'accepted'
+                AND tenant.organizations_users.deleted IS NULL
+        )
+            THEN 'admin'
+        WHEN EXISTS (
+            SELECT 1
+            FROM tenant.projects
+            JOIN tenant.project_members
+                ON tenant.project_members.project_id = tenant.projects.id
+            WHERE tenant.projects.cluster_id = tenant.clusters.id
+                AND tenant.projects.deleted IS NULL
+                AND tenant.project_members.user_id = $1
+                AND tenant.project_members.deleted IS NULL
+        )
+            THEN 'member'
+        ELSE 'none'
+    END AS access_level
+FROM tenant.clusters
+WHERE tenant.clusters.id = $2
+LIMIT 1
+`
+
+type ResolveUserAccessParams struct {
+	UserID    uuid.UUID
+	ClusterID uuid.UUID
+}
+
+// Determines the access level for a user on a cluster.
+// Returns 'admin' if the user is an accepted org admin, 'member' if the user
+// is a project member on any project in the cluster, or 'none' otherwise.
+// NOTE: Duplicated in cluster-worker/pkg/db/user_access.sql — keep both in sync.
+func (q *Queries) ResolveUserAccess(ctx context.Context, arg ResolveUserAccessParams) (string, error) {
+	row := q.db.QueryRow(ctx, resolveUserAccess, arg.UserID, arg.ClusterID)
+	var access_level string
+	err := row.Scan(&access_level)
+	return access_level, err
 }
 
 const userCreate = `-- name: UserCreate :one

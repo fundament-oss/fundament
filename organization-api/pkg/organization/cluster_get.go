@@ -51,6 +51,8 @@ func (s *Server) GetClusterByName(
 			OutboxStatus:       cluster.OutboxStatus,
 			OutboxRetries:      cluster.OutboxRetries,
 			OutboxError:        cluster.OutboxError,
+			ShootApiServerUrl:  cluster.ShootApiServerUrl,
+			ShootCaData:        cluster.ShootCaData,
 		}),
 	}.Build()), nil
 }
@@ -146,7 +148,7 @@ func (s *Server) GetKubeconfig(
 }
 
 func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
-	return organizationv1.ClusterDetails_builder{
+	builder := organizationv1.ClusterDetails_builder{
 		Id:                row.ID.String(),
 		Name:              row.Name,
 		Region:            row.Region,
@@ -162,7 +164,14 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
 		),
-	}.Build()
+	}
+	if row.ShootApiServerUrl.Valid {
+		builder.ShootApiServerUrl = &row.ShootApiServerUrl.String
+	}
+	if row.ShootCaData.Valid {
+		builder.ShootCaData = &row.ShootCaData.String
+	}
+	return builder.Build()
 }
 
 func buildKubeconfig(cluster *db.ClusterGetByIDRow) string {
