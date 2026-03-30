@@ -173,7 +173,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-	IF EXISTS (
+	IF NEW.deleted IS NOT NULL AND EXISTS (
 		SELECT 1
 		FROM tenant.projects
 		WHERE
@@ -205,15 +205,15 @@ END;]]> </definition>
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-    INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+    INSERT INTO tenant.cluster_outbox (node_pool_id, event, source)
     VALUES (
-        COALESCE(NEW.cluster_id, OLD.cluster_id),
+        COALESCE(NEW.id, OLD.id),
         CASE
             WHEN TG_OP = 'INSERT' THEN 'created'
             WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
             ELSE 'updated'
         END,
-        'node_pool'
+        'trigger'
     );
     RETURN NULL;
 END;]]> </definition>
@@ -353,7 +353,9 @@ END;]]> </definition>
 	<return-type>
 	<type name="trigger" length="0"/>
 	</return-type>
-	<definition> <![CDATA[BEGIN
+	<definition> <![CDATA[DECLARE
+    resolved_cluster_id uuid;
+BEGIN
     IF NEW.cluster_id IS NOT NULL THEN
         UPDATE tenant.clusters
         SET outbox_status = latest.status,
@@ -367,6 +369,30 @@ END;]]> </definition>
             LIMIT 1
         ) latest
         WHERE tenant.clusters.id = NEW.cluster_id;
+    ELSIF NEW.node_pool_id IS NOT NULL THEN
+        SELECT tenant.node_pools.cluster_id INTO resolved_cluster_id
+        FROM tenant.node_pools
+        WHERE tenant.node_pools.id = NEW.node_pool_id;
+
+        IF resolved_cluster_id IS NOT NULL THEN
+            UPDATE tenant.clusters
+            SET outbox_status = latest.status,
+                outbox_retries = latest.retries,
+                outbox_error = latest.status_info
+            FROM LATERAL (
+                SELECT status, retries, status_info, id
+                FROM tenant.cluster_outbox
+                WHERE cluster_id = resolved_cluster_id
+                UNION ALL
+                SELECT status, retries, status_info, id
+                FROM tenant.cluster_outbox
+                WHERE node_pool_id IN (
+                    SELECT id FROM tenant.node_pools WHERE cluster_id = resolved_cluster_id
+                )
+                ORDER BY id DESC LIMIT 1
+            ) latest
+            WHERE tenant.clusters.id = resolved_cluster_id;
+        END IF;
     END IF;
     RETURN NULL;
 END;]]> </definition>
@@ -1267,11 +1293,14 @@ END;]]> </definition>
 	<column name="project_member_id">
 		<type name="uuid" length="0"/>
 	</column>
+	<column name="node_pool_id">
+		<type name="uuid" length="0"/>
+	</column>
 	<constraint name="cluster_outbox_pk" type="pk-constr" table="tenant.cluster_outbox">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="cluster_outbox_ck_single_fk" type="ck-constr" table="tenant.cluster_outbox">
-			<expression> <![CDATA[num_nonnulls(cluster_id, organization_user_id, project_member_id) = 1]]> </expression>
+			<expression> <![CDATA[num_nonnulls(cluster_id, organization_user_id, project_member_id, node_pool_id) = 1]]> </expression>
 	</constraint>
 	<constraint name="cluster_outbox_ck_status" type="ck-constr" table="tenant.cluster_outbox">
 			<expression> <![CDATA[status IN ('pending', 'completed', 'retrying', 'failed')]]> </expression>
@@ -1280,7 +1309,7 @@ END;]]> </definition>
 			<expression> <![CDATA[event IN ('created', 'updated', 'deleted', 'reconcile', 'ready')]]> </expression>
 	</constraint>
 	<constraint name="cluster_outbox_ck_source" type="ck-constr" table="tenant.cluster_outbox">
-			<expression> <![CDATA[source IN ('trigger', 'reconcile', 'manual', 'node_pool', 'status')]]> </expression>
+			<expression> <![CDATA[source IN ('trigger', 'reconcile', 'manual', 'status')]]> </expression>
 	</constraint>
 </table>
 
@@ -1306,6 +1335,25 @@ END;]]> </definition>
 		</idxelement>
 		<idxelement use-sorting="true" nulls-first="false" asc-order="false">
 			<column name="id"/>
+		</idxelement>
+</index>
+
+<index name="cluster_outbox_idx_node_pool_id" table="tenant.cluster_outbox"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="node_pool_id"/>
+		</idxelement>
+		<idxelement use-sorting="true" nulls-first="false" asc-order="false">
+			<column name="id"/>
+		</idxelement>
+</index>
+
+<index name="node_pools_idx_cluster_id" table="tenant.node_pools"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="cluster_id"/>
 		</idxelement>
 </index>
 
@@ -1636,7 +1684,7 @@ END;]]> </definition>
 </trigger>
 
 <trigger name="node_pool_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="true" upd-event="true" trunc-event="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.node_pools">
 		<function signature="tenant.node_pool_outbox_trigger()"/>
 		<columns names="name,machine_type,autoscale_min,autoscale_max,deleted"/>
@@ -1920,6 +1968,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="cluster_outbox_fk_node_pool" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.node_pools" table="tenant.cluster_outbox">
+	<columns names="node_pool_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="outbox_fk_node_pool" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.node_pools" table="authz.outbox">
 	<columns names="node_pool_id" ref-type="src-columns"/>
@@ -2109,6 +2163,11 @@ END;]]> </definition>
 <relationship name="rel_cluster_outbox_project_members" type="relfk" layers="0"
 	 src-table="tenant.cluster_outbox"
 	 dst-table="tenant.project_members" reference-fk="cluster_outbox_fk_project_member"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_cluster_outbox_node_pools" type="relfk" layers="0"
+	 src-table="tenant.cluster_outbox"
+	 dst-table="tenant.node_pools" reference-fk="cluster_outbox_fk_node_pool"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_organizations_users_organizations" type="relfk" layers="0"
