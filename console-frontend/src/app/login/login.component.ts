@@ -7,17 +7,21 @@ import {
   AfterViewInit,
   signal,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
+import '@minbzk/storybook';
+import '@minbzk/storybook/css';
 
 @Component({
   selector: 'app-login',
   imports: [ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.component.html',
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class LoginComponent implements OnInit, AfterViewInit {
   @ViewChild('emailInput') emailInput!: ElementRef<HTMLInputElement>;
