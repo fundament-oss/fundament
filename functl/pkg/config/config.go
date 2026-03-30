@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"gopkg.in/yaml.v3"
 )
@@ -32,12 +33,32 @@ func DefaultConfig() *Config {
 }
 
 // ConfigDir returns the path to the configuration directory.
+//
+// Resolution order:
+//  1. FUNCTL_CONFIG_DIR environment variable (explicit override)
+//  2. XDG_CONFIG_HOME/fundament (XDG spec)
+//  3. %APPDATA%/fundament (Windows default)
+//  4. ~/.config/fundament (Linux/macOS CLI convention)
 func ConfigDir() (string, error) {
+	if v := os.Getenv("FUNCTL_CONFIG_DIR"); v != "" {
+		if !filepath.IsAbs(v) {
+			return "", fmt.Errorf("FUNCTL_CONFIG_DIR must be an absolute path, got: %s", v)
+		}
+		return v, nil
+	}
+	if v := os.Getenv("XDG_CONFIG_HOME"); v != "" && filepath.IsAbs(v) {
+		return filepath.Join(v, "fundament"), nil
+	}
+	if runtime.GOOS == "windows" {
+		if v := os.Getenv("APPDATA"); v != "" {
+			return filepath.Join(v, "fundament"), nil
+		}
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
-	return filepath.Join(home, ".fundament"), nil
+	return filepath.Join(home, ".config", "fundament"), nil
 }
 
 // ConfigPath returns the path to the configuration file.
