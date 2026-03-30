@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -24,11 +26,13 @@ import (
 
 // Config holds configuration for the outbox worker.
 type Config struct {
-	PollInterval time.Duration `env:"POLL_INTERVAL" envDefault:"5s"`
-	BaseBackoff  time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
-	MaxBackoff   time.Duration `env:"MAX_BACKOFF" envDefault:"1m"`
-	MaxRetries   int32         `env:"MAX_RETRIES" envDefault:"10"`
-	BackoffDelay time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
+	PollInterval            time.Duration `env:"POLL_INTERVAL" envDefault:"5s"`
+	BaseBackoff             time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
+	MaxBackoff              time.Duration `env:"MAX_BACKOFF" envDefault:"1m"`
+	MaxRetries              int32         `env:"MAX_RETRIES" envDefault:"10"`
+	BackoffDelay            time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
+	PreconditionDelay       time.Duration `env:"PRECONDITION_DELAY" envDefault:"30s"`
+	MaxPreconditionDeferrals int32        `env:"MAX_PRECONDITION_DEFERRALS" envDefault:"100"`
 }
 
 // Worker processes the cluster outbox table and dispatches to handlers.
@@ -232,9 +236,15 @@ func (w *Worker) process(ctx context.Context, row *db.OutboxGetAndLockRow) (hand
 
 // complete finalizes the outbox row based on the processing result.
 // On success: mark processed + commit inside the same tx.
-// On error: rollback tx (releases lock), then mark retry/failed via pool.
+// On PreconditionError: rollback tx, defer without retry increment.
+// On other error: rollback tx (releases lock), then mark retry/failed via pool.
 func (w *Worker) complete(ctx context.Context, row *db.OutboxGetAndLockRow, tx pgx.Tx, entityType handler.EntityType, processErr error) (bool, error) {
 	if processErr != nil {
+		var precondErr *handler.PreconditionError
+		if errors.As(processErr, &precondErr) {
+			return w.handlePreconditionError(ctx, row, tx, entityType, precondErr)
+		}
+
 		w.logger.Warn("handler returned error",
 			"outbox_id", row.ID,
 			"entity_type", entityType,
@@ -319,9 +329,66 @@ func entityFromRow(row *db.OutboxGetAndLockRow) (handler.EntityType, uuid.UUID, 
 		return handler.EntityOrgUser, uuid.UUID(row.OrganizationUserID.Bytes), nil
 	case row.ProjectMemberID.Valid:
 		return handler.EntityProjectMember, uuid.UUID(row.ProjectMemberID.Bytes), nil
+	case row.NodePoolID.Valid:
+		return handler.EntityNodePool, uuid.UUID(row.NodePoolID.Bytes), nil
 	default:
 		return "", uuid.Nil, fmt.Errorf("no valid entity FK in outbox row %s", row.ID)
 	}
+}
+
+// handlePreconditionError defers a row without incrementing retries.
+// If the deferral count exceeds MaxPreconditionDeferrals, it falls through to
+// regular error handling (increments retries, applies backoff/fail logic).
+func (w *Worker) handlePreconditionError(ctx context.Context, row *db.OutboxGetAndLockRow, tx pgx.Tx, entityType handler.EntityType, precondErr *handler.PreconditionError) (bool, error) {
+	_ = tx.Rollback(ctx) // release lock before deferring via pool
+
+	deferrals := parseDeferralCount(row.StatusInfo.String) + 1
+
+	if deferrals > w.cfg.MaxPreconditionDeferrals {
+		w.logger.Warn("precondition deferral cap exceeded, treating as regular error",
+			"outbox_id", row.ID,
+			"entity_type", entityType,
+			"deferrals", deferrals,
+			"reason", precondErr.Reason)
+		markErr := w.handleRowError(ctx, w.queries, row, precondErr)
+		if markErr != nil {
+			return false, fmt.Errorf("handle processing error: %w", markErr)
+		}
+		return true, nil
+	}
+
+	statusInfo := fmt.Sprintf("precondition_deferrals=%d; %s", deferrals, precondErr.Reason)
+
+	if err := w.queries.OutboxDeferWithoutRetry(ctx, db.OutboxDeferWithoutRetryParams{
+		ID:         row.ID,
+		Delay:      durationToInterval(w.cfg.PreconditionDelay),
+		StatusInfo: pgtype.Text{String: statusInfo, Valid: true},
+	}); err != nil {
+		return false, fmt.Errorf("defer outbox row: %w", err)
+	}
+
+	w.logger.Debug("deferred outbox row (precondition not met)",
+		"outbox_id", row.ID,
+		"entity_type", entityType,
+		"deferrals", deferrals,
+		"reason", precondErr.Reason)
+
+	return true, nil
+}
+
+var deferralCountRe = regexp.MustCompile(`^precondition_deferrals=(\d+);`)
+
+// parseDeferralCount extracts the precondition deferral count from status_info.
+func parseDeferralCount(statusInfo string) int32 {
+	m := deferralCountRe.FindStringSubmatch(statusInfo)
+	if m == nil {
+		return 0
+	}
+	n, err := strconv.ParseInt(m[1], 10, 32)
+	if err != nil {
+		return 0
+	}
+	return int32(n)
 }
 
 func durationToInterval(d time.Duration) pgtype.Interval {

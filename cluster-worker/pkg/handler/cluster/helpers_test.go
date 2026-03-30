@@ -134,6 +134,20 @@ func insertNodePool(t *testing.T, db *testDB, clusterID uuid.UUID, name, machine
 	require.NoError(t, err)
 }
 
+// insertNodePoolReturningID inserts a node pool and returns its ID.
+func insertNodePoolReturningID(t *testing.T, db *testDB, clusterID uuid.UUID, name, machineType string, scaleMin, scaleMax int32) uuid.UUID {
+	t.Helper()
+
+	var id uuid.UUID
+	err := db.adminPool.QueryRow(t.Context(),
+		`INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max)
+		 VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		clusterID, name, machineType, scaleMin, scaleMax,
+	).Scan(&id)
+	require.NoError(t, err)
+	return id
+}
+
 // markOutboxCompleted sets the latest outbox row for a cluster to completed.
 // The trigger propagates this to clusters.outbox_status.
 func markOutboxCompleted(t *testing.T, db *testDB, clusterID uuid.UUID) {

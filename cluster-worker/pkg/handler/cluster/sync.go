@@ -17,13 +17,36 @@ import (
 )
 
 // Sync dispatches an outbox row to the appropriate sync method based on entity type.
+// Preconditions are checked before any sync logic executes.
 func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext) error {
+	if err := h.checkPreconditions(ctx, sc.EntityType, id); err != nil {
+		return err
+	}
+
 	switch sc.EntityType {
 	case handler.EntityCluster:
 		return h.syncCluster(ctx, id, sc)
+	case handler.EntityNodePool:
+		return h.syncNodePool(ctx, id, sc)
 	default:
 		panic(fmt.Sprintf("unhandled entity type %q in cluster handler", sc.EntityType))
 	}
+}
+
+// syncNodePool resolves a node pool ID to its parent cluster and syncs the cluster.
+// Returns nil if the node pool no longer exists (deleted between outbox insert and processing).
+// Preconditions (cluster ever synced) are already checked by checkPreconditions in Sync().
+func (h *Handler) syncNodePool(ctx context.Context, nodePoolID uuid.UUID, sc handler.SyncContext) error {
+	clusterID, err := h.queries.NodePoolGetClusterID(ctx, db.NodePoolGetClusterIDParams{NodePoolID: nodePoolID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			h.logger.Info("node pool not found, skipping (deleted between outbox insert and processing)", "node_pool_id", nodePoolID)
+			return nil
+		}
+		return fmt.Errorf("get cluster_id for node pool %s: %w", nodePoolID, err)
+	}
+
+	return h.syncCluster(ctx, clusterID, sc)
 }
 
 // syncCluster processes a single cluster outbox row by syncing the cluster to Gardener.
@@ -73,9 +96,8 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 		return h.syncError(ctx, cluster.ID, syncAction, "ensure project", err)
 	}
 	if namespace == "" {
-		h.logger.Warn("sync waiting: project namespace not ready yet", "cluster_id", cluster.ID, "name", cluster.Name)
-		h.createSyncFailedEvent(ctx, cluster.ID, syncAction, "project namespace not ready yet")
-		return fmt.Errorf("project namespace not ready for %s", gardener.ProjectName(cluster.OrganizationName))
+		h.logger.Debug("sync waiting: project namespace not ready yet", "cluster_id", cluster.ID, "name", cluster.Name)
+		return handler.NewPreconditionError("project namespace not ready")
 	}
 
 	// 5. Load node pools

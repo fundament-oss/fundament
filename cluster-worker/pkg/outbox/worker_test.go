@@ -89,13 +89,56 @@ func TestEntityFromRow_NoValidFK(t *testing.T) {
 	}
 }
 
+func TestEntityFromRow_NodePoolID(t *testing.T) {
+	id := uuid.New()
+	row := &db.OutboxGetAndLockRow{
+		ID:         uuid.New(),
+		NodePoolID: pgtype.UUID{Bytes: id, Valid: true},
+	}
+
+	entityType, entityID, err := entityFromRow(row)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if entityType != handler.EntityNodePool {
+		t.Errorf("expected EntityNodePool, got %q", entityType)
+	}
+	if entityID != id {
+		t.Errorf("expected %s, got %s", id, entityID)
+	}
+}
+
+func TestParseDeferralCount(t *testing.T) {
+	tests := []struct {
+		input string
+		want  int32
+	}{
+		{"", 0},
+		{"some random error", 0},
+		{"precondition_deferrals=5; parent cluster not synced", 5},
+		{"precondition_deferrals=100; project namespace not ready", 100},
+		{"precondition_deferrals=0; first deferral", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := parseDeferralCount(tt.input)
+			if got != tt.want {
+				t.Errorf("parseDeferralCount(%q) = %d, want %d", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func newTestWorker() *Worker {
 	return &Worker{
 		logger: slog.Default(),
 		cfg: Config{
-			MaxRetries:  10,
-			BaseBackoff: 500 * time.Millisecond,
-			MaxBackoff:  time.Minute,
+			MaxRetries:               10,
+			BaseBackoff:              500 * time.Millisecond,
+			MaxBackoff:               time.Minute,
+			PreconditionDelay:        30 * time.Second,
+			MaxPreconditionDeferrals: 100,
 		},
 	}
 }

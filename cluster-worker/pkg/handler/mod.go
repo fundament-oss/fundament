@@ -9,6 +9,20 @@ import (
 	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
+// PreconditionError signals that a structural precondition is not met.
+// The outbox worker defers the row without incrementing retries.
+type PreconditionError struct {
+	Reason string
+}
+
+func (e *PreconditionError) Error() string {
+	return "precondition not met: " + e.Reason
+}
+
+func NewPreconditionError(reason string) *PreconditionError {
+	return &PreconditionError{Reason: reason}
+}
+
 // EntityType identifies an entity type in the outbox table via its FK column.
 type EntityType string
 
@@ -50,6 +64,12 @@ type StatusHandler interface {
 // Called periodically by the outbox worker's reconcile loop.
 type ReconcileHandler interface {
 	Reconcile(ctx context.Context) error
+}
+
+// Precondition declares what must be true before a handler can process an entity.
+type Precondition struct {
+	Description string
+	Check       func(ctx context.Context, id uuid.UUID) error // returns PreconditionError or nil
 }
 
 // RouteKey identifies a handler registration by entity type and optional event.

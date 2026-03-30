@@ -74,6 +74,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	// Cluster handler (sync, status, reconcile)
 	ch := clusterhandler.New(pool, gardenerClient, gardenerClient, logger, cfg.Cluster)
 	registry.RegisterSync(handler.EntityCluster, ch)
+	registry.RegisterSync(handler.EntityNodePool, ch)
 	registry.RegisterStatus(ch)
 	registry.RegisterReconcile(ch)
 
