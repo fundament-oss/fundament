@@ -49,7 +49,7 @@ func TestConfigDir_XDGConfigHome_Absolute(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	want := filepath.Join("/home/user/.myconfig", "fundament")
+	want := "/home/user/.myconfig/fundament"
 	if dir != want {
 		t.Errorf("got %q, want %q", dir, want)
 	}

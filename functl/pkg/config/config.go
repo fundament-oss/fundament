@@ -85,7 +85,7 @@ func EnsureConfigDir() error {
 	if err != nil {
 		return err
 	}
-	return os.MkdirAll(dir, 0700)
+	return os.MkdirAll(dir, 0o700)
 }
 
 // LoadConfig loads the configuration from the config file.
@@ -128,7 +128,7 @@ func SaveConfig(cfg *Config) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0600); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
@@ -184,7 +184,7 @@ func SaveCredentials(creds *Credentials) error {
 	}
 
 	// Write with restricted permissions (owner read/write only)
-	if err := os.WriteFile(path, data, 0600); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write credentials file: %w", err)
 	}
 

@@ -19,7 +19,7 @@ type ConfigDirCmd struct{}
 func (c *ConfigDirCmd) Run(ctx *Context) error {
 	dir, err := config.ConfigDir()
 	if err != nil {
-		return err
+		return fmt.Errorf("resolving config directory: %w", err)
 	}
 	fmt.Println(dir)
 	return nil
@@ -32,7 +32,7 @@ type ConfigPathCmd struct{}
 func (c *ConfigPathCmd) Run(ctx *Context) error {
 	path, err := config.ConfigPath()
 	if err != nil {
-		return err
+		return fmt.Errorf("resolving config path: %w", err)
 	}
 	fmt.Println(path)
 	return nil
