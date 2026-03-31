@@ -89,6 +89,20 @@ func TestEntityFromRow_NoValidFK(t *testing.T) {
 	}
 }
 
+func TestProcessWrapsInvalidEntityAsNonRetryable(t *testing.T) {
+	w := newTestWorker()
+	row := &db.OutboxGetAndLockRow{ID: uuid.New()} // no valid FK
+
+	_, err := w.process(context.Background(), row)
+
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, errNonRetryable) {
+		t.Errorf("expected errNonRetryable, got: %v", err)
+	}
+}
+
 func TestEntityFromRow_NodePoolID(t *testing.T) {
 	id := uuid.New()
 	row := &db.OutboxGetAndLockRow{
@@ -106,27 +120,6 @@ func TestEntityFromRow_NodePoolID(t *testing.T) {
 	}
 	if entityID != id {
 		t.Errorf("expected %s, got %s", id, entityID)
-	}
-}
-
-func TestParseDeferralCount(t *testing.T) {
-	tests := []struct {
-		input string
-		want  int32
-	}{
-		{"", 0},
-		{"some random error", 0},
-		{"precondition_deferrals=5; parent cluster not synced", 5},
-		{"precondition_deferrals=100; project namespace not ready", 100},
-		{"precondition_deferrals=0; first deferral", 0},
-	}
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got := parseDeferralCount(tt.input)
-			if got != tt.want {
-				t.Errorf("parseDeferralCount(%q) = %d, want %d", tt.input, got, tt.want)
-			}
-		})
 	}
 }
 

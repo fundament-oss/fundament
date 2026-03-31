@@ -1295,6 +1295,9 @@ END;]]> </definition>
 	<column name="node_pool_id">
 		<type name="uuid" length="0"/>
 	</column>
+	<column name="deferrals" not-null="true" default-value="0">
+		<type name="integer" length="0"/>
+	</column>
 	<constraint name="cluster_outbox_pk" type="pk-constr" table="tenant.cluster_outbox">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>

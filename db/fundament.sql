@@ -1099,6 +1099,7 @@ CREATE TABLE tenant.cluster_outbox (
 	organization_user_id uuid,
 	project_member_id uuid,
 	node_pool_id uuid,
+	deferrals integer NOT NULL DEFAULT 0,
 	CONSTRAINT cluster_outbox_pk PRIMARY KEY (id),
 	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id, organization_user_id, project_member_id, node_pool_id) = 1),
 	CONSTRAINT cluster_outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed')),
