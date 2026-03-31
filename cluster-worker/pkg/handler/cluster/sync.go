@@ -90,14 +90,10 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 		return nil
 	}
 
-	// 4. Sync path: ensure project exists
+	// 4. Sync path: resolve project namespace (precondition guarantees it's ready)
 	namespace, err := h.resolveProjectNamespace(ctx, cluster.OrganizationName, cluster.OrganizationID)
 	if err != nil {
 		return h.syncError(ctx, cluster.ID, syncAction, "ensure project", err)
-	}
-	if namespace == "" {
-		h.logger.Debug("sync waiting: project namespace not ready yet", "cluster_id", cluster.ID, "name", cluster.Name)
-		return handler.NewPreconditionError("project namespace not ready")
 	}
 
 	// 5. Load node pools

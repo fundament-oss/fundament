@@ -287,16 +287,9 @@ DECLARE
 BEGIN
     IF NEW.cluster_id IS NOT NULL THEN
         UPDATE tenant.clusters
-        SET outbox_status = latest.status,
-            outbox_retries = latest.retries,
-            outbox_error = latest.status_info
-        FROM (
-            SELECT status, retries, status_info
-            FROM tenant.cluster_outbox
-            WHERE cluster_id = NEW.cluster_id
-            ORDER BY id DESC
-            LIMIT 1
-        ) latest
+        SET outbox_status = NEW.status,
+            outbox_retries = NEW.retries,
+            outbox_error = NEW.status_info
         WHERE tenant.clusters.id = NEW.cluster_id;
     ELSIF NEW.node_pool_id IS NOT NULL THEN
         SELECT tenant.node_pools.cluster_id INTO resolved_cluster_id
@@ -305,21 +298,9 @@ BEGIN
 
         IF resolved_cluster_id IS NOT NULL THEN
             UPDATE tenant.clusters
-            SET outbox_status = latest.status,
-                outbox_retries = latest.retries,
-                outbox_error = latest.status_info
-            FROM LATERAL (
-                SELECT status, retries, status_info, id
-                FROM tenant.cluster_outbox
-                WHERE cluster_id = resolved_cluster_id
-                UNION ALL
-                SELECT status, retries, status_info, id
-                FROM tenant.cluster_outbox
-                WHERE node_pool_id IN (
-                    SELECT id FROM tenant.node_pools WHERE cluster_id = resolved_cluster_id
-                )
-                ORDER BY id DESC LIMIT 1
-            ) latest
+            SET outbox_status = NEW.status,
+                outbox_retries = NEW.retries,
+                outbox_error = NEW.status_info
             WHERE tenant.clusters.id = resolved_cluster_id;
         END IF;
     END IF;
