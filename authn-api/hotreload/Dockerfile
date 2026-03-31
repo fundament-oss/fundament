@@ -4,5 +4,6 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY authn-api/ ./authn-api/
+COPY cluster-worker/ ./cluster-worker/
 COPY common/ ./common/
 CMD ["air", "-c", "authn-api/hotreload/.air.toml"]
