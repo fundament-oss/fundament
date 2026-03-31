@@ -12,11 +12,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const outboxDeferWithoutRetry = `-- name: OutboxDeferWithoutRetry :exec
+const outboxDeferWithoutRetry = `-- name: OutboxDeferWithoutRetry :one
 UPDATE tenant.cluster_outbox
 SET retry_after = now() + $1::interval,
+    deferrals = deferrals + 1,
     status_info = $2
 WHERE id = $3
+RETURNING deferrals
 `
 
 type OutboxDeferWithoutRetryParams struct {
@@ -26,11 +28,14 @@ type OutboxDeferWithoutRetryParams struct {
 }
 
 // Defers a row for later processing without incrementing the retry counter.
+// Increments deferrals to track how many times a precondition was not met.
 // Used when a handler returns PreconditionError — the row is not yet processable
 // but this is not a failure. The precondition reason is written to status_info.
-func (q *Queries) OutboxDeferWithoutRetry(ctx context.Context, arg OutboxDeferWithoutRetryParams) error {
-	_, err := q.db.Exec(ctx, outboxDeferWithoutRetry, arg.Delay, arg.StatusInfo, arg.ID)
-	return err
+func (q *Queries) OutboxDeferWithoutRetry(ctx context.Context, arg OutboxDeferWithoutRetryParams) (int32, error) {
+	row := q.db.QueryRow(ctx, outboxDeferWithoutRetry, arg.Delay, arg.StatusInfo, arg.ID)
+	var deferrals int32
+	err := row.Scan(&deferrals)
+	return deferrals, err
 }
 
 const outboxGetAndLock = `-- name: OutboxGetAndLock :one
@@ -43,6 +48,7 @@ SELECT id,
        source,
        status,
        retries,
+       deferrals,
        status_info
 FROM tenant.cluster_outbox
 WHERE status IN ('pending', 'retrying')
@@ -62,6 +68,7 @@ type OutboxGetAndLockRow struct {
 	Source             string
 	Status             string
 	Retries            int32
+	Deferrals          int32
 	StatusInfo         pgtype.Text
 }
 
@@ -81,6 +88,7 @@ func (q *Queries) OutboxGetAndLock(ctx context.Context) (OutboxGetAndLockRow, er
 		&i.Source,
 		&i.Status,
 		&i.Retries,
+		&i.Deferrals,
 		&i.StatusInfo,
 	)
 	return i, err

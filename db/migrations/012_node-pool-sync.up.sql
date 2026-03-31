@@ -104,6 +104,8 @@ $function$
 
 ALTER TABLE "tenant"."cluster_outbox" ADD COLUMN "node_pool_id" uuid;
 
+ALTER TABLE "tenant"."cluster_outbox" ADD COLUMN "deferrals" integer NOT NULL DEFAULT 0;
+
 ALTER TABLE "tenant"."cluster_outbox" DROP CONSTRAINT "cluster_outbox_ck_single_fk";
 
 ALTER TABLE "tenant"."cluster_outbox" ADD CONSTRAINT "cluster_outbox_ck_single_fk" CHECK((num_nonnulls(cluster_id, organization_user_id, project_member_id, node_pool_id) = 1)) NOT VALID;
