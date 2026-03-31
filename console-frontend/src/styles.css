@@ -1,10 +1,21 @@
 /* You can add global styles to this file, and also import other style files */
 
+@import '@minbzk/storybook/css';
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 
 /* Dark mode variant using the 'dark' class on the HTML element */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Make the CSS color-scheme follow the app's .dark class so that Overheid web
+   components using light-dark() respond to our toggle instead of the OS setting.
+   html.dark specificity (0,1,1) beats :root (0,1,0) from the storybook tokens. */
+html:not(.dark) {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
 
 /* View transition styles for switching between light and dark mode, see https://theme-toggle.rdsx.dev/ */
 ::view-transition-group(root) {
