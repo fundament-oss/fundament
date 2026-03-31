@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/google/uuid"
@@ -23,10 +24,17 @@ type ProviderConfig struct {
 	CloudProfile           string // e.g., "local", "metal", "aws"
 	CredentialsBindingName string // e.g., "local", "metal-credentials" (required for all providers)
 
-	// CredentialsSecretRef is the reference to the shared credentials secret.
+	// CredentialsRef is the reference to the shared credentials resource.
 	// This is used to create CredentialsBindings in new project namespaces.
 	// Format: "namespace/name" (e.g., "garden-local/local")
-	CredentialsSecretRef string
+	CredentialsRef string
+
+	// CredentialsRefKind is the kind of the credentials resource (e.g., "Secret", "WorkloadIdentity").
+	CredentialsRefKind string
+
+	// CredentialsRefAPIVersion is the API version of the credentials resource
+	// (e.g., "v1" for Secret, "security.gardener.cloud/v1alpha1" for WorkloadIdentity).
+	CredentialsRefAPIVersion string
 
 	MachineImageName    string // e.g., "local", "gardenlinux"
 	MachineImageVersion string // e.g., "1.0.0", "1592.2.0"
@@ -37,13 +45,15 @@ type ProviderConfig struct {
 // Override fields as needed for other providers.
 func NewProviderConfig() ProviderConfig {
 	return ProviderConfig{
-		Type:                   "local",
-		CloudProfile:           "local",
-		CredentialsBindingName: "local",              // Name of CredentialsBinding to create/reference
-		CredentialsSecretRef:   "garden-local/local", // Shared secret for local provider
-		MachineImageName:       "local",
-		MachineImageVersion:    "1.0.0",
-		DefaultMachineType:     "local",
+		Type:                     "local",
+		CloudProfile:             "local",
+		CredentialsBindingName:   "local",                            // Name of CredentialsBinding to create/reference
+		CredentialsRef:           "garden-local/local",               // Shared WorkloadIdentity for local provider
+		CredentialsRefKind:       "WorkloadIdentity",                 // Local provider uses WorkloadIdentity
+		CredentialsRefAPIVersion: "security.gardener.cloud/v1alpha1", // Gardener security API
+		MachineImageName:         "local",
+		MachineImageVersion:      "1.0.0",
+		DefaultMachineType:       "local",
 	}
 }
 
@@ -81,6 +91,9 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 	}
 	if err := securityv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add Gardener security types to scheme: %w", err)
+	}
+	if err := authenticationv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add Gardener authentication types to scheme: %w", err)
 	}
 
 	c, err := client.New(cfg, client.Options{Scheme: scheme})
@@ -268,10 +281,18 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 		case gardencorev1beta1.LastOperationStateError, gardencorev1beta1.LastOperationStateFailed:
 			return &ShootStatus{Status: StatusError, Message: op.Description}, nil
 		case gardencorev1beta1.LastOperationStateSucceeded:
-			if r.isShootHealthy(shoot) {
-				return &ShootStatus{Status: StatusReady, Message: MsgShootReady}, nil
+			msg := MsgShootReady
+			if !r.isShootHealthy(shoot) {
+				msg = "Shoot reconciled but not all conditions healthy"
+				r.logger.Warn("shoot succeeded but conditions unhealthy",
+					"shoot", shoot.Name,
+					"namespace", shoot.Namespace)
 			}
-			return &ShootStatus{Status: StatusProgressing, Message: "Shoot reconciled but not all conditions healthy"}, nil
+			return &ShootStatus{
+				Status:       StatusReady,
+				Message:      msg,
+				APIServerURL: shootAPIServerURL(shoot),
+			}, nil
 		case gardencorev1beta1.LastOperationStateAborted:
 			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description}, nil
 		}
@@ -281,11 +302,38 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 	return &ShootStatus{Status: StatusProgressing, Message: "Shoot is being created"}, nil
 }
 
+// RequestAdminKubeconfig requests a short-lived admin kubeconfig for a shoot.
+func (r *RealClient) RequestAdminKubeconfig(ctx context.Context, clusterID uuid.UUID, expirationSeconds int64) (*AdminKubeconfig, error) {
+	shoot, err := r.getShootByClusterID(ctx, clusterID)
+	if err != nil {
+		return nil, fmt.Errorf("look up shoot: %w", err)
+	}
+	if shoot == nil {
+		return nil, fmt.Errorf("shoot not found for cluster %s", clusterID)
+	}
+
+	adminKubeconfigRequest := &authenticationv1alpha1.AdminKubeconfigRequest{
+		Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
+			ExpirationSeconds: &expirationSeconds,
+		},
+	}
+
+	if err := r.client.SubResource("adminkubeconfig").Create(ctx, shoot, adminKubeconfigRequest); err != nil {
+		return nil, fmt.Errorf("create admin kubeconfig request for shoot %s/%s: %w", shoot.Namespace, shoot.Name, err)
+	}
+
+	return &AdminKubeconfig{
+		Kubeconfig: adminKubeconfigRequest.Status.Kubeconfig,
+		ExpiresAt:  adminKubeconfigRequest.Status.ExpirationTimestamp.Time,
+	}, nil
+}
+
 // ensureCredentialsBinding creates a CredentialsBinding in the namespace if it doesn't exist.
-// The binding references the shared credentials secret configured in ProviderConfig.
+// The binding references the shared credentials configured in ProviderConfig.
+// Supports both Secret and WorkloadIdentity credential types via CredentialsRefKind.
 func (r *RealClient) ensureCredentialsBinding(ctx context.Context, namespace string) error {
-	if r.provider.CredentialsSecretRef == "" {
-		// No credentials secret configured, skip
+	if r.provider.CredentialsRef == "" {
+		// No credentials configured, skip
 		return nil
 	}
 
@@ -311,10 +359,13 @@ func (r *RealClient) ensureCredentialsBinding(ctx context.Context, namespace str
 		return fmt.Errorf("failed to get credentials binding: %w", err)
 	}
 
-	secretNs, secretName, err := parseSecretRef(r.provider.CredentialsSecretRef)
+	refNs, refName, err := parseRef(r.provider.CredentialsRef)
 	if err != nil {
-		return fmt.Errorf("invalid credentials secret ref: %w", err)
+		return fmt.Errorf("invalid credentials ref: %w", err)
 	}
+
+	refKind := r.provider.CredentialsRefKind
+	refAPIVersion := r.provider.CredentialsRefAPIVersion
 
 	binding := &securityv1alpha1.CredentialsBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -325,17 +376,18 @@ func (r *RealClient) ensureCredentialsBinding(ctx context.Context, namespace str
 			Type: r.provider.Type,
 		},
 		CredentialsRef: corev1.ObjectReference{
-			APIVersion: "v1",
-			Kind:       "Secret",
-			Name:       secretName,
-			Namespace:  secretNs,
+			APIVersion: refAPIVersion,
+			Kind:       refKind,
+			Name:       refName,
+			Namespace:  refNs,
 		},
 	}
 
 	r.logger.Info("creating credentials binding",
 		"namespace", namespace,
 		"name", bindingName,
-		"secretRef", r.provider.CredentialsSecretRef)
+		"credentialsRef", r.provider.CredentialsRef,
+		"kind", refKind)
 
 	if err := r.client.Create(ctx, binding); err != nil {
 		if apierrors.IsAlreadyExists(err) {
@@ -347,8 +399,8 @@ func (r *RealClient) ensureCredentialsBinding(ctx context.Context, namespace str
 	return nil
 }
 
-// parseSecretRef parses "namespace/name" format into separate parts.
-func parseSecretRef(ref string) (namespace, name string, err error) {
+// parseRef parses "namespace/name" format into separate parts.
+func parseRef(ref string) (namespace, name string, err error) {
 	parts := make([]string, 0, 2)
 	for i, j := 0, 0; i <= len(ref); i++ {
 		if i == len(ref) || ref[i] == '/' {
@@ -422,20 +474,27 @@ func (r *RealClient) getShootByClusterID(ctx context.Context, clusterID uuid.UUI
 }
 
 // deleteShoot deletes a shoot, adding the required confirmation annotation.
+// Force-deletion is only set on shoots that are already being deleted (have a
+// deletionTimestamp), since Gardener rejects it on non-deleting shoots.
 func (r *RealClient) deleteShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
-	// Add the required confirmation annotation
 	if shoot.Annotations == nil {
 		shoot.Annotations = make(map[string]string)
 	}
 	shoot.Annotations["confirmation.gardener.cloud/deletion"] = "true"
 
+	// Force-deletion can only be set when the shoot already has a deletionTimestamp.
+	if r.provider.Type == "local" && shoot.DeletionTimestamp != nil {
+		shoot.Annotations["confirmation.gardener.cloud/force-deletion"] = "true"
+	}
+
 	if err := r.client.Update(ctx, shoot); err != nil {
-		return fmt.Errorf("failed to add deletion confirmation annotation: %w", err)
+		return fmt.Errorf("failed to add deletion annotations: %w", err)
 	}
 
 	r.logger.Info("deleting shoot",
 		"shoot", shoot.Name,
-		"namespace", shoot.Namespace)
+		"namespace", shoot.Namespace,
+		"force", r.provider.Type == "local" && shoot.DeletionTimestamp != nil)
 
 	if err := r.client.Delete(ctx, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -472,6 +531,34 @@ func (r *RealClient) isShootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 	return true
 }
 
+// shootAnnotations returns the base annotations for a new Shoot.
+// For the local provider, adds cleanup grace period annotations to speed up deletion.
+func (r *RealClient) shootAnnotations(clusterName string) map[string]string {
+	annotations := map[string]string{
+		AnnotationClusterName: clusterName,
+	}
+	if r.provider.Type == "local" {
+		annotations["shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds"] = "15"
+		annotations["shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds"] = "15"
+		annotations["shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds"] = "15"
+	}
+	return annotations
+}
+
+// shootAPIServerURL extracts the external API server URL from a Shoot's advertised addresses.
+func shootAPIServerURL(shoot *gardencorev1beta1.Shoot) string {
+	for _, addr := range shoot.Status.AdvertisedAddresses {
+		if addr.Name == "external" {
+			return addr.URL
+		}
+	}
+	// Fall back to the first advertised address if no "external" entry found.
+	if len(shoot.Status.AdvertisedAddresses) > 0 {
+		return shoot.Status.AdvertisedAddresses[0].URL
+	}
+	return ""
+}
+
 // buildShootSpec creates a new Shoot spec from cluster info using provider config.
 func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.Shoot {
 	shoot := &gardencorev1beta1.Shoot{
@@ -482,9 +569,7 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 				LabelClusterID:      cluster.ID.String(),
 				LabelOrganizationID: cluster.OrganizationID.String(),
 			},
-			Annotations: map[string]string{
-				AnnotationClusterName: cluster.Name,
-			},
+			Annotations: r.shootAnnotations(cluster.Name),
 		},
 		Spec: gardencorev1beta1.ShootSpec{
 			CloudProfile: &gardencorev1beta1.CloudProfileReference{
@@ -553,10 +638,19 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 		maxSurge := intstr.FromInt32(1)
 		maxUnavailable := intstr.FromInt32(0)
 		imageVersion := r.provider.MachineImageVersion
+
+		// The local Gardener provider only supports machine type "local", but the
+		// DB may contain cloud-specific types like "n1-standard-1". Override with
+		// the provider default when running against the local provider.
+		machineType := np.MachineType
+		if r.provider.Type == "local" {
+			machineType = r.provider.DefaultMachineType
+		}
+
 		workers[i] = gardencorev1beta1.Worker{
 			Name: np.Name,
 			Machine: gardencorev1beta1.Machine{
-				Type: np.MachineType,
+				Type: machineType,
 				Image: &gardencorev1beta1.ShootMachineImage{
 					Name:    r.provider.MachineImageName,
 					Version: &imageVersion,

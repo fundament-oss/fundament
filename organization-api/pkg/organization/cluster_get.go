@@ -51,6 +51,8 @@ func (s *Server) GetClusterByName(
 			OutboxStatus:       cluster.OutboxStatus,
 			OutboxRetries:      cluster.OutboxRetries,
 			OutboxError:        cluster.OutboxError,
+			ShootApiServerUrl:  cluster.ShootApiServerUrl,
+			ShootCaData:        cluster.ShootCaData,
 		}),
 	}.Build()), nil
 }
@@ -138,7 +140,12 @@ func (s *Server) GetKubeconfig(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	kubeconfig := buildKubeconfig(&cluster)
+	if !cluster.ShootApiServerUrl.Valid || cluster.ShootApiServerUrl.String == "" ||
+		!cluster.ShootCaData.Valid || cluster.ShootCaData.String == "" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet (API server URL or CA data not available)"))
+	}
+
+	kubeconfig := buildKubeconfig(clusterID.String(), cluster.ShootApiServerUrl.String, cluster.ShootCaData.String)
 
 	return connect.NewResponse(organizationv1.GetKubeconfigResponse_builder{
 		KubeconfigContent: kubeconfig,
@@ -146,7 +153,7 @@ func (s *Server) GetKubeconfig(
 }
 
 func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
-	return organizationv1.ClusterDetails_builder{
+	builder := organizationv1.ClusterDetails_builder{
 		Id:                row.ID.String(),
 		Name:              row.Name,
 		Region:            row.Region,
@@ -162,15 +169,26 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
 		),
-	}.Build()
+	}
+	if row.ShootApiServerUrl.Valid {
+		builder.ShootApiServerUrl = &row.ShootApiServerUrl.String
+	}
+	if row.ShootCaData.Valid {
+		builder.ShootCaData = &row.ShootCaData.String
+	}
+	return builder.Build()
 }
 
-func buildKubeconfig(cluster *db.ClusterGetByIDRow) string {
+func buildKubeconfig(clusterID, apiServerURL, caData string) string {
+	clusterName := "fundament-" + clusterID
+	userName := "fundament-user-" + clusterID
+
 	return fmt.Sprintf(`apiVersion: v1
 kind: Config
 clusters:
 - cluster:
-    server: https://%s.organizationv1.io:6443
+    server: %s
+    certificate-authority-data: %s
   name: %s
 contexts:
 - context:
@@ -180,6 +198,15 @@ contexts:
 current-context: %s
 users:
 - name: %s
-  user: {}
-`, cluster.ID.String(), cluster.Name, cluster.Name, cluster.Name, cluster.Name, cluster.Name, cluster.Name)
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      command: functl
+      args:
+      - cluster
+      - token
+      - %s
+      interactiveMode: Never
+      provideClusterInfo: false
+`, apiServerURL, caData, clusterName, clusterName, userName, clusterName, clusterName, userName, clusterID)
 }

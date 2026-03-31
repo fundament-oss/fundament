@@ -3,6 +3,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -165,4 +166,50 @@ func (c *Client) Authn() authnv1connect.AuthnServiceClient {
 		c.authnURL,
 		connect.WithInterceptors(c.authInterceptor()),
 	)
+}
+
+// clusterTokenResponse is the JSON response from the cluster token endpoint.
+type clusterTokenResponse struct {
+	Token     string `json:"token"`
+	ExpiresAt string `json:"expires_at"`
+}
+
+// ClusterToken requests a service account token for the given cluster.
+// This is a plain HTTP POST (not Connect RPC) to the authn-api.
+func (c *Client) ClusterToken(ctx context.Context, clusterID string) (token, expiresAt string, err error) {
+	jwt, err := c.ensureToken(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	url := c.authnURL + "/clusters/" + clusterID + "/token"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, http.NoBody)
+	if err != nil {
+		return "", "", fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", "", fmt.Errorf("request cluster token: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
+		if errResp.Error != "" {
+			return "", "", fmt.Errorf("%s", errResp.Error)
+		}
+		return "", "", fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+
+	var tokenResp clusterTokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		return "", "", fmt.Errorf("decode response: %w", err)
+	}
+
+	return tokenResp.Token, tokenResp.ExpiresAt, nil
 }

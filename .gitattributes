@@ -9,6 +9,11 @@
 *_pb.ts -diff linguist-generated=true
 *_connect.ts -diff linguist-generated=true
 *.graphql.ts -diff linguist-generated=true
+*.gen.ts -diff linguist-generated=true
+
+# Files in generated/gen dirs without conventional naming
+console-frontend/src/generated/authn-api/index.ts -diff linguist-generated=true
+common/authz/gen/main.go -diff linguist-generated=true
 
 # CSS / TailwindCSS generated files
 *.generated.css -diff linguist-generated=true

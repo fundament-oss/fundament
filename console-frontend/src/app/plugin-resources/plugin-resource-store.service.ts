@@ -1,64 +1,46 @@
-import { Injectable, signal } from '@angular/core';
-import type { KubeResource } from './types';
-import { MOCK_RESOURCES, type MockResourceMap } from './mock-resources';
+import { Injectable } from '@angular/core';
+import type { KubeResource, ParsedCrd } from './types';
 
-// TODO: Replace mock data with real Kubernetes API calls.
 @Injectable({ providedIn: 'root' })
 export default class PluginResourceStoreService {
-  private resources = signal<MockResourceMap>(structuredClone(MOCK_RESOURCES));
+  // Cache: key = "${pluginName}/${kind}/${clusterId}"
+  private cache = new Map<string, KubeResource[]>();
 
-  listResources(pluginName: string, kind: string): KubeResource[] {
-    return this.resources()[pluginName]?.[kind] ?? [];
-  }
+  async loadResources(
+    crd: ParsedCrd,
+    clusterId: string,
+    kubeApiProxyUrl: string,
+    orgId: string,
+    pluginName: string,
+  ): Promise<KubeResource[]> {
+    const base = kubeApiProxyUrl.replace(/\/$/, '');
+    // TODO: Support namespaced resources by adding /namespaces/{ns}/ when crd.scope === 'Namespaced'.
+    // Currently fetches cluster-scoped list; real mode will return 404 for namespaced CRDs.
+    const url = `${base}/apis/${crd.group}/${crd.version}/${crd.plural}`;
 
-  getResource(pluginName: string, kind: string, name: string): KubeResource | undefined {
-    const list = this.listResources(pluginName, kind);
-    return list.find((r) => r.metadata.name === name);
-  }
-
-  createResource(pluginName: string, kind: string, resource: KubeResource): string {
-    const uid = crypto.randomUUID();
-    const newResource: KubeResource = {
-      ...resource,
-      metadata: {
-        ...resource.metadata,
-        uid,
-        creationTimestamp: new Date().toISOString(),
-      },
-    };
-
-    this.resources.update((current) => {
-      const updated = structuredClone(current);
-      if (!updated[pluginName]) updated[pluginName] = {};
-      if (!updated[pluginName][kind]) updated[pluginName][kind] = [];
-      updated[pluginName][kind] = [...updated[pluginName][kind], newResource];
-      return updated;
+    const response = await fetch(url, {
+      credentials: 'include',
+      headers: { 'Fun-Organization': orgId, 'Fun-Cluster': clusterId },
     });
 
-    return uid;
+    if (!response.ok) {
+      throw new Error(`Failed to fetch resources for ${crd.kind}: ${response.status}`);
+    }
+
+    const data = (await response.json()) as { items?: KubeResource[] };
+    const resources = data.items ?? [];
+    this.cache.set(`${pluginName}/${crd.kind}/${clusterId}`, resources);
+    return resources;
   }
 
-  deleteResource(pluginName: string, kind: string, name: string): void {
-    this.resources.update((current) => {
-      const updated = structuredClone(current);
-      if (updated[pluginName]?.[kind]) {
-        updated[pluginName][kind] = updated[pluginName][kind].filter(
-          (r) => r.metadata.name !== name,
-        );
-      }
-      return updated;
-    });
-  }
-
-  updateResource(pluginName: string, kind: string, name: string, resource: KubeResource): void {
-    this.resources.update((current) => {
-      const updated = structuredClone(current);
-      if (updated[pluginName]?.[kind]) {
-        updated[pluginName][kind] = updated[pluginName][kind].map((r) =>
-          r.metadata.name === name ? { ...resource, metadata: { ...resource.metadata, name } } : r,
-        );
-      }
-      return updated;
-    });
+  getResource(
+    pluginName: string,
+    kind: string,
+    resourceId: string,
+    clusterId: string | null | undefined,
+  ): KubeResource | undefined {
+    if (!clusterId) return undefined;
+    const key = `${pluginName}/${kind}/${clusterId}`;
+    return this.cache.get(key)?.find((r) => r.metadata.name === resourceId);
   }
 }

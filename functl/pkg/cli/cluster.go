@@ -11,8 +11,10 @@ import (
 
 // ClusterCmd contains cluster subcommands.
 type ClusterCmd struct {
-	List ClusterListCmd `cmd:"" help:"List all clusters."`
-	Get  ClusterGetCmd  `cmd:"" help:"Get cluster details."`
+	List       ClusterListCmd       `cmd:"" help:"List all clusters."`
+	Get        ClusterGetCmd        `cmd:"" help:"Get cluster details."`
+	Kubeconfig ClusterKubeconfigCmd `cmd:"" help:"Generate kubeconfig for a cluster."`
+	Token      ClusterTokenCmd      `cmd:"" help:"Get a service account token for a cluster."`
 }
 
 // ClusterListCmd handles the cluster list command.

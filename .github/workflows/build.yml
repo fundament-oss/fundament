@@ -40,6 +40,9 @@ jobs:
           - image-name: authz-worker
             dockerfile: authz-worker/Dockerfile
             context: "."
+          - image-name: kube-api-proxy
+            dockerfile: kube-api-proxy/Dockerfile
+            context: "."
           - image-name: openfga-setup
             dockerfile: openfga/setup/Dockerfile
             context: openfga/setup

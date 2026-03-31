@@ -1,6 +1,6 @@
 <!-- Header -->
 <div class="card-header">
-  <h1 class="text-2xl font-bold dark:text-white">Cluster summary</h1>
+  <h1 class="text-2xl font-semibold dark:text-white">Cluster summary</h1>
   <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
     Review your cluster configuration before creating it.
   </p>
@@ -100,34 +100,115 @@
 
   <!-- Error Message -->
   @if (errorMessage()) {
-    <div class="flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
+    <div
+      class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+    >
       <ng-icon
         name="tablerCircleXFill"
-        class="mr-3 shrink-0 text-rose-400! dark:text-rose-500!"
-        size="1.25rem"
+        class="shrink-0 text-rose-500! dark:text-rose-400!"
+        size="1.125rem"
       />
-      <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
+      <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
     </div>
   }
 
-  <!-- Form Actions -->
-  <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-    <a
-      routerLink="/clusters/add/plugins"
-      class="btn-secondary"
-      [class.pointer-events-none]="isCreating() || showModal()"
-      [class.opacity-50]="isCreating() || showModal()"
-      >Previous step</a
+  <!-- Creation progress banner (shown after creation starts, when modal is dismissed) -->
+  @if (hasCreationStarted() && !showModal()) {
+    <div
+      class="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3"
+      [class]="
+        bannerState() === 'ready'
+          ? 'border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30'
+          : bannerState() === 'failed'
+            ? 'border-rose-200 bg-rose-50 dark:border-rose-900/40 dark:bg-rose-950/30'
+            : bannerState() === 'partial'
+              ? 'border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30'
+              : 'border-indigo-200 bg-indigo-50 dark:border-indigo-900/40 dark:bg-indigo-950/30'
+      "
     >
-    <button
-      type="button"
-      (click)="onCreateCluster()"
-      class="btn-primary"
-      [disabled]="isCreating() || showModal()"
-    >
-      {{ isCreating() ? 'Creating...' : 'Create cluster' }}
-    </button>
-  </div>
+      <div class="flex items-center gap-3">
+        @if (bannerState() === 'creating' || bannerState() === 'provisioning') {
+          <app-loading-indicator
+            class="h-4 w-4 shrink-0 animate-spin fill-indigo-600 text-indigo-200 dark:fill-indigo-400 dark:text-indigo-900"
+          />
+        } @else if (bannerState() === 'ready') {
+          <ng-icon
+            name="tablerCircleCheck"
+            class="shrink-0 text-green-500! dark:text-green-400!"
+            size="1.125rem"
+          />
+        } @else if (bannerState() === 'partial') {
+          <ng-icon
+            name="tablerAlertTriangle"
+            class="shrink-0 text-amber-500! dark:text-amber-400!"
+            size="1.125rem"
+          />
+        } @else {
+          <ng-icon
+            name="tablerCircleXFill"
+            class="shrink-0 text-rose-500! dark:text-rose-400!"
+            size="1.125rem"
+          />
+        }
+        <div>
+          <p
+            class="text-sm font-medium"
+            [class]="
+              bannerState() === 'ready'
+                ? 'text-green-800 dark:text-green-200'
+                : bannerState() === 'failed'
+                  ? 'text-rose-800 dark:text-rose-200'
+                  : bannerState() === 'partial'
+                    ? 'text-amber-800 dark:text-amber-200'
+                    : 'text-indigo-800 dark:text-indigo-200'
+            "
+          >
+            @if (bannerState() === 'creating') {
+              Creating cluster...
+            } @else if (bannerState() === 'provisioning') {
+              Provisioning cluster...
+            } @else if (bannerState() === 'ready') {
+              Cluster ready
+            } @else if (bannerState() === 'partial') {
+              Cluster created with errors
+            } @else {
+              Cluster creation failed
+            }
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ clusterDisplayName() }}</p>
+        </div>
+      </div>
+      <div class="flex shrink-0 gap-2">
+        <button type="button" (click)="reopenModal()" class="btn-secondary">View progress</button>
+        @if (clusterId()) {
+          <button type="button" (click)="navigateToCluster()" class="btn-primary">
+            Go to cluster
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Form Actions (hidden once creation has started) -->
+  @if (!hasCreationStarted()) {
+    <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+      <a
+        routerLink="/clusters/add/plugins"
+        class="btn-secondary"
+        [class.pointer-events-none]="isCreating() || showModal()"
+        [class.opacity-50]="isCreating() || showModal()"
+        >Previous step</a
+      >
+      <button
+        type="button"
+        (click)="onCreateCluster()"
+        class="btn-primary"
+        [disabled]="isCreating() || showModal()"
+      >
+        {{ isCreating() ? 'Creating...' : 'Create cluster' }}
+      </button>
+    </div>
+  }
 </div>
 
 <!-- Creation Progress Modal -->

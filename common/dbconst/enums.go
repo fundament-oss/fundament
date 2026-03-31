@@ -14,6 +14,8 @@ const (
 	ClusterEventEventType_StatusReady       ClusterEventEventType = "status_ready"
 	ClusterEventEventType_StatusError       ClusterEventEventType = "status_error"
 	ClusterEventEventType_StatusDeleted     ClusterEventEventType = "status_deleted"
+	ClusterEventEventType_UserSyncSucceeded ClusterEventEventType = "user_sync_succeeded"
+	ClusterEventEventType_UserSyncFailed    ClusterEventEventType = "user_sync_failed"
 )
 
 // ClusterEventSyncAction represents valid values for tenant.cluster_events.sync_action.
@@ -32,6 +34,7 @@ const (
 	ClusterOutboxEvent_Updated   ClusterOutboxEvent = "updated"
 	ClusterOutboxEvent_Deleted   ClusterOutboxEvent = "deleted"
 	ClusterOutboxEvent_Reconcile ClusterOutboxEvent = "reconcile"
+	ClusterOutboxEvent_Ready     ClusterOutboxEvent = "ready"
 )
 
 // ClusterOutboxSource represents valid values for tenant.cluster_outbox.source.
@@ -42,6 +45,7 @@ const (
 	ClusterOutboxSource_Reconcile ClusterOutboxSource = "reconcile"
 	ClusterOutboxSource_Manual    ClusterOutboxSource = "manual"
 	ClusterOutboxSource_NodePool  ClusterOutboxSource = "node_pool"
+	ClusterOutboxSource_Status    ClusterOutboxSource = "status"
 )
 
 // ClusterOutboxStatus represents valid values for tenant.cluster_outbox.status.

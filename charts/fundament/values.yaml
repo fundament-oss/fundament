@@ -10,6 +10,8 @@ jwtSecretRef:
 externalUrls:
   authn: "" # e.g., https://authn.example.com
   organization: "" # e.g., https://organization.example.com
+  kubeApiProxy: "" # e.g., https://k8s-api.example.com
+  corsAllowedOrigins: "" # e.g., "https://console.example.com" (space-separated; defaults to console URL if empty)
   console: "" # e.g., https://app.example.com
   docs: "" # e.g., https://docs.example.com
   cookieDomain: "" # e.g., example.com
@@ -23,7 +25,9 @@ images:
   docsFrontend: ghcr.io/fundament-oss/fundament/docs-frontend:latest
   clusterWorker: ghcr.io/fundament-oss/fundament/cluster-worker:latest
   authzWorker: ghcr.io/fundament-oss/fundament/authz-worker:latest
+  kubeApiProxy: ghcr.io/fundament-oss/fundament/kube-api-proxy:latest
   openfgaSetup: ghcr.io/fundament-oss/fundament/openfga-setup:latest
+  pluginController: ghcr.io/fundament-oss/fundament/plugin-controller:latest
 
 # Database (CloudNativePG)
 db:
@@ -60,6 +64,14 @@ organizationApi:
     #    namespace: gateway-ns
     hostnames: []
     #  - organization.example.com
+
+# Kube Proxy (Kubernetes API proxy for frontend)
+kubeApiProxy:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  mode: mock # "mock" or "real"
+  gardenerKubeconfigSecret: "" # Secret name containing a Gardener kubeconfig (only used when mode is "real")
 
 # Cluster Worker
 clusterWorker:
@@ -110,6 +122,11 @@ openfga:
   playground:
     enabled: false
 
+# Plugin Controller
+pluginController:
+  enabled: false
+  logLevel: info
+
 # Dex (OIDC Identity Provider)
 dex:
   enabled: true
@@ -136,3 +153,7 @@ ingress:
   subdomainInfix: "" # e.g., "pr123." for PR environments → console.pr123.domain
   tls:
     clusterIssuer: ""
+
+# Gardener shoot proxy (local development only)
+shootProxy:
+  enabled: false

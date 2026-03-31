@@ -18,6 +18,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	clusterhandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/cluster"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/usersync"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/outbox"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/reconcile"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/status"
@@ -113,6 +114,17 @@ func run() error {
 	registry.RegisterStatus(ch)
 	registry.RegisterReconcile(ch)
 
+	// User sync handler (SA/CRB lifecycle on shoots)
+	shootAccess, err := createShootAccess(&cfg, gardenerClient, logger)
+	if err != nil {
+		return err
+	}
+	ush := usersync.New(db.Pool, shootAccess, logger)
+	registry.RegisterSync(handler.EntityOrgUser, ush)
+	registry.RegisterSync(handler.EntityProjectMember, ush)
+	registry.RegisterSyncForEvent(handler.EntityCluster, "ready", ush)
+	registry.RegisterReconcile(ush)
+
 	// Outbox worker
 	outboxWorker := outbox.New(db.Pool, registry, logger, cfg.Outbox)
 
@@ -206,6 +218,19 @@ func createGardenerClient(cfg *config, logger *slog.Logger) (gardener.Client, er
 		}
 		return client, nil
 
+	default:
+		return nil, fmt.Errorf("invalid GARDENER_MODE: %s (must be mock or real)", cfg.GardenerMode)
+	}
+}
+
+func createShootAccess(cfg *config, gardenerClient gardener.Client, logger *slog.Logger) (usersync.ShootAccess, error) {
+	switch cfg.GardenerMode {
+	case "mock":
+		logger.Info("using mock shoot access (in-memory)")
+		return usersync.NewMockShootAccess(logger), nil
+	case "real":
+		logger.Info("using real shoot access (AdminKubeconfigRequest)")
+		return usersync.NewRealShootAccess(gardenerClient, logger), nil
 	default:
 		return nil, fmt.Errorf("invalid GARDENER_MODE: %s (must be mock or real)", cfg.GardenerMode)
 	}

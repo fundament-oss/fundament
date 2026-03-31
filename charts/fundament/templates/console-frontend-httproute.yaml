@@ -5,8 +5,7 @@ kind: HTTPRoute
 metadata:
   name: {{ $.Release.Name }}-console-frontend
   labels:
-    {{- include "fundament.labels" . | nindent 4 }}
-    app.kubernetes.io/component: console-frontend
+    {{- include "fundament.labels" (dict "root" $ "name" "console-frontend" "component" "gateway") | nindent 4 }}
 spec:
   parentRefs:
     {{- toYaml $.Values.consoleFrontend.httproute.parentRefs | nindent 4 }}

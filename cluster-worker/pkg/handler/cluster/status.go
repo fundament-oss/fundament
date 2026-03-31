@@ -2,11 +2,14 @@ package cluster
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
@@ -79,11 +82,30 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 			oldStatus = gardener.ShootStatusType(cluster.ShootStatus.String)
 		}
 
-		if err := h.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
+		params := db.ClusterUpdateShootStatusParams{
 			ClusterID: cluster.ID,
 			Status:    pgtype.Text{String: string(shootStatus.Status), Valid: true},
 			Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
-		}); err != nil {
+		}
+
+		if shootStatus.APIServerURL != "" {
+			params.ApiServerUrl = pgtype.Text{String: shootStatus.APIServerURL, Valid: true}
+		}
+
+		// Refresh CA data on the initial ready transition and keep retrying until
+		// it is stored, so transient Gardener failures do not wedge kubeconfig delivery.
+		if shouldRefreshShootCA(shootStatus.Status, oldStatus, cluster.ShootCaData.Valid) {
+			caData, err := h.extractShootCA(ctx, cluster.ID)
+			if err != nil {
+				h.logger.Warn("failed to extract shoot CA data",
+					"cluster_id", cluster.ID,
+					"error", err)
+			} else {
+				params.CaData = pgtype.Text{String: caData, Valid: true}
+			}
+		}
+
+		if err := h.queries.ClusterUpdateShootStatus(ctx, params); err != nil {
 			h.logger.Error("failed to update shoot status",
 				"cluster_id", cluster.ID,
 				"error", err)
@@ -119,9 +141,20 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 						"error", err)
 				}
 			}
+
+			// On transition to ready, insert outbox row to trigger initial user sync.
+			if shootStatus.Status == gardener.StatusReady {
+				if err := h.queries.OutboxInsertReady(ctx, db.OutboxInsertReadyParams{
+					ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
+				}); err != nil {
+					h.logger.Warn("failed to insert ready outbox row",
+						"cluster_id", cluster.ID,
+						"error", err)
+				}
+			}
 		}
 
-		h.logger.Info("updated shoot status",
+		h.logger.Debug("updated shoot status",
 			"cluster_id", cluster.ID,
 			"name", cluster.Name,
 			"status", shootStatus.Status)
@@ -134,6 +167,14 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func shouldRefreshShootCA(currentStatus, previousStatus gardener.ShootStatusType, hasStoredCA bool) bool {
+	if currentStatus != gardener.StatusReady {
+		return false
+	}
+
+	return (previousStatus != gardener.StatusReady) || !hasStoredCA
 }
 
 // pollDeletedClusters verifies that soft-deleted clusters have actually been removed from Gardener.
@@ -228,4 +269,26 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// extractShootCA requests a short-lived admin kubeconfig and extracts the CA certificate data.
+// Returns base64-encoded CA data suitable for kubeconfig certificate-authority-data.
+func (h *Handler) extractShootCA(ctx context.Context, clusterID uuid.UUID) (string, error) {
+	adminKC, err := h.gardener.RequestAdminKubeconfig(ctx, clusterID, 600)
+	if err != nil {
+		return "", fmt.Errorf("request admin kubeconfig: %w", err)
+	}
+
+	cfg, err := clientcmd.Load(adminKC.Kubeconfig)
+	if err != nil {
+		return "", fmt.Errorf("parse kubeconfig: %w", err)
+	}
+
+	for _, cluster := range cfg.Clusters {
+		if len(cluster.CertificateAuthorityData) > 0 {
+			return base64.StdEncoding.EncodeToString(cluster.CertificateAuthorityData), nil
+		}
+	}
+
+	return "", fmt.Errorf("no CA data found in admin kubeconfig")
 }

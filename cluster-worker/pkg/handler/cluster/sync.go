@@ -50,6 +50,7 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 	// 3. Delete path (D3): skip EnsureProject, search by label across all namespaces
 	if syncAction == dbconst.ClusterEventSyncAction_Delete {
 		if err := h.gardener.DeleteShootByClusterID(ctx, cluster.ID); err != nil {
+			h.logger.Error("sync failed: delete shoot", "cluster_id", cluster.ID, "name", cluster.Name, "error", err)
 			h.createSyncFailedEvent(ctx, cluster.ID, syncAction, err.Error())
 			return fmt.Errorf("delete shoot: %w", err)
 		}
@@ -63,10 +64,12 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 	projectName := gardener.ProjectName(cluster.OrganizationName)
 	namespace, err := h.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
 	if err != nil {
+		h.logger.Error("sync failed: ensure project", "cluster_id", cluster.ID, "name", cluster.Name, "project", projectName, "error", err)
 		h.createSyncFailedEvent(ctx, cluster.ID, syncAction, "ensure project: "+err.Error())
 		return fmt.Errorf("ensure project: %w", err)
 	}
 	if namespace == "" {
+		h.logger.Warn("sync waiting: project namespace not ready yet", "cluster_id", cluster.ID, "name", cluster.Name, "project", projectName)
 		h.createSyncFailedEvent(ctx, cluster.ID, syncAction, "project namespace not ready yet")
 		return fmt.Errorf("project namespace not ready for %s", projectName)
 	}
@@ -74,6 +77,7 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 	// 5. Load node pools
 	nodePoolRows, err := h.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{ClusterID: cluster.ID})
 	if err != nil {
+		h.logger.Error("sync failed: load node pools", "cluster_id", cluster.ID, "name", cluster.Name, "error", err)
 		h.createSyncFailedEvent(ctx, cluster.ID, syncAction, "load node pools: "+err.Error())
 		return fmt.Errorf("load node pools: %w", err)
 	}
@@ -94,6 +98,7 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 	}
 
 	if err := h.gardener.ApplyShoot(ctx, clusterToSync); err != nil {
+		h.logger.Error("sync failed: apply shoot", "cluster_id", cluster.ID, "name", cluster.Name, "shoot", shootName, "error", err)
 		h.createSyncFailedEvent(ctx, cluster.ID, syncAction, err.Error())
 		return fmt.Errorf("apply shoot: %w", err)
 	}

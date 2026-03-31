@@ -3,7 +3,7 @@
 :numbered:
 :icons: font
 :sidebar-order: 13
-:state: prediscussion
+:state: discussion
 
 = FUN-13 Testing Strategy
 

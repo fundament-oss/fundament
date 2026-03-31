@@ -1,0 +1,125 @@
+{{- if $.Values.shootProxy.enabled }}
+# Gardener proxy: forwards TLS traffic from k3d to the Gardener kind cluster's Istio ingresses.
+# Gardener-operator exposes two separate Istio ingresses on different NodePorts:
+#   - Seed ingress (port 30443): routes to shoot kube-apiservers
+#   - Virtual garden ingress (port 31443): routes to the virtual garden kube-apiserver
+# Both use SNI passthrough, so the socat TCP proxy preserves the TLS handshake.
+# CoreDNS resolves *.local.gardener.cloud to the appropriate proxy ClusterIP.
+# Only deployed with the local-gardener profile.
+
+# --- Shoot proxy (for shoot kube-apiservers) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-shoot-proxy
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "shoot-proxy" "component" "shoot-proxy") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: shoot-proxy
+  template:
+    metadata:
+      labels:
+        {{- include "fundament.labels" (dict "root" $ "name" "shoot-proxy" "component" "shoot-proxy") | nindent 8 }}
+    spec:
+      containers:
+        - name: socat
+          image: alpine/socat:1.8.0.1
+          args:
+            - TCP-LISTEN:443,fork,reuseaddr
+            - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.seedNodePort }}
+          ports:
+            - containerPort: 443
+              name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Release.Name }}-shoot-proxy
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "shoot-proxy" "component" "shoot-proxy") | nindent 4 }}
+spec:
+  clusterIP: {{ $.Values.shootProxy.clusterIP }}
+  selector:
+    app.kubernetes.io/component: shoot-proxy
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+
+# --- Garden proxy (for the virtual garden kube-apiserver) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-garden-proxy
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "garden-proxy" "component" "garden-proxy") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: garden-proxy
+  template:
+    metadata:
+      labels:
+        {{- include "fundament.labels" (dict "root" $ "name" "garden-proxy" "component" "garden-proxy") | nindent 8 }}
+    spec:
+      containers:
+        - name: socat
+          image: alpine/socat:1.8.0.1
+          args:
+            - TCP-LISTEN:443,fork,reuseaddr
+            - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.gardenNodePort }}
+          ports:
+            - containerPort: 443
+              name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Release.Name }}-garden-proxy
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "garden-proxy" "component" "garden-proxy") | nindent 4 }}
+spec:
+  clusterIP: {{ $.Values.shootProxy.gardenClusterIP }}
+  selector:
+    app.kubernetes.io/component: garden-proxy
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+
+# CoreDNS custom config: resolves *.local.gardener.cloud to the proxy Service ClusterIPs.
+# The virtual garden API gets its own ClusterIP (garden-proxy) since it uses a different
+# Istio ingress NodePort. All other *.local.gardener.cloud traffic goes to the shoot-proxy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "shoot-proxy" "component" "shoot-proxy") | nindent 4 }}
+data:
+  gardener.server: |
+    local.gardener.cloud:53 {
+      template IN A api.virtual-garden.local.gardener.cloud {
+        answer "{{`{{ .Name }}`}} 60 IN A {{ $.Values.shootProxy.gardenClusterIP }}"
+      }
+      template IN A gardener.virtual-garden.local.gardener.cloud {
+        answer "{{`{{ .Name }}`}} 60 IN A {{ $.Values.shootProxy.gardenClusterIP }}"
+      }
+      template IN A {
+        answer "{{`{{ .Name }}`}} 60 IN A {{ $.Values.shootProxy.clusterIP }}"
+      }
+      template IN AAAA {
+        rcode NOERROR
+      }
+      template IN ANY {
+        rcode NOERROR
+      }
+    }
+{{- end }}

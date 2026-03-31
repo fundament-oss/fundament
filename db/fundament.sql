@@ -128,7 +128,7 @@ CREATE OR REPLACE FUNCTION tenant.node_pool_outbox_trigger ()
 	LANGUAGE plpgsql
 	VOLATILE 
 	CALLED ON NULL INPUT
-	SECURITY INVOKER
+	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
 	AS 
@@ -158,7 +158,7 @@ CREATE OR REPLACE FUNCTION tenant.cluster_outbox_cluster_trigger ()
 	LANGUAGE plpgsql
 	VOLATILE 
 	CALLED ON NULL INPUT
-	SECURITY INVOKER
+	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
 	AS 
@@ -183,6 +183,70 @@ END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION tenant.cluster_outbox_cluster_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.cluster_outbox_organization_user_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_outbox_organization_user_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_outbox_organization_user_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO tenant.cluster_outbox (organization_user_id, event, source)
+        VALUES (
+            COALESCE(NEW.id, OLD.id),
+            CASE
+                WHEN TG_OP = 'INSERT' THEN 'created'
+                WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                ELSE 'updated'
+            END,
+            'trigger'
+        );
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_outbox_organization_user_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.cluster_outbox_project_member_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.cluster_outbox_project_member_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.cluster_outbox_project_member_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO tenant.cluster_outbox (project_member_id, event, source)
+        VALUES (
+            COALESCE(NEW.id, OLD.id),
+            CASE
+                WHEN TG_OP = 'INSERT' THEN 'created'
+                WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                ELSE 'updated'
+            END,
+            'trigger'
+        );
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.cluster_outbox_project_member_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.cluster_outbox_notify | type: FUNCTION --
@@ -564,6 +628,8 @@ CREATE TABLE tenant.clusters (
 	outbox_status text,
 	outbox_retries integer NOT NULL DEFAULT 0,
 	outbox_error text,
+	shoot_api_server_url text,
+	shoot_ca_data text,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
 	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
@@ -598,6 +664,15 @@ CREATE POLICY cluster_worker_all_access ON tenant.clusters
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: clusters_authn_api_policy | type: POLICY --
+-- DROP POLICY IF EXISTS clusters_authn_api_policy ON tenant.clusters CASCADE;
+CREATE POLICY clusters_authn_api_policy ON tenant.clusters
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_authn_api
 	USING (true);
 -- ddl-end --
 
@@ -848,6 +923,15 @@ CREATE POLICY project_members_organization_policy ON tenant.project_members
 	USING (authn.is_project_in_organization(project_id));
 -- ddl-end --
 
+-- object: project_members_authn_api_policy | type: POLICY --
+-- DROP POLICY IF EXISTS project_members_authn_api_policy ON tenant.project_members CASCADE;
+CREATE POLICY project_members_authn_api_policy ON tenant.project_members
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_authn_api
+	USING (true);
+-- ddl-end --
+
 -- object: projects_organization_policy | type: POLICY --
 -- DROP POLICY IF EXISTS projects_organization_policy ON tenant.projects CASCADE;
 CREATE POLICY projects_organization_policy ON tenant.projects
@@ -863,6 +947,15 @@ CREATE POLICY projects_cluster_worker_policy ON tenant.projects
 	AS PERMISSIVE
 	FOR SELECT
 	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: projects_authn_api_policy | type: POLICY --
+-- DROP POLICY IF EXISTS projects_authn_api_policy ON tenant.projects CASCADE;
+CREATE POLICY projects_authn_api_policy ON tenant.projects
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_authn_api
 	USING (true);
 -- ddl-end --
 
@@ -922,7 +1015,7 @@ CREATE TABLE tenant.cluster_events (
 	message text,
 	attempt integer,
 	CONSTRAINT cluster_events_pk PRIMARY KEY (id),
-	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted')),
+	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','user_sync_succeeded','user_sync_failed')),
 	CONSTRAINT cluster_events_ck_sync_action CHECK (sync_action IN ('sync','delete'))
 );
 -- ddl-end --
@@ -977,11 +1070,13 @@ CREATE TABLE tenant.cluster_outbox (
 	failed timestamptz,
 	status_info text,
 	created timestamptz NOT NULL DEFAULT now(),
+	organization_user_id uuid,
+	project_member_id uuid,
 	CONSTRAINT cluster_outbox_pk PRIMARY KEY (id),
-	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id) = 1),
+	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id, organization_user_id, project_member_id) = 1),
 	CONSTRAINT cluster_outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed')),
-	CONSTRAINT cluster_outbox_ck_event CHECK (event IN ('created', 'updated', 'deleted', 'reconcile')),
-	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual', 'node_pool'))
+	CONSTRAINT cluster_outbox_ck_event CHECK (event IN ('created', 'updated', 'deleted', 'reconcile', 'ready')),
+	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual', 'node_pool', 'status'))
 );
 -- ddl-end --
 ALTER TABLE tenant.cluster_outbox OWNER TO fun_owner;
@@ -1496,6 +1591,51 @@ USING btree
 WHERE (deleted IS NULL AND status NOT IN ('declined', 'revoked'));
 -- ddl-end --
 
+-- object: organizations_users_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_users_cluster_worker_policy ON tenant.organizations_users CASCADE;
+CREATE POLICY organizations_users_cluster_worker_policy ON tenant.organizations_users
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: project_members_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS project_members_cluster_worker_policy ON tenant.project_members CASCADE;
+CREATE POLICY project_members_cluster_worker_policy ON tenant.project_members
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: users_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS users_cluster_worker_policy ON tenant.users CASCADE;
+CREATE POLICY users_cluster_worker_policy ON tenant.users
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: cluster_outbox_organization_user | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS cluster_outbox_organization_user ON tenant.organizations_users CASCADE;
+CREATE OR REPLACE TRIGGER cluster_outbox_organization_user
+	AFTER INSERT OR UPDATE
+	ON tenant.organizations_users
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.cluster_outbox_organization_user_trigger();
+-- ddl-end --
+
+-- object: cluster_outbox_project_member | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS cluster_outbox_project_member ON tenant.project_members CASCADE;
+CREATE OR REPLACE TRIGGER cluster_outbox_project_member
+	AFTER INSERT OR UPDATE
+	ON tenant.project_members
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.cluster_outbox_project_member_trigger();
+-- ddl-end --
+
 -- object: projects_fk_cluster | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_cluster CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_cluster FOREIGN KEY (cluster_id)
@@ -1626,6 +1766,20 @@ ON DELETE CASCADE ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_cluster CASCADE;
 ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_cluster FOREIGN KEY (cluster_id)
 REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: cluster_outbox_fk_organization_user | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_organization_user CASCADE;
+ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_organization_user FOREIGN KEY (organization_user_id)
+REFERENCES tenant.organizations_users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: cluster_outbox_fk_project_member | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_project_member CASCADE;
+ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_project_member FOREIGN KEY (project_member_id)
+REFERENCES tenant.project_members (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -2215,6 +2369,54 @@ GRANT SELECT,INSERT,UPDATE
 GRANT SELECT,INSERT
    ON TABLE tenant.cluster_outbox
    TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_68731d4fef | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.clusters
+   TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_d2a84d99af | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.projects
+   TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_99bf5865bc | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.project_members
+   TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_3af5f26765 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organizations_users
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_0223382d53 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.project_members
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_4e91af4339 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.users
+   TO fun_cluster_worker;
 
 -- ddl-end --
 

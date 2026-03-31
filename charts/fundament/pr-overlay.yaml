@@ -59,6 +59,7 @@ spec:
       docsFrontend: ${IMAGE_PREFIX}/docs-frontend:${IMAGE_TAG}
       clusterWorker: ${IMAGE_PREFIX}/cluster-worker:${IMAGE_TAG}
       authzWorker: ${IMAGE_PREFIX}/authz-worker:${IMAGE_TAG}
+      kubeApiProxy: ${IMAGE_PREFIX}/kube-api-proxy:${IMAGE_TAG}
       openfgaSetup: ${IMAGE_PREFIX}/openfga-setup:${IMAGE_TAG}
 
     authnApi:
@@ -77,6 +78,12 @@ spec:
       instances: 1
       storageSize: 1Gi
       reset: true
+
+    kubeApiProxy:
+      enabled: true
+      replicas: 1
+      logLevel: debug
+      mode: mock
 
     clusterWorker:
       enabled: true

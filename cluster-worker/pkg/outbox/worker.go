@@ -93,11 +93,17 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 	w.processAllRows(ctx)
 
 	for {
-		_, err := w.waitForNotification(ctx, conn)
+		w.logger.Debug("waiting for notification or poll timeout", "poll_interval", w.cfg.PollInterval)
+		notified, err := w.waitForNotification(ctx, conn)
 		if err != nil {
 			return err
 		}
 
+		if notified {
+			w.logger.Debug("woke up from notification")
+		} else {
+			w.logger.Debug("woke up from poll timeout")
+		}
 		w.processAllRows(ctx)
 	}
 }
@@ -156,11 +162,11 @@ func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 		return false, nil
 	}
 
-	// Row lock acquired: OutboxGetAndLock uses FOR NO KEY UPDATE SKIP LOCKED,
+	// Row lock: OutboxGetAndLock uses FOR NO KEY UPDATE SKIP LOCKED,
 	// so the row is locked for the lifetime of this transaction.
-	// Row lock released: on tx.Commit() or deferred rollback.
-	// Error-path marks use w.queries (the pool) so they run in an independent
-	// transaction and are not coupled to the lock transaction.
+	// Happy path: mark processed + commit inside the same tx.
+	// Error path: rollback tx (releases lock), then mark retry/failed via pool
+	// to avoid deadlock (pool UPDATE would block on the tx's row lock).
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("begin transaction: %w", err)
@@ -172,6 +178,7 @@ func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 	row, err := qtx.OutboxGetAndLock(ctx)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			w.logger.Debug("no pending outbox rows")
 			return false, nil
 		}
 		return false, fmt.Errorf("get next outbox row: %w", err)
@@ -182,6 +189,7 @@ func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 		w.logger.Error("invalid outbox row, marking as failed",
 			"outbox_id", row.ID,
 			"error", err)
+		_ = tx.Rollback(ctx) // release lock before marking via pool
 		markErr := w.queries.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
 			ID:         row.ID,
 			StatusInfo: pgtype.Text{String: err.Error(), Valid: true},
@@ -197,14 +205,16 @@ func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 		"entity_type", entityType,
 		"entity_id", entityID,
 		"event", row.Event,
+		"source", row.Source,
 		"retries", row.Retries)
 
-	h, err := w.registry.SyncHandlerFor(entityType)
+	h, err := w.registry.SyncHandlerFor(entityType, row.Event)
 	if err != nil {
 		w.logger.Error("no handler registered, marking as failed",
 			"outbox_id", row.ID,
 			"entity_type", entityType,
 			"error", err)
+		_ = tx.Rollback(ctx)
 		markErr := w.queries.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
 			ID:         row.ID,
 			StatusInfo: pgtype.Text{String: err.Error(), Valid: true},
@@ -215,8 +225,13 @@ func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 		return true, nil
 	}
 
-	err = h.Sync(ctx, entityID, handler.SyncContext{Event: row.Event, Source: row.Source})
+	err = h.Sync(ctx, entityID, handler.SyncContext{EntityType: entityType, Event: row.Event, Source: row.Source})
 	if err != nil {
+		w.logger.Warn("handler returned error",
+			"outbox_id", row.ID,
+			"entity_type", entityType,
+			"error", err)
+		_ = tx.Rollback(ctx) // release lock before marking via pool
 		markErr := w.handleRowError(ctx, w.queries, &row, err)
 		if markErr != nil {
 			return false, fmt.Errorf("handle processing error: %w", markErr)
@@ -224,6 +239,7 @@ func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 		return true, nil
 	}
 
+	// Happy path: mark processed and commit in the same transaction.
 	err = qtx.OutboxMarkProcessed(ctx, db.OutboxMarkProcessedParams{ID: row.ID})
 	if err != nil {
 		return false, fmt.Errorf("mark as processed: %w", err)
@@ -287,6 +303,10 @@ func entityFromRow(row *db.OutboxGetAndLockRow) (handler.EntityType, uuid.UUID, 
 	switch {
 	case row.ClusterID.Valid:
 		return handler.EntityCluster, uuid.UUID(row.ClusterID.Bytes), nil
+	case row.OrganizationUserID.Valid:
+		return handler.EntityOrgUser, uuid.UUID(row.OrganizationUserID.Bytes), nil
+	case row.ProjectMemberID.Valid:
+		return handler.EntityProjectMember, uuid.UUID(row.ProjectMemberID.Bytes), nil
 	default:
 		return "", uuid.Nil, fmt.Errorf("no valid entity FK in outbox row %s", row.ID)
 	}
