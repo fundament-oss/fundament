@@ -132,7 +132,7 @@ func New(pool *pgxpool.Pool, syncer ShootSyncer, statusChecker ShootStatusChecke
 func (h *Handler) checkPreconditions(ctx context.Context, entityType handler.EntityType, id uuid.UUID) error {
 	for _, p := range h.preconditions[entityType] {
 		if err := p.Check(ctx, id); err != nil {
-			return err
+			return fmt.Errorf("precondition %q: %w", p.Description, err)
 		}
 	}
 	return nil
