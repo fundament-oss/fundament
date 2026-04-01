@@ -69,39 +69,6 @@
       <p>This is a demo plugin rendered inside a sandboxed iframe.</p>
     </div>
 
-    <script>
-      (function () {
-        function applyTheme(theme) {
-          document.body.classList.remove('light', 'dark');
-          document.body.classList.add(theme);
-        }
-
-        // Listen for messages from the host
-        window.addEventListener('message', function (event) {
-          var data = event.data;
-          if (!data || typeof data.type !== 'string') return;
-
-          console.log('[demo-plugin received message]', data);
-
-          if (data.type === 'fundament:init') {
-            applyTheme(data.theme);
-          } else if (data.type === 'fundament:theme-changed') {
-            applyTheme(data.theme);
-          }
-        });
-
-        function reportHeight() {
-          var height = document.body.scrollHeight;
-          window.parent.postMessage({ type: 'plugin:resize', height: height }, '*');
-        }
-
-        // Report height changes to avoid scrollbars
-        var observer = new ResizeObserver(reportHeight);
-        observer.observe(document.body);
-
-        // Signal ready
-        window.parent.postMessage({ type: 'plugin:ready', version: 1 }, '*');
-      })();
-    </script>
+    <script src="../plugin-sdk.js"></script>
   </body>
 </html>

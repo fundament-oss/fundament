@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "prebuild": "node generate-proto-version.js",
+    "prebuild": "node generate-proto-version.js && bun build src/plugin-sdk/plugin-sdk.ts --outfile public/plugin-ui/plugin-sdk.js --target browser --minify",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",

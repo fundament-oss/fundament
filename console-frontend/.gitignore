@@ -1,6 +1,9 @@
 # Compiled output
 /dist
 
+# Generated plugin SDK (compiled from src/plugin-sdk/plugin-sdk.ts)
+/public/plugin-ui/plugin-sdk.js
+
 # Node
 /node_modules
 
