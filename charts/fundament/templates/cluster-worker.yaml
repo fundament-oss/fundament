@@ -41,12 +41,53 @@ spec:
               value: {{ $.Values.clusterWorker.gardenerCloudProfile | default "local" }}
             - name: GARDENER_CREDENTIALS_BINDING_NAME
               value: {{ $.Values.clusterWorker.gardenerCredentialsBindingName | default "" }}
+            {{- with $.Values.clusterWorker.gardenerCredentialsSecretRef }}
+            - name: GARDENER_CREDENTIALS_SECRET_REF
+              value: {{ . }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerMachineImageName }}
+            - name: GARDENER_MACHINE_IMAGE_NAME
+              value: {{ . }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerMachineImageVersion }}
+            - name: GARDENER_MACHINE_IMAGE_VERSION
+              value: {{ . }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerDefaultMachineType }}
+            - name: GARDENER_DEFAULT_MACHINE_TYPE
+              value: {{ . }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerNetworkingType }}
+            - name: GARDENER_NETWORKING_TYPE
+              value: {{ . }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerNetworkingNodes }}
+            - name: GARDENER_NETWORKING_NODES
+              value: {{ . }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerShootAnnotations }}
+            - name: GARDENER_SHOOT_ANNOTATIONS
+              value: {{ . }}
+            {{- end }}
+            {{- if $.Values.clusterWorker.gardenerInfrastructureConfig }}
+            - name: GARDENER_INFRASTRUCTURE_CONFIG_FILE
+              value: /etc/gardener-provider/infrastructure-config.json
+            {{- end }}
+            {{- if $.Values.clusterWorker.gardenerControlPlaneConfig }}
+            - name: GARDENER_CONTROLPLANE_CONFIG_FILE
+              value: /etc/gardener-provider/controlplane-config.json
+            {{- end }}
             {{- end }}
           {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
           volumeMounts:
             - name: gardener-kubeconfig
               mountPath: /etc/gardener
               readOnly: true
+            {{- if or $.Values.clusterWorker.gardenerInfrastructureConfig $.Values.clusterWorker.gardenerControlPlaneConfig }}
+            - name: gardener-provider-config
+              mountPath: /etc/gardener-provider
+              readOnly: true
+            {{- end }}
           {{- end }}
           livenessProbe:
             httpGet:
@@ -65,5 +106,28 @@ spec:
         - name: gardener-kubeconfig
           secret:
             secretName: {{ $.Values.clusterWorker.gardenerKubeconfigSecret }}
+        {{- if or $.Values.clusterWorker.gardenerInfrastructureConfig $.Values.clusterWorker.gardenerControlPlaneConfig }}
+        - name: gardener-provider-config
+          configMap:
+            name: cluster-worker-provider-config
+        {{- end }}
       {{- end }}
+{{- if or $.Values.clusterWorker.gardenerInfrastructureConfig $.Values.clusterWorker.gardenerControlPlaneConfig }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-worker-provider-config
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "cluster-worker" "component" "worker") | nindent 4 }}
+data:
+  {{- if $.Values.clusterWorker.gardenerInfrastructureConfig }}
+  infrastructure-config.json: |
+    {{- $.Values.clusterWorker.gardenerInfrastructureConfig | nindent 4 }}
+  {{- end }}
+  {{- if $.Values.clusterWorker.gardenerControlPlaneConfig }}
+  controlplane-config.json: |
+    {{- $.Values.clusterWorker.gardenerControlPlaneConfig | nindent 4 }}
+  {{- end }}
+{{- end }}
 {{- end }}
