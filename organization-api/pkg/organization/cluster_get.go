@@ -52,7 +52,6 @@ func (s *Server) GetClusterByName(
 			OutboxRetries:      cluster.OutboxRetries,
 			OutboxError:        cluster.OutboxError,
 			ShootApiServerUrl:  cluster.ShootApiServerUrl,
-			ShootCaData:        cluster.ShootCaData,
 		}),
 	}.Build()), nil
 }
@@ -178,9 +177,6 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 	}
 	if row.ShootApiServerUrl.Valid {
 		builder.ShootApiServerUrl = &row.ShootApiServerUrl.String
-	}
-	if row.ShootCaData.Valid {
-		builder.ShootCaData = &row.ShootCaData.String
 	}
 	return builder.Build()
 }

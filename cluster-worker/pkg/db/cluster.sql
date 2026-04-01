@@ -86,7 +86,6 @@ SELECT
     tenant.clusters.deleted,
     tenant.clusters.shoot_status,
     tenant.clusters.shoot_api_server_url,
-    tenant.clusters.shoot_ca_data,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name
@@ -106,10 +105,7 @@ WHERE
         OR tenant.clusters.shoot_status = 'error'
         OR (
             tenant.clusters.shoot_status = 'ready'
-            AND (
-                tenant.clusters.shoot_api_server_url IS NULL
-                OR tenant.clusters.shoot_ca_data IS NULL
-            )
+            AND tenant.clusters.shoot_api_server_url IS NULL
         )
     ) -- Failed, might recover
     AND (
@@ -163,8 +159,7 @@ SET
     shoot_status = @status,
     shoot_status_message = @message,
     shoot_status_updated = now(),
-    shoot_api_server_url = COALESCE(@api_server_url, shoot_api_server_url),
-    shoot_ca_data = COALESCE(@ca_data, shoot_ca_data)
+    shoot_api_server_url = COALESCE(@api_server_url, shoot_api_server_url)
 WHERE
     id = @cluster_id;
 

@@ -15,8 +15,7 @@ SELECT
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error,
-    tenant.clusters.shoot_api_server_url,
-    tenant.clusters.shoot_ca_data
+    tenant.clusters.shoot_api_server_url
 FROM tenant.clusters
 WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 ORDER BY created DESC;
@@ -37,8 +36,7 @@ SELECT
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error,
-    tenant.clusters.shoot_api_server_url,
-    tenant.clusters.shoot_ca_data
+    tenant.clusters.shoot_api_server_url
 FROM tenant.clusters
 WHERE tenant.clusters.id = $1;
 
@@ -57,8 +55,7 @@ SELECT
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error,
-    tenant.clusters.shoot_api_server_url,
-    tenant.clusters.shoot_ca_data
+    tenant.clusters.shoot_api_server_url
 FROM tenant.clusters
 WHERE name = $1 AND deleted IS NULL;
 

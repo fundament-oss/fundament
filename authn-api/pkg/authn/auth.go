@@ -45,14 +45,14 @@ type Config struct {
 
 // AuthnServer handles authentication operations.
 type AuthnServer struct {
-	config         *Config
-	oauth2Config   *oauth2.Config
-	oidcVerifier   *oidc.IDTokenVerifier
-	db             *psqldb.DB
-	queries        *db.Queries
-	sessionStore   *SessionStore
-	logger         *slog.Logger
-	validator      *auth.Validator
+	config        *Config
+	oauth2Config  *oauth2.Config
+	oidcVerifier  *oidc.IDTokenVerifier
+	db            *psqldb.DB
+	queries       *db.Queries
+	sessionStore  *SessionStore
+	logger        *slog.Logger
+	validator     *auth.Validator
 	cookieBuilder *auth.CookieBuilder
 	authz          *authz.Client
 }

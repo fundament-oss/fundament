@@ -96,8 +96,8 @@ func Test_GetKubeconfig_Ready(t *testing.T) {
 
 	// Simulate shoot becoming ready by populating shoot fields directly in the DB.
 	_, err = env.adminPool.Exec(t.Context(),
-		"UPDATE tenant.clusters SET shoot_api_server_url = $1, shoot_ca_data = $2 WHERE id = $3",
-		"https://api.test.example.com", "dGVzdC1jYS1kYXRh", clusterID,
+		"UPDATE tenant.clusters SET shoot_api_server_url = $1 WHERE id = $2",
+		"https://api.test.example.com", clusterID,
 	)
 	require.NoError(t, err)
 
@@ -164,8 +164,8 @@ func Test_GetKubeconfig_ProxyInsecure(t *testing.T) {
 
 	// Simulate shoot becoming ready.
 	_, err = env.adminPool.Exec(t.Context(),
-		"UPDATE tenant.clusters SET shoot_api_server_url = $1, shoot_ca_data = $2 WHERE id = $3",
-		"https://api.test.example.com", "dGVzdC1jYS1kYXRh", clusterID,
+		"UPDATE tenant.clusters SET shoot_api_server_url = $1 WHERE id = $2",
+		"https://api.test.example.com", clusterID,
 	)
 	require.NoError(t, err)
 

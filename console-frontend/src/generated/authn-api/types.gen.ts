@@ -67,17 +67,6 @@ export type StatusResponse = {
     status?: string;
 };
 
-export type ClusterTokenResponse = {
-    /**
-     * Service account token for the cluster
-     */
-    token: string;
-    /**
-     * Token expiration time
-     */
-    expires_at: string;
-};
-
 export type ErrorResponse = {
     /**
      * Error message
@@ -216,48 +205,6 @@ export type HandleRefreshResponses = {
 };
 
 export type HandleRefreshResponse = HandleRefreshResponses[keyof HandleRefreshResponses];
-
-export type HandleClusterTokenData = {
-    body?: never;
-    path: {
-        /**
-         * Cluster ID
-         */
-        cluster_id: string;
-    };
-    query?: never;
-    url: '/clusters/{cluster_id}/token';
-};
-
-export type HandleClusterTokenErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden - no access to this cluster
-     */
-    403: ErrorResponse;
-    /**
-     * Cluster not found
-     */
-    404: ErrorResponse;
-    /**
-     * Cluster not ready or service account not yet provisioned
-     */
-    503: ErrorResponse;
-};
-
-export type HandleClusterTokenError = HandleClusterTokenErrors[keyof HandleClusterTokenErrors];
-
-export type HandleClusterTokenResponses = {
-    /**
-     * Token issued successfully
-     */
-    200: ClusterTokenResponse;
-};
-
-export type HandleClusterTokenResponse = HandleClusterTokenResponses[keyof HandleClusterTokenResponses];
 
 export type HandleLogoutData = {
     body?: never;
