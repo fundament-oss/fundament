@@ -25,13 +25,12 @@ func newMockShootAccess(t *testing.T) *usersync.MockShootAccess {
 	return usersync.NewMockShootAccess(logger)
 }
 
-// makeClusterReady sets a cluster to ready with shoot URL.
+// makeClusterReady sets a cluster to ready.
 func makeClusterReady(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	t.Helper()
 	_, err := db.adminPool.Exec(t.Context(),
 		`UPDATE tenant.clusters
 		 SET shoot_status = 'ready',
-		     shoot_api_server_url = 'https://mock-api.example.com',
 		     shoot_status_updated = now() - interval '1 minute'
 		 WHERE id = $1`,
 		clusterID,

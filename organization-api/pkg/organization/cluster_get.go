@@ -51,7 +51,6 @@ func (s *Server) GetClusterByName(
 			OutboxStatus:       cluster.OutboxStatus,
 			OutboxRetries:      cluster.OutboxRetries,
 			OutboxError:        cluster.OutboxError,
-			ShootApiServerUrl:  cluster.ShootApiServerUrl,
 		}),
 	}.Build()), nil
 }
@@ -139,16 +138,14 @@ func (s *Server) GetKubeconfig(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	if !cluster.ShootApiServerUrl.Valid || cluster.ShootApiServerUrl.String == "" {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet (API server URL not available)"))
+	if !cluster.ShootStatus.Valid || cluster.ShootStatus.String != "ready" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet"))
 	}
 
-	proxyURL := s.config.KubeAPIProxyURL
-	if proxyURL == "" {
-		proxyURL = cluster.ShootApiServerUrl.String
-	} else {
-		proxyURL = proxyURL + "/clusters/" + clusterID.String()
+	if s.config.KubeAPIProxyURL == "" {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("kube-api-proxy URL not configured"))
 	}
+	proxyURL := s.config.KubeAPIProxyURL + "/clusters/" + clusterID.String()
 
 	kubeconfig := buildKubeconfig(clusterID.String(), proxyURL, s.config.KubeAPIProxyInsecure)
 
@@ -174,9 +171,6 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
 		),
-	}
-	if row.ShootApiServerUrl.Valid {
-		builder.ShootApiServerUrl = &row.ShootApiServerUrl.String
 	}
 	return builder.Build()
 }
