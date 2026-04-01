@@ -541,7 +541,6 @@ type ClusterDetails struct {
 	xxx_hidden_ResourceUsage     *ResourceUsageInfo     `protobuf:"bytes,70,opt,name=resource_usage,json=resourceUsage"`
 	xxx_hidden_SyncState         *SyncState             `protobuf:"bytes,80,opt,name=sync_state,json=syncState"`
 	xxx_hidden_ShootApiServerUrl *string                `protobuf:"bytes,90,opt,name=shoot_api_server_url,json=shootApiServerUrl"`
-	xxx_hidden_ShootCaData       *string                `protobuf:"bytes,100,opt,name=shoot_ca_data,json=shootCaData"`
 	XXX_raceDetectHookData       protoimpl.RaceDetectHookData
 	XXX_presence                 [1]uint32
 	unknownFields                protoimpl.UnknownFields
@@ -639,16 +638,6 @@ func (x *ClusterDetails) GetShootApiServerUrl() string {
 	return ""
 }
 
-func (x *ClusterDetails) GetShootCaData() string {
-	if x != nil {
-		if x.xxx_hidden_ShootCaData != nil {
-			return *x.xxx_hidden_ShootCaData
-		}
-		return ""
-	}
-	return ""
-}
-
 func (x *ClusterDetails) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -683,12 +672,7 @@ func (x *ClusterDetails) SetSyncState(v *SyncState) {
 
 func (x *ClusterDetails) SetShootApiServerUrl(v string) {
 	x.xxx_hidden_ShootApiServerUrl = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 8, 10)
-}
-
-func (x *ClusterDetails) SetShootCaData(v string) {
-	x.xxx_hidden_ShootCaData = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 9, 10)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 8, 9)
 }
 
 func (x *ClusterDetails) HasCreated() bool {
@@ -719,13 +703,6 @@ func (x *ClusterDetails) HasShootApiServerUrl() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 8)
 }
 
-func (x *ClusterDetails) HasShootCaData() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 9)
-}
-
 func (x *ClusterDetails) ClearCreated() {
 	x.xxx_hidden_Created = nil
 }
@@ -743,11 +720,6 @@ func (x *ClusterDetails) ClearShootApiServerUrl() {
 	x.xxx_hidden_ShootApiServerUrl = nil
 }
 
-func (x *ClusterDetails) ClearShootCaData() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 9)
-	x.xxx_hidden_ShootCaData = nil
-}
-
 type ClusterDetails_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -760,7 +732,6 @@ type ClusterDetails_builder struct {
 	ResourceUsage     *ResourceUsageInfo
 	SyncState         *SyncState
 	ShootApiServerUrl *string
-	ShootCaData       *string
 }
 
 func (b0 ClusterDetails_builder) Build() *ClusterDetails {
@@ -776,12 +747,8 @@ func (b0 ClusterDetails_builder) Build() *ClusterDetails {
 	x.xxx_hidden_ResourceUsage = b.ResourceUsage
 	x.xxx_hidden_SyncState = b.SyncState
 	if b.ShootApiServerUrl != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 8, 10)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 8, 9)
 		x.xxx_hidden_ShootApiServerUrl = b.ShootApiServerUrl
-	}
-	if b.ShootCaData != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 9, 10)
-		x.xxx_hidden_ShootCaData = b.ShootCaData
 	}
 	return m0
 }
@@ -3298,7 +3265,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\"O\n" +
 	"\x12GetClusterResponse\x129\n" +
 	"\acluster\x18\n" +
-	" \x01(\v2\x1f.organization.v1.ClusterDetailsR\acluster\"\xd2\x03\n" +
+	" \x01(\v2\x1f.organization.v1.ClusterDetailsR\acluster\"\xa7\x03\n" +
 	"\x0eClusterDetails\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -3310,8 +3277,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\x0eresource_usage\x18F \x01(\v2\".organization.v1.ResourceUsageInfoR\rresourceUsage\x129\n" +
 	"\n" +
 	"sync_state\x18P \x01(\v2\x1a.organization.v1.SyncStateR\tsyncState\x126\n" +
-	"\x14shoot_api_server_url\x18Z \x01(\tB\x05\xaa\x01\x02\b\x01R\x11shootApiServerUrl\x12)\n" +
-	"\rshoot_ca_data\x18d \x01(\tB\x05\xaa\x01\x02\b\x01R\vshootCaData\"\xe5\x01\n" +
+	"\x14shoot_api_server_url\x18Z \x01(\tB\x05\xaa\x01\x02\b\x01R\x11shootApiServerUrl\"\xe5\x01\n" +
 	"\x11ResourceUsageInfo\x120\n" +
 	"\x03cpu\x18\n" +
 	" \x01(\v2\x1e.organization.v1.ResourceUsageR\x03cpu\x126\n" +

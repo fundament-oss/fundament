@@ -53,4 +53,3 @@ func (t *retryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Set("Authorization", "Bearer "+newToken)
 	return t.inner.RoundTrip(req)
 }
-

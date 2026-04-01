@@ -44,7 +44,6 @@ type config struct {
 	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,http://console.fundament.localhost:8080"`
-
 }
 
 func main() {
@@ -199,4 +198,3 @@ func run() error {
 
 	return nil
 }
-

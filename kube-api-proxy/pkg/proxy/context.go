@@ -24,4 +24,3 @@ func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
 func WithSAToken(ctx context.Context, token string) context.Context {
 	return context.WithValue(ctx, kube.SATokenContextKey{}, token)
 }
-

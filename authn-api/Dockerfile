@@ -3,7 +3,6 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 COPY authn-api/ ./authn-api/
-COPY cluster-worker/ ./cluster-worker/
 COPY common/ ./common/
 RUN CGO_ENABLED=0 go build ./authn-api/cmd/fun-authn-api
 

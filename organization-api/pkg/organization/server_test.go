@@ -129,7 +129,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 
 	organizationCfg := &organization.Config{
 		JWTSecret:            jwtSecret,
-		CORSAllowedOrigins:  []string{"*"},
+		CORSAllowedOrigins:   []string{"*"},
 		Clock:                opts.clock,
 		KubeAPIProxyURL:      opts.kubeAPIProxyURL,
 		KubeAPIProxyInsecure: opts.kubeAPIProxyInsecure,
