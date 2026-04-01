@@ -9,6 +9,7 @@ import (
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/token"
 	"github.com/rs/cors"
 )
 
@@ -23,6 +24,7 @@ type Server struct {
 	logger        *slog.Logger
 	authValidator *auth.Validator
 	authz         *authz.Client
+	tokenCache    *token.Cache
 	kubeHandler   http.Handler
 	handler       http.Handler
 }
@@ -33,9 +35,11 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 	}
 
 	var kubeHandler http.Handler
+	var tokenCache *token.Cache
 	switch cfg.Mode {
 	case "real":
-		kubeHandler = kube.NewMultiClusterProxy(cfg.GardenerClient, logger)
+		kubeHandler = kube.NewMultiClusterProxy(cfg.GardenerClient, tokenCache, logger)
+		tokenCache = token.NewCache(cfg.GardenerClient, logger)
 	case "mock":
 		kubeHandler = &kube.MockClient{}
 	default:
@@ -46,15 +50,15 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		logger:        logger,
 		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
 		authz:         authzClient,
+		tokenCache:    tokenCache,
 		kubeHandler:   kubeHandler,
 	}
 
 	mux := http.NewServeMux()
-	// /api/ = core resources (Pods, Services, …)
-	// /apis/ = API groups (apps, CRDs, …)
-	// Both prefixes are registered explicitly to prevent SSRF — only these paths reach the proxy
-	mux.Handle("/apis/", http.HandlerFunc(s.handleClusterProxy))
-	mux.Handle("/api/", http.HandlerFunc(s.handleClusterProxy))
+	// Catch-all pattern for cluster-scoped requests.
+	// The handler validates that the remaining path starts with an allowed
+	// Kubernetes API prefix (api, apis, openapi/) before forwarding.
+	mux.Handle("/clusters/{clusterID}/{path...}", http.HandlerFunc(s.handleClusterProxy))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
@@ -66,8 +70,8 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
-		AllowedMethods:   []string{"GET", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization", OrganizationHeader, ClusterHeader},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})
 

@@ -9,8 +9,10 @@ import (
 
 // ClusterTokenCmd handles the cluster token command.
 // It outputs an ExecCredential JSON for use as a kubectl credential plugin.
+// The token is a Fundament platform JWT (cluster-agnostic); the proxy handles
+// per-cluster SA token injection.
 type ClusterTokenCmd struct {
-	ClusterID string `arg:"" help:"Cluster ID to get a token for."`
+	ClusterID string `arg:"" help:"Cluster ID (accepted for compatibility, not used for token exchange)."`
 }
 
 // Run executes the cluster token command.
@@ -20,17 +22,17 @@ func (c *ClusterTokenCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	token, expiresAt, err := apiClient.ClusterToken(context.Background(), c.ClusterID)
+	token, expiry, err := apiClient.ExchangeToken(context.Background())
 	if err != nil {
-		return fmt.Errorf("failed to get cluster token: %w", err)
+		return fmt.Errorf("failed to exchange API key for token: %w", err)
 	}
 
 	execCredential := map[string]any{
-		"apiVersion": "client.authentication.k8s.io/v1beta1",
+		"apiVersion": "client.authentication.k8s.io/v1",
 		"kind":       "ExecCredential",
 		"status": map[string]any{
 			"token":               token,
-			"expirationTimestamp": expiresAt,
+			"expirationTimestamp": expiry.UTC().Format("2006-01-02T15:04:05Z"),
 		},
 	}
 

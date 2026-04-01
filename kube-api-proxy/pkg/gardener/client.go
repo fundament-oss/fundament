@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -13,6 +14,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// AdminKubeconfig holds the result of an AdminKubeconfigRequest.
+type AdminKubeconfig struct {
+	Kubeconfig []byte
+	ExpiresAt  time.Time
+}
 
 const labelClusterID = "fundament.io/cluster-id"
 
@@ -51,7 +58,7 @@ func New(kubeconfigPath string, logger *slog.Logger) (*Client, error) {
 // GetAdminKubeconfig finds the Shoot for clusterID and returns a short-lived
 // admin kubeconfig via the Gardener adminkubeconfig subresource.
 // Pass expirationSeconds=0 to use the Gardener default (typically 1 hour).
-func (c *Client) GetAdminKubeconfig(ctx context.Context, clusterID string, expirationSeconds int64) ([]byte, error) {
+func (c *Client) GetAdminKubeconfig(ctx context.Context, clusterID string, expirationSeconds int64) (*AdminKubeconfig, error) {
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := c.client.List(ctx, shootList,
 		client.MatchingLabels{labelClusterID: clusterID},
@@ -73,5 +80,8 @@ func (c *Client) GetAdminKubeconfig(ctx context.Context, clusterID string, expir
 		return nil, fmt.Errorf("request admin kubeconfig for cluster %s: %w", clusterID, err)
 	}
 
-	return req.Status.Kubeconfig, nil
+	return &AdminKubeconfig{
+		Kubeconfig: req.Status.Kubeconfig,
+		ExpiresAt:  req.Status.ExpirationTimestamp.Time,
+	}, nil
 }
