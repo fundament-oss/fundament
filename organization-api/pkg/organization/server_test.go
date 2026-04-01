@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/common/idempotency"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -42,6 +43,7 @@ type apiOptions struct {
 	organizations map[uuid.UUID]string
 	users         map[uuid.UUID]testUser
 	clock         clock.Clock
+	idempotency   bool
 }
 
 type APIOption func(*apiOptions)
@@ -100,6 +102,12 @@ func WithClock(c clock.Clock) APIOption {
 	}
 }
 
+func WithIdempotency() APIOption {
+	return func(o *apiOptions) {
+		o.idempotency = true
+	}
+}
+
 func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	opts := apiOptions{
 		t:             t,
@@ -124,7 +132,12 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		Clock:              opts.clock,
 	}
 
-	organizationServer, err := organization.New(testLogger, organizationCfg, testDb, nil)
+	var idempotencyStore *idempotency.Store
+	if opts.idempotency {
+		idempotencyStore = idempotency.NewStore(testDb.Pool, idempotency.Config{}, testLogger)
+	}
+
+	organizationServer, err := organization.New(testLogger, organizationCfg, testDb, nil, idempotencyStore)
 	require.NoError(t, err)
 
 	ts := httptest.NewServer(organizationServer.Handler())

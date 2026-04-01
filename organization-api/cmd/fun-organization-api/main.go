@@ -16,6 +16,7 @@ import (
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbversion"
+	"github.com/fundament-oss/fundament/common/idempotency"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	dbgen "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
@@ -111,13 +112,16 @@ func run() error {
 		return clusters, nil
 	})
 
+	idempotencyStore := idempotency.NewStore(db.Pool, idempotency.Config{}, logger)
+	go idempotencyStore.StartCleanup(ctx)
+
 	server, err := organization.New(logger, &organization.Config{
 		JWTSecret:            []byte(cfg.JWTSecret),
 		CORSAllowedOrigins:   cfg.CORSAllowedOrigins,
 		Clock:                clock.New(),
 		MockPrometheusClient: mockClient,
 		PrometheusURL:        cfg.PrometheusURL,
-	}, db, authzClient)
+	}, db, authzClient, idempotencyStore)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)
 	}

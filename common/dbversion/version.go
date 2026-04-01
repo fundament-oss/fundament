@@ -1,4 +1,4 @@
 package dbversion
 
 // LatestVersion is the latest version for the db migrations.
-const LatestVersion = 11
+const LatestVersion = 12
