@@ -90,7 +90,7 @@ func (m *MultiClusterProxy) proxyFor(ctx context.Context, clusterID string) (*ht
 		return m.buildProxy(ctx, clusterID)
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build proxy for cluster %s: %w", clusterID, err)
 	}
 	return v.(*httputil.ReverseProxy), nil
 }

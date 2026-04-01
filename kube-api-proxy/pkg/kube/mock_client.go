@@ -59,7 +59,7 @@ func (m *MockClient) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to contact kubernetes API", http.StatusBadGateway)
 		return
 	}
-	defer body.Close()
+	defer func() { _ = body.Close() }()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -71,7 +71,7 @@ const mockEmptyList = `{"apiVersion":"v1","kind":"List","metadata":{"resourceVer
 // isResourceList reports whether path is a Kubernetes list request for the given group/version/plural.
 // Matches both cluster-scoped (/apis/{g}/{v}/{plural}) and namespaced
 // (/apis/{g}/{v}/namespaces/{ns}/{plural}) list paths.
-func isResourceList(path, group, version, plural string) bool {
+func isResourceList(path, group, version, plural string) bool { //nolint:unparam // version is always v1 today but the param keeps the function general
 	prefix := "/apis/" + group + "/" + version + "/"
 	if !strings.HasPrefix(path, prefix) {
 		return false

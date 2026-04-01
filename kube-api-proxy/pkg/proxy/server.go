@@ -5,12 +5,13 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/rs/cors"
+
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/token"
-	"github.com/rs/cors"
 )
 
 type Config struct {

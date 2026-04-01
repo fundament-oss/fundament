@@ -109,7 +109,7 @@ func (c *Cache) fetchAndCache(ctx context.Context, key cacheKey) (string, error)
 		return c.requestToken(ctx, key)
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("fetch token for %s/%s: %w", key.userID, key.clusterID, err)
 	}
 
 	return v.(string), nil
@@ -179,5 +179,9 @@ func clientsetFromKubeconfig(kubeconfig []byte) (*kubernetes.Clientset, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse kubeconfig: %w", err)
 	}
-	return kubernetes.NewForConfig(restConfig)
+	cs, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("create kubernetes client: %w", err)
+	}
+	return cs, nil
 }
