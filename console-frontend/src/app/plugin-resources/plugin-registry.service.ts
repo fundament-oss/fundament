@@ -127,6 +127,7 @@ export default class PluginRegistryService {
         const raw = (await response.json()) as RawCrdYaml;
         const parsed = parseCrd(raw);
         this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.plural}`, parsed);
+        this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.kind}`, parsed);
       }),
     );
   }
