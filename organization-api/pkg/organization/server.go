@@ -28,7 +28,7 @@ type Config struct {
 	MockPrometheusClient *prom.MockClient
 	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
 	KubeAPIProxyURL      string // Base URL for the kube-api-proxy (e.g. "https://kube-proxy.fundament.example")
-	KubeAPIProxyCA       string // Optional base64-encoded PEM CA for the proxy (for self-signed/private CA)
+	KubeAPIProxyInsecure bool   // When true, generated kubeconfigs use insecure-skip-tls-verify (for local dev with self-signed certs)
 }
 
 type Server struct {
