@@ -74,6 +74,7 @@ func Test_GetKubeconfig_Ready(t *testing.T) {
 			Name:   "test-user",
 			OrgIDs: []uuid.UUID{orgID},
 		}),
+		WithKubeAPIProxy("https://k8s-api.example.com", false),
 	)
 
 	token := env.createAuthnToken(t, userID)
@@ -94,10 +95,10 @@ func Test_GetKubeconfig_Ready(t *testing.T) {
 
 	clusterID := createRes.Msg.GetClusterId()
 
-	// Simulate shoot becoming ready by populating shoot fields directly in the DB.
+	// Simulate shoot becoming ready.
 	_, err = env.adminPool.Exec(t.Context(),
-		"UPDATE tenant.clusters SET shoot_api_server_url = $1 WHERE id = $2",
-		"https://api.test.example.com", clusterID,
+		"UPDATE tenant.clusters SET shoot_status = 'ready' WHERE id = $1",
+		clusterID,
 	)
 	require.NoError(t, err)
 
@@ -113,8 +114,8 @@ func Test_GetKubeconfig_Ready(t *testing.T) {
 
 	kc := res.Msg.GetKubeconfigContent()
 
-	// Without KubeAPIProxyURL configured, falls back to direct shoot URL.
-	assert.Contains(t, kc, "server: https://api.test.example.com")
+	// Kubeconfig should point at the proxy.
+	assert.Contains(t, kc, "server: https://k8s-api.example.com/clusters/"+clusterID)
 	assert.NotContains(t, kc, "insecure-skip-tls-verify")
 	assert.Contains(t, kc, "fundament-"+clusterID)
 	assert.Contains(t, kc, "fundament-user-"+clusterID)
@@ -164,8 +165,8 @@ func Test_GetKubeconfig_ProxyInsecure(t *testing.T) {
 
 	// Simulate shoot becoming ready.
 	_, err = env.adminPool.Exec(t.Context(),
-		"UPDATE tenant.clusters SET shoot_api_server_url = $1 WHERE id = $2",
-		"https://api.test.example.com", clusterID,
+		"UPDATE tenant.clusters SET shoot_status = 'ready' WHERE id = $1",
+		clusterID,
 	)
 	require.NoError(t, err)
 

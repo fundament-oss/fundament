@@ -99,8 +99,7 @@ SELECT
     shoot_status_updated,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error,
-    tenant.clusters.shoot_api_server_url
+    tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE tenant.clusters.id = $1
 `
@@ -123,7 +122,6 @@ type ClusterGetByIDRow struct {
 	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
-	ShootApiServerUrl  pgtype.Text
 }
 
 // Get cluster by ID, including deleted clusters for direct access.
@@ -144,7 +142,6 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.OutboxStatus,
 		&i.OutboxRetries,
 		&i.OutboxError,
-		&i.ShootApiServerUrl,
 	)
 	return i, err
 }
@@ -163,8 +160,7 @@ SELECT
     shoot_status_updated,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error,
-    tenant.clusters.shoot_api_server_url
+    tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE name = $1 AND deleted IS NULL
 `
@@ -187,7 +183,6 @@ type ClusterGetByNameRow struct {
 	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
-	ShootApiServerUrl  pgtype.Text
 }
 
 func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (ClusterGetByNameRow, error) {
@@ -207,7 +202,6 @@ func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNamePara
 		&i.OutboxStatus,
 		&i.OutboxRetries,
 		&i.OutboxError,
-		&i.ShootApiServerUrl,
 	)
 	return i, err
 }
@@ -275,8 +269,7 @@ SELECT
     shoot_status_updated,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error,
-    tenant.clusters.shoot_api_server_url
+    tenant.clusters.outbox_error
 FROM tenant.clusters
 WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 ORDER BY created DESC
@@ -296,7 +289,6 @@ type ClusterListRow struct {
 	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
-	ShootApiServerUrl  pgtype.Text
 }
 
 // List active clusters and clusters being deleted (not yet confirmed deleted in Gardener).
@@ -324,7 +316,6 @@ func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
 			&i.OutboxStatus,
 			&i.OutboxRetries,
 			&i.OutboxError,
-			&i.ShootApiServerUrl,
 		); err != nil {
 			return nil, err
 		}

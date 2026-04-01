@@ -85,10 +85,6 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 			Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
 		}
 
-		if shootStatus.APIServerURL != "" {
-			params.ApiServerUrl = pgtype.Text{String: shootStatus.APIServerURL, Valid: true}
-		}
-
 		if err := h.queries.ClusterUpdateShootStatus(ctx, params); err != nil {
 			h.logger.Error("failed to update shoot status",
 				"cluster_id", cluster.ID,

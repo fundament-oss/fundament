@@ -250,7 +250,6 @@ SELECT
     tenant.clusters.kubernetes_version,
     tenant.clusters.deleted,
     tenant.clusters.shoot_status,
-    tenant.clusters.shoot_api_server_url,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name
@@ -268,10 +267,6 @@ WHERE
         OR tenant.clusters.shoot_status = 'pending' -- Shoot not yet visible in Gardener
         OR tenant.clusters.shoot_status = 'progressing' -- Gardener creating/updating
         OR tenant.clusters.shoot_status = 'error'
-        OR (
-            tenant.clusters.shoot_status = 'ready'
-            AND tenant.clusters.shoot_api_server_url IS NULL
-        )
     ) -- Failed, might recover
     AND (
         tenant.clusters.shoot_status_updated IS NULL -- Never checked
@@ -294,7 +289,6 @@ type ClusterListNeedingStatusCheckRow struct {
 	KubernetesVersion  string
 	Deleted            pgtype.Timestamptz
 	ShootStatus        pgtype.Text
-	ShootApiServerUrl  pgtype.Text
 	OrganizationID     uuid.UUID
 	ShootStatusUpdated pgtype.Timestamptz
 	OrganizationName   string
@@ -302,8 +296,7 @@ type ClusterListNeedingStatusCheckRow struct {
 
 // Get clusters where we need to check Gardener status (active clusters).
 // Polls clusters in non-terminal states: NULL (never checked), pending,
-// progressing, error. Also polls ready clusters that are still missing shoot
-// connection data so kubeconfig delivery can recover from transient failures.
+// progressing, error.
 func (q *Queries) ClusterListNeedingStatusCheck(ctx context.Context, arg ClusterListNeedingStatusCheckParams) ([]ClusterListNeedingStatusCheckRow, error) {
 	rows, err := q.db.Query(ctx, clusterListNeedingStatusCheck, arg.LimitCount)
 	if err != nil {
@@ -320,7 +313,6 @@ func (q *Queries) ClusterListNeedingStatusCheck(ctx context.Context, arg Cluster
 			&i.KubernetesVersion,
 			&i.Deleted,
 			&i.ShootStatus,
-			&i.ShootApiServerUrl,
 			&i.OrganizationID,
 			&i.ShootStatusUpdated,
 			&i.OrganizationName,
@@ -340,27 +332,20 @@ UPDATE tenant.clusters
 SET
     shoot_status = $1,
     shoot_status_message = $2,
-    shoot_status_updated = now(),
-    shoot_api_server_url = COALESCE($3, shoot_api_server_url)
+    shoot_status_updated = now()
 WHERE
-    id = $4
+    id = $3
 `
 
 type ClusterUpdateShootStatusParams struct {
-	Status       pgtype.Text
-	Message      pgtype.Text
-	ApiServerUrl pgtype.Text
-	ClusterID    uuid.UUID
+	Status    pgtype.Text
+	Message   pgtype.Text
+	ClusterID uuid.UUID
 }
 
 // Update shoot status from Gardener polling.
 func (q *Queries) ClusterUpdateShootStatus(ctx context.Context, arg ClusterUpdateShootStatusParams) error {
-	_, err := q.db.Exec(ctx, clusterUpdateShootStatus,
-		arg.Status,
-		arg.Message,
-		arg.ApiServerUrl,
-		arg.ClusterID,
-	)
+	_, err := q.db.Exec(ctx, clusterUpdateShootStatus, arg.Status, arg.Message, arg.ClusterID)
 	return err
 }
 
