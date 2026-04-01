@@ -53,25 +53,22 @@ type AuthnServer struct {
 	sessionStore   *SessionStore
 	logger         *slog.Logger
 	validator      *auth.Validator
-	cookieBuilder  *auth.CookieBuilder
-	gardenerClient GardenerClient
+	cookieBuilder *auth.CookieBuilder
 	authz          *authz.Client
 }
 
 // New creates a new AuthnServer.
-// gardenerClient may be nil if cluster token support is not enabled.
-func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, gardenerClient GardenerClient, authzClient *authz.Client) (*AuthnServer, error) {
+func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, authzClient *authz.Client) (*AuthnServer, error) {
 	return &AuthnServer{
-		config:         cfg,
-		logger:         logger,
-		oauth2Config:   oauth2Config,
-		oidcVerifier:   verifier,
-		db:             database,
-		queries:        db.New(database.Pool),
-		sessionStore:   sessionStore,
-		validator:      auth.NewValidator(cfg.JWTSecret, logger),
-		cookieBuilder:  auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure),
-		gardenerClient: gardenerClient,
+		config:        cfg,
+		logger:        logger,
+		oauth2Config:  oauth2Config,
+		oidcVerifier:  verifier,
+		db:            database,
+		queries:       db.New(database.Pool),
+		sessionStore:  sessionStore,
+		validator:     auth.NewValidator(cfg.JWTSecret, logger),
+		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure),
 		authz:          authzClient,
 	}, nil
 }

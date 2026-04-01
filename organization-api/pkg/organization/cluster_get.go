@@ -140,12 +140,18 @@ func (s *Server) GetKubeconfig(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	if !cluster.ShootApiServerUrl.Valid || cluster.ShootApiServerUrl.String == "" ||
-		!cluster.ShootCaData.Valid || cluster.ShootCaData.String == "" {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet (API server URL or CA data not available)"))
+	if !cluster.ShootApiServerUrl.Valid || cluster.ShootApiServerUrl.String == "" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet (API server URL not available)"))
 	}
 
-	kubeconfig := buildKubeconfig(clusterID.String(), cluster.ShootApiServerUrl.String, cluster.ShootCaData.String)
+	proxyURL := s.config.KubeAPIProxyURL
+	if proxyURL == "" {
+		proxyURL = cluster.ShootApiServerUrl.String
+	} else {
+		proxyURL = proxyURL + "/clusters/" + clusterID.String()
+	}
+
+	kubeconfig := buildKubeconfig(clusterID.String(), proxyURL, s.config.KubeAPIProxyCA)
 
 	return connect.NewResponse(organizationv1.GetKubeconfigResponse_builder{
 		KubeconfigContent: kubeconfig,
@@ -179,16 +185,20 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 	return builder.Build()
 }
 
-func buildKubeconfig(clusterID, apiServerURL, caData string) string {
+func buildKubeconfig(clusterID, serverURL, caData string) string {
 	clusterName := "fundament-" + clusterID
 	userName := "fundament-user-" + clusterID
+
+	caLine := ""
+	if caData != "" {
+		caLine = fmt.Sprintf("\n    certificate-authority-data: %s", caData)
+	}
 
 	return fmt.Sprintf(`apiVersion: v1
 kind: Config
 clusters:
 - cluster:
-    server: %s
-    certificate-authority-data: %s
+    server: %s%s
   name: %s
 contexts:
 - context:
@@ -200,7 +210,7 @@ users:
 - name: %s
   user:
     exec:
-      apiVersion: client.authentication.k8s.io/v1beta1
+      apiVersion: client.authentication.k8s.io/v1
       command: functl
       args:
       - cluster
@@ -208,5 +218,5 @@ users:
       - %s
       interactiveMode: Never
       provideClusterInfo: false
-`, apiServerURL, caData, clusterName, clusterName, userName, clusterName, clusterName, userName, clusterID)
+`, serverURL, caLine, clusterName, clusterName, userName, clusterName, clusterName, userName, clusterID)
 }

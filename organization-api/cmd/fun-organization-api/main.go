@@ -32,6 +32,8 @@ type config struct {
 	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
 	PrometheusURL      string     `env:"PROMETHEUS_URL" envDefault:"mock"`
+	KubeAPIProxyURL    string     `env:"KUBE_API_PROXY_URL"`
+	KubeAPIProxyCA     string     `env:"KUBE_API_PROXY_CA"`
 }
 
 func main() {
@@ -122,6 +124,8 @@ func run() error {
 		Clock:                clock.New(),
 		MockPrometheusClient: mockClient,
 		PrometheusURL:        cfg.PrometheusURL,
+		KubeAPIProxyURL:      cfg.KubeAPIProxyURL,
+		KubeAPIProxyCA:       cfg.KubeAPIProxyCA,
 	}, db, authzClient, idempotencyStore)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)

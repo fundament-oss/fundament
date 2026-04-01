@@ -113,15 +113,16 @@ func Test_GetKubeconfig_Ready(t *testing.T) {
 
 	kc := res.Msg.GetKubeconfigContent()
 
+	// Without KubeAPIProxyURL configured, falls back to direct shoot URL.
 	assert.Contains(t, kc, "server: https://api.test.example.com")
-	assert.Contains(t, kc, "certificate-authority-data: dGVzdC1jYS1kYXRh")
+	assert.NotContains(t, kc, "certificate-authority-data:")
 	assert.Contains(t, kc, "fundament-"+clusterID)
 	assert.Contains(t, kc, "fundament-user-"+clusterID)
 	assert.Contains(t, kc, "command: functl")
 	assert.Contains(t, kc, "- cluster")
 	assert.Contains(t, kc, "- token")
 	assert.Contains(t, kc, "- "+clusterID)
-	assert.Contains(t, kc, "client.authentication.k8s.io/v1beta1")
+	assert.Contains(t, kc, "client.authentication.k8s.io/v1")
 
 	// Verify it's valid YAML (basic structure check).
 	assert.True(t, strings.HasPrefix(kc, "apiVersion: v1"))
