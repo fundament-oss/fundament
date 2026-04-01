@@ -36,9 +36,36 @@ function applyTheme(theme: Theme): void {
   document.body.classList.add(theme);
 }
 
+let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+
 function reportHeight(): void {
-  const height = document.body.scrollHeight;
-  window.parent.postMessage({ type: 'plugin:resize', height }, '*');
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    window.parent.postMessage(
+      { type: 'plugin:resize', height: document.documentElement.scrollHeight },
+      '*',
+    );
+  }, 50);
+}
+
+/** Resolves once all <link rel="stylesheet"> elements in the document have loaded. */
+async function waitForStylesheets(): Promise<void> {
+  const links = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'));
+  await Promise.all(
+    links.map((link) =>
+      link.sheet
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => {
+            link.addEventListener(
+              'load',
+              () => {
+                resolve();
+              },
+              { once: true },
+            );
+          }),
+    ),
+  );
 }
 
 window.addEventListener('message', (event: MessageEvent) => {
@@ -53,6 +80,7 @@ window.addEventListener('message', (event: MessageEvent) => {
 });
 
 const observer = new ResizeObserver(reportHeight);
-observer.observe(document.body);
+
+waitForStylesheets().then(() => observer.observe(document.body));
 
 window.parent.postMessage({ type: 'plugin:ready', version: PLUGIN_SDK_VERSION }, '*');

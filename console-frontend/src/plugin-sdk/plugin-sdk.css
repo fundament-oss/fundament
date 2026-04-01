@@ -23,7 +23,7 @@
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 
 body {
-  @apply font-sans bg-white text-gray-900 transition-colors duration-200 dark:bg-gray-800 dark:text-gray-50;
+  @apply m-0 bg-white font-sans text-gray-900 transition-colors duration-200 dark:bg-gray-800 dark:text-gray-50;
 }
 
 /* ── Components ───────────────────────────────────────────────────────────── */
