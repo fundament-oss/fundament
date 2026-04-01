@@ -15,5 +15,7 @@ spec:
       ingressClassResource:
         default: true
       service:
+        nodePorts:
+          https: 30443
         externalIPs:
           - 172.19.0.2
