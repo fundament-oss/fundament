@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -20,7 +21,7 @@ type retryTransport struct {
 func (t *retryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := t.inner.RoundTrip(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("round trip: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusUnauthorized {
@@ -47,9 +48,13 @@ func (t *retryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	// Close the original 401 response body before retrying.
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Retry with the new token.
 	req.Header.Set("Authorization", "Bearer "+newToken)
-	return t.inner.RoundTrip(req)
+	retryResp, retryErr := t.inner.RoundTrip(req)
+	if retryErr != nil {
+		return nil, fmt.Errorf("retry round trip: %w", retryErr)
+	}
+	return retryResp, nil
 }
