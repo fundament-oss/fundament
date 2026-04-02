@@ -8,14 +8,16 @@ import (
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
 )
 
+type userIDContextKey struct{}
+
 // WithUserID stores user_id in context.
 func WithUserID(ctx context.Context, userID uuid.UUID) context.Context {
-	return context.WithValue(ctx, kube.UserIDContextKey{}, userID)
+	return context.WithValue(ctx, userIDContextKey{}, userID)
 }
 
 // UserIDFromContext extracts user_id from context.
 func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
-	userID, ok := ctx.Value(kube.UserIDContextKey{}).(uuid.UUID)
+	userID, ok := ctx.Value(userIDContextKey{}).(uuid.UUID)
 	return userID, ok
 }
 

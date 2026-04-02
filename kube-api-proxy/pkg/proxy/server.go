@@ -13,7 +13,7 @@ import (
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
-	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/token"
+	tokenpkg "github.com/fundament-oss/fundament/kube-api-proxy/pkg/token"
 )
 
 type Config struct {
@@ -27,7 +27,7 @@ type Server struct {
 	logger        *slog.Logger
 	authValidator *auth.Validator
 	authz         *authz.Client
-	tokenCache    *token.Cache
+	tokenCache    *tokenpkg.Cache
 	kubeHandler   http.Handler
 	handler       http.Handler
 }
@@ -38,11 +38,11 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 	}
 
 	var kubeHandler http.Handler
-	var tokenCache *token.Cache
+	var tokenCache *tokenpkg.Cache
 	switch cfg.Mode {
 	case "real":
-		kubeHandler = kube.NewMultiClusterProxy(cfg.GardenerClient, tokenCache, logger)
-		tokenCache = token.NewCache(cfg.GardenerClient, logger)
+		tokenCache = tokenpkg.NewCache(cfg.GardenerClient, logger)
+		kubeHandler = kube.NewMultiClusterProxy(cfg.GardenerClient, logger)
 	case "mock":
 		kubeHandler = &kube.MockClient{}
 	default:
