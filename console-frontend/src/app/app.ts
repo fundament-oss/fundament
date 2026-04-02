@@ -172,6 +172,31 @@ export default class App implements OnInit {
       this.organizationDataService.organizations();
       untracked(() => this.updateBreadcrumbs());
     });
+
+    effect(() => {
+      const projectId = this.selectedProjectId();
+
+      if (projectId) {
+        untracked(() => this.loadPluginsForProject(projectId))
+      } else {
+        untracked(() => this.pluginRegistry.reset())
+      }
+    })
+  }
+
+  private async loadPluginsForProject(projectId : string): Promise<void> {
+    await this.organizationDataService.loadProjectsAndNamespaces().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Unexpected error while loading projects and namespaces: ', err);
+    })
+    const projectData = this.organizationDataService.getProjectById(projectId)
+
+    if (!projectData) return;
+
+    const clusterId = projectData.cluster.id;
+    this.clusterContext.onClusterChange(clusterId);
+
+    await this.pluginRegistry.loadPlugins(clusterId);
   }
 
   async ngOnInit() {
@@ -390,7 +415,7 @@ export default class App implements OnInit {
 
     if (label === ':resourceKindLabel') {
       const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
-      const allMenuItems = [...(plugin?.menu.organization ?? []), ...(plugin?.menu.project ?? [])];
+      const allMenuItems = [...(plugin?.menu.project ?? [])];
       const menuItem = allMenuItems.find((m) => m.crd === params['resourceKind']);
       label = menuItem ? (menuItem.label ?? menuItem.crd) : (params['resourceKind'] ?? 'Resources');
     }

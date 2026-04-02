@@ -2,6 +2,62 @@ package kube
 
 // Mock resource instance lists, mirroring the former frontend mock-resources.ts
 
+const mockPluginInstallationListJSON = `{
+  "apiVersion": "plugins.fundament.io/v1",
+  "kind": "PluginInstallationList",
+  "metadata": {"resourceVersion": "1"},
+  "items": [
+    {
+      "apiVersion": "plugins.fundament.io/v1",
+      "kind": "PluginInstallation",
+      "metadata": {"name": "cert-manager", "namespace": "plugin-cert-manager"},
+      "spec": {"pluginName": "cert-manager", "version": "v1.17.2", "image": "mock"},
+      "status": {"phase": "Running", "ready": true, "pluginVersion": "v1.17.2"}
+    },
+    {
+      "apiVersion": "plugins.fundament.io/v1",
+      "kind": "PluginInstallation",
+      "metadata": {"name": "cnpg", "namespace": "plugin-cnpg"},
+      "spec": {"pluginName": "cnpg", "version": "v1.25.1", "image": "mock"},
+      "status": {"phase": "Running", "ready": true, "pluginVersion": "v1.25.1"}
+    }
+  ]
+}`
+
+const mockCertManagerDefinitionJSON = `{
+  "apiVersion": "plugins.fundament.io/v1",
+  "name": "cert-manager",
+  "displayName": "Cert Manager",
+  "version": "v1.17.2",
+  "description": "Automated TLS certificate management for Kubernetes using cert-manager.",
+  "author": "Fundament",
+  "icon": "shield-check",
+  "menu": {
+    "project": [
+      {"crd": "clusterissuers.cert-manager.io", "label": "Cluster Issuers", "icon": "shield-check"},
+      {"crd": "certificates.cert-manager.io", "label": "Certificates", "icon": "certificate"},
+      {"crd": "certificaterequests.cert-manager.io", "label": "Certificate Requests", "icon": "folder"}
+    ]
+  },
+  "crds": ["clusterissuers.cert-manager.io", "certificates.cert-manager.io", "certificaterequests.cert-manager.io"]
+}`
+
+const mockCnpgDefinitionJSON = `{
+  "apiVersion": "plugins.fundament.io/v1",
+  "name": "cnpg",
+  "displayName": "CNPG Databases",
+  "version": "v1.25.1",
+  "description": "Manage PostgreSQL databases via CloudNativePG.",
+  "author": "Fundament",
+  "icon": "database",
+  "menu": {
+    "project": [
+      {"crd": "databases.postgresql.cnpg.io", "label": "Databases", "icon": "database"}
+    ]
+  },
+  "crds": ["databases.postgresql.cnpg.io", "backups.postgresql.cnpg.io", "subscriptions.postgresql.cnpg.io"]
+}`
+
 const mockCertificateListJSON = `{
   "apiVersion": "cert-manager.io/v1",
   "kind": "CertificateList",
