@@ -24,16 +24,25 @@ just functl auth status
 
 ## Configuration
 
-Configuration files are stored in `~/.fundament/`:
+Configuration files are stored in `~/.config/fundament/` by default, following the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir/latest/):
 
 | File | Description |
 |------|-------------|
 | `config.yaml` | API endpoints and default settings |
 | `credentials` | Stored API key (created after login) |
 
+The config directory is resolved in this order:
+
+1. `FUNCTL_CONFIG_DIR` environment variable (explicit override)
+2. `XDG_CONFIG_HOME/fundament` (XDG spec)
+3. `%APPDATA%/fundament` (Windows default)
+4. `~/.config/fundament` (Linux/macOS fallback)
+
+Use `functl config dir` to see the resolved directory, or `functl config path` for the config file path.
+
 ### Configuration file
 
-Create `~/.fundament/config.yaml` to override defaults:
+Create `~/.config/fundament/config.yaml` to override defaults:
 
 ```yaml
 api_endpoint: http://organization.fundament.localhost:8080
@@ -45,6 +54,7 @@ output: table
 
 | Variable | Description |
 |----------|-------------|
+| `FUNCTL_CONFIG_DIR` | Override the configuration directory path (must be absolute) |
 | `FUNDAMENT_API_KEY` | API key for authentication (takes precedence over credentials file) |
 
 ## Authentication
