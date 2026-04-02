@@ -4,6 +4,8 @@ import { docsLoader } from '@astrojs/starlight/loaders';
 import { asciidocLoader } from '../asciidoc-loader.ts';
 import type { LoaderContext } from 'astro/loaders';
 import { z } from 'astro:content';
+import { autoSidebarLoader } from 'starlight-auto-sidebar/loader';
+import { autoSidebarSchema } from 'starlight-auto-sidebar/schema';
 
 // Hybrid loader that handles both .md/.mdx (via docsLoader) and .adoc (via asciidocLoader)
 function hybridLoader() {
@@ -31,5 +33,9 @@ export const collections = {
           .optional(),
       }),
     }),
+  }),
+  autoSidebar: defineCollection({
+    loader: autoSidebarLoader(),
+    schema: autoSidebarSchema(),
   }),
 };

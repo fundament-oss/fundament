@@ -10,6 +10,7 @@
  *   .plugin-card       Bordered card container
  *   .plugin-heading    Primary heading
  *   .plugin-text       Body / paragraph text
+ *   .plugin-table      Full-width data table with dividers
  */
 
 /* Include theme CSS variables (colors, spacing, etc.) but not the preflight reset */
@@ -38,4 +39,16 @@ body {
 
 .plugin-text {
   @apply text-sm leading-relaxed opacity-80;
+}
+
+.plugin-table {
+  @apply w-full border-collapse text-sm;
+}
+
+.plugin-table th {
+  @apply border-b border-gray-200 pb-2 text-left font-medium text-gray-500 dark:border-gray-700 dark:text-gray-400;
+}
+
+.plugin-table td {
+  @apply border-b border-gray-100 py-2 dark:border-gray-800;
 }
