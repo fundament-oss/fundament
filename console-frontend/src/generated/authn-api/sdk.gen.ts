@@ -3,7 +3,7 @@
 import type { Client, Options as Options2, TDataShape } from '@hey-api/client-fetch';
 
 import { client } from './client.gen';
-import type { HandleCallbackData, HandleCallbackErrors, HandleClusterTokenData, HandleClusterTokenErrors, HandleClusterTokenResponses, HandleLoginData, HandleLoginErrors, HandleLogoutData, HandleLogoutErrors, HandleLogoutResponses, HandlePasswordLoginData, HandlePasswordLoginErrors, HandlePasswordLoginResponses, HandleRefreshData, HandleRefreshErrors, HandleRefreshResponses } from './types.gen';
+import type { HandleCallbackData, HandleCallbackErrors, HandleLoginData, HandleLoginErrors, HandleLogoutData, HandleLogoutErrors, HandleLogoutResponses, HandlePasswordLoginData, HandlePasswordLoginErrors, HandlePasswordLoginResponses, HandleRefreshData, HandleRefreshErrors, HandleRefreshResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -68,20 +68,6 @@ export const handleRefresh = <ThrowOnError extends boolean = false>(options?: Op
             type: 'apiKey'
         }, { scheme: 'bearer', type: 'http' }],
     url: '/refresh',
-    ...options
-});
-
-/**
- * Request a cluster token
- *
- * Issues a short-lived token for the authenticated user's service account on the given cluster.
- * Each user has a dedicated service account (fundament-{user-id}) that is provisioned
- * automatically. The caller must have access to the cluster (admin or member).
- *
- */
-export const handleClusterToken = <ThrowOnError extends boolean = false>(options: Options<HandleClusterTokenData, ThrowOnError>) => (options.client ?? client).post<HandleClusterTokenResponses, HandleClusterTokenErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/clusters/{cluster_id}/token',
     ...options
 });
 

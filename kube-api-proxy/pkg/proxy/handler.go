@@ -1,32 +1,43 @@
 package proxy
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"net/http"
-	"slices"
+	"strings"
 
 	"github.com/google/uuid"
 
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
+	tokenpkg "github.com/fundament-oss/fundament/kube-api-proxy/pkg/token"
 )
 
-// OrganizationHeader is the header name for selecting the active organization.
-const OrganizationHeader = "Fun-Organization"
+// allowedPathPrefixes are the Kubernetes API path prefixes the proxy forwards.
+// All other paths return 404.
+var allowedPathPrefixes = []string{"api", "apis", "openapi/"}
 
-// ClusterHeader is the header name for selecting the target cluster.
-const ClusterHeader = "Fun-Cluster"
-
-// handleClusterProxy is a read-only HTTP proxy to the Kubernetes API for a specific cluster.
-// Handles /api/ and /apis/ paths forwarded directly to the upstream cluster.
+// handleClusterProxy proxies Kubernetes API requests to a specific cluster.
+// The cluster ID and remaining path are extracted from the URL via Go 1.22+ wildcards:
 //
-// Authentication: JWT from Authorization header or fundament_auth cookie,
-// plus Fun-Organization header for org scoping.
+//	/clusters/{clusterID}/{path...}
+//
+// Authentication: JWT from Authorization header or fundament_auth cookie.
 // Authorization: user must have can_view on the cluster (via OpenFGA).
 func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
-	// Read-only: reject anything that is not a GET request.
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	// --- Extract cluster ID from path ---
+
+	clusterIDStr := r.PathValue("clusterID")
+	clusterID, err := uuid.Parse(clusterIDStr)
+	if err != nil {
+		http.Error(w, "invalid cluster ID", http.StatusBadRequest)
+		return
+	}
+
+	// {path...} does not include leading slash.
+	path := r.PathValue("path")
+	if !isAllowedPath(path) {
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 
@@ -38,37 +49,7 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgHeader := r.Header.Get(OrganizationHeader)
-	if orgHeader == "" {
-		http.Error(w, fmt.Sprintf("missing %s header", OrganizationHeader), http.StatusBadRequest)
-		return
-	}
-
-	organizationID, err := uuid.Parse(orgHeader)
-	if err != nil {
-		http.Error(w, "invalid organization ID", http.StatusBadRequest)
-		return
-	}
-
-	if !slices.Contains(claims.OrganizationIDs, organizationID) {
-		http.Error(w, "permission denied", http.StatusForbidden)
-		return
-	}
-
 	ctx := WithUserID(r.Context(), claims.UserID())
-
-	// --- Read cluster ID from header ---
-	clusterHeader := r.Header.Get(ClusterHeader)
-	if clusterHeader == "" {
-		http.Error(w, fmt.Sprintf("missing %s header", ClusterHeader), http.StatusBadRequest)
-		return
-	}
-
-	clusterID, err := uuid.Parse(clusterHeader)
-	if err != nil {
-		http.Error(w, "invalid cluster ID", http.StatusBadRequest)
-		return
-	}
 
 	// --- Authorization ---
 
@@ -82,8 +63,42 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// --- Get SA token (real mode only) ---
+
+	if s.tokenCache != nil {
+		saToken, err := s.tokenCache.GetToken(ctx, claims.UserID(), clusterID.String())
+		if err != nil {
+			if errors.Is(err, tokenpkg.ErrSyncPending) {
+				http.Error(w, "service account sync pending, try again shortly", http.StatusServiceUnavailable)
+				return
+			}
+			s.logger.ErrorContext(ctx, "failed to get SA token", "error", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		ctx = WithSAToken(ctx, saToken)
+	}
+
 	// --- Proxy to Kubernetes API ---
 
+	// Rewrite the URL to the forwarded path (prepend leading slash).
+	r.URL.Path = "/" + path
 	r.URL.RawPath = ""
+
+	// Store cluster ID in context for the multi-cluster proxy.
+	ctx = context.WithValue(ctx, kube.ClusterIDContextKey{}, clusterID.String())
+	r = r.WithContext(ctx)
+
 	s.kubeHandler.ServeHTTP(w, r)
+}
+
+// isAllowedPath checks whether the path (without leading slash) starts with
+// one of the allowed Kubernetes API prefixes.
+func isAllowedPath(path string) bool {
+	for _, prefix := range allowedPathPrefixes {
+		if path == strings.TrimSuffix(prefix, "/") || strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
 }

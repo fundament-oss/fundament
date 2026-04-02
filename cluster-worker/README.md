@@ -19,7 +19,7 @@ The cluster-worker watches for changes to the `tenant.clusters` table and ensure
 - **Updates**: When cluster configuration changes, update the Shoot (future scope)
 - **Deletion**: When a cluster is soft-deleted, delete the Shoot from Gardener
 
-The worker also monitors Gardener to track the reconciliation status of each Shoot (pending, progressing, ready, error) and stores this in the `shoot_status` column. When a shoot becomes ready, the worker extracts connection data (`shoot_api_server_url`, `shoot_ca_data`) via an AdminKubeconfigRequest so that users can generate kubeconfigs.
+The worker also monitors Gardener to track the reconciliation status of each Shoot (pending, progressing, ready, error) and stores this in the `shoot_status` column. When a shoot becomes ready, the worker triggers user sync to create per-user service accounts on the cluster.
 
 The `tenant.cluster_outbox` table also tracks changes to `organizations_users` and `project_members` via database triggers, laying the groundwork for a future UserSyncHandler that will reconcile service accounts and RBAC on shoot clusters.
 
@@ -110,11 +110,6 @@ sequenceDiagram
         Worker->>Gardener: GetShootStatus(clusters...)
         Gardener-->>Worker: Status + API server URL
         Worker->>DB: UPDATE shoot_status, shoot_status_message
-        opt Transition to ready
-            Worker->>Gardener: RequestAdminKubeconfig(shoot)
-            Gardener-->>Worker: Short-lived kubeconfig
-            Worker->>DB: UPDATE shoot_api_server_url, shoot_ca_data
-        end
         opt Status changed
             Worker->>DB: INSERT cluster_events
         end
@@ -209,16 +204,6 @@ The `cluster_outbox` table tracks changes from multiple sources:
 | `manual` | Manual intervention |
 | `node_pool` | Node pool configuration change |
 | `status` | Status poller detected a state change |
-
-### Connection Data
-
-When the status poller detects a shoot has become ready, it requests a short-lived admin kubeconfig from Gardener via `AdminKubeconfigRequest` and extracts:
-
-- `shoot_api_server_url` — the external API server URL from the shoot's advertised addresses
-- `shoot_ca_data` — base64-encoded CA certificate for TLS verification
-
-This data is stored in the `tenant.clusters` table and used by `authn-api` and `functl` to generate kubeconfigs. If the CA extraction fails (transient Gardener error), the poller retries on subsequent polls until the data is stored.
-
 
 ## Quick Start: Full Local Development
 

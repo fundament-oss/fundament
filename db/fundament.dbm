@@ -768,12 +768,6 @@ END;]]> </definition>
 	<column name="outbox_error">
 		<type name="text" length="0"/>
 	</column>
-	<column name="shoot_api_server_url">
-		<type name="text" length="0"/>
-	</column>
-	<column name="shoot_ca_data">
-		<type name="text" length="0"/>
-	</column>
 
 	<constraint name="clusters_pk" type="pk-constr" table="tenant.clusters">
 		<columns names="id" ref-type="src-columns"/>
