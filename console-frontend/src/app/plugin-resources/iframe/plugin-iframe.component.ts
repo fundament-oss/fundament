@@ -69,6 +69,8 @@ export default class PluginIframeComponent implements OnInit {
 
   private iframeReady = false;
 
+  private lastSentTheme: 'light' | 'dark' | null = null;
+
   ngOnInit(): void {
     const onMessage = (event: MessageEvent): void => {
       const iframe = this.iframeRef()?.nativeElement;
@@ -85,9 +87,13 @@ export default class PluginIframeComponent implements OnInit {
       const iframe = this.iframeRef()?.nativeElement;
       if (!iframe?.contentWindow) return;
 
+      const theme = getCurrentTheme();
+      if (theme === this.lastSentTheme) return;
+      this.lastSentTheme = theme;
+
       const msg: HostMessage = {
         type: 'fundament:theme-changed',
-        theme: getCurrentTheme(),
+        theme,
       };
       iframe.contentWindow.postMessage(msg, '*');
     });
@@ -104,11 +110,6 @@ export default class PluginIframeComponent implements OnInit {
   }
 
   private handleMessage(msg: PluginMessage, iframe: HTMLIFrameElement): void {
-    if (msg.type !== 'plugin:resize') {
-      // eslint-disable-next-line no-console
-      console.log('[plugin-parent received message]', msg);
-    }
-
     switch (msg.type) {
       case 'plugin:ready':
         this.iframeReady = true;
@@ -120,7 +121,7 @@ export default class PluginIframeComponent implements OnInit {
         }
         break;
       case 'plugin:navigate':
-        if (typeof msg.path === 'string') {
+        if (typeof msg.path === 'string' && msg.path.startsWith('/plugins/')) {
           this.router.navigateByUrl(msg.path);
         }
         break;
@@ -132,10 +133,13 @@ export default class PluginIframeComponent implements OnInit {
   private sendInit(iframe: HTMLIFrameElement): void {
     if (!iframe.contentWindow) return;
 
+    const theme = getCurrentTheme();
+    this.lastSentTheme = theme;
+
     const msg: HostMessage = {
       type: 'fundament:init',
       version: POSTMESSAGE_VERSION,
-      theme: getCurrentTheme(),
+      theme,
       pluginName: this.pluginName(),
       crdKind: this.crdKind(),
       view: this.view(),

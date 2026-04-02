@@ -34,7 +34,11 @@
       const tbody = document.getElementById('items');
       for (const { name, namespace, status, age } of items) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${name}</td><td>${namespace}</td><td>${status}</td><td>${age}</td>`;
+        for (const value of [name, namespace, status, age]) {
+          const td = document.createElement('td');
+          td.textContent = value;
+          tr.appendChild(td);
+        }
         tbody.appendChild(tr);
       }
 
