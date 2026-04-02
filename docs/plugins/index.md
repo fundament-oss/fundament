@@ -39,9 +39,9 @@ The plugin system allows extending Fundament with installable plugins that integ
 
 | Component | Purpose |
 |-----------|---------|
-| [**Plugin Runtime**](writing-plugins#plugin-runtime) | Go framework that plugins implement. Handles HTTP, health probes, metadata API, logging, and lifecycle. |
-| [**Plugin Controller**](writing-plugins#plugin-controller) | Kubernetes controller that watches `PluginInstallation` CRs and manages plugin namespaces, RBAC, and deployments. |
-| [**Plugin**](example-cert-manager) | A container image that uses the SDK. Implements business logic (install software, manage CRDs, serve console UI). |
+| [**Plugin Runtime**](#plugin-runtime) | Go framework that plugins implement. Handles HTTP, health probes, metadata API, logging, and lifecycle. |
+| [**Plugin Controller**](#plugin-controller) | Kubernetes controller that watches `PluginInstallation` CRs and manages plugin namespaces, RBAC, and deployments. |
+| [**Plugin**](writing-a-plugin) | A container image that uses the SDK. Implements business logic (install software, manage CRDs, serve console UI). |
 
 ## Plugin Runtime
 

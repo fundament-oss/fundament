@@ -155,4 +155,4 @@ menu:
       detail: true  # served from /console/detail.html
 ```
 
-See [Writing plugins](writing-plugins) for the full plugin setup.
+See [Writing a plugin](writing-a-plugin) for the full plugin setup.
