@@ -1,7 +1,15 @@
 ---
 interface Props {
-  state: 'prediscussion' | 'discussion' | 'published' | 'committed' | 'abandoned'
-       | 'proposed' | 'accepted' | 'superseded' | 'deprecated';
+  state:
+    | 'prediscussion'
+    | 'discussion'
+    | 'published'
+    | 'committed'
+    | 'abandoned'
+    | 'proposed'
+    | 'accepted'
+    | 'superseded'
+    | 'deprecated';
 }
 
 const { state } = Astro.props;
