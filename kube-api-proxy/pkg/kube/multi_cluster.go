@@ -13,7 +13,6 @@ import (
 	"golang.org/x/sync/singleflight"
 
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
-	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/token"
 )
 
 // adminKubeconfigRefreshRatio is the fraction of TTL at which to proactively
@@ -25,11 +24,10 @@ const adminKubeconfigRefreshRatio = 0.7
 // per cluster by fetching a short-lived admin kubeconfig from Gardener,
 // caching it until 70% of its TTL before re-fetching.
 type MultiClusterProxy struct {
-	gardener   *gardener.Client
-	tokenCache *token.Cache
-	logger     *slog.Logger
-	proxies    sync.Map           // string(clusterID) → *cachedProxy
-	group      singleflight.Group // deduplicates concurrent proxy construction for the same cluster
+	gardener *gardener.Client
+	logger   *slog.Logger
+	proxies  sync.Map           // string(clusterID) → *cachedProxy
+	group    singleflight.Group // deduplicates concurrent proxy construction for the same cluster
 }
 
 type cachedProxy struct {
@@ -39,11 +37,10 @@ type cachedProxy struct {
 
 // NewMultiClusterProxy returns a MultiClusterProxy that fetches kubeconfigs
 // from Gardener on demand using the provided gardener.Client.
-func NewMultiClusterProxy(gc *gardener.Client, tc *token.Cache, logger *slog.Logger) *MultiClusterProxy {
+func NewMultiClusterProxy(gc *gardener.Client, logger *slog.Logger) *MultiClusterProxy {
 	return &MultiClusterProxy{
-		gardener:   gc,
-		tokenCache: tc,
-		logger:     logger,
+		gardener: gc,
+		logger:   logger,
 	}
 }
 
@@ -55,11 +52,6 @@ type ClusterIDContextKey struct{}
 
 // SATokenContextKey is used to pass the per-user SA token from the handler to the proxy Director.
 type SATokenContextKey struct{}
-
-// UserIDContextKey is used to pass the user ID from the handler for 401 retry token refresh.
-type UserIDContextKey struct{}
-
-type saTokenContextKey = SATokenContextKey
 
 func (m *MultiClusterProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	clusterID, ok := r.Context().Value(ClusterIDContextKey{}).(string)
@@ -110,16 +102,7 @@ func (m *MultiClusterProxy) buildProxy(ctx context.Context, clusterID string) (*
 	ttl := time.Until(adminKC.ExpiresAt)
 	refreshAt := time.Now().Add(time.Duration(float64(ttl) * adminKubeconfigRefreshRatio))
 
-	transport := c.Transport()
-	if m.tokenCache != nil {
-		transport = &retryTransport{
-			inner:      transport,
-			tokenCache: m.tokenCache,
-			logger:     m.logger,
-		}
-	}
-
-	proxy := buildReverseProxy(c.Host(), transport, m.logger)
+	proxy := buildReverseProxy(c.Host(), c.Transport(), m.logger)
 	m.proxies.Store(clusterID, &cachedProxy{
 		proxy:     proxy,
 		expiresAt: refreshAt,
@@ -142,7 +125,7 @@ func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slo
 			req.Header.Del("Authorization")
 			req.Header.Del("Cookie")
 			// Inject per-user SA token if present in context.
-			if saToken, ok := req.Context().Value(saTokenContextKey{}).(string); ok && saToken != "" {
+			if saToken, ok := req.Context().Value(SATokenContextKey{}).(string); ok && saToken != "" {
 				req.Header.Set("Authorization", "Bearer "+saToken)
 			}
 		},

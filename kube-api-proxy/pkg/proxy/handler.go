@@ -10,7 +10,7 @@ import (
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
-	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/token"
+	tokenpkg "github.com/fundament-oss/fundament/kube-api-proxy/pkg/token"
 )
 
 // allowedPathPrefixes are the Kubernetes API path prefixes the proxy forwards.
@@ -68,7 +68,7 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	if s.tokenCache != nil {
 		saToken, err := s.tokenCache.GetToken(ctx, claims.UserID(), clusterID.String())
 		if err != nil {
-			if errors.Is(err, token.ErrSyncPending) {
+			if errors.Is(err, tokenpkg.ErrSyncPending) {
 				http.Error(w, "service account sync pending, try again shortly", http.StatusServiceUnavailable)
 				return
 			}

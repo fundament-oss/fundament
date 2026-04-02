@@ -61,7 +61,7 @@ Two-level cache minimizes latency and Gardener API calls:
 
 ## Local development
 
-The proxy runs behind ingress-nginx in k3d. HTTPS is required for kubectl exec credential plugins (client-go refuses exec over HTTP). Local dev uses port 8443 mapped to a fixed NodePort 30443 to bypass a klipper ServiceLB TLS bug.
+The proxy runs behind ingress-nginx in k3d. HTTPS is required for kubectl exec credential plugins (client-go refuses exec over HTTP). Local dev uses port 8443 mapped to a fixed NodePort 30443.
 
 ```bash
 # With real Gardener (requires gardener-up first)
