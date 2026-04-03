@@ -35,14 +35,20 @@ func (h *Handler) ApiKey(ctx context.Context, qtx *db.Queries, apiKeyID uuid.UUI
 		return h.deleteTuplesIfExist(ctx,
 			tupleDelete(orgObj, authz.ActionOwner, apiKeyObj),
 			tupleDelete(userObj, authz.ActionCreator, apiKeyObj),
+			tupleDelete(userObj, authz.ActionUsableBy, apiKeyObj),
 		)
 	}
 
-	tupleCreator := tuple(userObj, authz.ActionCreator, apiKeyObj)
+	if apiKey.Revoked.Valid {
+		return h.deleteTuplesIfExist(ctx,
+			tupleDelete(userObj, authz.ActionUsableBy, apiKeyObj),
+		)
+	}
 
-	// Add is_not_expired self-relation for can_use check
+	tupleUsableBy := tuple(userObj, authz.ActionUsableBy, apiKeyObj)
+
 	if apiKey.Expires.Valid {
-		tupleCreator.Condition = &openfga.RelationshipCondition{
+		tupleUsableBy.Condition = &openfga.RelationshipCondition{
 			Name: "is_not_expired",
 			Context: &map[string]any{
 				"expiration": apiKey.Expires.Time.Format(time.RFC3339),
@@ -52,6 +58,7 @@ func (h *Handler) ApiKey(ctx context.Context, qtx *db.Queries, apiKeyID uuid.UUI
 
 	return h.writeTuplesIfNotExist(ctx,
 		tuple(orgObj, authz.ActionOwner, apiKeyObj),
-		tupleCreator,
+		tuple(userObj, authz.ActionCreator, apiKeyObj),
+		tupleUsableBy,
 	)
 }
