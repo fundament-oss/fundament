@@ -46,6 +46,7 @@ spec:
     externalUrls:
       authn: https://authn.pr${PR_NUM}.${DOMAIN}
       organization: https://organization.pr${PR_NUM}.${DOMAIN}
+      kubeApiProxy: https://k8s-api.pr${PR_NUM}.${DOMAIN}
       console: https://console.pr${PR_NUM}.${DOMAIN}
       docs: https://docs.pr${PR_NUM}.${DOMAIN}
       cookieDomain: pr${PR_NUM}.${DOMAIN}

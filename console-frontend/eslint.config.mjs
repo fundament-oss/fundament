@@ -42,6 +42,13 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/plugin-sdk/build-css.ts'],
+    rules: {
+      'import-x/no-extraneous-dependencies': ['error', { devDependencies: true }],
+      'no-console': 'off',
+    },
+  },
+  {
     files: ['**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
     rules: {},

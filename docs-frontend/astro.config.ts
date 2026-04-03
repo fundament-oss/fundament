@@ -4,6 +4,7 @@ import type { default as shikiHighlighter } from './shiki-highlighter.js';
 import { fileURLToPath } from 'node:url';
 import starlight from '@astrojs/starlight';
 import tailwindcss from '@tailwindcss/vite';
+import starlightAutoSidebar from 'starlight-auto-sidebar';
 
 type ShikiOptions = Parameters<typeof shikiHighlighter>[0];
 
@@ -50,6 +51,7 @@ export default defineConfig({
       },
     }),
     starlight({
+      plugins: [starlightAutoSidebar()],
       title: 'Fundament Docs',
       logo: {
         src: '/public/img/favicon.svg',

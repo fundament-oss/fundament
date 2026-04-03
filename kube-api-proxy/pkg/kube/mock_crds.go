@@ -19,6 +19,8 @@ func mockCRDForName(name string) (string, bool) {
 		return mockBackupCRD, true
 	case "subscriptions.postgresql.cnpg.io":
 		return mockSubscriptionCRD, true
+	case "demoitems.demo.fundament.io":
+		return mockDemoItemCRD, true
 	default:
 		return "", false
 	}
@@ -33,6 +35,7 @@ var mockCRDListJSON = `{"apiVersion":"apiextensions.k8s.io/v1","kind":"CustomRes
 		mockDatabaseCRD,
 		mockBackupCRD,
 		mockSubscriptionCRD,
+		mockDemoItemCRD,
 	}, ",") + `]}`
 
 const mockCertificateCRD = `{
@@ -464,6 +467,38 @@ const mockSubscriptionCRD = `{
                 "applied": {"description": "Applied is true if the subscription was reconciled correctly", "type": "boolean"},
                 "message": {"description": "Message is the reconciliation output message", "type": "string"},
                 "observedGeneration": {"description": "A sequence number representing the latest desired state", "type": "integer", "format": "int64"}
+              }
+            }
+          }
+        }
+      }
+    }]
+  }
+}`
+
+const mockDemoItemCRD = `{
+  "apiVersion": "apiextensions.k8s.io/v1",
+  "kind": "CustomResourceDefinition",
+  "metadata": {"name": "demoitems.demo.fundament.io"},
+  "spec": {
+    "group": "demo.fundament.io",
+    "names": {"kind": "DemoItem", "plural": "demoitems", "singular": "demoitem"},
+    "scope": "Namespaced",
+    "versions": [{
+      "name": "v1",
+      "served": true,
+      "storage": true,
+      "schema": {
+        "openAPIV3Schema": {
+          "type": "object",
+          "properties": {
+            "apiVersion": {"type": "string"},
+            "kind": {"type": "string"},
+            "metadata": {"type": "object"},
+            "spec": {
+              "type": "object",
+              "properties": {
+                "message": {"description": "A greeting message", "type": "string"}
               }
             }
           }

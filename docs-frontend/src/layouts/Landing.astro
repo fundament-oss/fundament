@@ -8,8 +8,8 @@ export interface Props {
 
 const { title = 'Fundament', heroClass = '' } = Astro.props;
 
-const pathname = Astro.url.pathname;
-const isActive = (path: string) => pathname === path || pathname === path + '/';
+const { pathname } = Astro.url;
+const isActive = (path: string) => pathname === path || pathname === `${path}/`;
 
 const navLinkClass =
   'text-gray-700 no-underline transition-colors duration-200 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100';

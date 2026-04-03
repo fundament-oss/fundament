@@ -1,0 +1,162 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 16
+:state: committed
+
+= FUN-16 Plugin isolation
+
+== Introduction
+
+Plugins in Fundament can provide custom UIs for the CRDs they manage. When a plugin does not provide a custom UI, the Console auto-generates read-only list and detail views from the CRD schema. This FUN describes the decision to implement custom plugin UIs using sandboxed iframes, the security model behind that choice, and the design of the host-plugin communication protocol.
+
+== Why iframes
+
+=== The third-party authorship problem
+
+Plugins are written and deployed by third parties. A plugin author has no particular relationship with the Fundament platform team — they write their own Go backend, define their own CRDs, and ship their own UI. This means the Console cannot trust plugin UI code in the way it trusts its own code.
+
+This rules out approaches where plugin UI code runs in the same JavaScript context as the Console. If a plugin's script executes in the same origin as the Console, it has full access to the user's session: it can read cookies, access localStorage, call any API on the user's behalf, and inspect or manipulate the Console's own DOM. Even a well-intentioned plugin author could introduce a vulnerability that compromises user data.
+
+=== Sandboxed iframes as an isolation boundary
+
+Iframes with the `sandbox` attribute provide the browser's native isolation mechanism. Fundament uses:
+
+[source,html]
+----
+<iframe sandbox="allow-scripts" ...>
+----
+
+The `sandbox` attribute, without `allow-same-origin`, causes the browser to treat the iframe as having an opaque (null) origin. This has several security consequences:
+
+* The iframe cannot read or write cookies or localStorage from the parent origin.
+* The iframe cannot access the parent window's DOM.
+* The iframe cannot make credentialed requests that would carry the user's session.
+* The iframe cannot navigate the top-level browsing context.
+* The iframe cannot open popups.
+
+The plugin can run arbitrary JavaScript inside this box, but its blast radius is contained entirely to the iframe's own document. Even a compromised or malicious plugin cannot exfiltrate the user's session or interact with the rest of the Console.
+
+The authentication token used by the Console is stored as an `HttpOnly` cookie. `HttpOnly` cookies are inaccessible to JavaScript by design — `document.cookie` does not expose them — so no script running inside the iframe can read the token directly. The sandbox's opaque-origin isolation adds a second layer: even if a future browser bug were to weaken `HttpOnly` enforcement, the iframe's null origin means it has no access to the parent origin's cookie jar at all. The two mechanisms are independent, and both must fail for the token to be reachable from plugin code.
+
+=== Alternatives considered
+
+==== Module Federation / Native Federation
+
+Angular Native Federation allows lazy-loading of separately compiled Angular modules at runtime. FUN-11 originally considered this approach because it would give plugins direct access to Angular's component system and the Console's dependency injection context.
+
+The fundamental problem is that Module Federation does not provide an isolation boundary. A federated module runs in the same JavaScript context as the host application with full access to the host's memory, services, tokens, and the user's session. For first-party code this is fine; for third-party plugin authors it is not acceptable.
+
+Rejecting Module Federation is not a statement about the technology itself. It is a consequence of the third-party authorship model: we cannot grant untrusted code that level of access regardless of how convenient the integration would be.
+
+==== Web Components
+
+Web Components also run in the same JavaScript context as the host page. Shadow DOM provides style encapsulation but not JavaScript isolation. The same objections as above apply.
+
+== Serving plugins on the same origin
+
+Plugin UI assets are served through the Fundament Console's own nginx instance, not directly from the plugin's Go backend. The plugin backend implements a `ConsoleProvider` interface that exposes its assets as an `http.FileSystem`. The Fundament runtime mounts these assets under a path on the Console origin (e.g., `/plugin-ui/<plugin-name>/`).
+
+There are two reasons for this.
+
+First, it keeps the threat model simple. The iframe's `src` is a same-origin URL, so there is no need to enumerate external origins in the `frame-src` CSP directive or manage a dynamic allowlist of plugin backend URLs.
+
+Second, it avoids cross-origin complications for the plugin itself. Because the iframe's HTML is served from the same origin as the SDK files (`/plugin-ui/plugin-sdk.js`, `/plugin-ui/plugin-sdk.css`), those files can be loaded with plain `<script>` and `<link>` tags without CORS configuration. The plugin's own fetch calls to its backend are proxied through the Fundament server, so they too resolve to the same origin.
+
+== Content Security Policy
+
+The nginx configuration sets strict CSP headers for the Console. For the plugin UI path, a separate location block relaxes the directives that must differ:
+
+[cols="1,2,2"]
+|===
+| Directive | Console | Plugin UI path (`/plugin-ui/`)
+
+| `default-src` | `'self'` | `'self'`
+| `script-src` | `'self'` | `'self' 'unsafe-inline'`
+| `style-src` | `'self' 'unsafe-inline'` | `'self' 'unsafe-inline'`
+| `connect-src` | `'self' ${CONNECT_SRC}` | `'self' ${CONNECT_SRC}`
+| `frame-ancestors` | `'none'` | `'self'`
+| `X-Frame-Options` | `DENY` | _(omitted)_
+|===
+
+The critical difference is `frame-ancestors`. This directive in the response headers of the iframe's own document controls who is permitted to embed it. With `frame-ancestors 'none'`, the browser refuses to render the document inside any iframe — including one on the same origin. Plugin HTML pages therefore need `frame-ancestors 'self'` so the Console can embed them.
+
+`X-Frame-Options: DENY` is omitted from the plugin UI path for the same reason. When both `frame-ancestors` and `X-Frame-Options` are present, `frame-ancestors` takes precedence in modern browsers; omitting `X-Frame-Options` avoids any ambiguity.
+
+`script-src` includes `'unsafe-inline'` for the plugin UI path. Plugin pages are expected to contain inline `<script>` tags — this is the natural way plugin authors write their UI logic without a build step. Allowing inline scripts here does not weaken the overall security posture because the iframe sandbox attribute is the actual isolation boundary: even with `'unsafe-inline'`, plugin scripts cannot escape the sandboxed context to reach the parent page, its cookies, or its DOM.
+
+The Console itself keeps `script-src 'self'` without `'unsafe-inline'`. AOT-compiled Angular never emits inline scripts, so there is no reason to relax this for the main application.
+
+nginx's `add_header` directive in a location block replaces the headers set in the parent context, so the plugin UI location block repeats all other headers explicitly.
+
+== PostMessage communication protocol
+
+=== Why postMessage
+
+With `allow-same-origin` absent from the sandbox attribute, the iframe's origin is opaque. This means the iframe cannot call methods on the parent window directly and the parent cannot read from the iframe's document. `window.postMessage` is the only sanctioned channel for structured communication across this boundary.
+
+Using postMessage as the sole channel also makes the protocol explicit and auditable. Every piece of information the plugin receives from the Console, and every action it can request, must go through a defined message type.
+
+=== Message types
+
+All messages use a `type` string as a discriminator. Host-to-plugin messages are prefixed with `fundament:`; plugin-to-host messages are prefixed with `plugin:`.
+
+*Plugin → host:*
+
+[cols="1,1,2"]
+|===
+| Type | Payload | Description
+
+| `plugin:ready` | _(no payload)_ | Sent on script load. Signals that the plugin is ready to receive context.
+| `plugin:resize` | `{ height: number }` | Sent when content height changes. The host updates the iframe's CSS height.
+| `plugin:navigate` | `{ path: string }` | Requests host-side navigation using the Angular router.
+|===
+
+*Host → plugin:*
+
+[cols="1,1,2"]
+|===
+| Type | Payload | Description
+
+| `fundament:init` | `{ theme, pluginName, crdKind, view }` | Sent after `plugin:ready`. Provides all context the plugin needs to render.
+| `fundament:theme-changed` | `{ theme: 'light' \| 'dark' }` | Sent when the user switches the Console theme.
+|===
+
+=== Message validation
+
+Because the iframe's opaque origin reports as `'null'`, the host cannot use `event.origin` to verify the sender. Instead, the host checks `event.source === iframe.contentWindow`. This ensures that messages are only accepted from the specific iframe element, not from any other frame or window.
+
+The host also validates the message structure before acting on it. Unknown message types are ignored.
+
+== The plugin SDK
+
+Plugins must include two files served by the Console:
+
+[source,html]
+----
+<link rel="stylesheet" href="/plugin-ui/plugin-sdk.css" />
+<script src="/plugin-ui/plugin-sdk.js"></script>
+----
+
+These are not convenience helpers — they are required for the iframe to function correctly as part of the Console.
+
+`plugin-sdk.js` handles the postMessage protocol automatically:
+
+* Posts `plugin:ready` on load.
+* Installs a `ResizeObserver` on the document body and posts `plugin:resize` whenever the content height changes, allowing the host to grow or shrink the iframe to fit the content without scrollbars.
+* Listens for `fundament:init` and `fundament:theme-changed` and applies the `.dark` class to `<body>`, enabling CSS-based dark mode switching without any plugin-side code.
+
+`plugin-sdk.css` provides the base styles that give plugin UIs a consistent appearance within the Console, including component classes (`.plugin-card`, `.plugin-table`, etc.) and dark mode variants.
+
+Plugins are free to add their own styles and scripts on top of the SDK. The SDK handles only the integration concerns; the plugin is otherwise unconstrained in how it builds its UI.
+
+== Kubernetes API access
+
+Plugins fetch Kubernetes resources through the Fundament Kubernetes API Proxy. Requests are made with relative URLs from the plugin's HTML page. Because the plugin HTML is served from the same origin as the proxy, and the plugin's Go backend handles authentication on the server side, the plugin does not need to manage credentials or deal with CORS.
+
+The proxy enforces the user's RBAC permissions: a plugin cannot retrieve resources the user is not entitled to see. This means plugin UIs automatically respect the access control model without any additional effort from the plugin author.
+
+== Dogfooding
+
+The built-in plugins — currently e.g. cert-manager — use the same iframe-based custom UI mechanism available to third-party plugin authors. There is no internal API or shortcut available to first-party plugins. This keeps the plugin interface honest: if something is inconvenient for a first-party plugin to do, it is inconvenient for everyone, which gives us direct feedback on where the SDK or protocol needs improvement.
