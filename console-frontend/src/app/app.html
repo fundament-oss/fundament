@@ -177,277 +177,39 @@
   <div class="flex min-h-[calc(100vh-3.5rem)]">
     <!-- Overheid sidebar -->
     @if (!isLoginPage()) {
-      <!-- Mobile overlay -->
-      <div
-        class="fixed inset-0 z-40 bg-gray-900/50 transition-opacity duration-300 lg:hidden"
-        [class.opacity-0]="!sidebarOpen()"
-        [class.opacity-100]="sidebarOpen()"
-        [class.pointer-events-none]="!sidebarOpen()"
-        (click)="closeSidebar()"
-        (keydown.escape)="closeSidebar()"
-        role="button"
-        tabindex="0"
-        aria-label="Close sidebar"
-      ></div>
-
+      <!-- Desktop sidebar -->
       <aside
-        class="fixed inset-y-0 left-0 z-50 w-60 transform overflow-y-auto border-r border-gray-200 bg-white pt-4 transition-transform duration-300 ease-in-out lg:static lg:min-h-[calc(100vh-3.5rem)] lg:translate-x-0 dark:border-gray-800 dark:bg-gray-950"
-        [class.-translate-x-full]="!sidebarOpen()"
+        class="hidden w-60 shrink-0 overflow-y-auto border-r border-gray-200 bg-white lg:block dark:border-gray-800 dark:bg-gray-950"
       >
-        <!-- Close button (mobile) -->
-        <div class="flex justify-end px-4 lg:hidden">
-          <button
-            (click)="closeSidebar()"
-            type="button"
-            aria-label="Close sidebar"
-            class="cursor-pointer rounded-md p-2 ring-indigo-500 hover:opacity-80 focus:ring-2 focus:outline-none"
-          >
-            <ng-icon name="tablerX" class="block!" size="1.5rem" />
-          </button>
-        </div>
-
-        <!-- Context selector -->
-        <div class="px-3">
-          <div
-            class="mb-1.5 px-2 text-xs font-medium tracking-wide text-gray-600 dark:text-gray-400"
-          >
-            Context
-          </div>
-          <button
-            (click)="openSelectorModal()"
-            type="button"
-            class="flex w-full cursor-pointer items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
-          >
-            <div class="flex min-w-0 flex-1 items-center">
-              @if (selectedItemDisplay(); as selected) {
-                @if (selected.type === 'organization') {
-                  <ng-icon name="tablerBuilding" class="mr-2 shrink-0" size="0.875rem" />
-                } @else if (selected.type === 'project') {
-                  <ng-icon name="tablerFolder" class="mr-2 shrink-0" size="0.875rem" />
-                }
-                <span class="truncate font-medium">{{ selected.name }}</span>
-              } @else {
-                <span class="text-gray-400 dark:text-gray-500">Select...</span>
-              }
-            </div>
-            <ng-icon name="tablerChevronRight" class="ml-2 shrink-0" size="0.875rem" />
-          </button>
-        </div>
-
-        <nav class="overflow-y-auto px-3 pb-6">
-          @if (selectedType()) {
-            <div class="mb-1.5 pt-5">
-              <p
-                class="px-3 text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
-              >
-                {{ settingsHeader() }}
-              </p>
-            </div>
-          }
-
-          <ndd-list>
-            @if (selectedType() === 'organization') {
-              <ndd-list-item>
-                <a
-                  routerLink="/"
-                  [class.active]="isClustersActive()"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <app-kubernetes-icon class="mr-3 h-5 w-5" />
-                  Clusters
-                </a>
-              </ndd-list-item>
-              <ndd-list-item>
-                <a
-                  routerLink="/projects"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerFolders" class="mr-3" size="1.25rem" />
-                  Projects
-                </a>
-              </ndd-list-item>
-              <ndd-list-item>
-                <a
-                  routerLink="/plugins"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerPuzzle" class="mr-3" size="1.25rem" />
-                  Plugins
-                </a>
-              </ndd-list-item>
-              <ndd-list-item>
-                <a
-                  routerLink="/organization/members"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
-                  Members
-                </a>
-              </ndd-list-item>
-              <ndd-list-item>
-                <a
-                  routerLink="/usage"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
-                  Usage
-                </a>
-              </ndd-list-item>
-              <ndd-list-item>
-                <a
-                  routerLink="/organization"
-                  routerLinkActive="active"
-                  [routerLinkActiveOptions]="{ exact: true }"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
-                  Settings
-                </a>
-              </ndd-list-item>
-
-              @for (group of pluginNavService.organizationNav(); track group.pluginName) {
-                <ndd-list-item>
-                  <p
-                    class="px-3 pt-3 text-xs font-semibold tracking-wider uppercase"
-                    class="text-gray-500 dark:text-gray-400"
-                  >
-                    {{ group.label }}
-                  </p>
-                  <ndd-list>
-                    @for (item of group.items; track item.crdPlural) {
-                      <ndd-list-item>
-                        <a
-                          [routerLink]="['/plugin-resources', group.pluginName, item.crdPlural]"
-                          routerLinkActive="active"
-                          class="nav-link"
-                          (click)="closeSidebar()"
-                        >
-                          @if (item.icon) {
-                            <ng-icon [name]="item.icon" class="mr-3" size="1.25rem" />
-                          }
-                          {{ item.label }}
-                        </a>
-                      </ndd-list-item>
-                    }
-                  </ndd-list>
-                </ndd-list-item>
-              }
-            } @else if (selectedType() === 'project') {
-              <ndd-list-item>
-                <a
-                  [routerLink]="['/projects', selectedProjectId()]"
-                  routerLinkActive="active"
-                  [routerLinkActiveOptions]="{ exact: true }"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerFolder" size="1.25rem" class="mr-3" />
-                  General
-                </a>
-              </ndd-list-item>
-              <ndd-list-item>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'namespaces']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerBracketsContain" size="1.25rem" class="mr-3" />
-                  Namespaces
-                </a>
-              </ndd-list-item>
-              <ndd-list-item>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'members']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
-                  Members
-                </a>
-              </ndd-list-item>
-              <ndd-list-item>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'roles']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerUserCog" class="mr-3" size="1.25rem" />
-                  Roles
-                </a>
-              </ndd-list-item>
-              <ndd-list-item>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'usage']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
-                  Usage
-                </a>
-              </ndd-list-item>
-              <ndd-list-item>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'settings']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
-                  Settings
-                </a>
-              </ndd-list-item>
-
-              @for (group of pluginNavService.projectNav(); track group.pluginName) {
-                <ndd-list-item>
-                  <p
-                    class="px-3 pt-3 text-xs font-semibold tracking-wider uppercase"
-                    class="text-gray-500 dark:text-gray-400"
-                  >
-                    {{ group.label }}
-                  </p>
-                  <ndd-list>
-                    @for (item of group.items; track item.crdPlural) {
-                      <ndd-list-item>
-                        <a
-                          [routerLink]="[
-                            '/projects',
-                            selectedProjectId(),
-                            'plugin-resources',
-                            group.pluginName,
-                            item.crdPlural,
-                          ]"
-                          routerLinkActive="active"
-                          class="nav-link"
-                          (click)="closeSidebar()"
-                        >
-                          @if (item.icon) {
-                            <ng-icon [name]="item.icon" class="mr-3" size="1.25rem" />
-                          }
-                          {{ item.label }}
-                        </a>
-                      </ndd-list-item>
-                    }
-                  </ndd-list>
-                </ndd-list-item>
-              }
-            }
-          </ndd-list>
-        </nav>
+        <app-sidebar-nav
+          [selectedType]="selectedType()"
+          [selectedItemDisplay]="selectedItemDisplay()"
+          [selectedProjectId]="selectedProjectId()"
+          [settingsHeader]="settingsHeader()"
+          [isClustersActive]="isClustersActive()"
+          [organizationNav]="pluginNavService.organizationNav()"
+          [projectNav]="pluginNavService.projectNav()"
+          (openSelectorModal)="openSelectorModal()"
+        />
       </aside>
+
+      <!-- Mobile sheet -->
+      <ndd-sheet #mobileSheet placement="left" accessible-label="Navigation">
+        <ndd-page sticky-header="">
+          <ndd-top-title-bar slot="header" dismiss-label="Close"></ndd-top-title-bar>
+          <app-sidebar-nav
+            [selectedType]="selectedType()"
+            [selectedItemDisplay]="selectedItemDisplay()"
+            [selectedProjectId]="selectedProjectId()"
+            [settingsHeader]="settingsHeader()"
+            [isClustersActive]="isClustersActive()"
+            [organizationNav]="pluginNavService.organizationNav()"
+            [projectNav]="pluginNavService.projectNav()"
+            (openSelectorModal)="openSelectorModal()"
+            (closeSidebar)="closeSidebar()"
+          />
+        </ndd-page>
+      </ndd-sheet>
     }
 
     <!-- Main content -->

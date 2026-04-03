@@ -1,0 +1,235 @@
+<!-- Context selector -->
+<div class="px-3 pt-4">
+  <div class="mb-1.5 px-2 text-xs font-medium tracking-wide text-gray-600 dark:text-gray-400">
+    Context
+  </div>
+  <button
+    (click)="openSelectorModal.emit()"
+    type="button"
+    class="flex w-full cursor-pointer items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+  >
+    <div class="flex min-w-0 flex-1 items-center">
+      @if (selectedItemDisplay(); as selected) {
+        @if (selected.type === 'organization') {
+          <ng-icon name="tablerBuilding" class="mr-2 shrink-0" size="0.875rem" />
+        } @else if (selected.type === 'project') {
+          <ng-icon name="tablerFolder" class="mr-2 shrink-0" size="0.875rem" />
+        }
+        <span class="truncate font-medium">{{ selected.name }}</span>
+      } @else {
+        <span class="text-gray-400 dark:text-gray-500">Select...</span>
+      }
+    </div>
+    <ng-icon name="tablerChevronRight" class="ml-2 shrink-0" size="0.875rem" />
+  </button>
+</div>
+
+<nav class="overflow-y-auto px-3 pb-6">
+  @if (selectedType()) {
+    <div class="mb-1.5 pt-5">
+      <p class="px-3 text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400">
+        {{ settingsHeader() }}
+      </p>
+    </div>
+  }
+
+  <ul class="space-y-2">
+    @if (selectedType() === 'organization') {
+      <li>
+        <a
+          routerLink="/"
+          [class.active]="isClustersActive()"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <app-kubernetes-icon class="mr-3 h-5 w-5" />
+          Clusters
+        </a>
+      </li>
+      <li>
+        <a
+          routerLink="/projects"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <ng-icon name="tablerFolders" class="mr-3" size="1.25rem" />
+          Projects
+        </a>
+      </li>
+      <li>
+        <a
+          routerLink="/plugins"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <ng-icon name="tablerPuzzle" class="mr-3" size="1.25rem" />
+          Plugins
+        </a>
+      </li>
+      <li>
+        <a
+          routerLink="/organization/members"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
+          Members
+        </a>
+      </li>
+      <li>
+        <a
+          routerLink="/usage"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
+          Usage
+        </a>
+      </li>
+      <li>
+        <a
+          routerLink="/organization"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
+          Settings
+        </a>
+      </li>
+
+      @for (group of organizationNav(); track group.pluginName) {
+        <li class="mt-2">
+          <p
+            class="px-3 pt-3 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+          >
+            {{ group.label }}
+          </p>
+          <ul class="mt-1 space-y-1">
+            @for (item of group.items; track item.crdPlural) {
+              <li>
+                <a
+                  [routerLink]="['/plugin-resources', group.pluginName, item.crdPlural]"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar.emit()"
+                >
+                  @if (item.icon) {
+                    <ng-icon [name]="item.icon" class="mr-3" size="1.25rem" />
+                  }
+                  {{ item.label }}
+                </a>
+              </li>
+            }
+          </ul>
+        </li>
+      }
+    } @else if (selectedType() === 'project') {
+      <li>
+        <a
+          [routerLink]="['/projects', selectedProjectId()]"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <ng-icon name="tablerFolder" size="1.25rem" class="mr-3" />
+          General
+        </a>
+      </li>
+      <li>
+        <a
+          [routerLink]="['/projects', selectedProjectId(), 'namespaces']"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <ng-icon name="tablerBracketsContain" size="1.25rem" class="mr-3" />
+          Namespaces
+        </a>
+      </li>
+      <li>
+        <a
+          [routerLink]="['/projects', selectedProjectId(), 'members']"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
+          Members
+        </a>
+      </li>
+      <li>
+        <a
+          [routerLink]="['/projects', selectedProjectId(), 'roles']"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <ng-icon name="tablerUserCog" class="mr-3" size="1.25rem" />
+          Roles
+        </a>
+      </li>
+      <li>
+        <a
+          [routerLink]="['/projects', selectedProjectId(), 'usage']"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
+          Usage
+        </a>
+      </li>
+      <li>
+        <a
+          [routerLink]="['/projects', selectedProjectId(), 'settings']"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
+          Settings
+        </a>
+      </li>
+
+      @for (group of projectNav(); track group.pluginName) {
+        <li class="mt-2">
+          <p
+            class="px-3 pt-3 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+          >
+            {{ group.label }}
+          </p>
+          <ul class="mt-1 space-y-1">
+            @for (item of group.items; track item.crdPlural) {
+              <li>
+                <a
+                  [routerLink]="[
+                    '/projects',
+                    selectedProjectId(),
+                    'plugin-resources',
+                    group.pluginName,
+                    item.crdPlural,
+                  ]"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar.emit()"
+                >
+                  @if (item.icon) {
+                    <ng-icon [name]="item.icon" class="mr-3" size="1.25rem" />
+                  }
+                  {{ item.label }}
+                </a>
+              </li>
+            }
+          </ul>
+        </li>
+      }
+    }
+  </ul>
+</nav>

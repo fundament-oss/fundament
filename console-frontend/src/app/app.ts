@@ -8,12 +8,13 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  ViewChild,
+  ElementRef,
 } from '@angular/core';
 import '@minbzk/storybook';
 import {
   RouterOutlet,
   RouterLink,
-  RouterLinkActive,
   Router,
   NavigationEnd,
   ActivatedRouteSnapshot,
@@ -30,16 +31,6 @@ import {
   tablerMoon,
   tablerSun,
   tablerUserCircle,
-  tablerFolder,
-  tablerFolders,
-  tablerPuzzle,
-  tablerUsers,
-  tablerSettings,
-  tablerChartLine,
-  tablerChevronRight,
-  tablerBuilding,
-  tablerBracketsContain,
-  tablerUserCog,
 } from '@ng-icons/tabler-icons';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
@@ -51,7 +42,7 @@ import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 import type { Invitation } from '../generated/v1/invite_pb';
-import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
+import { FundamentLogoIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
@@ -59,6 +50,7 @@ import KubeClusterContextService from './plugin-resources/kube-cluster-context.s
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
+import SidebarNavComponent from './sidebar-nav/sidebar-nav';
 
 const reloadApp = () => {
   window.location.reload();
@@ -69,13 +61,12 @@ const reloadApp = () => {
   imports: [
     RouterOutlet,
     RouterLink,
-    RouterLinkActive,
     SelectorModalComponent,
     OrgPickerComponent,
     FundamentLogoIconComponent,
-    KubernetesIconComponent,
     BreadcrumbComponent,
     NgIcon,
+    SidebarNavComponent,
   ],
   viewProviders: [
     provideIcons({
@@ -88,16 +79,6 @@ const reloadApp = () => {
       tablerMoon,
       tablerSun,
       tablerUserCircle,
-      tablerFolder,
-      tablerFolders,
-      tablerPuzzle,
-      tablerUsers,
-      tablerSettings,
-      tablerChartLine,
-      tablerChevronRight,
-      tablerBuilding,
-      tablerBracketsContain,
-      tablerUserCog,
     }),
   ],
   host: {
@@ -134,6 +115,8 @@ export default class App implements OnInit {
 
   private inviteClient = inject(INVITE);
 
+  @ViewChild('mobileSheet') private mobileSheetRef?: ElementRef<HTMLElement>;
+
   private clusterNameCache = new Map<string, string>();
 
   // Version mismatch state
@@ -141,8 +124,6 @@ export default class App implements OnInit {
 
   // Dropdown states
   userDropdownOpen = signal(false);
-
-  sidebarOpen = signal(false);
 
   selectorModalOpen = signal(false);
 
@@ -543,11 +524,11 @@ export default class App implements OnInit {
   }
 
   toggleSidebar() {
-    this.sidebarOpen.update((value) => !value);
+    (this.mobileSheetRef?.nativeElement as (HTMLElement & { show(): void }) | undefined)?.show();
   }
 
   closeSidebar() {
-    this.sidebarOpen.set(false);
+    (this.mobileSheetRef?.nativeElement as (HTMLElement & { hide(): void }) | undefined)?.hide();
   }
 
   // Nested selector methods

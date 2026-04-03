@@ -40,6 +40,10 @@
             [value]="password?.value ?? ''"
             (input)="loginForm.get('password')!.setValue($any($event.target).value)"
             (blur)="loginForm.get('password')!.markAsTouched()"
+            show-text="Show"
+            show-accessible-label="Show password"
+            hide-text="Hide"
+            hide-accessible-label="Hide password"
           ></ndd-password-field>
           @if (password?.invalid && password?.dirty) {
             <span slot="description" class="text-sm text-rose-600 dark:text-rose-400">
