@@ -16,20 +16,20 @@ At 50,000 physical servers across 3+ sites, the physical network architecture mu
 == Options
 
 === Option 1: Spine-leaf with BGP/EVPN
-* Pros: industry standard for large-scale DCs, horizontal scaling by adding leaves, well-understood fault domains, automated via open tooling (SONiC, FRR)
-* Cons: opinionated — requires compatible switch hardware, less flexible for legacy network designs
+* Pros: industry standard for large-scale DCs; horizontal scaling by adding leaves; well-understood fault domains; automated via open tooling (SONiC, FRR)
+* Cons: opinionated — requires compatible switch hardware; less flexible for legacy network designs
 
 === Option 2: Traditional three-tier (core/distribution/access)
-* Pros: familiar to most network teams, works with any vendor
-* Cons: spanning tree limits scale, poor east-west performance, difficult to automate, does not scale to 50,000 physical servers
+* Pros: familiar to most network teams; works with any vendor; large installed base in existing government DCs
+* Cons: spanning tree limits scale; poor east-west performance; difficult to automate
 
 === Option 3: SDN overlay (e.g. NSX, Contrail)
-* Pros: abstraction from physical topology, multi-tenant network virtualization built in
-* Cons: proprietary vendor dependency, additional software layer, licensing costs at scale
+* Pros: abstraction from physical topology; multi-tenant network virtualization built in
+* Cons: proprietary vendor dependency; additional software layer; licensing costs at scale
 
 == Decision
 
-Spine-leaf with BGP/EVPN. Only topology proven to scale to 50,000+ physical servers with full automation. Aligns with the automation-first requirement from ADR-0002.
+Spine-leaf with BGP/EVPN. At our target scale (ADR-0002), three-tier topology hits fundamental scaling limits due to spanning tree, and its east-west performance is insufficient for distributed systems like Ceph and etcd. SDN overlays add a proprietary dependency that conflicts with sovereignty requirements. Spine-leaf with BGP/EVPN is the only topology proven at 50,000+ servers with full automation, and aligns with the automation-first requirement from ADR-0002.
 
 == Consequences
 
