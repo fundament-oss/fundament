@@ -43,7 +43,6 @@ apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
   name: cert-manager-test
-  namespace: fundament
 spec:
   image: localhost:5111/cert-manager-plugin:latest
   pluginName: cert-manager-test

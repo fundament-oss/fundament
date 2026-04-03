@@ -129,7 +129,6 @@ apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
   name: my-plugin
-  namespace: fundament
 spec:
   image: registry.example.com/my-plugin:v1.0.0
   pluginName: my-plugin

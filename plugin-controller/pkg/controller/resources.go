@@ -17,8 +17,7 @@ import (
 const (
 	labelManagedBy             = "app.kubernetes.io/managed-by"
 	labelPlugin                = "plugins.fundament.io/plugin"
-	labelInstallationName      = "plugins.fundament.io/installation-name"
-	labelInstallationNamespace = "plugins.fundament.io/installation-namespace"
+	labelInstallationName = "plugins.fundament.io/installation-name"
 	managedByValue             = "plugin-controller"
 )
 
@@ -53,10 +52,9 @@ func pluginNamespace(pluginName string) string {
 
 func childLabels(cr *pluginsv1.PluginInstallation) map[string]string {
 	return map[string]string{
-		labelManagedBy:             managedByValue,
-		labelPlugin:                cr.Spec.PluginName,
-		labelInstallationName:      cr.Name,
-		labelInstallationNamespace: cr.Namespace,
+		labelManagedBy:        managedByValue,
+		labelPlugin:           cr.Spec.PluginName,
+		labelInstallationName: cr.Name,
 	}
 }
 
