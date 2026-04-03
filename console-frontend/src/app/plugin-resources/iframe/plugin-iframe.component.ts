@@ -33,12 +33,21 @@ function isPluginMessage(data: unknown): data is PluginMessage {
   selector: 'app-plugin-iframe',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    @if (status() === 'error') {
+      <div
+        class="flex items-center gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300"
+      >
+        <span
+          >The plugin UI did not load. Check that the plugin is running and includes the SDK.</span
+        >
+      </div>
+    }
     <iframe
       #pluginFrame
       [src]="trustedSrc()"
       sandbox="allow-scripts"
       [style.height.px]="frameHeight()"
-      class="block w-full border-none"
+      [class]="status() === 'error' ? 'hidden' : 'block w-full border-none'"
       title="Plugin custom UI"
     ></iframe>
   `,
@@ -62,17 +71,23 @@ export default class PluginIframeComponent implements OnInit {
 
   frameHeight = signal(150);
 
+  status = signal<'loading' | 'ready' | 'error'>('loading');
+
   // Required: Angular blocks all iframe [src] bindings by default. The bypass is safe here
   // because src() is always a backend-controlled URL (e.g. /plugin-ui/...), never user input.
   trustedSrc = computed<SafeResourceUrl>(() =>
     this.sanitizer.bypassSecurityTrustResourceUrl(this.src()),
   );
 
-  private iframeReady = false;
-
   private lastSentTheme: 'light' | 'dark' | null = null;
 
   ngOnInit(): void {
+    const readyTimeout = setTimeout(() => {
+      if (this.status() === 'loading') this.status.set('error');
+    }, 5000);
+
+    this.destroyRef.onDestroy(() => clearTimeout(readyTimeout));
+
     const onMessage = (event: MessageEvent): void => {
       const iframe = this.iframeRef()?.nativeElement;
       if (!iframe || event.source !== iframe.contentWindow) return;
@@ -84,7 +99,7 @@ export default class PluginIframeComponent implements OnInit {
     window.addEventListener('message', onMessage);
 
     const observer = new MutationObserver(() => {
-      if (!this.iframeReady) return;
+      if (this.status() !== 'ready') return;
       const iframe = this.iframeRef()?.nativeElement;
       if (!iframe?.contentWindow) return;
 
@@ -113,7 +128,7 @@ export default class PluginIframeComponent implements OnInit {
   private handleMessage(msg: PluginMessage, iframe: HTMLIFrameElement): void {
     switch (msg.type) {
       case 'plugin:ready':
-        this.iframeReady = true;
+        this.status.set('ready');
         this.sendInit(iframe);
         break;
       case 'plugin:resize':
