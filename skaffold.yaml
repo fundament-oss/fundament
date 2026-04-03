@@ -33,6 +33,7 @@ build:
         dockerfile: console-frontend/Dockerfile
         buildArgs:
           APP_CONFIGURATION: development
+          GITHUB_TOKEN: "{{.GITHUB_TOKEN}}"
 
     - image: cluster-worker
       context: .

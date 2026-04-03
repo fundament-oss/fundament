@@ -1,140 +1,67 @@
-@if (themeService.isOverheidTheme()) {
-  <!-- Overheid-themed login form -->
-  <div class="flex min-h-[calc(100vh-3.5rem)] flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-      <h2 class="mb-6 text-center text-3xl font-extrabold">Log in</h2>
-      <p class="mb-8 text-center text-gray-600 dark:text-gray-300">
-        Please enter your credentials to continue.
-      </p>
-    </div>
+<!-- Overheid-themed login form -->
+<div class="flex min-h-[calc(100vh-3.5rem)] flex-col justify-center py-12 sm:px-6 lg:px-8">
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <h2 class="mb-6 text-center text-3xl font-extrabold">Log in</h2>
+    <p class="mb-8 text-center text-gray-600 dark:text-gray-300">
+      Please enter your credentials to continue.
+    </p>
+  </div>
 
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-      <div
-        class="rounded-lg border border-gray-200 bg-white px-4 py-8 sm:px-10 dark:border-gray-800 dark:bg-gray-950"
-      >
-        <form [formGroup]="loginForm" class="space-y-6" (ngSubmit)="onSubmit()">
-          <rr-form-field>
-            <label for="email-overheid">Email address</label>
-            <rr-text-field
-              id="email-overheid"
-              type="email"
-              placeholder="Enter your email address"
-              autocomplete="email"
-              #emailInput
-              [value]="email?.value ?? ''"
-              (input)="loginForm.get('email')!.setValue($any($event.target).value)"
-              (blur)="loginForm.get('email')!.markAsTouched()"
-            ></rr-text-field>
-            @if (email?.invalid && email?.touched) {
-              <span slot="description" class="text-sm text-rose-600 dark:text-rose-400">
-                {{ getEmailError() }}
-              </span>
-            }
-          </rr-form-field>
-
-          <rr-form-field>
-            <label for="password-overheid">Password</label>
-            <rr-password-field
-              id="password-overheid"
-              placeholder="Enter your password"
-              autocomplete="current-password"
-              [value]="password?.value ?? ''"
-              (input)="loginForm.get('password')!.setValue($any($event.target).value)"
-              (blur)="loginForm.get('password')!.markAsTouched()"
-            ></rr-password-field>
-            @if (password?.invalid && password?.dirty) {
-              <span slot="description" class="text-sm text-rose-600 dark:text-rose-400">
-                {{ getPasswordError() }}
-              </span>
-            }
-          </rr-form-field>
-
-          @if (error()) {
-            <div class="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
-              <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
-            </div>
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <div
+      class="rounded-lg border border-gray-200 bg-white px-4 py-8 sm:px-10 dark:border-gray-800 dark:bg-gray-950"
+    >
+      <form [formGroup]="loginForm" class="space-y-6" (ngSubmit)="onSubmit()">
+        <ndd-form-field>
+          <label for="email-overheid">Email address</label>
+          <ndd-text-field
+            id="email-overheid"
+            type="email"
+            placeholder="Enter your email address"
+            autocomplete="email"
+            #emailInput
+            [value]="email?.value ?? ''"
+            (input)="loginForm.get('email')!.setValue($any($event.target).value)"
+            (blur)="loginForm.get('email')!.markAsTouched()"
+          ></ndd-text-field>
+          @if (email?.invalid && email?.touched) {
+            <span slot="description" class="text-sm text-rose-600 dark:text-rose-400">
+              {{ getEmailError() }}
+            </span>
           }
+        </ndd-form-field>
 
-          <rr-button
-            type="submit"
-            variant="accent-filled"
-            full-width
-            [attr.disabled]="isLoading() ? '' : null"
-          >
-            {{ isLoading() ? 'Signing in...' : 'Sign in' }}
-          </rr-button>
-        </form>
-      </div>
+        <ndd-form-field>
+          <label for="password-overheid">Password</label>
+          <ndd-password-field
+            id="password-overheid"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            [value]="password?.value ?? ''"
+            (input)="loginForm.get('password')!.setValue($any($event.target).value)"
+            (blur)="loginForm.get('password')!.markAsTouched()"
+          ></ndd-password-field>
+          @if (password?.invalid && password?.dirty) {
+            <span slot="description" class="text-sm text-rose-600 dark:text-rose-400">
+              {{ getPasswordError() }}
+            </span>
+          }
+        </ndd-form-field>
+
+        @if (error()) {
+          <div class="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
+            <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+          </div>
+        }
+
+        <ndd-button
+          variant="accent-filled"
+          full-width
+          [attr.disabled]="isLoading() ? '' : null"
+          [text]="isLoading() ? 'Signing in...' : 'Sign in'"
+          (click)="onSubmit()"
+        ></ndd-button>
+      </form>
     </div>
   </div>
-} @else {
-  <!-- Default Tailwind login form -->
-  <div class="flex min-h-[calc(100vh-7.0625rem)] flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-      <h2 class="text-center text-3xl font-extrabold dark:text-white">Login</h2>
-      <p class="mt-2 text-center text-gray-600 dark:text-gray-300">
-        Please enter your credentials to continue.
-      </p>
-    </div>
-
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-      <div
-        class="rounded-lg border border-gray-200 bg-white px-4 py-8 sm:px-10 dark:border-gray-800 dark:bg-gray-950"
-      >
-        <form [formGroup]="loginForm" class="space-y-6" (ngSubmit)="onSubmit()">
-          <div>
-            <label for="email" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-              Email address
-            </label>
-            <input
-              #emailInput
-              id="email"
-              formControlName="email"
-              type="email"
-              placeholder="Enter your email address"
-              autocomplete="email"
-            />
-            @if (email?.invalid && email?.touched) {
-              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getEmailError() }}</p>
-            }
-          </div>
-
-          <div>
-            <label
-              for="password"
-              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              formControlName="password"
-              type="password"
-              placeholder="Enter your password"
-              autocomplete="current-password"
-            />
-            @if (password?.invalid && password?.dirty) {
-              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getPasswordError() }}</p>
-            }
-          </div>
-
-          @if (error()) {
-            <div class="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
-              <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
-            </div>
-          }
-
-          <div>
-            <button
-              type="submit"
-              [disabled]="isLoading()"
-              class="w-full cursor-pointer rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-indigo-500 transition-colors duration-200 hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950"
-            >
-              {{ isLoading() ? 'Signing in...' : 'Sign in' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-}
+</div>

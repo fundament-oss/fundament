@@ -13,7 +13,6 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
-import ThemeService from '../theme.service';
 
 @Component({
   selector: 'app-login',
@@ -32,8 +31,6 @@ export default class LoginComponent implements OnInit, AfterViewInit {
   private apiService = inject(AuthnApiService);
 
   private fb = inject(FormBuilder);
-
-  protected themeService = inject(ThemeService);
 
   loginForm!: FormGroup;
 

@@ -2,7 +2,10 @@ FROM oven/bun:1-alpine
 WORKDIR /app
 
 # Copy package files
-COPY console-frontend/package.json console-frontend/bun.lock ./
+COPY console-frontend/package.json console-frontend/bun.lock console-frontend/bunfig.toml ./
+
+# Token for @minbzk/* packages on npm.pkg.github.com (read via bunfig.toml)
+ARG GITHUB_TOKEN
 
 # Install dependencies
 RUN bun install --frozen-lockfile

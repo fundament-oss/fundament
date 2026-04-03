@@ -39,7 +39,7 @@
     "@connectrpc/connect": "^2.1.1",
     "@connectrpc/connect-web": "^2.1.1",
     "@hey-api/client-fetch": "^0.13.1",
-    "@minbzk/storybook": "^0.8.12",
+    "@minbzk/storybook": "^0.8.16",
     "@ng-icons/core": "^33.0.0",
     "@ng-icons/tabler-icons": "^33.0.0",
     "chart.js": "^4.5.1",

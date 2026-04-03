@@ -59,7 +59,6 @@ import KubeClusterContextService from './plugin-resources/kube-cluster-context.s
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
-import ThemeService from './theme.service';
 
 const reloadApp = () => {
   window.location.reload();
@@ -114,8 +113,6 @@ export default class App implements OnInit {
   private router = inject(Router);
 
   private apiService = inject(AuthnApiService);
-
-  protected themeService = inject(ThemeService);
 
   protected toastService = inject(ToastService);
 
@@ -510,7 +507,7 @@ export default class App implements OnInit {
     // nav bar host (which contains the account button) the same as clicks inside
     // the dropdown to avoid the dropdown being closed immediately on open.
     const isInsideDropdown = !!target.closest('.user-dropdown');
-    const isNavBarHost = target.tagName?.toLowerCase() === 'rr-top-navigation-bar';
+    const isNavBarHost = target.tagName?.toLowerCase() === 'ndd-top-navigation-bar';
 
     if (!isInsideDropdown && !isNavBarHost) {
       this.userDropdownOpen.set(false);
