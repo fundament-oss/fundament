@@ -1,4 +1,4 @@
-package usersync
+package shoot
 
 import (
 	"context"
@@ -15,58 +15,6 @@ import (
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 )
-
-const (
-	// Namespace where all fundament ServiceAccounts are created.
-	FundamentNamespace = "fundament-system"
-
-	// Metadata keys for fundament-managed resources.
-	LabelUserID        = "fundament.io/user-id"
-	AnnotationUserName = "fundament.io/user-name"
-)
-
-// SAName returns the ServiceAccount name for a user.
-func SAName(userID uuid.UUID) string {
-	return "fundament-" + userID.String()
-}
-
-// CRBName returns the ClusterRoleBinding name for an admin user.
-func CRBName(userID uuid.UUID) string {
-	return "fundament:admin:" + userID.String()
-}
-
-// ResourceInfo contains the metadata needed by reconciliation.
-type ResourceInfo struct {
-	Name        string
-	Labels      map[string]string
-	Annotations map[string]string
-	RoleRef     rbacv1.RoleRef
-	Subjects    []rbacv1.Subject
-}
-
-// ShootAccess provides operations on shoot clusters for user access management.
-type ShootAccess interface {
-	// EnsureNamespace creates the namespace if it doesn't exist.
-	EnsureNamespace(ctx context.Context, clusterID uuid.UUID, name string) error
-
-	// EnsureServiceAccount creates or updates a ServiceAccount.
-	EnsureServiceAccount(ctx context.Context, clusterID uuid.UUID, namespace, name string, labels, annotations map[string]string) error
-
-	// EnsureClusterRoleBinding creates or updates a ClusterRoleBinding binding to cluster-admin.
-	EnsureClusterRoleBinding(ctx context.Context, clusterID uuid.UUID, name, saNamespace, saName string, labels, annotations map[string]string) error
-
-	// DeleteServiceAccount deletes a ServiceAccount (no-op if absent).
-	DeleteServiceAccount(ctx context.Context, clusterID uuid.UUID, namespace, name string) error
-
-	// DeleteClusterRoleBinding deletes a ClusterRoleBinding (no-op if absent).
-	DeleteClusterRoleBinding(ctx context.Context, clusterID uuid.UUID, name string) error
-
-	// ListServiceAccounts lists ServiceAccounts in a namespace filtered by label key existence.
-	ListServiceAccounts(ctx context.Context, clusterID uuid.UUID, namespace, labelKey string) ([]ResourceInfo, error)
-
-	// ListClusterRoleBindings lists ClusterRoleBindings filtered by label key existence.
-	ListClusterRoleBindings(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error)
-}
 
 // RealShootAccess implements ShootAccess using AdminKubeconfigRequest to access shoot clusters.
 type RealShootAccess struct {
@@ -138,8 +86,8 @@ func (r *RealShootAccess) EnsureServiceAccount(ctx context.Context, clusterID uu
 		if getErr != nil {
 			return fmt.Errorf("get existing SA %s/%s: %w", namespace, name, getErr)
 		}
-		mergeStringMap(existing.Labels, labels)
-		mergeStringMap(existing.Annotations, annotations)
+		MergeStringMap(existing.Labels, labels)
+		MergeStringMap(existing.Annotations, annotations)
 		_, err = cs.CoreV1().ServiceAccounts(namespace).Update(ctx, existing, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("update SA %s/%s: %w", namespace, name, err)
@@ -185,7 +133,7 @@ func (r *RealShootAccess) EnsureClusterRoleBinding(ctx context.Context, clusterI
 			return fmt.Errorf("get existing CRB %s: %w", name, getErr)
 		}
 
-		if clusterRoleBindingNeedsRecreate(existing, crb) {
+		if ClusterRoleBindingNeedsRecreate(existing, crb) {
 			if err := cs.RbacV1().ClusterRoleBindings().Delete(ctx, name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 				return fmt.Errorf("delete existing CRB %s before recreate: %w", name, err)
 			}
@@ -195,8 +143,8 @@ func (r *RealShootAccess) EnsureClusterRoleBinding(ctx context.Context, clusterI
 			return nil
 		}
 
-		mergeStringMap(existing.Labels, labels)
-		mergeStringMap(existing.Annotations, annotations)
+		MergeStringMap(existing.Labels, labels)
+		MergeStringMap(existing.Annotations, annotations)
 		existing.Subjects = crb.Subjects
 		_, err = cs.RbacV1().ClusterRoleBindings().Update(ctx, existing, metav1.UpdateOptions{})
 		if err != nil {
@@ -257,8 +205,8 @@ func (r *RealShootAccess) ListServiceAccounts(ctx context.Context, clusterID uui
 	for i := range list.Items {
 		result[i] = ResourceInfo{
 			Name:        list.Items[i].Name,
-			Labels:      cloneStringMap(list.Items[i].Labels),
-			Annotations: cloneStringMap(list.Items[i].Annotations),
+			Labels:      CloneStringMap(list.Items[i].Labels),
+			Annotations: CloneStringMap(list.Items[i].Annotations),
 		}
 	}
 	return result, nil
@@ -279,8 +227,8 @@ func (r *RealShootAccess) ListClusterRoleBindings(ctx context.Context, clusterID
 	for i := range list.Items {
 		result[i] = ResourceInfo{
 			Name:        list.Items[i].Name,
-			Labels:      cloneStringMap(list.Items[i].Labels),
-			Annotations: cloneStringMap(list.Items[i].Annotations),
+			Labels:      CloneStringMap(list.Items[i].Labels),
+			Annotations: CloneStringMap(list.Items[i].Annotations),
 			RoleRef:     list.Items[i].RoleRef,
 			Subjects:    append([]rbacv1.Subject(nil), list.Items[i].Subjects...),
 		}
@@ -288,19 +236,21 @@ func (r *RealShootAccess) ListClusterRoleBindings(ctx context.Context, clusterID
 	return result, nil
 }
 
-func clusterRoleBindingNeedsRecreate(existing, desired *rbacv1.ClusterRoleBinding) bool {
+// ClusterRoleBindingNeedsRecreate returns true if the RoleRef has changed (immutable field).
+func ClusterRoleBindingNeedsRecreate(existing, desired *rbacv1.ClusterRoleBinding) bool {
 	return existing.RoleRef != desired.RoleRef
 }
 
-// mergeStringMap copies all entries from src into dst, overwriting existing keys.
+// MergeStringMap copies all entries from src into dst, overwriting existing keys.
 // Existing keys in dst that are not in src are preserved.
-func mergeStringMap(dst, src map[string]string) {
+func MergeStringMap(dst, src map[string]string) {
 	for k, v := range src {
 		dst[k] = v
 	}
 }
 
-func cloneStringMap(src map[string]string) map[string]string {
+// CloneStringMap returns a shallow copy of the map.
+func CloneStringMap(src map[string]string) map[string]string {
 	if src == nil {
 		return nil
 	}
@@ -311,3 +261,5 @@ func cloneStringMap(src map[string]string) map[string]string {
 	}
 	return dst
 }
+
+var _ ShootAccess = (*RealShootAccess)(nil)

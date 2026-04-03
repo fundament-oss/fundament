@@ -18,16 +18,23 @@ import (
 
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 )
 
+// errNonRetryable marks errors that will never self-resolve (invalid row, missing handler).
+// The outbox worker fails these immediately instead of burning through retries.
+var errNonRetryable = errors.New("non-retryable")
+
 // Config holds configuration for the outbox worker.
 type Config struct {
-	PollInterval time.Duration `env:"POLL_INTERVAL" envDefault:"5s"`
-	BaseBackoff  time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
-	MaxBackoff   time.Duration `env:"MAX_BACKOFF" envDefault:"1m"`
-	MaxRetries   int32         `env:"MAX_RETRIES" envDefault:"10"`
-	BackoffDelay time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
+	PollInterval             time.Duration `env:"POLL_INTERVAL" envDefault:"5s"`
+	BaseBackoff              time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
+	MaxBackoff               time.Duration `env:"MAX_BACKOFF" envDefault:"1m"`
+	MaxRetries               int32         `env:"MAX_RETRIES" envDefault:"10"`
+	BackoffDelay             time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
+	PreconditionDelay        time.Duration `env:"PRECONDITION_DELAY" envDefault:"30s"`
+	MaxPreconditionDeferrals int32         `env:"MAX_PRECONDITION_DEFERRALS" envDefault:"100"`
 }
 
 // Worker processes the cluster outbox table and dispatches to handlers.
@@ -157,82 +164,113 @@ func (w *Worker) processAllRows(ctx context.Context) {
 	}
 }
 
+// processNextRow is a thin orchestrator: claim → process → complete.
 func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 	if ctx.Err() != nil {
 		return false, nil
 	}
 
-	// Row lock: OutboxGetAndLock uses FOR NO KEY UPDATE SKIP LOCKED,
-	// so the row is locked for the lifetime of this transaction.
-	// Happy path: mark processed + commit inside the same tx.
-	// Error path: rollback tx (releases lock), then mark retry/failed via pool
-	// to avoid deadlock (pool UPDATE would block on the tx's row lock).
-	tx, err := w.pool.Begin(ctx)
+	row, tx, err := w.claim(ctx)
 	if err != nil {
-		return false, fmt.Errorf("begin transaction: %w", err)
+		return false, err
+	}
+	if row == nil {
+		return false, nil
 	}
 	defer rollback.Rollback(ctx, tx, w.logger)
 
-	qtx := w.queries.WithTx(tx)
+	entityType, processErr := w.process(ctx, row)
 
+	return w.complete(ctx, row, tx, entityType, processErr)
+}
+
+// claim begins a transaction and locks the next pending outbox row.
+// Returns nil row if no rows are available.
+func (w *Worker) claim(ctx context.Context) (*db.OutboxGetAndLockRow, pgx.Tx, error) {
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("begin transaction: %w", err)
+	}
+
+	qtx := w.queries.WithTx(tx)
 	row, err := qtx.OutboxGetAndLock(ctx)
 	if err != nil {
+		_ = tx.Rollback(ctx)
 		if errors.Is(err, pgx.ErrNoRows) {
 			w.logger.Debug("no pending outbox rows")
-			return false, nil
+			return nil, nil, nil
 		}
-		return false, fmt.Errorf("get next outbox row: %w", err)
+		return nil, nil, fmt.Errorf("get next outbox row: %w", err)
 	}
 
-	entityType, entityID, err := entityFromRow(&row)
+	return &row, tx, nil
+}
+
+// process extracts the entity, finds the handler, and dispatches.
+// Returns the entity type (for logging) and any handler error.
+func (w *Worker) process(ctx context.Context, row *db.OutboxGetAndLockRow) (handler.EntityType, error) {
+	entityType, entityID, err := entityFromRow(row)
 	if err != nil {
-		w.logger.Error("invalid outbox row, marking as failed",
-			"outbox_id", row.ID,
-			"error", err)
-		_ = tx.Rollback(ctx) // release lock before marking via pool
-		markErr := w.queries.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
-			ID:         row.ID,
-			StatusInfo: pgtype.Text{String: err.Error(), Valid: true},
-		})
-		if markErr != nil {
-			return false, fmt.Errorf("mark failed for invalid entity: %w", markErr)
-		}
-		return true, nil
+		return "", fmt.Errorf("%w: %w", errNonRetryable, err)
 	}
+
+	event := dbconst.ClusterOutboxEvent(row.Event)
+	source := dbconst.ClusterOutboxSource(row.Source)
 
 	w.logger.Debug("processing outbox row",
 		"outbox_id", row.ID,
 		"entity_type", entityType,
 		"entity_id", entityID,
-		"event", row.Event,
-		"source", row.Source,
+		"event", event,
+		"source", source,
 		"retries", row.Retries)
 
-	h, err := w.registry.SyncHandlerFor(entityType, row.Event)
+	h, err := w.registry.SyncHandlerFor(entityType, event)
 	if err != nil {
-		w.logger.Error("no handler registered, marking as failed",
-			"outbox_id", row.ID,
-			"entity_type", entityType,
-			"error", err)
-		_ = tx.Rollback(ctx)
-		markErr := w.queries.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
-			ID:         row.ID,
-			StatusInfo: pgtype.Text{String: err.Error(), Valid: true},
-		})
-		if markErr != nil {
-			return false, fmt.Errorf("mark failed for unhandled entity: %w", markErr)
-		}
-		return true, nil
+		return entityType, fmt.Errorf("%w: %w", errNonRetryable, err)
 	}
 
-	err = h.Sync(ctx, entityID, handler.SyncContext{EntityType: entityType, Event: row.Event, Source: row.Source})
-	if err != nil {
+	if err := h.Sync(ctx, entityID, handler.SyncContext{EntityType: entityType, Event: event, Source: source}); err != nil {
+		return entityType, fmt.Errorf("sync %s %s: %w", entityType, entityID, err)
+	}
+	return entityType, nil
+}
+
+// complete finalizes the outbox row based on the processing result.
+// On success: mark processed + commit inside the same tx.
+// On PreconditionError: rollback tx, defer without retry increment.
+// On other error: rollback tx (releases lock), then mark retry/failed via pool.
+func (w *Worker) complete(ctx context.Context, row *db.OutboxGetAndLockRow, tx pgx.Tx, entityType handler.EntityType, processErr error) (bool, error) {
+	if processErr != nil {
+		// Non-retryable errors (invalid row, missing handler) fail immediately.
+		if errors.Is(processErr, errNonRetryable) {
+			w.logger.Error("non-retryable error, marking as failed",
+				"outbox_id", row.ID,
+				"entity_type", entityType,
+				"error", processErr)
+			_ = tx.Rollback(ctx)
+			markErr := w.queries.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
+				ID:         row.ID,
+				StatusInfo: pgtype.Text{String: processErr.Error(), Valid: true},
+			})
+			if markErr != nil {
+				return false, fmt.Errorf("mark failed for non-retryable error: %w", markErr)
+			}
+			return true, nil
+		}
+
+		// Check if precondition is not present yet
+		precondErr, isPrecond := errors.AsType[*handler.PreconditionError](processErr)
+		if isPrecond {
+			return w.handlePreconditionError(ctx, row, tx, entityType, precondErr)
+		}
+
 		w.logger.Warn("handler returned error",
 			"outbox_id", row.ID,
 			"entity_type", entityType,
-			"error", err)
+			"error", processErr)
 		_ = tx.Rollback(ctx) // release lock before marking via pool
-		markErr := w.handleRowError(ctx, w.queries, &row, err)
+		markErr := w.handleRowError(ctx, w.queries, row, processErr)
 		if markErr != nil {
 			return false, fmt.Errorf("handle processing error: %w", markErr)
 		}
@@ -240,14 +278,18 @@ func (w *Worker) processNextRow(ctx context.Context) (hasNext bool, err error) {
 	}
 
 	// Happy path: mark processed and commit in the same transaction.
-	err = qtx.OutboxMarkProcessed(ctx, db.OutboxMarkProcessedParams{ID: row.ID})
-	if err != nil {
+	qtx := w.queries.WithTx(tx)
+	if err := qtx.OutboxMarkProcessed(ctx, db.OutboxMarkProcessedParams{ID: row.ID}); err != nil {
 		return false, fmt.Errorf("mark as processed: %w", err)
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		return false, fmt.Errorf("commit: %w", err)
+	}
+
+	entityID := uuid.Nil
+	if entityType != "" {
+		_, entityID, _ = entityFromRow(row)
 	}
 
 	w.logger.Debug("outbox row processed",
@@ -307,9 +349,50 @@ func entityFromRow(row *db.OutboxGetAndLockRow) (handler.EntityType, uuid.UUID, 
 		return handler.EntityOrgUser, uuid.UUID(row.OrganizationUserID.Bytes), nil
 	case row.ProjectMemberID.Valid:
 		return handler.EntityProjectMember, uuid.UUID(row.ProjectMemberID.Bytes), nil
+	case row.NodePoolID.Valid:
+		return handler.EntityNodePool, uuid.UUID(row.NodePoolID.Bytes), nil
 	default:
 		return "", uuid.Nil, fmt.Errorf("no valid entity FK in outbox row %s", row.ID)
 	}
+}
+
+// handlePreconditionError defers a row without incrementing retries.
+// If the deferral count exceeds MaxPreconditionDeferrals, it falls through to
+// regular error handling (increments retries, applies backoff/fail logic).
+func (w *Worker) handlePreconditionError(ctx context.Context, row *db.OutboxGetAndLockRow, tx pgx.Tx, entityType handler.EntityType, precondErr *handler.PreconditionError) (bool, error) {
+	_ = tx.Rollback(ctx) // release lock before deferring via pool
+
+	// deferrals is checked before the UPDATE increments it, so +1 to reflect the new count.
+	deferrals := row.Deferrals + 1
+
+	if deferrals > w.cfg.MaxPreconditionDeferrals {
+		w.logger.Warn("precondition deferral cap exceeded, treating as regular error",
+			"outbox_id", row.ID,
+			"entity_type", entityType,
+			"deferrals", deferrals,
+			"reason", precondErr.Reason)
+		markErr := w.handleRowError(ctx, w.queries, row, precondErr)
+		if markErr != nil {
+			return false, fmt.Errorf("handle processing error: %w", markErr)
+		}
+		return true, nil
+	}
+
+	if _, err := w.queries.OutboxDeferWithoutRetry(ctx, db.OutboxDeferWithoutRetryParams{
+		ID:         row.ID,
+		Delay:      durationToInterval(w.cfg.PreconditionDelay),
+		StatusInfo: pgtype.Text{String: precondErr.Reason, Valid: true},
+	}); err != nil {
+		return false, fmt.Errorf("defer outbox row: %w", err)
+	}
+
+	w.logger.Debug("deferred outbox row (precondition not met)",
+		"outbox_id", row.ID,
+		"entity_type", entityType,
+		"deferrals", deferrals,
+		"reason", precondErr.Reason)
+
+	return true, nil
 }
 
 func durationToInterval(d time.Duration) pgtype.Interval {

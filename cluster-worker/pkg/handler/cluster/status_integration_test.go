@@ -7,6 +7,7 @@ import (
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
 func TestCheckStatusTransitionCreatesEvent(t *testing.T) {
@@ -18,7 +19,7 @@ func TestCheckStatusTransitionCreatesEvent(t *testing.T) {
 
 	// Insert cluster, sync it to create the shoot, then mark outbox completed.
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "status-ready")
-	sc := handler.SyncContext{Event: "created", Source: "trigger"}
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
 	err := h.Sync(t.Context(), clusterID, sc)
 	require.NoError(t, err)
 	markOutboxCompleted(t, db, clusterID)
@@ -75,7 +76,7 @@ func TestCheckStatusErrorTransition(t *testing.T) {
 
 	// Insert cluster, sync it, mark completed.
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "status-error")
-	sc := handler.SyncContext{Event: "created", Source: "trigger"}
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
 	err := h.Sync(t.Context(), clusterID, sc)
 	require.NoError(t, err)
 	markOutboxCompleted(t, db, clusterID)
