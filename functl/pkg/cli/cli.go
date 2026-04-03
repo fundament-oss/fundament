@@ -15,6 +15,7 @@ type CLI struct {
 
 	Auth      AuthCmd      `cmd:"" help:"Authentication commands."`
 	Cluster   ClusterCmd   `cmd:"" help:"Manage clusters."`
+	Config    ConfigCmd    `cmd:"" help:"Configuration introspection."`
 	Org       OrgCmd       `cmd:"" help:"Manage organization."`
 	Project   ProjectCmd   `cmd:"" help:"Manage projects."`
 	Namespace NamespaceCmd `cmd:"" help:"Manage namespaces."`
