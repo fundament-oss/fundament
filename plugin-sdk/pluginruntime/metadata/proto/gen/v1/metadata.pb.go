@@ -729,6 +729,7 @@ type GetDefinitionResponse struct {
 	CustomComponents map[string]*ComponentMapping `protobuf:"bytes,12,rep,name=custom_components,json=customComponents" json:"custom_components,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	UiHints          map[string]*UIHint           `protobuf:"bytes,13,rep,name=ui_hints,json=uiHints" json:"ui_hints,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Crds             []string                     `protobuf:"bytes,14,rep,name=crds" json:"crds,omitempty"`
+	ApiVersion       *string                      `protobuf:"bytes,15,opt,name=api_version,json=apiVersion" json:"api_version,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -861,6 +862,13 @@ func (x *GetDefinitionResponse) GetCrds() []string {
 	return nil
 }
 
+func (x *GetDefinitionResponse) GetApiVersion() string {
+	if x != nil && x.ApiVersion != nil {
+		return *x.ApiVersion
+	}
+	return ""
+}
+
 var File_v1_metadata_proto protoreflect.FileDescriptor
 
 const file_v1_metadata_proto_rawDesc = "" +
@@ -915,7 +923,7 @@ const file_v1_metadata_proto_rawDesc = "" +
 	"\x06UIHint\x12=\n" +
 	"\vform_groups\x18\x01 \x03(\v2\x1c.pluginmetadata.v1.FormGroupR\n" +
 	"formGroups\x12G\n" +
-	"\x0estatus_mapping\x18\x02 \x01(\v2 .pluginmetadata.v1.StatusMappingR\rstatusMapping\"\xa4\x06\n" +
+	"\x0estatus_mapping\x18\x02 \x01(\v2 .pluginmetadata.v1.StatusMappingR\rstatusMapping\"\xc5\x06\n" +
 	"\x15GetDefinitionResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12 \n" +
@@ -931,7 +939,9 @@ const file_v1_metadata_proto_rawDesc = "" +
 	"\x04menu\x18\v \x01(\v2!.pluginmetadata.v1.MenuDefinitionR\x04menu\x12k\n" +
 	"\x11custom_components\x18\f \x03(\v2>.pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntryR\x10customComponents\x12P\n" +
 	"\bui_hints\x18\r \x03(\v25.pluginmetadata.v1.GetDefinitionResponse.UiHintsEntryR\auiHints\x12\x12\n" +
-	"\x04crds\x18\x0e \x03(\tR\x04crds\x1ah\n" +
+	"\x04crds\x18\x0e \x03(\tR\x04crds\x12\x1f\n" +
+	"\vapi_version\x18\x0f \x01(\tR\n" +
+	"apiVersion\x1ah\n" +
 	"\x15CustomComponentsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x129\n" +
 	"\x05value\x18\x02 \x01(\v2#.pluginmetadata.v1.ComponentMappingR\x05value:\x028\x01\x1aU\n" +

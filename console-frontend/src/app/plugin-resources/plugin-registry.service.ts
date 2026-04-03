@@ -1,7 +1,11 @@
-import { Injectable, signal } from '@angular/core';
-import * as yaml from 'js-yaml';
-import type { PluginDefinition, ParsedCrd, RawPluginYaml, RawCrdYaml } from './types';
+import {inject, Injectable, signal} from '@angular/core';
+import type {
+  PluginDefinition, ParsedCrd, RawCrdYaml, PluginInstallationListResponse,
+  GetDefinitionResponse
+} from './types';
 import { parseObjectSchema } from './crd-schema.utils';
+import {ConfigService} from '../config.service';
+import OrganizationContextService from '../organization-context.service';
 
 function parseCrd(raw: RawCrdYaml): ParsedCrd {
   const version = raw.spec.versions.find((v) => v.storage) ?? raw.spec.versions[0];
@@ -41,19 +45,27 @@ function parseCrd(raw: RawCrdYaml): ParsedCrd {
   };
 }
 
-function parsePluginYaml(yamlText: string): PluginDefinition {
-  const raw = yaml.load(yamlText) as RawPluginYaml;
+function toTablerIconName(icon: string): string {
+  return `tabler${  icon.split('-').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`;
+}
 
+function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
   return {
-    apiVersion: raw.apiVersion,
+    apiVersion: def.apiVersion,
     kind: 'PluginDefinition',
-    name: raw.name,
-    label: raw.label,
-    version: raw.version,
-    description: raw.description,
-    author: raw.author,
-    menu: raw.menu,
-    crds: raw.crds,
+    name: def.name,
+    label: def.displayName,
+    version: def.version,
+    description: def.description,
+    author: def.author,
+    menu: {
+      project: def.menu.project?.map((e) => ({
+        crd: e.crd,
+        label: e.label,
+        icon: e.icon ? toTablerIconName(e.icon) : undefined,
+      })),
+    },
+    crds: def.crds ?? [],
   };
 }
 
@@ -61,41 +73,73 @@ function parsePluginYaml(yamlText: string): PluginDefinition {
 export default class PluginRegistryService {
   private plugins = signal<PluginDefinition[]>([]);
 
-  private loaded = signal(false);
+  private loadedForClusterId: string | null = null
 
   // Parsed CRDs indexed by plural; key: "${pluginName}/${clusterId}/${plural}"
   private parsedCrdByPlural = new Map<string, ParsedCrd>();
 
-  private readonly pluginFiles = [
-    '/plugins/cert-manager/cert-manager.plugin.yaml',
-    '/plugins/cnpg/cnpg.plugin.yaml',
-  ];
+  private configService = inject(ConfigService);
 
-  async loadPlugins(): Promise<void> {
-    if (this.loaded()) return;
+  private organizationContextService = inject(OrganizationContextService);
+
+  async loadPlugins(clusterId: string): Promise<void> {
+    if (clusterId === this.loadedForClusterId) return;
+
+    const { kubeApiProxyUrl } = this.configService.getConfig();
+
+    const orgId =
+      this.organizationContextService.currentOrganizationId() ??
+      OrganizationContextService.getStoredOrganizationId();
+
+    if (!orgId) return;
+
+    const headers: Record<string, string> = {
+      'Fun-Organization': orgId,
+      'Fun-Cluster': clusterId,
+    };
+
+    let listData: PluginInstallationListResponse;
+
+    try {
+      const listRes = await fetch(
+        `${kubeApiProxyUrl}/apis/plugins.fundament.io/v1/plugininstallations`,
+        { credentials: 'include', headers },
+      );
+      if (!listRes.ok) return;
+
+      listData = (await listRes.json()) as PluginInstallationListResponse;
+    } catch {
+      return;
+    }
+
+    const runningPlugins = (listData.items ?? []).filter(
+      (item) => item.status.phase === 'Running' && item.status.ready,
+    );
 
     const results = await Promise.allSettled(
-      this.pluginFiles.map(async (file) => {
-        const response = await fetch(file);
-        if (!response.ok) {
-          throw new Error(`Failed to load plugin file ${file}: ${response.status}`);
+      runningPlugins.map(async (item) => {
+        const { pluginName } = item.spec;
+        const defRes = await fetch(
+          `${kubeApiProxyUrl}/api/v1/namespaces/plugin-${pluginName}/services/http:plugin-${pluginName}:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition`,
+          { credentials: 'include', headers },
+        );
+        if (!defRes.ok) {
+          throw new Error(`Failed to fetch definition for ${pluginName}: ${defRes.status}`);
         }
-        const text = await response.text();
-        return parsePluginYaml(text);
+
+        return defRes.json() as Promise<GetDefinitionResponse>;
       }),
     );
 
-    results
-      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-      // eslint-disable-next-line no-console
-      .forEach((r) => console.error('[PluginRegistry] Failed to load plugin:', r.reason));
-
     const definitions: PluginDefinition[] = results
-      .filter((r): r is PromiseFulfilledResult<PluginDefinition> => r.status === 'fulfilled')
-      .map((r) => r.value);
+      .filter(
+        (r): r is PromiseFulfilledResult<GetDefinitionResponse> => r.status === 'fulfilled',
+      )
+      .map((r) => mapDefinition(r.value));
 
     this.plugins.set(definitions);
-    this.loaded.set(true);
+
+    this.loadedForClusterId = clusterId
   }
 
   async loadCrdsForPlugin(
@@ -116,6 +160,7 @@ export default class PluginRegistryService {
           credentials: 'include',
           headers: { 'Fun-Organization': orgId, 'Fun-Cluster': clusterId },
         });
+
         if (!response.ok) {
           // eslint-disable-next-line no-console
           console.error(`[PluginRegistry] Failed to fetch CRD ${crdName}: ${response.status}`);
@@ -127,6 +172,12 @@ export default class PluginRegistryService {
         this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.plural}`, parsed);
       }),
     );
+  }
+
+  reset(): void {
+    this.loadedForClusterId = null;
+    this.plugins.set([]);
+    this.parsedCrdByPlural.clear();
   }
 
   getPlugin(name: string): PluginDefinition | undefined {
