@@ -31,6 +31,8 @@ type HostMessage =
 
 const PLUGIN_SDK_VERSION = 1;
 
+let parentOrigin: string | null = null;
+
 function applyTheme(theme: Theme): void {
   document.body.classList.remove('light', 'dark');
   document.body.classList.add(theme);
@@ -43,7 +45,7 @@ function reportHeight(): void {
   resizeTimer = setTimeout(() => {
     window.parent.postMessage(
       { type: 'plugin:resize', height: document.documentElement.scrollHeight },
-      '*',
+      parentOrigin ?? '*',
     );
   }, 50);
 }
@@ -69,10 +71,13 @@ async function waitForStylesheets(): Promise<void> {
 }
 
 window.addEventListener('message', (event: MessageEvent) => {
+  if (parentOrigin !== null && event.origin !== parentOrigin) return;
+
   const data = event.data as HostMessage;
   if (!data || typeof data.type !== 'string') return;
 
   if (data.type === 'fundament:init') {
+    parentOrigin = event.origin;
     applyTheme(data.theme);
   } else if (data.type === 'fundament:theme-changed') {
     applyTheme(data.theme);
@@ -83,4 +88,6 @@ const observer = new ResizeObserver(reportHeight);
 
 waitForStylesheets().then(() => observer.observe(document.body));
 
+// '*' is intentional: parentOrigin is not yet known at this point (fundament:init hasn't arrived),
+// and this message carries no sensitive data.
 window.parent.postMessage({ type: 'plugin:ready', version: PLUGIN_SDK_VERSION }, '*');
