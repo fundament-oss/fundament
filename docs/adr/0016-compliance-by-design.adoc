@@ -1,0 +1,38 @@
+:showtitle:
+:state: proposed
+
+= ADR-0016: Compliance by design
+
+Status:: proposed
+Date:: 2026-03-10
+Group:: cross-cutting
+Depends-on:: ADR-0001
+
+== Context
+
+Fundament is a sovereign cloud platform for government workloads. Government platforms must meet compliance requirements around security, data protection, and sovereignty. The question is when and how compliance enters the design process.
+
+== Options
+
+=== Option 1: Compliance by design
+* Pros: compliance requirements are inputs to architecture decisions; gaps are prevented rather than discovered; audit trail is built into the ADR process; avoids costly redesign when certification is pursued; every architecture decision can reference concrete compliance criteria
+* Cons: slower initial design process; requires upfront knowledge of applicable frameworks; risk of over-engineering for compliance criteria that may not apply
+
+=== Option 2: Compliance as certification
+* Pros: build fast, certify later; no upfront compliance overhead; flexibility to change direction
+* Cons: gaps discovered during certification require redesign; retrofitting compliance into existing architecture is expensive; may lead to bolt-on security controls rather than structural guarantees
+
+=== Option 3: Compliance as documentation
+* Pros: lightest touch; map existing architecture to framework requirements after the fact
+* Cons: no guarantee that the architecture actually satisfies requirements; documentation becomes fiction if architecture diverges; does not provide structural assurance
+
+== Decision
+
+Compliance by design. Compliance requirements are inputs to architecture decisions, not afterthoughts. Each ADR that makes a compliance-relevant choice must reference the specific requirement it satisfies. Which compliance frameworks to design against is a separate decision (separate ADR).
+
+== Consequences
+
+* Frameworks and certifications must be chosen per compliance area (separate ADRs per area)
+* ADRs that affect security, isolation, sovereignty, or data protection must reference specific compliance criteria
+* The ADR process itself serves as part of the compliance audit trail
+* The platform team must understand applicable compliance frameworks, not just technology
