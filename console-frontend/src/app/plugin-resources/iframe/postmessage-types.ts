@@ -1,9 +1,6 @@
-export const POSTMESSAGE_VERSION = 1;
-
 export type HostMessage =
   | {
       type: 'fundament:init';
-      version: number;
       theme: 'light' | 'dark';
       pluginName: string;
       crdKind: string;
@@ -17,7 +14,6 @@ export type HostMessage =
 export type PluginMessage =
   | {
       type: 'plugin:ready';
-      version: number;
     }
   | {
       type: 'plugin:resize';

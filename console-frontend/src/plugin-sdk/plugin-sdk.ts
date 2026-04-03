@@ -29,8 +29,6 @@ type HostMessage =
       theme: Theme;
     };
 
-const PLUGIN_SDK_VERSION = 1;
-
 let parentOrigin: string | null = null;
 
 function applyTheme(theme: Theme): void {
@@ -90,4 +88,4 @@ waitForStylesheets().then(() => observer.observe(document.body));
 
 // '*' is intentional: parentOrigin is not yet known at this point (fundament:init hasn't arrived),
 // and this message carries no sensitive data.
-window.parent.postMessage({ type: 'plugin:ready', version: PLUGIN_SDK_VERSION }, '*');
+window.parent.postMessage({ type: 'plugin:ready' }, '*');

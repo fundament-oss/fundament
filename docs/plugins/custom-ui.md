@@ -30,7 +30,7 @@ The host sends messages to the plugin after it signals readiness.
 
 | Message | When | Payload |
 |---------|------|---------|
-| `plugin:ready` | On script load | `{ version: number }` |
+| `plugin:ready` | On script load | _(no payload)_ |
 | `plugin:resize` | When content height changes | `{ height: number }` |
 | `plugin:navigate` | When the plugin navigates | `{ path: string }` |
 
@@ -38,7 +38,7 @@ The host sends messages to the plugin after it signals readiness.
 
 | Message | When | Payload |
 |---------|------|---------|
-| `fundament:init` | After `plugin:ready` | `{ version, theme, pluginName, crdKind, view }` |
+| `fundament:init` | After `plugin:ready` | `{ theme, pluginName, crdKind, view }` |
 | `fundament:theme-changed` | User switches theme | `{ theme: 'light' \| 'dark' }` |
 
 The `fundament:init` message contains everything the plugin needs to render the correct view:

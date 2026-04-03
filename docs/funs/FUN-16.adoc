@@ -108,7 +108,7 @@ All messages use a `type` string as a discriminator. Host-to-plugin messages are
 |===
 | Type | Payload | Description
 
-| `plugin:ready` | `{ version: number }` | Sent on script load. Signals that the plugin is ready to receive context.
+| `plugin:ready` | _(no payload)_ | Sent on script load. Signals that the plugin is ready to receive context.
 | `plugin:resize` | `{ height: number }` | Sent when content height changes. The host updates the iframe's CSS height.
 | `plugin:navigate` | `{ path: string }` | Requests host-side navigation using the Angular router.
 |===
@@ -119,7 +119,7 @@ All messages use a `type` string as a discriminator. Host-to-plugin messages are
 |===
 | Type | Payload | Description
 
-| `fundament:init` | `{ version, theme, pluginName, crdKind, view }` | Sent after `plugin:ready`. Provides all context the plugin needs to render.
+| `fundament:init` | `{ theme, pluginName, crdKind, view }` | Sent after `plugin:ready`. Provides all context the plugin needs to render.
 | `fundament:theme-changed` | `{ theme: 'light' \| 'dark' }` | Sent when the user switches the Console theme.
 |===
 
@@ -143,7 +143,7 @@ These are not convenience helpers — they are required for the iframe to functi
 
 `plugin-sdk.js` handles the postMessage protocol automatically:
 
-* Posts `plugin:ready` on load, including the protocol version.
+* Posts `plugin:ready` on load.
 * Installs a `ResizeObserver` on the document body and posts `plugin:resize` whenever the content height changes, allowing the host to grow or shrink the iframe to fit the content without scrollbars.
 * Listens for `fundament:init` and `fundament:theme-changed` and applies the `.dark` class to `<body>`, enabling CSS-based dark mode switching without any plugin-side code.
 

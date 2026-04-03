@@ -13,7 +13,6 @@ import {
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import type { HostMessage, PluginMessage } from './postmessage-types';
-import { POSTMESSAGE_VERSION } from './postmessage-types';
 
 function getCurrentTheme(): 'light' | 'dark' {
   return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -63,6 +62,8 @@ export default class PluginIframeComponent implements OnInit {
 
   frameHeight = signal(150);
 
+  // Required: Angular blocks all iframe [src] bindings by default. The bypass is safe here
+  // because src() is always a backend-controlled URL (e.g. /plugin-ui/...), never user input.
   trustedSrc = computed<SafeResourceUrl>(() =>
     this.sanitizer.bypassSecurityTrustResourceUrl(this.src()),
   );
@@ -138,7 +139,6 @@ export default class PluginIframeComponent implements OnInit {
 
     const msg: HostMessage = {
       type: 'fundament:init',
-      version: POSTMESSAGE_VERSION,
       theme,
       pluginName: this.pluginName(),
       crdKind: this.crdKind(),
