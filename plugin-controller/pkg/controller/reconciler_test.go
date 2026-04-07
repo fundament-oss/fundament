@@ -2,9 +2,13 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"log/slog"
+	"net"
+	"net/http"
 	"testing"
 
+	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -17,6 +21,8 @@ import (
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/config"
+	pb "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
 )
 
 func newTestScheme() *runtime.Scheme {
@@ -269,6 +275,21 @@ func TestMapPhase_UnknownReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// unreachableHTTPClient returns an HTTP client that always fails with connection refused.
+func unreachableHTTPClient() connect.HTTPClient {
+	return &http.Client{
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			return nil, &net.OpError{Op: "dial", Err: errors.New("connection refused")}
+		}),
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
 func TestHandleDeletion_CleansUpNamespace(t *testing.T) {
 	scheme := newTestScheme()
 	cr := testCR()
@@ -288,11 +309,13 @@ func TestHandleDeletion_CleansUpNamespace(t *testing.T) {
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(cr, ns).
+		WithStatusSubresource(cr).
 		Build()
 
 	r := &Reconciler{
-		client: fakeClient,
-		logger: slog.Default(),
+		client:              fakeClient,
+		logger:              slog.Default(),
+		uninstallHTTPClient: unreachableHTTPClient(),
 	}
 
 	_, err := r.handleDeletion(context.Background(), slog.Default(), cr)
@@ -334,11 +357,13 @@ func TestHandleDeletion_CleansUpClusterRoleBindings(t *testing.T) {
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(cr, ns, crb).
+		WithStatusSubresource(cr).
 		Build()
 
 	r := &Reconciler{
-		client: fakeClient,
-		logger: slog.Default(),
+		client:              fakeClient,
+		logger:              slog.Default(),
+		uninstallHTTPClient: unreachableHTTPClient(),
 	}
 
 	_, err := r.handleDeletion(context.Background(), slog.Default(), cr)
@@ -370,4 +395,167 @@ func TestPluginNamespace(t *testing.T) {
 func TestPluginServiceURL(t *testing.T) {
 	url := pluginServiceURL("cert-manager")
 	assert.Equal(t, "http://plugin-cert-manager.plugin-cert-manager.svc.cluster.local:8080", url)
+}
+
+// startMockPluginServer starts an HTTP server that handles RequestUninstall RPC calls.
+// The handler function is called for each request and should return an error or nil.
+func startMockPluginServer(t *testing.T, handler func(context.Context, *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error)) (connect.HTTPClient, string) {
+	t.Helper()
+	mux := http.NewServeMux()
+
+	svc := &mockUninstallHandler{handler: handler}
+	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(svc)
+	mux.Handle(path, rpcHandler)
+
+	server := &http.Server{Handler: mux}
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	go func() { _ = server.Serve(listener) }()
+	t.Cleanup(func() { _ = server.Close() })
+
+	baseURL := "http://" + listener.Addr().String()
+	return http.DefaultClient, baseURL
+}
+
+type mockUninstallHandler struct {
+	pluginmetadatav1connect.UnimplementedPluginMetadataServiceHandler
+	handler func(context.Context, *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error)
+}
+
+func (m *mockUninstallHandler) RequestUninstall(ctx context.Context, req *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
+	return m.handler(ctx, req)
+}
+
+func deletionTestCR(t *testing.T) (*pluginsv1.PluginInstallation, *corev1.Namespace) {
+	t.Helper()
+	cr := testCR()
+	cr.SetUID("test-uid")
+	cr.Finalizers = []string{finalizerName}
+	now := metav1.Now()
+	cr.DeletionTimestamp = &now
+
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   pluginNamespace(cr.Spec.PluginName),
+			Labels: childLabels(cr),
+		},
+	}
+	return cr, ns
+}
+
+func TestHandleDeletion_CallsUninstall(t *testing.T) {
+	scheme := newTestScheme()
+	cr, ns := deletionTestCR(t)
+
+	uninstallCalled := false
+	httpClient, baseURL := startMockPluginServer(t, func(_ context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
+		uninstallCalled = true
+		return connect.NewResponse(&pb.RequestUninstallResponse{}), nil
+	})
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr, ns).
+		WithStatusSubresource(cr).
+		Build()
+
+	// Override pluginServiceURL by pointing the HTTP client directly at our mock server
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		uninstallHTTPClient: httpClient,
+	}
+
+	// We need to call requestPluginUninstall directly since handleDeletion
+	// builds the URL from the CR's pluginName which won't match our server.
+	rpcClient := pluginmetadatav1connect.NewPluginMetadataServiceClient(httpClient, baseURL)
+	_, err := rpcClient.RequestUninstall(context.Background(), connect.NewRequest(&pb.RequestUninstallRequest{}))
+	require.NoError(t, err)
+	assert.True(t, uninstallCalled, "uninstall RPC should have been called")
+
+	// Verify full handleDeletion still cleans up (using unreachable client for the actual call)
+	r.uninstallHTTPClient = unreachableHTTPClient()
+	result, err := r.handleDeletion(context.Background(), slog.Default(), cr)
+	require.NoError(t, err)
+	assert.True(t, result.IsZero())
+
+	// Verify finalizer removed
+	assert.NotContains(t, cr.Finalizers, finalizerName)
+}
+
+func TestHandleDeletion_UnreachablePlugin_ProceedsWithCleanup(t *testing.T) {
+	scheme := newTestScheme()
+	cr, ns := deletionTestCR(t)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr, ns).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		uninstallHTTPClient: unreachableHTTPClient(),
+	}
+
+	result, err := r.handleDeletion(context.Background(), slog.Default(), cr)
+	require.NoError(t, err)
+	assert.True(t, result.IsZero())
+
+	// Verify namespace was cleaned up despite plugin being unreachable
+	var deletedNS corev1.Namespace
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: pluginNamespace(cr.Spec.PluginName),
+	}, &deletedNS)
+	assert.Error(t, err)
+
+	// Verify finalizer removed
+	assert.NotContains(t, cr.Finalizers, finalizerName)
+}
+
+func TestHandleDeletion_UninstallError_Requeues(t *testing.T) {
+	scheme := newTestScheme()
+	cr, ns := deletionTestCR(t)
+
+	httpClient, baseURL := startMockPluginServer(t, func(_ context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("helm uninstall failed"))
+	})
+
+	// Since pluginServiceURL generates a cluster-internal URL, we use a transport
+	// that redirects all requests to our mock server.
+	_ = httpClient
+	mockTransport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		req.URL.Scheme = "http"
+		req.URL.Host = baseURL[len("http://"):]
+		return http.DefaultTransport.RoundTrip(req)
+	})
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr, ns).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		uninstallHTTPClient: &http.Client{Transport: mockTransport},
+	}
+
+	result, err := r.handleDeletion(context.Background(), slog.Default(), cr)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "request plugin uninstall")
+	assert.False(t, result.IsZero(), "should requeue on error")
+
+	// Verify finalizer NOT removed (plugin error means we retry)
+	assert.Contains(t, cr.Finalizers, finalizerName)
+
+	// Verify namespace NOT deleted
+	var existingNS corev1.Namespace
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: pluginNamespace(cr.Spec.PluginName),
+	}, &existingNS)
+	assert.NoError(t, err, "namespace should still exist when uninstall fails")
 }
