@@ -1,19 +1,13 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerArrowRight } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 
 @Component({
   selector: 'app-add-cluster-plugins',
-  imports: [SharedPluginsFormComponent, RouterLink, NgIcon],
-  viewProviders: [
-    provideIcons({
-      tablerArrowRight,
-    }),
-  ],
+  imports: [SharedPluginsFormComponent, RouterLink],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-plugins.component.html',
 })

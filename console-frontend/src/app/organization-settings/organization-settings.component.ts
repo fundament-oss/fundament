@@ -6,12 +6,11 @@ import {
   ElementRef,
   signal,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPencil, tablerX, tablerCheck } from '@ng-icons/tabler-icons';
 import { UpdateOrganizationRequestSchema } from '../../generated/v1/organization_pb';
 import { ORGANIZATION } from '../../connect/tokens';
 import { TitleService } from '../title.service';
@@ -21,14 +20,8 @@ import OrganizationContextService from '../organization-context.service';
 
 @Component({
   selector: 'app-organization-settings',
-  imports: [FormsModule, NgIcon],
-  viewProviders: [
-    provideIcons({
-      tablerPencil,
-      tablerX,
-      tablerCheck,
-    }),
-  ],
+  imports: [FormsModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './organization-settings.component.html',
 })

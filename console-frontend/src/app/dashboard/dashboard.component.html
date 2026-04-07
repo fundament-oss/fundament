@@ -6,7 +6,7 @@
 
     @if (clusters().length > 0) {
       <a routerLink="/clusters/add" class="btn-primary mt-4 inline-flex items-center">
-        <ng-icon name="tablerPlus" class="mr-1.5" size="0.875rem" />
+        <ndd-icon name="plus-small" class="mr-1.5 h-3.5 w-3.5"></ndd-icon>
         Add cluster
       </a>
     }
@@ -73,7 +73,7 @@
                   routerLink="/clusters/{{ cluster.id }}"
                   class="btn-primary inline-flex items-center"
                 >
-                  <ng-icon name="tablerEye" class="mr-1.5" size="0.75rem" /> View details
+                  <ndd-icon name="eye" class="mr-1.5 h-3 w-3"></ndd-icon> View details
                 </a>
               </div>
             </div>
@@ -90,7 +90,7 @@
           Add your first Kubernetes cluster to get started.
         </p>
         <a routerLink="/clusters/add" class="btn-primary mt-5 inline-flex items-center">
-          <ng-icon name="tablerPlus" class="mr-1.5" size="0.875rem" />
+          <ndd-icon name="plus-small" class="mr-1.5 h-3.5 w-3.5"></ndd-icon>
           Add cluster
         </a>
       </div>

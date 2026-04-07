@@ -6,10 +6,12 @@ import {
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleCheck, tablerArrowBackUp, tablerAlertTriangle } from '@ng-icons/tabler-icons';
+import { tablerArrowBackUp } from '@ng-icons/tabler-icons';
+import '@minbzk/storybook';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -55,14 +57,8 @@ interface ProgressItem {
 @Component({
   selector: 'app-add-cluster-summary',
   imports: [RouterLink, NgIcon, ModalComponent, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-      tablerCircleCheck,
-      tablerArrowBackUp,
-      tablerAlertTriangle,
-    }),
-  ],
+  viewProviders: [provideIcons({ tablerCircleXFill, tablerArrowBackUp })],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-summary.component.html',
 })

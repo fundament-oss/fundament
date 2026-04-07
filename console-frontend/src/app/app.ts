@@ -21,17 +21,7 @@ import {
 } from '@angular/router';
 import { filter, skip } from 'rxjs/operators';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerCircleCheck,
-  tablerCircleX,
-  tablerAlertTriangle,
-  tablerInfoCircle,
-  tablerX,
-  tablerMenu2,
-  tablerMoon,
-  tablerSun,
-  tablerUserCircle,
-} from '@ng-icons/tabler-icons';
+import { tablerMoon, tablerSun } from '@ng-icons/tabler-icons';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
@@ -70,15 +60,8 @@ const reloadApp = () => {
   ],
   viewProviders: [
     provideIcons({
-      tablerCircleCheck,
-      tablerCircleX,
-      tablerAlertTriangle,
-      tablerInfoCircle,
-      tablerX,
-      tablerMenu2,
       tablerMoon,
       tablerSun,
-      tablerUserCircle,
     }),
   ],
   host: {

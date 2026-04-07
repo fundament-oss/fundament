@@ -7,11 +7,12 @@ import {
   effect,
   untracked,
   OnInit,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerEye, tablerDatabaseOff, tablerRefresh } from '@ng-icons/tabler-icons';
+import { tablerDatabaseOff, tablerRefresh } from '@ng-icons/tabler-icons';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
@@ -42,13 +43,8 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
 @Component({
   selector: 'app-resource-list',
   imports: [RouterLink, NgIcon, PluginIframeComponent],
-  viewProviders: [
-    provideIcons({
-      tablerEye,
-      tablerDatabaseOff,
-      tablerRefresh,
-    }),
-  ],
+  viewProviders: [provideIcons({ tablerDatabaseOff, tablerRefresh })],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

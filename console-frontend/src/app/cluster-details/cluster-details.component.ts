@@ -6,19 +6,13 @@ import {
   OnDestroy,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerTerminal,
-  tablerDownload,
-  tablerArrowUp,
-  tablerCaretRight,
-  tablerPencil,
-  tablerAlertTriangle,
-} from '@ng-icons/tabler-icons';
+import { tablerTerminal, tablerCaretRight } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
@@ -126,17 +120,8 @@ const getEventDetails = (event: ClusterEvent): string => {
 @Component({
   selector: 'app-cluster-details',
   imports: [RouterLink, NgIcon, LoadingIndicatorComponent, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-      tablerTerminal,
-      tablerDownload,
-      tablerArrowUp,
-      tablerCaretRight,
-      tablerPencil,
-      tablerAlertTriangle,
-    }),
-  ],
+  viewProviders: [provideIcons({ tablerCircleXFill, tablerTerminal, tablerCaretRight })],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

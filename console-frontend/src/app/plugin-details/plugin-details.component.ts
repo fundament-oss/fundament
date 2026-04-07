@@ -1,8 +1,14 @@
-import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  signal,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerChevronRight, tablerCheck } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -33,13 +39,8 @@ interface InstallWithCluster extends Install {
 @Component({
   selector: 'app-plugin-details',
   imports: [InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerChevronRight,
-      tablerCheck,
-      tablerCircleXFill,
-    }),
-  ],
+  viewProviders: [provideIcons({ tablerCircleXFill })],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
 })

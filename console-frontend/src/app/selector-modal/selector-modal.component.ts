@@ -6,9 +6,10 @@ import {
   computed,
   effect,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { tablerSearch, tablerFolder, tablerBuilding } from '@ng-icons/tabler-icons';
+import { tablerFolder, tablerBuilding } from '@ng-icons/tabler-icons';
 import ModalComponent from '../modal/modal.component';
 
 interface Project {
@@ -27,11 +28,11 @@ interface Organization {
   imports: [NgIconComponent, ModalComponent],
   viewProviders: [
     provideIcons({
-      tablerSearch,
       tablerFolder,
       tablerBuilding,
     }),
   ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './selector-modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

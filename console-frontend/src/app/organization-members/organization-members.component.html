@@ -35,7 +35,7 @@
     </div>
 
     <button type="button" (click)="openModal()" class="btn-primary mb-6 inline-flex items-center">
-      <ng-icon name="tablerPlus" class="mr-2" />
+      <ndd-icon name="plus-small" class="mr-2"></ndd-icon>
       Invite member
     </button>
 
@@ -94,7 +94,7 @@
                       (click)="cancelInvitation(invitation.id)"
                       class="btn-remove shrink-0"
                     >
-                      <ng-icon name="tablerTrash" class="mr-1.5" /> Cancel
+                      <ndd-icon name="trash" class="mr-1.5"></ndd-icon> Cancel
                     </button>
                   </td>
                 </tr>
@@ -135,7 +135,7 @@
         <div
           class="rounded-md border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-800 dark:bg-rose-950"
         >
-          <ng-icon name="tablerAlertTriangle" size="3rem" class="mx-auto text-rose-400!" />
+          <ndd-icon name="exclamation-circle" class="mx-auto h-12 w-12 text-rose-400!"></ndd-icon>
           <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
           <button
             type="button"
@@ -211,14 +211,14 @@
                         (click)="openEditModal(member)"
                         class="btn-light mr-2 inline-flex shrink-0 items-center"
                       >
-                        <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
+                        <ndd-icon name="pencil" class="mr-1.5"></ndd-icon> Edit
                       </button>
                       <button
                         type="button"
                         (click)="openDeleteModal(member)"
                         class="btn-remove shrink-0"
                       >
-                        <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
+                        <ndd-icon name="trash" class="mr-1.5"></ndd-icon> Remove
                       </button>
                     }
                   </td>

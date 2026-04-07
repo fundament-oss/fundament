@@ -1,9 +1,15 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPencil } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
@@ -23,9 +29,9 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
   viewProviders: [
     provideIcons({
       tablerCircleXFill,
-      tablerPencil,
     }),
   ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

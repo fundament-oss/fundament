@@ -6,11 +6,10 @@ import {
   ChangeDetectionStrategy,
   ViewChild,
   ElementRef,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { tablerX, tablerPencil, tablerCheck, tablerAlertTriangle } from '@ng-icons/tabler-icons';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
@@ -28,15 +27,8 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-settings',
-  imports: [FormsModule, NgIconComponent, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerX,
-      tablerPencil,
-      tablerCheck,
-      tablerAlertTriangle,
-    }),
-  ],
+  imports: [FormsModule, ModalComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-settings.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -9,6 +9,7 @@ import {
   AfterViewInit,
   inject,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import {
   ReactiveFormsModule,
@@ -19,8 +20,6 @@ import {
   AbstractControl,
   ValidationErrors,
 } from '@angular/forms';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerTrash, tablerPlus } from '@ng-icons/tabler-icons';
 
 export interface NodePoolData {
   name: string;
@@ -31,13 +30,8 @@ export interface NodePoolData {
 
 @Component({
   selector: 'app-shared-node-pools-form',
-  imports: [ReactiveFormsModule, NgIcon],
-  viewProviders: [
-    provideIcons({
-      tablerTrash,
-      tablerPlus,
-    }),
-  ],
+  imports: [ReactiveFormsModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-node-pools-form.component.html',
 })

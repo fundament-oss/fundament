@@ -6,21 +6,14 @@ import {
   ViewChild,
   ElementRef,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerPlus,
-  tablerTrash,
-  tablerX,
-  tablerCheck,
-  tablerCopy,
-  tablerBan,
-  tablerAlertTriangle,
-} from '@ng-icons/tabler-icons';
+import { tablerBan } from '@ng-icons/tabler-icons';
 import ModalComponent from '../modal/modal.component';
 import {
   type APIKey,
@@ -58,17 +51,8 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
 @Component({
   selector: 'app-api-keys',
   imports: [FormsModule, NgIcon, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerPlus,
-      tablerTrash,
-      tablerX,
-      tablerCheck,
-      tablerCopy,
-      tablerBan,
-      tablerAlertTriangle,
-    }),
-  ],
+  viewProviders: [provideIcons({ tablerBan })],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './api-keys.component.html',
 })

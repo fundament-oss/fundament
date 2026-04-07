@@ -23,7 +23,7 @@
 
       @if (clusters().length > 0) {
         <a routerLink="/projects/add" class="btn-primary mt-4 inline-flex items-center">
-          <ng-icon name="tablerPlus" class="mr-1.5" size="0.875rem" />
+          <ndd-icon name="plus-small" class="mr-1.5 h-3.5 w-3.5"></ndd-icon>
           Add project
         </a>
       }
@@ -91,11 +91,10 @@
                       <span class="min-w-0 flex-1 text-sm font-medium">
                         {{ project.name }}
                       </span>
-                      <ng-icon
-                        name="tablerChevronRight"
-                        size="1.125rem"
-                        class="shrink-0 text-gray-300 group-hover:text-gray-400 dark:text-gray-600 dark:group-hover:text-gray-500"
-                      />
+                      <ndd-icon
+                        name="chevron-right-small"
+                        class="h-4.5 w-4.5 shrink-0 text-gray-300 group-hover:text-gray-400 dark:text-gray-600 dark:group-hover:text-gray-500"
+                      ></ndd-icon>
                     </a>
                   }
                 </div>

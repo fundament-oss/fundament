@@ -10,18 +10,13 @@ import {
   SimpleChanges,
   AfterViewChecked,
   OnDestroy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { tablerX } from '@ng-icons/tabler-icons';
 
 @Component({
   selector: 'app-modal',
-  imports: [NgIconComponent],
-  viewProviders: [
-    provideIcons({
-      tablerX,
-    }),
-  ],
+  imports: [],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
     '(document:keydown)': 'handleKeydown($event)',
     '[attr.title]': 'null',

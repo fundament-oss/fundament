@@ -1,7 +1,14 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCheck, tablerHelpCircle } from '@ng-icons/tabler-icons';
+import { tablerHelpCircle } from '@ng-icons/tabler-icons';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
@@ -59,12 +66,8 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
 @Component({
   selector: 'app-plugins',
   imports: [RouterLink, InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCheck,
-      tablerHelpCircle,
-    }),
-  ],
+  viewProviders: [provideIcons({ tablerHelpCircle })],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',
 })

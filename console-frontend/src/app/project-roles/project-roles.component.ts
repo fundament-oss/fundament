@@ -5,17 +5,10 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   computed,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerPlus,
-  tablerTrash,
-  tablerPencil,
-  tablerInfoCircle,
-  tablerAlertTriangle,
-} from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
 import ModalComponent from '../modal/modal.component';
 
@@ -31,16 +24,8 @@ const AVAILABLE_ROLES = ['deploy', 'view-pods', 'view-logs', 'manage-services'];
 
 @Component({
   selector: 'app-project-roles',
-  imports: [FormsModule, NgIcon, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerPlus,
-      tablerTrash,
-      tablerPencil,
-      tablerInfoCircle,
-      tablerAlertTriangle,
-    }),
-  ],
+  imports: [FormsModule, ModalComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-roles.component.html',
 })

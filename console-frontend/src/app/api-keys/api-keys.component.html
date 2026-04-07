@@ -41,12 +41,12 @@
               (click)="copyToken()"
               class="btn-primary inline-flex shrink-0 items-center"
             >
-              <ng-icon name="tablerCopy" class="mr-1.5" /> Copy
+              <ndd-icon name="squares-stack-plus" class="mr-1.5"></ndd-icon> Copy
             </button>
           </div>
         </div>
         <button type="button" (click)="dismissToken()" class="btn-primary inline-flex items-center">
-          <ng-icon name="tablerCheck" class="mr-1.5" /> I've saved the token
+          <ndd-icon name="check-mark" class="mr-1.5"></ndd-icon> I've saved the token
         </button>
       </div>
     }
@@ -135,7 +135,7 @@
         [disabled]="loading()"
         class="btn-primary mb-5 inline-flex items-center"
       >
-        <ng-icon name="tablerPlus" class="mr-1.5" />
+        <ndd-icon name="plus-small" class="mr-1.5"></ndd-icon>
         Create new API key
       </button>
     }
@@ -216,7 +216,7 @@
                       [disabled]="loading()"
                       class="btn-remove inline-flex shrink-0 items-center"
                     >
-                      <ng-icon name="tablerTrash" class="mr-1.5" /> Delete
+                      <ndd-icon name="trash" class="mr-1.5"></ndd-icon> Delete
                     </button>
                   </div>
                 </td>
@@ -248,11 +248,10 @@
     <div
       class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
     >
-      <ng-icon
-        name="tablerAlertTriangle"
-        size="1.5rem"
-        class="text-rose-600! dark:text-rose-400!"
-      />
+      <ndd-icon
+        name="exclamation-circle"
+        class="h-6 w-6 text-rose-600! dark:text-rose-400!"
+      ></ndd-icon>
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
@@ -288,11 +287,10 @@
     <div
       class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
     >
-      <ng-icon
-        name="tablerAlertTriangle"
-        size="1.5rem"
-        class="text-rose-600! dark:text-rose-400!"
-      />
+      <ndd-icon
+        name="exclamation-circle"
+        class="h-6 w-6 text-rose-600! dark:text-rose-400!"
+      ></ndd-icon>
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">

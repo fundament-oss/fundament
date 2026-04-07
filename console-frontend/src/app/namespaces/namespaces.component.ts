@@ -1,10 +1,16 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerTrash, tablerAlertTriangle } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
@@ -22,14 +28,8 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 @Component({
   selector: 'app-namespaces',
   imports: [ReactiveFormsModule, NgIcon, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-      tablerPlus,
-      tablerTrash,
-      tablerAlertTriangle,
-    }),
-  ],
+  viewProviders: [provideIcons({ tablerCircleXFill })],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './namespaces.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

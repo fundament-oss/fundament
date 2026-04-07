@@ -1,4 +1,10 @@
-import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -6,9 +12,7 @@ import {
   tablerFolders,
   tablerPuzzle,
   tablerUsers,
-  tablerSettings,
   tablerChartLine,
-  tablerChevronRight,
   tablerBuilding,
   tablerBracketsContain,
   tablerUserCog,
@@ -25,14 +29,13 @@ import type { PluginNavGroup } from '../plugin-resources/types';
       tablerFolders,
       tablerPuzzle,
       tablerUsers,
-      tablerSettings,
       tablerChartLine,
-      tablerChevronRight,
       tablerBuilding,
       tablerBracketsContain,
       tablerUserCog,
     }),
   ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './sidebar-nav.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

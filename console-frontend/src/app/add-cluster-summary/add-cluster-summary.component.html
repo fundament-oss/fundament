@@ -132,17 +132,15 @@
             class="h-4 w-4 shrink-0 animate-spin fill-indigo-600 text-indigo-200 dark:fill-indigo-400 dark:text-indigo-900"
           />
         } @else if (bannerState() === 'ready') {
-          <ng-icon
-            name="tablerCircleCheck"
-            class="shrink-0 text-green-500! dark:text-green-400!"
-            size="1.125rem"
-          />
+          <ndd-icon
+            name="check-mark-circle"
+            class="h-5 w-5 shrink-0 text-green-500! dark:text-green-400!"
+          ></ndd-icon>
         } @else if (bannerState() === 'partial') {
-          <ng-icon
-            name="tablerAlertTriangle"
-            class="shrink-0 text-amber-500! dark:text-amber-400!"
-            size="1.125rem"
-          />
+          <ndd-icon
+            name="exclamation-circle"
+            class="h-4.5 w-4.5 shrink-0 text-amber-500! dark:text-amber-400!"
+          ></ndd-icon>
         } @else {
           <ng-icon
             name="tablerCircleXFill"
@@ -240,7 +238,7 @@
           } @else if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
             <ng-icon name="tablerCircleXFill" class="shrink-0 text-rose-500!" size="1.25rem" />
           } @else {
-            <ng-icon name="tablerCircleCheck" class="shrink-0 text-green-500!" size="1.25rem" />
+            <ndd-icon name="check-mark-circle" class="h-5 w-5 shrink-0 text-green-500!"></ndd-icon>
           }
 
           <div>
