@@ -116,7 +116,7 @@ authzWorker:
 
 # OpenFGA (Fine-Grained Authorization)
 openfga:
-  enabled: false
+  enabled: true
   image: openfga/openfga:v1.11.3
   replicas: 1
   playground:
