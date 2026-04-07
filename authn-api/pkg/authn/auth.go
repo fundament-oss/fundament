@@ -54,7 +54,7 @@ type AuthnServer struct {
 	logger        *slog.Logger
 	validator     *auth.Validator
 	cookieBuilder *auth.CookieBuilder
-	authz          *authz.Client
+	authz         *authz.Client
 }
 
 // New creates a new AuthnServer.
@@ -69,7 +69,7 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		sessionStore:  sessionStore,
 		validator:     auth.NewValidator(cfg.JWTSecret, logger),
 		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure),
-		authz:          authzClient,
+		authz:         authzClient,
 	}, nil
 }
 
