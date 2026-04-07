@@ -43,7 +43,7 @@ type apiOptions struct {
 	organizations        map[uuid.UUID]string
 	users                map[uuid.UUID]testUser
 	clock                clock.Clock
-	idempotency   bool
+	idempotency          bool
 	kubeAPIProxyURL      string
 	kubeAPIProxyInsecure bool
 }

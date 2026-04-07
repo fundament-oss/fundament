@@ -54,6 +54,20 @@ func (q *Queries) APIKeyGetByHash(ctx context.Context, arg APIKeyGetByHashParams
 	return i, err
 }
 
+const aPIKeyUpdateLastUsed = `-- name: APIKeyUpdateLastUsed :exec
+SELECT authn.api_key_update_last_used($1)
+`
+
+type APIKeyUpdateLastUsedParams struct {
+	PID uuid.UUID
+}
+
+// Uses SECURITY DEFINER function to bypass RLS
+func (q *Queries) APIKeyUpdateLastUsed(ctx context.Context, arg APIKeyUpdateLastUsedParams) error {
+	_, err := q.db.Exec(ctx, aPIKeyUpdateLastUsed, arg.PID)
+	return err
+}
+
 const organizationCreate = `-- name: OrganizationCreate :one
 INSERT INTO tenant.organizations (name, alias)
 VALUES ($1, $2)
