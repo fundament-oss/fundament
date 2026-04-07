@@ -107,3 +107,7 @@ WHERE tenant.clusters.id = @cluster_id
 -- Uses SECURITY DEFINER function to bypass RLS (we don't know org_id before lookup)
 SELECT id, organization_id, user_id, name, token_prefix, expires, revoked, last_used, created, deleted
 FROM authn.api_key_get_by_hash($1);
+
+-- name: APIKeyUpdateLastUsed :exec
+-- Uses SECURITY DEFINER function to bypass RLS
+SELECT authn.api_key_update_last_used($1);

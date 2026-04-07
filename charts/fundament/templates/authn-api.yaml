@@ -57,6 +57,18 @@ spec:
             - name: GARDENER_KUBECONFIG
               value: /etc/gardener/kubeconfig
             {{- end }}
+            - name: OPENFGA_API_URL
+              value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
+            - name: OPENFGA_STORE_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: openfga-config
+                  key: store-id
+            - name: OPENFGA_AUTHORIZATION_MODEL_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: openfga-config
+                  key: authorization-model-id
           {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
           volumeMounts:
             - name: gardener-kubeconfig

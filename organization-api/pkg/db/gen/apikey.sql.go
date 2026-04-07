@@ -43,7 +43,7 @@ func (q *Queries) APIKeyCreate(ctx context.Context, arg APIKeyCreateParams) (uui
 
 const aPIKeyDelete = `-- name: APIKeyDelete :execrows
 UPDATE authn.api_keys
-SET deleted = NOW()
+SET deleted = NOW(), expires = NOW()
 WHERE id = $1 AND user_id = $2 AND deleted IS NULL
 `
 

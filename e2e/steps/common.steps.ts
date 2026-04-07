@@ -1,4 +1,4 @@
-import { Given, Then } from '@cucumber/cucumber';
+import { Given, When, Then } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 import { ICustomWorld } from '../support/world.ts';
 import { APIKeyService, type CreateAPIKeyResponse } from '../support/api/apikey-service.ts';
@@ -110,11 +110,65 @@ Given('I have created an API key named {string}', async function (this: ICustomW
   })
 });
 
+Given('I have created an API key named {string} with expiry {string}', async function (this: ICustomWorld, name: string, expiresIn: string) {
+  let response;
+  try {
+    response = await this.apiKeyService!.createAPIKey({ name, expiresIn });
+  } catch (err) {
+    if (err instanceof ConnectRpcError && err.code === 'already_exists') {
+      const list = await this.apiKeyService!.listAPIKeys();
+      const existing = list.apiKeys.find((k) => k.name === name);
+      if (existing) {
+        await this.apiKeyService!.deleteAPIKey(existing.id);
+      }
+      response = await this.apiKeyService!.createAPIKey({ name, expiresIn });
+    } else {
+      throw err;
+    }
+  }
+  currentApiKey = response;
+
+  this.createdApiKeys.set(name, response);
+  if (this.currentUserEmail) {
+    this.createdApiKeysByUser.get(this.currentUserEmail)?.set(name, response);
+  }
+
+  // wait until the permissions have settled
+  const retrieveAPIKey = async () => {
+    return this.apiKeyService?.getAPIKey(response.id);
+  };
+
+  await pRetry(retrieveAPIKey, {
+    shouldRetry: ({error}) => {
+      return ((error instanceof ConnectRpcError) && error.code == 'permission_denied');
+    }
+  });
+});
+
 Given('I have revoked the API key', async function (this: ICustomWorld) {
   await this.apiKeyService!.revokeAPIKey(currentApiKey!.id);
 });
 
+Given('I wait {int} seconds', async function (this: ICustomWorld, seconds: number) {
+  await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+});
+
+// --- Common When Steps ---
+
+When('I delete the API key', async function (this: ICustomWorld) {
+  try {
+    await this.apiKeyService!.deleteAPIKey(currentApiKey!.id);
+    this.lastApiError = undefined;
+  } catch (error) {
+    this.lastApiError = error as Error;
+  }
+});
+
 // --- Common Then Steps ---
+
+Then('I should not receive an error', async function (this: ICustomWorld) {
+  expect(this.lastApiError).toBeUndefined();
+});
 
 Then('I should receive an error', async function (this: ICustomWorld) {
   expect(this.lastApiError).toBeDefined();
@@ -130,4 +184,9 @@ Then('I should receive a not found error', async function (this: ICustomWorld) {
   expect(this.lastApiError).toBeDefined();
   expect(this.lastApiError).toBeInstanceOf(ConnectRpcError);
   expect((this.lastApiError as ConnectRpcError).code).toBe('not_found');
+});
+
+Then('the error message should contain {string}', async function (this: ICustomWorld, expected: string) {
+  expect(this.lastApiError).toBeDefined();
+  expect(this.lastApiError!.message).toContain(expected);
 });
