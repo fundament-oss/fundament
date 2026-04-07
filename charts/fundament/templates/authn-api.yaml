@@ -6,6 +6,8 @@ metadata:
   name: authn-api
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "authn-api" "component" "backend") | nindent 4 }}
+  annotations:
+    reloader.stakater.com/auto: "true"
 spec:
   replicas: {{ $.Values.authnApi.replicas }}
   selector:
