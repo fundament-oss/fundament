@@ -22,7 +22,7 @@ const adminKubeconfigRefreshRatio = 0.7
 // MultiClusterProxy routes Kubernetes API requests to the correct cluster
 // based on the cluster ID from request context. It lazily creates one httputil.ReverseProxy
 // per cluster by fetching a short-lived admin kubeconfig from Gardener,
-// caching it until 70% of its TTL before re-fetching.
+// caching it until it needs re-fetching.
 type MultiClusterProxy struct {
 	gardener *gardener.Client
 	logger   *slog.Logger
@@ -98,7 +98,6 @@ func (m *MultiClusterProxy) buildProxy(ctx context.Context, clusterID string) (*
 		return nil, fmt.Errorf("build client for cluster %s: %w", clusterID, err)
 	}
 
-	// Refresh at 70% of the actual expiration time from Gardener.
 	ttl := time.Until(adminKC.ExpiresAt)
 	refreshAt := time.Now().Add(time.Duration(float64(ttl) * adminKubeconfigRefreshRatio))
 
@@ -113,9 +112,7 @@ func (m *MultiClusterProxy) buildProxy(ctx context.Context, clusterID string) (*
 func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slog.Logger) *httputil.ReverseProxy {
 	return &httputil.ReverseProxy{
 		Transport: transport,
-		// Flush immediately after each write. Go's ReverseProxy auto-detects
-		// chunked responses and flushes anyway, but -1 is a defensive default
-		// for watch and log-follow streaming.
+		// Disable buffering to ensure smooth streaming for watch and log-follow requests.
 		FlushInterval: -1,
 		Director: func(req *http.Request) {
 			req.URL.Scheme = target.Scheme
@@ -124,10 +121,13 @@ func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slo
 			// Strip client auth headers.
 			req.Header.Del("Authorization")
 			req.Header.Del("Cookie")
-			// Inject per-user SA token if present in context.
-			if saToken, ok := req.Context().Value(SATokenContextKey{}).(string); ok && saToken != "" {
-				req.Header.Set("Authorization", "Bearer "+saToken)
+			// Inject per-user SA token from context.
+			saToken, ok := req.Context().Value(SATokenContextKey{}).(string)
+			if !ok || saToken == "" {
+				logger.ErrorContext(req.Context(), "missing SA token in context")
+				return
 			}
+			req.Header.Set("Authorization", "Bearer "+saToken)
 		},
 		ErrorHandler: func(w http.ResponseWriter, req *http.Request, err error) {
 			logger.ErrorContext(req.Context(), "kubernetes proxy error", "error", err)

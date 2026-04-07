@@ -48,7 +48,7 @@ func NewCache(gc *gardener.Client, logger *slog.Logger) *Cache {
 	c := &Cache{
 		gardener: gc,
 		logger:   logger,
-		tokens: ttlcache.New[cacheKey, *cachedToken](
+		tokens: ttlcache.New(
 			// No default TTL — each entry gets its own TTL from the API server response.
 			ttlcache.WithTTL[cacheKey, *cachedToken](ttlcache.NoTTL),
 		),
@@ -74,13 +74,6 @@ func (c *Cache) GetToken(ctx context.Context, userID uuid.UUID, clusterID string
 	}
 
 	// Cache miss or expired — synchronous fetch.
-	return c.fetchAndCache(ctx, key)
-}
-
-// ForceRefresh evicts the cached token and fetches a new one.
-func (c *Cache) ForceRefresh(ctx context.Context, userID uuid.UUID, clusterID string) (string, error) {
-	key := cacheKey{userID: userID, clusterID: clusterID}
-	c.tokens.Delete(key)
 	return c.fetchAndCache(ctx, key)
 }
 

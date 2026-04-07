@@ -8,7 +8,7 @@ import (
 )
 
 // MockClient returns hardcoded Kubernetes API responses for development and testing.
-// It implements both Interface (Do) and http.Handler (ServeHTTP).
+// It implements http.Handler so it can be used in place of MultiClusterProxy.
 type MockClient struct{}
 
 const crdBasePath = "/apis/apiextensions.k8s.io/v1/customresourcedefinitions"
