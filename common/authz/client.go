@@ -35,6 +35,15 @@ func New(cfg Config) (*Client, error) {
 	return &Client{fga: fgaClient}, nil
 }
 
+// Healthy checks that the OpenFGA store is reachable.
+func (c *Client) Healthy(ctx context.Context) error {
+	_, err := c.fga.GetStore(ctx).Execute()
+	if err != nil {
+		return fmt.Errorf("openfga: %w", err)
+	}
+	return nil
+}
+
 // Evaluate performs a single access evaluation following the AuthZEN Access Evaluation API.
 // Returns a Decision indicating whether the subject can perform the action on the resource.
 func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision, error) {
