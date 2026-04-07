@@ -54,6 +54,7 @@ function parsePluginYaml(yamlText: string): PluginDefinition {
     author: raw.author,
     menu: raw.menu,
     crds: raw.crds,
+    customUI: raw.customUI,
   };
 }
 
@@ -69,6 +70,7 @@ export default class PluginRegistryService {
   private readonly pluginFiles = [
     '/plugins/cert-manager/cert-manager.plugin.yaml',
     '/plugins/cnpg/cnpg.plugin.yaml',
+    '/plugins/demo/demo.plugin.yaml',
   ];
 
   async loadPlugins(): Promise<void> {
@@ -125,6 +127,7 @@ export default class PluginRegistryService {
         const raw = (await response.json()) as RawCrdYaml;
         const parsed = parseCrd(raw);
         this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.plural}`, parsed);
+        this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.kind}`, parsed);
       }),
     );
   }

@@ -20,6 +20,9 @@ RUN mv /tmp/docs/funs ./src/content/docs/funs \
  && mv /tmp/docs ./src/content/docs/docs \
  && find ./src/content/docs/docs -name '*.md' -exec sed -i 's|(assets/|(/assets/|g' {} +
 
+# Disable Astro telemetry
+ENV ASTRO_TELEMETRY_DISABLED=1
+
 # Build the application
 RUN bun run build
 

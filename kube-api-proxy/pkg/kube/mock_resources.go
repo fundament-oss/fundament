@@ -207,3 +207,23 @@ const mockSubscriptionListJSON = `{
   "metadata": {"resourceVersion": "1"},
   "items": []
 }`
+
+const mockDemoItemListJSON = `{
+  "apiVersion": "demo.fundament.io/v1",
+  "kind": "DemoItemList",
+  "metadata": {"resourceVersion": "1"},
+  "items": [
+    {
+      "apiVersion": "demo.fundament.io/v1",
+      "kind": "DemoItem",
+      "metadata": {"name": "hello-world", "namespace": "default", "uid": "demoitem-1", "creationTimestamp": "2026-03-01T00:00:00Z"},
+      "spec": {"message": "Hello, World!"}
+    },
+    {
+      "apiVersion": "demo.fundament.io/v1",
+      "kind": "DemoItem",
+      "metadata": {"name": "greetings", "namespace": "default", "uid": "demoitem-2", "creationTimestamp": "2026-03-15T00:00:00Z"},
+      "spec": {"message": "Greetings from the demo plugin!"}
+    }
+  ]
+}`
