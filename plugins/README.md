@@ -17,8 +17,14 @@ just logs                          # Watch controller logs
 just cert-manager test             # Creates a self-signed ClusterIssuer + Certificate
 just cert-manager test-cleanup     # Remove test resources
 
+# Install and verify external-dns:
+just plugin-install external-dns   # Build plugin, push to registry, apply CR
+just external-dns test             # Creates a DNSEndpoint resource
+just external-dns test-cleanup     # Remove test resources
+
 # Cleanup:
 just plugin-uninstall cert-manager
+just plugin-uninstall external-dns
 just cluster-delete
 ```
 
