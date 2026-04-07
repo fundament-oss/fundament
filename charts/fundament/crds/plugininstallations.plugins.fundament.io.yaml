@@ -39,6 +39,9 @@ spec:
           type: object
           required:
             - spec
+          x-kubernetes-validations:
+            - rule: "self.metadata.name == self.spec.pluginName"
+              message: "metadata.name must match spec.pluginName"
           properties:
             spec:
               type: object
@@ -57,6 +60,9 @@ spec:
                     - Never
                 pluginName:
                   type: string
+                  x-kubernetes-validations:
+                    - rule: "self == oldSelf"
+                      message: "spec.pluginName is immutable"
                 version:
                   type: string
                 clusterRoles:
