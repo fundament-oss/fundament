@@ -50,6 +50,7 @@ const (
 	ActionCanCreateProject   ActionName = "can_create_project"
 	ActionCanListProjects    ActionName = "can_list_projects"
 	ActionCreator            ActionName = "creator"
+	ActionUsableBy           ActionName = "usable_by"
 	ActionCanUse             ActionName = "can_use"
 )
 
@@ -332,6 +333,11 @@ func CanListProjects() Action {
 // Creator creates an Action for the creator relation.
 func Creator() Action {
 	return Action{Name: ActionCreator}
+}
+
+// UsableBy creates an Action for the usable_by relation.
+func UsableBy() Action {
+	return Action{Name: ActionUsableBy}
 }
 
 // CanUse creates an Action for the can_use relation.

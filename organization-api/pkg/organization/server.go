@@ -11,6 +11,7 @@ import (
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
+	"github.com/fundament-oss/fundament/common/idempotency"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -41,7 +42,7 @@ type Server struct {
 	prometheusURL  string
 }
 
-func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client) (*Server, error) {
+func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client, idempotencyStore *idempotency.Store) (*Server, error) {
 	clk := cfg.Clock
 	if clk == nil {
 		clk = clock.New()
@@ -67,11 +68,14 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		logging.WithLogOnEvents(logging.FinishCall),
 	)
 
+	procedures := buildProcedures(s.queries)
+
 	interceptors := connect.WithInterceptors(
 		connectrecovery.NewInterceptor(logger),
 		s.authInterceptor(),
 		validate.NewInterceptor(),
 		loggingInterceptor,
+		idempotency.NewInterceptor(logger, idempotencyStore, UserIDFromContext, procedures),
 	)
 
 	orgPath, orgHandler := organizationv1connect.NewOrganizationServiceHandler(s, interceptors)
@@ -120,7 +124,8 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization", "Connect-Protocol-Version", "Fun-Organization"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "Connect-Protocol-Version", "Fun-Organization", idempotency.HeaderIdempotencyKey},
+		ExposedHeaders:   []string{idempotency.HeaderIdempotencyStatus},
 		AllowCredentials: true,
 	})
 

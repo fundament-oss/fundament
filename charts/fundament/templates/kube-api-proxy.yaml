@@ -38,7 +38,6 @@ spec:
             - name: GARDENER_KUBECONFIG
               value: /etc/gardener/kubeconfig
             {{- end }}
-            {{- if $.Values.openfga.enabled }}
             - name: OPENFGA_API_URL
               value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
             - name: OPENFGA_STORE_ID
@@ -51,7 +50,6 @@ spec:
                 configMapKeyRef:
                   name: openfga-config
                   key: authorization-model-id
-            {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

@@ -3,3 +3,8 @@ bun.lock
 
 # Generated code
 src/generated/
+
+# Generated plugin SDK (compiled from src/plugin-sdk/)
+/public/plugin-ui/plugin-sdk.js
+/public/plugin-ui/plugin-sdk.css
+/src/app/plugin-resources/generated-plugin-icons.ts

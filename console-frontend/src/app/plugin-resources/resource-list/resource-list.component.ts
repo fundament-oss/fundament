@@ -12,6 +12,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerEye, tablerDatabaseOff, tablerRefresh } from '@ng-icons/tabler-icons';
+import PluginIframeComponent from '../iframe/plugin-iframe.component';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
@@ -40,7 +41,7 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
 
 @Component({
   selector: 'app-resource-list',
-  imports: [RouterLink, NgIcon],
+  imports: [RouterLink, NgIcon, PluginIframeComponent],
   viewProviders: [
     provideIcons({
       tablerEye,
@@ -66,7 +67,7 @@ export default class ResourceListComponent implements OnInit {
     initialValue: this.route.snapshot.paramMap,
   });
 
-  private pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
+  protected pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
 
   private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
 
@@ -79,6 +80,12 @@ export default class ResourceListComponent implements OnInit {
   crdDef = signal<ParsedCrd | undefined>(undefined);
 
   resources = signal<KubeResource[]>([]);
+
+  customUIUrl = computed(() => {
+    const kind = this.crdDef()?.kind;
+    if (!kind) return null;
+    return this.plugin()?.customUI?.[kind]?.list ?? null;
+  });
 
   columns = computed<AdditionalPrinterColumn[]>(() => {
     const crd = this.crdDef();

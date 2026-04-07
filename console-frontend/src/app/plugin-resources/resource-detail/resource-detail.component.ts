@@ -13,6 +13,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerArrowLeft } from '@ng-icons/tabler-icons';
 import FieldRendererComponent from '../field-renderers/field-renderer.component';
+import PluginIframeComponent from '../iframe/plugin-iframe.component';
+import PluginRegistryService from '../plugin-registry.service';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
@@ -43,7 +45,7 @@ function toRecord(val: unknown): Record<string, unknown> {
 
 @Component({
   selector: 'app-resource-detail',
-  imports: [RouterLink, NgIcon, FieldRendererComponent],
+  imports: [RouterLink, NgIcon, FieldRendererComponent, PluginIframeComponent],
   viewProviders: [provideIcons({ tablerArrowLeft })],
   templateUrl: './resource-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,6 +55,8 @@ export default class ResourceDetailComponent implements OnInit {
 
   private titleService = inject(TitleService);
 
+  private registry = inject(PluginRegistryService);
+
   private clusterContext = inject(KubeClusterContextService);
 
   private loader = inject(KubePluginLoaderService);
@@ -61,11 +65,19 @@ export default class ResourceDetailComponent implements OnInit {
     initialValue: this.route.snapshot.paramMap,
   });
 
-  private pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
+  protected pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
 
   private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
 
   private resourceId = computed(() => this.routeParams().get('resourceId') ?? '');
+
+  private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
+
+  customUIUrl = computed(() => {
+    const kind = this.crdDef()?.kind;
+    if (!kind) return null;
+    return this.plugin()?.customUI?.[kind]?.detail ?? null;
+  });
 
   isLoading = signal(false);
 

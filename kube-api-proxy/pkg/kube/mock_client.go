@@ -48,6 +48,8 @@ func (m *MockClient) Do(_ context.Context, _, path string, _ io.Reader) (int, io
 		return 200, r(mockBackupListJSON), nil
 	case isResourceList(path, "postgresql.cnpg.io", "v1", "subscriptions"):
 		return 200, r(mockSubscriptionListJSON), nil
+	case isResourceList(path, "demo.fundament.io", "v1", "demoitems"):
+		return 200, r(mockDemoItemListJSON), nil
 	default:
 		return 200, r(mockEmptyList), nil
 	}

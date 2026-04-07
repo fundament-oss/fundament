@@ -1,0 +1,148 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 15
+:state: discussion
+
+= FUN-15 Idempotency
+
+== Problem
+
+Creating a resource in Fundament is not a single atomic operation. The API writes a row to the database, but authorization tuples are propagated asynchronously through the outbox pattern: an outbox worker picks up the event and syncs it to OpenFGA. Until that completes, the resource exists in the database but the caller may not yet have permission to access it. Other side effects -- such as cluster provisioning or member notifications -- are similarly asynchronous.
+
+This creates two related problems:
+
+* **Unsafe retries.** When a client creates a resource and the request fails in transit or the response is lost, the client cannot safely retry. It doesn't know whether the server processed the original request. Retrying blindly may create duplicate resources.
+* **Unknown completion status.** Even when the initial create succeeds, the client has no way to know whether the asynchronous processing (outbox sync, provisioning) has completed. Polling a separate status endpoint would require the client to track the resource ID and implement its own retry logic.
+
+Idempotency keys solve both problems: they prevent duplicate creation on retry, and on replay they report the current processing status of the originally created resource.
+
+== Decision
+
+The API supports optional client-provided idempotency keys on create operations. The mechanism is implemented as a Connect unary interceptor in the `common/idempotency` package and is opt-in per procedure.
+
+=== Protocol
+
+Clients send a `Idempotency-Key` header containing a UUID. The server responds with a `Idempotency-Status` header indicating the processing state.
+
+The idempotency key is optional. Requests without the header are processed normally, with no idempotency behaviour.
+
+=== Lifecycle
+
+A request with an idempotency key goes through these states:
+
+. **Reserve**: Before the handler executes, the interceptor inserts a reservation row keyed on `(idempotency_key, user_id)`. This uses `INSERT ... ON CONFLICT DO NOTHING` to handle concurrent requests atomically.
+. **Execute**: The handler runs normally. The reservation exists but has no response data yet.
+. **Complete**: On success, the interceptor serializes the protobuf response and stores it alongside a foreign key to the created resource.
+. **Unreserve**: On handler failure, the reservation is hard-deleted so the client can retry with the same key.
+
+When a replay request arrives (same key, same user), the interceptor:
+
+. Validates that the procedure and request body hash match the original.
+. Deserializes and returns the cached response.
+. Resolves the current processing status by querying the authz outbox for the created resource's latest state.
+
+=== Scoping
+
+Idempotency keys are scoped per user. Two different users may use the same key value independently without conflict. This is enforced by a unique constraint on `(idempotency_key, user_id)` and by RLS policies that restrict access to rows matching the current user.
+
+=== Validation
+
+The interceptor validates replayed requests in two ways:
+
+* **Procedure match**: The same idempotency key cannot be reused across different RPC procedures.
+* **Request hash match**: The request body is hashed with SHA-256 using deterministic protobuf marshaling. A replay with different request parameters is rejected with `INVALID_ARGUMENT`.
+
+The hash comparison uses `crypto/subtle.ConstantTimeCompare` to prevent timing side-channels.
+
+=== Status resolution
+
+The `Idempotency-Status` response header communicates the state of the created resource:
+
+* `processing` -- the resource was created but the authz outbox has not finished processing it. The resource may not yet be fully authorized.
+* `completed` -- the outbox has processed the resource. Authorization tuples are in place.
+* `failed` -- the outbox processing failed.
+
+On the initial response, the status is always `processing`. On replays, the interceptor queries the authz outbox for the resource's latest outbox entry and returns the actual status.
+
+If the status cannot be resolved (e.g. the outbox query fails), the interceptor defaults to `processing` and logs a warning.
+
+=== Race conditions
+
+A narrow window exists between the `Lookup` (key not found) and `Reserve` (insert) calls. If two concurrent requests race on the same key:
+
+. The first to insert wins the reservation.
+. The second's `INSERT ... ON CONFLICT DO NOTHING` returns zero rows affected, indicating a conflict.
+. The second request performs another lookup to determine whether the first has completed (replay the response) or is still in progress (return `ABORTED`).
+
+=== Expiry and cleanup
+
+Idempotency keys have a configurable TTL (default: 24 hours). A background goroutine runs hourly and hard-deletes expired rows.
+
+=== Hard deletes
+
+Idempotency keys are the only entity in the system that uses hard deletes rather than soft deletes. This is an intentional exception to the project-wide soft-delete convention. Idempotency keys are ephemeral cache entries, not domain data. They have no audit value once expired, and retaining them indefinitely would grow the table without benefit. The TTL and hard-delete approach keeps the table small and the cleanup query simple.
+
+== Database design
+
+The `tenant.idempotency_keys` table stores reservations and cached responses:
+
+[cols="1,1,3", options="header"]
+|===
+| Column | Type | Purpose
+
+| `id` | uuid | Primary key (UUIDv7)
+| `idempotency_key` | uuid | Client-provided key
+| `user_id` | uuid | Authenticated user
+| `procedure` | text | Fully qualified RPC procedure name
+| `request_hash` | bytea | SHA-256 of deterministic proto marshal
+| `response_bytes` | bytea | Serialized proto response (NULL while in progress)
+| `created` | timestamptz | Row creation time
+| `expires` | timestamptz | Expiry time for cleanup
+| `project_id` | uuid | FK to created project (nullable)
+| `project_member_id` | uuid | FK to created project member (nullable)
+| `cluster_id` | uuid | FK to created cluster (nullable)
+| `node_pool_id` | uuid | FK to created node pool (nullable)
+| `namespace_id` | uuid | FK to created namespace (nullable)
+| `api_key_id` | uuid | FK to created API key (nullable)
+| `install_id` | uuid | FK to created install (nullable)
+| `organization_user_id` | uuid | FK to created organization user (nullable)
+|===
+
+A check constraint (`num_nonnulls(...) <= 1`) ensures that at most one resource FK is set per row. This polymorphic FK approach avoids a separate junction table per resource type while maintaining referential integrity.
+
+=== Row-level security
+
+Two permissive RLS policies protect the table:
+
+* `idempotency_keys_fundament_api_policy` (FOR ALL): `user_id = authn.current_user_id()` -- users can only access their own keys.
+* `idempotency_keys_cleanup_policy` (FOR DELETE): `expires < now()` -- the background cleanup goroutine can delete any expired key regardless of ownership.
+
+Because both policies are permissive and apply to the same role, PostgreSQL OR's them together for DELETE operations.
+
+=== Indexes
+
+* Unique index on `(idempotency_key, user_id)` -- serves both the uniqueness constraint and the lookup query.
+* B-tree index on `expires` -- supports the periodic cleanup query.
+
+== Covered procedures
+
+The following create operations support idempotency keys:
+
+* `ProjectService/CreateProject`
+* `ProjectService/AddProjectMember`
+* `ClusterService/CreateCluster`
+* `ClusterService/CreateNodePool`
+* `ClusterService/AddInstall`
+* `NamespaceService/CreateNamespace`
+* `APIKeyService/CreateAPIKey`
+* `InviteService/InviteMember`
+
+Adding idempotency to a new procedure requires defining a `Procedure` implementation that specifies the resource type, response deserialization, resource ID extraction, and status resolution.
+
+== Graceful degradation
+
+The interceptor is designed to degrade gracefully. If any idempotency operation fails (lookup, reserve, complete, status resolution), it logs a warning and falls back to normal (non-idempotent) request processing. A database outage does not prevent the API from serving requests -- it only disables the idempotency cache.
+
+If the idempotency store is nil (not configured), the interceptor passes through to the handler with no overhead.

@@ -1,10 +1,13 @@
-import {inject, Injectable, signal} from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import type {
-  PluginDefinition, ParsedCrd, RawCrdYaml, PluginInstallationListResponse,
-  GetDefinitionResponse
+  PluginDefinition,
+  ParsedCrd,
+  RawCrdYaml,
+  PluginInstallationListResponse,
+  GetDefinitionResponse,
 } from './types';
 import { parseObjectSchema } from './crd-schema.utils';
-import {ConfigService} from '../config.service';
+import { ConfigService } from '../config.service';
 import OrganizationContextService from '../organization-context.service';
 
 function parseCrd(raw: RawCrdYaml): ParsedCrd {
@@ -46,7 +49,10 @@ function parseCrd(raw: RawCrdYaml): ParsedCrd {
 }
 
 function toTablerIconName(icon: string): string {
-  return `tabler${  icon.split('-').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`;
+  return `tabler${icon
+    .split('-')
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join('')}`;
 }
 
 function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
@@ -66,6 +72,7 @@ function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
       })),
     },
     crds: def.crds ?? [],
+    customUI: def.customUI,
   };
 }
 
@@ -73,7 +80,7 @@ function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
 export default class PluginRegistryService {
   private plugins = signal<PluginDefinition[]>([]);
 
-  private loadedForClusterId: string | null = null
+  private loadedForClusterId: string | null = null;
 
   // Parsed CRDs indexed by plural; key: "${pluginName}/${clusterId}/${plural}"
   private parsedCrdByPlural = new Map<string, ParsedCrd>();
@@ -132,14 +139,12 @@ export default class PluginRegistryService {
     );
 
     const definitions: PluginDefinition[] = results
-      .filter(
-        (r): r is PromiseFulfilledResult<GetDefinitionResponse> => r.status === 'fulfilled',
-      )
+      .filter((r): r is PromiseFulfilledResult<GetDefinitionResponse> => r.status === 'fulfilled')
       .map((r) => mapDefinition(r.value));
 
     this.plugins.set(definitions);
 
-    this.loadedForClusterId = clusterId
+    this.loadedForClusterId = clusterId;
   }
 
   async loadCrdsForPlugin(
@@ -169,7 +174,10 @@ export default class PluginRegistryService {
 
         const raw = (await response.json()) as RawCrdYaml;
         const parsed = parseCrd(raw);
+        const fullName = `${parsed.plural}.${parsed.group}`;
         this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.plural}`, parsed);
+        this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.kind}`, parsed);
+        this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${fullName}`, parsed);
       }),
     );
   }

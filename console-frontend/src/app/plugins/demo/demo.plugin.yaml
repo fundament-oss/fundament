@@ -1,0 +1,16 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+name: demo
+label: Demo plugin
+version: v0.1.0
+description: Demonstration plugin with custom iframe UI
+menu:
+  organization:
+    - crd: demoitems
+      label: Demo items
+      icon: tablerInfoHexagon
+crds:
+  - demoitems.demo.fundament.io
+customUI:
+  DemoItem:
+    list: /plugin-ui/demo/list.html

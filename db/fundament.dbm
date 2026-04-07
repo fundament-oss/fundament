@@ -693,32 +693,37 @@ END;]]> </definition>
 	</parameter>
 	<definition> <![CDATA[DECLARE
 	result authn.api_keys;
-	key_record authn.api_keys;
 BEGIN
-	SELECT * INTO key_record FROM authn.api_keys WHERE token_hash = p_token_hash;
+	SELECT * INTO result FROM authn.api_keys WHERE token_hash = p_token_hash;
 
 	IF NOT FOUND THEN
 		RETURN NULL;
 	END IF;
 
-	IF key_record.deleted IS NOT NULL THEN
-		RAISE EXCEPTION 'API key has been deleted' USING HINT = 'api_key_deleted';
-	END IF;
-
-	IF key_record.revoked IS NOT NULL THEN
-		RAISE EXCEPTION 'API key has been revoked' USING HINT = 'api_key_revoked';
-	END IF;
-
-	IF key_record.expires IS NOT NULL AND key_record.expires <= NOW() THEN
-		RAISE EXCEPTION 'API key has expired' USING HINT = 'api_key_expired';
-	END IF;
-
-	UPDATE authn.api_keys
-	SET last_used = NOW()
-	WHERE id = key_record.id
-	RETURNING * INTO result;
-
 	RETURN result;
+END;]]> </definition>
+</function>
+
+<function name="api_key_update_last_used"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="10"
+		row-amount="0">
+	<schema name="authn"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="void" length="0"/>
+	</return-type>
+	<parameter name="p_id" in="true">
+		<type name="uuid" length="0"/>
+	</parameter>
+	<definition> <![CDATA[BEGIN
+	UPDATE authn.api_keys SET last_used = NOW() WHERE id = p_id;
 END;]]> </definition>
 </function>
 
@@ -2319,7 +2324,7 @@ END;]]> </definition>
 <permission>
 	<object name="authz.outbox" type="table"/>
 	<roles names="fun_fundament_api"/>
-	<privileges insert="true"/>
+	<privileges select="true" insert="true"/>
 </permission>
 <permission>
 	<object name="authz.outbox" type="table"/>
@@ -2496,5 +2501,151 @@ END;]]> </definition>
 	 table="tenant.project_members">
 		<function signature="tenant.cluster_outbox_project_member_trigger()"/>
 </trigger>
+
+<table name="idempotency_keys" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="15" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<position x="2200" y="400"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="idempotency_key" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="user_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="procedure" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="request_hash" not-null="true">
+		<type name="bytea" length="0"/>
+	</column>
+	<column name="response_bytes">
+		<type name="bytea" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="expires" not-null="true">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="project_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="project_member_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="cluster_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="node_pool_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="namespace_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="api_key_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="install_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="organization_user_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<constraint name="idempotency_keys_pk" type="pk-constr" table="tenant.idempotency_keys">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="idempotency_keys_uq_key_user" type="uq-constr" table="tenant.idempotency_keys">
+		<columns names="idempotency_key,user_id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="idempotency_keys_ck_single_fk" type="ck-constr" table="tenant.idempotency_keys">
+			<expression> <![CDATA[num_nonnulls(
+	project_id,
+	project_member_id,
+	cluster_id,
+	node_pool_id,
+	namespace_id,
+	api_key_id,
+	install_id,
+	organization_user_id
+) <= 1]]> </expression>
+	</constraint>
+</table>
+
+<index name="idempotency_keys_idx_expires" table="tenant.idempotency_keys"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="expires"/>
+		</idxelement>
+</index>
+
+<permission>
+	<object name="tenant.idempotency_keys" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true" delete="true"/>
+</permission>
+<policy name="idempotency_keys_fundament_api_policy" table="tenant.idempotency_keys" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[user_id = authn.current_user_id()]]> </expression>
+</policy>
+<policy name="idempotency_keys_cleanup_policy" table="tenant.idempotency_keys" command="DELETE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[expires < now()]]> </expression>
+</policy>
+
+<constraint name="idempotency_keys_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.idempotency_keys">
+	<columns names="project_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="idempotency_keys_fk_project_member" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.project_members" table="tenant.idempotency_keys">
+	<columns names="project_member_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="idempotency_keys_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.idempotency_keys">
+	<columns names="cluster_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="idempotency_keys_fk_node_pool" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.node_pools" table="tenant.idempotency_keys">
+	<columns names="node_pool_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="idempotency_keys_fk_namespace" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.namespaces" table="tenant.idempotency_keys">
+	<columns names="namespace_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="idempotency_keys_fk_api_key" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="authn.api_keys" table="tenant.idempotency_keys">
+	<columns names="api_key_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="idempotency_keys_fk_install" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.installs" table="tenant.idempotency_keys">
+	<columns names="install_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="idempotency_keys_fk_organization_user" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations_users" table="tenant.idempotency_keys">
+	<columns names="organization_user_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="idempotency_keys_fk_user" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.users" table="tenant.idempotency_keys">
+	<columns names="user_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
 
 </dbmodel>

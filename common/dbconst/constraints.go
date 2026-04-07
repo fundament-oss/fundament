@@ -37,6 +37,28 @@ const (
 	ConstraintClustersFkOrganization = "clusters_fk_organization"
 	// ConstraintClustersUqName is defined on tenant.clusters.
 	ConstraintClustersUqName = "clusters_uq_name"
+	// ConstraintIdempotencyKeysCkSingleFk is defined on tenant.idempotency_keys.
+	ConstraintIdempotencyKeysCkSingleFk = "idempotency_keys_ck_single_fk"
+	// ConstraintIdempotencyKeysFkApiKey is defined on tenant.idempotency_keys.
+	ConstraintIdempotencyKeysFkApiKey = "idempotency_keys_fk_api_key"
+	// ConstraintIdempotencyKeysFkCluster is defined on tenant.idempotency_keys.
+	ConstraintIdempotencyKeysFkCluster = "idempotency_keys_fk_cluster"
+	// ConstraintIdempotencyKeysFkInstall is defined on tenant.idempotency_keys.
+	ConstraintIdempotencyKeysFkInstall = "idempotency_keys_fk_install"
+	// ConstraintIdempotencyKeysFkNamespace is defined on tenant.idempotency_keys.
+	ConstraintIdempotencyKeysFkNamespace = "idempotency_keys_fk_namespace"
+	// ConstraintIdempotencyKeysFkNodePool is defined on tenant.idempotency_keys.
+	ConstraintIdempotencyKeysFkNodePool = "idempotency_keys_fk_node_pool"
+	// ConstraintIdempotencyKeysFkOrganizationUser is defined on tenant.idempotency_keys.
+	ConstraintIdempotencyKeysFkOrganizationUser = "idempotency_keys_fk_organization_user"
+	// ConstraintIdempotencyKeysFkProject is defined on tenant.idempotency_keys.
+	ConstraintIdempotencyKeysFkProject = "idempotency_keys_fk_project"
+	// ConstraintIdempotencyKeysFkProjectMember is defined on tenant.idempotency_keys.
+	ConstraintIdempotencyKeysFkProjectMember = "idempotency_keys_fk_project_member"
+	// ConstraintIdempotencyKeysFkUser is defined on tenant.idempotency_keys.
+	ConstraintIdempotencyKeysFkUser = "idempotency_keys_fk_user"
+	// ConstraintIdempotencyKeysUqKeyUser is defined on tenant.idempotency_keys.
+	ConstraintIdempotencyKeysUqKeyUser = "idempotency_keys_uq_key_user"
 	// ConstraintInstallsFkCluster is defined on appstore.installs.
 	ConstraintInstallsFkCluster = "installs_fk_cluster"
 	// ConstraintInstallsFkPlugin is defined on appstore.installs.

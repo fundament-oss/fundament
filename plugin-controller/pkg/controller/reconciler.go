@@ -54,7 +54,7 @@ func NewReconciler(c client.Client, logger *slog.Logger, cfg *config.Config, opt
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.logger.With("plugin", req.NamespacedName)
+	log := r.logger.With("plugin", req.Name)
 
 	var cr pluginsv1.PluginInstallation
 	if err := r.client.Get(ctx, req.NamespacedName, &cr); err != nil {

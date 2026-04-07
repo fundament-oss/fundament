@@ -51,4 +51,7 @@ FUNs (Fundament Update Notes) document technical decisions, architecture, and pr
 
 | link:/funs/fun-14[FUN-14 Personas]
 | discussion
+
+| link:/funs/fun-15[FUN-15 Idempotency]
+| discussion
 |===

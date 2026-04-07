@@ -1,0 +1,54 @@
+/**
+ * Fundament Plugin SDK — Base Stylesheet
+ *
+ * This file is compiled to public/plugin-ui/plugin-sdk.css and served alongside plugin UIs.
+ * Include it in every plugin HTML page for consistent styling, theming, and typography.
+ *
+ * Dark mode is applied by the plugin SDK JS via the `.dark` class on <body>.
+ *
+ * Available component classes:
+ *   .plugin-card       Bordered card container
+ *   .plugin-heading    Primary heading
+ *   .plugin-text       Body / paragraph text
+ *   .plugin-table      Full-width data table with dividers
+ */
+
+/* Include theme CSS variables (colors, spacing, etc.) but not the preflight reset */
+@import 'tailwindcss/theme' layer(theme);
+/* Make all utilities available for @apply without emitting them */
+@reference 'tailwindcss';
+
+/* Dark mode uses the .dark class set on <body> by plugin-sdk.js */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+
+body {
+  @apply m-0 bg-white font-sans text-gray-900 transition-colors duration-200 dark:bg-gray-800 dark:text-gray-50;
+}
+
+/* ── Components ───────────────────────────────────────────────────────────── */
+
+.plugin-card {
+  @apply rounded-lg border border-gray-200 p-6 dark:border-gray-700;
+}
+
+.plugin-heading {
+  @apply mb-2 text-2xl font-bold;
+}
+
+.plugin-text {
+  @apply text-sm leading-relaxed opacity-80;
+}
+
+.plugin-table {
+  @apply w-full border-collapse text-sm;
+}
+
+.plugin-table th {
+  @apply border-b border-gray-200 pb-2 text-left font-medium text-gray-500 dark:border-gray-700 dark:text-gray-400;
+}
+
+.plugin-table td {
+  @apply border-b border-gray-100 py-2 dark:border-gray-800;
+}

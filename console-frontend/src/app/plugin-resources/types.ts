@@ -10,6 +10,7 @@ export interface PluginDefinition {
   author?: string;
   menu: PluginMenu;
   crds: string[];
+  customUI?: Record<string, CustomUIConfig>;
 }
 
 export interface PluginMenu {
@@ -77,6 +78,13 @@ export interface KubeResource {
   status?: Record<string, unknown>;
 }
 
+// Custom UI configuration
+
+export interface CustomUIConfig {
+  list?: string;
+  detail?: string;
+}
+
 // Navigation types
 
 export interface PluginNavGroup {
@@ -118,6 +126,7 @@ export interface GetDefinitionResponse {
     project?: GetDefinitionMenuEntry[];
   };
   crds: string[];
+  customUI?: Record<string, CustomUIConfig>;
 }
 
 export interface RawCrdYaml {

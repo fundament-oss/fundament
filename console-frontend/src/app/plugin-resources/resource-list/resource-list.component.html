@@ -4,94 +4,103 @@
   </div>
 }
 
-<div class="card">
-  <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">{{ kindLabel() }}</h1>
-    @if (plugin()?.description) {
-      <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-        {{ plugin()?.description }}
-      </p>
-    }
-  </div>
+@if (customUIUrl()) {
+  <app-plugin-iframe
+    [src]="customUIUrl()!"
+    [pluginName]="pluginName()"
+    [crdKind]="crdDef()!.kind"
+    view="list"
+  />
+} @else {
+  <div class="card">
+    <div class="card-header">
+      <h1 class="text-2xl font-semibold dark:text-white">{{ kindLabel() }}</h1>
+      @if (plugin()?.description) {
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          {{ plugin()?.description }}
+        </p>
+      }
+    </div>
 
-  <div class="p-6">
-    @if (isLoading()) {
-      <div class="py-8 text-center">
-        <span
-          class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"
-        ></span>
-        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading…</p>
-      </div>
-    } @else {
-      <!-- Table -->
-      @if (resources().length > 0) {
-        <div class="table-container">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col">Name</th>
-                @for (col of columns(); track col.name) {
-                  <th
-                    scope="col"
-                    [class.hidden]="col.priority && col.priority > 0"
-                    [class.lg:table-cell]="col.priority && col.priority > 0"
-                  >
-                    {{ col.name }}
-                  </th>
-                }
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (resource of resources(); track resource.metadata.uid) {
+    <div class="p-6">
+      @if (isLoading()) {
+        <div class="py-8 text-center">
+          <span
+            class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"
+          ></span>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading…</p>
+        </div>
+      } @else {
+        <!-- Table -->
+        @if (resources().length > 0) {
+          <div class="table-container">
+            <table class="table">
+              <thead>
                 <tr>
-                  <td class="whitespace-normal">
-                    <a
-                      [routerLink]="detailLink(resource)"
-                      class="font-medium hover:underline dark:text-white"
-                      >{{ resource.metadata.name }}</a
-                    >
-                    @if (resource.metadata.namespace) {
-                      <div class="mt-0.5 font-mono text-xs text-gray-500 dark:text-gray-400">
-                        {{ resource.metadata.namespace }}
-                      </div>
-                    }
-                  </td>
+                  <th scope="col">Name</th>
                   @for (col of columns(); track col.name) {
-                    <td
+                    <th
+                      scope="col"
                       [class.hidden]="col.priority && col.priority > 0"
                       [class.lg:table-cell]="col.priority && col.priority > 0"
-                      class="whitespace-normal"
                     >
-                      {{ formatCell(resource, col) }}
-                    </td>
+                      {{ col.name }}
+                    </th>
                   }
-                  <td>
-                    <div class="flex gap-1">
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (resource of resources(); track resource.metadata.uid) {
+                  <tr>
+                    <td class="whitespace-normal">
                       <a
                         [routerLink]="detailLink(resource)"
-                        class="btn-light inline-flex shrink-0 items-center px-2!"
-                        aria-label="View"
-                        title="View"
+                        class="font-medium hover:underline dark:text-white"
+                        >{{ resource.metadata.name }}</a
                       >
-                        <ng-icon name="tablerEye" />
-                      </a>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
+                      @if (resource.metadata.namespace) {
+                        <div class="mt-0.5 font-mono text-xs text-gray-500 dark:text-gray-400">
+                          {{ resource.metadata.namespace }}
+                        </div>
+                      }
+                    </td>
+                    @for (col of columns(); track col.name) {
+                      <td
+                        [class.hidden]="col.priority && col.priority > 0"
+                        [class.lg:table-cell]="col.priority && col.priority > 0"
+                        class="whitespace-normal"
+                      >
+                        {{ formatCell(resource, col) }}
+                      </td>
+                    }
+                    <td>
+                      <div class="flex gap-1">
+                        <a
+                          [routerLink]="detailLink(resource)"
+                          class="btn-light inline-flex shrink-0 items-center px-2!"
+                          aria-label="View"
+                          title="View"
+                        >
+                          <ng-icon name="tablerEye" />
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
 
-      <!-- Empty State -->
-      @if (resources().length === 0) {
-        <div class="py-8 text-center">
-          <ng-icon name="tablerDatabaseOff" size="3rem" class="mx-auto mb-3 text-gray-400!" />
-          <p class="text-gray-600 dark:text-gray-300">No {{ kindLabel().toLowerCase() }} found</p>
-        </div>
+        <!-- Empty State -->
+        @if (resources().length === 0) {
+          <div class="py-8 text-center">
+            <ng-icon name="tablerDatabaseOff" size="3rem" class="mx-auto mb-3 text-gray-400!" />
+            <p class="text-gray-600 dark:text-gray-300">No {{ kindLabel().toLowerCase() }} found</p>
+          </div>
+        }
       }
-    }
+    </div>
   </div>
-</div>
+}

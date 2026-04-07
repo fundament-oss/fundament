@@ -579,36 +579,38 @@ CREATE OR REPLACE FUNCTION authn.api_key_get_by_hash (IN p_token_hash bytea)
 $function$
 DECLARE
 	result authn.api_keys;
-	key_record authn.api_keys;
 BEGIN
-	SELECT * INTO key_record FROM authn.api_keys WHERE token_hash = p_token_hash;
+	SELECT * INTO result FROM authn.api_keys WHERE token_hash = p_token_hash;
 
 	IF NOT FOUND THEN
 		RETURN NULL;
 	END IF;
-
-	IF key_record.deleted IS NOT NULL THEN
-		RAISE EXCEPTION 'API key has been deleted' USING HINT = 'api_key_deleted';
-	END IF;
-
-	IF key_record.revoked IS NOT NULL THEN
-		RAISE EXCEPTION 'API key has been revoked' USING HINT = 'api_key_revoked';
-	END IF;
-
-	IF key_record.expires IS NOT NULL AND key_record.expires <= NOW() THEN
-		RAISE EXCEPTION 'API key has expired' USING HINT = 'api_key_expired';
-	END IF;
-
-	UPDATE authn.api_keys
-	SET last_used = NOW()
-	WHERE id = key_record.id
-	RETURNING * INTO result;
 
 	RETURN result;
 END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION authn.api_key_get_by_hash(bytea) OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authn.api_key_update_last_used | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authn.api_key_update_last_used(uuid) CASCADE;
+CREATE OR REPLACE FUNCTION authn.api_key_update_last_used (IN p_id uuid)
+	RETURNS void
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 10
+	AS 
+$function$
+BEGIN
+	UPDATE authn.api_keys SET last_used = NOW() WHERE id = p_id;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authn.api_key_update_last_used(uuid) OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.clusters | type: TABLE --
@@ -1636,6 +1638,71 @@ CREATE OR REPLACE TRIGGER cluster_outbox_project_member
 	EXECUTE PROCEDURE tenant.cluster_outbox_project_member_trigger();
 -- ddl-end --
 
+-- object: tenant.idempotency_keys | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.idempotency_keys CASCADE;
+CREATE TABLE tenant.idempotency_keys (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	idempotency_key uuid NOT NULL,
+	user_id uuid NOT NULL,
+	procedure text NOT NULL,
+	request_hash bytea NOT NULL,
+	response_bytes bytea,
+	created timestamptz NOT NULL DEFAULT now(),
+	expires timestamptz NOT NULL,
+	project_id uuid,
+	project_member_id uuid,
+	cluster_id uuid,
+	node_pool_id uuid,
+	namespace_id uuid,
+	api_key_id uuid,
+	install_id uuid,
+	organization_user_id uuid,
+	CONSTRAINT idempotency_keys_pk PRIMARY KEY (id),
+	CONSTRAINT idempotency_keys_uq_key_user UNIQUE (idempotency_key,user_id),
+	CONSTRAINT idempotency_keys_ck_single_fk CHECK (num_nonnulls(
+	project_id,
+	project_member_id,
+	cluster_id,
+	node_pool_id,
+	namespace_id,
+	api_key_id,
+	install_id,
+	organization_user_id
+) <= 1)
+);
+-- ddl-end --
+ALTER TABLE tenant.idempotency_keys OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.idempotency_keys ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: idempotency_keys_idx_expires | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.idempotency_keys_idx_expires CASCADE;
+CREATE INDEX idempotency_keys_idx_expires ON tenant.idempotency_keys
+USING btree
+(
+	expires
+);
+-- ddl-end --
+
+-- object: idempotency_keys_fundament_api_policy | type: POLICY --
+-- DROP POLICY IF EXISTS idempotency_keys_fundament_api_policy ON tenant.idempotency_keys CASCADE;
+CREATE POLICY idempotency_keys_fundament_api_policy ON tenant.idempotency_keys
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (user_id = authn.current_user_id());
+-- ddl-end --
+
+-- object: idempotency_keys_cleanup_policy | type: POLICY --
+-- DROP POLICY IF EXISTS idempotency_keys_cleanup_policy ON tenant.idempotency_keys CASCADE;
+CREATE POLICY idempotency_keys_cleanup_policy ON tenant.idempotency_keys
+	AS PERMISSIVE
+	FOR DELETE
+	TO fun_fundament_api
+	USING (expires < now());
+-- ddl-end --
+
 -- object: projects_fk_cluster | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_cluster CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_cluster FOREIGN KEY (cluster_id)
@@ -1849,6 +1916,69 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- object: organizations_users_fk_user | type: CONSTRAINT --
 -- ALTER TABLE tenant.organizations_users DROP CONSTRAINT IF EXISTS organizations_users_fk_user CASCADE;
 ALTER TABLE tenant.organizations_users ADD CONSTRAINT organizations_users_fk_user FOREIGN KEY (user_id)
+REFERENCES tenant.users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: idempotency_keys_fk_project | type: CONSTRAINT --
+-- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_project CASCADE;
+ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_project FOREIGN KEY (project_id)
+REFERENCES tenant.projects (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: idempotency_keys_fk_project_member | type: CONSTRAINT --
+-- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_project_member CASCADE;
+ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_project_member FOREIGN KEY (project_member_id)
+REFERENCES tenant.project_members (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: idempotency_keys_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_cluster CASCADE;
+ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: idempotency_keys_fk_node_pool | type: CONSTRAINT --
+-- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_node_pool CASCADE;
+ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_node_pool FOREIGN KEY (node_pool_id)
+REFERENCES tenant.node_pools (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: idempotency_keys_fk_namespace | type: CONSTRAINT --
+-- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_namespace CASCADE;
+ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_namespace FOREIGN KEY (namespace_id)
+REFERENCES tenant.namespaces (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: idempotency_keys_fk_api_key | type: CONSTRAINT --
+-- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_api_key CASCADE;
+ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_api_key FOREIGN KEY (api_key_id)
+REFERENCES authn.api_keys (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: idempotency_keys_fk_install | type: CONSTRAINT --
+-- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_install CASCADE;
+ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_install FOREIGN KEY (install_id)
+REFERENCES appstore.installs (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: idempotency_keys_fk_organization_user | type: CONSTRAINT --
+-- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_organization_user CASCADE;
+ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_organization_user FOREIGN KEY (organization_user_id)
+REFERENCES tenant.organizations_users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: idempotency_keys_fk_user | type: CONSTRAINT --
+-- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_user CASCADE;
+ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_user FOREIGN KEY (user_id)
 REFERENCES tenant.users (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
@@ -2165,8 +2295,8 @@ GRANT USAGE
 -- ddl-end --
 
 
--- object: grant_a_9bf38d7215 | type: PERMISSION --
-GRANT INSERT
+-- object: grant_ra_9bf38d7215 | type: PERMISSION --
+GRANT SELECT,INSERT
    ON TABLE authz.outbox
    TO fun_fundament_api;
 
@@ -2417,6 +2547,14 @@ GRANT SELECT
 GRANT SELECT
    ON TABLE tenant.users
    TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_rawd_49c1fe5985 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE,DELETE
+   ON TABLE tenant.idempotency_keys
+   TO fun_fundament_api;
 
 -- ddl-end --
 

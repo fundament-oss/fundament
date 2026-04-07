@@ -177,19 +177,19 @@ export default class App implements OnInit {
       const projectId = this.selectedProjectId();
 
       if (projectId) {
-        untracked(() => this.loadPluginsForProject(projectId))
+        untracked(() => this.loadPluginsForProject(projectId));
       } else {
-        untracked(() => this.pluginRegistry.reset())
+        untracked(() => this.pluginRegistry.reset());
       }
-    })
+    });
   }
 
-  private async loadPluginsForProject(projectId : string): Promise<void> {
+  private async loadPluginsForProject(projectId: string): Promise<void> {
     await this.organizationDataService.loadProjectsAndNamespaces().catch((err) => {
       // eslint-disable-next-line no-console
       console.error('Unexpected error while loading projects and namespaces: ', err);
-    })
-    const projectData = this.organizationDataService.getProjectById(projectId)
+    });
+    const projectData = this.organizationDataService.getProjectById(projectId);
 
     if (!projectData) return;
 

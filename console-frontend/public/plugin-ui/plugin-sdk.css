@@ -1,0 +1,103 @@
+/*! tailwindcss v4.1.18 | MIT License | https://tailwindcss.com */
+@layer properties;
+@layer theme;
+body {
+  margin: calc(var(--spacing, 0.25rem) * 0);
+  background-color: var(--color-white, #fff);
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+      "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
+  color: var(--color-gray-900, oklch(21% 0.034 264.665));
+  transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
+  transition-timing-function: var(--tw-ease, var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1)));
+  transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
+  --tw-duration: 200ms;
+  transition-duration: 200ms;
+  &:where(.dark, .dark *) {
+    background-color: var(--color-gray-800, oklch(27.8% 0.033 256.848));
+  }
+  &:where(.dark, .dark *) {
+    color: var(--color-gray-50, oklch(98.5% 0.002 247.839));
+  }
+}
+.plugin-card {
+  border-radius: var(--radius-lg, 0.5rem);
+  border-style: var(--tw-border-style);
+  border-width: 1px;
+  border-color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+  padding: calc(var(--spacing, 0.25rem) * 6);
+  &:where(.dark, .dark *) {
+    border-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
+  }
+}
+.plugin-heading {
+  margin-bottom: calc(var(--spacing, 0.25rem) * 2);
+  font-size: var(--text-2xl, 1.5rem);
+  line-height: var(--tw-leading, var(--text-2xl--line-height, calc(2 / 1.5)));
+  --tw-font-weight: var(--font-weight-bold, 700);
+  font-weight: var(--font-weight-bold, 700);
+}
+.plugin-text {
+  font-size: var(--text-sm, 0.875rem);
+  line-height: var(--tw-leading, var(--text-sm--line-height, calc(1.25 / 0.875)));
+  --tw-leading: var(--leading-relaxed, 1.625);
+  line-height: var(--leading-relaxed, 1.625);
+  opacity: 80%;
+}
+.plugin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm, 0.875rem);
+  line-height: var(--tw-leading, var(--text-sm--line-height, calc(1.25 / 0.875)));
+}
+.plugin-table th {
+  border-bottom-style: var(--tw-border-style);
+  border-bottom-width: 1px;
+  border-color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+  padding-bottom: calc(var(--spacing, 0.25rem) * 2);
+  text-align: left;
+  --tw-font-weight: var(--font-weight-medium, 500);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-gray-500, oklch(55.1% 0.027 264.364));
+  &:where(.dark, .dark *) {
+    border-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
+  }
+  &:where(.dark, .dark *) {
+    color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
+  }
+}
+.plugin-table td {
+  border-bottom-style: var(--tw-border-style);
+  border-bottom-width: 1px;
+  border-color: var(--color-gray-100, oklch(96.7% 0.003 264.542));
+  padding-block: calc(var(--spacing, 0.25rem) * 2);
+  &:where(.dark, .dark *) {
+    border-color: var(--color-gray-800, oklch(27.8% 0.033 256.848));
+  }
+}
+@property --tw-duration {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-border-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
+@property --tw-font-weight {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-leading {
+  syntax: "*";
+  inherits: false;
+}
+@layer properties {
+  @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
+    *, ::before, ::after, ::backdrop {
+      --tw-duration: initial;
+      --tw-border-style: solid;
+      --tw-font-weight: initial;
+      --tw-leading: initial;
+    }
+  }
+}

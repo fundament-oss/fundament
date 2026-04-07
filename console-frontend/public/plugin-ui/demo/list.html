@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Demo plugin</title>
+    <link rel="stylesheet" href="../plugin-sdk.css" />
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading" id="heading">Resources</h1>
+      <table class="plugin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Namespace</th>
+            <th>Status</th>
+            <th>Age</th>
+          </tr>
+        </thead>
+        <tbody id="items"></tbody>
+      </table>
+    </div>
+
+    <script src="../plugin-sdk.js"></script>
+    <script>
+      // In a real plugin this data would be fetched from your plugin's backend.
+      const items = [
+        { name: 'alpha-resource', namespace: 'default', status: 'Ready', age: '5d' },
+        { name: 'beta-resource', namespace: 'default', status: 'Ready', age: '2d' },
+        { name: 'gamma-resource', namespace: 'staging', status: 'Failed', age: '1d' },
+      ];
+
+      const tbody = document.getElementById('items');
+      for (const { name, namespace, status, age } of items) {
+        const tr = document.createElement('tr');
+        for (const value of [name, namespace, status, age]) {
+          const td = document.createElement('td');
+          td.textContent = value;
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+
+      window.addEventListener('message', (event) => {
+        const data = event.data;
+        if (data?.type === 'fundament:init') {
+          document.getElementById('heading').textContent = data.crdKind;
+        }
+      });
+    </script>
+  </body>
+</html>
