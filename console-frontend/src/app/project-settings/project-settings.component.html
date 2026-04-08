@@ -55,7 +55,7 @@
                 [disabled]="loading()"
                 class="btn-primary inline-flex shrink-0 items-center"
               >
-                <ndd-icon name="check-mark" class="mr-1.5"></ndd-icon> Save
+                <ndd-icon name="check-mark" class="w-4 h-4 mr-1.5"></ndd-icon> Save
               </button>
               <button
                 type="button"
@@ -63,7 +63,7 @@
                 [disabled]="loading()"
                 class="btn-secondary inline-flex shrink-0 items-center"
               >
-                <ndd-icon name="dismiss-small" class="mr-1.5"></ndd-icon> Cancel
+                <ndd-icon name="dismiss-small" class="w-4 h-4 mr-1.5"></ndd-icon> Cancel
               </button>
             </div>
           } @else {
@@ -117,10 +117,9 @@
     <div
       class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
     >
-      <ng-icon
-        name="tablerAlertTriangle"
-        size="1.5rem"
-        class="text-rose-600! dark:text-rose-400!"
+      <ndd-icon
+        name="exclamation-triangle"
+        class="w-5 h-5 text-rose-600! dark:text-rose-400!"
       />
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
