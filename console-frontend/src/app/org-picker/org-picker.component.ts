@@ -7,6 +7,7 @@ import {
   afterNextRender,
   inject,
   ElementRef,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerBuilding } from '@ng-icons/tabler-icons';
@@ -17,6 +18,7 @@ import type { Invitation } from '../../generated/v1/invite_pb';
   selector: 'app-org-picker',
   imports: [NgIconComponent],
   viewProviders: [provideIcons({ tablerBuilding })],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './org-picker.component.html',
 })

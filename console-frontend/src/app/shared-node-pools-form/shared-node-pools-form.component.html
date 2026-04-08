@@ -97,10 +97,14 @@
     }
   </div>
 
-  <button type="button" (click)="addNodePool()" class="btn-light inline-flex items-center">
-    <ndd-icon name="plus-small" class="w-4 h-4 mr-1.5"></ndd-icon>
-    Add another node pool
-  </button>
+  <ndd-button
+    type="button"
+    (click)="addNodePool()"
+    text="Add another node pool"
+    start-icon="plus-small"
+    variant="accent-outlined"
+    size="sm"
+  ></ndd-button>
 
   <!-- Form Actions slot -->
   <div class="border-t border-gray-200 pt-6 dark:border-gray-800">

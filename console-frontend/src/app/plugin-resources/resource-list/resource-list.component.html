@@ -52,14 +52,13 @@
               <option [value]="cluster.id">{{ cluster.name }}</option>
             }
           </select>
-          <button
-            class="btn-light inline-flex shrink-0 items-center px-2!"
-            aria-label="Refresh"
-            title="Refresh"
+          <ndd-button
             (click)="onRefresh()"
-          >
-            <ng-icon name="tablerRefresh" />
-          </button>
+            text="Refresh"
+            start-icon="arrows-sort"
+            variant="accent-outlined"
+            size="sm"
+          ></ndd-button>
         }
       </div>
     </div>
@@ -118,14 +117,13 @@
                     }
                     <td>
                       <div class="flex gap-1">
-                        <a
+                        <ndd-button
                           [routerLink]="detailLink(resource)"
-                          class="btn-light inline-flex shrink-0 items-center px-2!"
-                          aria-label="View"
-                          title="View"
-                        >
-                          <ndd-icon name="eye" class="w-4 h-4"></ndd-icon>
-                        </a>
+                          text="View"
+                          start-icon="eye"
+                          variant="accent-outlined"
+                          size="sm"
+                        ></ndd-button>
                       </div>
                     </td>
                   </tr>

@@ -36,18 +36,24 @@
               readonly
               class="block flex-1 rounded-md border border-green-300 bg-white px-3 py-2 font-mono text-sm dark:border-green-700 dark:bg-gray-900 dark:text-white"
             />
-            <button
+            <ndd-button
               type="button"
               (click)="copyToken()"
-              class="btn-primary inline-flex shrink-0 items-center"
-            >
-              <ndd-icon name="squares-stack-plus" class="w-4 h-4 mr-1.5"></ndd-icon> Copy
-            </button>
+              text="Copy"
+              start-icon="squares-stack-plus"
+              variant="primary"
+              size="sm"
+            ></ndd-button>
           </div>
         </div>
-        <button type="button" (click)="dismissToken()" class="btn-primary inline-flex items-center">
-          <ndd-icon name="check-mark" class="w-4 h-4 mr-1.5"></ndd-icon> I've saved the token
-        </button>
+        <ndd-button
+          type="button"
+          (click)="dismissToken()"
+          text="I've saved the token"
+          start-icon="check-mark"
+          variant="primary"
+          size="sm"
+        ></ndd-button>
       </div>
     }
 
@@ -108,36 +114,36 @@
             </p>
           </div>
           <div class="flex gap-2">
-            <button
+            <ndd-button
               type="button"
               (click)="createApiKey()"
               [disabled]="loading()"
-              class="btn-primary"
-            >
-              Create
-            </button>
-            <button
+              text="Create"
+              variant="primary"
+              size="sm"
+            ></ndd-button>
+            <ndd-button
               type="button"
               (click)="cancelCreating()"
               [disabled]="loading()"
-              class="btn-secondary"
-            >
-              Cancel
-            </button>
+              text="Cancel"
+              variant="secondary"
+              size="sm"
+            ></ndd-button>
           </div>
         </div>
       </div>
     } @else {
       <!-- Create Button -->
-      <button
+      <ndd-button
         type="button"
         (click)="startCreating()"
         [disabled]="loading()"
-        class="btn-primary mb-5 inline-flex items-center"
-      >
-        <ndd-icon name="plus-small" class="w-4 h-4 mr-1.5"></ndd-icon>
-        Create new API key
-      </button>
+        text="Create new API key"
+        start-icon="plus-small"
+        variant="primary"
+        size="sm"
+      ></ndd-button>
     }
 
     <!-- Loading State -->
@@ -201,23 +207,23 @@
                 <td>
                   <div class="flex gap-2">
                     @if (!isRevoked(apiKey.revoked) && !isExpired(apiKey.expires)) {
-                      <button
-                        type="button"
+                      <ndd-button
                         (click)="openRevokeModal(apiKey.id, apiKey.name)"
                         [disabled]="loading()"
-                        class="btn-light inline-flex shrink-0 items-center"
-                      >
-                        <ng-icon name="tablerBan" class="mr-1.5" /> Revoke
-                      </button>
+                        text="Revoke"
+                        start-icon="trash"
+                        variant="accent-outlined"
+                        size="sm"
+                      ></ndd-button>
                     }
-                    <button
-                      type="button"
+                    <ndd-button
                       (click)="openDeleteModal(apiKey.id, apiKey.name)"
                       [disabled]="loading()"
-                      class="btn-remove inline-flex shrink-0 items-center"
-                    >
-                      <ndd-icon name="trash" class="w-4 h-4 mr-1.5"></ndd-icon> Delete
-                    </button>
+                      text="Delete"
+                      start-icon="trash"
+                      variant="destructive"
+                      size="sm"
+                    ></ndd-button>
                   </div>
                 </td>
               </tr>
@@ -265,7 +271,13 @@
   </div>
 
   <div modal-footer class="modal-footer">
-    <button type="button" (click)="showRevokeModal.set(false)" class="btn-secondary">Cancel</button>
+    <ndd-button
+      type="button"
+      (click)="showRevokeModal.set(false)"
+      text="Cancel"
+      variant="secondary"
+      size="sm"
+    ></ndd-button>
     <button
       type="button"
       (click)="confirmRevoke()"
@@ -304,7 +316,13 @@
   </div>
 
   <div modal-footer class="modal-footer">
-    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <ndd-button
+      type="button"
+      (click)="showDeleteModal.set(false)"
+      text="Cancel"
+      variant="secondary"
+      size="sm"
+    ></ndd-button>
     <button
       type="button"
       (click)="confirmDelete()"

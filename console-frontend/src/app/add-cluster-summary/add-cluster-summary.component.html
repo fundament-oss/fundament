@@ -177,11 +177,21 @@
         </div>
       </div>
       <div class="flex shrink-0 gap-2">
-        <button type="button" (click)="reopenModal()" class="btn-secondary">View progress</button>
+        <ndd-button
+          type="button"
+          (click)="reopenModal()"
+          text="View progress"
+          variant="secondary"
+          size="sm"
+        ></ndd-button>
         @if (clusterId()) {
-          <button type="button" (click)="navigateToCluster()" class="btn-primary">
-            Go to cluster
-          </button>
+          <ndd-button
+            type="button"
+            (click)="navigateToCluster()"
+            text="Go to cluster"
+            variant="primary"
+            size="sm"
+          ></ndd-button>
         }
       </div>
     </div>
@@ -190,21 +200,22 @@
   <!-- Form Actions (hidden once creation has started) -->
   @if (!hasCreationStarted()) {
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-      <a
+      <ndd-button
         routerLink="/clusters/add/plugins"
-        class="btn-secondary"
+        text="Previous step"
         [class.pointer-events-none]="isCreating() || showModal()"
         [class.opacity-50]="isCreating() || showModal()"
-        >Previous step</a
-      >
-      <button
+        variant="secondary"
+        size="sm"
+      ></ndd-button>
+      <ndd-button
         type="button"
         (click)="onCreateCluster()"
-        class="btn-primary"
+        [text]="isCreating() ? 'Creating...' : 'Create cluster'"
         [disabled]="isCreating() || showModal()"
-      >
-        {{ isCreating() ? 'Creating...' : 'Create cluster' }}
-      </button>
+        variant="primary"
+        size="sm"
+      ></ndd-button>
     </div>
   }
 </div>
@@ -275,14 +286,13 @@
         </div>
 
         @if (item.requestStatus === 'failed') {
-          <button
-            type="button"
+          <ndd-button
             (click)="retryItem(item.key)"
-            class="btn-light flex items-center gap-1 px-2! py-1! text-xs!"
-          >
-            <ng-icon name="tablerArrowBackUp" />
-            Retry
-          </button>
+            text="Retry"
+            start-icon="back-in-time"
+            variant="accent-outlined"
+            size="sm"
+          ></ndd-button>
         }
       </div>
     }
@@ -290,9 +300,21 @@
 
   <div modal-footer class="mt-6">
     @if (clusterId()) {
-      <button type="button" (click)="navigateToCluster()" class="btn-primary">Go to cluster</button>
+      <ndd-button
+        type="button"
+        (click)="navigateToCluster()"
+        text="Go to cluster"
+        variant="primary"
+        size="sm"
+      ></ndd-button>
     } @else if (!isCreating()) {
-      <button type="button" (click)="onModalClose()" class="btn-secondary">Cancel</button>
+      <ndd-button
+        type="button"
+        (click)="onModalClose()"
+        text="Cancel"
+        variant="secondary"
+        size="sm"
+      ></ndd-button>
     }
   </div>
 </app-modal>

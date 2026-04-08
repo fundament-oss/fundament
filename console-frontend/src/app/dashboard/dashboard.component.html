@@ -5,10 +5,14 @@
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Manage your Kubernetes clusters</p>
 
     @if (clusters().length > 0) {
-      <a routerLink="/clusters/add" class="btn-primary mt-4 inline-flex items-center">
-        <ndd-icon name="plus-small" class="mr-1.5 h-3.5 w-3.5"></ndd-icon>
-        Add cluster
-      </a>
+      <ndd-button
+        routerLink="/clusters/add"
+        text="Add cluster"
+        start-icon="plus-small"
+        variant="primary"
+        size="sm"
+        class="mt-4"
+      ></ndd-button>
     }
   </div>
 
@@ -69,12 +73,13 @@
 
               <!-- Card Actions -->
               <div class="mt-auto pt-5">
-                <a
+                <ndd-button
                   routerLink="/clusters/{{ cluster.id }}"
-                  class="btn-primary inline-flex items-center"
-                >
-                  <ndd-icon name="eye" class="mr-1.5 h-3 w-3"></ndd-icon> View details
-                </a>
+                  text="View details"
+                  start-icon="eye"
+                  variant="primary"
+                  size="sm"
+                ></ndd-button>
               </div>
             </div>
           </div>
@@ -89,10 +94,14 @@
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Add your first Kubernetes cluster to get started.
         </p>
-        <a routerLink="/clusters/add" class="btn-primary mt-5 inline-flex items-center">
-          <ndd-icon name="plus-small" class="mr-1.5 h-3.5 w-3.5"></ndd-icon>
-          Add cluster
-        </a>
+        <ndd-button
+          routerLink="/clusters/add"
+          text="Add cluster"
+          start-icon="plus-small"
+          variant="primary"
+          size="sm"
+          class="mt-5"
+        ></ndd-button>
       </div>
     }
   </div>

@@ -65,34 +65,37 @@
                 (keyup.enter)="saveEdit()"
                 (keyup.escape)="cancelEdit()"
               />
-              <button
+              <ndd-button
                 type="button"
                 (click)="saveEdit()"
                 [disabled]="loading()"
-                class="btn-primary inline-flex shrink-0 items-center"
-              >
-                <ndd-icon name="check-mark" class="w-4 h-4 mr-1.5"></ndd-icon> Save
-              </button>
-              <button
+                text="Save"
+                start-icon="check-mark"
+                variant="primary"
+                size="sm"
+              ></ndd-button>
+              <ndd-button
                 type="button"
                 (click)="cancelEdit()"
                 [disabled]="loading()"
-                class="btn-secondary inline-flex shrink-0 items-center"
-              >
-                <ndd-icon name="dismiss-small" class="w-4 h-4 mr-1.5"></ndd-icon> Cancel
-              </button>
+                text="Cancel"
+                start-icon="dismiss-small"
+                variant="secondary"
+                size="sm"
+              ></ndd-button>
             </div>
           } @else {
             <div class="flex items-center gap-3">
               <p class="text-sm text-gray-900 dark:text-white">{{ organization()!.alias }}</p>
-              <button
+              <ndd-button
                 type="button"
                 (click)="startEdit()"
                 [disabled]="loading()"
-                class="btn-light inline-flex shrink-0 items-center"
-              >
-                <ndd-icon name="pencil" class="w-4 h-4 mr-1.5"></ndd-icon> Rename
-              </button>
+                text="Rename"
+                start-icon="pencil"
+                variant="accent-outlined"
+                size="sm"
+              ></ndd-button>
             </div>
           }
         </div>

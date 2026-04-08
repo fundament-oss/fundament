@@ -43,20 +43,20 @@
                   }}</span>
                 </div>
                 <div class="ml-3 flex shrink-0 space-x-2">
-                  <button
+                  <ndd-button
                     type="button"
                     (click)="onAccept(invitation)"
-                    class="btn-primary px-3! py-1! text-xs!"
-                  >
-                    Accept
-                  </button>
-                  <button
+                    text="Accept"
+                    variant="primary"
+                    size="sm"
+                  ></ndd-button>
+                  <ndd-button
                     type="button"
                     (click)="onDecline(invitation)"
-                    class="btn-secondary px-3! py-1! text-xs!"
-                  >
-                    Decline
-                  </button>
+                    text="Decline"
+                    variant="secondary"
+                    size="sm"
+                  ></ndd-button>
                 </div>
               </div>
             }

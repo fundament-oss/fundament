@@ -41,20 +41,21 @@
         </div>
 
         <div class="flex gap-2 lg:justify-end">
-          <button
+          <ndd-button
             type="button"
             (click)="openTerminal()"
-            class="btn-secondary inline-flex shrink-0 items-center transition-transform duration-200 ease-in-out hover:-translate-y-px"
-          >
-            <ng-icon name="tablerTerminal" class="mr-2" /> Open terminal
-          </button>
-          <button
+            text="Open terminal"
+            variant="secondary"
+            size="sm"
+          ></ndd-button>
+          <ndd-button
             type="button"
             (click)="downloadKubeconfig()"
-            class="btn-primary inline-flex shrink-0 items-center transition-transform duration-200 ease-in-out hover:-translate-y-px"
-          >
-            <ndd-icon name="arrow-down-in-bucket" class="w-4 h-4 mr-2"></ndd-icon> Download kubeconfig
-          </button>
+            text="Download kubeconfig"
+            start-icon="arrow-down-in-bucket"
+            variant="primary"
+            size="sm"
+          ></ndd-button>
         </div>
       </div>
     </div>
@@ -90,12 +91,12 @@
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
             <dd class="mt-1 text-sm dark:text-white">
               {{ clusterData.basics.kubernetesVersion }}
-              <button
-                type="button"
-                class="btn-light -my-0.5 ml-1 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
-              >
-                <ndd-icon name="arrow-up" class="mr-1 h-3.5 w-3.5"></ndd-icon> Upgrade
-              </button>
+              <ndd-button
+                text="Upgrade"
+                start-icon="arrow-up"
+                variant="accent-outlined"
+                size="sm"
+              ></ndd-button>
             </dd>
           </dl>
         </div>
@@ -431,12 +432,7 @@
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Members
             <!-- TODO: Update this link - clusters belong to organizations, not projects
-            <a
-              routerLink="/project-members"
-              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
-            >
-              <ndd-icon name="pencil" class="w-4 h-4 mr-1" /> Edit
-            </a>
+            <ndd-button routerLink="/project-members" text="Edit" start-icon="pencil" variant="accent-outlined" size="sm"></ndd-button>
             -->
           </h3>
           <div class="space-y-3">
@@ -476,12 +472,13 @@
         <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Node pools
-            <a
+            <ndd-button
               [routerLink]="['/clusters', clusterData.basics.id, 'nodes']"
-              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
-            >
-              <ndd-icon name="pencil" class="w-4 h-4 mr-1"></ndd-icon> Edit
-            </a>
+              text="Edit"
+              start-icon="pencil"
+              variant="accent-outlined"
+              size="sm"
+            ></ndd-button>
           </h3>
           @if (clusterData.nodePools.length === 0) {
             <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -537,12 +534,13 @@
         <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Plugins
-            <a
+            <ndd-button
               [routerLink]="['/clusters', clusterData.basics.id, 'plugins']"
-              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
-            >
-              <ndd-icon name="pencil" class="w-4 h-4 mr-1"></ndd-icon> Edit
-            </a>
+              text="Edit"
+              start-icon="pencil"
+              variant="accent-outlined"
+              size="sm"
+            ></ndd-button>
           </h3>
           @if (isLoadingPlugins()) {
             <p class="text-sm text-gray-500 dark:text-gray-400">Loading plugins...</p>
@@ -568,12 +566,13 @@
         <div class="card card-body">
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Namespaces
-            <a
+            <ndd-button
               [routerLink]="['/clusters', clusterData.basics.id, 'namespaces']"
-              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
-            >
-              <ndd-icon name="pencil" class="w-4 h-4 mr-1"></ndd-icon> Edit
-            </a>
+              text="Edit"
+              start-icon="pencil"
+              variant="accent-outlined"
+              size="sm"
+            ></ndd-button>
           </h3>
           @if (namespaces().length === 0) {
             <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -603,9 +602,12 @@
         <p class="mb-4 text-sm text-rose-700 dark:text-rose-300">
           Deleting a cluster is permanent and cannot be undone.
         </p>
-        <button type="button" (click)="showDeleteModal.set(true)" class="btn-remove">
-          Delete this cluster
-        </button>
+        <ndd-button
+          (click)="showDeleteModal.set(true)"
+          text="Delete this cluster"
+          variant="destructive"
+          size="sm"
+        ></ndd-button>
       </div>
     </div>
   </div>
@@ -642,7 +644,13 @@
   </div>
 
   <div modal-footer class="modal-footer">
-    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <ndd-button
+      type="button"
+      (click)="showDeleteModal.set(false)"
+      text="Cancel"
+      variant="secondary"
+      size="sm"
+    ></ndd-button>
     <button
       type="button"
       (click)="deleteCluster()"

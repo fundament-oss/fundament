@@ -49,34 +49,37 @@
                 (keyup.enter)="saveEdit()"
                 (keyup.escape)="cancelEdit()"
               />
-              <button
+              <ndd-button
                 type="button"
                 (click)="saveEdit()"
                 [disabled]="loading()"
-                class="btn-primary inline-flex shrink-0 items-center"
-              >
-                <ndd-icon name="check-mark" class="w-4 h-4 mr-1.5"></ndd-icon> Save
-              </button>
-              <button
+                text="Save"
+                start-icon="check-mark"
+                variant="primary"
+                size="sm"
+              ></ndd-button>
+              <ndd-button
                 type="button"
                 (click)="cancelEdit()"
                 [disabled]="loading()"
-                class="btn-secondary inline-flex shrink-0 items-center"
-              >
-                <ndd-icon name="dismiss-small" class="w-4 h-4 mr-1.5"></ndd-icon> Cancel
-              </button>
+                text="Cancel"
+                start-icon="dismiss-small"
+                variant="secondary"
+                size="sm"
+              ></ndd-button>
             </div>
           } @else {
             <div class="flex items-center gap-3">
               <p class="text-sm text-gray-900 dark:text-white">{{ project()!.name }}</p>
-              <button
+              <ndd-button
                 type="button"
                 (click)="startEdit()"
                 [disabled]="loading()"
-                class="btn-light inline-flex shrink-0 items-center"
-              >
-                <ndd-icon name="pencil" class="mr-1.5"></ndd-icon> Rename
-              </button>
+                text="Rename"
+                start-icon="pencil"
+                variant="accent-outlined"
+                size="sm"
+              ></ndd-button>
             </div>
           }
         </div>
@@ -97,9 +100,12 @@
           <p class="mb-4 text-sm text-rose-700 dark:text-rose-300">
             Deleting a project is permanent and cannot be undone.
           </p>
-          <button type="button" (click)="showDeleteModal.set(true)" class="btn-remove">
-            Delete this project
-          </button>
+          <ndd-button
+            (click)="showDeleteModal.set(true)"
+            text="Delete this project"
+            variant="destructive"
+            size="sm"
+          ></ndd-button>
         </div>
       </div>
     }
@@ -117,10 +123,7 @@
     <div
       class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
     >
-      <ndd-icon
-        name="exclamation-triangle"
-        class="w-5 h-5 text-rose-600! dark:text-rose-400!"
-      />
+      <ndd-icon name="exclamation-triangle" class="h-5 w-5 text-rose-600! dark:text-rose-400!" />
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
@@ -135,7 +138,13 @@
   </div>
 
   <div modal-footer class="modal-footer">
-    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <ndd-button
+      type="button"
+      (click)="showDeleteModal.set(false)"
+      text="Cancel"
+      variant="secondary"
+      size="sm"
+    ></ndd-button>
     <button
       type="button"
       (click)="deleteProject()"

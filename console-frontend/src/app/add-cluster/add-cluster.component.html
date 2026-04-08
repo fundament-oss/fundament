@@ -65,7 +65,13 @@
 
   <!-- Form Actions -->
   <div class="flex items-center space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-    <button type="button" (click)="onCancel()" class="btn-secondary">Cancel</button>
-    <button type="submit" class="btn-primary">Next step</button>
+    <ndd-button
+      type="button"
+      (click)="onCancel()"
+      text="Cancel"
+      variant="secondary"
+      size="sm"
+    ></ndd-button>
+    <ndd-button type="submit" text="Next step" variant="primary" size="sm"></ndd-button>
   </div>
 </form>

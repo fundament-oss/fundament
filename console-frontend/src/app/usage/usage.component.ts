@@ -7,6 +7,7 @@ import {
   signal,
   computed,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -106,6 +107,7 @@ function formatTimestamp(ts: Timestamp | undefined): string {
       tablerCircleXFill,
     }),
   ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './usage.component.html',
 })

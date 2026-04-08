@@ -7,6 +7,7 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   signal,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -17,6 +18,7 @@ import { OrganizationDataService } from '../organization-data.service';
 @Component({
   selector: 'app-add-cluster',
   imports: [ReactiveFormsModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster.component.html',
 })

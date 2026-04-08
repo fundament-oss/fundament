@@ -18,7 +18,7 @@
     >
       <ndd-icon
         name="info-circle"
-        class="w-5 h-5 mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
+        class="mt-0.5 h-5 w-5 shrink-0 text-indigo-600! dark:text-indigo-400!"
       />
       <div class="text-sm text-indigo-700 dark:text-indigo-300">
         <p class="mb-2">
@@ -33,10 +33,14 @@
       </div>
     </div>
 
-    <button type="button" (click)="openModal()" class="btn-primary mb-6 inline-flex items-center">
-      <ndd-icon name="plus-small" class="w-4 h-4 mr-2"></ndd-icon>
-      Invite member
-    </button>
+    <ndd-button
+      type="button"
+      (click)="openModal()"
+      text="Invite member"
+      start-icon="plus-small"
+      variant="primary"
+      size="sm"
+    ></ndd-button>
 
     <!-- Pending Invitations Section -->
     <div class="mb-8">
@@ -88,13 +92,13 @@
                     </span>
                   </td>
                   <td>
-                    <button
-                      type="button"
+                    <ndd-button
                       (click)="cancelInvitation(invitation.id)"
-                      class="btn-remove shrink-0"
-                    >
-                      <ndd-icon name="trash" class="w-4 h-4 mr-1.5"></ndd-icon> Cancel
-                    </button>
+                      text="Cancel"
+                      start-icon="trash"
+                      variant="destructive"
+                      size="sm"
+                    ></ndd-button>
                   </td>
                 </tr>
               }
@@ -205,20 +209,22 @@
                     @if (member.isCurrentUser) {
                       <span class="text-sm text-gray-400 dark:text-gray-600">&mdash;</span>
                     } @else {
-                      <button
+                      <ndd-button
                         type="button"
                         (click)="openEditModal(member)"
-                        class="btn-light mr-2 inline-flex shrink-0 items-center"
-                      >
-                        <ndd-icon name="pencil" class="w-4 h-4 mr-1.5"></ndd-icon> Edit
-                      </button>
-                      <button
-                        type="button"
+                        text="Edit"
+                        start-icon="pencil"
+                        variant="accent-outlined"
+                        size="sm"
+                        class="mr-3"
+                      ></ndd-button>
+                      <ndd-button
                         (click)="openDeleteModal(member)"
-                        class="btn-remove shrink-0"
-                      >
-                        <ndd-icon name="trash" class="w-4 h-4 mr-1.5"></ndd-icon> Remove
-                      </button>
+                        text="Remove"
+                        start-icon="trash"
+                        variant="destructive"
+                        size="sm"
+                      ></ndd-button>
                     }
                   </td>
                 </tr>
@@ -242,10 +248,7 @@
     <div
       class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
     >
-      <ndd-icon
-        name="exclamation-triangle"
-        class="w-5 h-5 text-rose-600! dark:text-rose-400!"
-      />
+      <ndd-icon name="exclamation-triangle" class="h-5 w-5 text-rose-600! dark:text-rose-400!" />
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
@@ -264,7 +267,13 @@
   </div>
 
   <div modal-footer class="modal-footer">
-    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
+    <ndd-button
+      type="button"
+      (click)="showDeleteModal.set(false)"
+      text="Cancel"
+      variant="secondary"
+      size="sm"
+    ></ndd-button>
     <button
       type="button"
       (click)="confirmDeleteMember()"
@@ -327,26 +336,22 @@
   </div>
 
   <div modal-footer class="modal-footer">
-    <button
+    <ndd-button
       type="button"
       (click)="showEditModal.set(false)"
-      class="btn-secondary"
       [disabled]="isSubmitting()"
-    >
-      Cancel
-    </button>
-    <button
+      text="Cancel"
+      variant="secondary"
+      size="sm"
+    ></ndd-button>
+    <ndd-button
       type="button"
       (click)="confirmEditMember()"
-      class="btn-primary"
+      [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
       [disabled]="isSubmitting()"
-    >
-      @if (isSubmitting()) {
-        Saving...
-      } @else {
-        Save changes
-      }
-    </button>
+      variant="primary"
+      size="sm"
+    ></ndd-button>
   </div>
 </app-modal>
 
@@ -422,21 +427,21 @@
     </div>
 
     <div modal-footer class="modal-footer">
-      <button
+      <ndd-button
         type="button"
         (click)="closeModal()"
-        class="btn-secondary"
         [disabled]="isSubmitting()"
-      >
-        Cancel
-      </button>
-      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
-        @if (isSubmitting()) {
-          Sending...
-        } @else {
-          Send invitation
-        }
-      </button>
+        text="Cancel"
+        variant="secondary"
+        size="sm"
+      ></ndd-button>
+      <ndd-button
+        type="submit"
+        [text]="isSubmitting() ? 'Sending...' : 'Send invitation'"
+        [disabled]="isSubmitting()"
+        variant="primary"
+        size="sm"
+      ></ndd-button>
     </div>
   </form>
 </app-modal>

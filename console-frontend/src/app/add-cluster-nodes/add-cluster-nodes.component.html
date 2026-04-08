@@ -4,7 +4,7 @@
   <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
     Configure your cluster worker nodes with the settings below.
     <a routerLink="/clusters/add/plugins" class="link inline-flex items-center"
-      >Skip this step <ndd-icon name="arrow-right" class="w-4 h-4 ml-0.5"></ndd-icon
+      >Skip this step <ndd-icon name="arrow-right" class="ml-0.5 h-4 w-4"></ndd-icon
     ></a>
   </p>
 </div>
@@ -13,8 +13,13 @@
 <div class="px-6 py-6">
   <app-shared-node-pools-form (formSubmit)="onFormSubmit($event)">
     <div class="flex space-x-3">
-      <a routerLink="/clusters/add" class="btn-secondary"> Previous step </a>
-      <button type="submit" class="btn-primary">Next step</button>
+      <ndd-button
+        routerLink="/clusters/add"
+        text="Previous step"
+        variant="secondary"
+        size="sm"
+      ></ndd-button>
+      <ndd-button type="submit" text="Next step" variant="primary" size="sm"></ndd-button>
     </div>
   </app-shared-node-pools-form>
 </div>

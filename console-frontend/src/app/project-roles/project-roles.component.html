@@ -23,14 +23,14 @@
     </div>
 
     <div class="mb-5 flex flex-wrap items-center gap-3">
-      <button
+      <ndd-button
         type="button"
         (click)="openCreateModal()"
-        class="btn-primary inline-flex items-center"
-      >
-        <ndd-icon name="plus-small" class="w-4 h-4 mr-1.5"></ndd-icon>
-        Create role binding
-      </button>
+        text="Create role binding"
+        start-icon="plus-small"
+        variant="primary"
+        size="sm"
+      ></ndd-button>
 
       <!-- Filters -->
       <select
@@ -75,21 +75,22 @@
                   </div>
                 </td>
                 <td>
-                  <button
+                  <ndd-button
                     type="button"
                     (click)="openEditModal(binding)"
-                    class="btn-light mr-2 inline-flex shrink-0 items-center"
-                  >
-                    <ndd-icon name="pencil" class="w-4 h-4 mr-1.5"></ndd-icon> Edit
-                  </button>
+                    text="Edit"
+                    start-icon="pencil"
+                    variant="accent-outlined"
+                    size="sm"
+                  ></ndd-button>
 
-                  <button
-                    type="button"
+                  <ndd-button
                     (click)="openRemoveModal(binding.id)"
-                    class="btn-remove shrink-0"
-                  >
-                    <ndd-icon name="trash" class="w-4 h-4 mr-1.5"></ndd-icon> Remove
-                  </button>
+                    text="Remove"
+                    start-icon="trash"
+                    variant="destructive"
+                    size="sm"
+                  ></ndd-button>
                 </td>
               </tr>
             }
@@ -239,23 +240,21 @@
     </div>
 
     <div modal-footer class="modal-footer">
-      <button
+      <ndd-button
         type="button"
         (click)="showCreateModal.set(false)"
-        class="btn-secondary"
         [disabled]="isSubmitting()"
-      >
-        Cancel
-      </button>
-      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
-        @if (isSubmitting()) {
-          Saving...
-        } @else if (editingBinding()) {
-          Save changes
-        } @else {
-          Create binding
-        }
-      </button>
+        text="Cancel"
+        variant="secondary"
+        size="sm"
+      ></ndd-button>
+      <ndd-button
+        type="submit"
+        [text]="isSubmitting() ? 'Saving...' : editingBinding() ? 'Save changes' : 'Create binding'"
+        [disabled]="isSubmitting()"
+        variant="primary"
+        size="sm"
+      ></ndd-button>
     </div>
   </form>
 </app-modal>
@@ -271,10 +270,7 @@
     <div
       class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
     >
-      <ndd-icon
-        name="exclamation-triangle"
-        class="w-5 h-5 text-rose-600! dark:text-rose-400!"
-      />
+      <ndd-icon name="exclamation-triangle" class="h-5 w-5 text-rose-600! dark:text-rose-400!" />
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
@@ -290,7 +286,13 @@
   </div>
 
   <div modal-footer class="modal-footer">
-    <button type="button" (click)="showRemoveModal.set(false)" class="btn-secondary">Cancel</button>
+    <ndd-button
+      type="button"
+      (click)="showRemoveModal.set(false)"
+      text="Cancel"
+      variant="secondary"
+      size="sm"
+    ></ndd-button>
     <button
       type="button"
       (click)="confirmRemoveBinding()"

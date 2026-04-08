@@ -31,21 +31,21 @@
         (formSubmit)="onFormSubmit($event)"
       >
         <div class="flex space-x-3">
-          <button
+          <ndd-button
             type="button"
             (click)="onCancel()"
-            class="btn-secondary"
             [disabled]="isSubmitting()"
-          >
-            Cancel
-          </button>
-          <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
-            @if (isSubmitting()) {
-              Saving...
-            } @else {
-              Save changes
-            }
-          </button>
+            text="Cancel"
+            variant="secondary"
+            size="sm"
+          ></ndd-button>
+          <ndd-button
+            type="submit"
+            [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
+            [disabled]="isSubmitting()"
+            variant="primary"
+            size="sm"
+          ></ndd-button>
         </div>
       </app-shared-node-pools-form>
     }

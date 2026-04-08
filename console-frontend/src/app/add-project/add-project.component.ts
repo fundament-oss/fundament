@@ -7,6 +7,7 @@ import {
   inject,
   signal,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -33,6 +34,7 @@ import {
       tablerCircleXFill,
     }),
   ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

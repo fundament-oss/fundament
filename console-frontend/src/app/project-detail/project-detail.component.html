@@ -74,13 +74,13 @@
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-lg font-medium dark:text-white">Namespaces</h3>
-          <a
+          <ndd-button
             [routerLink]="['/projects', project()?.id, 'namespaces']"
-            class="btn-light inline-flex items-center"
-          >
-            <ndd-icon name="pencil" class="w-4 h-4 mr-1.5"></ndd-icon>
-            Edit
-          </a>
+            text="Edit"
+            start-icon="pencil"
+            variant="accent-outlined"
+            size="sm"
+          ></ndd-button>
         </div>
         @if (namespaces().length === 0) {
           <p class="text-sm text-gray-500 dark:text-gray-400">
