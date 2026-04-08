@@ -58,18 +58,17 @@ plugin-install plugin:
     kind: PluginInstallation
     metadata:
       name: {{ plugin }}
-      namespace: fundament
     spec:
       image: ${image}
       pluginName: {{ plugin }}
-      version: ${tag}
+      version: "${tag}"
       clusterRoles:
         - cluster-admin
     EOF
 
 # Delete a PluginInstallation CR
 plugin-uninstall plugin:
-    kubectl --context {{ kube_context }} delete plugininstallation -n fundament {{ plugin }}
+    kubectl --context {{ kube_context }} delete plugininstallation {{ plugin }}
 
 # Stream logs for a specific plugin
 plugin-logs plugin:
@@ -77,7 +76,7 @@ plugin-logs plugin:
 
 # Show all PluginInstallation CRs
 plugin-status:
-    kubectl --context {{ kube_context }} get plugininstallations -n fundament
+    kubectl --context {{ kube_context }} get plugininstallations
 
 # View logs from all pods
 logs:

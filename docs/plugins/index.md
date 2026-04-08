@@ -12,16 +12,23 @@ The plugin system allows extending Fundament with installable plugins that integ
   ┌──────────────────────────────────────────────────────────────────────────┐
   │                         Fundament Cluster                                │
   │                                                                          │
+  │  PluginInstallation CRs (cluster-scoped)                                 │
+  │  ┌──────────────────────┐                                                │
+  │  │ cert-manager-test    │                                                │
+  │  │ another-plugin       │                                                │
+  │  └──────────┬───────────┘                                                │
+  │             │                                                            │
   │  fundament namespace                                                     │
-  │  ┌───────────────────────────────────────────────────────────────────┐   │
-  │  │  PluginInstallation CRs          Plugin Controller                │   │
-  │  │  ┌──────────────────────┐       ┌──────────────────────────────┐  │   │
-  │  │  │ cert-manager-test    │──────►│ Watches CRs                  │  │   │
-  │  │  │ another-plugin       │       │ Creates plugin namespaces    │  │   │
-  │  │  └──────────────────────┘       │ Manages RBAC + deployments   │  │   │
-  │  │                                 │ Polls plugin status          │  │   │
-  │  │                                 └──────┬───────────────────────┘  │   │
-  │  └────────────────────────────────────────┼──────────────────────────┘   │
+  │  ┌──────────┼────────────────────────────────────────────────────────┐   │
+  │  │          ▼                                                        │   │
+  │  │  Plugin Controller                                                │   │
+  │  │  ┌──────────────────────────────┐                                 │   │
+  │  │  │ Watches CRs                  │                                 │   │
+  │  │  │ Creates plugin namespaces    │                                 │   │
+  │  │  │ Manages RBAC + deployments   │                                 │   │
+  │  │  │ Polls plugin status          │                                 │   │
+  │  │  └──────┬───────────────────────┘                                 │   │
+  │  └─────────┼─────────────────────────────────────────────────────────┘   │
   │                                           │ creates                      │
   │               ┌───────────────────────────┼─────────────────────┐        │
   │               ▼                           ▼                     ▼        │
@@ -179,7 +186,7 @@ The SDK provides optional helpers that plugins can use. Plugins are free to choo
 
 ## Plugin Controller
 
-The controller runs in the `fundament` namespace and watches `PluginInstallation` CRs.
+The controller watches `PluginInstallation` CRs.
 
 ### PluginInstallation CRD
 
@@ -188,7 +195,6 @@ apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
   name: cert-manager-test
-  namespace: fundament
 spec:
   image: ghcr.io/fundament-oss/fundament/cert-manager-plugin:v1.0.0
   pluginName: cert-manager-test

@@ -579,36 +579,38 @@ CREATE OR REPLACE FUNCTION authn.api_key_get_by_hash (IN p_token_hash bytea)
 $function$
 DECLARE
 	result authn.api_keys;
-	key_record authn.api_keys;
 BEGIN
-	SELECT * INTO key_record FROM authn.api_keys WHERE token_hash = p_token_hash;
+	SELECT * INTO result FROM authn.api_keys WHERE token_hash = p_token_hash;
 
 	IF NOT FOUND THEN
 		RETURN NULL;
 	END IF;
-
-	IF key_record.deleted IS NOT NULL THEN
-		RAISE EXCEPTION 'API key has been deleted' USING HINT = 'api_key_deleted';
-	END IF;
-
-	IF key_record.revoked IS NOT NULL THEN
-		RAISE EXCEPTION 'API key has been revoked' USING HINT = 'api_key_revoked';
-	END IF;
-
-	IF key_record.expires IS NOT NULL AND key_record.expires <= NOW() THEN
-		RAISE EXCEPTION 'API key has expired' USING HINT = 'api_key_expired';
-	END IF;
-
-	UPDATE authn.api_keys
-	SET last_used = NOW()
-	WHERE id = key_record.id
-	RETURNING * INTO result;
 
 	RETURN result;
 END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION authn.api_key_get_by_hash(bytea) OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: authn.api_key_update_last_used | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authn.api_key_update_last_used(uuid) CASCADE;
+CREATE OR REPLACE FUNCTION authn.api_key_update_last_used (IN p_id uuid)
+	RETURNS void
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 10
+	AS 
+$function$
+BEGIN
+	UPDATE authn.api_keys SET last_used = NOW() WHERE id = p_id;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authn.api_key_update_last_used(uuid) OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.clusters | type: TABLE --

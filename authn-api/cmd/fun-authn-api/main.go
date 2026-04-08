@@ -27,6 +27,7 @@ import (
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -34,6 +35,7 @@ import (
 
 type config struct {
 	Database           psqldb.Config
+	OpenFGA            authz.Config
 	JWTSecret          string        `env:"JWT_SECRET,required,notEmpty" `
 	OIDCIssuer         string        `env:"OIDC_ISSUER,required,notEmpty" envDefault:"http://localhost:5556"`
 	OIDCDiscoveryURL   string        `env:"OIDC_DISCOVERY_URL"` // URL to fetch OIDC discovery document (defaults to OIDCIssuer)
@@ -132,6 +134,18 @@ func run() error {
 
 	logger.Debug("database connected")
 
+	logger.Debug("connecting to OpenFGA",
+		"api_url", cfg.OpenFGA.APIURL,
+		"store_id", cfg.OpenFGA.StoreID,
+	)
+
+	authzClient, err := authz.New(cfg.OpenFGA)
+	if err != nil {
+		return fmt.Errorf("failed to create OpenFGA client: %w", err)
+	}
+
+	logger.Debug("OpenFGA client connected")
+
 	// Create session store for OAuth state management
 	sessionStore := authn.NewSessionStore([]byte(cfg.JWTSecret))
 	sessionStore.ConfigureOptions(cfg.CookieDomain, cfg.CookieSecure)
@@ -163,12 +177,42 @@ func run() error {
 		FrontendURL:  cfg.FrontendURL,
 	}
 
-	server, err := authn.New(logger, authnCfg, oauth2Config, verifier, sessionStore, db, gardenerClient)
+	server, err := authn.New(logger, authnCfg, oauth2Config, verifier, sessionStore, db, gardenerClient, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create authn api: %w", err)
 	}
 
 	mux := http.NewServeMux()
+
+	// Health endpoints
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		var errs []string
+
+		if err := db.Pool.Ping(ctx); err != nil {
+			errs = append(errs, "database: "+err.Error())
+		}
+		if err := authzClient.Healthy(ctx); err != nil {
+			errs = append(errs, "openfga: "+err.Error())
+		}
+		if err := checkOIDC(ctx, cfg.OIDCDiscoveryURL); err != nil {
+			errs = append(errs, "oidc: "+err.Error())
+		}
+
+		if len(errs) > 0 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(strings.Join(errs, "\n")))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 
 	// Connect RPC handler for GetUserInfo
 	loggingInterceptor := logging.UnaryServerInterceptor(
@@ -221,6 +265,22 @@ func run() error {
 		return fmt.Errorf("server failed: %w", err)
 	}
 
+	return nil
+}
+
+func checkOIDC(ctx context.Context, discoveryURL string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discoveryURL+"/.well-known/openid-configuration", nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
 	return nil
 }
 

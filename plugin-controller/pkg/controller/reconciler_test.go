@@ -32,7 +32,6 @@ func testCR() *pluginsv1.PluginInstallation {
 	return &pluginsv1.PluginInstallation{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       "test-cert-manager",
-			Namespace:  "fundament",
 			Generation: 1,
 		},
 		Spec: pluginsv1.PluginInstallationSpec{
