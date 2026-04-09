@@ -96,7 +96,10 @@ func (c *CLI) Run(ctx *Context) int {
 			return ExitError
 		}
 	} else {
-		printTable(results)
+		if err := printTable(results); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return ExitError
+		}
 	}
 
 	if len(results.Errors) > 0 {
@@ -108,35 +111,57 @@ func (c *CLI) Run(ctx *Context) int {
 	return ExitOK
 }
 
-func printTable(results *checker.Results) {
+func printTable(results *checker.Results) error {
 	if len(results.Violations) > 0 {
-		fmt.Fprintf(os.Stdout, "VIOLATIONS (%d):\n", len(results.Violations))
-		w := NewTableWriter()
-		fmt.Fprintln(w, "MODULE\tVERSION\tPUBLISHED\tAGE\tREMAINING")
-		for _, v := range results.Violations {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-				v.Module, v.Version, v.PublishTime.Format(TimeFormat), v.Age, v.Remaining)
+		if _, err := fmt.Fprintf(os.Stdout, "VIOLATIONS (%d):\n", len(results.Violations)); err != nil {
+			return fmt.Errorf("writing output: %w", err)
 		}
-		w.Flush()
+		w := NewTableWriter()
+		if _, err := fmt.Fprintln(w, "MODULE\tVERSION\tPUBLISHED\tAGE\tREMAINING"); err != nil {
+			return fmt.Errorf("writing output: %w", err)
+		}
+		for i := range results.Violations {
+			v := &results.Violations[i]
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+				v.Module, v.Version, v.PublishTime.Format(TimeFormat), v.Age, v.Remaining); err != nil {
+				return fmt.Errorf("writing output: %w", err)
+			}
+		}
+		if err := w.Flush(); err != nil {
+			return fmt.Errorf("flushing output: %w", err)
+		}
 		fmt.Println()
 	}
 
 	if len(results.Errors) > 0 {
-		fmt.Fprintf(os.Stdout, "ERRORS (%d):\n", len(results.Errors))
-		for _, e := range results.Errors {
-			fmt.Fprintf(os.Stdout, "  %s@%s: %s\n", e.Module, e.Version, e.Reason)
+		if _, err := fmt.Fprintf(os.Stdout, "ERRORS (%d):\n", len(results.Errors)); err != nil {
+			return fmt.Errorf("writing output: %w", err)
+		}
+		for i := range results.Errors {
+			e := &results.Errors[i]
+			if _, err := fmt.Fprintf(os.Stdout, "  %s@%s: %s\n", e.Module, e.Version, e.Reason); err != nil {
+				return fmt.Errorf("writing output: %w", err)
+			}
 		}
 		fmt.Println()
 	}
 
 	if len(results.Skipped) > 0 {
-		fmt.Fprintf(os.Stdout, "SKIPPED (%d):\n", len(results.Skipped))
-		for _, s := range results.Skipped {
-			fmt.Fprintf(os.Stdout, "  %s@%s: %s\n", s.Module, s.Version, s.Reason)
+		if _, err := fmt.Fprintf(os.Stdout, "SKIPPED (%d):\n", len(results.Skipped)); err != nil {
+			return fmt.Errorf("writing output: %w", err)
+		}
+		for i := range results.Skipped {
+			s := &results.Skipped[i]
+			if _, err := fmt.Fprintf(os.Stdout, "  %s@%s: %s\n", s.Module, s.Version, s.Reason); err != nil {
+				return fmt.Errorf("writing output: %w", err)
+			}
 		}
 		fmt.Println()
 	}
 
-	fmt.Fprintf(os.Stdout, "Summary: %d passed, %d violations, %d skipped, %d errors\n",
-		len(results.Passed), len(results.Violations), len(results.Skipped), len(results.Errors))
+	if _, err := fmt.Fprintf(os.Stdout, "Summary: %d passed, %d violations, %d skipped, %d errors\n",
+		len(results.Passed), len(results.Violations), len(results.Skipped), len(results.Errors)); err != nil {
+		return fmt.Errorf("writing output: %w", err)
+	}
+	return nil
 }

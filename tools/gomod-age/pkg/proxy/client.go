@@ -4,6 +4,7 @@ package proxy
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -64,7 +65,7 @@ func (c *Client) queryProxy(ctx context.Context, baseURL, module, version string
 	encodedVersion := EncodePath(version)
 	url := fmt.Sprintf("%s/%s/@v/%s.info", baseURL, encodedPath, encodedVersion)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("creating request: %w", err)
 	}
@@ -73,7 +74,7 @@ func (c *Client) queryProxy(ctx context.Context, baseURL, module, version string
 	if err != nil {
 		return time.Time{}, fmt.Errorf("querying proxy: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusGone {
 		return time.Time{}, &NotFoundError{Module: module, Version: version, StatusCode: resp.StatusCode}
@@ -107,8 +108,8 @@ func (e *NotFoundError) Error() string {
 }
 
 func isNotFound(err error) bool {
-	_, ok := err.(*NotFoundError)
-	return ok
+	var nfe *NotFoundError
+	return errors.As(err, &nfe)
 }
 
 type proxyEntry struct {

@@ -17,7 +17,8 @@ func TestGetVersionTime(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/github.com/example/mod/@v/v1.0.0.info", r.URL.Path)
-		fmt.Fprintf(w, `{"Version":"v1.0.0","Time":"%s"}`, publishTime.Format(time.RFC3339))
+		_, err := fmt.Fprintf(w, `{"Version":"v1.0.0","Time":"%s"}`, publishTime.Format(time.RFC3339))
+		require.NoError(t, err)
 	}))
 	defer srv.Close()
 
@@ -41,7 +42,8 @@ func TestGetVersionTime_NotFound(t *testing.T) {
 
 func TestGetVersionTime_NoPublishTime(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprint(w, `{"Version":"v1.0.0"}`)
+		_, err := fmt.Fprint(w, `{"Version":"v1.0.0"}`)
+		require.NoError(t, err)
 	}))
 	defer srv.Close()
 
@@ -55,7 +57,8 @@ func TestGetVersionTime_UppercasePath(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// MyOrg should be encoded as !my!org
 		assert.Equal(t, "/github.com/!my!org/mod/@v/v1.0.0.info", r.URL.Path)
-		fmt.Fprintf(w, `{"Version":"v1.0.0","Time":"2024-01-01T00:00:00Z"}`)
+		_, err := fmt.Fprintf(w, `{"Version":"v1.0.0","Time":"2024-01-01T00:00:00Z"}`)
+		require.NoError(t, err)
 	}))
 	defer srv.Close()
 
@@ -74,7 +77,8 @@ func TestGetVersionTime_ProxyChainComma_StopsOn500(t *testing.T) {
 
 	srv2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		callCount++
-		fmt.Fprint(w, `{"Version":"v1.0.0","Time":"2024-01-01T00:00:00Z"}`)
+		_, err := fmt.Fprint(w, `{"Version":"v1.0.0","Time":"2024-01-01T00:00:00Z"}`)
+		require.NoError(t, err)
 	}))
 	defer srv2.Close()
 
@@ -93,7 +97,8 @@ func TestGetVersionTime_ProxyChainComma_FallsThrough404(t *testing.T) {
 	defer srv.Close()
 
 	srv2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprint(w, `{"Version":"v1.0.0","Time":"2024-01-01T00:00:00Z"}`)
+		_, err := fmt.Fprint(w, `{"Version":"v1.0.0","Time":"2024-01-01T00:00:00Z"}`)
+		require.NoError(t, err)
 	}))
 	defer srv2.Close()
 
@@ -111,7 +116,8 @@ func TestGetVersionTime_ProxyChainPipe_FallsThroughOn500(t *testing.T) {
 	defer srv.Close()
 
 	srv2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprint(w, `{"Version":"v1.0.0","Time":"2024-01-01T00:00:00Z"}`)
+		_, err := fmt.Fprint(w, `{"Version":"v1.0.0","Time":"2024-01-01T00:00:00Z"}`)
+		require.NoError(t, err)
 	}))
 	defer srv2.Close()
 

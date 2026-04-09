@@ -31,7 +31,7 @@ type AllowEntry struct {
 // Load reads and parses a config file. Returns an empty config if the file
 // does not exist.
 func Load(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // config path is user-provided CLI input
 	if err != nil {
 		if os.IsNotExist(err) {
 			return &Config{}, nil
@@ -90,7 +90,11 @@ func ParseDuration(s string) (time.Duration, error) {
 		}
 		return time.Duration(days * float64(24*time.Hour)), nil
 	}
-	return time.ParseDuration(s)
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("parsing duration: %w", err)
+	}
+	return d, nil
 }
 
 // matchGlob matches a module path against a GOPRIVATE-style glob pattern.
