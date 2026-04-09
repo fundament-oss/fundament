@@ -187,26 +187,33 @@ jobs:
         with:
           tofu_wrapper: false
 
-      - name: Wait for organization-api
+      - name: Wait for APIs
         run: |
-          URL="https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
-          echo "Waiting for ${URL} to be ready..."
-          for i in $(seq 1 30); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
-            if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "401" ] || [ "${STATUS}" = "404" ]; then
-              echo "Organization API is ready (HTTP ${STATUS})"
-              exit 0
-            fi
-            if [ "${STATUS}" = "000" ] || [ "${STATUS}" = "502" ] || [ "${STATUS}" = "503" ] || [ "${STATUS}" = "504" ]; then
-              echo "Attempt ${i}/30, not ready yet (HTTP ${STATUS}), retrying in 30s..."
-            else
-              echo "Organization API responded with unexpected status (HTTP ${STATUS}), failing."
-              exit 1
-            fi
-            sleep 30
-          done
-          echo "Timed out waiting for environment to be ready"
-          exit 1
+          wait_for_api() {
+            local NAME=$1
+            local URL=$2
+            echo "Waiting for ${NAME} at ${URL} to be ready..."
+            for i in $(seq 1 30); do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
+              if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "401" ] || [ "${STATUS}" = "404" ]; then
+                echo "${NAME} is ready (HTTP ${STATUS})"
+                return 0
+              fi
+              if [ "${STATUS}" = "000" ] || [ "${STATUS}" = "502" ] || [ "${STATUS}" = "503" ] || [ "${STATUS}" = "504" ]; then
+                echo "${NAME}: attempt ${i}/30, not ready yet (HTTP ${STATUS}), retrying in 30s..."
+              else
+                echo "${NAME} responded with unexpected status (HTTP ${STATUS}), failing."
+                return 1
+              fi
+              sleep 30
+            done
+            echo "Timed out waiting for ${NAME} to be ready"
+            return 1
+          }
+
+          BASE="pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
+          wait_for_api "organization-api" "https://organization.${BASE}" && \
+          wait_for_api "authn-api" "https://authn.${BASE}"
 
       - name: Run Terraform acceptance tests
         run: |
@@ -235,26 +242,34 @@ jobs:
       - name: Install Playwright browsers
         run: cd e2e && bunx playwright install chromium --with-deps
 
-      - name: Wait for console
+      - name: Wait for APIs
         run: |
-          URL="https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
-          echo "Waiting for ${URL} to be ready..."
-          for i in $(seq 1 30); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
-            if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "401" ] || [ "${STATUS}" = "404" ]; then
-              echo "Console is ready (HTTP ${STATUS})"
-              exit 0
-            fi
-            if [ "${STATUS}" = "000" ] || [ "${STATUS}" = "502" ] || [ "${STATUS}" = "503" ] || [ "${STATUS}" = "504" ]; then
-              echo "Attempt ${i}/30, not ready yet (HTTP ${STATUS}), retrying in 30s..."
-            else
-              echo "Console responded with unexpected status (HTTP ${STATUS}), failing."
-              exit 1
-            fi
-            sleep 30
-          done
-          echo "Timed out waiting for environment to be ready"
-          exit 1
+          wait_for_api() {
+            local NAME=$1
+            local URL=$2
+            echo "Waiting for ${NAME} at ${URL} to be ready..."
+            for i in $(seq 1 30); do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
+              if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "401" ] || [ "${STATUS}" = "404" ]; then
+                echo "${NAME} is ready (HTTP ${STATUS})"
+                return 0
+              fi
+              if [ "${STATUS}" = "000" ] || [ "${STATUS}" = "502" ] || [ "${STATUS}" = "503" ] || [ "${STATUS}" = "504" ]; then
+                echo "${NAME}: attempt ${i}/30, not ready yet (HTTP ${STATUS}), retrying in 30s..."
+              else
+                echo "${NAME} responded with unexpected status (HTTP ${STATUS}), failing."
+                return 1
+              fi
+              sleep 30
+            done
+            echo "Timed out waiting for ${NAME} to be ready"
+            return 1
+          }
+
+          BASE="pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
+          wait_for_api "console" "https://console.${BASE}" && \
+          wait_for_api "authn-api" "https://authn.${BASE}" && \
+          wait_for_api "organization-api" "https://organization.${BASE}"
 
       - name: Run E2E tests
         run: |
