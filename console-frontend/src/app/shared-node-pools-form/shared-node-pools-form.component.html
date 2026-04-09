@@ -10,13 +10,14 @@
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-lg font-medium dark:text-white">Node pool {{ $index + 1 }}</h3>
           @if (nodePools.length > 1) {
-            <button
+            <ndd-button
               type="button"
               (click)="removeNodePool($index)"
-              class="inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-2 py-1 text-xs font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white"
-            >
-              <ndd-icon name="trash" class="mr-1 h-3 w-3"></ndd-icon> Remove
-            </button>
+              text="Remove"
+              start-icon="trash"
+              variant="destructive"
+              size="sm"
+            ></ndd-button>
           }
         </div>
 

@@ -45,14 +45,14 @@
                 Created {{ formatDate(namespace.created) }}
               </p>
             </div>
-            <button
+            <ndd-button
               type="button"
               (click)="openDeleteNamespaceModal(namespace.id, namespace.name)"
-              class="inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white"
-            >
-              <ndd-icon name="trash" class="mr-1.5 h-4 w-4"></ndd-icon>
-              Delete
-            </button>
+              text="Delete"
+              start-icon="trash"
+              variant="destructive"
+              size="sm"
+            ></ndd-button>
           </div>
         }
       </div>
@@ -144,12 +144,12 @@
       variant="secondary"
       size="sm"
     ></ndd-button>
-    <button
+    <ndd-button
       type="button"
       (click)="confirmDeleteNamespace()"
-      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
-    >
-      Yes, delete this namespace
-    </button>
+      text="Yes, delete this namespace"
+      variant="destructive"
+      size="sm"
+    ></ndd-button>
   </div>
 </app-modal>

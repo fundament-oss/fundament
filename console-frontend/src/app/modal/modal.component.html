@@ -16,14 +16,13 @@
             {{ title }}
           }
         </h2>
-        <button
-          type="button"
+        <ndd-icon-button
+          text="Close"
+          icon="dismiss-small"
+          size="sm"
           (click)="onClose()"
-          class="cursor-pointer rounded-md text-gray-500 ring-indigo-500 hover:text-gray-700 focus:border-indigo-500 focus:ring-2 focus:outline-none dark:text-gray-400 dark:ring-offset-gray-950 dark:hover:text-gray-200"
-          aria-label="Close"
-        >
-          <ndd-icon name="dismiss-small" class="block! h-6 w-6"></ndd-icon>
-        </button>
+          class="-my-1 -mr-1"
+        ></ndd-icon-button>
       </div>
 
       <div class="modal-body">

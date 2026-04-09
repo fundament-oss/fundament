@@ -20,13 +20,13 @@
               <ndd-icon name="check-mark" class="mr-1 h-3 w-3"></ndd-icon> Installed
             </span>
           } @else {
-            <button
+            <ndd-button
               type="button"
               (click)="onInstall(cluster.id)"
-              class="cursor-pointer rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-            >
-              Install
-            </button>
+              text="Install"
+              variant="primary"
+              size="xs"
+            ></ndd-button>
           }
         </div>
       }
@@ -34,6 +34,12 @@
   </div>
 
   <div modal-footer class="modal-footer">
-    <button type="button" (click)="onClose()" class="btn-secondary">Close</button>
+    <ndd-button
+      type="button"
+      (click)="onClose()"
+      text="Close"
+      variant="secondary"
+      size="sm"
+    ></ndd-button>
   </div>
 </app-modal>

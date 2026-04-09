@@ -95,7 +95,7 @@
                 text="Upgrade"
                 start-icon="arrow-up"
                 variant="accent-outlined"
-                size="sm"
+                size="xs"
               ></ndd-button>
             </dd>
           </dl>
@@ -432,7 +432,7 @@
           <h3 class="mb-4 text-lg font-medium dark:text-white">
             Members
             <!-- TODO: Update this link - clusters belong to organizations, not projects
-            <ndd-button routerLink="/project-members" text="Edit" start-icon="pencil" variant="accent-outlined" size="sm"></ndd-button>
+            <ndd-button routerLink="/project-members" text="Edit" start-icon="pencil" variant="accent-outlined" size="xs"></ndd-button>
             -->
           </h3>
           <div class="space-y-3">
@@ -477,7 +477,7 @@
               text="Edit"
               start-icon="pencil"
               variant="accent-outlined"
-              size="sm"
+              size="xs"
             ></ndd-button>
           </h3>
           @if (clusterData.nodePools.length === 0) {
@@ -539,7 +539,7 @@
               text="Edit"
               start-icon="pencil"
               variant="accent-outlined"
-              size="sm"
+              size="xs"
             ></ndd-button>
           </h3>
           @if (isLoadingPlugins()) {
@@ -571,7 +571,7 @@
               text="Edit"
               start-icon="pencil"
               variant="accent-outlined"
-              size="sm"
+              size="xs"
             ></ndd-button>
           </h3>
           @if (namespaces().length === 0) {
@@ -651,12 +651,12 @@
       variant="secondary"
       size="sm"
     ></ndd-button>
-    <button
+    <ndd-button
       type="button"
       (click)="deleteCluster()"
-      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
-    >
-      Yes, delete this cluster
-    </button>
+      text="Yes, delete this cluster"
+      variant="destructive"
+      size="sm"
+    ></ndd-button>
   </div>
 </app-modal>

@@ -140,13 +140,13 @@
         >
           <ndd-icon name="exclamation-circle" class="mx-auto h-12 w-12 text-rose-400!"></ndd-icon>
           <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
-          <button
+          <ndd-button
             type="button"
             (click)="loadMembers()"
-            class="mt-4 inline-flex cursor-pointer items-center rounded-md border border-transparent bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700"
-          >
-            Try again
-          </button>
+            text="Try again"
+            variant="primary"
+            size="sm"
+          ></ndd-button>
         </div>
       } @else if (activeMembers().length === 0) {
         <div
@@ -274,13 +274,13 @@
       variant="secondary"
       size="sm"
     ></ndd-button>
-    <button
+    <ndd-button
       type="button"
       (click)="confirmDeleteMember()"
-      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
-    >
-      Yes, remove member
-    </button>
+      text="Yes, remove member"
+      variant="destructive"
+      size="sm"
+    ></ndd-button>
   </div>
 </app-modal>
 
