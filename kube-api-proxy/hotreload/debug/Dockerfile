@@ -1,4 +1,4 @@
-FROM golang:1.26.1-alpine
+FROM golang:1.26.2-alpine
 RUN go install github.com/air-verse/air@v1.64.5 && \
     go install github.com/go-delve/delve/cmd/dlv@v1.26.1
 WORKDIR /src
