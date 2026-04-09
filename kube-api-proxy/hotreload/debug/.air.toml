@@ -1,0 +1,13 @@
+root = "/src"
+tmp_dir = "tmp"
+
+[build]
+cmd = "GOCACHE=/src/tmp/go-cache GOTMPDIR=/src/tmp go build -gcflags='all=-N -l' -o tmp/fun-kube-api-proxy ./kube-api-proxy/cmd/fun-kube-api-proxy"
+bin = "/src/kube-api-proxy/hotreload/debug/start.sh"
+include_ext = ["go", "mod", "sum"]
+include_dir = ["kube-api-proxy", "common"]
+exclude_dir = ["tmp"]
+delay = 500
+
+[log]
+time = false

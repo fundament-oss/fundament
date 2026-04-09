@@ -14,7 +14,6 @@ export interface PluginDefinition {
 }
 
 export interface PluginMenu {
-  organization?: PluginMenuItem[];
   project?: PluginMenuItem[];
 }
 
@@ -100,17 +99,32 @@ export interface PluginNavItem {
   icon?: string;
 }
 
-// Raw YAML types (before parsing)
+export interface PluginInstallationItem {
+  metadata: { name: string };
+  spec: { pluginName: string; version: string };
+  status: { phase: string; ready: boolean; pluginVersion: string };
+}
 
-export interface RawPluginYaml {
-  apiVersion: string;
-  kind: string;
-  name: string;
+export interface PluginInstallationListResponse {
+  items: PluginInstallationItem[];
+}
+
+export interface GetDefinitionMenuEntry {
+  crd: string;
   label: string;
+  icon?: string;
+}
+
+export interface GetDefinitionResponse {
+  name: string;
+  displayName: string;
   version: string;
   description: string;
   author?: string;
-  menu: PluginMenu;
+  apiVersion: string;
+  menu: {
+    project?: GetDefinitionMenuEntry[];
+  };
   crds: string[];
   customUI?: Record<string, CustomUIConfig>;
 }
