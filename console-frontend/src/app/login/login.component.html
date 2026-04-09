@@ -63,6 +63,7 @@
           full-width
           [attr.disabled]="isLoading() ? '' : null"
           [text]="isLoading() ? 'Signing in...' : 'Sign in'"
+          type="submit"
           (click)="onSubmit()"
         ></ndd-button>
       </form>
