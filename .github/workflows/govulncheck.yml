@@ -17,5 +17,12 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - run: |
-          go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+      - name: Check dependency age
+        run: |
+          go run github.com/fchimpan/gomod-age@latest -config .gomod-age.json || {
+            echo ""
+            echo "To allow a fresh dependency, add it to .gomod-age.json:"
+            echo '  { "allow": [{ "module": "<module>", "version": "<version>", "reason": "<reason>" }] }'
+            exit 1
+          }
