@@ -255,7 +255,6 @@ The marketplace is implemented as an `appstore` schema in the organization-api d
 * **tags / categories**: Classification and filtering of plugins.
 * **plugin_documentation_links**: Associated documentation links per plugin.
 * **presets**: Predefined plugin bundles (e.g. "production essentials" preset that includes cert-manager, observability, etc.).
-* **installs**: Tracks which plugins are installed on which clusters.
 
 The `PluginService` API in `organization-api` provides:
 
@@ -263,7 +262,13 @@ The `PluginService` API in `organization-api` provides:
 * `GetPluginDetail()` - Returns detailed plugin info including documentation links.
 * `ListPresets()` - Returns predefined plugin collections.
 
-RLS policy ensures users can only view installations for clusters in their organization.
+=== Installing, viewing, and deleting plugins
+
+Plugin lifecycle is managed through `PluginInstallation` custom resources on the cluster (see <<Plugin Controller>>).
+
+* **Installing**: An organization admin selects a plugin from the marketplace and Fundament creates a `PluginInstallation` CR on the target cluster. The `plugin-controller` reconciles this into a running plugin.
+* **Viewing**: The `plugin-controller` polls the plugin's metadata service and updates the `PluginInstallation` status with phase, readiness, and version. The console reads this status to display plugin health.
+* **Deleting**: Removing the `PluginInstallation` CR triggers the controller's finalizer, which cleans up all child resources (namespace, deployments, RBAC bindings) before the CR is removed.
 
 === Sideloading
 
