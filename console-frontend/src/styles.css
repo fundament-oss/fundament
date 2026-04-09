@@ -1,8 +1,8 @@
 /* You can add global styles to this file, and also import other style files */
 
-@import '@minbzk/storybook/css';
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
+@import '@minbzk/storybook/css';
 
 /* Dark mode variant using the 'dark' class on the HTML element */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -56,7 +56,16 @@ html.dark {
   }
 }
 
+@font-face {
+  font-family: 'RijksSansVF';
+  src: url('/fonts/RijksSansVF-Regular.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 body {
+  font-family: RijksSansVF, system-ui, sans-serif;
   @apply min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-white;
 }
 
