@@ -185,7 +185,7 @@ func run() error {
 	mux := http.NewServeMux()
 
 	// Health endpoints
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
@@ -200,9 +200,6 @@ func run() error {
 		}
 		if err := authzClient.Healthy(ctx); err != nil {
 			errs = append(errs, "openfga: "+err.Error())
-		}
-		if err := checkOIDC(ctx, cfg.OIDCDiscoveryURL); err != nil {
-			errs = append(errs, "oidc: "+err.Error())
 		}
 
 		if len(errs) > 0 {
@@ -265,22 +262,6 @@ func run() error {
 		return fmt.Errorf("server failed: %w", err)
 	}
 
-	return nil
-}
-
-func checkOIDC(ctx context.Context, discoveryURL string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discoveryURL+"/.well-known/openid-configuration", nil)
-	if err != nil {
-		return err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
-	}
 	return nil
 }
 
