@@ -9,6 +9,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Test data user IDs from db/testdata/001_0101-content.sql.
+var (
+	testUser1 = uuid.MustParse("019b4000-1000-7000-8000-000000000001") // Alice
+	testUser2 = uuid.MustParse("019b4000-1000-7000-8000-000000000002") // Bart
+)
+
 func createTestDB(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 
@@ -58,7 +64,7 @@ func TestStore_ReserveThenLookupReturnsNilResponse(t *testing.T) {
 	store := newTestStore(t)
 	ctx := t.Context()
 	key := uuid.New()
-	userID := uuid.New()
+	userID := testUser1
 
 	reserved, err := store.Reserve(ctx, ReserveParams{
 		IdempotencyKey: key,
@@ -92,7 +98,7 @@ func TestStore_DuplicateReserveReturnsFalse(t *testing.T) {
 	store := newTestStore(t)
 	ctx := t.Context()
 	key := uuid.New()
-	userID := uuid.New()
+	userID := testUser1
 
 	reserved, err := store.Reserve(ctx, ReserveParams{
 		IdempotencyKey: key,
@@ -126,8 +132,8 @@ func TestStore_DifferentUsersCanUseSameKey(t *testing.T) {
 	store := newTestStore(t)
 	ctx := t.Context()
 	key := uuid.New()
-	user1 := uuid.New()
-	user2 := uuid.New()
+	user1 := testUser1
+	user2 := testUser2
 
 	reserved1, err := store.Reserve(ctx, ReserveParams{
 		IdempotencyKey: key,
@@ -160,7 +166,7 @@ func TestStore_CompleteUpdatesReservation(t *testing.T) {
 	store := newTestStore(t)
 	ctx := t.Context()
 	key := uuid.New()
-	userID := uuid.New()
+	userID := testUser1
 	// Use existing project from test data to satisfy FK constraint.
 	resourceID := uuid.MustParse("019b4000-9000-7000-8000-000000000001")
 
@@ -204,7 +210,7 @@ func TestStore_UnreserveAllowsRetry(t *testing.T) {
 	store := newTestStore(t)
 	ctx := t.Context()
 	key := uuid.New()
-	userID := uuid.New()
+	userID := testUser1
 
 	// Reserve.
 	_, err := store.Reserve(ctx, ReserveParams{
@@ -251,7 +257,7 @@ func TestStore_UnreserveDoesNotDeleteCompletedEntry(t *testing.T) {
 	store := newTestStore(t)
 	ctx := t.Context()
 	key := uuid.New()
-	userID := uuid.New()
+	userID := testUser1
 	// Use existing project from test data to satisfy FK constraint.
 	resourceID := uuid.MustParse("019b4000-9000-7000-8000-000000000001")
 

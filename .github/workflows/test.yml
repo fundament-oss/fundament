@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [master]
 
+permissions:
+  contents: read
+
 env:
   FUNDAMENT_TEST_CACHE_DIR: /tmp/fundament-test-pg
 
@@ -81,6 +84,40 @@ jobs:
         working-directory: cluster-worker
         run: go test ./... -count=1
 
+  common:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Trek binary
+        id: cache-trek
+        uses: actions/cache@v5
+        with:
+          path: ~/go/bin/trek
+          key: trek-${{ runner.os }}-v0.12.1
+
+      - name: Cache embedded PostgreSQL
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}-common
+          key: embedded-pg-common-${{ runner.os }}
+
+      - name: Install dependencies
+        run: go get ./...
+
+      - name: Install Trek
+        if: steps.cache-trek.outputs.cache-hit != 'true'
+        run: go install github.com/printeers/trek@v0.12.1
+
+      - name: Run tests (common)
+        working-directory: common
+        run: go test ./... -count=1
+
   functl:
     runs-on: ubuntu-latest
     steps:
@@ -99,3 +136,19 @@ jobs:
         run: |
           go build ./...
           go vet ./...
+
+  test-other:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install dependencies
+        run: go get ./...
+
+      - name: Run tests
+        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|cluster-worker|common)/')
