@@ -21,6 +21,9 @@ spec:
       containers:
         - name: authz-worker
           image: {{ $.Values.images.authzWorker }}
+          ports:
+            - name: health
+              containerPort: 8097
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -47,4 +50,16 @@ spec:
                 configMapKeyRef:
                   name: openfga-config
                   key: authorization-model-id
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 5
 {{- end }}
