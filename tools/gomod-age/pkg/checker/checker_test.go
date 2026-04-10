@@ -28,32 +28,28 @@ func TestFormatDuration(t *testing.T) {
 	}
 }
 
-func TestClassifyModule_Passed(t *testing.T) {
-	cfg := &config.Config{MinAge: 7 * 24 * time.Hour}
-	now := time.Date(2024, 6, 15, 0, 0, 0, 0, time.UTC)
-	publishTime := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC) // 14 days old
-
-	age := now.Sub(publishTime)
-	assert.True(t, age >= cfg.MinAge, "14d age should pass 7d threshold")
-}
-
-func TestClassifyModule_Violation(t *testing.T) {
-	cfg := &config.Config{MinAge: 7 * 24 * time.Hour}
-	now := time.Date(2024, 6, 15, 0, 0, 0, 0, time.UTC)
-	publishTime := time.Date(2024, 6, 14, 0, 0, 0, 0, time.UTC) // 1 day old
-
-	age := now.Sub(publishTime)
-	assert.True(t, age < cfg.MinAge, "1d age should violate 7d threshold")
-}
-
-func TestClassifyModule_ExactBoundary(t *testing.T) {
-	cfg := &config.Config{MinAge: 7 * 24 * time.Hour}
-	now := time.Date(2024, 6, 15, 0, 0, 0, 0, time.UTC)
-	publishTime := time.Date(2024, 6, 8, 0, 0, 0, 0, time.UTC) // exactly 7 days
-
-	age := now.Sub(publishTime)
-	// Strict less-than: age == minAge should pass
-	assert.False(t, age < cfg.MinAge, "exact boundary should pass, not violate")
+func TestClassify(t *testing.T) {
+	const week = 7 * 24 * time.Hour
+	tests := []struct {
+		name   string
+		age    time.Duration
+		minAge time.Duration
+		want   ResultKind
+	}{
+		{"older than minimum", 14 * 24 * time.Hour, week, KindPassed},
+		{"younger than minimum", 24 * time.Hour, week, KindViolation},
+		{"exact boundary passes", week, week, KindPassed},
+		// Clock skew / antedating: a publish time in the future yields a
+		// negative age and must be flagged as a violation, not silently
+		// treated as zero.
+		{"future-dated is a violation", -24 * time.Hour, week, KindViolation},
+		{"zero minimum allows just-published", 0, 0, KindPassed},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, Classify(tt.age, tt.minAge))
+		})
+	}
 }
 
 func TestConfig_IsAllowed_ExactMatch(t *testing.T) {
@@ -99,30 +95,6 @@ func TestConfig_IsIgnored_SlashStar(t *testing.T) {
 	assert.False(t, cfg.IsIgnored("github.com/other/repo"))
 	// Exact match on the prefix itself
 	assert.True(t, cfg.IsIgnored("github.com/org"))
-}
-
-func TestClassifyModule_FutureTimestamp(t *testing.T) {
-	// Clock skew: proxy reports a publish time in the future.
-	// Age would be negative — should not violate (treat as 0 age).
-	cfg := &config.Config{MinAge: 7 * 24 * time.Hour}
-	now := time.Date(2024, 6, 15, 0, 0, 0, 0, time.UTC)
-	publishTime := time.Date(2024, 6, 16, 0, 0, 0, 0, time.UTC) // 1 day in the future
-
-	age := now.Sub(publishTime) // negative
-	// Negative age is < minAge, so it's a violation — correct behavior.
-	// A future-dated package is suspicious and should be flagged.
-	assert.True(t, age < cfg.MinAge)
-}
-
-func TestClassifyModule_ZeroMinAge(t *testing.T) {
-	// age: "0d" should allow everything (no minimum).
-	cfg := &config.Config{MinAge: 0}
-	now := time.Date(2024, 6, 15, 0, 0, 0, 0, time.UTC)
-	publishTime := time.Date(2024, 6, 15, 0, 0, 0, 0, time.UTC) // just published
-
-	age := now.Sub(publishTime) // 0
-	// 0 is not < 0, so it passes.
-	assert.False(t, age < cfg.MinAge)
 }
 
 func TestConfig_ParseDuration(t *testing.T) {

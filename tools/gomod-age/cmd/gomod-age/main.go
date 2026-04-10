@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/alecthomas/kong"
 
@@ -29,13 +32,16 @@ func main() {
 		Level: logLevel,
 	}))
 
-	runCtx := &cli.Context{
+	env := &cli.Env{
 		Debug:  root.Debug,
 		Output: root.Output,
 		Logger: logger,
 	}
 
-	code := root.Run(runCtx)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	code := root.Run(ctx, env)
 	if code == cli.ExitViolation {
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "To allow a fresh dependency, add it to .gomod-age.json:")

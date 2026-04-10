@@ -117,14 +117,26 @@ type proxyEntry struct {
 	lenient bool // pipe-separated entries are lenient (fall through on any error)
 }
 
+// parseProxyChain expands a GOPROXY value into an ordered list of entries
+// to try, marking each entry's failure semantics.
+//
+// Go's GOPROXY supports two separators with different fall-through rules:
+//   - comma  (a,b): only fall through to b on 404/410, abort on any other error
+//   - pipe   (a|b): fall through to b on any error
+//
+// We split on pipe first, then comma within each pipe segment. The boundary
+// between two pipe segments is the only place where pipe semantics matter:
+// the last comma entry of a pipe group is the one whose failure must roll
+// over into the next pipe segment, so it gets marked lenient. (For the very
+// last pipe group there is nothing to roll over into, so the lenient flag on
+// its trailing entry is harmless.)
 func parseProxyChain(goproxy string) []proxyEntry {
 	if goproxy == "" {
 		goproxy = "https://proxy.golang.org,direct"
 	}
 
+	hasPipe := strings.Contains(goproxy, "|")
 	var entries []proxyEntry
-
-	// Split on pipe first, then comma within each pipe segment
 	for _, pipePart := range strings.Split(goproxy, "|") {
 		commaParts := strings.Split(pipePart, ",")
 		for i, part := range commaParts {
@@ -132,9 +144,7 @@ func parseProxyChain(goproxy string) []proxyEntry {
 			if part == "" {
 				continue
 			}
-			// Last entry in a pipe group is lenient (falls through on any error)
-			// except if it's also the last comma entry
-			lenient := i == len(commaParts)-1 && strings.Contains(goproxy, "|")
+			lenient := hasPipe && i == len(commaParts)-1
 			entries = append(entries, proxyEntry{url: part, lenient: lenient})
 		}
 	}

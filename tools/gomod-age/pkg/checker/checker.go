@@ -154,13 +154,10 @@ func Check(ctx context.Context, cfg *config.Config, proxyClient *proxy.Client, n
 				CheckedVersion: cVer,
 				PublishTime:    publishTime,
 				Age:            FormatDuration(age),
+				Kind:           Classify(age, cfg.MinAge),
 			}
-
-			if age < cfg.MinAge {
-				mr.Kind = KindViolation
+			if mr.Kind == KindViolation {
 				mr.Remaining = FormatDuration(cfg.MinAge - age)
-			} else {
-				mr.Kind = KindPassed
 			}
 
 			mu.Lock()
@@ -176,6 +173,16 @@ func Check(ctx context.Context, cfg *config.Config, proxyClient *proxy.Client, n
 
 	wg.Wait()
 	return results, nil
+}
+
+// Classify decides whether a module of the given age passes the configured
+// minimum age. A negative age (clock skew / future-dated package) is treated
+// as a violation, since an antedated publish time is suspicious.
+func Classify(age, minAge time.Duration) ResultKind {
+	if age < minAge {
+		return KindViolation
+	}
+	return KindPassed
 }
 
 // FormatDuration formats a duration in a human-readable way (e.g. "3d5h", "5h30m").

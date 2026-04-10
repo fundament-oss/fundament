@@ -24,8 +24,8 @@ type CLI struct {
 	Ignore   string       `help:"Comma-separated glob patterns to ignore."`
 }
 
-// Context holds shared dependencies for command execution.
-type Context struct {
+// Env holds shared dependencies for command execution.
+type Env struct {
 	Debug  bool
 	Output OutputFormat
 	Logger *slog.Logger
@@ -38,7 +38,7 @@ const (
 )
 
 // Run executes the age check and returns an exit code.
-func (c *CLI) Run(ctx *Context) int {
+func (c *CLI) Run(ctx context.Context, env *Env) int {
 	cfg, err := config.Load(c.Config)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -76,7 +76,7 @@ func (c *CLI) Run(ctx *Context) int {
 		return ExitError
 	}
 
-	ctx.Logger.Debug("configuration loaded",
+	env.Logger.Debug("configuration loaded",
 		"min_age", cfg.MinAge,
 		"indirect", cfg.Indirect,
 		"ignore", cfg.Ignore,
@@ -84,13 +84,13 @@ func (c *CLI) Run(ctx *Context) int {
 	)
 
 	proxyClient := proxy.NewClient(nil)
-	results, err := checker.Check(context.Background(), cfg, proxyClient, time.Now())
+	results, err := checker.Check(ctx, cfg, proxyClient, time.Now())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return ExitError
 	}
 
-	if ctx.Output == OutputJSON {
+	if env.Output == OutputJSON {
 		if err := PrintJSON(results); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			return ExitError
@@ -113,19 +113,13 @@ func (c *CLI) Run(ctx *Context) int {
 
 func printTable(results *checker.Results) error {
 	if len(results.Violations) > 0 {
-		if _, err := fmt.Fprintf(os.Stdout, "VIOLATIONS (%d):\n", len(results.Violations)); err != nil {
-			return fmt.Errorf("writing output: %w", err)
-		}
+		fmt.Printf("VIOLATIONS (%d):\n", len(results.Violations))
 		w := NewTableWriter()
-		if _, err := fmt.Fprintln(w, "MODULE\tVERSION\tPUBLISHED\tAGE\tREMAINING"); err != nil {
-			return fmt.Errorf("writing output: %w", err)
-		}
+		fmt.Fprintln(w, "MODULE\tVERSION\tPUBLISHED\tAGE\tREMAINING")
 		for i := range results.Violations {
 			v := &results.Violations[i]
-			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-				v.Module, v.Version, v.PublishTime.Format(TimeFormat), v.Age, v.Remaining); err != nil {
-				return fmt.Errorf("writing output: %w", err)
-			}
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+				v.Module, v.Version, v.PublishTime.Format(TimeFormat), v.Age, v.Remaining)
 		}
 		if err := w.Flush(); err != nil {
 			return fmt.Errorf("flushing output: %w", err)
@@ -134,34 +128,24 @@ func printTable(results *checker.Results) error {
 	}
 
 	if len(results.Errors) > 0 {
-		if _, err := fmt.Fprintf(os.Stdout, "ERRORS (%d):\n", len(results.Errors)); err != nil {
-			return fmt.Errorf("writing output: %w", err)
-		}
+		fmt.Printf("ERRORS (%d):\n", len(results.Errors))
 		for i := range results.Errors {
 			e := &results.Errors[i]
-			if _, err := fmt.Fprintf(os.Stdout, "  %s@%s: %s\n", e.Module, e.Version, e.Reason); err != nil {
-				return fmt.Errorf("writing output: %w", err)
-			}
+			fmt.Printf("  %s@%s: %s\n", e.Module, e.Version, e.Reason)
 		}
 		fmt.Println()
 	}
 
 	if len(results.Skipped) > 0 {
-		if _, err := fmt.Fprintf(os.Stdout, "SKIPPED (%d):\n", len(results.Skipped)); err != nil {
-			return fmt.Errorf("writing output: %w", err)
-		}
+		fmt.Printf("SKIPPED (%d):\n", len(results.Skipped))
 		for i := range results.Skipped {
 			s := &results.Skipped[i]
-			if _, err := fmt.Fprintf(os.Stdout, "  %s@%s: %s\n", s.Module, s.Version, s.Reason); err != nil {
-				return fmt.Errorf("writing output: %w", err)
-			}
+			fmt.Printf("  %s@%s: %s\n", s.Module, s.Version, s.Reason)
 		}
 		fmt.Println()
 	}
 
-	if _, err := fmt.Fprintf(os.Stdout, "Summary: %d passed, %d violations, %d skipped, %d errors\n",
-		len(results.Passed), len(results.Violations), len(results.Skipped), len(results.Errors)); err != nil {
-		return fmt.Errorf("writing output: %w", err)
-	}
+	fmt.Printf("Summary: %d passed, %d violations, %d skipped, %d errors\n",
+		len(results.Passed), len(results.Violations), len(results.Skipped), len(results.Errors))
 	return nil
 }

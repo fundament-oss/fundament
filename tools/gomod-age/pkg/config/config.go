@@ -98,7 +98,12 @@ func ParseDuration(s string) (time.Duration, error) {
 }
 
 // matchGlob matches a module path against a GOPRIVATE-style glob pattern.
-// Supports trailing /* for prefix matching.
+// Only trailing wildcards are supported:
+//   - "example.com/foo/*" matches "example.com/foo" and "example.com/foo/bar"
+//   - "example.com/foo*"  matches any module path with that prefix
+//   - any other pattern is compared for exact equality
+//
+// Mid-pattern wildcards like "*/internal/*" are NOT supported.
 func matchGlob(pattern, module string) bool {
 	if prefix, ok := strings.CutSuffix(pattern, "/*"); ok {
 		return module == prefix || strings.HasPrefix(module, prefix+"/")
