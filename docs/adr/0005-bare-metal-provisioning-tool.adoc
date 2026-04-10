@@ -17,7 +17,7 @@ With bare-metal infrastructure (ADR-0003) and spine-leaf networking (ADR-0004) c
 
 === Option 1: metal-stack
 * Pros: integrated compute + network provisioning (spine-leaf BGP/EVPN built in), production-proven at scale (German financial sector under BaFin/ECB), European origin (x-cellent), API-first zero-touch provisioning, proven Gardener integration, small team viable at scale (estimated 10-30 FTE for 500-50,000 servers, to be validated)
-* Cons: smaller community than CAPI/Metal³, opinionated network architecture (but matches ADR-0004), not a CNCF project, Dutch market expertise limited
+* Cons: smaller community than CAPI/Metal³, opinionated network architecture (but matches ADR-0004), not a CNCF project, limited market expertise outside Germany
 
 === Option 2: Cluster API + Metal³ + Ironic
 * Pros: CNCF sandbox project, declarative and Kubernetes-native, modular — infrastructure provider is swappable

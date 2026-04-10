@@ -1,0 +1,43 @@
+:showtitle:
+:state: proposed
+
+= ADR-0021: Cloud security certification
+
+Status:: proposed
+Date:: 2026-03-11
+Group:: cross-cutting
+Depends-on:: ADR-0018
+
+== Context
+
+ISO 27001 (ADR-0018) provides the ISMS foundation. On top of this, the platform needs a cloud-specific security controls framework that covers cloud security in depth and provides continuous operational assurance — evidence that controls are not just designed but operating effectively over time.
+
+== Options
+
+=== Option 1: ISO 27002 (+ ISO 27017 for cloud)
+* Pros: detailed implementation guidance for ISO 27001 Annex A controls; ISO 27017 adds cloud-specific guidance; stays within the ISO ecosystem; familiar to ISO auditors
+* Cons: ISO 27002 is guidance, not separately certifiable; no continuous assurance mechanism (point-in-time audits only); less cloud-specific depth than C5; does not provide a Type 2 report
+
+=== Option 2: BSI C5 Type 2
+* Pros: comprehensive cloud-specific security criteria (17 domains, 121+ controls); Type 2 report provides continuous assurance over an audit period (typically 12 months); European origin (German BSI); increasingly required for EU government cloud procurement; explicitly builds on ISO 27001; covers cloud controls in more depth than ISO 27017; recognized across EU member states
+* Cons: originates from German BSI, though EU adoption is growing; audit requires mature operational processes; smaller auditor ecosystem than ISO
+
+=== Option 3: SOC 2 Type II
+* Pros: well-known in commercial cloud; continuous assurance model; covers security, availability, confidentiality
+* Cons: US-origin (AICPA); does not build on ISO 27001; less recognized in European government procurement; does not specifically address EU regulatory context
+
+=== Option 4: BSI C5 Type 2 + SOC 2 Type II
+* Pros: C5 for EU government; SOC 2 for international commercial customers; broadest market coverage
+* Cons: two audit tracks; significant cost; SOC 2 adds limited value when C5 Type 2 is already in place
+
+== Decision
+
+BSI C5 Type 2. It is the most comprehensive European cloud security certification, covering cloud-specific security controls and continuous operational assurance in a single framework. C5 builds on ISO 27001 (ADR-0018), providing the detailed cloud controls layer that ISO 27002/27017 would cover but with more depth and with a continuous assurance mechanism (Type 2 report). SOC 2 can be added later for international commercial customers but is not needed when C5 Type 2 is in place.
+
+== Consequences
+
+* C5 Type 2 audit should be planned after the first year of production operation (requires an audit period)
+* Operational processes must be formalized and evidenced from day one — even before the C5 audit
+* Monitoring and logging must produce auditable records of operational events
+* C5 makes ISO 27017 redundant — cloud controls are covered in more depth
+* SOC 2 Type II can be pursued later for non-EU customers with limited additional effort
