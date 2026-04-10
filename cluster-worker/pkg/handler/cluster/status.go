@@ -2,14 +2,11 @@ package cluster
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
@@ -226,26 +223,4 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-// extractShootCA requests a short-lived admin kubeconfig and extracts the CA certificate data.
-// Returns base64-encoded CA data suitable for kubeconfig certificate-authority-data.
-func (h *Handler) extractShootCA(ctx context.Context, clusterID uuid.UUID) (string, error) {
-	adminKC, err := h.statusChecker.RequestAdminKubeconfig(ctx, clusterID, 600)
-	if err != nil {
-		return "", fmt.Errorf("request admin kubeconfig: %w", err)
-	}
-
-	cfg, err := clientcmd.Load(adminKC.Kubeconfig)
-	if err != nil {
-		return "", fmt.Errorf("parse kubeconfig: %w", err)
-	}
-
-	for _, cluster := range cfg.Clusters {
-		if len(cluster.CertificateAuthorityData) > 0 {
-			return base64.StdEncoding.EncodeToString(cluster.CertificateAuthorityData), nil
-		}
-	}
-
-	return "", fmt.Errorf("no CA data found in admin kubeconfig")
 }
