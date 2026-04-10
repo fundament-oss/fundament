@@ -50,7 +50,7 @@ spec:
           {{- end }}
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: /livez
               port: health
             initialDelaySeconds: 5
             periodSeconds: 10
