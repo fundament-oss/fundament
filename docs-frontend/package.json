@@ -39,7 +39,7 @@
     "@astrojs/starlight": "0.37.3",
     "@fortawesome/fontawesome-free": "7.1.0",
     "@tailwindcss/vite": "4.1.18",
-    "astro": "5.16.11",
+    "astro": "5.18.1",
     "astro-asciidoc": "0.1.0",
     "starlight-auto-sidebar": "0.2.0",
     "tailwindcss": "4.1.18"
