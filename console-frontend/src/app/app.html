@@ -70,9 +70,9 @@
     <div class="flex items-center">
       @if (!isLoginPage()) {
         <ndd-icon-button
-          text="Toggle sidebar"
           icon="list"
           size="xs"
+          aria-label="Toggle sidebar"
           (click)="toggleSidebar()"
           class="mr-3 flex items-center lg:hidden"
         ></ndd-icon-button>

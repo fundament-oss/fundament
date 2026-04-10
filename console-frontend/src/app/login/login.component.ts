@@ -85,6 +85,7 @@ export default class LoginComponent implements OnInit, AfterViewInit {
   }
 
   async onSubmit() {
+    if (this.isLoading()) return;
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       return;
