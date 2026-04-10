@@ -50,8 +50,6 @@ export default class SidebarNavComponent {
 
   isClustersActive = input(false);
 
-  organizationNav = input<PluginNavGroup[]>([]);
-
   projectNav = input<PluginNavGroup[]>([]);
 
   openSelectorModal = output<void>();

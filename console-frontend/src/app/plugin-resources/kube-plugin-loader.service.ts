@@ -24,6 +24,7 @@ export default class KubePluginLoaderService {
     if (!orgId) return { crd: undefined, resources: [] };
 
     const kubeApiProxyUrl = this.configService.getConfig().kubeApiProxyUrl;
+    await this.registry.loadPlugins(clusterId);
     await this.registry.loadCrdsForPlugin(pluginName, clusterId, kubeApiProxyUrl, orgId);
     const crd = this.registry.getCrd(pluginName, resourceKind, clusterId);
     if (!crd) return { crd: undefined, resources: [] };

@@ -47,6 +47,21 @@ dev *flags:
 dev-hotreload:
     @just dev --profile hotreload
 
+# Deploy with hot-reload and kube-api-proxy debugger (dlv on localhost:2345)
+dev-debug:
+    #!/usr/bin/env bash
+    set -e
+    # Wait for the deployment to be ready, then keep port-forwarding 2345 in the background.
+    # Restart the forward if the pod restarts (air rebuild).
+    (while true; do
+        kubectl wait --for=condition=available --timeout=120s deployment/kube-api-proxy -n fundament >/dev/null 2>&1 || true
+        kubectl port-forward -n fundament deployment/kube-api-proxy 2345:2345 >/dev/null 2>&1 || true
+        sleep 2
+    done) &
+    PF_PID=$!
+    trap "kill $PF_PID 2>/dev/null" EXIT
+    just dev --profile hotreload --profile debug
+
 # Deploy to an environment (e.g. local, production)
 deploy env:
     skaffold run --profile env-{{ env }}

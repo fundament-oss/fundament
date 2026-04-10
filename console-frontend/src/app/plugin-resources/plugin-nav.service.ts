@@ -7,11 +7,9 @@ import { kindToLabel } from './crd-schema.utils';
 export default class PluginNavService {
   private registry = inject(PluginRegistryService);
 
-  organizationNav = computed<PluginNavGroup[]>(() => this.buildNavGroups('organization'));
-
   projectNav = computed<PluginNavGroup[]>(() => this.buildNavGroups('project'));
 
-  private buildNavGroups(section: 'organization' | 'project'): PluginNavGroup[] {
+  private buildNavGroups(section: 'project'): PluginNavGroup[] {
     return this.registry
       .allPlugins()
       .filter((plugin) => (plugin.menu[section]?.length ?? 0) > 0)

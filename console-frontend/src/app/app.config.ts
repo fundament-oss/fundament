@@ -16,7 +16,6 @@ import EXPECTED_API_VERSION from '../proto-version.gen';
 import routes from './app.routes';
 import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';
-import PluginRegistryService from './plugin-resources/plugin-registry.service';
 
 // Global version mismatch observable
 export const versionMismatch$ = new BehaviorSubject<boolean>(false);
@@ -38,11 +37,6 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const configService = inject(ConfigService);
       return configService.loadConfig();
-    }),
-    // Load plugin definitions from YAML files
-    provideAppInitializer(() => {
-      const pluginRegistry = inject(PluginRegistryService);
-      return pluginRegistry.loadPlugins();
     }),
     provideNgIconsConfig({
       size: '1rem', // Default icon size

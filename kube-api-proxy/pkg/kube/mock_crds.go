@@ -13,6 +13,8 @@ func mockCRDForName(name string) (string, bool) {
 		return mockIssuerCRD, true
 	case "clusterissuers.cert-manager.io":
 		return mockClusterIssuerCRD, true
+	case "certificaterequests.cert-manager.io":
+		return mockCertificateRequestCRD, true
 	case "databases.postgresql.cnpg.io":
 		return mockDatabaseCRD, true
 	case "backups.postgresql.cnpg.io":
@@ -30,6 +32,7 @@ func mockCRDForName(name string) (string, bool) {
 var mockCRDListJSON = `{"apiVersion":"apiextensions.k8s.io/v1","kind":"CustomResourceDefinitionList","metadata":{"resourceVersion":"1"},"items":[` +
 	strings.Join([]string{
 		mockCertificateCRD,
+		mockCertificateRequestCRD,
 		mockIssuerCRD,
 		mockClusterIssuerCRD,
 		mockDatabaseCRD,
@@ -266,6 +269,78 @@ const mockClusterIssuerCRD = `{
                     }
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    }]
+  }
+}`
+
+const mockCertificateRequestCRD = `{
+  "apiVersion": "apiextensions.k8s.io/v1",
+  "kind": "CustomResourceDefinition",
+  "metadata": {"name": "certificaterequests.cert-manager.io"},
+  "spec": {
+    "group": "cert-manager.io",
+    "names": {"kind": "CertificateRequest", "plural": "certificaterequests", "singular": "certificaterequest"},
+    "scope": "Namespaced",
+    "versions": [{
+      "name": "v1",
+      "served": true,
+      "storage": true,
+      "additionalPrinterColumns": [
+        {"jsonPath": ".status.conditions[?(@.type == \"Ready\")].status", "name": "Approved", "type": "string"},
+        {"jsonPath": ".spec.issuerRef.name", "name": "Issuer", "priority": 1, "type": "string"},
+        {"jsonPath": ".status.conditions[?(@.type == \"Ready\")].message", "name": "Status", "priority": 1, "type": "string"},
+        {"jsonPath": ".metadata.creationTimestamp", "name": "Age", "type": "date"}
+      ],
+      "schema": {
+        "openAPIV3Schema": {
+          "description": "A CertificateRequest is used to request a signed certificate from an Issuer.",
+          "type": "object",
+          "properties": {
+            "apiVersion": {"type": "string"},
+            "kind": {"type": "string"},
+            "metadata": {"type": "object"},
+            "spec": {
+              "type": "object",
+              "required": ["issuerRef", "request"],
+              "properties": {
+                "request": {"description": "The PEM-encoded x509 certificate signing request.", "type": "string", "format": "byte"},
+                "isCA": {"description": "Whether the certificate is requested as a CA certificate.", "type": "boolean"},
+                "duration": {"description": "Requested lifetime of the Certificate.", "type": "string"},
+                "issuerRef": {
+                  "description": "Reference to the issuer responsible for issuing the certificate.",
+                  "type": "object",
+                  "required": ["name"],
+                  "properties": {
+                    "name": {"description": "Name of the issuer.", "type": "string"},
+                    "kind": {"description": "Kind of the issuer.", "type": "string"},
+                    "group": {"description": "Group of the issuer.", "type": "string"}
+                  }
+                }
+              }
+            },
+            "status": {
+              "type": "object",
+              "properties": {
+                "conditions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {"type": "string"},
+                      "status": {"type": "string", "enum": ["True", "False", "Unknown"]},
+                      "lastTransitionTime": {"type": "string", "format": "date-time"},
+                      "message": {"type": "string"},
+                      "reason": {"type": "string"}
+                    }
+                  }
+                },
+                "certificate": {"description": "The PEM encoded signed certificate.", "type": "string", "format": "byte"},
+                "ca": {"description": "The PEM encoded certificate of the issuer.", "type": "string", "format": "byte"}
               }
             }
           }

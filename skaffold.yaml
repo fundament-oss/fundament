@@ -166,3 +166,10 @@ profiles:
       - op: add
         path: /build/artifacts/7/sync
         value: {}
+
+  # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)
+  - name: debug
+    patches:
+      - op: replace
+        path: /build/artifacts/7/docker/dockerfile
+        value: kube-api-proxy/hotreload/debug/Dockerfile
