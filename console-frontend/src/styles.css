@@ -8,12 +8,27 @@
   /* Buttons */
   --semantics-buttons-accent-filled-background-color: theme('colors.indigo.600');
   --semantics-buttons-accent-filled-is-hovered-background-color: theme('colors.indigo.700');
-  --semantics-buttons-accent-filled-is-active-content-color: theme('colors.indigo.800');
+  --semantics-buttons-accent-filled-is-active-background-color: theme('colors.indigo.800');
+  --semantics-controls-sm-corner-radius: theme('borderRadius.md');
+  /* --primitives-space-6: theme('spacing.2');
+  --primitives-space-10: theme('spacing.4'); */
 
   /* Input fields */
   --semantics-input-fields-border-thickness: theme('borderWidth.DEFAULT');
   --semantics-input-fields-border-color: theme('colors.gray.300');
   --semantics-focus-ring-center-color: theme('colors.indigo.500');
+}
+
+/* Dark mode overrides for root variables */
+html.dark {
+  /* Buttons */
+  --semantics-buttons-accent-filled-background-color: theme('colors.indigo.500');
+  --semantics-buttons-accent-filled-is-hovered-background-color: theme('colors.indigo.400');
+  --semantics-buttons-accent-filled-is-active-background-color: theme('colors.indigo.300');
+
+  /* Input fields */
+  --semantics-input-fields-border-color: theme('colors.gray.600');
+  --semantics-focus-ring-center-color: theme('colors.indigo.400');
 }
 
 /* Dark mode variant using the 'dark' class on the HTML element */
