@@ -51,8 +51,6 @@ func (s *Server) GetClusterByName(
 			OutboxStatus:       cluster.OutboxStatus,
 			OutboxRetries:      cluster.OutboxRetries,
 			OutboxError:        cluster.OutboxError,
-			ShootApiServerUrl:  cluster.ShootApiServerUrl,
-			ShootCaData:        cluster.ShootCaData,
 		}),
 	}.Build()), nil
 }
@@ -140,12 +138,16 @@ func (s *Server) GetKubeconfig(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	if !cluster.ShootApiServerUrl.Valid || cluster.ShootApiServerUrl.String == "" ||
-		!cluster.ShootCaData.Valid || cluster.ShootCaData.String == "" {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet (API server URL or CA data not available)"))
+	if !cluster.ShootStatus.Valid || cluster.ShootStatus.String != "ready" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet"))
 	}
 
-	kubeconfig := buildKubeconfig(clusterID.String(), cluster.ShootApiServerUrl.String, cluster.ShootCaData.String)
+	if s.config.KubeAPIProxyURL == "" {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("kube-api-proxy URL not configured"))
+	}
+	proxyURL := s.config.KubeAPIProxyURL + "/clusters/" + clusterID.String()
+
+	kubeconfig := buildKubeconfig(clusterID.String(), proxyURL, s.config.KubeAPIProxyInsecure)
 
 	return connect.NewResponse(organizationv1.GetKubeconfigResponse_builder{
 		KubeconfigContent: kubeconfig,
@@ -170,25 +172,23 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 			row.ShootStatusUpdated,
 		),
 	}
-	if row.ShootApiServerUrl.Valid {
-		builder.ShootApiServerUrl = &row.ShootApiServerUrl.String
-	}
-	if row.ShootCaData.Valid {
-		builder.ShootCaData = &row.ShootCaData.String
-	}
 	return builder.Build()
 }
 
-func buildKubeconfig(clusterID, apiServerURL, caData string) string {
+func buildKubeconfig(clusterID, serverURL string, insecure bool) string {
 	clusterName := "fundament-" + clusterID
 	userName := "fundament-user-" + clusterID
+
+	tlsLine := ""
+	if insecure {
+		tlsLine = "\n    insecure-skip-tls-verify: true"
+	}
 
 	return fmt.Sprintf(`apiVersion: v1
 kind: Config
 clusters:
 - cluster:
-    server: %s
-    certificate-authority-data: %s
+    server: %s%s
   name: %s
 contexts:
 - context:
@@ -200,7 +200,7 @@ users:
 - name: %s
   user:
     exec:
-      apiVersion: client.authentication.k8s.io/v1beta1
+      apiVersion: client.authentication.k8s.io/v1
       command: functl
       args:
       - cluster
@@ -208,5 +208,5 @@ users:
       - %s
       interactiveMode: Never
       provideClusterInfo: false
-`, apiServerURL, caData, clusterName, clusterName, userName, clusterName, clusterName, userName, clusterID)
+`, serverURL, tlsLine, clusterName, clusterName, userName, clusterName, clusterName, userName, clusterID)
 }

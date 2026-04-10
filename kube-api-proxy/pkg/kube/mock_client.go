@@ -8,7 +8,7 @@ import (
 )
 
 // MockClient returns hardcoded Kubernetes API responses for development and testing.
-// It implements both Interface (Do) and http.Handler (ServeHTTP).
+// It implements http.Handler so it can be used in place of MultiClusterProxy.
 type MockClient struct{}
 
 const crdBasePath = "/apis/apiextensions.k8s.io/v1/customresourcedefinitions"
@@ -67,7 +67,7 @@ func (m *MockClient) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to contact kubernetes API", http.StatusBadGateway)
 		return
 	}
-	defer body.Close()
+	defer func() { _ = body.Close() }()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -85,7 +85,7 @@ func isPluginGetDefinition(path, pluginName string) bool {
 // isResourceList reports whether path is a Kubernetes list request for the given group/version/plural.
 // Matches both cluster-scoped (/apis/{g}/{v}/{plural}) and namespaced
 // (/apis/{g}/{v}/namespaces/{ns}/{plural}) list paths.
-func isResourceList(path, group, version, plural string) bool {
+func isResourceList(path, group, version, plural string) bool { //nolint:unparam // version is always v1 today but the param keeps the function general
 	prefix := "/apis/" + group + "/" + version + "/"
 	if !strings.HasPrefix(path, prefix) {
 		return false

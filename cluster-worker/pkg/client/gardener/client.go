@@ -25,9 +25,8 @@ const (
 
 // ShootStatus contains the current status and a descriptive message.
 type ShootStatus struct {
-	Status       ShootStatusType
-	Message      string
-	APIServerURL string // Populated when status is ready (from shoot.Status.AdvertisedAddresses)
+	Status  ShootStatusType
+	Message string
 }
 
 // Status message constants for consistent messaging.

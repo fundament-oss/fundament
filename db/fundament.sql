@@ -630,8 +630,6 @@ CREATE TABLE tenant.clusters (
 	outbox_status text,
 	outbox_retries integer NOT NULL DEFAULT 0,
 	outbox_error text,
-	shoot_api_server_url text,
-	shoot_ca_data text,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
 	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
