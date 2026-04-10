@@ -238,7 +238,7 @@ func createShootAccess(cfg *config, gardenerClient gardener.Client, logger *slog
 
 func startHealthServer(cfg *config, logger *slog.Logger, checkers ...ReadyChecker) *http.Server {
 	healthMux := http.NewServeMux()
-	healthMux.HandleFunc("/healthz", func(resp http.ResponseWriter, _ *http.Request) {
+	healthMux.HandleFunc("/livez", func(resp http.ResponseWriter, _ *http.Request) {
 		resp.WriteHeader(http.StatusOK)
 		_, _ = resp.Write([]byte("ok"))
 	})
