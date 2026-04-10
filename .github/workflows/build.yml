@@ -24,6 +24,8 @@ env:
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/fundament
   PR_NUMBER: ${{ github.event.number }}
 
+permissions: {}
+
 jobs:
   gate:
     runs-on: ubuntu-latest

@@ -9,6 +9,9 @@ on:
 env:
   FUNDAMENT_TEST_CACHE_DIR: /tmp/fundament-test-pg
 
+permissions:
+  contents: read
+
 jobs:
   organization-api:
     runs-on: ubuntu-latest
