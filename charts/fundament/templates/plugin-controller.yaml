@@ -142,7 +142,7 @@ spec:
               value: {{ $.Values.pluginController.logLevel }}
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: /livez
               port: 8097
             initialDelaySeconds: 5
             periodSeconds: 10

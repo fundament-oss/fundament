@@ -139,7 +139,7 @@ The Plugin SDK (`plugin-sdk/pluginruntime/`) provides the framework for building
 * Environment configuration via env vars (`FUNDAMENT_CLUSTER_ID`, `FUNDAMENT_INSTALL_ID`, `FUNDAMENT_ORGANIZATION_ID`, `FUNP_LOG_LEVEL`, `FUNP_RECONCILE_INTERVAL`).
 * Structured JSON logging (slog).
 * HTTP server on port 8080 (configurable via `WithMetadataPort()`) with:
-** `GET /healthz` - Liveness probe (always 200 OK).
+** `GET /livez` - Liveness probe (always 200 OK).
 ** `GET /readyz` - Readiness probe (200 OK when plugin reports ready, 503 otherwise).
 ** `PluginMetadataService` - Connect RPC endpoint serving plugin status and definition.
 ** `/console/` - Static file server for console assets (if `ConsoleProvider` is implemented).
@@ -206,7 +206,7 @@ When a `PluginInstallation` is created, the controller:
 . Creates a RoleBinding binding the ServiceAccount to the built-in `admin` ClusterRole within the plugin namespace.
 . Optionally creates ClusterRoleBindings for any `clusterRoles` specified in the spec.
 . Creates a Deployment `runtime` in the plugin namespace with the specified container image.
-. The Deployment includes liveness (`/healthz`) and readiness (`/readyz`) probes.
+. The Deployment includes liveness (`/livez`) and readiness (`/readyz`) probes.
 . Plugin config values are injected as `FUNP_*` environment variables.
 . Polls the plugin's `PluginMetadataService` endpoint to track status and readiness.
 

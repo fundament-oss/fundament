@@ -57,7 +57,7 @@ func run(plugin Plugin, opts ...RunOption) error {
 
 	mux := http.NewServeMux()
 
-	mux.Handle("GET /healthz", health.LivenessHandler())
+	mux.Handle("GET /livez", health.LivenessHandler())
 	mux.Handle("GET /readyz", health.ReadinessHandler(h))
 
 	handler := NewMetadataHandler(
