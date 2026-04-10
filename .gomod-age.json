@@ -1,0 +1,4 @@
+{
+  "age": "7d",
+  "ignore": ["buf.build/*"]
+}
