@@ -17,7 +17,7 @@ func (m *mockChecker) IsReady() bool {
 
 func TestLivenessHandler(t *testing.T) {
 	handler := LivenessHandler()
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/healthz", http.NoBody)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/livez", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)

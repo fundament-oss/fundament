@@ -120,6 +120,8 @@ func TestMutateDeployment(t *testing.T) {
 	// Health probes
 	assert.NotNil(t, container.LivenessProbe)
 	assert.NotNil(t, container.ReadinessProbe)
+	assert.Equal(t, "/livez", container.LivenessProbe.HTTPGet.Path)
+	assert.Equal(t, "/readyz", container.ReadinessProbe.HTTPGet.Path)
 }
 
 func TestMutateService(t *testing.T) {

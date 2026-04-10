@@ -97,7 +97,7 @@ When a plugin binary calls `pluginruntime.Run(plugin)`, the SDK:
         ├─ Create Host (provides logger, telemetry, status reporting)
         │
         ├─ Start HTTP server on :8080
-        │   ├─ GET /healthz ──────── Liveness probe (always 200)
+        │   ├─ GET /livez ───────── Liveness probe (always 200)
         │   ├─ GET /readyz ───────── Readiness probe (200 after ReportReady())
         │   ├─ ConnectRPC ─────────── PluginMetadataService (status + definition)
         │   └─ GET /console/ ──────── Static UI assets (if ConsoleProvider)

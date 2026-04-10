@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/go-logr/logr"
@@ -57,15 +60,24 @@ func run() error {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		HealthProbeBindAddress: fmt.Sprintf(":%d", cfg.HealthPort),
+		LivenessEndpointName:   "/livez",
+		ReadinessEndpointName:  "/readyz",
 	})
 	if err != nil {
 		return fmt.Errorf("create manager: %w", err)
 	}
 
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 		return fmt.Errorf("add healthz check: %w", err)
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err := mgr.AddReadyzCheck("cache-sync", func(req *http.Request) error {
+		ctx, cancel := context.WithTimeout(req.Context(), 100*time.Millisecond)
+		defer cancel()
+		if !mgr.GetCache().WaitForCacheSync(ctx) {
+			return fmt.Errorf("cache not synced")
+		}
+		return nil
+	}); err != nil {
 		return fmt.Errorf("add readyz check: %w", err)
 	}
 
