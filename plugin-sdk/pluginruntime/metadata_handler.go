@@ -17,14 +17,16 @@ type metadataHandler struct {
 	pluginmetadatav1connect.UnimplementedPluginMetadataServiceHandler
 	getStatus     func() PluginStatus
 	getDefinition func() PluginDefinition
+	uninstall     func(context.Context) error
 }
 
 // NewMetadataHandler creates a metadata handler that serves plugin status and
 // definition via the PluginMetadataService Connect RPC service.
-func NewMetadataHandler(statusFn func() PluginStatus, defFn func() PluginDefinition) *metadataHandler {
+func NewMetadataHandler(statusFn func() PluginStatus, defFn func() PluginDefinition, uninstallFn func(context.Context) error) *metadataHandler {
 	return &metadataHandler{
 		getStatus:     statusFn,
 		getDefinition: defFn,
+		uninstall:     uninstallFn,
 	}
 }
 
@@ -133,4 +135,11 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 		UiHints:          uiHints,
 		Crds:             def.CRDs,
 	}), nil
+}
+
+func (h *metadataHandler) RequestUninstall(ctx context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
+	if err := h.uninstall(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.RequestUninstallResponse{}), nil
 }
