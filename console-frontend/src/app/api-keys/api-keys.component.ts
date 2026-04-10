@@ -12,8 +12,6 @@ import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerBan } from '@ng-icons/tabler-icons';
 import ModalComponent from '../modal/modal.component';
 import {
   type APIKey,
@@ -50,8 +48,7 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
 
 @Component({
   selector: 'app-api-keys',
-  imports: [FormsModule, NgIcon, ModalComponent],
-  viewProviders: [provideIcons({ tablerBan })],
+  imports: [FormsModule, ModalComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './api-keys.component.html',
