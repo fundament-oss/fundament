@@ -60,9 +60,23 @@ func run(plugin Plugin, opts ...RunOption) error {
 	mux.Handle("GET /livez", health.LivenessHandler())
 	mux.Handle("GET /readyz", health.ReadinessHandler(h))
 
+	uninstallFn := func(ctx context.Context) error {
+		installer, ok := plugin.(Installer)
+		if !ok {
+			return nil
+		}
+		h.ReportStatus(PluginStatus{Phase: PhaseUninstalling, Message: "uninstalling"})
+		if err := installer.Uninstall(ctx, h); err != nil {
+			return err
+		}
+		sigCancel()
+		return nil
+	}
+
 	handler := NewMetadataHandler(
 		func() PluginStatus { return h.CurrentStatus() },
 		func() PluginDefinition { return plugin.Definition() },
+		uninstallFn,
 	)
 	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(handler)
 	mux.Handle(path, rpcHandler)

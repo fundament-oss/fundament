@@ -106,19 +106,33 @@ func RunInProcess(plugin pluginruntime.Plugin) (*InProcessPlugin, error) {
 		return nil, fmt.Errorf("listen: %w", err)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
+
 	mux := http.NewServeMux()
+
+	uninstallFn := func(ctx context.Context) error {
+		installer, ok := plugin.(pluginruntime.Installer)
+		if !ok {
+			return nil
+		}
+		h.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseUninstalling, Message: "uninstalling"})
+		if err := installer.Uninstall(ctx, h); err != nil {
+			return err
+		}
+		cancel()
+		return nil
+	}
 
 	handler := pluginruntime.NewMetadataHandler(
 		func() pluginruntime.PluginStatus { return h.CurrentStatus() },
 		func() pluginruntime.PluginDefinition { return plugin.Definition() },
+		uninstallFn,
 	)
 	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(handler)
 	mux.Handle(path, rpcHandler)
 
 	httpServer := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
 		if err := httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {

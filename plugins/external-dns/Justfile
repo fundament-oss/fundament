@@ -1,0 +1,11 @@
+kube_context := env("kube_context", "k3d-fundament-plugin")
+
+# Apply test DNSEndpoint resource to verify external-dns works
+test:
+    kubectl --context {{ kube_context }} apply -f test-resources.yaml
+    @echo "DNSEndpoint created. Checking status..."
+    kubectl --context {{ kube_context }} get dnsendpoints -n fundament test-dns
+
+# Remove test resources
+test-cleanup:
+    kubectl --context {{ kube_context }} delete -f test-resources.yaml --ignore-not-found

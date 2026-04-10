@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"connectrpc.com/connect"
@@ -18,15 +19,18 @@ import (
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/config"
+	pluginmetadatav1 "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
 )
 
 const finalizerName = "plugins.fundament.io/cleanup"
 
 type Reconciler struct {
-	client       client.Client
-	logger       *slog.Logger
-	cfg          config.Config
-	statusPoller *statusPoller
+	client              client.Client
+	logger              *slog.Logger
+	cfg                 config.Config
+	statusPoller        *statusPoller
+	uninstallHTTPClient connect.HTTPClient
 }
 
 // ReconcilerOption configures the Reconciler.
@@ -39,12 +43,20 @@ func WithHTTPClient(c connect.HTTPClient) ReconcilerOption {
 	}
 }
 
+// WithUninstallHTTPClient sets the HTTP client used for uninstall RPC calls.
+func WithUninstallHTTPClient(c connect.HTTPClient) ReconcilerOption {
+	return func(r *Reconciler) {
+		r.uninstallHTTPClient = c
+	}
+}
+
 func NewReconciler(c client.Client, logger *slog.Logger, cfg *config.Config, opts ...ReconcilerOption) *Reconciler {
 	r := &Reconciler{
-		client:       c,
-		logger:       logger,
-		cfg:          *cfg,
-		statusPoller: newStatusPoller(),
+		client:              c,
+		logger:              logger,
+		cfg:                 *cfg,
+		statusPoller:        newStatusPoller(),
+		uninstallHTTPClient: &http.Client{Timeout: 5 * time.Minute},
 	}
 
 	for _, opt := range opts {
@@ -110,6 +122,16 @@ func (r *Reconciler) handleDeletion(ctx context.Context, log *slog.Logger, cr *p
 		return ctrl.Result{}, nil
 	}
 
+	// Update status to Terminating
+	cr.Status.Phase = pluginsv1.PluginPhaseTerminating
+	cr.Status.Message = "uninstalling plugin"
+	_ = r.client.Status().Update(ctx, cr)
+
+	// Request plugin uninstall before tearing down resources
+	if result, err := r.requestPluginUninstall(ctx, log, cr); err != nil || !result.IsZero() {
+		return result, err
+	}
+
 	log.Info("cleaning up plugin resources")
 
 	// Delete ClusterRoleBindings
@@ -137,6 +159,27 @@ func (r *Reconciler) handleDeletion(ctx context.Context, log *slog.Logger, cr *p
 	}
 
 	log.Info("finalizer cleanup complete")
+	return ctrl.Result{}, nil
+}
+
+func (r *Reconciler) requestPluginUninstall(ctx context.Context, log *slog.Logger, cr *pluginsv1.PluginInstallation) (ctrl.Result, error) {
+	url := pluginServiceURL(cr.Spec.PluginName)
+	rpcClient := pluginmetadatav1connect.NewPluginMetadataServiceClient(r.uninstallHTTPClient, url)
+
+	_, err := rpcClient.RequestUninstall(ctx, connect.NewRequest(&pluginmetadatav1.RequestUninstallRequest{}))
+	if err != nil {
+		// If the plugin is unreachable, proceed with cleanup
+		if connect.CodeOf(err) == connect.CodeUnavailable || connect.CodeOf(err) == connect.CodeUnimplemented {
+			log.Info("plugin unreachable or does not support uninstall, proceeding with cleanup", "error", err)
+			return ctrl.Result{}, nil
+		}
+
+		// For other RPC errors, requeue to retry
+		log.Error("plugin uninstall failed, will retry", "error", err)
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, fmt.Errorf("request plugin uninstall: %w", err)
+	}
+
+	log.Info("plugin uninstall completed")
 	return ctrl.Result{}, nil
 }
 
