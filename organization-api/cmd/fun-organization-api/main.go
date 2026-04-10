@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -126,9 +127,38 @@ func run() error {
 		return fmt.Errorf("failed to create organization server: %w", err)
 	}
 
+	// Health endpoints are registered on an outer mux so they bypass CORS
+	// and Connect interceptors.
+	outerMux := http.NewServeMux()
+	outerMux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	outerMux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		var errs []string
+		if err := db.Pool.Ping(ctx); err != nil {
+			errs = append(errs, "database: "+err.Error())
+		}
+		if err := authzClient.Healthy(ctx); err != nil {
+			errs = append(errs, "openfga: "+err.Error())
+		}
+
+		if len(errs) > 0 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(strings.Join(errs, "\n")))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	outerMux.Handle("/", server.Handler())
+
 	httpServer := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           h2c.NewHandler(server.Handler(), &http2.Server{}),
+		Handler:           h2c.NewHandler(outerMux, &http2.Server{}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
