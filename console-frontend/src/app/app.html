@@ -62,7 +62,9 @@
 }
 
 <!-- Header: logo, dark/light mode toggle and user account -->
-<header class="border-b border-gray-200 bg-white px-4 py-2 dark:border-gray-700 dark:bg-gray-900">
+<header
+  class="border-b border-gray-200 bg-white px-4 py-3.5 sm:pr-6 dark:border-gray-700 dark:bg-gray-900"
+>
   <div class="flex items-center justify-between">
     <!-- Left: mobile sidebar toggle + logo -->
     <div class="flex items-center">
@@ -75,9 +77,9 @@
           class="mr-3 flex items-center lg:hidden"
         ></ndd-icon-button>
       }
-      <h1 class="text-base font-semibold tracking-tight dark:text-white">
+      <h1 class="text-lg font-semibold tracking-tight dark:text-white">
         <a class="flex items-center gap-2" routerLink="/">
-          <app-fundament-logo-icon class="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+          <app-fundament-logo-icon class="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
           Fundament
         </a>
       </h1>
@@ -165,12 +167,12 @@
     (declineInvitation)="handleDeclineInvitation($event)"
   />
 } @else {
-  <div class="flex min-h-[calc(100vh-3.5rem)]">
+  <div class="flex">
     <!-- Overheid sidebar -->
     @if (!isLoginPage()) {
       <!-- Desktop sidebar -->
       <aside
-        class="hidden w-60 shrink-0 overflow-y-auto border-r border-gray-200 bg-white lg:block dark:border-gray-800 dark:bg-gray-950"
+        class="hidden w-60 shrink-0 overflow-y-auto border-r border-gray-200 bg-white lg:block lg:min-h-[calc(100vh-3.5rem-1px)] dark:border-gray-800 dark:bg-gray-950"
       >
         <app-sidebar-nav
           [selectedType]="selectedType()"
@@ -193,7 +195,7 @@
             [selectedProjectId]="selectedProjectId()"
             [settingsHeader]="settingsHeader()"
             [isClustersActive]="isClustersActive()"
-              [projectNav]="pluginNavService.projectNav()"
+            [projectNav]="pluginNavService.projectNav()"
             (openSelectorModal)="openSelectorModal()"
             (closeSidebar)="closeSidebar()"
           />
