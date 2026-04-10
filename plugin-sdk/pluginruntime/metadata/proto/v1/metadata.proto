@@ -84,7 +84,6 @@ message GetDefinitionResponse {
   map<string, ComponentMapping> custom_components = 12;
   map<string, UIHint> ui_hints = 13;
   repeated string crds = 14;
-  string api_version = 15;
 }
 
 message RequestUninstallRequest {}

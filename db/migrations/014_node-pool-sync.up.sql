@@ -83,9 +83,9 @@ END;
 $function$
 ;
 
-ALTER TABLE "tenant"."cluster_outbox" ADD COLUMN "node_pool_id" uuid;
+ALTER TABLE "tenant"."cluster_outbox" ADD COLUMN "deferrals" integer DEFAULT 0 NOT NULL;
 
-ALTER TABLE "tenant"."cluster_outbox" ADD COLUMN "deferrals" integer NOT NULL DEFAULT 0;
+ALTER TABLE "tenant"."cluster_outbox" ADD COLUMN "node_pool_id" uuid;
 
 ALTER TABLE "tenant"."cluster_outbox" DROP CONSTRAINT "cluster_outbox_ck_single_fk";
 

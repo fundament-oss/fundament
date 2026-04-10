@@ -729,7 +729,6 @@ type GetDefinitionResponse struct {
 	CustomComponents map[string]*ComponentMapping `protobuf:"bytes,12,rep,name=custom_components,json=customComponents" json:"custom_components,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	UiHints          map[string]*UIHint           `protobuf:"bytes,13,rep,name=ui_hints,json=uiHints" json:"ui_hints,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Crds             []string                     `protobuf:"bytes,14,rep,name=crds" json:"crds,omitempty"`
-	ApiVersion       *string                      `protobuf:"bytes,15,opt,name=api_version,json=apiVersion" json:"api_version,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -862,85 +861,6 @@ func (x *GetDefinitionResponse) GetCrds() []string {
 	return nil
 }
 
-func (x *GetDefinitionResponse) GetApiVersion() string {
-	if x != nil && x.ApiVersion != nil {
-		return *x.ApiVersion
-	}
-	return ""
-}
-
-type RequestUninstallRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RequestUninstallRequest) Reset() {
-	*x = RequestUninstallRequest{}
-	mi := &file_v1_metadata_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RequestUninstallRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RequestUninstallRequest) ProtoMessage() {}
-
-func (x *RequestUninstallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metadata_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RequestUninstallRequest.ProtoReflect.Descriptor instead.
-func (*RequestUninstallRequest) Descriptor() ([]byte, []int) {
-	return file_v1_metadata_proto_rawDescGZIP(), []int{14}
-}
-
-type RequestUninstallResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RequestUninstallResponse) Reset() {
-	*x = RequestUninstallResponse{}
-	mi := &file_v1_metadata_proto_msgTypes[15]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RequestUninstallResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RequestUninstallResponse) ProtoMessage() {}
-
-func (x *RequestUninstallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metadata_proto_msgTypes[15]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RequestUninstallResponse.ProtoReflect.Descriptor instead.
-func (*RequestUninstallResponse) Descriptor() ([]byte, []int) {
-	return file_v1_metadata_proto_rawDescGZIP(), []int{15}
-}
-
 var File_v1_metadata_proto protoreflect.FileDescriptor
 
 const file_v1_metadata_proto_rawDesc = "" +
@@ -995,7 +915,7 @@ const file_v1_metadata_proto_rawDesc = "" +
 	"\x06UIHint\x12=\n" +
 	"\vform_groups\x18\x01 \x03(\v2\x1c.pluginmetadata.v1.FormGroupR\n" +
 	"formGroups\x12G\n" +
-	"\x0estatus_mapping\x18\x02 \x01(\v2 .pluginmetadata.v1.StatusMappingR\rstatusMapping\"\xc5\x06\n" +
+	"\x0estatus_mapping\x18\x02 \x01(\v2 .pluginmetadata.v1.StatusMappingR\rstatusMapping\"\xa4\x06\n" +
 	"\x15GetDefinitionResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12 \n" +
@@ -1011,21 +931,16 @@ const file_v1_metadata_proto_rawDesc = "" +
 	"\x04menu\x18\v \x01(\v2!.pluginmetadata.v1.MenuDefinitionR\x04menu\x12k\n" +
 	"\x11custom_components\x18\f \x03(\v2>.pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntryR\x10customComponents\x12P\n" +
 	"\bui_hints\x18\r \x03(\v25.pluginmetadata.v1.GetDefinitionResponse.UiHintsEntryR\auiHints\x12\x12\n" +
-	"\x04crds\x18\x0e \x03(\tR\x04crds\x12\x1f\n" +
-	"\vapi_version\x18\x0f \x01(\tR\n" +
-	"apiVersion\x1ah\n" +
+	"\x04crds\x18\x0e \x03(\tR\x04crds\x1ah\n" +
 	"\x15CustomComponentsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x129\n" +
 	"\x05value\x18\x02 \x01(\v2#.pluginmetadata.v1.ComponentMappingR\x05value:\x028\x01\x1aU\n" +
 	"\fUiHintsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12/\n" +
-	"\x05value\x18\x02 \x01(\v2\x19.pluginmetadata.v1.UIHintR\x05value:\x028\x01\"\x19\n" +
-	"\x17RequestUninstallRequest\"\x1a\n" +
-	"\x18RequestUninstallResponse2\xc0\x02\n" +
+	"\x05value\x18\x02 \x01(\v2\x19.pluginmetadata.v1.UIHintR\x05value:\x028\x012\xd3\x01\n" +
 	"\x15PluginMetadataService\x12V\n" +
 	"\tGetStatus\x12#.pluginmetadata.v1.GetStatusRequest\x1a$.pluginmetadata.v1.GetStatusResponse\x12b\n" +
-	"\rGetDefinition\x12'.pluginmetadata.v1.GetDefinitionRequest\x1a(.pluginmetadata.v1.GetDefinitionResponse\x12k\n" +
-	"\x10RequestUninstall\x12*.pluginmetadata.v1.RequestUninstallRequest\x1a+.pluginmetadata.v1.RequestUninstallResponseBdZbgithub.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1;pluginmetadatav1b\beditionsp\xe8\a"
+	"\rGetDefinition\x12'.pluginmetadata.v1.GetDefinitionRequest\x1a(.pluginmetadata.v1.GetDefinitionResponseBdZbgithub.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1;pluginmetadatav1b\beditionsp\xe8\a"
 
 var (
 	file_v1_metadata_proto_rawDescOnce sync.Once
@@ -1039,51 +954,47 @@ func file_v1_metadata_proto_rawDescGZIP() []byte {
 	return file_v1_metadata_proto_rawDescData
 }
 
-var file_v1_metadata_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_v1_metadata_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_v1_metadata_proto_goTypes = []any{
-	(*GetStatusRequest)(nil),         // 0: pluginmetadata.v1.GetStatusRequest
-	(*GetStatusResponse)(nil),        // 1: pluginmetadata.v1.GetStatusResponse
-	(*GetDefinitionRequest)(nil),     // 2: pluginmetadata.v1.GetDefinitionRequest
-	(*PluginURLs)(nil),               // 3: pluginmetadata.v1.PluginURLs
-	(*PolicyRule)(nil),               // 4: pluginmetadata.v1.PolicyRule
-	(*Permissions)(nil),              // 5: pluginmetadata.v1.Permissions
-	(*MenuEntry)(nil),                // 6: pluginmetadata.v1.MenuEntry
-	(*MenuDefinition)(nil),           // 7: pluginmetadata.v1.MenuDefinition
-	(*ComponentMapping)(nil),         // 8: pluginmetadata.v1.ComponentMapping
-	(*FormGroup)(nil),                // 9: pluginmetadata.v1.FormGroup
-	(*StatusValue)(nil),              // 10: pluginmetadata.v1.StatusValue
-	(*StatusMapping)(nil),            // 11: pluginmetadata.v1.StatusMapping
-	(*UIHint)(nil),                   // 12: pluginmetadata.v1.UIHint
-	(*GetDefinitionResponse)(nil),    // 13: pluginmetadata.v1.GetDefinitionResponse
-	(*RequestUninstallRequest)(nil),  // 14: pluginmetadata.v1.RequestUninstallRequest
-	(*RequestUninstallResponse)(nil), // 15: pluginmetadata.v1.RequestUninstallResponse
-	nil,                              // 16: pluginmetadata.v1.StatusMapping.ValuesEntry
-	nil,                              // 17: pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntry
-	nil,                              // 18: pluginmetadata.v1.GetDefinitionResponse.UiHintsEntry
+	(*GetStatusRequest)(nil),      // 0: pluginmetadata.v1.GetStatusRequest
+	(*GetStatusResponse)(nil),     // 1: pluginmetadata.v1.GetStatusResponse
+	(*GetDefinitionRequest)(nil),  // 2: pluginmetadata.v1.GetDefinitionRequest
+	(*PluginURLs)(nil),            // 3: pluginmetadata.v1.PluginURLs
+	(*PolicyRule)(nil),            // 4: pluginmetadata.v1.PolicyRule
+	(*Permissions)(nil),           // 5: pluginmetadata.v1.Permissions
+	(*MenuEntry)(nil),             // 6: pluginmetadata.v1.MenuEntry
+	(*MenuDefinition)(nil),        // 7: pluginmetadata.v1.MenuDefinition
+	(*ComponentMapping)(nil),      // 8: pluginmetadata.v1.ComponentMapping
+	(*FormGroup)(nil),             // 9: pluginmetadata.v1.FormGroup
+	(*StatusValue)(nil),           // 10: pluginmetadata.v1.StatusValue
+	(*StatusMapping)(nil),         // 11: pluginmetadata.v1.StatusMapping
+	(*UIHint)(nil),                // 12: pluginmetadata.v1.UIHint
+	(*GetDefinitionResponse)(nil), // 13: pluginmetadata.v1.GetDefinitionResponse
+	nil,                           // 14: pluginmetadata.v1.StatusMapping.ValuesEntry
+	nil,                           // 15: pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntry
+	nil,                           // 16: pluginmetadata.v1.GetDefinitionResponse.UiHintsEntry
 }
 var file_v1_metadata_proto_depIdxs = []int32{
 	4,  // 0: pluginmetadata.v1.Permissions.rbac:type_name -> pluginmetadata.v1.PolicyRule
 	6,  // 1: pluginmetadata.v1.MenuDefinition.organization:type_name -> pluginmetadata.v1.MenuEntry
 	6,  // 2: pluginmetadata.v1.MenuDefinition.project:type_name -> pluginmetadata.v1.MenuEntry
-	16, // 3: pluginmetadata.v1.StatusMapping.values:type_name -> pluginmetadata.v1.StatusMapping.ValuesEntry
+	14, // 3: pluginmetadata.v1.StatusMapping.values:type_name -> pluginmetadata.v1.StatusMapping.ValuesEntry
 	9,  // 4: pluginmetadata.v1.UIHint.form_groups:type_name -> pluginmetadata.v1.FormGroup
 	11, // 5: pluginmetadata.v1.UIHint.status_mapping:type_name -> pluginmetadata.v1.StatusMapping
 	3,  // 6: pluginmetadata.v1.GetDefinitionResponse.urls:type_name -> pluginmetadata.v1.PluginURLs
 	5,  // 7: pluginmetadata.v1.GetDefinitionResponse.permissions:type_name -> pluginmetadata.v1.Permissions
 	7,  // 8: pluginmetadata.v1.GetDefinitionResponse.menu:type_name -> pluginmetadata.v1.MenuDefinition
-	17, // 9: pluginmetadata.v1.GetDefinitionResponse.custom_components:type_name -> pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntry
-	18, // 10: pluginmetadata.v1.GetDefinitionResponse.ui_hints:type_name -> pluginmetadata.v1.GetDefinitionResponse.UiHintsEntry
+	15, // 9: pluginmetadata.v1.GetDefinitionResponse.custom_components:type_name -> pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntry
+	16, // 10: pluginmetadata.v1.GetDefinitionResponse.ui_hints:type_name -> pluginmetadata.v1.GetDefinitionResponse.UiHintsEntry
 	10, // 11: pluginmetadata.v1.StatusMapping.ValuesEntry.value:type_name -> pluginmetadata.v1.StatusValue
 	8,  // 12: pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntry.value:type_name -> pluginmetadata.v1.ComponentMapping
 	12, // 13: pluginmetadata.v1.GetDefinitionResponse.UiHintsEntry.value:type_name -> pluginmetadata.v1.UIHint
 	0,  // 14: pluginmetadata.v1.PluginMetadataService.GetStatus:input_type -> pluginmetadata.v1.GetStatusRequest
 	2,  // 15: pluginmetadata.v1.PluginMetadataService.GetDefinition:input_type -> pluginmetadata.v1.GetDefinitionRequest
-	14, // 16: pluginmetadata.v1.PluginMetadataService.RequestUninstall:input_type -> pluginmetadata.v1.RequestUninstallRequest
-	1,  // 17: pluginmetadata.v1.PluginMetadataService.GetStatus:output_type -> pluginmetadata.v1.GetStatusResponse
-	13, // 18: pluginmetadata.v1.PluginMetadataService.GetDefinition:output_type -> pluginmetadata.v1.GetDefinitionResponse
-	15, // 19: pluginmetadata.v1.PluginMetadataService.RequestUninstall:output_type -> pluginmetadata.v1.RequestUninstallResponse
-	17, // [17:20] is the sub-list for method output_type
-	14, // [14:17] is the sub-list for method input_type
+	1,  // 16: pluginmetadata.v1.PluginMetadataService.GetStatus:output_type -> pluginmetadata.v1.GetStatusResponse
+	13, // 17: pluginmetadata.v1.PluginMetadataService.GetDefinition:output_type -> pluginmetadata.v1.GetDefinitionResponse
+	16, // [16:18] is the sub-list for method output_type
+	14, // [14:16] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name
 	14, // [14:14] is the sub-list for extension extendee
 	0,  // [0:14] is the sub-list for field type_name
@@ -1100,7 +1011,7 @@ func file_v1_metadata_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_metadata_proto_rawDesc), len(file_v1_metadata_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
