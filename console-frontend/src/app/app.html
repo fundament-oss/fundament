@@ -63,7 +63,7 @@
 
 <!-- Header: logo, dark/light mode toggle and user account -->
 <header
-  class="border-b border-gray-200 bg-white px-4 py-3.5 sm:pr-6 dark:border-gray-700 dark:bg-gray-900"
+  class="border-b border-gray-200 bg-white px-4 py-3.5 sm:px-6 lg:px-4 dark:border-gray-700 dark:bg-gray-900"
 >
   <div class="flex items-center justify-between">
     <!-- Left: mobile sidebar toggle + logo -->
@@ -188,7 +188,7 @@
       <!-- Mobile sheet -->
       <ndd-sheet #mobileSheet placement="left" accessible-label="Navigation">
         <ndd-page sticky-header="">
-          <ndd-top-title-bar slot="header" dismiss-label="Close"></ndd-top-title-bar>
+          <ndd-top-title-bar slot="header" dismiss-text="Close"></ndd-top-title-bar>
           <app-sidebar-nav
             [selectedType]="selectedType()"
             [selectedItemDisplay]="selectedItemDisplay()"
