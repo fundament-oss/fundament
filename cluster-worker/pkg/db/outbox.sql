@@ -6,10 +6,13 @@ SELECT id,
        cluster_id,
        organization_user_id,
        project_member_id,
+       node_pool_id,
        event,
        source,
        status,
-       retries
+       retries,
+       deferrals,
+       status_info
 FROM tenant.cluster_outbox
 WHERE status IN ('pending', 'retrying')
   AND (retry_after IS NULL OR retry_after <= now())
@@ -46,6 +49,18 @@ RETURNING retries;
 UPDATE tenant.cluster_outbox
 SET status = 'failed', failed = now(), status_info = @status_info
 WHERE id = @id;
+
+-- name: OutboxDeferWithoutRetry :one
+-- Defers a row for later processing without incrementing the retry counter.
+-- Increments deferrals to track how many times a precondition was not met.
+-- Used when a handler returns PreconditionError — the row is not yet processable
+-- but this is not a failure. The precondition reason is written to status_info.
+UPDATE tenant.cluster_outbox
+SET retry_after = now() + @delay::interval,
+    deferrals = deferrals + 1,
+    status_info = @status_info
+WHERE id = @id
+RETURNING deferrals;
 
 -- name: OutboxInsertReady :exec
 -- Insert a 'ready' event outbox row for a cluster.

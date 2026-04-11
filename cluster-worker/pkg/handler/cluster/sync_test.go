@@ -9,6 +9,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
 var (
@@ -19,24 +20,24 @@ var (
 
 func TestSyncMessage(t *testing.T) {
 	tests := []struct {
-		event  string
-		source string
-		want   string
+		event      dbconst.ClusterOutboxEvent
+		entityType handler.EntityType
+		want       string
 	}{
-		{event: "created", source: "cluster", want: "Cluster created"},
-		{event: "updated", source: "cluster", want: "Cluster updated"},
-		{event: "deleted", source: "cluster", want: "Cluster deleted"},
-		{event: "reconcile", source: "cluster", want: "Cluster reconciled"},
-		{event: "created", source: "node_pool", want: "Node pool created"},
-		{event: "updated", source: "node_pool", want: "Node pool updated"},
-		{event: "deleted", source: "node_pool", want: "Node pool deleted"},
-		{event: "reconcile", source: "node_pool", want: "Node pool reconciled"},
+		{event: dbconst.ClusterOutboxEvent_Created, entityType: handler.EntityCluster, want: "Cluster created"},
+		{event: dbconst.ClusterOutboxEvent_Updated, entityType: handler.EntityCluster, want: "Cluster updated"},
+		{event: dbconst.ClusterOutboxEvent_Deleted, entityType: handler.EntityCluster, want: "Cluster deleted"},
+		{event: dbconst.ClusterOutboxEvent_Reconcile, entityType: handler.EntityCluster, want: "Cluster reconciled"},
+		{event: dbconst.ClusterOutboxEvent_Created, entityType: handler.EntityNodePool, want: "Node pool created"},
+		{event: dbconst.ClusterOutboxEvent_Updated, entityType: handler.EntityNodePool, want: "Node pool updated"},
+		{event: dbconst.ClusterOutboxEvent_Deleted, entityType: handler.EntityNodePool, want: "Node pool deleted"},
+		{event: dbconst.ClusterOutboxEvent_Reconcile, entityType: handler.EntityNodePool, want: "Node pool reconciled"},
 	}
 	for _, tt := range tests {
-		t.Run(tt.event+"_"+tt.source, func(t *testing.T) {
-			got := syncMessage(tt.event, tt.source)
+		t.Run(string(tt.event)+"_"+string(tt.entityType), func(t *testing.T) {
+			got := syncMessage(tt.event, tt.entityType)
 			if got != tt.want {
-				t.Errorf("syncMessage(%q, %q) = %q, want %q", tt.event, tt.source, got, tt.want)
+				t.Errorf("syncMessage(%q, %q) = %q, want %q", tt.event, tt.entityType, got, tt.want)
 			}
 		})
 	}
@@ -49,7 +50,7 @@ func TestSyncMessage_PanicsOnUnknownEvent(t *testing.T) {
 			t.Fatal("expected panic for unknown event, got none")
 		}
 	}()
-	syncMessage("unknown_event", "cluster")
+	syncMessage("unknown_event", handler.EntityCluster)
 }
 
 func TestToGardenerNodePools(t *testing.T) {

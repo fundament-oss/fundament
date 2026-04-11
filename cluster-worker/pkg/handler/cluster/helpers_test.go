@@ -80,7 +80,7 @@ func newTestHandler(t *testing.T, db *testDB, mock *gardener.MockClient) *cluste
 		StatusBatchSize: 50,
 		MaxRetries:      10,
 	}
-	return cluster.New(db.workerPool, mock, logger, cfg)
+	return cluster.New(db.workerPool, mock, mock, logger, cfg)
 }
 
 func newMock(t *testing.T) *gardener.MockClient {
@@ -132,6 +132,20 @@ func insertNodePool(t *testing.T, db *testDB, clusterID uuid.UUID, name, machine
 		clusterID, name, machineType, scaleMin, scaleMax,
 	)
 	require.NoError(t, err)
+}
+
+// insertNodePoolReturningID inserts a node pool and returns its ID.
+func insertNodePoolReturningID(t *testing.T, db *testDB, clusterID uuid.UUID, name, machineType string, scaleMin, scaleMax int32) uuid.UUID {
+	t.Helper()
+
+	var id uuid.UUID
+	err := db.adminPool.QueryRow(t.Context(),
+		`INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max)
+		 VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		clusterID, name, machineType, scaleMin, scaleMax,
+	).Scan(&id)
+	require.NoError(t, err)
+	return id
 }
 
 // markOutboxCompleted sets the latest outbox row for a cluster to completed.

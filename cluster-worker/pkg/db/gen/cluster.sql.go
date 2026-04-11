@@ -109,6 +109,29 @@ func (q *Queries) ClusterCreateSyncSucceededEvent(ctx context.Context, arg Clust
 	return id, err
 }
 
+const clusterHasEverBeenSynced = `-- name: ClusterHasEverBeenSynced :one
+SELECT EXISTS (
+    SELECT 1
+    FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = $1
+      AND tenant.cluster_outbox.status = 'completed'
+)::boolean AS has_been_synced
+`
+
+type ClusterHasEverBeenSyncedParams struct {
+	ClusterID pgtype.UUID
+}
+
+// Returns whether a cluster has been successfully synced to Gardener at least once.
+// Checks outbox history directly (EXISTS on completed rows with cluster_id set).
+// This remains true even if the latest outbox row is retrying or failed.
+func (q *Queries) ClusterHasEverBeenSynced(ctx context.Context, arg ClusterHasEverBeenSyncedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, clusterHasEverBeenSynced, arg.ClusterID)
+	var has_been_synced bool
+	err := row.Scan(&has_been_synced)
+	return has_been_synced, err
+}
+
 const clusterListActive = `-- name: ClusterListActive :many
 SELECT
     tenant.clusters.id,
@@ -347,6 +370,28 @@ type ClusterUpdateShootStatusParams struct {
 func (q *Queries) ClusterUpdateShootStatus(ctx context.Context, arg ClusterUpdateShootStatusParams) error {
 	_, err := q.db.Exec(ctx, clusterUpdateShootStatus, arg.Status, arg.Message, arg.ClusterID)
 	return err
+}
+
+const nodePoolGetClusterID = `-- name: NodePoolGetClusterID :one
+SELECT
+    tenant.node_pools.cluster_id
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.id = $1
+`
+
+type NodePoolGetClusterIDParams struct {
+	NodePoolID uuid.UUID
+}
+
+// Returns the cluster_id for a node pool (including soft-deleted node pools).
+// Used by the cluster handler to resolve node_pool_id → cluster_id.
+func (q *Queries) NodePoolGetClusterID(ctx context.Context, arg NodePoolGetClusterIDParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, nodePoolGetClusterID, arg.NodePoolID)
+	var cluster_id uuid.UUID
+	err := row.Scan(&cluster_id)
+	return cluster_id, err
 }
 
 const nodePoolListByClusterID = `-- name: NodePoolListByClusterID :many

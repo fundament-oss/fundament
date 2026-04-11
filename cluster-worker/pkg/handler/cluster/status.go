@@ -44,8 +44,7 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 		}
 		cluster := &clusters[i]
 
-		projectName := gardener.ProjectName(cluster.OrganizationName)
-		namespace, err := h.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
+		namespace, err := h.resolveProjectNamespace(ctx, cluster.OrganizationName, cluster.OrganizationID)
 		if err != nil {
 			h.logger.Error("failed to get project namespace",
 				"cluster_id", cluster.ID,
@@ -56,17 +55,9 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 			continue
 		}
 
-		clusterToSync := &gardener.ClusterToSync{
-			ID:                cluster.ID,
-			Name:              cluster.Name,
-			OrganizationID:    cluster.OrganizationID,
-			OrganizationName:  cluster.OrganizationName,
-			Namespace:         namespace,
-			Region:            cluster.Region,
-			KubernetesVersion: cluster.KubernetesVersion,
-		}
+		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
 
-		shootStatus, err := h.gardener.GetShootStatus(ctx, clusterToSync)
+		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
 		if err != nil {
 			h.logger.Error("failed to get shoot status",
 				"cluster_id", cluster.ID,
@@ -169,8 +160,7 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 			deleted = &cluster.Deleted.Time
 		}
 
-		projectName := gardener.ProjectName(cluster.OrganizationName)
-		namespace, err := h.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
+		namespace, err := h.resolveProjectNamespace(ctx, cluster.OrganizationName, cluster.OrganizationID)
 		if err != nil {
 			h.logger.Error("failed to get project namespace",
 				"cluster_id", cluster.ID,
@@ -181,18 +171,10 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 			continue
 		}
 
-		clusterToSync := &gardener.ClusterToSync{
-			ID:                cluster.ID,
-			Name:              cluster.Name,
-			OrganizationID:    cluster.OrganizationID,
-			OrganizationName:  cluster.OrganizationName,
-			Namespace:         namespace,
-			Region:            cluster.Region,
-			KubernetesVersion: cluster.KubernetesVersion,
-			Deleted:           deleted,
-		}
+		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
+		clusterToSync.Deleted = deleted
 
-		shootStatus, err := h.gardener.GetShootStatus(ctx, clusterToSync)
+		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
 		if err != nil {
 			h.logger.Error("failed to check deleted shoot status",
 				"cluster_id", cluster.ID,

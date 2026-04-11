@@ -89,13 +89,49 @@ func TestEntityFromRow_NoValidFK(t *testing.T) {
 	}
 }
 
+func TestProcessWrapsInvalidEntityAsNonRetryable(t *testing.T) {
+	w := newTestWorker()
+	row := &db.OutboxGetAndLockRow{ID: uuid.New()} // no valid FK
+
+	_, err := w.process(context.Background(), row)
+
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, errNonRetryable) {
+		t.Errorf("expected errNonRetryable, got: %v", err)
+	}
+}
+
+func TestEntityFromRow_NodePoolID(t *testing.T) {
+	id := uuid.New()
+	row := &db.OutboxGetAndLockRow{
+		ID:         uuid.New(),
+		NodePoolID: pgtype.UUID{Bytes: id, Valid: true},
+	}
+
+	entityType, entityID, err := entityFromRow(row)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if entityType != handler.EntityNodePool {
+		t.Errorf("expected EntityNodePool, got %q", entityType)
+	}
+	if entityID != id {
+		t.Errorf("expected %s, got %s", id, entityID)
+	}
+}
+
 func newTestWorker() *Worker {
 	return &Worker{
 		logger: slog.Default(),
 		cfg: Config{
-			MaxRetries:  10,
-			BaseBackoff: 500 * time.Millisecond,
-			MaxBackoff:  time.Minute,
+			MaxRetries:               10,
+			BaseBackoff:              500 * time.Millisecond,
+			MaxBackoff:               time.Minute,
+			PreconditionDelay:        30 * time.Second,
+			MaxPreconditionDeferrals: 100,
 		},
 	}
 }

@@ -73,6 +73,27 @@ ORDER BY
     tenant.node_pools.created,
     tenant.node_pools.id;
 
+-- name: NodePoolGetClusterID :one
+-- Returns the cluster_id for a node pool (including soft-deleted node pools).
+-- Used by the cluster handler to resolve node_pool_id → cluster_id.
+SELECT
+    tenant.node_pools.cluster_id
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.id = @node_pool_id;
+
+-- name: ClusterHasEverBeenSynced :one
+-- Returns whether a cluster has been successfully synced to Gardener at least once.
+-- Checks outbox history directly (EXISTS on completed rows with cluster_id set).
+-- This remains true even if the latest outbox row is retrying or failed.
+SELECT EXISTS (
+    SELECT 1
+    FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = @cluster_id
+      AND tenant.cluster_outbox.status = 'completed'
+)::boolean AS has_been_synced;
+
 -- name: ClusterListNeedingStatusCheck :many
 -- Get clusters where we need to check Gardener status (active clusters).
 -- Polls clusters in non-terminal states: NULL (never checked), pending,
