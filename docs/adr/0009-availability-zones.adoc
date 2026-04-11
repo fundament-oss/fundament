@@ -16,20 +16,24 @@ Government workloads require high availability and disaster resilience. A single
 == Options
 
 === Option 1: Single AZ (1 datacenter)
-* Pros: simplest operations, no cross-site networking, no replication latency
-* Cons: single point of failure, unacceptable for government continuity requirements
+* Pros: simplest operations; no cross-site networking; no replication latency; lowest infrastructure cost
+* Cons: single point of failure; no disaster resilience
 
 === Option 2: 2 AZs
-* Pros: survives single-site failure, simpler than 3-site
-* Cons: split-brain risk for distributed systems (no quorum possible), failover capacity requires 2x provisioning
+* Pros: survives single-site failure; simpler than 3-site; lower infrastructure investment than 3 AZs
+* Cons: split-brain risk for distributed systems (no quorum possible with 2 sites); failover capacity requires 2x provisioning
 
-=== Option 3: 3+ AZs
-* Pros: quorum-based consensus possible (etcd, Ceph, etc.), survives single-site failure without split-brain, capacity can be distributed (each site runs at ~66% instead of 50%)
-* Cons: cross-site network complexity, data replication across 3 sites, higher infrastructure investment
+=== Option 3: 3 AZs
+* Pros: quorum-based consensus possible (etcd, Ceph, etc.); survives single-site failure without split-brain; capacity can be distributed (each site runs at ~66% instead of 50%)
+* Cons: cross-site network complexity; data replication across 3 sites; higher infrastructure investment
+
+=== Option 4: 4+ AZs
+* Pros: survives multiple simultaneous site failures; more granular capacity distribution
+* Cons: significantly higher infrastructure and operational cost; diminishing returns beyond 3 for quorum-based systems; cross-site replication complexity increases with each AZ
 
 == Decision
 
-Minimum 3 availability zones across physically separate government datacenters (ODCs). Three is the minimum for quorum-based distributed systems. Each AZ must be independently operational (separate power, cooling, network uplinks). Gardener Seed clusters, etcd, and storage replication all require odd-numbered site counts for consensus.
+Minimum 3 availability zones across physically separate government datacenters (ODCs). A single AZ does not provide disaster resilience, which is a hard requirement for government continuity. Two AZs create split-brain risk for all quorum-based systems (etcd, Ceph, Gardener). Three is the minimum for quorum-based consensus. Each AZ must be independently operational (separate power, cooling, network uplinks). Four or more AZs may be added later but 3 is the design target.
 
 == Consequences
 
