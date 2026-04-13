@@ -43,7 +43,6 @@ func testCR() *pluginsv1.PluginInstallation {
 		Spec: pluginsv1.PluginInstallationSpec{
 			Image:      "ghcr.io/fundament-oss/fundament/cert-manager-plugin:latest",
 			PluginName: "cert-manager",
-			Version:    "1.0.0",
 			Config: map[string]string{
 				"LOG_LEVEL": "debug",
 			},

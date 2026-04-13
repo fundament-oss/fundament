@@ -32,11 +32,9 @@ func NewMetadataHandler(statusFn func() PluginStatus, defFn func() PluginDefinit
 
 func (h *metadataHandler) GetStatus(_ context.Context, _ *connect.Request[pb.GetStatusRequest]) (*connect.Response[pb.GetStatusResponse], error) {
 	status := h.getStatus()
-	def := h.getDefinition()
 	return connect.NewResponse(&pb.GetStatusResponse{
 		Phase:   ptr(string(status.Phase)),
 		Message: ptr(status.Message),
-		Version: ptr(def.Metadata.Version),
 	}), nil
 }
 

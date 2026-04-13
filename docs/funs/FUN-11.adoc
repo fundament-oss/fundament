@@ -189,12 +189,11 @@ metadata:
 spec:
   image: ghcr.io/fundament-plugins/cert-manager:v1.17.2
   pluginName: cert-manager
-  version: v1.17.2
   clusterRoles: []       # optional: ClusterRoles to bind
   config: {}             # optional: key-value config (injected as FUNP_* env vars)
 ---
 
-Status fields: `phase`, `message`, `ready`, `observedGeneration`, `pluginVersion`.
+Status fields: `phase`, `message`, `ready`, `observedGeneration`.
 
 === Installation lifecycle
 
