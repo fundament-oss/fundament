@@ -61,6 +61,7 @@ type GetStatusResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Phase         *string                `protobuf:"bytes,1,opt,name=phase" json:"phase,omitempty"`
 	Message       *string                `protobuf:"bytes,2,opt,name=message" json:"message,omitempty"`
+	Version       *string                `protobuf:"bytes,3,opt,name=version" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -105,6 +106,13 @@ func (x *GetStatusResponse) GetPhase() string {
 func (x *GetStatusResponse) GetMessage() string {
 	if x != nil && x.Message != nil {
 		return *x.Message
+	}
+	return ""
+}
+
+func (x *GetStatusResponse) GetVersion() string {
+	if x != nil && x.Version != nil {
+		return *x.Version
 	}
 	return ""
 }
@@ -938,10 +946,11 @@ var File_v1_metadata_proto protoreflect.FileDescriptor
 const file_v1_metadata_proto_rawDesc = "" +
 	"\n" +
 	"\x11v1/metadata.proto\x12\x11pluginmetadata.v1\"\x12\n" +
-	"\x10GetStatusRequest\"C\n" +
+	"\x10GetStatusRequest\"]\n" +
 	"\x11GetStatusResponse\x12\x14\n" +
 	"\x05phase\x18\x01 \x01(\tR\x05phase\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\x16\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\"\x16\n" +
 	"\x14GetDefinitionRequest\"n\n" +
 	"\n" +
 	"PluginURLs\x12\x1a\n" +

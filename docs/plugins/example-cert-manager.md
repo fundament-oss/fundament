@@ -46,6 +46,7 @@ metadata:
 spec:
   image: localhost:5111/cert-manager-plugin:latest
   pluginName: cert-manager-test
+  version: v1.17.2
   clusterRoles:
     - cluster-admin
 ```

@@ -9,6 +9,7 @@ message GetStatusRequest {}
 message GetStatusResponse {
   string phase = 1;
   string message = 2;
+  string version = 3;
 }
 
 message GetDefinitionRequest {}

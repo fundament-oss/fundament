@@ -198,6 +198,7 @@ metadata:
 spec:
   image: ghcr.io/fundament-oss/fundament/cert-manager-plugin:v1.0.0
   pluginName: cert-manager-test
+  version: v1.17.2
   clusterRoles:          # Optional: bind SA to these ClusterRoles
     - cluster-admin
   config:                # Optional: extra env vars (injected with FUNP_ prefix)
@@ -264,7 +265,7 @@ For each `PluginInstallation`, the controller creates:
            │
            ▼
   Update CR .status
-  (phase, ready, message)
+  (phase, ready, message, pluginVersion)
            │
            ▼
   RequeueAfter (poll interval)

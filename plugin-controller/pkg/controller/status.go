@@ -52,6 +52,7 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 			Phase:              pluginsv1.PluginPhaseDegraded,
 			Message:            err.Error(),
 			ObservedGeneration: cr.Generation,
+			PluginVersion:      resp.Msg.GetVersion(),
 		}
 	}
 
@@ -60,6 +61,7 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 		Message:            resp.Msg.GetMessage(),
 		Ready:              phase == pluginsv1.PluginPhaseRunning,
 		ObservedGeneration: cr.Generation,
+		PluginVersion:      resp.Msg.GetVersion(),
 	}
 }
 

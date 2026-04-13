@@ -11,15 +11,15 @@ const mockPluginInstallationListJSON = `{
       "apiVersion": "plugins.fundament.io/v1",
       "kind": "PluginInstallation",
       "metadata": {"name": "cert-manager", "namespace": "plugin-cert-manager"},
-      "spec": {"pluginName": "cert-manager", "image": "mock"},
-      "status": {"phase": "Running", "ready": true}
+      "spec": {"pluginName": "cert-manager", "version": "v1.17.2", "image": "mock"},
+      "status": {"phase": "Running", "ready": true, "pluginVersion": "v1.17.2"}
     },
     {
       "apiVersion": "plugins.fundament.io/v1",
       "kind": "PluginInstallation",
       "metadata": {"name": "cnpg", "namespace": "plugin-cnpg"},
-      "spec": {"pluginName": "cnpg", "image": "mock"},
-      "status": {"phase": "Running", "ready": true}
+      "spec": {"pluginName": "cnpg", "version": "v1.25.1", "image": "mock"},
+      "status": {"phase": "Running", "ready": true, "pluginVersion": "v1.25.1"}
     }
   ]
 }`

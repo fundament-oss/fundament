@@ -132,6 +132,7 @@ metadata:
 spec:
   image: registry.example.com/my-plugin:v1.0.0
   pluginName: my-plugin
+  version: v1.0.0
   # Only if your plugin needs cluster-wide access:
   # clusterRoles:
   #   - cluster-admin

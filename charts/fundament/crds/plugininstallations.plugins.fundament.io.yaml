@@ -20,6 +20,9 @@ spec:
         - name: Plugin
           type: string
           jsonPath: .spec.pluginName
+        - name: Version
+          type: string
+          jsonPath: .spec.version
         - name: Phase
           type: string
           jsonPath: .status.phase
@@ -45,6 +48,7 @@ spec:
               required:
                 - image
                 - pluginName
+                - version
               properties:
                 image:
                   type: string
@@ -59,6 +63,8 @@ spec:
                   x-kubernetes-validations:
                     - rule: "self == oldSelf"
                       message: "spec.pluginName is immutable"
+                version:
+                  type: string
                 clusterRoles:
                   type: array
                   items:
@@ -86,3 +92,5 @@ spec:
                 observedGeneration:
                   type: integer
                   format: int64
+                pluginVersion:
+                  type: string

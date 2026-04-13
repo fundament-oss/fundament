@@ -101,8 +101,8 @@ export interface PluginNavItem {
 
 export interface PluginInstallationItem {
   metadata: { name: string };
-  spec: { pluginName: string };
-  status: { phase: string; ready: boolean };
+  spec: { pluginName: string; version: string };
+  status: { phase: string; ready: boolean; pluginVersion: string };
 }
 
 export interface PluginInstallationListResponse {
