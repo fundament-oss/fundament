@@ -20,10 +20,10 @@ func TestLoadDefinition(t *testing.T) {
 	assert.Equal(t, "Apache-2.0", def.Metadata.License)
 	assert.Equal(t, "world", def.Metadata.Icon)
 	assert.Equal(t, "https://kubernetes-sigs.github.io/external-dns/", def.Metadata.URLs.Homepage)
-	assert.NotEmpty(t, def.Permissions.Capabilities)
-	assert.NotEmpty(t, def.Permissions.RBAC)
-	assert.Empty(t, def.Menu.Organization)
-	assert.Len(t, def.Menu.Project, 1)
+	assert.NotEmpty(t, def.Spec.Permissions.Capabilities)
+	assert.NotEmpty(t, def.Spec.Permissions.RBAC)
+	assert.Empty(t, def.Spec.Menu.Organization)
+	assert.Len(t, def.Spec.Menu.Project, 1)
 }
 
 func TestNewExternalDNSPlugin(t *testing.T) {

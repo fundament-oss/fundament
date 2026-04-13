@@ -11,18 +11,17 @@ Writing a plugin consists of several steps, each described below.
 ```yaml
 apiVersion: fundament.io/v1
 kind: PluginDefinition
+metadata:
+  name: my-plugin
+  displayName: My Plugin
+  version: v1.0.0
+  description: Does something useful
+  author: My Team
+  license: Apache-2.0
+  icon: puzzle
+  tags:
+    - example
 spec:
-  metadata:
-    name: my-plugin
-    displayName: My Plugin
-    version: v1.0.0
-    description: Does something useful
-    author: My Team
-    license: Apache-2.0
-    icon: puzzle
-    tags:
-      - example
-
   permissions:
     capabilities:
       - internet_access
