@@ -128,10 +128,7 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		Permission: plan.Permission.ValueString(),
 	}.Build())
 
-	// Retry on permission_denied: OpenFGA needs time to sync after login.
-	inviteResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.InviteMemberResponse], error) {
-		return r.client.InviteService.InviteMember(ctx, inviteReq)
-	})
+	inviteResp, err := createIdempotent(ctx, r.client.InviteService.InviteMember, inviteReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeAlreadyExists:
