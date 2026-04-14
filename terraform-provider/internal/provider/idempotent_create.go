@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"connectrpc.com/connect"
@@ -49,6 +50,8 @@ func (realClock) Sleep(ctx context.Context, d time.Duration) error {
 
 var defaultClock clock = realClock{}
 
+var errIdempotencyFailed = errors.New("server reported idempotent operation failed")
+
 // createIdempotent injects an idempotency key and polls the server until the
 // resource reaches a terminal outbox state.
 func createIdempotent[Req, Resp any](
@@ -65,6 +68,32 @@ func createIdempotentWithClock[Req, Resp any](
 	call func(ctx context.Context, req *connect.Request[Req]) (*connect.Response[Resp], error),
 	req *connect.Request[Req],
 ) (*connect.Response[Resp], error) {
-	_ = uuid.New // used in Task 2
-	return nil, nil
+	key := uuid.New().String()
+	req.Header().Set(idempotencyHeaderKey, key)
+
+	deadlineCtx, cancel := context.WithTimeout(ctx, idempotencyTotalBudget)
+	defer cancel()
+
+	backoff := idempotencyInitialBackoff
+	for {
+		resp, err := call(deadlineCtx, req)
+		if err != nil {
+			return nil, err
+		}
+
+		switch resp.Header().Get(idempotencyHeaderStatus) {
+		case statusCompleted:
+			return resp, nil
+		case statusFailed:
+			return nil, connect.NewError(connect.CodeInternal, errIdempotencyFailed)
+		}
+
+		if err := clk.Sleep(deadlineCtx, backoff); err != nil {
+			return nil, err
+		}
+		backoff *= 2
+		if backoff > idempotencyMaxBackoff {
+			backoff = idempotencyMaxBackoff
+		}
+	}
 }
