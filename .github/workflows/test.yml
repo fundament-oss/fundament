@@ -14,7 +14,7 @@ env:
 
 jobs:
   organization-api:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -48,7 +48,7 @@ jobs:
         run: go test ./... -count=1
 
   cluster-worker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -82,7 +82,7 @@ jobs:
         run: go test ./... -count=1
 
   common:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -116,7 +116,7 @@ jobs:
         run: go test ./... -count=1
 
   functl:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -135,7 +135,7 @@ jobs:
           go vet ./...
 
   test-other:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 

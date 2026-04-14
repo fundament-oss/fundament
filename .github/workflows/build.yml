@@ -28,7 +28,7 @@ permissions: {}
 
 jobs:
   gate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       should_deploy: ${{ steps.check.outputs.should_deploy }}
       should_teardown: ${{ steps.check.outputs.should_teardown }}
@@ -109,7 +109,7 @@ jobs:
   deploy:
     needs: [gate, build]
     if: needs.gate.outputs.should_deploy == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: write
@@ -218,7 +218,7 @@ jobs:
 
   terraform-acc-tests:
     needs: deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -272,7 +272,7 @@ jobs:
 
   e2e-tests:
     needs: deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -334,7 +334,7 @@ jobs:
   teardown:
     needs: gate
     if: needs.gate.outputs.should_teardown == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     steps:
