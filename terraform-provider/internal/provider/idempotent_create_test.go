@@ -78,3 +78,29 @@ func TestCreateIdempotent_CompletedOnFirstCall(t *testing.T) {
 		t.Fatal("expected Idempotency-Key header to be set")
 	}
 }
+
+func TestCreateIdempotent_ProcessingThenCompleted(t *testing.T) {
+	var keys []string
+	call := scriptedCall(t, []scriptStep{
+		{status: statusProcessing},
+		{status: statusCompleted},
+	}, &keys)
+
+	clk := newFakeClock()
+	resp, err := createIdempotentWithClock(context.Background(), clk, call, connect.NewRequest(&fakeReq{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("expected response, got nil")
+	}
+	if len(keys) != 2 {
+		t.Fatalf("expected 2 calls, got %d", len(keys))
+	}
+	if keys[0] != keys[1] {
+		t.Fatalf("expected same idempotency key on both calls, got %q and %q", keys[0], keys[1])
+	}
+	if len(clk.sleeps) != 1 || clk.sleeps[0] != idempotencyInitialBackoff {
+		t.Fatalf("expected one 100ms sleep, got %v", clk.sleeps)
+	}
+}
