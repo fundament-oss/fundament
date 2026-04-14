@@ -104,8 +104,6 @@ openfga:
     enabled: true
 
 ingress:
-  enabled: true
-  className: nginx
-  domain: fundament.apps.digilab.network
+  enabled: false
   tls:
     clusterIssuer: letsencrypt-prod

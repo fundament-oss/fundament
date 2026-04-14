@@ -33,6 +33,4 @@ dex:
         - https://fundament.sandbox.example.com/callback
 
 ingress:
-  enabled: true
-  className: nginx
-  domain: sandbox.example.com
+  enabled: false
