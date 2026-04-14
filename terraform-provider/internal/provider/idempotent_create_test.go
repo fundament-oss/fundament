@@ -120,3 +120,24 @@ func TestCreateIdempotent_FailedStatusReturnsError(t *testing.T) {
 		t.Fatalf("expected 1 call, got %d", len(keys))
 	}
 }
+
+func TestCreateIdempotent_TransportErrorReturnsImmediately(t *testing.T) {
+	var keys []string
+	wantErr := connect.NewError(connect.CodePermissionDenied, errorString("no"))
+	call := scriptedCall(t, []scriptStep{{err: wantErr}}, &keys)
+
+	_, err := createIdempotentWithClock(context.Background(), newFakeClock(), call, connect.NewRequest(&fakeReq{}))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v", err)
+	}
+	if len(keys) != 1 {
+		t.Fatalf("expected 1 call (no retries), got %d", len(keys))
+	}
+}
+
+type errorString string
+
+func (e errorString) Error() string { return string(e) }
