@@ -141,3 +141,60 @@ func TestCreateIdempotent_TransportErrorReturnsImmediately(t *testing.T) {
 type errorString string
 
 func (e errorString) Error() string { return string(e) }
+
+func TestCreateIdempotent_BackoffSchedule(t *testing.T) {
+	// Six processing calls then completed -> six sleeps with exponential
+	// backoff capped at 2s: 100ms, 200ms, 400ms, 800ms, 1.6s, 2s.
+	steps := []scriptStep{
+		{status: statusProcessing},
+		{status: statusProcessing},
+		{status: statusProcessing},
+		{status: statusProcessing},
+		{status: statusProcessing},
+		{status: statusProcessing},
+		{status: statusCompleted},
+	}
+	var keys []string
+	clk := newFakeClock()
+	_, err := createIdempotentWithClock(context.Background(), clk, scriptedCall(t, steps, &keys), connect.NewRequest(&fakeReq{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := []time.Duration{
+		100 * time.Millisecond,
+		200 * time.Millisecond,
+		400 * time.Millisecond,
+		800 * time.Millisecond,
+		1600 * time.Millisecond,
+		2 * time.Second,
+	}
+	if len(clk.sleeps) != len(want) {
+		t.Fatalf("expected %d sleeps, got %d (%v)", len(want), len(clk.sleeps), clk.sleeps)
+	}
+	for i, d := range want {
+		if clk.sleeps[i] != d {
+			t.Errorf("sleep[%d] = %v, want %v", i, clk.sleeps[i], d)
+		}
+	}
+}
+
+func TestCreateIdempotent_DeadlineExceeded(t *testing.T) {
+	// Always processing — helper must give up when the ctx budget expires.
+	// Use a ctx with a short deadline so the real clock's Sleep exits promptly.
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	var keys []string
+	steps := make([]scriptStep, 100)
+	for i := range steps {
+		steps[i] = scriptStep{status: statusProcessing}
+	}
+	_, err := createIdempotent(ctx, scriptedCall(t, steps, &keys), connect.NewRequest(&fakeReq{}))
+	if err == nil {
+		t.Fatal("expected deadline error, got nil")
+	}
+	if ctx.Err() == nil {
+		t.Fatal("expected parent ctx to be done")
+	}
+}
