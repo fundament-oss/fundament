@@ -72,15 +72,6 @@ const (
 	// ClusterServiceDeleteNodePoolProcedure is the fully-qualified name of the ClusterService's
 	// DeleteNodePool RPC.
 	ClusterServiceDeleteNodePoolProcedure = "/organization.v1.ClusterService/DeleteNodePool"
-	// ClusterServiceListInstallsProcedure is the fully-qualified name of the ClusterService's
-	// ListInstalls RPC.
-	ClusterServiceListInstallsProcedure = "/organization.v1.ClusterService/ListInstalls"
-	// ClusterServiceAddInstallProcedure is the fully-qualified name of the ClusterService's AddInstall
-	// RPC.
-	ClusterServiceAddInstallProcedure = "/organization.v1.ClusterService/AddInstall"
-	// ClusterServiceRemoveInstallProcedure is the fully-qualified name of the ClusterService's
-	// RemoveInstall RPC.
-	ClusterServiceRemoveInstallProcedure = "/organization.v1.ClusterService/RemoveInstall"
 )
 
 // ClusterServiceClient is a client for the organization.v1.ClusterService service.
@@ -111,12 +102,6 @@ type ClusterServiceClient interface {
 	UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error)
 	// Delete a node pool
 	DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error)
-	// List installs for a cluster
-	ListInstalls(context.Context, *connect.Request[v1.ListInstallsRequest]) (*connect.Response[v1.ListInstallsResponse], error)
-	// Add an install to a cluster
-	AddInstall(context.Context, *connect.Request[v1.AddInstallRequest]) (*connect.Response[v1.AddInstallResponse], error)
-	// Remove an install from a cluster
-	RemoveInstall(context.Context, *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[v1.RemoveInstallResponse], error)
 }
 
 // NewClusterServiceClient constructs a client for the organization.v1.ClusterService service. By
@@ -208,24 +193,6 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(clusterServiceMethods.ByName("DeleteNodePool")),
 			connect.WithClientOptions(opts...),
 		),
-		listInstalls: connect.NewClient[v1.ListInstallsRequest, v1.ListInstallsResponse](
-			httpClient,
-			baseURL+ClusterServiceListInstallsProcedure,
-			connect.WithSchema(clusterServiceMethods.ByName("ListInstalls")),
-			connect.WithClientOptions(opts...),
-		),
-		addInstall: connect.NewClient[v1.AddInstallRequest, v1.AddInstallResponse](
-			httpClient,
-			baseURL+ClusterServiceAddInstallProcedure,
-			connect.WithSchema(clusterServiceMethods.ByName("AddInstall")),
-			connect.WithClientOptions(opts...),
-		),
-		removeInstall: connect.NewClient[v1.RemoveInstallRequest, v1.RemoveInstallResponse](
-			httpClient,
-			baseURL+ClusterServiceRemoveInstallProcedure,
-			connect.WithSchema(clusterServiceMethods.ByName("RemoveInstall")),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
@@ -244,9 +211,6 @@ type clusterServiceClient struct {
 	createNodePool     *connect.Client[v1.CreateNodePoolRequest, v1.CreateNodePoolResponse]
 	updateNodePool     *connect.Client[v1.UpdateNodePoolRequest, v1.UpdateNodePoolResponse]
 	deleteNodePool     *connect.Client[v1.DeleteNodePoolRequest, v1.DeleteNodePoolResponse]
-	listInstalls       *connect.Client[v1.ListInstallsRequest, v1.ListInstallsResponse]
-	addInstall         *connect.Client[v1.AddInstallRequest, v1.AddInstallResponse]
-	removeInstall      *connect.Client[v1.RemoveInstallRequest, v1.RemoveInstallResponse]
 }
 
 // ListClusters calls organization.v1.ClusterService.ListClusters.
@@ -314,21 +278,6 @@ func (c *clusterServiceClient) DeleteNodePool(ctx context.Context, req *connect.
 	return c.deleteNodePool.CallUnary(ctx, req)
 }
 
-// ListInstalls calls organization.v1.ClusterService.ListInstalls.
-func (c *clusterServiceClient) ListInstalls(ctx context.Context, req *connect.Request[v1.ListInstallsRequest]) (*connect.Response[v1.ListInstallsResponse], error) {
-	return c.listInstalls.CallUnary(ctx, req)
-}
-
-// AddInstall calls organization.v1.ClusterService.AddInstall.
-func (c *clusterServiceClient) AddInstall(ctx context.Context, req *connect.Request[v1.AddInstallRequest]) (*connect.Response[v1.AddInstallResponse], error) {
-	return c.addInstall.CallUnary(ctx, req)
-}
-
-// RemoveInstall calls organization.v1.ClusterService.RemoveInstall.
-func (c *clusterServiceClient) RemoveInstall(ctx context.Context, req *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[v1.RemoveInstallResponse], error) {
-	return c.removeInstall.CallUnary(ctx, req)
-}
-
 // ClusterServiceHandler is an implementation of the organization.v1.ClusterService service.
 type ClusterServiceHandler interface {
 	// List all clusters for the current organization
@@ -357,12 +306,6 @@ type ClusterServiceHandler interface {
 	UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error)
 	// Delete a node pool
 	DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error)
-	// List installs for a cluster
-	ListInstalls(context.Context, *connect.Request[v1.ListInstallsRequest]) (*connect.Response[v1.ListInstallsResponse], error)
-	// Add an install to a cluster
-	AddInstall(context.Context, *connect.Request[v1.AddInstallRequest]) (*connect.Response[v1.AddInstallResponse], error)
-	// Remove an install from a cluster
-	RemoveInstall(context.Context, *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[v1.RemoveInstallResponse], error)
 }
 
 // NewClusterServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -450,24 +393,6 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 		connect.WithSchema(clusterServiceMethods.ByName("DeleteNodePool")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceListInstallsHandler := connect.NewUnaryHandler(
-		ClusterServiceListInstallsProcedure,
-		svc.ListInstalls,
-		connect.WithSchema(clusterServiceMethods.ByName("ListInstalls")),
-		connect.WithHandlerOptions(opts...),
-	)
-	clusterServiceAddInstallHandler := connect.NewUnaryHandler(
-		ClusterServiceAddInstallProcedure,
-		svc.AddInstall,
-		connect.WithSchema(clusterServiceMethods.ByName("AddInstall")),
-		connect.WithHandlerOptions(opts...),
-	)
-	clusterServiceRemoveInstallHandler := connect.NewUnaryHandler(
-		ClusterServiceRemoveInstallProcedure,
-		svc.RemoveInstall,
-		connect.WithSchema(clusterServiceMethods.ByName("RemoveInstall")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/organization.v1.ClusterService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ClusterServiceListClustersProcedure:
@@ -496,12 +421,6 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 			clusterServiceUpdateNodePoolHandler.ServeHTTP(w, r)
 		case ClusterServiceDeleteNodePoolProcedure:
 			clusterServiceDeleteNodePoolHandler.ServeHTTP(w, r)
-		case ClusterServiceListInstallsProcedure:
-			clusterServiceListInstallsHandler.ServeHTTP(w, r)
-		case ClusterServiceAddInstallProcedure:
-			clusterServiceAddInstallHandler.ServeHTTP(w, r)
-		case ClusterServiceRemoveInstallProcedure:
-			clusterServiceRemoveInstallHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -561,16 +480,4 @@ func (UnimplementedClusterServiceHandler) UpdateNodePool(context.Context, *conne
 
 func (UnimplementedClusterServiceHandler) DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.DeleteNodePool is not implemented"))
-}
-
-func (UnimplementedClusterServiceHandler) ListInstalls(context.Context, *connect.Request[v1.ListInstallsRequest]) (*connect.Response[v1.ListInstallsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.ListInstalls is not implemented"))
-}
-
-func (UnimplementedClusterServiceHandler) AddInstall(context.Context, *connect.Request[v1.AddInstallRequest]) (*connect.Response[v1.AddInstallResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.AddInstall is not implemented"))
-}
-
-func (UnimplementedClusterServiceHandler) RemoveInstall(context.Context, *connect.Request[v1.RemoveInstallRequest]) (*connect.Response[v1.RemoveInstallResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.RemoveInstall is not implemented"))
 }

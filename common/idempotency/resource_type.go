@@ -18,7 +18,6 @@ const (
 	ResourceNodePool
 	ResourceNamespace
 	ResourceAPIKey
-	ResourceInstall
 	ResourceOrganizationUser
 )
 
@@ -36,8 +35,6 @@ func (r ResourceType) String() string {
 		return "namespace"
 	case ResourceAPIKey:
 		return "api_key"
-	case ResourceInstall:
-		return "install"
 	case ResourceOrganizationUser:
 		return "organization_user"
 	default:

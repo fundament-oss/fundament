@@ -135,8 +135,6 @@ func (s *Store) Complete(ctx context.Context, params *CompleteParams) error {
 		arg.NamespaceID = resourceUUID
 	case ResourceAPIKey:
 		arg.ApiKeyID = resourceUUID
-	case ResourceInstall:
-		arg.InstallID = resourceUUID
 	case ResourceOrganizationUser:
 		arg.OrganizationUserID = resourceUUID
 	default:
