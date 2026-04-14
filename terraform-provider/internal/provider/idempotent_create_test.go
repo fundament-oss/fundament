@@ -104,3 +104,19 @@ func TestCreateIdempotent_ProcessingThenCompleted(t *testing.T) {
 		t.Fatalf("expected one 100ms sleep, got %v", clk.sleeps)
 	}
 }
+
+func TestCreateIdempotent_FailedStatusReturnsError(t *testing.T) {
+	var keys []string
+	call := scriptedCall(t, []scriptStep{{status: statusFailed}}, &keys)
+
+	resp, err := createIdempotentWithClock(context.Background(), newFakeClock(), call, connect.NewRequest(&fakeReq{}))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if resp != nil {
+		t.Fatal("expected nil response on failed status")
+	}
+	if len(keys) != 1 {
+		t.Fatalf("expected 1 call, got %d", len(keys))
+	}
+}
