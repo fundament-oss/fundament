@@ -11,8 +11,6 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerClockHour4, tablerMail, tablerUsersGroup } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
@@ -54,8 +52,7 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [FormsModule, NgIcon, ModalComponent, LoadingIndicatorComponent],
-  viewProviders: [provideIcons({ tablerClockHour4, tablerMail, tablerUsersGroup })],
+  imports: [FormsModule, ModalComponent, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './organization-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

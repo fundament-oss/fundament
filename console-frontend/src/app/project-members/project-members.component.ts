@@ -10,8 +10,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerLock, tablerArrowBackUp } from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
 import { PROJECT, MEMBER } from '../../connect/tokens';
 import ModalComponent from '../modal/modal.component';
@@ -51,8 +49,7 @@ const formatMemberDate = (member: ProjectMember): string =>
 
 @Component({
   selector: 'app-project-members',
-  imports: [ReactiveFormsModule, NgIcon, ModalComponent, RouterLink, LoadingIndicatorComponent],
-  viewProviders: [provideIcons({ tablerLock, tablerArrowBackUp })],
+  imports: [ReactiveFormsModule, ModalComponent, RouterLink, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-members.component.html',

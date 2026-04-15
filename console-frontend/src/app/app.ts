@@ -20,8 +20,6 @@ import {
   ActivatedRouteSnapshot,
 } from '@angular/router';
 import { filter, skip } from 'rxjs/operators';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerMoon, tablerSun } from '@ng-icons/tabler-icons';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
@@ -55,14 +53,7 @@ const reloadApp = () => {
     OrgPickerComponent,
     FundamentLogoIconComponent,
     BreadcrumbComponent,
-    NgIcon,
     SidebarNavComponent,
-  ],
-  viewProviders: [
-    provideIcons({
-      tablerMoon,
-      tablerSun,
-    }),
   ],
   host: {
     '(document:click)': 'onDocumentClick($event)',

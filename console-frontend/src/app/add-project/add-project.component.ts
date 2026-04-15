@@ -13,8 +13,6 @@ import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
@@ -28,12 +26,7 @@ import {
 
 @Component({
   selector: 'app-add-project',
-  imports: [RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-    }),
-  ],
+  imports: [RouterLink, ReactiveFormsModule, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

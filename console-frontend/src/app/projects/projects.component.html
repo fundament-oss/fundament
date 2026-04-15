@@ -68,11 +68,7 @@
                 <div
                   class="flex items-center gap-3 rounded-lg border border-dashed border-gray-200 px-5 py-4 dark:border-gray-800"
                 >
-                  <ng-icon
-                    name="tablerFolders"
-                    size="1.125rem"
-                    class="shrink-0 text-gray-300 dark:text-gray-600"
-                  />
+                  <ndd-icon name="folder-stack" class="h-4.5 w-4.5 shrink-0 text-gray-300 dark:text-gray-600" />
                   <p class="text-sm text-gray-500 dark:text-gray-400">
                     No projects in this cluster yet.
                   </p>
@@ -89,7 +85,7 @@
                       <div
                         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
                       >
-                        <ng-icon name="tablerFolder" />
+                        <ndd-icon name="folder" class="h-5 w-5" />
                       </div>
                       <span class="min-w-0 flex-1 text-sm font-medium">
                         {{ project.name }}
@@ -97,7 +93,7 @@
                       <ndd-icon
                         name="chevron-right-small"
                         class="h-4.5 w-4.5 shrink-0 text-gray-300 group-hover:text-gray-400 dark:text-gray-600 dark:group-hover:text-gray-500"
-                      ></ndd-icon>
+                       />
                     </a>
                   }
                 </div>

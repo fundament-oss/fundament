@@ -9,10 +9,6 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerArrowBackUp } from '@ng-icons/tabler-icons';
-import '@minbzk/storybook';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
@@ -56,8 +52,7 @@ interface ProgressItem {
 
 @Component({
   selector: 'app-add-cluster-summary',
-  imports: [RouterLink, NgIcon, ModalComponent, LoadingIndicatorComponent],
-  viewProviders: [provideIcons({ tablerCircleXFill, tablerArrowBackUp })],
+  imports: [RouterLink, ModalComponent, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-summary.component.html',

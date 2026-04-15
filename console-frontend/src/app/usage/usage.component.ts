@@ -15,9 +15,6 @@ import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerTableDown } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';
@@ -100,13 +97,7 @@ function formatTimestamp(ts: Timestamp | undefined): string {
 
 @Component({
   selector: 'app-usage',
-  imports: [FormsModule, DateRangePickerComponent, NgIcon, DecimalPipe],
-  viewProviders: [
-    provideIcons({
-      tablerTableDown,
-      tablerCircleXFill,
-    }),
-  ],
+  imports: [FormsModule, DateRangePickerComponent, DecimalPipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './usage.component.html',

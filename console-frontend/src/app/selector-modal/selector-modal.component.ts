@@ -8,8 +8,6 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { tablerFolder, tablerBuilding } from '@ng-icons/tabler-icons';
 import ModalComponent from '../modal/modal.component';
 
 interface Project {
@@ -25,13 +23,7 @@ interface Organization {
 
 @Component({
   selector: 'app-selector-modal',
-  imports: [NgIconComponent, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerFolder,
-      tablerBuilding,
-    }),
-  ],
+  imports: [ModalComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './selector-modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

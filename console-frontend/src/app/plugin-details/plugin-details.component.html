@@ -18,11 +18,7 @@
   <div
     class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
   >
-    <ng-icon
-      name="tablerCircleXFill"
-      class="shrink-0 text-rose-500! dark:text-rose-400!"
-      size="1.125rem"
-    />
+    <ndd-icon name="dismiss-circle" class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!" />
     <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -66,7 +62,7 @@
                       "
                     >
                       @if (tag.name.toLowerCase() === 'official') {
-                        <ndd-icon name="check-mark" class="mr-1 h-3 w-3"></ndd-icon>
+                        <ndd-icon name="check-mark" class="mr-1 h-3 w-3" />
                       }
                       {{ tag.name }}
                     </span>
@@ -75,7 +71,7 @@
                     <span
                       class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     >
-                      <ndd-icon name="check-mark" class="mr-1 h-3 w-3"></ndd-icon>
+                      <ndd-icon name="check-mark" class="mr-1 h-3 w-3" />
                       Installed on {{ getInstalledClusterCount() }} cluster{{
                         getInstalledClusterCount() > 1 ? 's' : ''
                       }}

@@ -11,9 +11,6 @@ import {
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerTerminal, tablerCaretRight } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { CLUSTER, NAMESPACE, PLUGIN } from '../../connect/tokens';
@@ -119,8 +116,7 @@ const getEventDetails = (event: ClusterEvent): string => {
 
 @Component({
   selector: 'app-cluster-details',
-  imports: [RouterLink, NgIcon, LoadingIndicatorComponent, ModalComponent],
-  viewProviders: [provideIcons({ tablerCircleXFill, tablerTerminal, tablerCaretRight })],
+  imports: [RouterLink, LoadingIndicatorComponent, ModalComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

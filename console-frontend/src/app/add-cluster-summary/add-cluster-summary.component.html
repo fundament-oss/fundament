@@ -103,11 +103,7 @@
     <div
       class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
     >
-      <ng-icon
-        name="tablerCircleXFill"
-        class="shrink-0 text-rose-500! dark:text-rose-400!"
-        size="1.125rem"
-      />
+      <ndd-icon name="dismiss-circle" class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!" />
       <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
     </div>
   }
@@ -135,18 +131,14 @@
           <ndd-icon
             name="check-mark-circle"
             class="h-5 w-5 shrink-0 text-green-500! dark:text-green-400!"
-          ></ndd-icon>
+           />
         } @else if (bannerState() === 'partial') {
           <ndd-icon
             name="exclamation-circle"
             class="h-4.5 w-4.5 shrink-0 text-amber-500! dark:text-amber-400!"
-          ></ndd-icon>
+           />
         } @else {
-          <ng-icon
-            name="tablerCircleXFill"
-            class="shrink-0 text-rose-500! dark:text-rose-400!"
-            size="1.125rem"
-          />
+          <ndd-icon name="dismiss-circle" class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!" />
         }
         <div>
           <p
@@ -247,9 +239,9 @@
               class="h-5 w-5 shrink-0 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
             />
           } @else if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
-            <ng-icon name="tablerCircleXFill" class="shrink-0 text-rose-500!" size="1.25rem" />
+            <ndd-icon name="dismiss-circle" class="h-5 w-5 shrink-0 text-rose-500!" />
           } @else {
-            <ndd-icon name="check-mark-circle" class="h-5 w-5 shrink-0 text-green-500"></ndd-icon>
+            <ndd-icon name="check-mark-circle" class="h-5 w-5 shrink-0 text-green-500" />
           }
 
           <div>
@@ -289,7 +281,7 @@
           <ndd-button
             (click)="retryItem(item.key)"
             text="Retry"
-            start-icon="back-in-time"
+            start-icon="arrow-uturn-backward"
             variant="accent-outlined"
             size="sm"
           ></ndd-button>
