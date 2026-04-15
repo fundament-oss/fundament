@@ -61,7 +61,6 @@ plugin-install plugin:
     spec:
       image: ${image}
       pluginName: {{ plugin }}
-      version: "${tag}"
       clusterRoles:
         - cluster-admin
     EOF

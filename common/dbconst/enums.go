@@ -44,7 +44,6 @@ const (
 	ClusterOutboxSource_Trigger   ClusterOutboxSource = "trigger"
 	ClusterOutboxSource_Reconcile ClusterOutboxSource = "reconcile"
 	ClusterOutboxSource_Manual    ClusterOutboxSource = "manual"
-	ClusterOutboxSource_NodePool  ClusterOutboxSource = "node_pool"
 	ClusterOutboxSource_Status    ClusterOutboxSource = "status"
 )
 

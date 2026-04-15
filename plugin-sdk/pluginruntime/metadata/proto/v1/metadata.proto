@@ -9,7 +9,6 @@ message GetStatusRequest {}
 message GetStatusResponse {
   string phase = 1;
   string message = 2;
-  string version = 3;
 }
 
 message GetDefinitionRequest {}
@@ -87,7 +86,11 @@ message GetDefinitionResponse {
   string api_version = 15;
 }
 
+message RequestUninstallRequest {}
+message RequestUninstallResponse {}
+
 service PluginMetadataService {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
   rpc GetDefinition(GetDefinitionRequest) returns (GetDefinitionResponse);
+  rpc RequestUninstall(RequestUninstallRequest) returns (RequestUninstallResponse);
 }

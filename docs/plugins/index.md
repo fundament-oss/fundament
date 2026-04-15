@@ -97,7 +97,7 @@ When a plugin binary calls `pluginruntime.Run(plugin)`, the SDK:
         ├─ Create Host (provides logger, telemetry, status reporting)
         │
         ├─ Start HTTP server on :8080
-        │   ├─ GET /healthz ──────── Liveness probe (always 200)
+        │   ├─ GET /livez ───────── Liveness probe (always 200)
         │   ├─ GET /readyz ───────── Readiness probe (200 after ReportReady())
         │   ├─ ConnectRPC ─────────── PluginMetadataService (status + definition)
         │   └─ GET /console/ ──────── Static UI assets (if ConsoleProvider)
@@ -198,7 +198,6 @@ metadata:
 spec:
   image: ghcr.io/fundament-oss/fundament/cert-manager-plugin:v1.0.0
   pluginName: cert-manager-test
-  version: v1.17.2
   clusterRoles:          # Optional: bind SA to these ClusterRoles
     - cluster-admin
   config:                # Optional: extra env vars (injected with FUNP_ prefix)
@@ -265,7 +264,7 @@ For each `PluginInstallation`, the controller creates:
            │
            ▼
   Update CR .status
-  (phase, ready, message, pluginVersion)
+  (phase, ready, message)
            │
            ▼
   RequeueAfter (poll interval)

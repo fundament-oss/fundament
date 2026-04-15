@@ -21,12 +21,9 @@ import (
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/oauth2"
 
-	"github.com/google/uuid"
-
 	"github.com/fundament-oss/fundament/authn-api/pkg/authn"
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/dbversion"
@@ -49,9 +46,6 @@ type config struct {
 	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,http://console.fundament.localhost:8080"`
-
-	GardenerMode       string `env:"GARDENER_MODE" envDefault:"mock"` // "real" or "mock" (disabled)
-	GardenerKubeconfig string `env:"GARDENER_KUBECONFIG"`             // path to Gardener kubeconfig
 }
 
 func main() {
@@ -150,25 +144,6 @@ func run() error {
 	sessionStore := authn.NewSessionStore([]byte(cfg.JWTSecret))
 	sessionStore.ConfigureOptions(cfg.CookieDomain, cfg.CookieSecure)
 
-	var gardenerClient authn.GardenerClient
-	switch cfg.GardenerMode {
-	case "real":
-		if cfg.GardenerKubeconfig == "" {
-			return fmt.Errorf("GARDENER_KUBECONFIG required when GARDENER_MODE=real")
-		}
-		providerCfg := gardener.NewProviderConfig()
-		realClient, err := gardener.NewReal(cfg.GardenerKubeconfig, providerCfg, logger)
-		if err != nil {
-			return fmt.Errorf("create gardener client: %w", err)
-		}
-		gardenerClient = &gardenerAdapter{client: realClient}
-		logger.Info("gardener client enabled", "mode", cfg.GardenerMode)
-	case "mock":
-		logger.Info("gardener client disabled (cluster token endpoint unavailable)")
-	default:
-		return fmt.Errorf("invalid GARDENER_MODE: %s (must be 'real' or 'mock')", cfg.GardenerMode)
-	}
-
 	authnCfg := &authn.Config{
 		TokenExpiry:  cfg.TokenExpiry,
 		JWTSecret:    []byte(cfg.JWTSecret),
@@ -177,7 +152,7 @@ func run() error {
 		FrontendURL:  cfg.FrontendURL,
 	}
 
-	server, err := authn.New(logger, authnCfg, oauth2Config, verifier, sessionStore, db, gardenerClient, authzClient)
+	server, err := authn.New(logger, authnCfg, oauth2Config, verifier, sessionStore, db, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create authn api: %w", err)
 	}
@@ -185,7 +160,7 @@ func run() error {
 	mux := http.NewServeMux()
 
 	// Health endpoints
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
@@ -200,9 +175,6 @@ func run() error {
 		}
 		if err := authzClient.Healthy(ctx); err != nil {
 			errs = append(errs, "openfga: "+err.Error())
-		}
-		if err := checkOIDC(ctx, cfg.OIDCDiscoveryURL); err != nil {
-			errs = append(errs, "oidc: "+err.Error())
 		}
 
 		if len(errs) > 0 {
@@ -266,36 +238,4 @@ func run() error {
 	}
 
 	return nil
-}
-
-func checkOIDC(ctx context.Context, discoveryURL string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discoveryURL+"/.well-known/openid-configuration", nil)
-	if err != nil {
-		return err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
-	}
-	return nil
-}
-
-// gardenerAdapter adapts the cluster-worker Gardener client to authn-api's GardenerClient interface.
-type gardenerAdapter struct {
-	client *gardener.RealClient
-}
-
-func (a *gardenerAdapter) RequestAdminKubeconfig(ctx context.Context, clusterID uuid.UUID, expirationSeconds int64) (*authn.AdminKubeconfig, error) {
-	kc, err := a.client.RequestAdminKubeconfig(ctx, clusterID, expirationSeconds)
-	if err != nil {
-		return nil, fmt.Errorf("request admin kubeconfig: %w", err)
-	}
-	return &authn.AdminKubeconfig{
-		Kubeconfig: kc.Kubeconfig,
-		ExpiresAt:  kc.ExpiresAt,
-	}, nil
 }

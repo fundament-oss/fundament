@@ -336,9 +336,8 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 			}
 		default:
 			status = &ShootStatus{
-				Status:       StatusReady,
-				Message:      MsgShootReady,
-				APIServerURL: fmt.Sprintf("https://api.mock-shoot-%s.example.com", cluster.ID),
+				Status:  StatusReady,
+				Message: MsgShootReady,
 			}
 		}
 	}

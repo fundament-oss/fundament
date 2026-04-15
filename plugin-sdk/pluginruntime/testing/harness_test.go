@@ -117,7 +117,6 @@ func TestRunInProcess(t *testing.T) {
 	statusResp, err := ip.MetadataClient.GetStatus(context.Background(), connect.NewRequest(&pb.GetStatusRequest{}))
 	require.NoError(t, err)
 	assert.Equal(t, string(pluginruntime.PhaseRunning), statusResp.Msg.GetPhase())
-	assert.Equal(t, "v0.1.0", statusResp.Msg.GetVersion())
 
 	// Test GetDefinition
 	defResp, err := ip.MetadataClient.GetDefinition(context.Background(), connect.NewRequest(&pb.GetDefinitionRequest{}))

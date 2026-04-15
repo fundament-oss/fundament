@@ -109,6 +109,29 @@ func (q *Queries) ClusterCreateSyncSucceededEvent(ctx context.Context, arg Clust
 	return id, err
 }
 
+const clusterHasEverBeenSynced = `-- name: ClusterHasEverBeenSynced :one
+SELECT EXISTS (
+    SELECT 1
+    FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = $1
+      AND tenant.cluster_outbox.status = 'completed'
+)::boolean AS has_been_synced
+`
+
+type ClusterHasEverBeenSyncedParams struct {
+	ClusterID pgtype.UUID
+}
+
+// Returns whether a cluster has been successfully synced to Gardener at least once.
+// Checks outbox history directly (EXISTS on completed rows with cluster_id set).
+// This remains true even if the latest outbox row is retrying or failed.
+func (q *Queries) ClusterHasEverBeenSynced(ctx context.Context, arg ClusterHasEverBeenSyncedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, clusterHasEverBeenSynced, arg.ClusterID)
+	var has_been_synced bool
+	err := row.Scan(&has_been_synced)
+	return has_been_synced, err
+}
+
 const clusterListActive = `-- name: ClusterListActive :many
 SELECT
     tenant.clusters.id,
@@ -250,8 +273,6 @@ SELECT
     tenant.clusters.kubernetes_version,
     tenant.clusters.deleted,
     tenant.clusters.shoot_status,
-    tenant.clusters.shoot_api_server_url,
-    tenant.clusters.shoot_ca_data,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name
@@ -269,13 +290,6 @@ WHERE
         OR tenant.clusters.shoot_status = 'pending' -- Shoot not yet visible in Gardener
         OR tenant.clusters.shoot_status = 'progressing' -- Gardener creating/updating
         OR tenant.clusters.shoot_status = 'error'
-        OR (
-            tenant.clusters.shoot_status = 'ready'
-            AND (
-                tenant.clusters.shoot_api_server_url IS NULL
-                OR tenant.clusters.shoot_ca_data IS NULL
-            )
-        )
     ) -- Failed, might recover
     AND (
         tenant.clusters.shoot_status_updated IS NULL -- Never checked
@@ -298,8 +312,6 @@ type ClusterListNeedingStatusCheckRow struct {
 	KubernetesVersion  string
 	Deleted            pgtype.Timestamptz
 	ShootStatus        pgtype.Text
-	ShootApiServerUrl  pgtype.Text
-	ShootCaData        pgtype.Text
 	OrganizationID     uuid.UUID
 	ShootStatusUpdated pgtype.Timestamptz
 	OrganizationName   string
@@ -307,8 +319,7 @@ type ClusterListNeedingStatusCheckRow struct {
 
 // Get clusters where we need to check Gardener status (active clusters).
 // Polls clusters in non-terminal states: NULL (never checked), pending,
-// progressing, error. Also polls ready clusters that are still missing shoot
-// connection data so kubeconfig delivery can recover from transient failures.
+// progressing, error.
 func (q *Queries) ClusterListNeedingStatusCheck(ctx context.Context, arg ClusterListNeedingStatusCheckParams) ([]ClusterListNeedingStatusCheckRow, error) {
 	rows, err := q.db.Query(ctx, clusterListNeedingStatusCheck, arg.LimitCount)
 	if err != nil {
@@ -325,8 +336,6 @@ func (q *Queries) ClusterListNeedingStatusCheck(ctx context.Context, arg Cluster
 			&i.KubernetesVersion,
 			&i.Deleted,
 			&i.ShootStatus,
-			&i.ShootApiServerUrl,
-			&i.ShootCaData,
 			&i.OrganizationID,
 			&i.ShootStatusUpdated,
 			&i.OrganizationName,
@@ -346,31 +355,43 @@ UPDATE tenant.clusters
 SET
     shoot_status = $1,
     shoot_status_message = $2,
-    shoot_status_updated = now(),
-    shoot_api_server_url = COALESCE($3, shoot_api_server_url),
-    shoot_ca_data = COALESCE($4, shoot_ca_data)
+    shoot_status_updated = now()
 WHERE
-    id = $5
+    id = $3
 `
 
 type ClusterUpdateShootStatusParams struct {
-	Status       pgtype.Text
-	Message      pgtype.Text
-	ApiServerUrl pgtype.Text
-	CaData       pgtype.Text
-	ClusterID    uuid.UUID
+	Status    pgtype.Text
+	Message   pgtype.Text
+	ClusterID uuid.UUID
 }
 
 // Update shoot status from Gardener polling.
 func (q *Queries) ClusterUpdateShootStatus(ctx context.Context, arg ClusterUpdateShootStatusParams) error {
-	_, err := q.db.Exec(ctx, clusterUpdateShootStatus,
-		arg.Status,
-		arg.Message,
-		arg.ApiServerUrl,
-		arg.CaData,
-		arg.ClusterID,
-	)
+	_, err := q.db.Exec(ctx, clusterUpdateShootStatus, arg.Status, arg.Message, arg.ClusterID)
 	return err
+}
+
+const nodePoolGetClusterID = `-- name: NodePoolGetClusterID :one
+SELECT
+    tenant.node_pools.cluster_id
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.id = $1
+`
+
+type NodePoolGetClusterIDParams struct {
+	NodePoolID uuid.UUID
+}
+
+// Returns the cluster_id for a node pool (including soft-deleted node pools).
+// Used by the cluster handler to resolve node_pool_id → cluster_id.
+func (q *Queries) NodePoolGetClusterID(ctx context.Context, arg NodePoolGetClusterIDParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, nodePoolGetClusterID, arg.NodePoolID)
+	var cluster_id uuid.UUID
+	err := row.Scan(&cluster_id)
+	return cluster_id, err
 }
 
 const nodePoolListByClusterID = `-- name: NodePoolListByClusterID :many

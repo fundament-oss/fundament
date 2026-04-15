@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +15,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/openfga/go-sdk/client"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/fundament-oss/fundament/authz-worker/pkg/worker"
 	"github.com/fundament-oss/fundament/common/authz"
@@ -21,15 +24,22 @@ import (
 )
 
 type config struct {
-	Database     psqldb.Config
-	OpenFGA      authz.Config
-	LogLevel     slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
-	PollInterval time.Duration `env:"POLL_INTERVAL" envDefault:"5s"`
-	BatchSize    int32         `env:"BATCH_SIZE" envDefault:"100"`
-	BaseBackoff  time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
-	MaxBackoff   time.Duration `env:"MAX_BACKOFF" envDefault:"5s"`
-	MaxRetries   int32         `env:"MAX_RETRIES" envDefault:"3"`
-	BackoffDelay time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
+	Database        psqldb.Config
+	OpenFGA         authz.Config
+	LogLevel        slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
+	PollInterval    time.Duration `env:"POLL_INTERVAL" envDefault:"5s"`
+	BatchSize       int32         `env:"BATCH_SIZE" envDefault:"100"`
+	BaseBackoff     time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
+	MaxBackoff      time.Duration `env:"MAX_BACKOFF" envDefault:"5s"`
+	MaxRetries      int32         `env:"MAX_RETRIES" envDefault:"3"`
+	BackoffDelay    time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
+	HealthPort      int           `env:"HEALTH_PORT" envDefault:"8097"`
+	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
+}
+
+// ReadyChecker reports whether a worker is ready to serve traffic.
+type ReadyChecker interface {
+	IsReady() bool
 }
 
 func main() {
@@ -123,8 +133,61 @@ func run() error {
 		BackoffDelay: cfg.BackoffDelay,
 	})
 
-	if err := w.Run(ctx); err != nil {
+	healthServer := startHealthServer(&cfg, logger, w)
+
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return w.Run(ctx)
+	})
+
+	err = g.Wait()
+
+	// Graceful shutdown of the health server
+	logger.Info("shutting down...")
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	defer shutdownCancel()
+	if shutdownErr := healthServer.Shutdown(shutdownCtx); shutdownErr != nil {
+		logger.Error("health server shutdown error", "error", shutdownErr)
+	}
+
+	if err != nil && !errors.Is(err, context.Canceled) {
 		return fmt.Errorf("worker failed: %w", err)
 	}
+
+	logger.Info("authz-worker stopped")
 	return nil
+}
+
+func startHealthServer(cfg *config, logger *slog.Logger, checkers ...ReadyChecker) *http.Server {
+	healthMux := http.NewServeMux()
+	healthMux.HandleFunc("/livez", func(resp http.ResponseWriter, _ *http.Request) {
+		resp.WriteHeader(http.StatusOK)
+		_, _ = resp.Write([]byte("ok"))
+	})
+	healthMux.HandleFunc("/readyz", func(resp http.ResponseWriter, _ *http.Request) {
+		for _, c := range checkers {
+			if !c.IsReady() {
+				resp.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = resp.Write([]byte("not ready"))
+				return
+			}
+		}
+		resp.WriteHeader(http.StatusOK)
+		_, _ = resp.Write([]byte("ready"))
+	})
+
+	healthServer := &http.Server{
+		Addr:              fmt.Sprintf(":%d", cfg.HealthPort),
+		Handler:           healthMux,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	go func() {
+		logger.Info("health server starting", "port", cfg.HealthPort)
+		if err := healthServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("health server error", "error", err)
+		}
+	}()
+
+	return healthServer
 }

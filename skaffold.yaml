@@ -117,6 +117,9 @@ profiles:
           clusterWorker.gardenerMode: real
           clusterWorker.gardenerKubeconfigSecret: gardener-kubeconfig
           shootProxy.enabled: true
+          kubeApiProxy.mode: real
+          kubeApiProxy.gardenerKubeconfigSecret: gardener-kubeconfig
+          organizationApi.kubeApiProxyInsecure: "true"
       - op: add
         path: /deploy/helm/releases/0/valuesFiles/-
         value: charts/fundament/values-gardener-local.yaml

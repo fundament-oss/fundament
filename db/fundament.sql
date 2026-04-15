@@ -105,7 +105,7 @@ CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_deleted ()
 	AS 
 $function$
 BEGIN
-	IF EXISTS (
+	IF NEW.deleted IS NOT NULL AND EXISTS (
 		SELECT 1
 		FROM tenant.projects
 		WHERE
@@ -134,15 +134,15 @@ CREATE OR REPLACE FUNCTION tenant.node_pool_outbox_trigger ()
 	AS 
 $function$
 BEGIN
-    INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+    INSERT INTO tenant.cluster_outbox (node_pool_id, event, source)
     VALUES (
-        COALESCE(NEW.cluster_id, OLD.cluster_id),
+        COALESCE(NEW.id, OLD.id),
         CASE
             WHEN TG_OP = 'INSERT' THEN 'created'
             WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
             ELSE 'updated'
         END,
-        'node_pool'
+        'trigger'
     );
     RETURN NULL;
 END;
@@ -282,20 +282,27 @@ CREATE OR REPLACE FUNCTION tenant.cluster_outbox_update_cluster_status ()
 	COST 1
 	AS 
 $function$
+DECLARE
+    resolved_cluster_id uuid;
 BEGIN
     IF NEW.cluster_id IS NOT NULL THEN
         UPDATE tenant.clusters
-        SET outbox_status = latest.status,
-            outbox_retries = latest.retries,
-            outbox_error = latest.status_info
-        FROM (
-            SELECT status, retries, status_info
-            FROM tenant.cluster_outbox
-            WHERE cluster_id = NEW.cluster_id
-            ORDER BY id DESC
-            LIMIT 1
-        ) latest
+        SET outbox_status = NEW.status,
+            outbox_retries = NEW.retries,
+            outbox_error = NEW.status_info
         WHERE tenant.clusters.id = NEW.cluster_id;
+    ELSIF NEW.node_pool_id IS NOT NULL THEN
+        SELECT tenant.node_pools.cluster_id INTO resolved_cluster_id
+        FROM tenant.node_pools
+        WHERE tenant.node_pools.id = NEW.node_pool_id;
+
+        IF resolved_cluster_id IS NOT NULL THEN
+            UPDATE tenant.clusters
+            SET outbox_status = NEW.status,
+                outbox_retries = NEW.retries,
+                outbox_error = NEW.status_info
+            WHERE tenant.clusters.id = resolved_cluster_id;
+        END IF;
     END IF;
     RETURN NULL;
 END;
@@ -630,8 +637,6 @@ CREATE TABLE tenant.clusters (
 	outbox_status text,
 	outbox_retries integer NOT NULL DEFAULT 0,
 	outbox_error text,
-	shoot_api_server_url text,
-	shoot_ca_data text,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
 	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
@@ -1074,11 +1079,13 @@ CREATE TABLE tenant.cluster_outbox (
 	created timestamptz NOT NULL DEFAULT now(),
 	organization_user_id uuid,
 	project_member_id uuid,
+	node_pool_id uuid,
+	deferrals integer NOT NULL DEFAULT 0,
 	CONSTRAINT cluster_outbox_pk PRIMARY KEY (id),
-	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id, organization_user_id, project_member_id) = 1),
+	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id, organization_user_id, project_member_id, node_pool_id) = 1),
 	CONSTRAINT cluster_outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed')),
 	CONSTRAINT cluster_outbox_ck_event CHECK (event IN ('created', 'updated', 'deleted', 'reconcile', 'ready')),
-	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual', 'node_pool', 'status'))
+	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual', 'status'))
 );
 -- ddl-end --
 ALTER TABLE tenant.cluster_outbox OWNER TO fun_owner;
@@ -1102,6 +1109,25 @@ USING btree
 (
 	cluster_id,
 	id DESC NULLS LAST
+);
+-- ddl-end --
+
+-- object: cluster_outbox_idx_node_pool_id | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.cluster_outbox_idx_node_pool_id CASCADE;
+CREATE INDEX cluster_outbox_idx_node_pool_id ON tenant.cluster_outbox
+USING btree
+(
+	node_pool_id,
+	id DESC NULLS LAST
+);
+-- ddl-end --
+
+-- object: node_pools_idx_cluster_id | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.node_pools_idx_cluster_id CASCADE;
+CREATE INDEX node_pools_idx_cluster_id ON tenant.node_pools
+USING btree
+(
+	cluster_id
 );
 -- ddl-end --
 
@@ -1411,7 +1437,7 @@ CREATE OR REPLACE TRIGGER node_pools_outbox
 -- object: node_pool_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS node_pool_outbox ON tenant.node_pools CASCADE;
 CREATE OR REPLACE TRIGGER node_pool_outbox
-	AFTER INSERT OR DELETE OR UPDATE OF name,machine_type,autoscale_min,autoscale_max,deleted
+	AFTER INSERT OR UPDATE OF name,machine_type,autoscale_min,autoscale_max,deleted
 	ON tenant.node_pools
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.node_pool_outbox_trigger();
@@ -1847,6 +1873,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_project_member CASCADE;
 ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_project_member FOREIGN KEY (project_member_id)
 REFERENCES tenant.project_members (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: cluster_outbox_fk_node_pool | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_node_pool CASCADE;
+ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_node_pool FOREIGN KEY (node_pool_id)
+REFERENCES tenant.node_pools (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 

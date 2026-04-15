@@ -5,7 +5,7 @@ jwtSecret: "local-dev-jwt-secret"
 externalUrls:
   authn: http://authn.fundament.localhost:8080
   organization: http://organization.fundament.localhost:8080
-  kubeApiProxy: http://k8s-api.fundament.localhost:8080
+  kubeApiProxy: https://k8s-api.fundament.localhost:8443
   console: http://console.fundament.localhost:8080
   docs: http://docs.fundament.localhost:8080
   cookieDomain: fundament.localhost
@@ -49,6 +49,7 @@ consoleFrontend:
 clusterWorker:
   enabled: true
   replicas: 1
+  logLevel: debug
   gardenerMode: mock
 
 # Shoot proxy for local Gardener development (enabled by local-gardener profile).

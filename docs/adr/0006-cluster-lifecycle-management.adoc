@@ -16,20 +16,28 @@ With bare-metal provisioning in place (ADR-0005), tenant organizations need dedi
 == Options
 
 === Option 1: Gardener
-* Pros: full lifecycle management built in (upgrades, cert rotation, node rotation, auto-scaling, self-healing), proven at scale (SAP runs thousands of clusters), control planes run as pods on Seed cluster (efficient), native metal-stack integration, European origin (SAP/NeoNephos/LF Europe), Apache 2.0
-* Cons: has its own concept model (Garden/Seed/Shoot) with learning curve, Seed cluster is critical component
+* Pros: full lifecycle management built in (upgrades, cert rotation, node rotation, auto-scaling, self-healing); proven at scale (SAP runs thousands of clusters); control planes run as pods on Seed cluster (efficient); native metal-stack integration; European origin (SAP/NeoNephos/LF Europe); Apache 2.0
+* Cons: complex to set up and operate; own concept model (Garden/Seed/Shoot) with learning curve; Seed cluster is a critical component; smaller community than CAPI
 
-=== Option 2: Kamaji
-* Pros: efficient shared control planes, CNCF Sandbox, fast provisioning
-* Cons: young project, smaller community, central etcd requires careful capacity planning, less mature tooling
+=== Option 2: Cluster API (CAPI) with infrastructure providers
+* Pros: Kubernetes-native declarative API; CNCF project; large community; modular — swap infrastructure providers; familiar to Kubernetes operators
+* Cons: no built-in day-2 operations (upgrades, cert rotation, self-healing are separate concerns); requires assembling multiple components; Metal³ provider is less mature than Gardener's metal-stack integration
 
-=== Option 3: vCluster
-* Pros: lowest overhead, seconds to provision, works within existing cluster
-* Cons: no kernel isolation (container breakout affects other tenants), fails EUCS SEAL-4 isolation requirements, sync mechanism adds attack surface
+=== Option 3: Kamaji
+* Pros: efficient shared control planes; CNCF Sandbox; fast provisioning
+* Cons: young project; smaller community; central etcd requires careful capacity planning; less mature day-2 tooling
+
+=== Option 4: Rancher (SUSE)
+* Pros: widely deployed in European government; UI-driven cluster management; supports multiple Kubernetes distributions; large community
+* Cons: commercial vendor dependency (SUSE); less suited for bare-metal at scale; no native metal-stack integration; day-2 operations less mature than Gardener
+
+=== Option 5: vCluster
+* Pros: lowest overhead; seconds to provision; works within existing cluster
+* Cons: no kernel isolation (container breakout affects other tenants); sync mechanism adds attack surface; commercial vendor dependency (Loft Labs)
 
 == Decision
 
-Gardener. Native metal-stack integration means the full stack (provisioning → cluster lifecycle) is proven in production together. Mature project with a lot of production exposure. European governance aligns with sovereignty requirements.
+Gardener. Native metal-stack integration means the full stack (provisioning → cluster lifecycle) is proven in production together. Gardener is the only option with comprehensive built-in day-2 operations at scale. CAPI requires assembling multiple components to achieve what Gardener provides out of the box. Rancher lacks native metal-stack integration. Kamaji is too young for production use at our scale. vCluster does not provide the kernel-level isolation required by ADR-0008 and EUCS SEAL-4. European governance aligns with sovereignty requirements.
 
 == Consequences
 

@@ -15,12 +15,14 @@ import (
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 )
 
-const kubeconfigCacheTTL = 45 * time.Minute
+// adminKubeconfigRefreshRatio is the fraction of TTL at which to proactively
+// refresh admin kubeconfigs (70% of TTL).
+const adminKubeconfigRefreshRatio = 0.7
 
 // MultiClusterProxy routes Kubernetes API requests to the correct cluster
-// based on the Fun-Cluster header. It lazily creates one httputil.ReverseProxy
+// based on the cluster ID from request context. It lazily creates one httputil.ReverseProxy
 // per cluster by fetching a short-lived admin kubeconfig from Gardener,
-// caching it for kubeconfigCacheTTL before re-fetching.
+// caching it until it needs re-fetching.
 type MultiClusterProxy struct {
 	gardener *gardener.Client
 	logger   *slog.Logger
@@ -42,10 +44,19 @@ func NewMultiClusterProxy(gc *gardener.Client, logger *slog.Logger) *MultiCluste
 	}
 }
 
+// Context keys shared between the proxy handler and the kube package.
+// Defined here because kube cannot import proxy (would be circular).
+
+// ClusterIDContextKey is used to pass the cluster ID from the handler to the proxy via request context.
+type ClusterIDContextKey struct{}
+
+// SATokenContextKey is used to pass the per-user SA token from the handler to the proxy Director.
+type SATokenContextKey struct{}
+
 func (m *MultiClusterProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	clusterID := r.Header.Get("Fun-Cluster")
-	if clusterID == "" {
-		http.Error(w, "missing cluster header", http.StatusBadRequest)
+	clusterID, ok := r.Context().Value(ClusterIDContextKey{}).(string)
+	if !ok || clusterID == "" {
+		http.Error(w, "missing cluster ID in context", http.StatusBadRequest)
 		return
 	}
 
@@ -71,26 +82,29 @@ func (m *MultiClusterProxy) proxyFor(ctx context.Context, clusterID string) (*ht
 		return m.buildProxy(ctx, clusterID)
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build proxy for cluster %s: %w", clusterID, err)
 	}
 	return v.(*httputil.ReverseProxy), nil
 }
 
 func (m *MultiClusterProxy) buildProxy(ctx context.Context, clusterID string) (*httputil.ReverseProxy, error) {
-	kubeconfigData, err := m.gardener.GetAdminKubeconfig(ctx, clusterID, 0)
+	adminKC, err := m.gardener.GetAdminKubeconfig(ctx, clusterID, 0)
 	if err != nil {
 		return nil, fmt.Errorf("get admin kubeconfig for cluster %s: %w", clusterID, err)
 	}
 
-	c, err := NewFromBytes(kubeconfigData)
+	c, err := NewFromBytes(adminKC.Kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("build client for cluster %s: %w", clusterID, err)
 	}
 
+	ttl := time.Until(adminKC.ExpiresAt)
+	refreshAt := time.Now().Add(time.Duration(float64(ttl) * adminKubeconfigRefreshRatio))
+
 	proxy := buildReverseProxy(c.Host(), c.Transport(), m.logger)
 	m.proxies.Store(clusterID, &cachedProxy{
 		proxy:     proxy,
-		expiresAt: time.Now().Add(kubeconfigCacheTTL),
+		expiresAt: refreshAt,
 	})
 	return proxy, nil
 }
@@ -98,15 +112,22 @@ func (m *MultiClusterProxy) buildProxy(ctx context.Context, clusterID string) (*
 func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slog.Logger) *httputil.ReverseProxy {
 	return &httputil.ReverseProxy{
 		Transport: transport,
+		// Disable buffering to ensure smooth streaming for watch and log-follow requests.
+		FlushInterval: -1,
 		Director: func(req *http.Request) {
 			req.URL.Scheme = target.Scheme
 			req.URL.Host = target.Host
 			req.Host = target.Host
-			// Strip client auth headers so the kubeconfig transport supplies its own.
+			// Strip client auth headers.
 			req.Header.Del("Authorization")
 			req.Header.Del("Cookie")
-			req.Header.Del("Fun-Organization")
-			req.Header.Del("Fun-Cluster")
+			// Inject per-user SA token from context.
+			saToken, ok := req.Context().Value(SATokenContextKey{}).(string)
+			if !ok || saToken == "" {
+				logger.ErrorContext(req.Context(), "missing SA token in context")
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+saToken)
 		},
 		ErrorHandler: func(w http.ResponseWriter, req *http.Request, err error) {
 			logger.ErrorContext(req.Context(), "kubernetes proxy error", "error", err)

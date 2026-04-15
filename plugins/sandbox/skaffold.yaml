@@ -20,6 +20,11 @@ build:
       docker:
         dockerfile: plugins/cert-manager/Dockerfile
 
+    - image: external-dns-plugin
+      context: ..
+      docker:
+        dockerfile: plugins/external-dns/Dockerfile
+
 deploy:
   kubeContext: k3d-fundament-plugin
   statusCheckDeadlineSeconds: 120

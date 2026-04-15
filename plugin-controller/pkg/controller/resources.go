@@ -171,7 +171,7 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
-								Path: "/healthz",
+								Path: "/livez",
 								Port: intstr.FromString("http"),
 							},
 						},

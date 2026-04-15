@@ -1,0 +1,45 @@
+:showtitle:
+:state: proposed
+
+= ADR-0017: Cloud sovereignty framework
+
+Status:: proposed
+Date:: 2026-03-10
+Group:: cross-cutting
+Depends-on:: ADR-0016
+
+== Context
+
+With compliance by design (ADR-0016), we need to choose which framework defines what "sovereign cloud" means for this platform. Without a concrete framework, sovereignty is a subjective claim. The framework determines how we evaluate architecture decisions across data residency, supply chain, operational control, legal jurisdiction, and technological independence.
+
+== Options
+
+=== Option 1: EU Cloud Sovereignty Framework (European Commission, 2025)
+* Pros: official EU-wide definition of sovereign cloud; covers 8 sovereignty objectives (strategic, legal, data/AI, operational, supply chain, technological, security/compliance, environmental sustainability); defines SEAL levels (0-4) for graduated sovereignty assurance; designed for government procurement — directly applicable; Sovereignty Score provides measurable evaluation; increasingly the reference standard for EU member states
+* Cons: published October 2025, still maturing; designed for procurement evaluation, requires interpretation for platform architecture; SEAL-4 (full digital sovereignty) is demanding across all 8 objectives
+
+=== Option 2: EUCS (European Cybersecurity Certification Scheme, ENISA)
+* Pros: cloud-specific cybersecurity certification; detailed technical requirements; ENISA-backed
+* Cons: covers only the security/compliance dimension of sovereignty; does not address strategic, legal, operational, supply chain, or technological sovereignty; narrower scope than needed for a sovereign cloud platform
+
+=== Option 3: Own sovereignty definition based on government policy documents
+* Pros: tailored to our specific context; no dependency on external framework timelines
+* Cons: subjective — lacks external validation; not recognized in procurement; reinvents what the EU has already standardized
+
+=== Option 4: EU Cloud Sovereignty Framework + EUCS for security/compliance objective
+* Pros: Cloud Sovereignty Framework provides the umbrella across all 8 sovereignty objectives; EUCS provides deep cybersecurity certification that satisfies the security/compliance objective (SOV-7); together they cover both the broad sovereignty definition and the technical security depth; EUCS at highest level aligns with SEAL-4 security requirements
+* Cons: two frameworks to track; EUCS is still being finalized
+
+== Decision
+
+EU Cloud Sovereignty Framework as the primary sovereignty definition, targeting SEAL-4 (full digital sovereignty). EUCS as the certification instrument for the security and compliance objective (SOV-7). The Cloud Sovereignty Framework defines *what* sovereign cloud means across all dimensions — data, operations, supply chain, technology, legal, strategy. EUCS provides the *how* for the security dimension specifically. Architecture decisions must be validated against the relevant sovereignty objectives.
+
+== Consequences
+
+* All 8 sovereignty objectives must be addressed in architecture decisions, not just security
+* ADRs affecting sovereignty must reference the specific SOV objective(s) they satisfy
+* Supply chain decisions (ADR-0020) map to SOV-5
+* Data residency and tenant isolation (ADR-0008) map to SOV-3
+* Open-source component choices map to SOV-6 (technological sovereignty)
+* Operational sovereignty (SOV-4) drives decisions on staffing, documentation, and vendor independence
+* The Sovereignty Score provides a measurable way to evaluate the platform's sovereignty posture

@@ -1,4 +1,4 @@
-package usersync
+package shoot
 
 import (
 	"context"
@@ -14,11 +14,11 @@ type MockShootAccess struct {
 	mu     sync.RWMutex
 	logger *slog.Logger
 
-	// Per-cluster state: clusterID → namespace → SA name → resource metadata
+	// Per-cluster state: clusterID -> namespace -> SA name -> resource metadata
 	ServiceAccounts map[uuid.UUID]map[string]map[string]ResourceInfo
-	// Per-cluster CRBs: clusterID → CRB name → resource metadata
+	// Per-cluster CRBs: clusterID -> CRB name -> resource metadata
 	ClusterRoleBindings map[uuid.UUID]map[string]ResourceInfo
-	// Namespaces: clusterID → namespace names
+	// Namespaces: clusterID -> namespace names
 	Namespaces map[uuid.UUID]map[string]bool
 
 	// Configurable errors for testing
@@ -72,8 +72,8 @@ func (m *MockShootAccess) EnsureServiceAccount(_ context.Context, clusterID uuid
 	}
 	m.ServiceAccounts[clusterID][namespace][name] = ResourceInfo{
 		Name:        name,
-		Labels:      cloneStringMap(labels),
-		Annotations: cloneStringMap(annotations),
+		Labels:      CloneStringMap(labels),
+		Annotations: CloneStringMap(annotations),
 	}
 	m.logger.Debug("MOCK: ensured SA", "cluster_id", clusterID, "namespace", namespace, "name", name)
 	return nil
@@ -92,8 +92,8 @@ func (m *MockShootAccess) EnsureClusterRoleBinding(_ context.Context, clusterID 
 	}
 	m.ClusterRoleBindings[clusterID][name] = ResourceInfo{
 		Name:        name,
-		Labels:      cloneStringMap(labels),
-		Annotations: cloneStringMap(annotations),
+		Labels:      CloneStringMap(labels),
+		Annotations: CloneStringMap(annotations),
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",

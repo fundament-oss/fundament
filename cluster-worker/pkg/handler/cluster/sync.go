@@ -16,9 +16,42 @@ import (
 	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
-// Sync processes a single cluster outbox row by syncing the cluster to Gardener.
-// Returns nil to mark the row as processed, or an error to trigger outbox retry.
+// Sync dispatches an outbox row to the appropriate sync method based on entity type.
+// Preconditions are checked before any sync logic executes.
 func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext) error {
+	if err := h.checkPreconditions(ctx, sc.EntityType, id); err != nil {
+		return err
+	}
+
+	switch sc.EntityType {
+	case handler.EntityCluster:
+		return h.syncCluster(ctx, id, sc)
+	case handler.EntityNodePool:
+		return h.syncNodePool(ctx, id, sc)
+	default:
+		panic(fmt.Sprintf("unhandled entity type %q in cluster handler", sc.EntityType))
+	}
+}
+
+// syncNodePool resolves a node pool ID to its parent cluster and syncs the cluster.
+// Returns nil if the node pool no longer exists (deleted between outbox insert and processing).
+// Preconditions (cluster ever synced) are already checked by checkPreconditions in Sync().
+func (h *Handler) syncNodePool(ctx context.Context, nodePoolID uuid.UUID, sc handler.SyncContext) error {
+	clusterID, err := h.queries.NodePoolGetClusterID(ctx, db.NodePoolGetClusterIDParams{NodePoolID: nodePoolID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			h.logger.Info("node pool not found, skipping (deleted between outbox insert and processing)", "node_pool_id", nodePoolID)
+			return nil
+		}
+		return fmt.Errorf("get cluster_id for node pool %s: %w", nodePoolID, err)
+	}
+
+	return h.syncCluster(ctx, clusterID, sc)
+}
+
+// syncCluster processes a single cluster outbox row by syncing the cluster to Gardener.
+// Returns nil to mark the row as processed, or an error to trigger outbox retry.
+func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.SyncContext) error {
 	// 1. Look up cluster
 	cluster, err := h.queries.ClusterGetForSync(ctx, db.ClusterGetForSyncParams{ClusterID: id})
 	if err != nil {
@@ -50,61 +83,37 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 	// 3. Delete path (D3): skip EnsureProject, search by label across all namespaces
 	if syncAction == dbconst.ClusterEventSyncAction_Delete {
 		if err := h.gardener.DeleteShootByClusterID(ctx, cluster.ID); err != nil {
-			h.logger.Error("sync failed: delete shoot", "cluster_id", cluster.ID, "name", cluster.Name, "error", err)
-			h.createSyncFailedEvent(ctx, cluster.ID, syncAction, err.Error())
-			return fmt.Errorf("delete shoot: %w", err)
+			return h.syncError(ctx, cluster.ID, syncAction, "delete shoot", err)
 		}
-
-		h.createSyncSucceededEvent(ctx, cluster.ID, syncAction, syncMessage(sc.Event, sc.Source))
+		h.createSyncSucceededEvent(ctx, cluster.ID, syncAction, syncMessage(sc.Event, sc.EntityType))
 		h.logger.Info("synced cluster deletion to gardener", "cluster_id", cluster.ID, "name", cluster.Name)
 		return nil
 	}
 
-	// 4. Sync path: ensure project exists
-	projectName := gardener.ProjectName(cluster.OrganizationName)
-	namespace, err := h.gardener.EnsureProject(ctx, projectName, cluster.OrganizationID)
+	// 4. Sync path: resolve project namespace (precondition guarantees it's ready)
+	namespace, err := h.resolveProjectNamespace(ctx, cluster.OrganizationName, cluster.OrganizationID)
 	if err != nil {
-		h.logger.Error("sync failed: ensure project", "cluster_id", cluster.ID, "name", cluster.Name, "project", projectName, "error", err)
-		h.createSyncFailedEvent(ctx, cluster.ID, syncAction, "ensure project: "+err.Error())
-		return fmt.Errorf("ensure project: %w", err)
-	}
-	if namespace == "" {
-		h.logger.Warn("sync waiting: project namespace not ready yet", "cluster_id", cluster.ID, "name", cluster.Name, "project", projectName)
-		h.createSyncFailedEvent(ctx, cluster.ID, syncAction, "project namespace not ready yet")
-		return fmt.Errorf("project namespace not ready for %s", projectName)
+		return h.syncError(ctx, cluster.ID, syncAction, "ensure project", err)
 	}
 
 	// 5. Load node pools
 	nodePoolRows, err := h.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{ClusterID: cluster.ID})
 	if err != nil {
-		h.logger.Error("sync failed: load node pools", "cluster_id", cluster.ID, "name", cluster.Name, "error", err)
-		h.createSyncFailedEvent(ctx, cluster.ID, syncAction, "load node pools: "+err.Error())
-		return fmt.Errorf("load node pools: %w", err)
+		return h.syncError(ctx, cluster.ID, syncAction, "load node pools", err)
 	}
 
 	// 6. Build ClusterToSync and apply
-	shootName := gardener.GenerateShootName(cluster.Name, cluster.ID)
-	clusterToSync := &gardener.ClusterToSync{
-		ID:                cluster.ID,
-		OrganizationID:    cluster.OrganizationID,
-		OrganizationName:  cluster.OrganizationName,
-		Name:              cluster.Name,
-		ShootName:         shootName,
-		Namespace:         namespace,
-		Region:            cluster.Region,
-		KubernetesVersion: cluster.KubernetesVersion,
-		Deleted:           deleted,
-		NodePools:         toGardenerNodePools(nodePoolRows),
-	}
+	clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
+	clusterToSync.ShootName = gardener.GenerateShootName(cluster.Name, cluster.ID)
+	clusterToSync.Deleted = deleted
+	clusterToSync.NodePools = toGardenerNodePools(nodePoolRows)
 
 	if err := h.gardener.ApplyShoot(ctx, clusterToSync); err != nil {
-		h.logger.Error("sync failed: apply shoot", "cluster_id", cluster.ID, "name", cluster.Name, "shoot", shootName, "error", err)
-		h.createSyncFailedEvent(ctx, cluster.ID, syncAction, err.Error())
-		return fmt.Errorf("apply shoot: %w", err)
+		return h.syncError(ctx, cluster.ID, syncAction, "apply shoot", err)
 	}
 
 	// 7. Success
-	h.createSyncSucceededEvent(ctx, cluster.ID, syncAction, syncMessage(sc.Event, sc.Source))
+	h.createSyncSucceededEvent(ctx, cluster.ID, syncAction, syncMessage(sc.Event, sc.EntityType))
 	h.logger.Info("synced cluster to gardener", "cluster_id", cluster.ID, "name", cluster.Name)
 	return nil
 }
@@ -121,6 +130,14 @@ func toGardenerNodePools(rows []db.NodePoolListByClusterIDRow) []gardener.NodePo
 		}
 	}
 	return pools
+}
+
+// syncError logs an error, creates a sync_failed audit event, and returns a wrapped error.
+// This centralizes the verbose "log + event + return" pattern used throughout the sync path.
+func (h *Handler) syncError(ctx context.Context, clusterID uuid.UUID, syncAction dbconst.ClusterEventSyncAction, operation string, err error) error {
+	h.logger.Error("sync failed: "+operation, "cluster_id", clusterID, "error", err)
+	h.createSyncFailedEvent(ctx, clusterID, syncAction, operation+": "+err.Error())
+	return fmt.Errorf("%s: %w", operation, err)
 }
 
 // createSyncFailedEvent creates a sync_failed audit event.
@@ -147,22 +164,22 @@ func (h *Handler) createSyncSucceededEvent(ctx context.Context, clusterID uuid.U
 	}
 }
 
-// syncMessage builds a human-readable message from the outbox event and source.
-func syncMessage(event, source string) string {
+// syncMessage builds a human-readable message from the outbox event and entity type.
+func syncMessage(event dbconst.ClusterOutboxEvent, entityType handler.EntityType) string {
 	entity := "Cluster"
-	if source == "node_pool" {
+	if entityType == handler.EntityNodePool {
 		entity = "Node pool"
 	}
 	switch event {
-	case "created":
+	case dbconst.ClusterOutboxEvent_Created:
 		return entity + " created"
-	case "updated":
+	case dbconst.ClusterOutboxEvent_Updated:
 		return entity + " updated"
-	case "deleted":
+	case dbconst.ClusterOutboxEvent_Deleted:
 		return entity + " deleted"
-	case "reconcile":
+	case dbconst.ClusterOutboxEvent_Reconcile:
 		return entity + " reconciled"
 	default:
-		panic(fmt.Sprintf("unhandled sync event: %q (source: %q)", event, source))
+		panic(fmt.Sprintf("unhandled sync event: %q (entity: %q)", event, entityType))
 	}
 }

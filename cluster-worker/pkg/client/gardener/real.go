@@ -289,9 +289,8 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 					"namespace", shoot.Namespace)
 			}
 			return &ShootStatus{
-				Status:       StatusReady,
-				Message:      msg,
-				APIServerURL: shootAPIServerURL(shoot),
+				Status:  StatusReady,
+				Message: msg,
 			}, nil
 		case gardencorev1beta1.LastOperationStateAborted:
 			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description}, nil
@@ -543,20 +542,6 @@ func (r *RealClient) shootAnnotations(clusterName string) map[string]string {
 		annotations["shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds"] = "15"
 	}
 	return annotations
-}
-
-// shootAPIServerURL extracts the external API server URL from a Shoot's advertised addresses.
-func shootAPIServerURL(shoot *gardencorev1beta1.Shoot) string {
-	for _, addr := range shoot.Status.AdvertisedAddresses {
-		if addr.Name == "external" {
-			return addr.URL
-		}
-	}
-	// Fall back to the first advertised address if no "external" entry found.
-	if len(shoot.Status.AdvertisedAddresses) > 0 {
-		return shoot.Status.AdvertisedAddresses[0].URL
-	}
-	return ""
 }
 
 // buildShootSpec creates a new Shoot spec from cluster info using provider config.
