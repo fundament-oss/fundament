@@ -12,6 +12,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
@@ -42,6 +43,8 @@ export default class AddProjectComponent implements AfterViewInit, OnInit {
   private titleService = inject(TitleService);
 
   private router = inject(Router);
+
+  private idempotency = createIdempotencyRef();
 
   private fb = inject(FormBuilder);
 
@@ -122,7 +125,10 @@ export default class AddProjectComponent implements AfterViewInit, OnInit {
         name: this.projectForm.value.name!,
       });
 
-      const response = await firstValueFrom(this.client.createProject(request));
+      const response = await withIdempotency(
+        (opts) => this.client.createProject(request, opts),
+        { signal: this.idempotency.reset() },
+      );
 
       this.toastService.success(`Project '${this.projectForm.value.name}' created successfully`);
 

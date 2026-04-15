@@ -1,3 +1,4 @@
+import { DestroyRef, inject } from '@angular/core';
 import { type CallOptions } from '@connectrpc/connect';
 import { type Observable, firstValueFrom } from 'rxjs';
 
@@ -17,6 +18,29 @@ export interface IdempotencyOptions {
   signal?: AbortSignal;
 }
 
+export interface IdempotencyRef {
+  /** Aborts any in-flight call and returns a fresh AbortSignal for the next one. */
+  reset(): AbortSignal;
+}
+
+/**
+ * Creates an idempotency controller tied to the current injection context.
+ * The active AbortController is automatically aborted on component/directive destroy.
+ * Must be called inside an injection context (e.g. a field initializer or constructor).
+ */
+export function createIdempotencyRef(): IdempotencyRef {
+  const destroyRef = inject(DestroyRef);
+  let controller = new AbortController();
+  destroyRef.onDestroy(() => controller.abort());
+  return {
+    reset(): AbortSignal {
+      controller.abort();
+      controller = new AbortController();
+      return controller.signal;
+    },
+  };
+}
+
 export async function withIdempotency<T>(
   call: (options: CallOptions) => Observable<T>,
   options: IdempotencyOptions = {},
@@ -25,23 +49,20 @@ export async function withIdempotency<T>(
   const key = crypto.randomUUID();
   const deadline = Date.now() + timeoutMs;
 
-  const attempt = (): Promise<{ response: T; status: string }> =>
-    new Promise((resolve, reject) => {
-      let idempotencyStatus: string = IDEMPOTENCY_STATUS.PROCESSING;
-      firstValueFrom(
-        call({
-          headers: { 'Idempotency-Key': key },
-          onHeader: (headers) => {
-            idempotencyStatus =
-              headers.get('Idempotency-Status') ?? IDEMPOTENCY_STATUS.PROCESSING;
-          },
-          signal,
-        }),
-      ).then(
-        (response) => resolve({ response, status: idempotencyStatus }),
-        reject,
-      );
-    });
+  const attempt = async (): Promise<{ response: T; status: string }> => {
+    let idempotencyStatus: string = IDEMPOTENCY_STATUS.PROCESSING;
+    const response = await firstValueFrom(
+      call({
+        headers: { 'Idempotency-Key': key },
+        onHeader: (headers) => {
+          idempotencyStatus =
+            headers.get('Idempotency-Status') ?? IDEMPOTENCY_STATUS.PROCESSING;
+        },
+        signal,
+      }),
+    );
+    return { response, status: idempotencyStatus };
+  };
 
   while (true) {
     if (signal?.aborted) throw new DOMException('Idempotency polling aborted', 'AbortError');
