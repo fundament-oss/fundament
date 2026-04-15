@@ -98,7 +98,10 @@
       <!-- Empty State -->
       @if (!isLoading() && filteredPlugins.length === 0) {
         <div class="py-12 text-center">
-          <ndd-icon name="question-mark-circle" class="mx-auto h-8 w-8 text-gray-400! dark:text-gray-600!" />
+          <ndd-icon
+            name="question-mark-circle"
+            class="mx-auto h-8 w-8 text-gray-400! dark:text-gray-600!"
+          />
           <h3 class="mt-2 text-sm font-medium dark:text-white">No plugins found</h3>
           <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
             Please try selecting a different category.

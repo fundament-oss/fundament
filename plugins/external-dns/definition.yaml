@@ -8,7 +8,7 @@ spec:
     description: Automatic DNS record management for Kubernetes resources using ExternalDNS.
     author: Fundament
     license: Apache-2.0
-    icon: world
+    icon: stack
     urls:
       homepage: https://kubernetes-sigs.github.io/external-dns/
       repository: https://github.com/kubernetes-sigs/external-dns
@@ -46,7 +46,7 @@ spec:
         list: true
         detail: true
         create: true
-        icon: world
+        icon: stack
   uiHints:
     dnsendpoints.externaldns.k8s.io:
       statusMapping:

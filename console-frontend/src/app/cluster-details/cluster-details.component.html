@@ -3,7 +3,10 @@
   <div
     class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
   >
-    <ndd-icon name="dismiss-circle" class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!" />
+    <ndd-icon
+      name="dismiss-circle"
+      class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
+    />
     <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -151,7 +154,10 @@
         @if (clusterData.syncState) {
           <details class="group mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
             <summary class="inline-flex cursor-pointer items-center text-sm font-medium">
-              <ndd-icon name="caret-right" class="mr-1 h-4 w-4 text-indigo-500! transition-transform group-open:rotate-90" />
+              <ndd-icon
+                name="caret-right"
+                class="mr-1 h-4 w-4 text-indigo-500! transition-transform group-open:rotate-90"
+              />
               Sync details
             </summary>
 
@@ -617,10 +623,7 @@
     <div
       class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
     >
-      <ndd-icon
-        name="exclamation-circle"
-        class="h-6 w-6 text-rose-600! dark:text-rose-400!"
-       />
+      <ndd-icon name="exclamation-circle" class="h-6 w-6 text-rose-600! dark:text-rose-400!" />
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">

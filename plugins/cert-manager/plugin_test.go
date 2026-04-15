@@ -18,7 +18,7 @@ func TestLoadDefinition(t *testing.T) {
 	assert.Equal(t, "v1.17.2", def.Metadata.Version)
 	assert.Equal(t, "Fundament", def.Metadata.Author)
 	assert.Equal(t, "Apache-2.0", def.Metadata.License)
-	assert.Equal(t, "shield-check", def.Metadata.Icon)
+	assert.Equal(t, "shield-check-mark", def.Metadata.Icon)
 	assert.Equal(t, "https://cert-manager.io", def.Metadata.URLs.Homepage)
 	assert.NotEmpty(t, def.Permissions.Capabilities)
 	assert.NotEmpty(t, def.Permissions.RBAC)

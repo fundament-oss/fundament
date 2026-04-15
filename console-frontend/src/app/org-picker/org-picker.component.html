@@ -33,7 +33,10 @@
             @for (invitation of pendingInvitationList(); track invitation.id) {
               <div class="flex items-center justify-between rounded-md px-3 py-2.5">
                 <div class="flex min-w-0 items-center">
-                  <ndd-icon name="apartment-building" class="mr-3 h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500" />
+                  <ndd-icon
+                    name="apartment-building"
+                    class="mr-3 h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500"
+                  />
                   <span class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{
                     invitation.organizationAlias
                   }}</span>

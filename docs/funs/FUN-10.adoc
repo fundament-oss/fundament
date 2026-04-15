@@ -78,7 +78,7 @@ Preferably, do not capitalize every word in titles, headers, and buttons. Capita
 
 === Icon set
 
-The primary icon set is https://tabler.io/icons[Tabler Icons]. If this icon set does not offer a suitable icon for a particular use case, another icon set may be used, provided the chosen icon matches the same visual style and stroke width as Tabler icons.
+The primary icon set is the https://minbzk.github.io/storybook/?path=/story/components-content-icon--icon-gallery[NDD icon gallery] from the `@minbzk/storybook` library. Icon names are referenced using their kebab-case identifiers (e.g. `info-circle`, `check-mark`).
 
 === Icon style
 

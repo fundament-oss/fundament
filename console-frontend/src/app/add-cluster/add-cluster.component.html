@@ -21,7 +21,9 @@
       placeholder="E.g. my-production-cluster"
       (blur)="onClusterNameBlur()"
       (input)="onClusterNameInput($event)"
-      [invalid]="(clusterName?.invalid && (clusterName?.dirty || formSubmitted())) || clusterNameExists()"
+      [invalid]="
+        (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) || clusterNameExists()
+      "
     ></ndd-text-field>
     @if (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) {
       <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getClusterNameError() }}</p>
@@ -48,7 +50,10 @@
 
   <!-- Kubernetes Version -->
   <ndd-form-field label="Kubernetes version">
-    <ndd-radio-button-group name="kubernetesVersion" (change)="onRadioChange('kubernetesVersion', $event)">
+    <ndd-radio-button-group
+      name="kubernetesVersion"
+      (change)="onRadioChange('kubernetesVersion', $event)"
+    >
       @for (kv of kubernetesVersions; track kv) {
         <ndd-radio-button-field
           [value]="kv"
