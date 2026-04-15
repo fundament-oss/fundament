@@ -29,11 +29,11 @@
             Your API token
           </label>
           <div class="flex gap-2">
-            <input
+            <ndd-text-field
               id="apiToken"
-              type="text"
               [value]="createdToken()"
               readonly
+              size="sm"
               class="block flex-1 rounded-md border border-green-300 bg-white px-3 py-2 font-mono text-sm dark:border-green-700 dark:bg-gray-900 dark:text-white"
             />
             <ndd-button
@@ -76,17 +76,17 @@
             >
               Name
             </label>
-            <input
+            <ndd-text-field
               #nameInput
               #nameField="ngModel"
               id="name"
               class="validate-on-touch"
-              type="text"
               [(ngModel)]="newKeyName"
               placeholder="E.g. CLI key"
               (keyup.enter)="createApiKey()"
               (keyup.escape)="cancelCreating()"
               required
+              [invalid]="!!getNameError(nameField)"
             />
             @if (getNameError(nameField)) {
               <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
@@ -101,9 +101,8 @@
             >
               Expires after (duration)
             </label>
-            <input
+            <ndd-text-field
               id="expiresIn"
-              type="text"
               [(ngModel)]="newKeyExpiresIn"
               placeholder="Leave blank if you don't want the key to expire."
               (keyup.enter)="createApiKey()"

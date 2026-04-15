@@ -30,12 +30,13 @@
             >
               Node pool name
             </label>
-            <input
+            <ndd-text-field
               [id]="'nodePoolName-' + $index"
               formControlName="name"
-              type="text"
               #nodePoolNameInput
+              size="sm"
               placeholder="E.g. my-pool-name"
+              [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
             />
             @if (nameControl?.invalid && nameControl?.dirty) {
               <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">

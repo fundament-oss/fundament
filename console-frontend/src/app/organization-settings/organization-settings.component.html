@@ -56,9 +56,9 @@
           </div>
           @if (isEditing()) {
             <div class="flex gap-2">
-              <input
+              <ndd-text-field
                 #nameInput
-                type="text"
+                size="sm"
                 [ngModel]="editingName()"
                 (ngModelChange)="editingName.set($event)"
                 class="block flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"

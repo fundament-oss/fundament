@@ -203,9 +203,9 @@
             </span>
             @if (namespaceMode() === 'custom') {
               <div class="mt-2 ml-6">
-                <input
+                <ndd-text-field
                   id="rb-custom-namespace"
-                  type="text"
+                  size="sm"
                   placeholder="E.g. staging-* or my-namespace"
                   [ngModel]="modalCustomNamespace()"
                   (ngModelChange)="modalCustomNamespace.set($event)"
