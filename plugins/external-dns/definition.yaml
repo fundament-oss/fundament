@@ -1,21 +1,21 @@
 apiVersion: fundament.io/v1
 kind: PluginDefinition
+metadata:
+  name: external-dns
+  displayName: External DNS
+  version: v1.16.1
+  description: Automatic DNS record management for Kubernetes resources using ExternalDNS.
+  author: Fundament
+  license: Apache-2.0
+  icon: world
+  urls:
+    homepage: https://kubernetes-sigs.github.io/external-dns/
+    repository: https://github.com/kubernetes-sigs/external-dns
+    documentation: https://kubernetes-sigs.github.io/external-dns/latest/
+  tags:
+    - dns
+    - networking
 spec:
-  metadata:
-    name: external-dns
-    displayName: External DNS
-    version: v1.16.1
-    description: Automatic DNS record management for Kubernetes resources using ExternalDNS.
-    author: Fundament
-    license: Apache-2.0
-    icon: world
-    urls:
-      homepage: https://kubernetes-sigs.github.io/external-dns/
-      repository: https://github.com/kubernetes-sigs/external-dns
-      documentation: https://kubernetes-sigs.github.io/external-dns/latest/
-    tags:
-      - dns
-      - networking
   permissions:
     capabilities:
       - internet_access

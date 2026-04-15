@@ -20,10 +20,10 @@ func TestLoadDefinition(t *testing.T) {
 	assert.Equal(t, "Apache-2.0", def.Metadata.License)
 	assert.Equal(t, "shield-check", def.Metadata.Icon)
 	assert.Equal(t, "https://cert-manager.io", def.Metadata.URLs.Homepage)
-	assert.NotEmpty(t, def.Permissions.Capabilities)
-	assert.NotEmpty(t, def.Permissions.RBAC)
-	assert.Len(t, def.Menu.Organization, 1)
-	assert.Len(t, def.Menu.Project, 2)
+	assert.NotEmpty(t, def.Spec.Permissions.Capabilities)
+	assert.NotEmpty(t, def.Spec.Permissions.RBAC)
+	assert.Len(t, def.Spec.Menu.Organization, 1)
+	assert.Len(t, def.Spec.Menu.Project, 2)
 }
 
 func TestNewCertManagerPlugin(t *testing.T) {

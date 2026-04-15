@@ -1,15 +1,24 @@
 package pluginruntime
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
 )
 
-// PluginDefinition contains the static metadata for a plugin.
+// PluginDefinition is the top-level plugin manifest, modeled after a
+// Kubernetes resource with apiVersion, kind, metadata, and spec.
 type PluginDefinition struct {
-	Metadata         PluginMetadata              `yaml:"metadata"`
+	APIVersion string         `yaml:"apiVersion"`
+	Kind       string         `yaml:"kind"`
+	Metadata   PluginMetadata `yaml:"metadata"`
+	Spec       PluginSpec     `yaml:"spec"`
+}
+
+// PluginSpec contains the behavioral configuration of a plugin.
+type PluginSpec struct {
 	Permissions      Permissions                 `yaml:"permissions"`
 	Menu             MenuDefinition              `yaml:"menu"`
 	CustomComponents map[string]ComponentMapping `yaml:"customComponents"`
@@ -87,19 +96,13 @@ type FormGroup struct {
 type StatusMapping struct {
 	JSONPath string                 `yaml:"jsonPath"`
 	Values   map[string]StatusValue `yaml:"values"`
+	Default  *StatusValue           `yaml:"default"`
 }
 
 // StatusValue describes how a status value is displayed.
 type StatusValue struct {
 	Badge string `yaml:"badge"`
 	Label string `yaml:"label"`
-}
-
-// yamlManifest is the top-level YAML structure including apiVersion and kind.
-type yamlManifest struct {
-	APIVersion string           `yaml:"apiVersion"`
-	Kind       string           `yaml:"kind"`
-	Spec       PluginDefinition `yaml:"spec"`
 }
 
 // LoadDefinition reads a YAML plugin manifest from path and returns
@@ -111,19 +114,24 @@ func LoadDefinition(path string) (PluginDefinition, error) {
 		return PluginDefinition{}, fmt.Errorf("read plugin definition: %w", err)
 	}
 
-	var manifest yamlManifest
-	if err := yaml.Unmarshal(data, &manifest); err != nil {
+	var def PluginDefinition
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&def); err != nil {
 		return PluginDefinition{}, fmt.Errorf("parse plugin definition: %w", err)
 	}
 
-	if manifest.APIVersion != "fundament.io/v1" {
-		return PluginDefinition{}, fmt.Errorf("unsupported apiVersion %q, expected \"fundament.io/v1\"", manifest.APIVersion)
+	if def.APIVersion != "fundament.io/v1" {
+		return PluginDefinition{}, fmt.Errorf("unsupported apiVersion %q, expected \"fundament.io/v1\"", def.APIVersion)
 	}
-	if manifest.Kind != "PluginDefinition" {
-		return PluginDefinition{}, fmt.Errorf("unsupported kind %q, expected \"PluginDefinition\"", manifest.Kind)
+	if def.Kind != "PluginDefinition" {
+		return PluginDefinition{}, fmt.Errorf("unsupported kind %q, expected \"PluginDefinition\"", def.Kind)
+	}
+	if def.Metadata.Name == "" {
+		return PluginDefinition{}, fmt.Errorf("plugin definition is missing required field metadata.name")
 	}
 
-	return manifest.Spec, nil
+	return def, nil
 }
 
 // PluginPhase represents the current lifecycle phase of a plugin.
