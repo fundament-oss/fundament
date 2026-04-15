@@ -108,7 +108,10 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
     this.clusterNameExists.set(exists);
   }
 
-  onClusterNameInput() {
+  onClusterNameInput(event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.clusterForm.get('clusterName')?.setValue(value);
+    this.clusterForm.get('clusterName')?.markAsDirty();
     this.clusterNameExists.set(false);
   }
 
@@ -143,6 +146,11 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
         (firstInvalidControl as HTMLElement).focus();
       }
     }, 0);
+  }
+
+  onRadioChange(controlName: string, event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.clusterForm.get(controlName)?.setValue(value);
   }
 
   onCancel() {

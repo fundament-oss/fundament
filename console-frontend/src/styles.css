@@ -1,7 +1,6 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'tailwindcss';
-@plugin '@tailwindcss/forms';
 @import '@minbzk/storybook/styles';
 
 :root {
@@ -171,7 +170,7 @@ input.validate-on-touch.ng-invalid.ng-touched {
 
 /* Form styles */
 
-input:disabled,
+/* input:disabled,
 select:disabled,
 button:disabled {
   @apply cursor-not-allowed opacity-50;
@@ -193,7 +192,7 @@ input[type='radio'] {
 
 select {
   @apply rounded-md border border-gray-300 text-sm ring-indigo-500 focus:border-indigo-500 focus:ring-1 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950;
-}
+} */
 
 .link {
   @apply text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300;

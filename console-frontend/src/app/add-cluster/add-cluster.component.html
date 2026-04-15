@@ -13,19 +13,16 @@
     <label for="clusterName" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
       Cluster name
     </label>
-    <input
+    <ndd-text-field
       #clusterNameInput
       id="clusterName"
-      formControlName="clusterName"
-      type="text"
+      [value]="clusterName?.value"
+      size="sm"
       placeholder="E.g. my-production-cluster"
       (blur)="onClusterNameBlur()"
-      (input)="onClusterNameInput()"
-      class="validate-on-touch"
-      [class.ng-invalid]="
-        (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) || clusterNameExists()
-      "
-    />
+      (input)="onClusterNameInput($event)"
+      [invalid]="(clusterName?.invalid && (clusterName?.dirty || formSubmitted())) || clusterNameExists()"
+    ></ndd-text-field>
     @if (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) {
       <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getClusterNameError() }}</p>
     }
@@ -37,31 +34,30 @@
   </div>
 
   <!-- Region -->
-  <div>
-    <label for="region" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-      Region
-    </label>
-    <select id="region" formControlName="region">
+  <ndd-form-field label="Region">
+    <ndd-radio-button-group name="region" (change)="onRadioChange('region', $event)">
       @for (r of regions; track r.value) {
-        <option [value]="r.value">{{ r.label }}</option>
+        <ndd-radio-button-field
+          [value]="r.value"
+          [label]="r.label"
+          [checked]="clusterForm.get('region')?.value === r.value"
+        ></ndd-radio-button-field>
       }
-    </select>
-  </div>
+    </ndd-radio-button-group>
+  </ndd-form-field>
 
   <!-- Kubernetes Version -->
-  <div>
-    <label
-      for="kubernetesVersion"
-      class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-    >
-      Kubernetes version
-    </label>
-    <select id="kubernetesVersion" formControlName="kubernetesVersion">
+  <ndd-form-field label="Kubernetes version">
+    <ndd-radio-button-group name="kubernetesVersion" (change)="onRadioChange('kubernetesVersion', $event)">
       @for (kv of kubernetesVersions; track kv) {
-        <option [value]="kv">{{ kv }}</option>
+        <ndd-radio-button-field
+          [value]="kv"
+          [label]="kv"
+          [checked]="clusterForm.get('kubernetesVersion')?.value === kv"
+        ></ndd-radio-button-field>
       }
-    </select>
-  </div>
+    </ndd-radio-button-group>
+  </ndd-form-field>
 
   <!-- Form Actions -->
   <div class="flex items-center space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
