@@ -16,6 +16,7 @@ import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationDataService } from '../organization-data.service';
+import { withIdempotency } from '../../connect/idempotency';
 import { CLUSTER, PLUGIN } from '../../connect/tokens';
 import {
   CreateClusterRequestSchema,
@@ -128,12 +129,15 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
 
   private pollInterval?: ReturnType<typeof setInterval>;
 
+  private idempotencyAbortController?: AbortController;
+
   constructor() {
     this.titleService.setTitle('Cluster summary');
   }
 
   ngOnDestroy() {
     this.stopPolling();
+    this.idempotencyAbortController?.abort();
   }
 
   async ngOnInit() {
@@ -261,7 +265,13 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
         kubernetesVersion: this.clusterConfig.kubernetesVersion,
       });
 
-      const response = await firstValueFrom(this.client.createCluster(request));
+      this.idempotencyAbortController?.abort();
+      this.idempotencyAbortController = new AbortController();
+
+      const response = await withIdempotency(
+        (opts) => this.client.createCluster(request, opts),
+        { signal: this.idempotencyAbortController.signal },
+      );
       this.clusterId.set(response.clusterId);
       this.updateItem('cluster', {
         requestStatus: 'succeeded',
