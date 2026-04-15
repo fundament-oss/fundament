@@ -130,10 +130,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		KubernetesVersion: plan.KubernetesVersion.ValueString(),
 	}.Build())
 
-	// Retry on permission_denied: OpenFGA needs time to sync after login.
-	createResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.CreateClusterResponse], error) {
-		return r.client.ClusterService.CreateCluster(ctx, createReq)
-	})
+	createResp, err := createIdempotent(ctx, r.client.ClusterService.CreateCluster, createReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Cluster",
@@ -151,9 +148,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		ClusterId: createResp.Msg.GetClusterId(),
 	}.Build())
 
-	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetClusterResponse], error) {
-		return r.client.ClusterService.GetCluster(ctx, getReq)
-	})
+	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Created Cluster",
@@ -299,9 +294,7 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		ClusterId: state.ID.ValueString(),
 	}.Build())
 
-	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetClusterResponse], error) {
-		return r.client.ClusterService.GetCluster(ctx, getReq)
-	})
+	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeNotFound:
