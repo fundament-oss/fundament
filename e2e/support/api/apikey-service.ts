@@ -4,7 +4,13 @@
  */
 
 import { type Client, ConnectError } from '@connectrpc/connect';
-import { createServiceClient, ConnectRpcError } from './client.ts';
+import {
+  createServiceClient,
+  createWithIdempotency,
+  ConnectRpcError,
+  IDEMPOTENCY_KEY_HEADER,
+  IDEMPOTENCY_STATUS_HEADER,
+} from './client.ts';
 import {
   APIKeyService as APIKeyServiceDesc,
   type APIKey,
@@ -24,14 +30,22 @@ export class APIKeyService {
 
   async createAPIKey(request: { name: string; expiresIn?: string }): Promise<CreateAPIKeyResponse> {
     try {
-      return await this.client.createAPIKey({
-        name: request.name,
-        expiresIn: request.expiresIn ? request.expiresIn : undefined,
+      return await createWithIdempotency(async (idempotencyKey) => {
+        let status = '';
+        const response = await this.client.createAPIKey(
+          { name: request.name, expiresIn: request.expiresIn ?? undefined },
+          {
+            headers: { [IDEMPOTENCY_KEY_HEADER]: idempotencyKey },
+            onHeader(headers) { status = headers.get(IDEMPOTENCY_STATUS_HEADER) ?? ''; },
+          }
+        );
+        return { response, status };
       });
     } catch (err) {
       if (err instanceof ConnectError) {
         throw ConnectRpcError.fromConnectError(err);
       }
+
       throw err;
     }
   }
