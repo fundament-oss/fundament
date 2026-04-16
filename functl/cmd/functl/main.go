@@ -39,6 +39,7 @@ func main() {
 	runCtx := &cli.Context{
 		Debug:  root.Debug,
 		Output: root.Output,
+		Org:    root.OrgOverride,
 		Logger: logger,
 		Config: cfg,
 	}
