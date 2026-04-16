@@ -6,6 +6,7 @@ import { tablerChevronRight, tablerCheck } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
@@ -13,10 +14,7 @@ import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import { GetPluginDetailRequestSchema, type PluginDetail } from '../../generated/v1/plugin_pb';
 import {
   ListClustersRequestSchema,
-  ListInstallsRequestSchema,
-  AddInstallRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
-  type Install,
 } from '../../generated/v1/cluster_pb';
 import { ToastService } from '../toast.service';
 
@@ -25,8 +23,10 @@ interface ClusterWithState extends ClusterSummary {
   installed: boolean;
 }
 
-// Extended install type with cluster ID
-interface InstallWithCluster extends Install {
+// TODO: plugin installs are moving to the kube-api-proxy. Re-wire once available.
+interface InstallWithCluster {
+  id: string;
+  pluginId: string;
   clusterId: string;
 }
 
@@ -55,6 +55,8 @@ export default class PluginDetailsComponent implements OnInit {
   private clusterClient = inject(CLUSTER);
 
   private toastService = inject(ToastService);
+
+  private idempotency = createIdempotencyRef();
 
   pluginId = signal<string>('');
 
@@ -100,33 +102,14 @@ export default class PluginDetailsComponent implements OnInit {
       this.plugin.set(pluginResponse.plugin);
       this.titleService.setTitle(`${pluginResponse.plugin.name} — Plugins`);
 
-      // Fetch installs for all clusters
-      const installsPromises = clustersResponse.clusters.map((cluster) =>
-        firstValueFrom(
-          this.clusterClient.listInstalls(
-            create(ListInstallsRequestSchema, { clusterId: cluster.id }),
-          ),
-        ).then((response) => ({
-          clusterId: cluster.id,
-          installs: response.installs,
-        })),
-      );
+      // TODO: fetch installs via kube-api-proxy once that flow is implemented.
+      this.installs.set([]);
 
-      const installsResponses = await Promise.all(installsPromises);
-
-      // Flatten all installs and augment with cluster ID
-      const allInstalls: InstallWithCluster[] = installsResponses.flatMap(
-        ({ clusterId, installs }) => installs.map((install) => ({ ...install, clusterId })),
-      );
-      this.installs.set(allInstalls);
-
-      // Map clusters with install state
+      // Map clusters with install state (all false until kube-api-proxy is wired up)
       this.clusters.set(
         clustersResponse.clusters.map((cluster) => ({
           ...cluster,
-          installed: allInstalls.some(
-            (install) => install.clusterId === cluster.id && install.pluginId === id,
-          ),
+          installed: false,
         })),
       );
 
@@ -175,30 +158,10 @@ export default class PluginDetailsComponent implements OnInit {
       return;
     }
 
-    try {
-      // Call the API to install the plugin
-      const request = create(AddInstallRequestSchema, {
-        clusterId,
-        pluginId: this.pluginId(),
-      });
-
-      await firstValueFrom(this.clusterClient.addInstall(request));
-
-      // Update local state
-      this.clusters.update((clusters) =>
-        clusters.map((c) => (c.id === clusterId ? { ...c, installed: true } : c)),
-      );
-
-      this.toastService.success(
-        `Plugin ${this.plugin()?.name} installed on cluster ${cluster.name}`,
-      );
-    } catch (error) {
-      this.toastService.error(
-        error instanceof Error
-          ? `Failed to install plugin: ${error.message}`
-          : 'Failed to install plugin',
-      );
-    }
+    // TODO: install plugin via kube-api-proxy once that flow is implemented.
+    this.toastService.error(
+      `Installing ${this.plugin()?.name} on ${cluster.name} is temporarily unavailable`,
+    );
   }
 
   isInstalled(clusterId: string): boolean {

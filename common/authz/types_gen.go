@@ -15,7 +15,6 @@ const (
 	ObjectTypeNodePool      ObjectType = "node_pool"
 	ObjectTypeNamespace     ObjectType = "namespace"
 	ObjectTypeApiKey        ObjectType = "api_key"
-	ObjectTypeInstall       ObjectType = "install"
 )
 
 // ActionName identifies the operation being performed.
@@ -45,8 +44,6 @@ const (
 	ActionOwner              ActionName = "owner"
 	ActionCanCreateNodePool  ActionName = "can_create_node_pool"
 	ActionCanListNodePools   ActionName = "can_list_node_pools"
-	ActionCanCreateInstall   ActionName = "can_create_install"
-	ActionCanListInstalls    ActionName = "can_list_installs"
 	ActionCanCreateProject   ActionName = "can_create_project"
 	ActionCanListProjects    ActionName = "can_list_projects"
 	ActionCreator            ActionName = "creator"
@@ -190,14 +187,6 @@ func ApiKey(id uuid.UUID) Object {
 	}
 }
 
-// Install creates an Object of type install.
-func Install(id uuid.UUID) Object {
-	return Object{
-		Type: ObjectTypeInstall,
-		ID:   id.String(),
-	}
-}
-
 // Action constructors
 
 // Admin creates an Action for the admin relation.
@@ -308,16 +297,6 @@ func CanCreateNodePool() Action {
 // CanListNodePools creates an Action for the can_list_node_pools relation.
 func CanListNodePools() Action {
 	return Action{Name: ActionCanListNodePools}
-}
-
-// CanCreateInstall creates an Action for the can_create_install relation.
-func CanCreateInstall() Action {
-	return Action{Name: ActionCanCreateInstall}
-}
-
-// CanListInstalls creates an Action for the can_list_installs relation.
-func CanListInstalls() Action {
-	return Action{Name: ActionCanListInstalls}
 }
 
 // CanCreateProject creates an Action for the can_create_project relation.

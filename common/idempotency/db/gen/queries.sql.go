@@ -22,8 +22,7 @@ SET
 	node_pool_id = $7,
 	namespace_id = $8,
 	api_key_id = $9,
-	install_id = $10,
-	organization_user_id = $11
+	organization_user_id = $10
 WHERE tenant.idempotency_keys.idempotency_key = $1
 	AND tenant.idempotency_keys.user_id = $2
 	AND tenant.idempotency_keys.response_bytes IS NULL
@@ -39,7 +38,6 @@ type IdempotencyKeyCompleteParams struct {
 	NodePoolID         pgtype.UUID
 	NamespaceID        pgtype.UUID
 	ApiKeyID           pgtype.UUID
-	InstallID          pgtype.UUID
 	OrganizationUserID pgtype.UUID
 }
 
@@ -54,7 +52,6 @@ func (q *Queries) IdempotencyKeyComplete(ctx context.Context, arg IdempotencyKey
 		arg.NodePoolID,
 		arg.NamespaceID,
 		arg.ApiKeyID,
-		arg.InstallID,
 		arg.OrganizationUserID,
 	)
 	if err != nil {
@@ -80,7 +77,7 @@ SELECT
 	tenant.idempotency_keys.procedure,
 	tenant.idempotency_keys.request_hash,
 	tenant.idempotency_keys.response_bytes,
-	COALESCE(tenant.idempotency_keys.project_id, tenant.idempotency_keys.project_member_id, tenant.idempotency_keys.cluster_id, tenant.idempotency_keys.node_pool_id, tenant.idempotency_keys.namespace_id, tenant.idempotency_keys.api_key_id, tenant.idempotency_keys.install_id, tenant.idempotency_keys.organization_user_id) AS resource_id
+	COALESCE(tenant.idempotency_keys.project_id, tenant.idempotency_keys.project_member_id, tenant.idempotency_keys.cluster_id, tenant.idempotency_keys.node_pool_id, tenant.idempotency_keys.namespace_id, tenant.idempotency_keys.api_key_id, tenant.idempotency_keys.organization_user_id) AS resource_id
 FROM tenant.idempotency_keys
 WHERE tenant.idempotency_keys.idempotency_key = $1
 	AND tenant.idempotency_keys.user_id = $2

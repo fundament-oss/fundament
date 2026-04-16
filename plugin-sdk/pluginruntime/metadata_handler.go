@@ -32,19 +32,17 @@ func NewMetadataHandler(statusFn func() PluginStatus, defFn func() PluginDefinit
 
 func (h *metadataHandler) GetStatus(_ context.Context, _ *connect.Request[pb.GetStatusRequest]) (*connect.Response[pb.GetStatusResponse], error) {
 	status := h.getStatus()
-	def := h.getDefinition()
 	return connect.NewResponse(&pb.GetStatusResponse{
 		Phase:   ptr(string(status.Phase)),
 		Message: ptr(status.Message),
-		Version: ptr(def.Metadata.Version),
 	}), nil
 }
 
 func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb.GetDefinitionRequest]) (*connect.Response[pb.GetDefinitionResponse], error) {
 	def := h.getDefinition()
 
-	orgMenu := make([]*pb.MenuEntry, len(def.Menu.Organization))
-	for i, entry := range def.Menu.Organization {
+	orgMenu := make([]*pb.MenuEntry, len(def.Spec.Menu.Organization))
+	for i, entry := range def.Spec.Menu.Organization {
 		orgMenu[i] = &pb.MenuEntry{
 			Crd:    ptr(entry.CRD),
 			List:   ptr(entry.List),
@@ -54,8 +52,8 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 		}
 	}
 
-	projectMenu := make([]*pb.MenuEntry, len(def.Menu.Project))
-	for i, entry := range def.Menu.Project {
+	projectMenu := make([]*pb.MenuEntry, len(def.Spec.Menu.Project))
+	for i, entry := range def.Spec.Menu.Project {
 		projectMenu[i] = &pb.MenuEntry{
 			Crd:    ptr(entry.CRD),
 			List:   ptr(entry.List),
@@ -65,8 +63,8 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 		}
 	}
 
-	rbacRules := make([]*pb.PolicyRule, len(def.Permissions.RBAC))
-	for i, rule := range def.Permissions.RBAC {
+	rbacRules := make([]*pb.PolicyRule, len(def.Spec.Permissions.RBAC))
+	for i, rule := range def.Spec.Permissions.RBAC {
 		rbacRules[i] = &pb.PolicyRule{
 			ApiGroups: rule.APIGroups,
 			Resources: rule.Resources,
@@ -74,16 +72,16 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 		}
 	}
 
-	customComponents := make(map[string]*pb.ComponentMapping, len(def.CustomComponents))
-	for k, v := range def.CustomComponents {
+	customComponents := make(map[string]*pb.ComponentMapping, len(def.Spec.CustomComponents))
+	for k, v := range def.Spec.CustomComponents {
 		customComponents[k] = &pb.ComponentMapping{
 			List:   ptr(v.List),
 			Detail: ptr(v.Detail),
 		}
 	}
 
-	uiHints := make(map[string]*pb.UIHint, len(def.UIHints))
-	for k, v := range def.UIHints {
+	uiHints := make(map[string]*pb.UIHint, len(def.Spec.UIHints))
+	for k, v := range def.Spec.UIHints {
 		formGroups := make([]*pb.FormGroup, len(v.FormGroups))
 		for i, fg := range v.FormGroups {
 			formGroups[i] = &pb.FormGroup{
@@ -124,7 +122,7 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 		},
 		Tags: def.Metadata.Tags,
 		Permissions: &pb.Permissions{
-			Capabilities: def.Permissions.Capabilities,
+			Capabilities: def.Spec.Permissions.Capabilities,
 			Rbac:         rbacRules,
 		},
 		Menu: &pb.MenuDefinition{
@@ -133,7 +131,7 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 		},
 		CustomComponents: customComponents,
 		UiHints:          uiHints,
-		Crds:             def.CRDs,
+		Crds:             def.Spec.CRDs,
 	}), nil
 }
 

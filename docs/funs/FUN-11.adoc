@@ -27,30 +27,29 @@ Fundament takes a minimalistic approach when it comes to Clusters, which are lig
 
 == Plugin Definition
 
-A Plugin Definition is a YAML manifest that declares the outline of a plugin. It uses a Kubernetes-style structure with `apiVersion` and `kind`:
+A Plugin Definition is a YAML manifest that declares the outline of a plugin. It uses a Kubernetes-style structure with `apiVersion`, `kind`, top-level `metadata`, and `spec`:
 
 [source,yaml]
 ---
 apiVersion: fundament.io/v1
 kind: PluginDefinition
+metadata:
+  name: cert-manager
+  displayName: Cert Manager
+  version: v1.17.2
+  description: Automated TLS certificate management for Kubernetes using cert-manager.
+  author: Fundament
+  license: Apache-2.0
+  icon: shield-check
+  urls:
+    homepage: https://cert-manager.io
+    repository: https://github.com/cert-manager/cert-manager
+    documentation: https://cert-manager.io/docs
+  tags:
+    - certificates
+    - tls
+    - security
 spec:
-  metadata:
-    name: cert-manager
-    displayName: Cert Manager
-    version: v1.17.2
-    description: Automated TLS certificate management for Kubernetes using cert-manager.
-    author: Fundament
-    license: Apache-2.0
-    icon: shield-check
-    urls:
-      homepage: https://cert-manager.io
-      repository: https://github.com/cert-manager/cert-manager
-      documentation: https://cert-manager.io/docs
-    tags:
-      - certificates
-      - tls
-      - security
-
   permissions:
     capabilities:
       - internet_access
@@ -107,7 +106,8 @@ The definition is validated by `plugin-sdk/pluginruntime/LoadDefinition()` which
 
 === Definition structure
 
-* **metadata**: Identifying information (name, displayName, version, description, author, license, icon, urls, tags).
+* **metadata** (top-level): Identifying information (name, displayName, version, description, author, license, icon, urls, tags).
+* **spec**: Behavioral configuration of the plugin, containing the fields below.
 * **permissions**: What the plugin needs from the platform.
 ** `capabilities`: Simple string list (e.g. `internet_access`).
 ** `rbac`: Kubernetes PolicyRule structures declaring the API groups, resources, and verbs the plugin requires.
@@ -189,12 +189,11 @@ metadata:
 spec:
   image: ghcr.io/fundament-plugins/cert-manager:v1.17.2
   pluginName: cert-manager
-  version: v1.17.2
   clusterRoles: []       # optional: ClusterRoles to bind
   config: {}             # optional: key-value config (injected as FUNP_* env vars)
 ---
 
-Status fields: `phase`, `message`, `ready`, `observedGeneration`, `pluginVersion`.
+Status fields: `phase`, `message`, `ready`, `observedGeneration`.
 
 === Installation lifecycle
 

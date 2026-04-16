@@ -64,18 +64,6 @@ func buildProcedures(queries *db.Queries) map[string]idempotency.Procedure {
 				return &organizationv1.CreateNodePoolResponse{}
 			}),
 		},
-		"/organization.v1.ClusterService/AddInstall": &idempotency.ProcedureFunc{
-			Type: idempotency.ResourceInstall,
-			ResolveStatusFn: outboxResolver(func(ctx context.Context, id pgtype.UUID) (string, error) {
-				return queries.OutboxStatusByInstallID(ctx, db.OutboxStatusByInstallIDParams{InstallID: id})
-			}),
-			ExtractIDFn: extractID(func(resp any) string {
-				return resp.(*organizationv1.AddInstallResponse).GetInstallId()
-			}),
-			DeserializeFn: deserializeProto(func() *organizationv1.AddInstallResponse {
-				return &organizationv1.AddInstallResponse{}
-			}),
-		},
 		"/organization.v1.NamespaceService/CreateNamespace": &idempotency.ProcedureFunc{
 			Type: idempotency.ResourceNamespace,
 			ResolveStatusFn: outboxResolver(func(ctx context.Context, id pgtype.UUID) (string, error) {

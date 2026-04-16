@@ -43,39 +43,41 @@ func (p *testPlugin) Definition() pluginruntime.PluginDefinition {
 			},
 			Tags: []string{"test", "example"},
 		},
-		Permissions: pluginruntime.Permissions{
-			Capabilities: []string{"internet_access", "cluster_scoped_resources"},
-			RBAC: []pluginruntime.PolicyRule{
-				{
-					APIGroups: []string{""},
-					Resources: []string{"pods", "services"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-			},
-		},
-		Menu: pluginruntime.MenuDefinition{
-			Organization: []pluginruntime.MenuEntry{
-				{CRD: "TestResource", List: true, Detail: true, Create: true, Icon: "puzzle"},
-			},
-		},
-		CustomComponents: map[string]pluginruntime.ComponentMapping{
-			"TestResource": {List: "TestResourceList", Detail: "TestResourceDetail"},
-		},
-		UIHints: map[string]pluginruntime.UIHint{
-			"TestResource": {
-				FormGroups: []pluginruntime.FormGroup{
-					{Name: "General", Fields: []string{"name", "namespace"}},
-				},
-				StatusMapping: pluginruntime.StatusMapping{
-					JSONPath: ".status.phase",
-					Values: map[string]pluginruntime.StatusValue{
-						"Running": {Badge: "success", Label: "Running"},
+		Spec: pluginruntime.PluginSpec{
+			Permissions: pluginruntime.Permissions{
+				Capabilities: []string{"internet_access", "cluster_scoped_resources"},
+				RBAC: []pluginruntime.PolicyRule{
+					{
+						APIGroups: []string{""},
+						Resources: []string{"pods", "services"},
+						Verbs:     []string{"get", "list", "watch"},
 					},
 				},
 			},
-		},
-		CRDs: []string{
-			"apiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\nmetadata:\n  name: testresources.test.example.com",
+			Menu: pluginruntime.MenuDefinition{
+				Organization: []pluginruntime.MenuEntry{
+					{CRD: "TestResource", List: true, Detail: true, Create: true, Icon: "puzzle"},
+				},
+			},
+			CustomComponents: map[string]pluginruntime.ComponentMapping{
+				"TestResource": {List: "TestResourceList", Detail: "TestResourceDetail"},
+			},
+			UIHints: map[string]pluginruntime.UIHint{
+				"TestResource": {
+					FormGroups: []pluginruntime.FormGroup{
+						{Name: "General", Fields: []string{"name", "namespace"}},
+					},
+					StatusMapping: pluginruntime.StatusMapping{
+						JSONPath: ".status.phase",
+						Values: map[string]pluginruntime.StatusValue{
+							"Running": {Badge: "success", Label: "Running"},
+						},
+					},
+				},
+			},
+			CRDs: []string{
+				"apiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\nmetadata:\n  name: testresources.test.example.com",
+			},
 		},
 	}
 }
@@ -117,7 +119,6 @@ func TestRunInProcess(t *testing.T) {
 	statusResp, err := ip.MetadataClient.GetStatus(context.Background(), connect.NewRequest(&pb.GetStatusRequest{}))
 	require.NoError(t, err)
 	assert.Equal(t, string(pluginruntime.PhaseRunning), statusResp.Msg.GetPhase())
-	assert.Equal(t, "v0.1.0", statusResp.Msg.GetVersion())
 
 	// Test GetDefinition
 	defResp, err := ip.MetadataClient.GetDefinition(context.Background(), connect.NewRequest(&pb.GetDefinitionRequest{}))

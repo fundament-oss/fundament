@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
+import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerPlus,
@@ -78,6 +79,8 @@ export default class ApiKeysComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private apiKeyClient = inject(APIKEY);
+
+  private idempotency = createIdempotencyRef();
 
   apiKeys = signal<APIKey[]>([]);
 
@@ -231,7 +234,10 @@ export default class ApiKeysComponent implements OnInit {
         expiresIn,
       });
 
-      const response = await firstValueFrom(this.apiKeyClient.createAPIKey(request));
+      const response = await withIdempotency(
+        (opts) => this.apiKeyClient.createAPIKey(request, opts),
+        { signal: this.idempotency.reset() },
+      );
 
       // Store the token to display to the user (only time it's shown)
       this.createdToken.set(response.token);

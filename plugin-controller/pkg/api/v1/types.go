@@ -33,7 +33,6 @@ type PluginInstallationSpec struct {
 	Image           string            `json:"image"`
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 	PluginName      string            `json:"pluginName"`
-	Version         string            `json:"version"`
 	ClusterRoles    []string          `json:"clusterRoles,omitempty"`
 	Config          map[string]string `json:"config,omitempty"`
 }
@@ -43,7 +42,6 @@ type PluginInstallationStatus struct {
 	Message            string      `json:"message,omitempty"`
 	Ready              bool        `json:"ready,omitempty"`
 	ObservedGeneration int64       `json:"observedGeneration,omitempty"`
-	PluginVersion      string      `json:"pluginVersion,omitempty"`
 }
 
 // PluginInstallationList is a list of PluginInstallation resources.

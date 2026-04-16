@@ -27,7 +27,6 @@ import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
   DeleteClusterRequestSchema,
-  ListInstallsRequestSchema,
   GetClusterActivityRequestSchema,
   NodePool,
   type ClusterEvent,
@@ -409,25 +408,16 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   // Load installed plugins for the cluster
-  async loadInstalledPlugins(clusterId: string): Promise<void> {
+  async loadInstalledPlugins(_clusterId: string): Promise<void> {
     try {
       this.isLoadingPlugins.set(true);
 
-      // Fetch installs and all available plugins in parallel
-      const [installsResponse, pluginsResponse] = await Promise.all([
-        firstValueFrom(this.client.listInstalls(create(ListInstallsRequestSchema, { clusterId }))),
-        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
-      ]);
+      // Plugin metadata comes from organization-api; installs will be resolved
+      // against the kube-api-proxy once that flow is implemented.
+      await firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {})));
 
-      // Get the IDs of installed plugins
-      const installedPluginIds = installsResponse.installs.map((install) => install.pluginId);
-
-      // Filter the plugins to only include installed ones
-      const installed = pluginsResponse.plugins.filter((plugin) =>
-        installedPluginIds.includes(plugin.id),
-      );
-
-      this.installedPlugins.set(installed);
+      // TODO: filter by installed plugin IDs from the kube-api-proxy.
+      this.installedPlugins.set([]);
     } catch (error) {
       this.toastService.error(
         error instanceof Error

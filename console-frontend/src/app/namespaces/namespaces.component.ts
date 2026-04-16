@@ -3,6 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlus, tablerTrash, tablerAlertTriangle } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
@@ -41,6 +42,8 @@ export default class NamespacesComponent implements OnInit {
   private fb = inject(FormBuilder);
 
   private namespaceClient = inject(NAMESPACE);
+
+  private idempotency = createIdempotencyRef();
 
   private toastService = inject(ToastService);
 
@@ -117,7 +120,10 @@ export default class NamespacesComponent implements OnInit {
         name: this.namespaceForm.value.name!,
       });
 
-      await firstValueFrom(this.namespaceClient.createNamespace(request));
+      await withIdempotency(
+        (opts) => this.namespaceClient.createNamespace(request, opts),
+        { signal: this.idempotency.reset() },
+      );
 
       this.showCreateNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
