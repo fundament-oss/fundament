@@ -9,9 +9,9 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
+import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
@@ -164,7 +164,8 @@ export default class OrganizationMembersComponent implements OnInit {
 
     try {
       await withIdempotency(
-        (opts) => this.inviteClient.inviteMember({ email, permission: this.invitePermission() }, opts),
+        (opts) =>
+          this.inviteClient.inviteMember({ email, permission: this.invitePermission() }, opts),
         { signal: this.idempotency.reset() },
       );
       this.closeModal();

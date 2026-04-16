@@ -111,10 +111,9 @@ export default class AddProjectComponent implements OnInit {
         name: this.projectForm.value.name!,
       });
 
-      const response = await withIdempotency(
-        (opts) => this.client.createProject(request, opts),
-        { signal: this.idempotency.reset() },
-      );
+      const response = await withIdempotency((opts) => this.client.createProject(request, opts), {
+        signal: this.idempotency.reset(),
+      });
 
       this.toastService.success(`Project '${this.projectForm.value.name}' created successfully`);
 
@@ -131,6 +130,12 @@ export default class AddProjectComponent implements OnInit {
     } finally {
       this.isSubmitting.set(false);
     }
+  }
+
+  onNameInput(event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.projectForm.get('name')?.setValue(value);
+    this.projectForm.get('name')?.markAsDirty();
   }
 
   getClusterError(): string {

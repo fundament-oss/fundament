@@ -7,10 +7,10 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import AutofocusDirective from '../autofocus.directive';
 import { ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import AutofocusDirective from '../autofocus.directive';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -93,7 +93,6 @@ export default class ProjectSettingsComponent implements OnInit {
     if (currentProject) {
       this.isEditing.set(true);
       this.editingName.set(currentProject.name);
-
     }
   }
 

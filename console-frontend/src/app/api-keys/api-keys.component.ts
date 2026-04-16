@@ -183,7 +183,6 @@ export default class ApiKeysComponent implements OnInit {
     this.newKeyName.set('');
     this.newKeyExpiresIn.set('');
     this.error.set(null);
-
   }
 
   cancelCreating() {

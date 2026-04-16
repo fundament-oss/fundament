@@ -1,4 +1,10 @@
-import { Component, inject, ViewChild, ChangeDetectionStrategy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import {
+  Component,
+  inject,
+  ViewChild,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import {

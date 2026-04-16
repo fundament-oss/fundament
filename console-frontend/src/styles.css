@@ -19,7 +19,9 @@
   /* --semantics-input-fields-border-color: theme('colors.gray.300'); */
 
   --semantics-focus-ring-outline: none;
-  --semantics-focus-ring-box-shadow: var(--semantics-surfaces-background-color) 0 0 0 2px, var(--primitives-color-accent-200) 0 0 0 4px;
+  --semantics-focus-ring-box-shadow:
+    var(--semantics-surfaces-background-color) 0 0 0 2px,
+    var(--primitives-color-accent-200) 0 0 0 4px;
 }
 
 /* Dark mode overrides for root variables */

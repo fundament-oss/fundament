@@ -9,8 +9,8 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
+import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import { PROJECT, MEMBER } from '../../connect/tokens';
 import ModalComponent from '../modal/modal.component';
@@ -193,11 +193,15 @@ export default class ProjectMembersComponent implements OnInit {
       } else {
         const userId = this.memberForm.value.userId!;
         await withIdempotency(
-          (opts) => this.projectClient.addProjectMember({
-            projectId: this.projectId(),
-            userId,
-            role,
-          }, opts),
+          (opts) =>
+            this.projectClient.addProjectMember(
+              {
+                projectId: this.projectId(),
+                userId,
+                role,
+              },
+              opts,
+            ),
           { signal: this.idempotency.reset() },
         );
       }

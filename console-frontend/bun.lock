@@ -15,7 +15,7 @@
         "@connectrpc/connect": "2.1.1",
         "@connectrpc/connect-web": "2.1.1",
         "@hey-api/client-fetch": "0.13.1",
-        "@minbzk/storybook": "^0.8.31",
+        "@minbzk/storybook": "^0.8.32",
         "chart.js": "4.5.1",
         "js-yaml": "4.1.1",
         "rxjs": "7.8.2",
@@ -387,7 +387,7 @@
 
     "@lmdb/lmdb-win32-x64": ["@lmdb/lmdb-win32-x64@3.4.4", "", { "os": "win32", "cpu": "x64" }, "sha512-KRzfocJzB/mgoTCqnMawuLSKheHRVTqWfSmouIgYpFs6Hx4zvZSvsZKSCEb5gHmICy7qsx9l06jk3MFTtiFVAQ=="],
 
-    "@minbzk/storybook": ["@minbzk/storybook@0.8.31", "https://npm.pkg.github.com/download/@minbzk/storybook/0.8.31/dc16fc5a06a4ce63c2db2240bce50edc2d47d6b7", { "dependencies": { "@floating-ui/dom": "^1.7.6", "@rijkshuisstijl-community/font": "^1.1.2", "lit": "^3.3.1" } }, "sha512-uYyGuPHqy/tyTVgYROPoz4v0MyMbF4m0VROI6+tRUrkWMG5l7GRETlre8K7ZGnarMJhuVxHGNG4p2ddRM6Haaw=="],
+    "@minbzk/storybook": ["@minbzk/storybook@0.8.32", "https://npm.pkg.github.com/download/@minbzk/storybook/0.8.32/9dd77ccb62052aa5f2533787a8dffd0fe29c2c84", { "dependencies": { "@floating-ui/dom": "^1.7.6", "@rijkshuisstijl-community/font": "^1.1.2", "lit": "^3.3.1" } }, "sha512-HG7+XylS2/BcTXVTZIJt96HrooxYjTenfcpoTgG6Ku+5KfYUvLSGLO+AnTGfNSPkbCaGXMG1V4x3kFxTsu6Iig=="],
 
     "@modelcontextprotocol/sdk": ["@modelcontextprotocol/sdk@1.25.2", "", { "dependencies": { "@hono/node-server": "^1.19.7", "ajv": "^8.17.1", "ajv-formats": "^3.0.1", "content-type": "^1.0.5", "cors": "^2.8.5", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.0", "express": "^5.0.1", "express-rate-limit": "^7.5.0", "jose": "^6.1.1", "json-schema-typed": "^8.0.2", "pkce-challenge": "^5.0.0", "raw-body": "^3.0.0", "zod": "^3.25 || ^4.0", "zod-to-json-schema": "^3.25.0" }, "peerDependencies": { "@cfworker/json-schema": "^4.1.1" }, "optionalPeers": ["@cfworker/json-schema"] }, "sha512-LZFeo4F9M5qOhC/Uc1aQSrBHxMrvxett+9KLHt7OhcExtoiRN9DKgbZffMP/nxjutWDQpfMDfP3nkHI4X9ijww=="],
 

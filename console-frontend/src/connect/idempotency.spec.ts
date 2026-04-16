@@ -10,7 +10,8 @@ interface FakeResponse {
 function makeCall(statuses: string[], response: FakeResponse = { clusterId: 'abc' }) {
   let callCount = 0;
   return vi.fn((options: CallOptions) => {
-    const status = statuses[callCount++] ?? 'completed';
+    const status = statuses[callCount] ?? 'completed';
+    callCount += 1;
     return new Observable<FakeResponse>((sub) => {
       options.onHeader?.(new Headers({ 'Idempotency-Status': status }));
       sub.next(response);
@@ -56,11 +57,12 @@ describe('withIdempotency', () => {
 
   it('propagates network errors out of the polling loop', async () => {
     const networkError = new Error('Network failure');
-    const call = vi.fn(() => {
-      return new Observable<FakeResponse>((sub) => {
-        sub.error(networkError);
-      });
-    });
+    const call = vi.fn(
+      () =>
+        new Observable<FakeResponse>((sub) => {
+          sub.error(networkError);
+        }),
+    );
     await expect(withIdempotency(call)).rejects.toThrow('Network failure');
     expect(call).toHaveBeenCalledTimes(1);
   });
@@ -82,9 +84,9 @@ describe('withIdempotency', () => {
     const controller = new AbortController();
     controller.abort();
     const call = makeCall(['processing']);
-    await expect(
-      withIdempotency(call, { signal: controller.signal }),
-    ).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(withIdempotency(call, { signal: controller.signal })).rejects.toMatchObject({
+      name: 'AbortError',
+    });
     expect(call).not.toHaveBeenCalled();
   });
 

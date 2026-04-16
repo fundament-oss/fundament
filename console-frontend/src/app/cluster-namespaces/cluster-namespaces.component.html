@@ -123,9 +123,10 @@
       </label>
       <ndd-text-field
         id="namespaceName"
-        formControlName="name"
+        [value]="namespaceForm.get('name')?.value ?? ''"
         placeholder="E.g. my-namespace"
         [invalid]="!!(namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty)"
+        (input)="onNamespaceNameInput($event)"
       />
       @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
         <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">

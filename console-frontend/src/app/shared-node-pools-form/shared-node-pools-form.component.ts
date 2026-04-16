@@ -1,4 +1,6 @@
 import {
+  AfterViewInit,
+  ChangeDetectorRef,
   Component,
   Input,
   Output,
@@ -32,8 +34,7 @@ export interface NodePoolData {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-node-pools-form.component.html',
 })
-export class SharedNodePoolsFormComponent {
-
+export class SharedNodePoolsFormComponent implements AfterViewInit {
   @Input() submitButtonText = 'Next step';
 
   @Input() set initialData(data: NodePoolData[] | null) {
@@ -45,6 +46,8 @@ export class SharedNodePoolsFormComponent {
   @Output() formSubmit = new EventEmitter<{ nodePools: NodePoolData[] }>();
 
   private fb = inject(FormBuilder);
+
+  private cdr = inject(ChangeDetectorRef);
 
   // Form
   nodePoolsForm: FormGroup;
@@ -63,6 +66,10 @@ export class SharedNodePoolsFormComponent {
     this.nodePoolsForm = this.fb.group({
       nodePools: this.fb.array([this.createNodePoolFormGroup()]),
     });
+  }
+
+  ngAfterViewInit(): void {
+    this.cdr.markForCheck();
   }
 
   get nodePools(): FormArray {
@@ -141,6 +148,12 @@ export class SharedNodePoolsFormComponent {
       return 'This node pool name is already in use. Please choose a unique name.';
     }
     return '';
+  }
+
+  onNodePoolNameInput(index: number, event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.nodePools.at(index).get('name')?.setValue(value);
+    this.nodePools.at(index).get('name')?.markAsDirty();
   }
 
   addNodePool() {

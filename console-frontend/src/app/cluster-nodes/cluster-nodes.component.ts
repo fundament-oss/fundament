@@ -150,10 +150,9 @@ export default class ClusterNodesComponent implements OnInit {
               autoscaleMin: newPool.autoscaleMin,
               autoscaleMax: newPool.autoscaleMax,
             });
-            return withIdempotency(
-              (opts) => this.client.createNodePool(createRequest, opts),
-              { signal: idempotencySignal },
-            );
+            return withIdempotency((opts) => this.client.createNodePool(createRequest, opts), {
+              signal: idempotencySignal,
+            });
           }
           return undefined;
         }),

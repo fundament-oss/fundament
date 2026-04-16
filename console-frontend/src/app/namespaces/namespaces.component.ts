@@ -117,10 +117,9 @@ export default class NamespacesComponent implements OnInit {
         name: this.namespaceForm.value.name!,
       });
 
-      await withIdempotency(
-        (opts) => this.namespaceClient.createNamespace(request, opts),
-        { signal: this.idempotency.reset() },
-      );
+      await withIdempotency((opts) => this.namespaceClient.createNamespace(request, opts), {
+        signal: this.idempotency.reset(),
+      });
 
       this.showCreateNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
@@ -175,6 +174,12 @@ export default class NamespacesComponent implements OnInit {
   }
 
   readonly formatDate = formatDateUtil;
+
+  onNameInput(event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.namespaceForm.get('name')?.setValue(value);
+    this.namespaceForm.get('name')?.markAsDirty();
+  }
 
   getNameError(): string {
     const nameControl = this.namespaceForm.get('name');

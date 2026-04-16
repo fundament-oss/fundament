@@ -7,9 +7,9 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import AutofocusDirective from '../autofocus.directive';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import AutofocusDirective from '../autofocus.directive';
 import { UpdateOrganizationRequestSchema } from '../../generated/v1/organization_pb';
 import { ORGANIZATION } from '../../connect/tokens';
 import { TitleService } from '../title.service';
@@ -58,7 +58,6 @@ export default class OrganizationComponent implements OnInit {
     if (currentOrganization) {
       this.isEditing.set(true);
       this.editingName.set(currentOrganization.alias);
-
     }
   }
 

@@ -255,10 +255,9 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
         kubernetesVersion: this.clusterConfig.kubernetesVersion,
       });
 
-      const response = await withIdempotency(
-        (opts) => this.client.createCluster(request, opts),
-        { signal: this.idempotency.reset() },
-      );
+      const response = await withIdempotency((opts) => this.client.createCluster(request, opts), {
+        signal: this.idempotency.reset(),
+      });
       this.clusterId.set(response.clusterId);
       this.updateItem('cluster', {
         requestStatus: 'succeeded',
@@ -291,7 +290,9 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     const abortSignal = this.idempotency.reset();
 
     await Promise.allSettled([
-      ...nodePoolItems.map((item) => this.createNodePool(item.key, item.nodePoolConfig!, cid, abortSignal)),
+      ...nodePoolItems.map((item) =>
+        this.createNodePool(item.key, item.nodePoolConfig!, cid, abortSignal),
+      ),
       ...pluginItems.map((item) => this.installPlugin(item.key, item.pluginId!, cid, abortSignal)),
     ]);
 
@@ -320,10 +321,9 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
         autoscaleMax: config.autoscaleMax,
       });
 
-      const response = await withIdempotency(
-        (opts) => this.client.createNodePool(request, opts),
-        { signal: abortSignal },
-      );
+      const response = await withIdempotency((opts) => this.client.createNodePool(request, opts), {
+        signal: abortSignal,
+      });
       this.updateItem(key, {
         requestStatus: 'succeeded',
         syncStatus: 'none',
@@ -337,14 +337,19 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async installPlugin(key: string, _pluginId: string, clusterId?: string, abortSignal?: AbortSignal) {
+  private async installPlugin(
+    key: string,
+    _pluginId: string,
+    clusterId?: string,
+    _abortSignal?: AbortSignal,
+  ) {
     const cid = clusterId || this.clusterId();
     if (!cid) return;
 
     this.updateItem(key, { requestStatus: 'in_progress', error: undefined });
 
     try {
-    // TODO: install plugin via kube-api-proxy once that flow is implemented.
+      // TODO: install plugin via kube-api-proxy once that flow is implemented.
       this.updateItem(key, { requestStatus: 'succeeded' });
     } catch (error) {
       this.updateItem(key, {

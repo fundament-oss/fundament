@@ -21,9 +21,7 @@ import {
   type Preset,
   type PluginSummary,
 } from '../../generated/v1/plugin_pb';
-import {
-  type ListClustersResponse_ClusterSummary as ClusterSummary,
-} from '../../generated/v1/cluster_pb';
+import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ToastService } from '../toast.service';
 
 // TODO: plugin installs are moving to the kube-api-proxy. Re-wire once available.
