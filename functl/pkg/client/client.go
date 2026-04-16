@@ -109,7 +109,7 @@ func (c *Client) Clusters() organizationv1connect.ClusterServiceClient {
 	return organizationv1connect.NewClusterServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -118,7 +118,7 @@ func (c *Client) Projects() organizationv1connect.ProjectServiceClient {
 	return organizationv1connect.NewProjectServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -127,7 +127,7 @@ func (c *Client) Namespaces() organizationv1connect.NamespaceServiceClient {
 	return organizationv1connect.NewNamespaceServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor()),
+		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor()),
 	)
 }
 
@@ -136,7 +136,7 @@ func (c *Client) APIKeys() organizationv1connect.APIKeyServiceClient {
 	return organizationv1connect.NewAPIKeyServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -145,7 +145,7 @@ func (c *Client) Members() organizationv1connect.MemberServiceClient {
 	return organizationv1connect.NewMemberServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -154,7 +154,7 @@ func (c *Client) Invites() organizationv1connect.InviteServiceClient {
 	return organizationv1connect.NewInviteServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -163,7 +163,7 @@ func (c *Client) Authn() authnv1connect.AuthnServiceClient {
 	return authnv1connect.NewAuthnServiceClient(
 		c.httpClient,
 		c.authnURL,
-		connect.WithInterceptors(c.authInterceptor()),
+		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor()),
 	)
 }
 
