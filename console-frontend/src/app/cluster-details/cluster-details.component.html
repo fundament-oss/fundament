@@ -78,7 +78,7 @@
             <dt class="font-medium text-gray-500 dark:text-gray-400">Status</dt>
             <dd class="mt-1">
               <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-medium"
+                class="inline-flex items-center rounded-full px-2.5 py-0.5 font-medium"
                 [class]="getStatusColor(clusterData.status)"
               >
                 {{ getStatusLabel(clusterData.status) }}
@@ -161,7 +161,7 @@
             </summary>
 
             <div class="mt-3 overflow-x-auto">
-              <table class="min-w-full text-sm">
+              <table class="min-w-full">
                 <thead>
                   <tr class="border-b border-gray-200 dark:border-gray-800">
                     <th class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
@@ -230,7 +230,7 @@
           <div class="space-y-4">
             <!-- CPU Usage -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
+              <div class="mb-1 flex justify-between">
                 <span class="font-medium text-gray-700 dark:text-white">CPU</span>
                 <span class="text-gray-500 dark:text-gray-400"
                   >{{ clusterData.resourceUsage.cpu.used }} /
@@ -257,7 +257,7 @@
                   "
                 ></div>
               </div>
-              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{
                   getUsagePercentage(
                     clusterData.resourceUsage.cpu.used,
@@ -269,7 +269,7 @@
 
             <!-- Memory Usage -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
+              <div class="mb-1 flex justify-between">
                 <span class="font-medium text-gray-700 dark:text-white">Memory</span>
                 <span class="text-gray-500 dark:text-gray-400"
                   >{{ clusterData.resourceUsage.memory.used }} /
@@ -296,7 +296,7 @@
                   "
                 ></div>
               </div>
-              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{
                   getUsagePercentage(
                     clusterData.resourceUsage.memory.used,
@@ -308,7 +308,7 @@
 
             <!-- Disk Usage -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
+              <div class="mb-1 flex justify-between">
                 <span class="font-medium text-gray-700 dark:text-white">Disk</span>
                 <span class="text-gray-500 dark:text-gray-400"
                   >{{ clusterData.resourceUsage.disk.used }} /
@@ -335,7 +335,7 @@
                   "
                 ></div>
               </div>
-              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{
                   getUsagePercentage(
                     clusterData.resourceUsage.disk.used,
@@ -347,7 +347,7 @@
 
             <!-- Pods Usage -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
+              <div class="mb-1 flex justify-between">
                 <span class="font-medium text-gray-700 dark:text-white">Pods</span>
                 <span class="text-gray-500 dark:text-gray-400"
                   >{{ clusterData.resourceUsage.pods.used }} /
@@ -374,7 +374,7 @@
                   "
                 ></div>
               </div>
-              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{
                   getUsagePercentage(
                     clusterData.resourceUsage.pods.used,
@@ -411,7 +411,7 @@
                       {{ getEventDetails(event) }}
                     </p>
                     @if (event.createdAt) {
-                      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      <p class="mt-1 text-gray-500 dark:text-gray-400">
                         {{ formatDate(event.createdAt) }}
                       </p>
                     }
@@ -457,7 +457,7 @@
                   >
                     {{ member.role }}
                   </span>
-                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  <p class="mt-1 text-gray-500 dark:text-gray-400">
                     Last active: {{ formatDate(member.lastActive) }}
                   </p>
                 </div>
@@ -501,7 +501,7 @@
                       {{ getNodePoolStatusLabel(pool.status) }}
                     </span>
                   </div>
-                  <div class="grid grid-cols-2 gap-2 text-sm">
+                  <div class="grid grid-cols-2 gap-2">
                     <div>
                       <span class="text-gray-500 dark:text-gray-400">Type:</span>
                       <span class="ml-1 dark:text-white">{{ pool.machineType }}</span>
@@ -577,7 +577,7 @@
               @for (namespace of namespaces(); track namespace.id) {
                 <div class="card card-body-sm">
                   <p class="font-mono dark:text-white">{{ namespace.name }}</p>
-                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  <p class="mt-1 text-gray-500 dark:text-gray-400">
                     Project: {{ getProjectName(namespace.projectId) }} &bull; Created
                     {{ formatDate(namespace.created) }}
                   </p>

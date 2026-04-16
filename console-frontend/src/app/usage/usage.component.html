@@ -120,7 +120,7 @@
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <!-- CPU -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
+              <div class="mb-1 flex justify-between">
                 <span class="font-medium text-gray-700 dark:text-white">CPU</span>
                 <span class="text-gray-500 dark:text-gray-400">
                   {{ totals.cpu.used | number: '1.1-1' }} / {{ totals.cpu.total | number: '1.0-0' }}
@@ -141,7 +141,7 @@
 
             <!-- Memory -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
+              <div class="mb-1 flex justify-between">
                 <span class="font-medium text-gray-700 dark:text-white">Memory</span>
                 <span class="text-gray-500 dark:text-gray-400">
                   {{ totals.memory.used | number: '1.1-1' }} /
@@ -158,14 +158,14 @@
                   [style.width.%]="getUsagePercentage(totals.memory.used, totals.memory.total)"
                 ></div>
               </div>
-              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{ getUsagePercentage(totals.memory.used, totals.memory.total) }}% used
               </div>
             </div>
 
             <!-- Pods -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
+              <div class="mb-1 flex justify-between">
                 <span class="font-medium text-gray-700 dark:text-white">Pods</span>
                 <span class="text-gray-500 dark:text-gray-400">
                   {{ totals.pods.used | number: '1.0-0' }} /
@@ -180,7 +180,7 @@
                   [style.width.%]="getUsagePercentage(totals.pods.used, totals.pods.total)"
                 ></div>
               </div>
-              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{ getUsagePercentage(totals.pods.used, totals.pods.total) }}% used
               </div>
             </div>
@@ -310,7 +310,7 @@
                   </h4>
                   <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
-                      <div class="mb-1 flex justify-between text-sm">
+                      <div class="mb-1 flex justify-between">
                         <span class="text-gray-600 dark:text-gray-300">CPU</span>
                         <span class="text-gray-500 dark:text-gray-400">
                           {{ node.cpu.used | number: '1.1-1' }} /
@@ -326,7 +326,7 @@
                       </div>
                     </div>
                     <div>
-                      <div class="mb-1 flex justify-between text-sm">
+                      <div class="mb-1 flex justify-between">
                         <span class="text-gray-600 dark:text-gray-300">Memory</span>
                         <span class="text-gray-500 dark:text-gray-400">
                           {{ node.memory.used | number: '1.1-1' }} /
@@ -344,7 +344,7 @@
                       </div>
                     </div>
                     <div>
-                      <div class="mb-1 flex justify-between text-sm">
+                      <div class="mb-1 flex justify-between">
                         <span class="text-gray-600 dark:text-gray-300">Pods</span>
                         <span class="text-gray-500 dark:text-gray-400">
                           {{ node.pods.used | number: '1.0-0' }} /
