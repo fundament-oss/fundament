@@ -14,8 +14,8 @@
       Cluster name
     </label>
     <ndd-text-field
-      #clusterNameInput
       id="clusterName"
+      appAutofocus
       [value]="clusterName?.value"
       placeholder="E.g. my-production-cluster"
       (blur)="onClusterNameBlur()"
@@ -71,6 +71,6 @@
       text="Cancel"
       variant="secondary"
     />
-    <ndd-button type="submit" text="Next step" variant="primary" />
+    <ndd-button type="button" (click)="onSubmit()" text="Next step" variant="primary" />
   </div>
 </form>

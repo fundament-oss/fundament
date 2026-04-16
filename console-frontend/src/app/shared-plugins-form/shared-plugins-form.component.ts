@@ -121,6 +121,10 @@ export class SharedPluginsFormComponent implements OnInit {
     }
   }
 
+  submit() {
+    this.onSubmit();
+  }
+
   onSubmit() {
     const selectedPlugins = this.plugins.filter((plugin) => plugin.selected);
 

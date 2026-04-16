@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, inject, ViewChild, ChangeDetectionStrategy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import {
@@ -15,6 +15,8 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
   templateUrl: './add-cluster-nodes.component.html',
 })
 export default class AddClusterNodesComponent {
+  @ViewChild(SharedNodePoolsFormComponent) nodePoolsForm!: SharedNodePoolsFormComponent;
+
   private titleService = inject(TitleService);
 
   private router = inject(Router);

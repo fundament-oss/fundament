@@ -2,13 +2,12 @@ import {
   Component,
   inject,
   OnInit,
-  ViewChild,
-  ElementRef,
   signal,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import AutofocusDirective from '../autofocus.directive';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { UpdateOrganizationRequestSchema } from '../../generated/v1/organization_pb';
@@ -20,7 +19,7 @@ import OrganizationContextService from '../organization-context.service';
 
 @Component({
   selector: 'app-organization-settings',
-  imports: [FormsModule],
+  imports: [FormsModule, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './organization-settings.component.html',
@@ -33,8 +32,6 @@ export default class OrganizationComponent implements OnInit {
   private organizationContextService = inject(OrganizationContextService);
 
   private organizationDataService = inject(OrganizationDataService);
-
-  @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   organization = signal<OrganizationData | null>(null);
 
@@ -62,10 +59,6 @@ export default class OrganizationComponent implements OnInit {
       this.isEditing.set(true);
       this.editingName.set(currentOrganization.alias);
 
-      // Focus the input field after Angular updates the view
-      setTimeout(() => {
-        this.nameInput?.nativeElement.focus();
-      });
     }
   }
 

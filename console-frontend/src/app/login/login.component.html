@@ -24,7 +24,7 @@
             type="email"
             placeholder="Enter your email address"
             autocomplete="email"
-            #emailInput
+            appAutofocus
             [value]="email?.value ?? ''"
             (input)="loginForm.get('email')!.setValue($any($event.target).value)"
             (blur)="loginForm.get('email')!.markAsTouched()"

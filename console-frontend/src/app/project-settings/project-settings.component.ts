@@ -4,11 +4,10 @@ import {
   signal,
   OnInit,
   ChangeDetectionStrategy,
-  ViewChild,
-  ElementRef,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import AutofocusDirective from '../autofocus.directive';
 import { ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -27,7 +26,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-settings',
-  imports: [FormsModule, ModalComponent],
+  imports: [FormsModule, ModalComponent, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-settings.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,8 +55,6 @@ export default class ProjectSettingsComponent implements OnInit {
   loading = signal(false);
 
   error = signal<string | null>(null);
-
-  @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   showDeleteModal = signal<boolean>(false);
 
@@ -97,9 +94,6 @@ export default class ProjectSettingsComponent implements OnInit {
       this.isEditing.set(true);
       this.editingName.set(currentProject.name);
 
-      setTimeout(() => {
-        this.nameInput?.nativeElement.focus();
-      });
     }
   }
 

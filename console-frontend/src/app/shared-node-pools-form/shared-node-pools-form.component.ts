@@ -3,10 +3,6 @@ import {
   Input,
   Output,
   EventEmitter,
-  ViewChildren,
-  QueryList,
-  ElementRef,
-  AfterViewInit,
   inject,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -20,6 +16,7 @@ import {
   AbstractControl,
   ValidationErrors,
 } from '@angular/forms';
+import AutofocusDirective from '../autofocus.directive';
 
 export interface NodePoolData {
   name: string;
@@ -30,13 +27,12 @@ export interface NodePoolData {
 
 @Component({
   selector: 'app-shared-node-pools-form',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-node-pools-form.component.html',
 })
-export class SharedNodePoolsFormComponent implements AfterViewInit {
-  @ViewChildren('nodePoolNameInput') nodePoolNameInputs!: QueryList<ElementRef<HTMLInputElement>>;
+export class SharedNodePoolsFormComponent {
 
   @Input() submitButtonText = 'Next step';
 
@@ -130,10 +126,6 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     return hasDuplicate ? { duplicate: true } : null;
   }
 
-  ngAfterViewInit() {
-    this.nodePoolNameInputs.first?.nativeElement.focus();
-  }
-
   getNodePoolNameError(index: number): string {
     const nameControl = this.nodePools.at(index).get('name');
     if (nameControl?.hasError('required')) {
@@ -167,6 +159,10 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     this.nodePools.controls.forEach((control) => {
       control.get('name')?.updateValueAndValidity();
     });
+  }
+
+  submit() {
+    this.onSubmit();
   }
 
   onSubmit() {

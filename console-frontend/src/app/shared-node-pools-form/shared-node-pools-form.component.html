@@ -32,7 +32,7 @@
             <ndd-text-field
               [id]="'nodePoolName-' + $index"
               formControlName="name"
-              #nodePoolNameInput
+              [appAutofocus]="$first"
               placeholder="E.g. my-pool-name"
               [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
             />

@@ -41,7 +41,7 @@
           @if (isEditing()) {
             <div class="flex gap-2">
               <ndd-text-field
-                #nameInput
+                appAutofocus
                 [ngModel]="editingName()"
                 (ngModelChange)="editingName.set($event)"
                 class="w-full"

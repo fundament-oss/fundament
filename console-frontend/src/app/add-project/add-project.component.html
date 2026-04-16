@@ -61,8 +61,8 @@
         Project name
       </label>
       <ndd-text-field
-        #projectNameInput
         id="name"
+        appAutofocus
         formControlName="name"
         placeholder="E.g. my-project"
         [invalid]="!!(projectForm.get('name')?.invalid && projectForm.get('name')?.dirty)"

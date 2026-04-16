@@ -3,8 +3,6 @@ import {
   inject,
   OnInit,
   signal,
-  ViewChild,
-  ElementRef,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
@@ -27,6 +25,7 @@ import {
   formatDate as formatDateUtil,
   formatDateTime as formatDateTimeUtil,
 } from '../utils/date-format';
+import AutofocusDirective from '../autofocus.directive';
 
 const getNameError = (field?: { invalid: boolean | null; touched: boolean | null }): string => {
   if (field?.invalid && field?.touched) {
@@ -49,14 +48,12 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
 
 @Component({
   selector: 'app-api-keys',
-  imports: [FormsModule, ModalComponent],
+  imports: [FormsModule, ModalComponent, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './api-keys.component.html',
 })
 export default class ApiKeysComponent implements OnInit {
-  @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
-
   private titleService = inject(TitleService);
 
   private apiKeyClient = inject(APIKEY);
@@ -187,10 +184,6 @@ export default class ApiKeysComponent implements OnInit {
     this.newKeyExpiresIn.set('');
     this.error.set(null);
 
-    // Focus the name input field after Angular updates the view
-    setTimeout(() => {
-      this.nameInput?.nativeElement.focus();
-    });
   }
 
   cancelCreating() {

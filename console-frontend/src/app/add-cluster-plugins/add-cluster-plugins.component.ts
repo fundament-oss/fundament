@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, inject, ViewChild, ChangeDetectionStrategy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
@@ -12,6 +12,8 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
   templateUrl: './add-cluster-plugins.component.html',
 })
 export default class AddClusterPluginsComponent {
+  @ViewChild(SharedPluginsFormComponent) pluginsForm!: SharedPluginsFormComponent;
+
   private titleService = inject(TitleService);
 
   private router = inject(Router);

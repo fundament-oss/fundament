@@ -1,8 +1,5 @@
 import {
   Component,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
   OnInit,
   inject,
   signal,
@@ -24,17 +21,16 @@ import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
+import AutofocusDirective from '../autofocus.directive';
 
 @Component({
   selector: 'app-add-project',
-  imports: [RouterLink, ReactiveFormsModule, LoadingIndicatorComponent],
+  imports: [RouterLink, ReactiveFormsModule, LoadingIndicatorComponent, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class AddProjectComponent implements AfterViewInit, OnInit {
-  @ViewChild('projectNameInput') projectNameInput!: ElementRef<HTMLInputElement>;
-
+export default class AddProjectComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -78,11 +74,6 @@ export default class AddProjectComponent implements AfterViewInit, OnInit {
 
   async ngOnInit() {
     await this.loadClusters();
-  }
-
-  ngAfterViewInit() {
-    // Focus the project name input after the view is initialized
-    this.projectNameInput.nativeElement.focus();
   }
 
   async loadClusters() {
