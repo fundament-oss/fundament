@@ -180,7 +180,6 @@
           (click)="reopenModal()"
           text="View progress"
           variant="secondary"
-          size="sm"
         ></ndd-button>
         @if (clusterId()) {
           <ndd-button
@@ -188,7 +187,6 @@
             (click)="navigateToCluster()"
             text="Go to cluster"
             variant="primary"
-            size="sm"
           ></ndd-button>
         }
       </div>
@@ -204,7 +202,6 @@
         [class.pointer-events-none]="isCreating() || showModal()"
         [class.opacity-50]="isCreating() || showModal()"
         variant="secondary"
-        size="sm"
       ></ndd-button>
       <ndd-button
         type="button"
@@ -212,7 +209,6 @@
         [text]="isCreating() ? 'Creating...' : 'Create cluster'"
         [disabled]="isCreating() || showModal()"
         variant="primary"
-        size="sm"
       ></ndd-button>
     </div>
   }
@@ -303,7 +299,6 @@
         (click)="navigateToCluster()"
         text="Go to cluster"
         variant="primary"
-        size="sm"
       ></ndd-button>
     } @else if (!isCreating()) {
       <ndd-button
@@ -311,7 +306,6 @@
         (click)="onModalClose()"
         text="Cancel"
         variant="secondary"
-        size="sm"
       ></ndd-button>
     }
   </div>

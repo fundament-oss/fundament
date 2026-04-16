@@ -39,7 +39,6 @@
       text="Invite member"
       start-icon="plus-small"
       variant="primary"
-      size="sm"
     ></ndd-button>
 
     <!-- Pending Invitations Section -->
@@ -141,7 +140,6 @@
             (click)="loadMembers()"
             text="Try again"
             variant="primary"
-            size="sm"
           ></ndd-button>
         </div>
       } @else if (activeMembers().length === 0) {
@@ -264,14 +262,12 @@
       (click)="showDeleteModal.set(false)"
       text="Cancel"
       variant="secondary"
-      size="sm"
     ></ndd-button>
     <ndd-button
       type="button"
       (click)="confirmDeleteMember()"
       text="Yes, remove member"
       variant="destructive"
-      size="sm"
     ></ndd-button>
   </div>
 </app-modal>
@@ -292,39 +288,25 @@
   </div>
 
   <div class="mb-4">
-    <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
-    <div class="space-y-2">
-      <label class="radio-option">
-        <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-          <input
-            name="editPermission"
-            type="radio"
-            value="viewer"
-            [ngModel]="editPermission()"
-            (ngModelChange)="editPermission.set($event)"
-          />
-          Viewer
-        </span>
-        <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-          Read access to resources
-        </span>
-      </label>
-      <label class="radio-option">
-        <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-          <input
-            name="editPermission"
-            type="radio"
-            value="admin"
-            [ngModel]="editPermission()"
-            (ngModelChange)="editPermission.set($event)"
-          />
-          Admin
-        </span>
-        <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-          Full access to resources
-        </span>
-      </label>
-    </div>
+    <ndd-form-field label="Permission">
+      <ndd-radio-button-group
+        name="editPermission"
+        (change)="editPermission.set($any($event).detail.value)"
+      >
+        <ndd-radio-button-field
+          class="radio-option"
+          value="viewer"
+          label="Viewer"
+          [checked]="editPermission() === 'viewer'"
+        ></ndd-radio-button-field>
+        <ndd-radio-button-field
+          class="radio-option"
+          value="admin"
+          label="Admin"
+          [checked]="editPermission() === 'admin'"
+        ></ndd-radio-button-field>
+      </ndd-radio-button-group>
+    </ndd-form-field>
   </div>
 
   <div modal-footer class="modal-footer">
@@ -334,7 +316,6 @@
       [disabled]="isSubmitting()"
       text="Cancel"
       variant="secondary"
-      size="sm"
     ></ndd-button>
     <ndd-button
       type="button"
@@ -342,7 +323,6 @@
       [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
       [disabled]="isSubmitting()"
       variant="primary"
-      size="sm"
     ></ndd-button>
   </div>
 </app-modal>
@@ -367,7 +347,6 @@
         [ngModel]="inviteEmail()"
         (ngModelChange)="inviteEmail.set($event); inviteError.set(null)"
         name="email"
-        size="sm"
         placeholder="user@example.com"
         [disabled]="isSubmitting()"
         [invalid]="!!(inviteError() || (emailModel.invalid && emailModel.touched))"
@@ -378,41 +357,26 @@
     </div>
 
     <div class="mb-6">
-      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
-      <div class="space-y-2">
-        <label class="radio-option">
-          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-            <input
-              name="permission"
-              type="radio"
-              value="viewer"
-              [ngModel]="invitePermission()"
-              (ngModelChange)="invitePermission.set($event)"
-              [disabled]="isSubmitting()"
-            />
-            Viewer
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-            Read access to resources
-          </span>
-        </label>
-        <label class="radio-option">
-          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-            <input
-              name="permission"
-              type="radio"
-              value="admin"
-              [ngModel]="invitePermission()"
-              (ngModelChange)="invitePermission.set($event)"
-              [disabled]="isSubmitting()"
-            />
-            Admin
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-            Full access to resources
-          </span>
-        </label>
-      </div>
+      <ndd-form-field label="Permission">
+        <ndd-radio-button-group
+          name="permission"
+          (change)="invitePermission.set($any($event).detail.value)"
+          [disabled]="isSubmitting()"
+        >
+          <ndd-radio-button-field
+            class="radio-option"
+            value="viewer"
+            label="Viewer"
+            [checked]="invitePermission() === 'viewer'"
+          ></ndd-radio-button-field>
+          <ndd-radio-button-field
+            class="radio-option"
+            value="admin"
+            label="Admin"
+            [checked]="invitePermission() === 'admin'"
+          ></ndd-radio-button-field>
+        </ndd-radio-button-group>
+      </ndd-form-field>
     </div>
 
     <div modal-footer class="modal-footer">
@@ -422,14 +386,12 @@
         [disabled]="isSubmitting()"
         text="Cancel"
         variant="secondary"
-        size="sm"
       ></ndd-button>
       <ndd-button
         type="submit"
         [text]="isSubmitting() ? 'Sending...' : 'Send invitation'"
         [disabled]="isSubmitting()"
         variant="primary"
-        size="sm"
       ></ndd-button>
     </div>
   </form>

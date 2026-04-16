@@ -36,7 +36,6 @@
         text="Add namespace"
         start-icon="plus-small"
         variant="primary"
-        size="sm"
       ></ndd-button>
 
       @if (namespaces().length === 0) {
@@ -60,7 +59,6 @@
                 text="Delete"
                 start-icon="trash"
                 variant="destructive"
-                size="sm"
               ></ndd-button>
             </div>
           }
@@ -73,7 +71,6 @@
           (click)="onCancel()"
           text="Back to cluster"
           variant="secondary"
-          size="sm"
         ></ndd-button>
       </div>
     }
@@ -127,7 +124,6 @@
       <ndd-text-field
         id="namespaceName"
         formControlName="name"
-        size="sm"
         placeholder="E.g. my-namespace"
         [invalid]="!!(namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty)"
       />
@@ -145,14 +141,12 @@
         [disabled]="isCreatingNamespace()"
         text="Cancel"
         variant="secondary"
-        size="sm"
       ></ndd-button>
       <ndd-button
         type="submit"
         [text]="isCreatingNamespace() ? 'Creating...' : 'Add namespace'"
         [disabled]="isCreatingNamespace() || !namespaceForm.valid"
         variant="primary"
-        size="sm"
       ></ndd-button>
     </div>
   </form>
@@ -193,14 +187,12 @@
       (click)="showDeleteNamespaceModal.set(false)"
       text="Cancel"
       variant="secondary"
-      size="sm"
     ></ndd-button>
     <ndd-button
       type="button"
       (click)="confirmDeleteNamespace()"
       text="Yes, delete this namespace"
       variant="destructive"
-      size="sm"
     ></ndd-button>
   </div>
 </app-modal>

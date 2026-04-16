@@ -9,46 +9,22 @@
   } @else {
     <!-- Plugin Preset Selection -->
     <div class="space-y-4">
-      <h3 class="text-lg font-medium dark:text-white">Plugin preset</h3>
-      <div class="grid gap-4 md:grid-cols-3">
-        @for (preset of presets; track preset.id) {
-          <label
-            class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
-          >
-            <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
-              <input
-                name="preset"
-                type="radio"
-                [value]="preset.id"
-                [(ngModel)]="selectedPreset"
-                (change)="onPresetChange()"
-              />
-              {{ preset.name }}
-            </span>
-            <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-              {{ preset.description }}
-            </span>
-          </label>
-        }
-
-        <label
-          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
-        >
-          <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
-            <input
-              name="preset"
-              type="radio"
-              value="custom"
-              [(ngModel)]="selectedPreset"
-              (change)="onPresetChange()"
-            />
-            Custom plugin selection
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300"
-            >Cherry pick plugins you need.</span
-          >
-        </label>
-      </div>
+      <ndd-form-field label="Plugin preset">
+        <ndd-radio-button-group name="preset" (change)="onPresetRadioChange($event)">
+          @for (preset of presets; track preset.id) {
+            <ndd-radio-button-field
+              [value]="preset.id"
+              [label]="preset.name"
+              [checked]="selectedPreset === preset.id"
+            ></ndd-radio-button-field>
+          }
+          <ndd-radio-button-field
+            value="custom"
+            label="Custom plugin selection"
+            [checked]="selectedPreset === 'custom'"
+          ></ndd-radio-button-field>
+        </ndd-radio-button-group>
+      </ndd-form-field>
     </div>
 
     <!-- Plugin Selection -->

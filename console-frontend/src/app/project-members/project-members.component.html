@@ -45,7 +45,6 @@
       text="Add a member"
       start-icon="plus-small"
       variant="primary"
-      size="sm"
     ></ndd-button>
 
     @if (error()) {
@@ -61,7 +60,6 @@
           (click)="error.set(null)"
           text="Dismiss"
           variant="primary"
-          size="sm"
         ></ndd-button>
       </div>
     }
@@ -206,27 +204,22 @@
 
     <!-- Permissions Selection -->
     <div class="mb-4">
-      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
-      <div class="space-y-2">
-        <label class="radio-option">
-          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-            <input name="permission" type="radio" value="viewer" formControlName="permission" />
-            Project viewer
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-            Read access to project resources
-          </span>
-        </label>
-        <label class="radio-option">
-          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-            <input name="permission" type="radio" value="admin" formControlName="permission" />
-            Project admin
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-            Full access to project resources
-          </span>
-        </label>
-      </div>
+      <ndd-form-field label="Permission">
+        <ndd-radio-button-group name="permission" (change)="onPermissionChange($event)">
+          <ndd-radio-button-field
+            class="radio-option"
+            value="viewer"
+            label="Project viewer"
+            [checked]="memberForm.get('permission')?.value === 'viewer'"
+          ></ndd-radio-button-field>
+          <ndd-radio-button-field
+            class="radio-option"
+            value="admin"
+            label="Project admin"
+            [checked]="memberForm.get('permission')?.value === 'admin'"
+          ></ndd-radio-button-field>
+        </ndd-radio-button-group>
+      </ndd-form-field>
     </div>
 
     <div modal-footer class="modal-footer">
@@ -236,7 +229,6 @@
         [disabled]="isAddingMember()"
         text="Cancel"
         variant="secondary"
-        size="sm"
       ></ndd-button>
       <ndd-button
         type="submit"
@@ -245,7 +237,6 @@
         "
         [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
         variant="primary"
-        size="sm"
       ></ndd-button>
     </div>
   </form>
@@ -283,14 +274,12 @@
       (click)="showRemoveMemberModal.set(false)"
       text="Cancel"
       variant="secondary"
-      size="sm"
     ></ndd-button>
     <ndd-button
       type="button"
       (click)="confirmRemoveMember()"
       text="Yes, remove this member"
       variant="destructive"
-      size="sm"
     ></ndd-button>
   </div>
 </app-modal>

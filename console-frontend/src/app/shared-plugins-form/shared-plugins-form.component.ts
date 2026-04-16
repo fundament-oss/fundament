@@ -7,6 +7,7 @@ import {
   signal,
   Input,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
@@ -29,6 +30,7 @@ export interface Plugin {
 @Component({
   selector: 'app-shared-plugins-form',
   imports: [FormsModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-plugins-form.component.html',
 })
@@ -84,6 +86,11 @@ export class SharedPluginsFormComponent implements OnInit {
       this.errorMessage.set(`Failed to load plugins from server: ${error}`);
       this.isLoading.set(false);
     }
+  }
+
+  onPresetRadioChange(event: Event) {
+    this.selectedPreset = (event as CustomEvent<{ value: string }>).detail.value;
+    this.onPresetChange();
   }
 
   onPresetChange() {

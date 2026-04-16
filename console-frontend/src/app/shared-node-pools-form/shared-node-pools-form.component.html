@@ -16,7 +16,6 @@
               text="Remove"
               start-icon="trash"
               variant="destructive"
-              size="sm"
             ></ndd-button>
           }
         </div>
@@ -34,7 +33,6 @@
               [id]="'nodePoolName-' + $index"
               formControlName="name"
               #nodePoolNameInput
-              size="sm"
               placeholder="E.g. my-pool-name"
               [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
             />
@@ -105,7 +103,6 @@
     text="Add another node pool"
     start-icon="plus-small"
     variant="accent-outlined"
-    size="sm"
   ></ndd-button>
 
   <!-- Form Actions slot -->

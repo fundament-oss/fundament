@@ -165,6 +165,11 @@ export default class ProjectMembersComponent implements OnInit {
     this.showAddMemberModal.set(true);
   }
 
+  onPermissionChange(event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.memberForm.get('permission')?.setValue(value);
+  }
+
   async saveMember() {
     if (this.memberForm.invalid) {
       this.memberForm.markAllAsTouched();

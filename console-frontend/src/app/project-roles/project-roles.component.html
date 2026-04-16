@@ -29,7 +29,6 @@
         text="Create role binding"
         start-icon="plus-small"
         variant="primary"
-        size="sm"
       ></ndd-button>
 
       <!-- Filters -->
@@ -134,87 +133,61 @@
 
     <!-- Namespace selection -->
     <div class="mb-4">
-      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Namespace</span>
       @if (editingBinding()) {
         <p class="text-sm dark:text-white">{{ editingBinding()?.namespace }}</p>
       } @else {
-        <div class="space-y-2">
-          <!-- All namespaces -->
-          <label class="radio-option">
-            <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
-              <input
-                name="namespaceMode"
-                type="radio"
-                value="all"
-                [ngModel]="namespaceMode()"
-                (ngModelChange)="onNamespaceModeChange($event)"
-              />
-              All namespaces
-            </span>
-            <span class="mt-1 ml-6 block text-sm text-gray-600 dark:text-gray-300">
-              All current and future namespaces in this project
-            </span>
-          </label>
-
-          <!-- Specific namespace -->
-          <label class="radio-option">
-            <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
-              <input
-                name="namespaceMode"
-                type="radio"
-                value="specific"
-                [ngModel]="namespaceMode()"
-                (ngModelChange)="onNamespaceModeChange($event)"
-              />
-              Specific namespace
-            </span>
-            @if (namespaceMode() === 'specific') {
-              <div class="mt-2 ml-6">
-                <select
-                  id="rb-namespace"
-                  class="w-full"
-                  [ngModel]="modalNamespace()"
-                  (ngModelChange)="modalNamespace.set($event)"
-                  name="namespace"
-                >
-                  <option value="">Select a namespace</option>
-                  @for (ns of namespaces(); track ns) {
-                    <option [value]="ns">{{ ns }}</option>
-                  }
-                </select>
-              </div>
-            }
-          </label>
-
-          <!-- Custom namespace -->
-          <label class="radio-option">
-            <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
-              <input
-                name="namespaceMode"
-                type="radio"
-                value="custom"
-                [ngModel]="namespaceMode()"
-                (ngModelChange)="onNamespaceModeChange($event)"
-              />
-              Custom pattern
-            </span>
-            <span class="mt-1 ml-6 block text-sm text-gray-600 dark:text-gray-300">
-              Type a namespace name, wildcard (<code class="text-xs">*</code>) allowed
-            </span>
-            @if (namespaceMode() === 'custom') {
-              <div class="mt-2 ml-6">
-                <ndd-text-field
-                  id="rb-custom-namespace"
-                  size="sm"
-                  placeholder="E.g. staging-* or my-namespace"
-                  [ngModel]="modalCustomNamespace()"
-                  (ngModelChange)="modalCustomNamespace.set($event)"
-                  name="customNamespace"
-                />
-              </div>
-            }
-          </label>
-        </div>
+        <ndd-form-field label="Namespace">
+          <ndd-radio-button-group
+            name="namespaceMode"
+            (change)="onNamespaceModeChange($any($event).detail.value)"
+          >
+            <ndd-radio-button-field
+              class="radio-option"
+              value="all"
+              label="All namespaces"
+              [checked]="namespaceMode() === 'all'"
+            ></ndd-radio-button-field>
+            <ndd-radio-button-field
+              class="radio-option"
+              value="specific"
+              label="Specific namespace"
+              [checked]="namespaceMode() === 'specific'"
+            ></ndd-radio-button-field>
+            <ndd-radio-button-field
+              class="radio-option"
+              value="custom"
+              label="Custom pattern"
+              [checked]="namespaceMode() === 'custom'"
+            ></ndd-radio-button-field>
+          </ndd-radio-button-group>
+        </ndd-form-field>
+        @if (namespaceMode() === 'specific') {
+          <div class="mt-2">
+            <select
+              id="rb-namespace"
+              class="w-full"
+              [ngModel]="modalNamespace()"
+              (ngModelChange)="modalNamespace.set($event)"
+              name="namespace"
+            >
+              <option value="">Select a namespace</option>
+              @for (ns of namespaces(); track ns) {
+                <option [value]="ns">{{ ns }}</option>
+              }
+            </select>
+          </div>
+        }
+        @if (namespaceMode() === 'custom') {
+          <div class="mt-2">
+            <ndd-text-field
+              id="rb-custom-namespace"
+              placeholder="E.g. staging-* or my-namespace"
+              [ngModel]="modalCustomNamespace()"
+              (ngModelChange)="modalCustomNamespace.set($event)"
+              name="customNamespace"
+            />
+          </div>
+        }
       }
     </div>
 
@@ -246,14 +219,12 @@
         [disabled]="isSubmitting()"
         text="Cancel"
         variant="secondary"
-        size="sm"
       ></ndd-button>
       <ndd-button
         type="submit"
         [text]="isSubmitting() ? 'Saving...' : editingBinding() ? 'Save changes' : 'Create binding'"
         [disabled]="isSubmitting()"
         variant="primary"
-        size="sm"
       ></ndd-button>
     </div>
   </form>
@@ -291,14 +262,12 @@
       (click)="showRemoveModal.set(false)"
       text="Cancel"
       variant="secondary"
-      size="sm"
     ></ndd-button>
     <ndd-button
       type="button"
       (click)="confirmRemoveBinding()"
       text="Yes, remove this binding"
       variant="destructive"
-      size="sm"
     ></ndd-button>
   </div>
 </app-modal>

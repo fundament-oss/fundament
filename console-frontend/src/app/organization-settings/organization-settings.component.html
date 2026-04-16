@@ -58,12 +58,11 @@
             <div class="flex gap-2">
               <ndd-text-field
                 #nameInput
-                size="sm"
                 [ngModel]="editingName()"
                 (ngModelChange)="editingName.set($event)"
-                class="block flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                 (keyup.enter)="saveEdit()"
                 (keyup.escape)="cancelEdit()"
+                class="w-full"
               />
               <ndd-button
                 type="button"
@@ -72,7 +71,6 @@
                 text="Save"
                 start-icon="check-mark"
                 variant="primary"
-                size="sm"
               ></ndd-button>
               <ndd-button
                 type="button"
@@ -81,7 +79,6 @@
                 text="Cancel"
                 start-icon="dismiss-small"
                 variant="secondary"
-                size="sm"
               ></ndd-button>
             </div>
           } @else {

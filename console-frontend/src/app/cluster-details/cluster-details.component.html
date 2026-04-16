@@ -45,7 +45,7 @@
             (click)="openTerminal()"
             text="Open terminal"
             variant="secondary"
-            size="sm"
+            start-icon="terminal"
           ></ndd-button>
           <ndd-button
             type="button"
@@ -53,7 +53,6 @@
             text="Download kubeconfig"
             start-icon="arrow-down-in-bucket"
             variant="primary"
-            size="sm"
           ></ndd-button>
         </div>
       </div>
@@ -605,7 +604,6 @@
           (click)="showDeleteModal.set(true)"
           text="Delete this cluster"
           variant="destructive"
-          size="sm"
         ></ndd-button>
       </div>
     </div>
@@ -645,14 +643,12 @@
       (click)="showDeleteModal.set(false)"
       text="Cancel"
       variant="secondary"
-      size="sm"
     ></ndd-button>
     <ndd-button
       type="button"
       (click)="deleteCluster()"
       text="Yes, delete this cluster"
       variant="destructive"
-      size="sm"
     ></ndd-button>
   </div>
 </app-modal>

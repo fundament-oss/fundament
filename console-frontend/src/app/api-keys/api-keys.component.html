@@ -33,7 +33,6 @@
               id="apiToken"
               [value]="createdToken()"
               readonly
-              size="sm"
               class="block flex-1 rounded-md border border-green-300 bg-white px-3 py-2 font-mono text-sm dark:border-green-700 dark:bg-gray-900 dark:text-white"
             />
             <ndd-button
@@ -42,7 +41,6 @@
               text="Copy"
               start-icon="squares-stack-plus"
               variant="primary"
-              size="sm"
             ></ndd-button>
           </div>
         </div>
@@ -52,7 +50,6 @@
           text="I've saved the token"
           start-icon="check-mark"
           variant="primary"
-          size="sm"
         ></ndd-button>
       </div>
     }
@@ -119,7 +116,6 @@
               [disabled]="loading()"
               text="Create"
               variant="primary"
-              size="sm"
             ></ndd-button>
             <ndd-button
               type="button"
@@ -127,7 +123,6 @@
               [disabled]="loading()"
               text="Cancel"
               variant="secondary"
-              size="sm"
             ></ndd-button>
           </div>
         </div>
@@ -141,7 +136,6 @@
         text="Create new API key"
         start-icon="plus-small"
         variant="primary"
-        size="sm"
       ></ndd-button>
     }
 
@@ -212,7 +206,6 @@
                         text="Revoke"
                         start-icon="trash"
                         variant="accent-outlined"
-                        size="sm"
                       ></ndd-button>
                     }
                     <ndd-button
@@ -221,7 +214,6 @@
                       text="Delete"
                       start-icon="trash"
                       variant="destructive"
-                      size="sm"
                     ></ndd-button>
                   </div>
                 </td>
@@ -272,14 +264,12 @@
       (click)="showRevokeModal.set(false)"
       text="Cancel"
       variant="secondary"
-      size="sm"
     ></ndd-button>
     <ndd-button
       type="button"
       (click)="confirmRevoke()"
       text="Yes, revoke this key"
       variant="destructive"
-      size="sm"
     ></ndd-button>
   </div>
 </app-modal>
@@ -314,14 +304,12 @@
       (click)="showDeleteModal.set(false)"
       text="Cancel"
       variant="secondary"
-      size="sm"
     ></ndd-button>
     <ndd-button
       type="button"
       (click)="confirmDelete()"
       text="Yes, delete this key"
       variant="destructive"
-      size="sm"
     ></ndd-button>
   </div>
 </app-modal>

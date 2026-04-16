@@ -1,7 +1,7 @@
 <!-- Header -->
 <div class="card-header">
-  <h1 class="text-2xl font-semibold dark:text-white">Create a Kubernetes cluster</h1>
-  <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+  <h1 class="text-3xl font-semibold">Create a Kubernetes cluster</h1>
+  <p class="mt-1 text-gray-600 dark:text-gray-300">
     Configure your new Kubernetes cluster with the settings below.
   </p>
 </div>
@@ -10,14 +10,13 @@
 <form [formGroup]="clusterForm" (ngSubmit)="onSubmit()" class="space-y-6 px-6 py-6">
   <!-- Cluster Name -->
   <div>
-    <label for="clusterName" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+    <label for="clusterName" class="mb-2 block font-medium text-gray-700 dark:text-white">
       Cluster name
     </label>
     <ndd-text-field
       #clusterNameInput
       id="clusterName"
       [value]="clusterName?.value"
-      size="sm"
       placeholder="E.g. my-production-cluster"
       (blur)="onClusterNameBlur()"
       (input)="onClusterNameInput($event)"
@@ -71,8 +70,7 @@
       (click)="onCancel()"
       text="Cancel"
       variant="secondary"
-      size="sm"
-    ></ndd-button>
-    <ndd-button type="submit" text="Next step" variant="primary" size="sm"></ndd-button>
+    />
+    <ndd-button type="submit" text="Next step" variant="primary" />
   </div>
 </form>

@@ -4,30 +4,34 @@
 @import '@minbzk/storybook/styles';
 
 :root {
+  --primitives-font-size-100: theme('fontSize.base');
+
   /* Buttons */
-  --semantics-buttons-accent-filled-background-color: theme('colors.indigo.600');
+  /* --semantics-buttons-accent-filled-background-color: theme('colors.indigo.600');
   --semantics-buttons-accent-filled-is-hovered-background-color: theme('colors.indigo.700');
-  --semantics-buttons-accent-filled-is-active-background-color: theme('colors.indigo.800');
-  --semantics-controls-sm-corner-radius: theme('borderRadius.md');
+  --semantics-buttons-accent-filled-is-active-background-color: theme('colors.indigo.800'); */
+  /* --semantics-controls-sm-corner-radius: theme('borderRadius.md'); */
   /* --primitives-space-6: theme('spacing.2');
   --primitives-space-10: theme('spacing.4'); */
 
   /* Input fields */
-  --semantics-input-fields-border-thickness: theme('borderWidth.DEFAULT');
-  --semantics-input-fields-border-color: theme('colors.gray.300');
-  --semantics-focus-ring-center-color: theme('colors.indigo.500');
+  /* --semantics-input-fields-border-thickness: theme('borderWidth.DEFAULT'); */
+  /* --semantics-input-fields-border-color: theme('colors.gray.300'); */
+
+  --semantics-focus-ring-outline: none;
+  --semantics-focus-ring-box-shadow: var(--semantics-surfaces-background-color) 0 0 0 2px, var(--primitives-color-accent-200) 0 0 0 4px;
 }
 
 /* Dark mode overrides for root variables */
 html.dark {
   /* Buttons */
-  --semantics-buttons-accent-filled-background-color: theme('colors.indigo.500');
+  /* --semantics-buttons-accent-filled-background-color: theme('colors.indigo.500');
   --semantics-buttons-accent-filled-is-hovered-background-color: theme('colors.indigo.400');
-  --semantics-buttons-accent-filled-is-active-background-color: theme('colors.indigo.300');
+  --semantics-buttons-accent-filled-is-active-background-color: theme('colors.indigo.300'); */
 
   /* Input fields */
-  --semantics-input-fields-border-color: theme('colors.gray.600');
-  --semantics-focus-ring-center-color: theme('colors.indigo.400');
+  /* --semantics-input-fields-border-color: theme('colors.gray.600');
+  --semantics-focus-ring-center-color: theme('colors.indigo.400'); */
 }
 
 /* Dark mode variant using the 'dark' class on the HTML element */
@@ -200,8 +204,12 @@ select {
 
 /* Radio option label styles */
 
-.radio-option {
-  @apply block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950;
+ndd-radio-button-field.radio-option {
+  @apply block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900;
+
+  &[checked] {
+    @apply border-indigo-300 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-950;
+  }
 }
 
 /* Switch (toggle) styles */
@@ -229,7 +237,7 @@ select {
 /* Breadcrumb styles */
 
 .breadcrumb {
-  @apply -mt-2 mb-4 flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400;
+  @apply -mt-2 mb-4 flex items-center space-x-2 text-gray-600 dark:text-gray-400;
 }
 
 .breadcrumb a {
@@ -243,7 +251,7 @@ select {
 /* Navigation link styles */
 
 .nav-link {
-  @apply flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-200;
+  @apply flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-200;
 }
 
 .nav-link.active {
