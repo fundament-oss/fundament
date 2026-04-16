@@ -7,16 +7,9 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
-import { create } from '@bufbuild/protobuf';
-import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { CLUSTER } from '../../connect/tokens';
-import {
-  ListInstallsRequestSchema,
-  AddInstallRequestSchema,
-  RemoveInstallRequestSchema,
-} from '../../generated/v1/cluster_pb';
 import { fetchClusterName } from '../utils/cluster-status';
 
 @Component({
@@ -52,73 +45,15 @@ export default class ClusterPluginsComponent implements OnInit {
 
   async ngOnInit() {
     await fetchClusterName(this.client, this.clusterId).then((name) => this.clusterName.set(name));
-    try {
-      // Fetch current installs for the cluster
-      const listRequest = create(ListInstallsRequestSchema, {
-        clusterId: this.clusterId,
-      });
-      const listResponse = await firstValueFrom(this.client.listInstalls(listRequest));
-      this.currentPluginIds.set(listResponse.installs.map((install) => install.pluginId));
-    } catch (error) {
-      this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to load current plugins: ${error.message}`
-          : 'Failed to load current plugins',
-      );
-    }
+    // TODO: fetch installs via kube-api-proxy once that flow is implemented.
+    this.currentPluginIds.set([]);
   }
 
-  async onFormSubmit(data: { preset: string; plugins: string[] }) {
-    // Note: data.plugins now contains UUIDs from the shared-plugins-form component
+  async onFormSubmit(_data: { preset: string; plugins: string[] }) {
     if (this.isSubmitting()) return;
 
-    this.errorMessage.set(null);
-    this.isSubmitting.set(true);
-
-    try {
-      // Get current installs for the cluster
-      const listRequest = create(ListInstallsRequestSchema, {
-        clusterId: this.clusterId,
-      });
-      const listResponse = await firstValueFrom(this.client.listInstalls(listRequest));
-      const currentPluginIds = listResponse.installs.map((install) => install.pluginId);
-
-      // Remove plugins that are no longer selected
-      await Promise.all(
-        listResponse.installs
-          .filter((install) => !data.plugins.includes(install.pluginId))
-          .map((install) => {
-            const removeRequest = create(RemoveInstallRequestSchema, {
-              installId: install.id,
-            });
-            return firstValueFrom(this.client.removeInstall(removeRequest));
-          }),
-      );
-
-      // Add plugins that are newly selected
-      await Promise.all(
-        data.plugins
-          .filter((pluginId) => !currentPluginIds.includes(pluginId))
-          .map((pluginId) => {
-            const addRequest = create(AddInstallRequestSchema, {
-              clusterId: this.clusterId,
-              pluginId,
-            });
-            return firstValueFrom(this.client.addInstall(addRequest));
-          }),
-      );
-
-      // Navigate back to cluster detail
-      this.router.navigate(['/clusters', this.clusterId]);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? `Failed to update cluster plugins: ${error.message}`
-          : 'Failed to update cluster plugins';
-      this.errorMessage.set(message);
-    } finally {
-      this.isSubmitting.set(false);
-    }
+    // TODO: sync install changes via kube-api-proxy once that flow is implemented.
+    this.errorMessage.set('Updating cluster plugins is temporarily unavailable');
   }
 
   onCancel() {

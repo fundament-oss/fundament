@@ -152,7 +152,7 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 		Role:      protoRole,
 	}.Build())
 
-	createResp, err := r.client.ProjectService.AddProjectMember(ctx, createReq)
+	createResp, err := createIdempotent(ctx, r.client.ProjectService.AddProjectMember, createReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeAlreadyExists:
@@ -188,9 +188,7 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 		MemberId: createResp.Msg.GetMemberId(),
 	}.Build())
 
-	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetProjectMemberResponse], error) {
-		return r.client.ProjectService.GetProjectMember(ctx, getReq)
-	})
+	getResp, err := r.client.ProjectService.GetProjectMember(ctx, getReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Created Project Member",

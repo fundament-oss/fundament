@@ -9,14 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type AppstoreInstall struct {
-	ID        uuid.UUID
-	ClusterID uuid.UUID
-	PluginID  uuid.UUID
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-}
-
 type AppstorePluginDocumentationLink struct {
 	ID       uuid.UUID
 	PluginID uuid.UUID

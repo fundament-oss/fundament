@@ -45,8 +45,6 @@ const (
 	ConstraintIdempotencyKeysFkApiKey = "idempotency_keys_fk_api_key"
 	// ConstraintIdempotencyKeysFkCluster is defined on tenant.idempotency_keys.
 	ConstraintIdempotencyKeysFkCluster = "idempotency_keys_fk_cluster"
-	// ConstraintIdempotencyKeysFkInstall is defined on tenant.idempotency_keys.
-	ConstraintIdempotencyKeysFkInstall = "idempotency_keys_fk_install"
 	// ConstraintIdempotencyKeysFkNamespace is defined on tenant.idempotency_keys.
 	ConstraintIdempotencyKeysFkNamespace = "idempotency_keys_fk_namespace"
 	// ConstraintIdempotencyKeysFkNodePool is defined on tenant.idempotency_keys.
@@ -61,12 +59,6 @@ const (
 	ConstraintIdempotencyKeysFkUser = "idempotency_keys_fk_user"
 	// ConstraintIdempotencyKeysUqKeyUser is defined on tenant.idempotency_keys.
 	ConstraintIdempotencyKeysUqKeyUser = "idempotency_keys_uq_key_user"
-	// ConstraintInstallsFkCluster is defined on appstore.installs.
-	ConstraintInstallsFkCluster = "installs_fk_cluster"
-	// ConstraintInstallsFkPlugin is defined on appstore.installs.
-	ConstraintInstallsFkPlugin = "installs_fk_plugin"
-	// ConstraintInstallsUq is defined on appstore.installs.
-	ConstraintInstallsUq = "installs_uq"
 	// ConstraintNamespacesCkName is defined on tenant.namespaces.
 	ConstraintNamespacesCkName = "namespaces_ck_name"
 	// ConstraintNamespacesFkProject is defined on tenant.namespaces.
@@ -101,8 +93,6 @@ const (
 	ConstraintOutboxFkApiKey = "outbox_fk_api_key"
 	// ConstraintOutboxFkCluster is defined on authz.outbox.
 	ConstraintOutboxFkCluster = "outbox_fk_cluster"
-	// ConstraintOutboxFkInstall is defined on authz.outbox.
-	ConstraintOutboxFkInstall = "outbox_fk_install"
 	// ConstraintOutboxFkNamespace is defined on authz.outbox.
 	ConstraintOutboxFkNamespace = "outbox_fk_namespace"
 	// ConstraintOutboxFkNodePool is defined on authz.outbox.

@@ -731,23 +731,6 @@ CREATE POLICY node_pools_cluster_worker_read ON tenant.node_pools
 	USING (true);
 -- ddl-end --
 
--- object: appstore.installs | type: TABLE --
--- DROP TABLE IF EXISTS appstore.installs CASCADE;
-CREATE TABLE appstore.installs (
-	id uuid NOT NULL DEFAULT uuidv7(),
-	cluster_id uuid NOT NULL,
-	plugin_id uuid NOT NULL,
-	created timestamptz NOT NULL DEFAULT now(),
-	deleted timestamptz,
-	CONSTRAINT installs_pk PRIMARY KEY (id),
-	CONSTRAINT installs_uq UNIQUE NULLS NOT DISTINCT (cluster_id,plugin_id,deleted)
-);
--- ddl-end --
-ALTER TABLE appstore.installs OWNER TO fun_owner;
--- ddl-end --
-ALTER TABLE appstore.installs ENABLE ROW LEVEL SECURITY;
--- ddl-end --
-
 -- object: appstore.plugins | type: TABLE --
 -- DROP TABLE IF EXISTS appstore.plugins CASCADE;
 CREATE TABLE appstore.plugins (
@@ -789,15 +772,6 @@ CREATE TABLE appstore.preset_plugins (
 );
 -- ddl-end --
 ALTER TABLE appstore.preset_plugins OWNER TO fun_owner;
--- ddl-end --
-
--- object: install_organization_policy | type: POLICY --
--- DROP POLICY IF EXISTS install_organization_policy ON appstore.installs CASCADE;
-CREATE POLICY install_organization_policy ON appstore.installs
-	AS PERMISSIVE
-	FOR ALL
-	TO fun_fundament_api
-	USING (authn.is_cluster_in_organization(cluster_id));
 -- ddl-end --
 
 -- object: appstore.tags | type: TABLE --
@@ -1141,7 +1115,6 @@ CREATE TABLE authz.outbox (
 	node_pool_id uuid,
 	namespace_id uuid,
 	api_key_id uuid,
-	install_id uuid,
 	organization_user_id uuid,
 	created timestamptz NOT NULL DEFAULT now(),
 	processed timestamptz,
@@ -1158,7 +1131,6 @@ CREATE TABLE authz.outbox (
 	node_pool_id,
 	namespace_id,
 	api_key_id,
-	install_id,
 	organization_user_id
 ) = 1),
 	CONSTRAINT outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed'))
@@ -1327,31 +1299,6 @@ $function$;
 ALTER FUNCTION authz.api_keys_sync_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
--- object: authz.installs_sync_trigger | type: FUNCTION --
--- DROP FUNCTION IF EXISTS authz.installs_sync_trigger() CASCADE;
-CREATE OR REPLACE FUNCTION authz.installs_sync_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE 
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS 
-$function$
-BEGIN
-    -- Only insert into outbox if this is an INSERT or if data actually changed
-    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
-        INSERT INTO authz.outbox (install_id)
-        VALUES (COALESCE(NEW.id, OLD.id));
-    END IF;
-    RETURN COALESCE(NEW, OLD);
-END;
-$function$;
--- ddl-end --
-ALTER FUNCTION authz.installs_sync_trigger() OWNER TO fun_owner;
--- ddl-end --
-
 -- object: authz.organizations_users_sync_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authz.organizations_users_sync_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION authz.organizations_users_sync_trigger ()
@@ -1469,15 +1416,6 @@ CREATE OR REPLACE TRIGGER api_keys_outbox
 	ON authn.api_keys
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.api_keys_sync_trigger();
--- ddl-end --
-
--- object: installs_outbox | type: TRIGGER --
--- DROP TRIGGER IF EXISTS installs_outbox ON appstore.installs CASCADE;
-CREATE OR REPLACE TRIGGER installs_outbox
-	AFTER INSERT OR UPDATE
-	ON appstore.installs
-	FOR EACH ROW
-	EXECUTE PROCEDURE authz.installs_sync_trigger();
 -- ddl-end --
 
 -- object: outbox_notify | type: TRIGGER --
@@ -1681,7 +1619,6 @@ CREATE TABLE tenant.idempotency_keys (
 	node_pool_id uuid,
 	namespace_id uuid,
 	api_key_id uuid,
-	install_id uuid,
 	organization_user_id uuid,
 	CONSTRAINT idempotency_keys_pk PRIMARY KEY (id),
 	CONSTRAINT idempotency_keys_uq_key_user UNIQUE (idempotency_key,user_id),
@@ -1692,7 +1629,6 @@ CREATE TABLE tenant.idempotency_keys (
 	node_pool_id,
 	namespace_id,
 	api_key_id,
-	install_id,
 	organization_user_id
 ) <= 1)
 );
@@ -1768,20 +1704,6 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.node_pools DROP CONSTRAINT IF EXISTS node_pools_fk_cluster CASCADE;
 ALTER TABLE tenant.node_pools ADD CONSTRAINT node_pools_fk_cluster FOREIGN KEY (cluster_id)
 REFERENCES tenant.clusters (id) MATCH SIMPLE
-ON DELETE NO ACTION ON UPDATE NO ACTION;
--- ddl-end --
-
--- object: installs_fk_cluster | type: CONSTRAINT --
--- ALTER TABLE appstore.installs DROP CONSTRAINT IF EXISTS installs_fk_cluster CASCADE;
-ALTER TABLE appstore.installs ADD CONSTRAINT installs_fk_cluster FOREIGN KEY (cluster_id)
-REFERENCES tenant.clusters (id) MATCH SIMPLE
-ON DELETE NO ACTION ON UPDATE NO ACTION;
--- ddl-end --
-
--- object: installs_fk_plugin | type: CONSTRAINT --
--- ALTER TABLE appstore.installs DROP CONSTRAINT IF EXISTS installs_fk_plugin CASCADE;
-ALTER TABLE appstore.installs ADD CONSTRAINT installs_fk_plugin FOREIGN KEY (plugin_id)
-REFERENCES appstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -1925,13 +1847,6 @@ REFERENCES authn.api_keys (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
--- object: outbox_fk_install | type: CONSTRAINT --
--- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_install CASCADE;
-ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_install FOREIGN KEY (install_id)
-REFERENCES appstore.installs (id) MATCH SIMPLE
-ON DELETE NO ACTION ON UPDATE NO ACTION;
--- ddl-end --
-
 -- object: outbox_fk_organization_user | type: CONSTRAINT --
 -- ALTER TABLE authz.outbox DROP CONSTRAINT IF EXISTS outbox_fk_organization_user CASCADE;
 ALTER TABLE authz.outbox ADD CONSTRAINT outbox_fk_organization_user FOREIGN KEY (organization_user_id)
@@ -1992,13 +1907,6 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_api_key CASCADE;
 ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_api_key FOREIGN KEY (api_key_id)
 REFERENCES authn.api_keys (id) MATCH SIMPLE
-ON DELETE NO ACTION ON UPDATE NO ACTION;
--- ddl-end --
-
--- object: idempotency_keys_fk_install | type: CONSTRAINT --
--- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_install CASCADE;
-ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_install FOREIGN KEY (install_id)
-REFERENCES appstore.installs (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -2164,14 +2072,6 @@ GRANT SELECT,INSERT,UPDATE
 GRANT SELECT
    ON TABLE tenant.node_pools
    TO fun_cluster_worker;
-
--- ddl-end --
-
-
--- object: grant_raw_873c22dd3c | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE appstore.installs
-   TO fun_fundament_api;
 
 -- ddl-end --
 
@@ -2475,14 +2375,6 @@ GRANT SELECT
 -- object: "grant_U_19fbeed564" | type: PERMISSION --
 GRANT USAGE
    ON SCHEMA appstore
-   TO fun_authz_worker;
-
--- ddl-end --
-
-
--- object: grant_r_4ffd4633b5 | type: PERMISSION --
-GRANT SELECT
-   ON TABLE appstore.installs
    TO fun_authz_worker;
 
 -- ddl-end --

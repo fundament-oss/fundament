@@ -10,6 +10,7 @@ import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -41,6 +42,8 @@ export default class ClusterNamespacesComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   private client = inject(CLUSTER);
+
+  private idempotency = createIdempotencyRef();
 
   private namespaceClient = inject(NAMESPACE);
 
@@ -164,7 +167,10 @@ export default class ClusterNamespacesComponent implements OnInit {
         name: this.namespaceForm.value.name!,
       });
 
-      await firstValueFrom(this.namespaceClient.createNamespace(request));
+      await withIdempotency(
+        (opts) => this.namespaceClient.createNamespace(request, opts),
+        { signal: this.idempotency.reset() },
+      );
 
       this.showAddNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);

@@ -1,22 +1,22 @@
 apiVersion: fundament.io/v1
 kind: PluginDefinition
+metadata:
+  name: cert-manager
+  displayName: Cert Manager
+  version: v1.17.2
+  description: Automated TLS certificate management for Kubernetes using cert-manager.
+  author: Fundament
+  license: Apache-2.0
+  icon: shield-check-mark
+  urls:
+    homepage: https://cert-manager.io
+    repository: https://github.com/cert-manager/cert-manager
+    documentation: https://cert-manager.io/docs
+  tags:
+    - certificates
+    - tls
+    - security
 spec:
-  metadata:
-    name: cert-manager
-    displayName: Cert Manager
-    version: v1.17.2
-    description: Automated TLS certificate management for Kubernetes using cert-manager.
-    author: Fundament
-    license: Apache-2.0
-    icon: shield-check-mark
-    urls:
-      homepage: https://cert-manager.io
-      repository: https://github.com/cert-manager/cert-manager
-      documentation: https://cert-manager.io/docs
-    tags:
-      - certificates
-      - tls
-      - security
   permissions:
     capabilities:
       - internet_access

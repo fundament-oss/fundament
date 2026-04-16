@@ -228,10 +228,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		Name:      plan.Name.ValueString(),
 	}.Build())
 
-	// Retry on permission_denied: OpenFGA needs time to sync after login.
-	createResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.CreateNamespaceResponse], error) {
-		return r.client.NamespaceService.CreateNamespace(ctx, createReq)
-	})
+	createResp, err := createIdempotent(ctx, r.client.NamespaceService.CreateNamespace, createReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeNotFound:
@@ -272,9 +269,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		NamespaceId: plan.ID.ValueString(),
 	}.Build())
 
-	getResp, err := retryOnPermissionDenied(func() (*connect.Response[organizationv1.GetNamespaceResponse], error) {
-		return r.client.NamespaceService.GetNamespace(ctx, getReq)
-	})
+	getResp, err := r.client.NamespaceService.GetNamespace(ctx, getReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Created Namespace",
