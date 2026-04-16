@@ -3,8 +3,8 @@
   <div class="card-header">
     <div class="grid items-center gap-3 sm:grid-cols-2">
       <div>
-        <h1 class="text-2xl font-semibold dark:text-white">Organization members</h1>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        <h1 class="text-3xl font-semibold dark:text-white">Organization members</h1>
+        <p class="mt-1 text-gray-600 dark:text-gray-300">
           Manage who has access to your organization
         </p>
       </div>
@@ -39,12 +39,13 @@
       text="Invite member"
       start-icon="plus-small"
       variant="primary"
+      class="mb-4"
     ></ndd-button>
 
     <!-- Pending Invitations Section -->
     <div class="mb-8">
       <h2 class="mb-4 text-lg font-semibold dark:text-white">Pending invitations</h2>
-      <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+      <p class="mb-4 text-gray-500 dark:text-gray-400">
         Users who have been invited but haven't accepted yet
       </p>
 
@@ -56,7 +57,7 @@
             />
             <span class="sr-only">Loading...</span>
           </div>
-          <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading invitations...</p>
+          <p class="mt-4 text-gray-600 dark:text-gray-300">Loading invitations...</p>
         </div>
       } @else if (pendingInvitations().length > 0) {
         <div class="table-container">
@@ -76,7 +77,7 @@
                       <span class="font-medium dark:text-white">
                         {{ invitation.email || invitation.name }}
                       </span>
-                      <p class="text-sm text-gray-500 dark:text-gray-400">
+                      <p class="text-gray-500 dark:text-gray-400">
                         Invited {{ formatTimeAgo(invitation.created) }}
                       </p>
                     </div>
@@ -107,7 +108,7 @@
       } @else {
         <div class="rounded-md border border-gray-200 p-4 text-center dark:border-gray-800">
           <ndd-icon name="envelope" class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!" />
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No pending invitations</p>
+          <p class="mt-2 text-gray-600 dark:text-gray-400">No pending invitations</p>
         </div>
       }
     </div>
@@ -115,7 +116,7 @@
     <!-- Active Members Section -->
     <div>
       <h2 class="mb-4 text-lg font-semibold dark:text-white">Active members</h2>
-      <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+      <p class="mb-4 text-gray-500 dark:text-gray-400">
         Users who have signed in to the organization
       </p>
 
@@ -127,14 +128,14 @@
             />
             <span class="sr-only">Loading...</span>
           </div>
-          <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading members...</p>
+          <p class="mt-4 text-gray-600 dark:text-gray-300">Loading members...</p>
         </div>
       } @else if (error()) {
         <div
           class="rounded-md border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-800 dark:bg-rose-950"
         >
           <ndd-icon name="exclamation-circle" class="mx-auto h-12 w-12 text-rose-400!" />
-          <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
+          <p class="mt-2 text-rose-600 dark:text-rose-400">{{ error() }}</p>
           <ndd-button
             type="button"
             (click)="loadMembers()"
@@ -147,7 +148,7 @@
           class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700"
         >
           <ndd-icon name="person-2" class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!" />
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No members found</p>
+          <p class="mt-2 text-gray-600 dark:text-gray-400">No members found</p>
         </div>
       } @else {
         <div class="table-container">
@@ -165,7 +166,7 @@
                   <td>
                     <div class="flex items-center gap-3">
                       <div
-                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-medium text-white"
+                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-medium text-white"
                         [class]="getAvatarColor(member.name)"
                       >
                         {{ getInitials(member.name) }}
@@ -174,13 +175,12 @@
                         <div class="flex items-center gap-2">
                           <span class="font-medium dark:text-white">{{ member.name }}</span>
                           @if (member.isCurrentUser) {
-                            <span
-                              class="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                            <span class="badge badge-gray text-gray-600! dark:text-gray-400!"
                               >You</span
                             >
                           }
                         </div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                        <p class="text-gray-500 dark:text-gray-400">
                           Joined {{ formatTimeAgo(member.created) }}
                         </p>
                       </div>
@@ -197,7 +197,7 @@
                   </td>
                   <td>
                     @if (member.isCurrentUser) {
-                      <span class="text-sm text-gray-400 dark:text-gray-600">&mdash;</span>
+                      <span class="text-gray-400 dark:text-gray-600">&mdash;</span>
                     } @else {
                       <ndd-button
                         type="button"
@@ -242,14 +242,14 @@
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
+        <p class="text-gray-500 dark:text-gray-400">
           Are you sure you want to remove
           <span class="font-semibold text-gray-900 dark:text-white">{{
             deletingMember()?.name
           }}</span>
           from this organization?
         </p>
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+        <p class="mt-2 text-rose-600 dark:text-rose-400">
           This will revoke their access to all organization resources.
         </p>
       </div>
@@ -280,9 +280,9 @@
   (modalClose)="showEditModal.set(false)"
 >
   <div class="mb-4">
-    <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Member</span>
-    <p class="text-sm dark:text-white">{{ editingMember()?.name }}</p>
-    <p class="text-xs text-gray-500 dark:text-gray-400">
+    <span class="mb-2 block font-medium text-gray-700 dark:text-white">Member</span>
+    <p class="dark:text-white">{{ editingMember()?.name }}</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
       {{ editingMember()?.email || editingMember()?.externalRef }}
     </p>
   </div>
@@ -329,14 +329,14 @@
 
 <!-- Invite Modal -->
 <app-modal [show]="isModalOpen()" title="Invite user" (modalClose)="closeModal()">
-  <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
+  <p class="mb-6 text-gray-600 dark:text-gray-400">
     Enter the email address of the user you want to invite. They will be able to sign in via SSO
     once added.
   </p>
 
   <form (ngSubmit)="submitInvitation()" novalidate>
     <div class="mb-4">
-      <label for="email" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label for="email" class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
         Email address
       </label>
       <ndd-text-field
@@ -352,7 +352,7 @@
         [invalid]="!!(inviteError() || (emailModel.invalid && emailModel.touched))"
       />
       @if (inviteError()) {
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ inviteError() }}</p>
+        <p class="mt-2 text-rose-600 dark:text-rose-400">{{ inviteError() }}</p>
       }
     </div>
 

@@ -14,7 +14,7 @@
         [attr.aria-disabled]="!canNavigate(i) ? 'true' : null"
       >
         <span
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-3 border-gray-200 text-sm font-semibold text-gray-400 group-data-[active=true]:border-emerald-500 group-data-[active=true]:text-emerald-500 group-data-[completed=true]:border-emerald-500 group-data-[completed=true]:text-emerald-500 dark:border-gray-700 dark:text-gray-500"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-3 border-gray-200 font-semibold text-gray-400 group-data-[active=true]:border-emerald-500 group-data-[active=true]:text-emerald-500 group-data-[completed=true]:border-emerald-500 group-data-[completed=true]:text-emerald-500 dark:border-gray-700 dark:text-gray-500"
         >
           @if (isCompleted(i)) {
             <app-checkmark-icon class="h-4 w-4" />
@@ -25,7 +25,7 @@
           }
         </span>
         <span
-          class="top-11 ml-3 text-sm font-medium whitespace-nowrap sm:absolute sm:ml-0 lg:text-base"
+          class="top-11 ml-3 font-medium whitespace-nowrap sm:absolute sm:ml-0"
           [class]="isFirst ? 'left-0' : isLast ? 'right-0' : 'left-1/2 sm:-translate-x-1/2'"
           >{{ step.name }}</span
         >

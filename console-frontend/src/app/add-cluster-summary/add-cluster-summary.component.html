@@ -1,7 +1,7 @@
 <!-- Header -->
 <div class="card-header">
-  <h1 class="text-2xl font-semibold dark:text-white">Cluster summary</h1>
-  <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+  <h1 class="text-3xl font-semibold dark:text-white">Cluster summary</h1>
+  <p class="mt-1 text-gray-600 dark:text-gray-300">
     Review your cluster configuration before creating it.
   </p>
 </div>
@@ -13,16 +13,16 @@
     <h3 class="mb-4 text-lg font-medium dark:text-white">Basics</h3>
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <dl>
-        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
-        <dd class="mt-1 text-sm dark:text-white">{{ state().clusterName || 'N/A' }}</dd>
+        <dt class="font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
+        <dd class="mt-1 dark:text-white">{{ state().clusterName || 'N/A' }}</dd>
       </dl>
       <dl>
-        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
-        <dd class="mt-1 text-sm dark:text-white">{{ state().region?.toUpperCase() || 'N/A' }}</dd>
+        <dt class="font-medium text-gray-500 dark:text-gray-400">Region</dt>
+        <dd class="mt-1 dark:text-white">{{ state().region?.toUpperCase() || 'N/A' }}</dd>
       </dl>
       <dl>
-        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
-        <dd class="mt-1 text-sm dark:text-white">
+        <dt class="font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
+        <dd class="mt-1 dark:text-white">
           {{ state().kubernetesVersion || 'N/A' }}
         </dd>
       </dl>
@@ -38,30 +38,30 @@
           <div
             class="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900"
           >
-            <h4 class="mb-3 text-sm font-medium dark:text-white">{{ nodePool.name }}</h4>
+            <h4 class="mb-3 font-medium dark:text-white">{{ nodePool.name }}</h4>
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <dl>
-                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Machine type</dt>
-                <dd class="mt-1 text-sm dark:text-white">{{ nodePool.machineType }}</dd>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Machine type</dt>
+                <dd class="mt-1 dark:text-white">{{ nodePool.machineType }}</dd>
               </dl>
               <dl>
-                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Min autoscaling
                 </dt>
-                <dd class="mt-1 text-sm dark:text-white">{{ nodePool.autoscaleMin }} nodes</dd>
+                <dd class="mt-1 dark:text-white">{{ nodePool.autoscaleMin }} nodes</dd>
               </dl>
               <dl>
-                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Max autoscaling
                 </dt>
-                <dd class="mt-1 text-sm dark:text-white">{{ nodePool.autoscaleMax }} nodes</dd>
+                <dd class="mt-1 dark:text-white">{{ nodePool.autoscaleMax }} nodes</dd>
               </dl>
             </div>
           </div>
         }
       </div>
     } @else {
-      <p class="text-sm text-gray-500 dark:text-gray-400">No node pools configured</p>
+      <p class="text-gray-500 dark:text-gray-400">No node pools configured</p>
     }
   </div>
 
@@ -69,22 +69,22 @@
   <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
     <h3 class="mb-4 text-lg font-medium dark:text-white">Plugins</h3>
     @if (isLoadingPlugins()) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">Loading plugin information...</p>
+      <p class="text-gray-500 dark:text-gray-400">Loading plugin information...</p>
     } @else if (state().preset || (state().plugins && state().plugins!.length > 0)) {
       <div class="space-y-2">
         @if (state().preset) {
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Preset</dt>
-            <dd class="mt-1 text-sm dark:text-white">{{ getPresetName(state().preset!) }}</dd>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Preset</dt>
+            <dd class="mt-1 dark:text-white">{{ getPresetName(state().preset!) }}</dd>
           </dl>
         }
         @if (state().plugins && state().plugins!.length > 0) {
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Selected plugins</dt>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Selected plugins</dt>
             <dd class="mt-2 flex flex-wrap gap-1">
               @for (pluginName of getPluginNames(state().plugins!); track pluginName) {
                 <span
-                  class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                  class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
                 >
                   {{ pluginName }}
                 </span>
@@ -94,7 +94,7 @@
         }
       </div>
     } @else {
-      <p class="text-sm text-gray-500 dark:text-gray-400">No plugins configured</p>
+      <p class="text-gray-500 dark:text-gray-400">No plugins configured</p>
     }
   </div>
 
@@ -107,7 +107,7 @@
         name="dismiss-circle"
         class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
       />
-      <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+      <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
     </div>
   }
 
@@ -148,7 +148,7 @@
         }
         <div>
           <p
-            class="text-sm font-medium"
+            class="font-medium"
             [class]="
               bannerState() === 'ready'
                 ? 'text-green-800 dark:text-green-200'
@@ -171,7 +171,7 @@
               Cluster creation failed
             }
           </p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">{{ clusterDisplayName() }}</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">{{ clusterDisplayName() }}</p>
         </div>
       </div>
       <div class="flex shrink-0 gap-2">
@@ -221,7 +221,7 @@
   (modalClose)="onModalClose()"
   maxWidth="max-w-lg"
 >
-  <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+  <p class="mb-4 text-gray-600 dark:text-gray-400">
     Your cluster is being provisioned. You can track the progress of each step below.
   </p>
   <div class="max-h-[60vh] divide-y divide-gray-200 overflow-y-auto dark:divide-gray-800">
@@ -247,7 +247,7 @@
           }
 
           <div>
-            <p class="text-sm font-medium dark:text-white">
+            <p class="font-medium dark:text-white">
               @if (item.type === 'nodepool') {
                 <span class="text-gray-500 dark:text-gray-400">Node pool:</span>
               } @else if (item.type === 'plugin') {
@@ -256,23 +256,23 @@
               {{ item.name }}
             </p>
             @if (item.requestStatus === 'pending') {
-              <p class="text-xs text-gray-500 dark:text-gray-400">Waiting...</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Waiting...</p>
             } @else if (item.requestStatus === 'in_progress') {
-              <p class="text-xs text-indigo-600 dark:text-indigo-400">
+              <p class="text-sm text-indigo-600 dark:text-indigo-400">
                 {{ item.type === 'plugin' ? 'Installing...' : 'Creating...' }}
               </p>
             } @else if (item.requestStatus === 'failed') {
-              <p class="text-xs text-rose-600 dark:text-rose-400">{{ item.error }}</p>
+              <p class="text-sm text-rose-600 dark:text-rose-400">{{ item.error }}</p>
             } @else if (item.syncStatus === 'syncing') {
-              <p class="text-xs text-indigo-600 dark:text-indigo-400">
+              <p class="text-sm text-indigo-600 dark:text-indigo-400">
                 Syncing{{ item.shootStatus ? ' (' + item.shootStatus + ')' : '' }}...
               </p>
             } @else if (item.syncStatus === 'failed') {
-              <p class="text-xs text-rose-600 dark:text-rose-400">{{ item.error }}</p>
+              <p class="text-sm text-rose-600 dark:text-rose-400">{{ item.error }}</p>
             } @else if (item.syncStatus === 'synced') {
-              <p class="text-xs text-green-600 dark:text-green-400">Ready</p>
+              <p class="text-sm text-green-600 dark:text-green-400">Ready</p>
             } @else {
-              <p class="text-xs text-green-600 dark:text-green-400">
+              <p class="text-sm text-green-600 dark:text-green-400">
                 {{ item.type === 'plugin' ? 'Installed' : 'Done' }}
               </p>
             }

@@ -1,8 +1,8 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Profile</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Your account information</p>
+    <h1 class="text-3xl font-semibold dark:text-white">Profile</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">Your account information</p>
   </div>
 
   @if (isLoading()) {
@@ -12,7 +12,7 @@
   } @else if (error()) {
     <div class="card-body-lg">
       <div class="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-        <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+        <p class="text-red-800 dark:text-red-200">{{ error() }}</p>
       </div>
     </div>
   } @else {
@@ -29,7 +29,7 @@
         </p>
       </div>
 
-      <div class="space-y-4 text-sm">
+      <div class="space-y-4">
         <div class="sm:flex">
           <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Name:</p>
           <p>{{ userInfo()?.name || 'N/A' }}</p>

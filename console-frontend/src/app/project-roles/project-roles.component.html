@@ -1,10 +1,8 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Project roles</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-      Manage roles for members of this project
-    </p>
+    <h1 class="text-3xl font-semibold dark:text-white">Project roles</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">Manage roles for members of this project</p>
   </div>
 
   <div class="p-6">
@@ -22,7 +20,7 @@
       </p>
     </div>
 
-    <div class="mb-5 flex flex-wrap items-center gap-3">
+    <div class="mb-6 flex flex-wrap items-center gap-3">
       <ndd-button
         type="button"
         (click)="openCreateModal()"
@@ -45,7 +43,7 @@
     </div>
 
     @if (filteredBindings().length === 0) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">No role bindings found.</p>
+      <p class="text-gray-500 dark:text-gray-400">No role bindings found.</p>
     } @else {
       <div class="table-container">
         <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
@@ -81,6 +79,7 @@
                     start-icon="pencil"
                     variant="accent-outlined"
                     size="sm"
+                    class="mr-2"
                   ></ndd-button>
 
                   <ndd-button
@@ -110,11 +109,11 @@
   <form (ngSubmit)="saveBinding()" novalidate>
     <!-- Member selection -->
     <div class="mb-4">
-      <label for="rb-member" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+      <label for="rb-member" class="mb-2 block font-medium text-gray-700 dark:text-white">
         Member
       </label>
       @if (editingBinding()) {
-        <p class="text-sm dark:text-white">{{ editingBinding()?.memberName }}</p>
+        <p class="dark:text-white">{{ editingBinding()?.memberName }}</p>
       } @else {
         <select
           id="rb-member"
@@ -134,7 +133,7 @@
     <!-- Namespace selection -->
     <div class="mb-4">
       @if (editingBinding()) {
-        <p class="text-sm dark:text-white">{{ editingBinding()?.namespace }}</p>
+        <p class="dark:text-white">{{ editingBinding()?.namespace }}</p>
       } @else {
         <ndd-form-field label="Namespace">
           <ndd-radio-button-group
@@ -193,7 +192,7 @@
 
     <!-- Roles switches -->
     <div class="mb-4">
-      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Roles</span>
+      <span class="mb-2 block font-medium text-gray-700 dark:text-white">Roles</span>
       <div class="space-y-3">
         @for (role of availableRoles; track role) {
           <div>
@@ -205,7 +204,7 @@
                 class="peer sr-only"
               />
               <span class="switch"></span>
-              <span class="ml-3 text-sm font-medium dark:text-gray-300">{{ role }}</span>
+              <span class="ml-3 font-medium dark:text-gray-300">{{ role }}</span>
             </label>
           </div>
         }
@@ -245,7 +244,7 @@
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
+        <p class="text-gray-600 dark:text-gray-400">
           Are you sure you want to remove the role binding for
           <span class="font-semibold text-gray-800 dark:text-white">{{
             pendingBindingDescription()

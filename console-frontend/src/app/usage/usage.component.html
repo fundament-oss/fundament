@@ -3,8 +3,8 @@
   <div class="card-header">
     <div class="grid items-center gap-3 sm:grid-cols-2">
       <div>
-        <h1 class="text-2xl font-semibold dark:text-white">Usage</h1>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        <h1 class="text-3xl font-semibold dark:text-white">Usage</h1>
+        <p class="mt-1 text-gray-600 dark:text-gray-300">
           @if (viewMode() === 'project') {
             Monitor resource usage for this project
           } @else {
@@ -28,7 +28,7 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <!-- Date Range -->
       <div class="lg:col-span-2">
-        <label for="date" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+        <label for="date" class="mb-1 block font-medium text-gray-700 dark:text-gray-300"
           >Date range</label
         >
         <app-date-range-picker
@@ -42,9 +42,7 @@
       <!-- Cluster filter — only shown in org-level view -->
       @if (viewMode() === 'org') {
         <div>
-          <label
-            for="cluster"
-            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          <label for="cluster" class="mb-1 block font-medium text-gray-700 dark:text-gray-300"
             >Cluster</label
           >
           <select
@@ -65,9 +63,7 @@
       <!-- Namespace filter — only shown in project-level view -->
       @if (viewMode() === 'project') {
         <div>
-          <label
-            for="namespace"
-            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          <label for="namespace" class="mb-1 block font-medium text-gray-700 dark:text-gray-300"
             >Namespace</label
           >
           <select
@@ -91,7 +87,7 @@
     <!-- Loading indicator -->
     @if (isLoading()) {
       <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Loading metrics…</p>
+        <p class="text-gray-500 dark:text-gray-400">Loading metrics…</p>
       </div>
     }
 
@@ -104,7 +100,7 @@
           name="dismiss-circle"
           class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
         />
-        <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+        <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
       </div>
     }
 
@@ -138,7 +134,7 @@
                   [style.width.%]="getUsagePercentage(totals.cpu.used, totals.cpu.total)"
                 ></div>
               </div>
-              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {{ getUsagePercentage(totals.cpu.used, totals.cpu.total) }}% used
               </div>
             </div>
@@ -162,7 +158,7 @@
                   [style.width.%]="getUsagePercentage(totals.memory.used, totals.memory.total)"
                 ></div>
               </div>
-              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {{ getUsagePercentage(totals.memory.used, totals.memory.total) }}% used
               </div>
             </div>
@@ -184,7 +180,7 @@
                   [style.width.%]="getUsagePercentage(totals.pods.used, totals.pods.total)"
                 ></div>
               </div>
-              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {{ getUsagePercentage(totals.pods.used, totals.pods.total) }}% used
               </div>
             </div>
@@ -200,9 +196,7 @@
             @if (hasCpuData) {
               <canvas #cpuChart></canvas>
             } @else {
-              <p
-                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
-              >
+              <p class="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">
                 No data available
               </p>
             }
@@ -214,9 +208,7 @@
             @if (hasMemoryData) {
               <canvas #memoryChart></canvas>
             } @else {
-              <p
-                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
-              >
+              <p class="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">
                 No data available
               </p>
             }
@@ -228,9 +220,7 @@
             @if (hasPodData) {
               <canvas #podChart></canvas>
             } @else {
-              <p
-                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
-              >
+              <p class="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">
                 No data available
               </p>
             }
@@ -242,9 +232,7 @@
             @if (hasNetworkData) {
               <canvas #networkChart></canvas>
             } @else {
-              <p
-                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
-              >
+              <p class="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">
                 No data available
               </p>
             }
@@ -317,12 +305,12 @@
             <div class="space-y-4">
               @for (node of nodeUsage(); track node.name) {
                 <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800">
-                  <h4 class="mb-3 font-mono text-sm font-medium dark:text-white">
+                  <h4 class="mb-3 font-mono font-medium dark:text-white">
                     {{ node.name }}
                   </h4>
                   <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
-                      <div class="mb-1 flex justify-between text-xs">
+                      <div class="mb-1 flex justify-between text-sm">
                         <span class="text-gray-600 dark:text-gray-300">CPU</span>
                         <span class="text-gray-500 dark:text-gray-400">
                           {{ node.cpu.used | number: '1.1-1' }} /
@@ -338,7 +326,7 @@
                       </div>
                     </div>
                     <div>
-                      <div class="mb-1 flex justify-between text-xs">
+                      <div class="mb-1 flex justify-between text-sm">
                         <span class="text-gray-600 dark:text-gray-300">Memory</span>
                         <span class="text-gray-500 dark:text-gray-400">
                           {{ node.memory.used | number: '1.1-1' }} /
@@ -356,7 +344,7 @@
                       </div>
                     </div>
                     <div>
-                      <div class="mb-1 flex justify-between text-xs">
+                      <div class="mb-1 flex justify-between text-sm">
                         <span class="text-gray-600 dark:text-gray-300">Pods</span>
                         <span class="text-gray-500 dark:text-gray-400">
                           {{ node.pods.used | number: '1.0-0' }} /
@@ -378,7 +366,7 @@
               }
             </div>
           } @else {
-            <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
+            <p class="text-gray-400 dark:text-gray-500">No data available</p>
           }
         </div>
       }
@@ -424,7 +412,7 @@
             </table>
           </div>
         } @else {
-          <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
+          <p class="text-gray-400 dark:text-gray-500">No data available</p>
         }
       </div>
     }

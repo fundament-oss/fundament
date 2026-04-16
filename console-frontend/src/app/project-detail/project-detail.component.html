@@ -7,7 +7,7 @@
       name="dismiss-circle"
       class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
     />
-    <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+    <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
 
@@ -20,7 +20,7 @@
       />
       <span class="sr-only">Loading...</span>
     </div>
-    <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading project details...</p>
+    <p class="mt-4 text-gray-600 dark:text-gray-300">Loading project details...</p>
   </div>
 }
 
@@ -29,10 +29,10 @@
   <div class="card">
     <!-- Header -->
     <div class="card-header">
-      <h1 class="text-2xl font-semibold dark:text-white">
+      <h1 class="text-3xl font-semibold dark:text-white">
         {{ project()?.name || 'Unknown project' }}
       </h1>
-      <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+      <p class="mt-1 text-gray-600 dark:text-gray-300">
         Created {{ formatDate(project()?.created) }}
       </p>
     </div>
@@ -43,28 +43,28 @@
         <h3 class="mb-4 text-lg font-medium dark:text-white">Project details</h3>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Project name</dt>
-            <dd class="mt-1 text-sm dark:text-white">{{ project()?.name }}</dd>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Project name</dt>
+            <dd class="mt-1 dark:text-white">{{ project()?.name }}</dd>
           </dl>
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Project ID</dt>
-            <dd class="mt-1 font-mono text-sm dark:text-white">{{ project()?.id }}</dd>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Project ID</dt>
+            <dd class="mt-1 font-mono dark:text-white">{{ project()?.id }}</dd>
           </dl>
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Created</dt>
-            <dd class="mt-1 text-sm dark:text-white">
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Created</dt>
+            <dd class="mt-1 dark:text-white">
               {{ formatDate(project()?.created) }}
             </dd>
           </dl>
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Cluster</dt>
-            <dd class="mt-1 text-sm dark:text-white">
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Cluster</dt>
+            <dd class="mt-1 dark:text-white">
               {{ getClusterName(project()?.clusterId ?? '') }}
             </dd>
           </dl>
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Namespaces</dt>
-            <dd class="mt-1 text-sm dark:text-white">{{ namespaces().length }}</dd>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Namespaces</dt>
+            <dd class="mt-1 dark:text-white">{{ namespaces().length }}</dd>
           </dl>
         </div>
       </div>
@@ -81,9 +81,7 @@
           ></ndd-button>
         </div>
         @if (namespaces().length === 0) {
-          <p class="text-sm text-gray-500 dark:text-gray-400">
-            No namespaces belong to this project yet.
-          </p>
+          <p class="text-gray-500 dark:text-gray-400">No namespaces belong to this project yet.</p>
         } @else {
           <div class="space-y-3">
             @for (namespace of namespaces(); track namespace.id) {
@@ -91,7 +89,7 @@
                 class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
               >
                 <div>
-                  <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
+                  <p class="font-mono dark:text-white">{{ namespace.name }}</p>
                   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     Created {{ formatDate(namespace.created) }}
                   </p>

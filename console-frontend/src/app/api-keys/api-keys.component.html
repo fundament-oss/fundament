@@ -1,8 +1,8 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">API keys</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+    <h1 class="text-3xl font-semibold dark:text-white">API keys</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">
       Manage API keys for programmatic access to your organization
     </p>
   </div>
@@ -17,15 +17,12 @@
           <h3 class="text-lg font-semibold text-green-900 dark:text-green-100">
             API key created successfully!
           </h3>
-          <p class="mt-1 text-sm text-green-800 dark:text-green-200">
+          <p class="mt-1 text-green-800 dark:text-green-200">
             Copy this token now. For security reasons, it will not be shown again.
           </p>
         </div>
         <div class="mb-4">
-          <label
-            for="apiToken"
-            class="mb-2 block text-sm font-medium text-green-900 dark:text-green-100"
-          >
+          <label for="apiToken" class="mb-2 block font-medium text-green-900 dark:text-green-100">
             Your API token
           </label>
           <div class="flex gap-2">
@@ -33,7 +30,7 @@
               id="apiToken"
               [value]="createdToken()"
               readonly
-              class="block flex-1 rounded-md border border-green-300 bg-white px-3 py-2 font-mono text-sm dark:border-green-700 dark:bg-gray-900 dark:text-white"
+              class="block flex-1 rounded-md border border-green-300 bg-white px-3 py-2 font-mono dark:border-green-700 dark:bg-gray-900 dark:text-white"
             />
             <ndd-button
               type="button"
@@ -57,7 +54,7 @@
     <!-- Error Message -->
     @if (error()) {
       <div class="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-950">
-        <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+        <p class="text-red-800 dark:text-red-200">{{ error() }}</p>
       </div>
     }
 
@@ -67,10 +64,7 @@
         <h3 class="-mt-2 mb-4 text-lg font-semibold dark:text-white">Create new API key</h3>
         <div class="space-y-4">
           <div>
-            <label
-              for="name"
-              class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
+            <label for="name" class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
               Name
             </label>
             <ndd-text-field
@@ -86,16 +80,13 @@
               [invalid]="!!getNameError(nameField)"
             />
             @if (getNameError(nameField)) {
-              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+              <p class="mt-2 text-rose-600 dark:text-rose-400">
                 {{ getNameError(nameField) }}
               </p>
             }
           </div>
           <div>
-            <label
-              for="expiresIn"
-              class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
+            <label for="expiresIn" class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
               Expires after (duration)
             </label>
             <ndd-text-field
@@ -105,7 +96,7 @@
               (keyup.enter)="createApiKey()"
               (keyup.escape)="cancelCreating()"
             />
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Optional. Formatted as duration, eg. 300s, 5m or 1h.
             </p>
           </div>
@@ -167,16 +158,16 @@
                 <td class="font-medium dark:text-white">
                   {{ apiKey.name }}
                 </td>
-                <td class="font-mono text-sm text-gray-600 dark:text-gray-400">
+                <td class="font-mono text-gray-600 dark:text-gray-400">
                   {{ apiKey.tokenPrefix }}
                 </td>
-                <td class="text-sm text-gray-600 dark:text-gray-400">
+                <td class="text-gray-600 dark:text-gray-400">
                   {{ formatDate(apiKey.created) }}
                 </td>
-                <td class="text-sm text-gray-600 dark:text-gray-400">
+                <td class="text-gray-600 dark:text-gray-400">
                   {{ formatDateTime(apiKey.lastUsed) }}
                 </td>
-                <td class="text-sm text-gray-600 dark:text-gray-400">
+                <td class="text-gray-600 dark:text-gray-400">
                   @if (apiKey.expires) {
                     <span
                       [class.text-red-600]="isExpired(apiKey.expires)"
@@ -227,8 +218,8 @@
     <!-- Empty State -->
     @if (!loading() && apiKeys().length === 0 && !error() && !isCreating()) {
       <div class="py-8 text-center">
-        <p class="text-gray-600 dark:text-gray-300">No API keys found</p>
-        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Create your first API key</p>
+        <p class="text-lg text-gray-600 dark:text-gray-300">No API keys found</p>
+        <p class="mt-2 text-gray-500 dark:text-gray-400">Create your first API key</p>
       </div>
     }
   </div>
@@ -249,7 +240,7 @@
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
+        <p class="text-gray-600 dark:text-gray-400">
           Are you sure you want to revoke API key
           <span class="font-semibold text-gray-800 dark:text-white">{{ pendingKeyName() }}</span
           >? It will no longer be usable.
@@ -289,7 +280,7 @@
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
+        <p class="text-gray-600 dark:text-gray-400">
           Are you sure you want to delete API key
           <span class="font-semibold text-gray-800 dark:text-white">{{ pendingKeyName() }}</span
           >?

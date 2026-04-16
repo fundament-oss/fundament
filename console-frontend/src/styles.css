@@ -134,15 +134,15 @@ input.validate-on-touch.ng-invalid.ng-touched {
 /* Badge styles */
 
 .badge {
-  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-medium;
 }
 
 .badge-sm {
-  @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium;
+  @apply inline-flex items-center rounded-full px-2 py-1 text-sm font-medium;
 }
 
 .badge-md {
-  @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium;
+  @apply inline-flex items-center rounded-full px-2 py-1 text-sm font-medium;
 }
 
 /* Badge color variants */
@@ -301,7 +301,7 @@ ndd-radio-button-field.radio-option {
 }
 
 .table thead th {
-  @apply px-6 py-3.5 text-left text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400;
+  @apply px-6 py-3.5 text-left font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400;
 }
 
 .table tbody {
@@ -313,5 +313,5 @@ ndd-radio-button-field.radio-option {
 } */
 
 .table tbody td {
-  @apply px-6 py-3 text-sm whitespace-nowrap dark:text-gray-300;
+  @apply px-6 py-3 whitespace-nowrap dark:text-gray-300;
 }

@@ -30,7 +30,7 @@
             (blur)="loginForm.get('email')!.markAsTouched()"
           ></ndd-text-field>
           @if (email?.invalid && email?.touched) {
-            <span slot="description" class="text-sm text-rose-600 dark:text-rose-400">
+            <span slot="description" class="text-rose-600 dark:text-rose-400">
               {{ getEmailError() }}
             </span>
           }
@@ -51,7 +51,7 @@
             hide-accessible-label="Hide password"
           ></ndd-password-field>
           @if (password?.invalid && password?.dirty) {
-            <span slot="description" class="text-sm text-rose-600 dark:text-rose-400">
+            <span slot="description" class="text-rose-600 dark:text-rose-400">
               {{ getPasswordError() }}
             </span>
           }
@@ -59,7 +59,7 @@
 
         @if (error()) {
           <div class="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
-            <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+            <p class="text-red-800 dark:text-red-200">{{ error() }}</p>
           </div>
         }
 

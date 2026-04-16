@@ -1,7 +1,7 @@
 <!-- Toast Message -->
 @if (toastService.toast()) {
   <div
-    class="fixed right-4 bottom-4 z-100 flex w-sm items-center gap-3 rounded-md bg-gray-800/90 px-4 py-3 text-sm text-white shadow-lg dark:bg-gray-200/90 dark:text-gray-800"
+    class="fixed right-4 bottom-4 z-100 flex w-sm items-center gap-3 rounded-md bg-gray-800/90 px-4 py-3 text-white shadow-lg dark:bg-gray-200/90 dark:text-gray-800"
     role="alert"
   >
     <div
@@ -121,8 +121,8 @@
               class="absolute right-0 z-10 mt-2 w-52 rounded-lg border border-gray-200 bg-white py-1 shadow-md dark:border-gray-800 dark:bg-gray-950"
             >
               <div class="border-b border-gray-100 px-4 py-2.5 dark:border-gray-800">
-                <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Logged in as</p>
-                <p class="mt-0.5 truncate text-sm font-medium text-gray-700 dark:text-gray-200">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Logged in as</p>
+                <p class="mt-1 truncate font-medium text-gray-700 dark:text-gray-200">
                   {{ currentUser()?.name || 'Unknown' }}
                 </p>
               </div>
@@ -130,14 +130,14 @@
                 <a
                   routerLink="/profile"
                   (click)="userDropdownOpen.set(false)"
-                  class="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
+                  class="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
                 >
                   My profile
                 </a>
                 <a
                   routerLink="/api-keys"
                   (click)="userDropdownOpen.set(false)"
-                  class="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
+                  class="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
                 >
                   API keys
                 </a>
@@ -145,7 +145,7 @@
               <div class="border-t border-gray-100 pt-1 dark:border-gray-800">
                 <button
                   (click)="handleLogout()"
-                  class="block w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
+                  class="block w-full cursor-pointer px-4 py-2 text-left text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
                 >
                   Log out
                 </button>

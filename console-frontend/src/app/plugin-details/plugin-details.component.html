@@ -9,7 +9,7 @@
       />
       <span class="sr-only">Loading...</span>
     </div>
-    <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading plugin details...</p>
+    <p class="mt-4 text-gray-600 dark:text-gray-300">Loading plugin details...</p>
   </div>
 }
 
@@ -22,7 +22,7 @@
       name="dismiss-circle"
       class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
     />
-    <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+    <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
 
@@ -51,7 +51,7 @@
               <div class="flex-1">
                 <h1 class="text-3xl font-bold dark:text-white">{{ plugin()!.name }}</h1>
                 @if (plugin()!.author?.name) {
-                  <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  <p class="mt-1 text-gray-600 dark:text-gray-400">
                     by {{ plugin()!.author!.name }}
                   </p>
                 }
@@ -60,8 +60,8 @@
                     <span
                       [class]="
                         tag.name.toLowerCase() === 'official'
-                          ? 'inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
-                          : 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                          ? 'inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
+                          : 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-sm font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-200'
                       "
                     >
                       @if (tag.name.toLowerCase() === 'official') {
@@ -72,7 +72,7 @@
                   }
                   @if (hasInstalledClusters()) {
                     <span
-                      class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                      class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     >
                       <ndd-icon name="check-mark" class="mr-1 h-3 w-3" />
                       Installed on {{ getInstalledClusterCount() }} cluster{{
@@ -111,21 +111,21 @@
                 name="check-mark"
                 class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
               />
-              <span class="text-sm text-gray-600 dark:text-gray-300">Community support</span>
+              <span class="text-gray-600 dark:text-gray-300">Community support</span>
             </div>
             <div class="flex items-start">
               <ndd-icon
                 name="check-mark"
                 class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
               />
-              <span class="text-sm text-gray-600 dark:text-gray-300">Open source</span>
+              <span class="text-gray-600 dark:text-gray-300">Open source</span>
             </div>
             <div class="flex items-start">
               <ndd-icon
                 name="check-mark"
                 class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
               />
-              <span class="text-sm text-gray-600 dark:text-gray-300">Regular updates</span>
+              <span class="text-gray-600 dark:text-gray-300">Regular updates</span>
             </div>
           </div>
         </div>
@@ -146,7 +146,7 @@
               <div class="mb-4 flex flex-wrap gap-2">
                 @for (category of plugin()!.categories; track category.id) {
                   <span
-                    class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                    class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                   >
                     {{ category.name }}
                   </span>
@@ -158,14 +158,14 @@
             <div class="space-y-3">
               @if (plugin()!.repositoryUrl) {
                 <div>
-                  <p class="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <p class="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">
                     Repository
                   </p>
                   <a
                     [href]="plugin()!.repositoryUrl"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="link text-sm"
+                    class="link"
                   >
                     {{ plugin()!.repositoryUrl }}
                   </a>
@@ -173,7 +173,7 @@
               }
               @if (plugin()!.documentationLinks && plugin()!.documentationLinks.length > 0) {
                 <div>
-                  <p class="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <p class="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">
                     Documentation
                   </p>
                   @for (link of plugin()!.documentationLinks; track link.id) {
@@ -181,7 +181,7 @@
                       [href]="link.url"
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="link block text-sm"
+                      class="link block"
                     >
                       {{ link.title }}
                     </a>
@@ -190,14 +190,14 @@
               }
               @if (plugin()!.author?.url) {
                 <div>
-                  <p class="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <p class="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">
                     Author website
                   </p>
                   <a
                     [href]="plugin()!.author!.url"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="link text-sm"
+                    class="link"
                   >
                     {{ plugin()!.author!.url }}
                   </a>

@@ -1,8 +1,8 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Project members</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+    <h1 class="text-3xl font-semibold dark:text-white">Project members</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">
       Manage members and their permissions for this project
     </p>
   </div>
@@ -16,7 +16,7 @@
         name="info-circle"
         class="mt-0.5 h-5 w-5 shrink-0 text-indigo-600! dark:text-indigo-400!"
       />
-      <div class="text-sm text-indigo-700 dark:text-indigo-300">
+      <div class="text-indigo-700 dark:text-indigo-300">
         <p class="mb-2">
           Members marked with
           <ndd-icon name="lock-closed" class="inline-block h-3.5 w-3.5 align-middle" /> inherit
@@ -45,6 +45,7 @@
       text="Add a member"
       start-icon="plus-small"
       variant="primary"
+      class="mb-6"
     ></ndd-button>
 
     @if (error()) {
@@ -53,7 +54,7 @@
       >
         <ndd-icon name="exclamation-circle" class="mt-0.5 h-5 w-5 shrink-0 text-rose-400!" />
         <div class="flex-1">
-          <p class="text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
+          <p class="text-rose-600 dark:text-rose-400">{{ error() }}</p>
         </div>
         <ndd-button
           type="button"
@@ -72,10 +73,10 @@
           />
           <span class="sr-only">Loading...</span>
         </div>
-        <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading members...</p>
+        <p class="mt-4 text-gray-600 dark:text-gray-300">Loading members...</p>
       </div>
     } @else if (memberViews().length === 0) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">
+      <p class="text-gray-500 dark:text-gray-400">
         No members have been added to this project yet.
       </p>
     } @else {
@@ -94,7 +95,7 @@
               <tr>
                 <td>
                   <div class="font-medium dark:text-white">{{ view.member.userName }}</div>
-                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                  <div class="text-sm text-gray-500 dark:text-gray-400">
                     Added to project {{ formatMemberDate(view.member) }}
                   </div>
                 </td>
@@ -109,22 +110,20 @@
                 </td>
                 <td>
                   @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
-                    <span
-                      class="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400"
-                    >
+                    <span class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400">
                       <ndd-icon name="lock-closed" class="h-3.5 w-3.5" />
                       Organization
                     </span>
                   } @else if (view.source === 'org') {
-                    <span class="text-sm text-gray-600 dark:text-gray-400">Organization</span>
+                    <span class="text-gray-600 dark:text-gray-400">Organization</span>
                   } @else {
-                    <span class="text-sm text-gray-600 dark:text-gray-400">Project</span>
+                    <span class="text-gray-600 dark:text-gray-400">Project</span>
                   }
                 </td>
                 <td>
                   @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
                     <!-- Org admin: locked, no actions -->
-                    <span class="text-sm text-gray-400 dark:text-gray-600">&mdash;</span>
+                    <span class="text-gray-400 dark:text-gray-600">&mdash;</span>
                   } @else {
                     <ndd-button
                       type="button"
@@ -141,6 +140,7 @@
                         start-icon="arrow-u-turn-backward"
                         variant="destructive"
                         size="sm"
+                        class="ml-2"
                       ></ndd-button>
                     } @else if (view.source === 'project') {
                       <ndd-button
@@ -149,6 +149,7 @@
                         start-icon="trash"
                         variant="destructive"
                         size="sm"
+                        class="ml-2"
                       ></ndd-button>
                     }
                   }
@@ -173,7 +174,7 @@
     <!-- User Selection (only show when adding) -->
     @if (!editingMemberView()) {
       <div class="mb-4">
-        <label for="userId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
+        <label for="userId" class="mb-2 block font-medium text-gray-700 dark:text-white">
           User
         </label>
         <select id="userId" formControlName="userId" class="w-full">
@@ -183,13 +184,13 @@
           }
         </select>
         @if (availableUsers().length === 0) {
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No users available to add.</p>
+          <p class="mt-2 text-gray-600 dark:text-gray-400">No users available to add.</p>
         }
         @if (
           memberForm.get('userId')?.invalid &&
           (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
         ) {
-          <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a user.</p>
+          <p class="mt-2 text-rose-600 dark:text-rose-400">Please select a user.</p>
         }
       </div>
     }
@@ -197,8 +198,8 @@
     <!-- Member name (only show when editing) -->
     @if (editingMemberView()) {
       <div class="mb-4">
-        <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"> Member </span>
-        <p class="text-sm dark:text-white">{{ editingMemberView()?.member?.userName }}</p>
+        <span class="mb-2 block font-medium text-gray-700 dark:text-white"> Member </span>
+        <p class="dark:text-white">{{ editingMemberView()?.member?.userName }}</p>
       </div>
     }
 
@@ -257,7 +258,7 @@
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
+        <p class="text-gray-600 dark:text-gray-400">
           Are you sure you want to remove
           <span class="font-semibold text-gray-800 dark:text-white">{{
             pendingRemoveView()?.member?.userName

@@ -1,8 +1,8 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold">Clusters</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Manage your Kubernetes clusters</p>
+    <h1 class="text-3xl font-semibold">Clusters</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">Manage your Kubernetes clusters</p>
 
     @if (clusters().length > 0) {
       <ndd-button
@@ -25,7 +25,7 @@
           name="dismiss-circle"
           class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
         />
-        <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+        <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
       </div>
     }
 
@@ -49,21 +49,21 @@
               <dl class="grid grid-cols-2 gap-x-6 gap-y-4">
                 <div>
                   <dt
-                    class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                    class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
                   >
                     Region
                   </dt>
-                  <dd class="mt-1 text-sm font-medium text-gray-700 dark:text-gray-200">
+                  <dd class="mt-1 font-medium text-gray-700 dark:text-gray-200">
                     {{ cluster.region.toUpperCase() }}
                   </dd>
                 </div>
                 <div>
                   <dt
-                    class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                    class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
                   >
                     Node pools
                   </dt>
-                  <dd class="mt-1 text-sm font-medium text-gray-700 dark:text-gray-200">
+                  <dd class="mt-1 font-medium text-gray-700 dark:text-gray-200">
                     {{ cluster.nodePoolCount }}
                   </dd>
                 </div>
@@ -87,8 +87,8 @@
       <div
         class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-16 text-center dark:border-gray-800 dark:bg-gray-900/30"
       >
-        <p class="text-sm font-medium text-gray-600 dark:text-gray-300">No clusters yet</p>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p class="font-medium text-gray-600 dark:text-gray-300">No clusters yet</p>
+        <p class="mt-1 text-gray-500 dark:text-gray-400">
           Add your first Kubernetes cluster to get started.
         </p>
         <ndd-button

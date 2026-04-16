@@ -26,7 +26,7 @@
           <div>
             <label
               [for]="'nodePoolName-' + $index"
-              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+              class="mb-2 block font-medium text-gray-700 dark:text-white"
             >
               Node pool name
             </label>
@@ -39,7 +39,7 @@
               (input)="onNodePoolNameInput($index, $event)"
             />
             @if (nameControl?.invalid && nameControl?.dirty) {
-              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+              <p class="mt-2 text-rose-600 dark:text-rose-400">
                 {{ getNodePoolNameError($index) }}
               </p>
             }
@@ -49,7 +49,7 @@
           <div>
             <label
               [for]="'machineType-' + $index"
-              class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+              class="mb-2 block font-medium text-gray-700 dark:text-white"
             >
               Machine type
             </label>
@@ -65,7 +65,7 @@
             <div>
               <label
                 [for]="'autoscaleMin-' + $index"
-                class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+                class="mb-2 block font-medium text-gray-700 dark:text-white"
               >
                 Autoscale minimum
               </label>
@@ -82,7 +82,7 @@
             <div>
               <label
                 [for]="'autoscaleMax-' + $index"
-                class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
+                class="mb-2 block font-medium text-gray-700 dark:text-white"
               >
                 Autoscale maximum
               </label>

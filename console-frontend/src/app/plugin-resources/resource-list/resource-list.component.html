@@ -1,6 +1,6 @@
 @if (errorMessage()) {
   <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
-    <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
+    <p class="font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
   </div>
 }
 
@@ -14,9 +14,9 @@
 } @else {
   <div class="card">
     <div class="card-header">
-      <h1 class="text-2xl font-semibold dark:text-white">{{ kindLabel() }}</h1>
+      <h1 class="text-3xl font-semibold dark:text-white">{{ kindLabel() }}</h1>
       @if (plugin()?.description) {
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        <p class="mt-1 text-gray-600 dark:text-gray-300">
           {{ plugin()?.description }}
         </p>
       }
@@ -24,22 +24,18 @@
       <!-- Cluster select + refresh -->
       <div class="mt-2 flex items-center gap-3">
         @if (clusterContext.isLoadingClusters()) {
-          <label
-            for="cluster-select"
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          <label for="cluster-select" class="block font-medium text-gray-700 dark:text-gray-300"
             >Cluster</label
           >
           <div class="select animate-pulse bg-gray-100 dark:bg-gray-800">&nbsp;</div>
         } @else if (clusterContext.clusters().length === 0) {
-          <p class="text-sm text-gray-600 dark:text-gray-400">
+          <p class="text-gray-600 dark:text-gray-400">
             No clusters found.
             <a routerLink="/clusters/add" class="link">Create a cluster first</a> to use this
             plugin.
           </p>
         } @else {
-          <label
-            for="cluster-select"
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          <label for="cluster-select" class="block font-medium text-gray-700 dark:text-gray-300"
             >Cluster</label
           >
           <select
@@ -69,7 +65,7 @@
           <span
             class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"
           ></span>
-          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading…</p>
+          <p class="mt-2 text-gray-500 dark:text-gray-400">Loading…</p>
         </div>
       } @else {
         <!-- Table -->

@@ -35,7 +35,7 @@ function isPluginMessage(data: unknown): data is PluginMessage {
   template: `
     @if (status() === 'error') {
       <div
-        class="flex items-center gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300"
+        class="flex items-center gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300"
       >
         <span
           >The plugin UI did not load. Check that the plugin is running and includes the SDK.</span

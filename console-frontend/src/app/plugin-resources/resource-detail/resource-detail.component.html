@@ -12,12 +12,12 @@
       <div class="card-header">
         <a
           [routerLink]="listLink"
-          class="mb-1 inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+          class="mb-1 inline-flex items-center text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
           ><ndd-icon name="arrow-left" class="mr-1 h-4 w-4" /> Back to list</a
         >
-        <h1 class="text-2xl font-semibold dark:text-white">{{ resource()!.metadata.name }}</h1>
+        <h1 class="text-3xl font-semibold dark:text-white">{{ resource()!.metadata.name }}</h1>
         @if (resource()!.metadata.namespace) {
-          <p class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
+          <p class="mt-0.5 font-mono text-gray-500 dark:text-gray-400">
             Namespace: {{ resource()!.metadata.namespace }}
           </p>
         }
@@ -27,16 +27,16 @@
       <div class="card-body">
         <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Kind</dt>
-            <dd class="mt-1 text-sm dark:text-white">{{ resource()!.kind }}</dd>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Kind</dt>
+            <dd class="mt-1 dark:text-white">{{ resource()!.kind }}</dd>
           </div>
           <div>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">API Version</dt>
-            <dd class="mt-1 font-mono text-sm dark:text-white">{{ resource()!.apiVersion }}</dd>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">API Version</dt>
+            <dd class="mt-1 font-mono dark:text-white">{{ resource()!.apiVersion }}</dd>
           </div>
           <div>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Created</dt>
-            <dd class="mt-1 text-sm dark:text-white">
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Created</dt>
+            <dd class="mt-1 dark:text-white">
               {{ formatDateValue(resource()!.metadata.creationTimestamp) }}
             </dd>
           </div>
@@ -54,10 +54,10 @@
           <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             @for (field of group.fields; track field[0]) {
               <div [class.sm:col-span-2]="isWideField(field[1])">
-                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                <dt class="font-medium text-gray-500 dark:text-gray-400">
                   {{ formatLabel(field[0]) }}
                 </dt>
-                <dd class="mt-1 text-sm dark:text-white">
+                <dd class="mt-1 dark:text-white">
                   <app-field-renderer [schema]="field[1]" [value]="getSpecValue(field[0])" />
                 </dd>
               </div>
@@ -77,10 +77,10 @@
           <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             @for (entry of statusFields(); track entry[0]) {
               <div [class.sm:col-span-2]="isWideStatusField(entry[0], entry[1])">
-                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                <dt class="font-medium text-gray-500 dark:text-gray-400">
                   {{ formatLabel(entry[0]) }}
                 </dt>
-                <dd class="mt-1 text-sm dark:text-white">
+                <dd class="mt-1 dark:text-white">
                   @if (isConditionsField(entry[0], entry[1])) {
                     <!-- Conditions table -->
                     @if (asArray(entry[1]).length > 0) {
@@ -110,11 +110,11 @@
                                   }
                                 </td>
                                 <td
-                                  class="max-w-xs text-sm whitespace-normal text-gray-600 dark:text-gray-400"
+                                  class="max-w-xs whitespace-normal text-gray-600 dark:text-gray-400"
                                 >
                                   {{ asRecord(cond)['message'] || '\u2014' }}
                                 </td>
-                                <td class="text-sm">
+                                <td>
                                   {{ formatDateValue(asRecord(cond)['lastTransitionTime']) }}
                                 </td>
                               </tr>

@@ -1,18 +1,18 @@
 <app-modal [show]="show" title="Install plugin" (modalClose)="onClose()">
-  <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+  <p class="mb-4 text-gray-600 dark:text-gray-400">
     Select cluster(s) to install plugin
     <strong class="font-semibold">{{ pluginName }}</strong> on:
   </p>
 
   <div class="space-y-2">
     @if (clusters.length === 0) {
-      <p class="text-sm text-gray-600 dark:text-gray-400">No clusters found</p>
+      <p class="text-gray-600 dark:text-gray-400">No clusters found</p>
     } @else {
       @for (cluster of clusters; track cluster.id) {
         <div
           class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
         >
-          <span class="text-sm font-medium">{{ cluster.name }}</span>
+          <span class="font-medium">{{ cluster.name }}</span>
           @if (cluster.installed) {
             <span
               class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"

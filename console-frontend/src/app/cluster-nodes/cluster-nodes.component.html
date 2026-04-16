@@ -1,8 +1,8 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Cluster worker nodes</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+    <h1 class="text-3xl font-semibold dark:text-white">Cluster worker nodes</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">
       Configure worker nodes for cluster 'cluster-1'.
     </p>
   </div>
@@ -17,12 +17,12 @@
           name="dismiss-circle"
           class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
         />
-        <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+        <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
       </div>
     }
     @if (isLoading()) {
       <div class="flex items-center justify-center py-8">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Loading node pools...</p>
+        <p class="text-gray-500 dark:text-gray-400">Loading node pools...</p>
       </div>
     } @else {
       <app-shared-node-pools-form

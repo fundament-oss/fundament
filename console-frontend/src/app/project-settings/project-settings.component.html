@@ -1,15 +1,15 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Project</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Manage your project's information</p>
+    <h1 class="text-3xl font-semibold dark:text-white">Project</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">Manage your project's information</p>
   </div>
 
   <div class="p-6">
     <!-- Error Message -->
     @if (error()) {
       <div class="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-950">
-        <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+        <p class="text-red-800 dark:text-red-200">{{ error() }}</p>
       </div>
     }
 
@@ -25,9 +25,7 @@
       <div class="space-y-6">
         <!-- Project ID -->
         <div>
-          <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Project ID
-          </div>
+          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">Project ID</div>
           <p
             class="rounded-md bg-gray-50 px-4 py-2 font-mono text-sm text-gray-900 dark:bg-gray-900 dark:text-white"
           >
@@ -37,7 +35,7 @@
 
         <!-- Project Name -->
         <div>
-          <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Name</div>
+          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">Name</div>
           @if (isEditing()) {
             <div class="flex gap-2">
               <ndd-text-field
@@ -67,7 +65,7 @@
             </div>
           } @else {
             <div class="flex items-center gap-3">
-              <p class="text-sm text-gray-900 dark:text-white">{{ project()!.name }}</p>
+              <p class="text-gray-900 dark:text-white">{{ project()!.name }}</p>
               <ndd-button
                 type="button"
                 (click)="startEdit()"
@@ -83,8 +81,8 @@
 
         <!-- Created Date -->
         <div>
-          <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Created</div>
-          <p class="text-sm text-gray-900 dark:text-white">
+          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">Created</div>
+          <p class="text-gray-900 dark:text-white">
             {{ formatDate(project()!.created) }}
           </p>
         </div>
@@ -94,7 +92,7 @@
           class="col-span-full rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-900/20"
         >
           <h3 class="mb-2 text-lg font-medium text-rose-800 dark:text-rose-200">Danger zone</h3>
-          <p class="mb-4 text-sm text-rose-700 dark:text-rose-300">
+          <p class="mb-4 text-rose-700 dark:text-rose-300">
             Deleting a project is permanent and cannot be undone.
           </p>
           <ndd-button
@@ -123,12 +121,12 @@
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
+        <p class="text-gray-600 dark:text-gray-400">
           Are you sure you want to delete project
           <span class="font-semibold text-gray-800 dark:text-white">{{ project()?.name }}</span
           >?
         </p>
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">This cannot be undone.</p>
+        <p class="mt-2 text-rose-600 dark:text-rose-400">This cannot be undone.</p>
       </div>
     </div>
   </div>

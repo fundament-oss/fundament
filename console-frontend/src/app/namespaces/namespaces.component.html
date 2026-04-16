@@ -7,15 +7,15 @@
       name="dismiss-circle"
       class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
     />
-    <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+    <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
 
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h2 class="text-2xl font-semibold">Namespaces</h2>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Manage namespaces for this project</p>
+    <h2 class="text-3xl font-semibold">Namespaces</h2>
+    <p class="mt-1 text-gray-600 dark:text-gray-400">Manage namespaces for this project</p>
   </div>
 
   <div class="p-6">
@@ -25,12 +25,11 @@
       text="Create namespace"
       start-icon="plus-small"
       variant="primary"
+      class="mb-4"
     ></ndd-button>
 
     @if (namespaces().length === 0) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        No namespaces belong to this project yet.
-      </p>
+      <p class="text-gray-500 dark:text-gray-400">No namespaces belong to this project yet.</p>
     } @else {
       <div class="space-y-3">
         @for (namespace of namespaces(); track namespace.id) {
@@ -38,7 +37,7 @@
             class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
           >
             <div>
-              <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
+              <p class="font-mono dark:text-white">{{ namespace.name }}</p>
               <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Created {{ formatDate(namespace.created) }}
               </p>
@@ -67,10 +66,7 @@
   <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
     <!-- Namespace Name -->
     <div class="mb-4">
-      <label
-        for="namespaceName"
-        class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-      >
+      <label for="namespaceName" class="mb-2 block font-medium text-gray-700 dark:text-white">
         Namespace name
       </label>
       <ndd-text-field
@@ -81,7 +77,7 @@
         (input)="onNameInput($event)"
       />
       @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
+        <p class="mt-2 text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
       }
     </div>
 
@@ -118,14 +114,14 @@
     </div>
     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
       <div class="mt-2">
-        <p class="text-sm text-gray-800 dark:text-gray-400">
+        <p class="text-gray-800 dark:text-gray-400">
           Are you sure you want to delete namespace
           <span class="font-semibold text-gray-800 dark:text-white">{{
             pendingNamespaceName()
           }}</span
           >?
         </p>
-        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <p class="mt-2 text-gray-600 dark:text-gray-400">
           This will remove the namespace and all resources running on it. This cannot be undone.
         </p>
       </div>

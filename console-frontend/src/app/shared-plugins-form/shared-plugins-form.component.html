@@ -32,7 +32,7 @@
       <h3 class="text-lg font-medium dark:text-white">Plugins</h3>
       <div class="space-y-4">
         @if (plugins.length === 0) {
-          <p class="text-sm text-gray-600 dark:text-gray-400">No plugins found</p>
+          <p class="text-gray-600 dark:text-gray-400">No plugins found</p>
         } @else {
           @for (plugin of plugins; track plugin.id) {
             <div>
@@ -60,7 +60,7 @@
     <!-- Custom Plugin Upload Section -->
     <div class="space-y-4">
       <h3 class="text-lg font-medium dark:text-white">Custom plugins</h3>
-      <p class="text-sm text-gray-600 dark:text-gray-300">
+      <p class="text-gray-600 dark:text-gray-300">
         Upload a custom plugin as a ZIP file. Custom plugins can extend the functionality of your
         cluster.
       </p>
@@ -84,10 +84,7 @@
 
         <!-- File upload input -->
         <div>
-          <label
-            for="customPluginFile"
-            class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
+          <label for="customPluginFile" class="mb-2 block text-gray-700 dark:text-gray-300">
             Upload plugin ZIP file
           </label>
           <input
@@ -98,7 +95,7 @@
             (change)="onCustomPluginFileChange($event)"
             class="block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 ring-indigo-500 file:mr-4 file:rounded-l-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:ring-offset-gray-950 dark:file:bg-gray-700 dark:file:text-gray-300 dark:hover:file:bg-gray-600"
           />
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Only ZIP files are accepted</p>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Only ZIP files are accepted</p>
         </div>
       </div>
     </div>
