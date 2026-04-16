@@ -48,8 +48,6 @@ type cluster
     define can_delete: admin
     define can_create_node_pool: admin
     define can_list_node_pools: admin or viewer
-    define can_create_install: admin
-    define can_list_installs: admin or viewer
     define can_list_namespaces: admin or viewer
     define can_create_project: admin
     define can_list_projects: viewer
@@ -77,13 +75,6 @@ type api_key
     define can_edit: creator or admin from owner
     define can_delete: creator or admin from owner
     define can_use: usable_by
-
-type install
-  relations
-    define parent: [cluster]
-    define can_view: admin from parent or viewer from parent
-    define can_edit: admin from parent
-    define can_delete: admin from parent
 
 condition is_not_expired(current_time: timestamp, expiration: timestamp) {
   current_time < expiration

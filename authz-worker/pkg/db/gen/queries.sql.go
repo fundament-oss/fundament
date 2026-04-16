@@ -22,7 +22,6 @@ SELECT
     node_pool_id,
     namespace_id,
     api_key_id,
-    install_id,
     organization_user_id,
     created,
     retries
@@ -42,7 +41,6 @@ type GetAndLockNextOutboxRowRow struct {
 	NodePoolID         pgtype.UUID
 	NamespaceID        pgtype.UUID
 	ApiKeyID           pgtype.UUID
-	InstallID          pgtype.UUID
 	OrganizationUserID pgtype.UUID
 	Created            pgtype.Timestamptz
 	Retries            int32
@@ -61,7 +59,6 @@ func (q *Queries) GetAndLockNextOutboxRow(ctx context.Context) (GetAndLockNextOu
 		&i.NodePoolID,
 		&i.NamespaceID,
 		&i.ApiKeyID,
-		&i.InstallID,
 		&i.OrganizationUserID,
 		&i.Created,
 		&i.Retries,
@@ -122,29 +119,6 @@ func (q *Queries) GetClusterByID(ctx context.Context, arg GetClusterByIDParams) 
 	row := q.db.QueryRow(ctx, getClusterByID, arg.ID)
 	var i GetClusterByIDRow
 	err := row.Scan(&i.ID, &i.OrganizationID, &i.Deleted)
-	return i, err
-}
-
-const getInstallByID = `-- name: GetInstallByID :one
-SELECT id, cluster_id, deleted
-FROM appstore.installs
-WHERE id = $1
-`
-
-type GetInstallByIDParams struct {
-	ID uuid.UUID
-}
-
-type GetInstallByIDRow struct {
-	ID        uuid.UUID
-	ClusterID uuid.UUID
-	Deleted   pgtype.Timestamptz
-}
-
-func (q *Queries) GetInstallByID(ctx context.Context, arg GetInstallByIDParams) (GetInstallByIDRow, error) {
-	row := q.db.QueryRow(ctx, getInstallByID, arg.ID)
-	var i GetInstallByIDRow
-	err := row.Scan(&i.ID, &i.ClusterID, &i.Deleted)
 	return i, err
 }
 

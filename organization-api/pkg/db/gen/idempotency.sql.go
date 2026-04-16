@@ -41,21 +41,6 @@ func (q *Queries) OutboxStatusByClusterID(ctx context.Context, arg OutboxStatusB
 	return status, err
 }
 
-const outboxStatusByInstallID = `-- name: OutboxStatusByInstallID :one
-SELECT status FROM authz.outbox WHERE install_id = $1 ORDER BY created DESC LIMIT 1
-`
-
-type OutboxStatusByInstallIDParams struct {
-	InstallID pgtype.UUID
-}
-
-func (q *Queries) OutboxStatusByInstallID(ctx context.Context, arg OutboxStatusByInstallIDParams) (string, error) {
-	row := q.db.QueryRow(ctx, outboxStatusByInstallID, arg.InstallID)
-	var status string
-	err := row.Scan(&status)
-	return status, err
-}
-
 const outboxStatusByNamespaceID = `-- name: OutboxStatusByNamespaceID :one
 SELECT status FROM authz.outbox WHERE namespace_id = $1 ORDER BY created DESC LIMIT 1
 `

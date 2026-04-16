@@ -863,33 +863,6 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
-<table name="installs" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
-	<schema name="appstore"/>
-	<role name="fun_owner"/>
-	<position x="120" y="1640"/>
-	<column name="id" not-null="true" default-value="uuidv7()">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="cluster_id" not-null="true">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="plugin_id" not-null="true">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="created" not-null="true" default-value="now()">
-		<type name="timestamptz" length="0"/>
-	</column>
-	<column name="deleted">
-		<type name="timestamptz" length="0"/>
-	</column>
-	<constraint name="installs_pk" type="pk-constr" table="appstore.installs">
-		<columns names="id" ref-type="src-columns"/>
-	</constraint>
-	<constraint name="installs_uq" type="uq-constr" nulls-not-distinct="true" table="appstore.installs">
-		<columns names="cluster_id,plugin_id,deleted" ref-type="src-columns"/>
-	</constraint>
-</table>
-
 <table name="plugins" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
@@ -964,10 +937,6 @@ END;]]> </definition>
 		<columns names="preset_id,plugin_id" ref-type="src-columns"/>
 	</constraint>
 </table>
-
-<policy name="install_organization_policy" table="appstore.installs" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[authn.is_cluster_in_organization(cluster_id)]]> </expression>
-</policy>
 
 <table name="tags" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
 	<schema name="appstore"/>
@@ -1365,9 +1334,6 @@ END;]]> </definition>
 	<column name="api_key_id">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="install_id">
-		<type name="uuid" length="0"/>
-	</column>
 	<column name="organization_user_id">
 		<type name="uuid" length="0"/>
 	</column>
@@ -1403,7 +1369,6 @@ END;]]> </definition>
 	node_pool_id,
 	namespace_id,
 	api_key_id,
-	install_id,
 	organization_user_id
 ) = 1]]> </expression>
 	</constraint>
@@ -1571,31 +1536,6 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
-<function name="installs_sync_trigger"
-		window-func="false"
-		returns-setof="false"
-		behavior-type="CALLED ON NULL INPUT"
-		function-type="VOLATILE"
-		security-type="SECURITY INVOKER"
-		parallel-type="PARALLEL UNSAFE"
-		execution-cost="1"
-		row-amount="0">
-	<schema name="authz"/>
-	<role name="fun_owner"/>
-	<language name="plpgsql"/>
-	<return-type>
-	<type name="trigger" length="0"/>
-	</return-type>
-	<definition> <![CDATA[BEGIN
-    -- Only insert into outbox if this is an INSERT or if data actually changed
-    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
-        INSERT INTO authz.outbox (install_id)
-        VALUES (COALESCE(NEW.id, OLD.id));
-    END IF;
-    RETURN COALESCE(NEW, OLD);
-END;]]> </definition>
-</function>
-
 <function name="organizations_users_sync_trigger"
 		window-func="false"
 		returns-setof="false"
@@ -1693,12 +1633,6 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="authn.api_keys">
 		<function signature="authz.api_keys_sync_trigger()"/>
-</trigger>
-
-<trigger name="installs_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
-	 table="appstore.installs">
-		<function signature="authz.installs_sync_trigger()"/>
 </trigger>
 
 <trigger name="outbox_notify" firing-type="AFTER" per-line="true" constraint="false"
@@ -1843,18 +1777,6 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
-<constraint name="installs_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="appstore.installs">
-	<columns names="cluster_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="installs_fk_plugin" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.installs">
-	<columns names="plugin_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
 <constraint name="plugins_presets_plugin_id" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.preset_plugins">
 	<columns names="plugin_id" ref-type="src-columns"/>
@@ -1975,12 +1897,6 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
-<constraint name="outbox_fk_install" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.installs" table="authz.outbox">
-	<columns names="install_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
 <constraint name="outbox_fk_organization_user" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations_users" table="authz.outbox">
 	<columns names="organization_user_id" ref-type="src-columns"/>
@@ -2022,16 +1938,6 @@ END;]]> </definition>
 <relationship name="rel_node_pools_clusters" type="relfk" layers="0"
 	 src-table="tenant.node_pools"
 	 dst-table="tenant.clusters" reference-fk="node_pools_fk_cluster"
-	 src-required="false" dst-required="true"/>
-
-<relationship name="rel_installs_clusters" type="relfk" layers="0"
-	 src-table="appstore.installs"
-	 dst-table="tenant.clusters" reference-fk="installs_fk_cluster"
-	 src-required="false" dst-required="true"/>
-
-<relationship name="rel_installs_plugins" type="relfk" layers="0"
-	 src-table="appstore.installs"
-	 dst-table="appstore.plugins" reference-fk="installs_fk_plugin"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_plugins_tags_tags" type="relfk" layers="0"
@@ -2121,11 +2027,6 @@ END;]]> </definition>
 <relationship name="rel_outbox_api_keys" type="relfk" layers="0"
 	 src-table="authz.outbox"
 	 dst-table="authn.api_keys" reference-fk="outbox_fk_api_key"
-	 src-required="false" dst-required="false"/>
-
-<relationship name="rel_outbox_installs" type="relfk" layers="0"
-	 src-table="authz.outbox"
-	 dst-table="appstore.installs" reference-fk="outbox_fk_install"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_outbox_organizations_users" type="relfk" layers="0"
@@ -2257,11 +2158,6 @@ END;]]> </definition>
 	<object name="tenant.node_pools" type="table"/>
 	<roles names="fun_cluster_worker"/>
 	<privileges select="true"/>
-</permission>
-<permission>
-	<object name="appstore.installs" type="table"/>
-	<roles names="fun_fundament_api"/>
-	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
 	<object name="appstore.plugin_documentation_links" type="table"/>
@@ -2454,11 +2350,6 @@ END;]]> </definition>
 	<privileges usage="true"/>
 </permission>
 <permission>
-	<object name="appstore.installs" type="table"/>
-	<roles names="fun_authz_worker"/>
-	<privileges select="true"/>
-</permission>
-<permission>
 	<object name="tenant.organizations_users" type="table"/>
 	<roles names="fun_authz_worker"/>
 	<privileges select="true"/>
@@ -2585,9 +2476,6 @@ END;]]> </definition>
 	<column name="api_key_id">
 		<type name="uuid" length="0"/>
 	</column>
-	<column name="install_id">
-		<type name="uuid" length="0"/>
-	</column>
 	<column name="organization_user_id">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2605,7 +2493,6 @@ END;]]> </definition>
 	node_pool_id,
 	namespace_id,
 	api_key_id,
-	install_id,
 	organization_user_id
 ) <= 1]]> </expression>
 	</constraint>
@@ -2664,12 +2551,6 @@ END;]]> </definition>
 <constraint name="idempotency_keys_fk_api_key" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="authn.api_keys" table="tenant.idempotency_keys">
 	<columns names="api_key_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="idempotency_keys_fk_install" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.installs" table="tenant.idempotency_keys">
-	<columns names="install_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 

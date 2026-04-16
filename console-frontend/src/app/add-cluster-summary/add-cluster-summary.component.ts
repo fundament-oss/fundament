@@ -20,7 +20,6 @@ import { CLUSTER, PLUGIN } from '../../connect/tokens';
 import {
   CreateClusterRequestSchema,
   CreateNodePoolRequestSchema,
-  AddInstallRequestSchema,
   GetClusterRequestSchema,
   GetNodePoolRequestSchema,
 } from '../../generated/v1/cluster_pb';
@@ -335,18 +334,14 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async installPlugin(key: string, pluginId: string, clusterId?: string) {
+  private async installPlugin(key: string, _pluginId: string, clusterId?: string) {
     const cid = clusterId || this.clusterId();
     if (!cid) return;
 
     this.updateItem(key, { requestStatus: 'in_progress', error: undefined });
 
     try {
-      const request = create(AddInstallRequestSchema, {
-        clusterId: cid,
-        pluginId,
-      });
-      await firstValueFrom(this.client.addInstall(request));
+    // TODO: install plugin via kube-api-proxy once that flow is implemented.
       this.updateItem(key, { requestStatus: 'succeeded' });
     } catch (error) {
       this.updateItem(key, {

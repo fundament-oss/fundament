@@ -9,7 +9,6 @@ SELECT
     node_pool_id,
     namespace_id,
     api_key_id,
-    install_id,
     organization_user_id,
     created,
     retries
@@ -89,7 +88,3 @@ SELECT id, organization_id, user_id, expires, revoked, deleted
 FROM authn.api_keys
 WHERE id = @id;
 
--- name: GetInstallByID :one
-SELECT id, cluster_id, deleted
-FROM appstore.installs
-WHERE id = @id;

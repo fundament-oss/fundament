@@ -8,7 +8,7 @@ import { TitleService } from '../title.service';
 import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
 import { OrganizationDataService } from '../organization-data.service';
-import { PLUGIN, CLUSTER } from '../../connect/tokens';
+import { PLUGIN } from '../../connect/tokens';
 import {
   ListPluginsRequestSchema,
   ListPresetsRequestSchema,
@@ -17,13 +17,15 @@ import {
   type PluginSummary,
 } from '../../generated/v1/plugin_pb';
 import {
-  ListInstallsRequestSchema,
-  AddInstallRequestSchema,
-  InstallSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
-  type Install,
 } from '../../generated/v1/cluster_pb';
 import { ToastService } from '../toast.service';
+
+// TODO: plugin installs are moving to the kube-api-proxy. Re-wire once available.
+interface Install {
+  id: string;
+  pluginId: string;
+}
 
 const getPluginIconName = (pluginName: string): string =>
   pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
@@ -72,8 +74,6 @@ export default class PluginsComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private pluginClient = inject(PLUGIN);
-
-  private clusterClient = inject(CLUSTER);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -175,24 +175,8 @@ export default class PluginsComponent implements OnInit {
       // Use pre-fetched cluster summaries instead of making a duplicate ListClusters call
       this.clusters = this.organizationDataService.clusterSummaries();
 
-      // Fetch installs for all clusters
-      const installsPromises = this.clusters.map((cluster) =>
-        firstValueFrom(
-          this.clusterClient.listInstalls(
-            create(ListInstallsRequestSchema, { clusterId: cluster.id }),
-          ),
-        ).then((response) => ({
-          clusterId: cluster.id,
-          installs: response.installs,
-        })),
-      );
-
-      const installsResponses = await Promise.all(installsPromises);
-
-      // Flatten all installs and augment with cluster ID
-      this.installs = installsResponses.flatMap(({ clusterId, installs }) =>
-        installs.map((install) => ({ ...install, clusterId })),
-      );
+      // TODO: fetch installs via kube-api-proxy once that flow is implemented.
+      this.installs = [];
 
       this.isLoading.set(false);
     } catch (error) {
@@ -321,35 +305,10 @@ export default class PluginsComponent implements OnInit {
       return;
     }
 
-    try {
-      // Call the API to install the plugin
-      const request = create(AddInstallRequestSchema, {
-        clusterId,
-        pluginId: this.selectedPlugin.id,
-      });
-
-      const response = await firstValueFrom(this.clusterClient.addInstall(request));
-
-      // Add the new install to the local state (augmented with clusterId)
-      const newInstall: InstallWithCluster = {
-        ...create(InstallSchema, {
-          id: response.installId,
-          pluginId: this.selectedPlugin.id,
-        }),
-        clusterId,
-      };
-      this.installs.push(newInstall);
-
-      this.toastService.success(
-        `Plugin ${this.selectedPlugin.name} installed on cluster ${cluster.name}`,
-      );
-    } catch (error) {
-      this.toastService.error(
-        error instanceof Error
-          ? `Failed to install plugin: ${error.message}`
-          : 'Failed to install plugin',
-      );
-    }
+    // TODO: install plugin via kube-api-proxy once that flow is implemented.
+    this.toastService.error(
+      `Installing ${this.selectedPlugin.name} on ${cluster.name} is temporarily unavailable`,
+    );
   }
 
   getPluginIconName = getPluginIconName;
