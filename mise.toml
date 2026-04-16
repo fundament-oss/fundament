@@ -28,7 +28,7 @@ opentofu = "1.11.3"
 # Go
 go = "1.26.2"
 "go:sigs.k8s.io/controller-tools/cmd/controller-gen" = "0.20.1"
-golangci-lint = "2.7.2"
+golangci-lint = "2.11.4"
 "aqua:sqlc-dev/sqlc" = "1.30.0"
 "go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen" = "2.4.1"
 "go:google.golang.org/open2opaque" = "0.1.7"

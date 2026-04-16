@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -86,6 +87,8 @@ export default class OrganizationMembersComponent implements OnInit {
   private memberClient = inject(MEMBER);
 
   private inviteClient = inject(INVITE);
+
+  private idempotency = createIdempotencyRef();
 
   private authnService = inject(AuthnApiService);
 
@@ -183,8 +186,9 @@ export default class OrganizationMembersComponent implements OnInit {
     this.inviteError.set(null);
 
     try {
-      await firstValueFrom(
-        this.inviteClient.inviteMember({ email, permission: this.invitePermission() }),
+      await withIdempotency(
+        (opts) => this.inviteClient.inviteMember({ email, permission: this.invitePermission() }, opts),
+        { signal: this.idempotency.reset() },
       );
       this.closeModal();
       await this.loadMembers();

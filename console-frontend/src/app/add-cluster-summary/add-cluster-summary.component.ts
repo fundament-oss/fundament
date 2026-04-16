@@ -16,6 +16,7 @@ import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationDataService } from '../organization-data.service';
+import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { CLUSTER, PLUGIN } from '../../connect/tokens';
 import {
   CreateClusterRequestSchema,
@@ -127,6 +128,8 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
   private clusterConfig?: { name: string; region: string; kubernetesVersion: string };
 
   private pollInterval?: ReturnType<typeof setInterval>;
+
+  private idempotency = createIdempotencyRef();
 
   constructor() {
     this.titleService.setTitle('Cluster summary');
@@ -261,7 +264,10 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
         kubernetesVersion: this.clusterConfig.kubernetesVersion,
       });
 
-      const response = await firstValueFrom(this.client.createCluster(request));
+      const response = await withIdempotency(
+        (opts) => this.client.createCluster(request, opts),
+        { signal: this.idempotency.reset() },
+      );
       this.clusterId.set(response.clusterId);
       this.updateItem('cluster', {
         requestStatus: 'succeeded',
@@ -291,9 +297,11 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
       (item) => item.type === 'plugin' && item.pluginId,
     );
 
+    const abortSignal = this.idempotency.reset();
+
     await Promise.allSettled([
-      ...nodePoolItems.map((item) => this.createNodePool(item.key, item.nodePoolConfig!, cid)),
-      ...pluginItems.map((item) => this.installPlugin(item.key, item.pluginId!, cid)),
+      ...nodePoolItems.map((item) => this.createNodePool(item.key, item.nodePoolConfig!, cid, abortSignal)),
+      ...pluginItems.map((item) => this.installPlugin(item.key, item.pluginId!, cid, abortSignal)),
     ]);
 
     // Start polling for sync status
@@ -305,6 +313,7 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     key: string,
     config: { name: string; machineType: string; autoscaleMin: number; autoscaleMax: number },
     clusterId?: string,
+    abortSignal?: AbortSignal,
   ) {
     const cid = clusterId || this.clusterId();
     if (!cid) return;
@@ -320,7 +329,10 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
         autoscaleMax: config.autoscaleMax,
       });
 
-      const response = await firstValueFrom(this.client.createNodePool(request));
+      const response = await withIdempotency(
+        (opts) => this.client.createNodePool(request, opts),
+        { signal: abortSignal },
+      );
       this.updateItem(key, {
         requestStatus: 'succeeded',
         syncStatus: 'none',
@@ -334,7 +346,7 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async installPlugin(key: string, _pluginId: string, clusterId?: string) {
+  private async installPlugin(key: string, _pluginId: string, clusterId?: string, abortSignal?: AbortSignal) {
     const cid = clusterId || this.clusterId();
     if (!cid) return;
 
@@ -452,12 +464,12 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
       this.isCreating.set(true);
       await this.executeCreation();
     } else if (item.type === 'nodepool' && item.nodePoolConfig) {
-      await this.createNodePool(key, item.nodePoolConfig);
+      await this.createNodePool(key, item.nodePoolConfig, undefined, this.idempotency.reset());
       if (!this.pollInterval && this.progressItems().some((i) => i.syncStatus === 'syncing')) {
         this.startPolling();
       }
     } else if (item.type === 'plugin' && item.pluginId) {
-      await this.installPlugin(key, item.pluginId);
+      await this.installPlugin(key, item.pluginId, undefined, this.idempotency.reset());
     }
   }
 

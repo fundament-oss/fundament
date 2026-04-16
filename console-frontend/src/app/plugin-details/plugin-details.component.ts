@@ -6,6 +6,7 @@ import { tablerChevronRight, tablerCheck } from '@ng-icons/tabler-icons';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
@@ -54,6 +55,8 @@ export default class PluginDetailsComponent implements OnInit {
   private clusterClient = inject(CLUSTER);
 
   private toastService = inject(ToastService);
+
+  private idempotency = createIdempotencyRef();
 
   pluginId = signal<string>('');
 

@@ -2,6 +2,7 @@ import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@ang
 import { Router, ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
@@ -42,6 +43,8 @@ export default class ClusterNodesComponent implements OnInit {
   private clusterId = '';
 
   private existingNodePools: NodePool[] = [];
+
+  private idempotency = createIdempotencyRef();
 
   errorMessage = signal<string | null>(null);
 
@@ -118,6 +121,8 @@ export default class ClusterNodesComponent implements OnInit {
       );
 
       // Create or update pools
+      const signal = this.idempotency.reset();
+
       await Promise.all(
         newPools.map((newPool) => {
           const existingPool = existingPoolsMap.get(newPool.name);
@@ -144,7 +149,10 @@ export default class ClusterNodesComponent implements OnInit {
               autoscaleMin: newPool.autoscaleMin,
               autoscaleMax: newPool.autoscaleMax,
             });
-            return firstValueFrom(this.client.createNodePool(createRequest));
+            return withIdempotency(
+              (opts) => this.client.createNodePool(createRequest, opts),
+              { signal },
+            );
           }
           return undefined;
         }),
