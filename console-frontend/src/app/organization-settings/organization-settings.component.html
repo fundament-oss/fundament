@@ -54,11 +54,11 @@
             <div class="flex gap-2">
               <ndd-text-field
                 appAutofocus
-                [ngModel]="editingName()"
-                (ngModelChange)="editingName.set($event)"
+                [value]="editingName()"
+                (input)="editingName.set($any($event.target).value)"
                 (keyup.enter)="saveEdit()"
                 (keyup.escape)="cancelEdit()"
-                class="w-full"
+                class="flex-1"
               />
               <ndd-button
                 type="button"

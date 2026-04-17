@@ -40,9 +40,9 @@
             <div class="flex gap-2">
               <ndd-text-field
                 appAutofocus
-                [ngModel]="editingName()"
-                (ngModelChange)="editingName.set($event)"
-                class="w-full"
+                [value]="editingName()"
+                (input)="editingName.set($any($event.target).value)"
+                class="flex-1"
                 (keyup.enter)="saveEdit()"
                 (keyup.escape)="cancelEdit()"
               />

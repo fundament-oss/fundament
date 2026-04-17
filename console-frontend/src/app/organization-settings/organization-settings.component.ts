@@ -6,7 +6,6 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import AutofocusDirective from '../autofocus.directive';
@@ -19,7 +18,7 @@ import OrganizationContextService from '../organization-context.service';
 
 @Component({
   selector: 'app-organization-settings',
-  imports: [FormsModule, AutofocusDirective],
+  imports: [AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './organization-settings.component.html',
