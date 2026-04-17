@@ -206,18 +206,26 @@
     <div class="mb-4">
       <ndd-form-field label="Permission">
         <ndd-radio-button-group name="permission" (change)="onPermissionChange($event)">
-          <ndd-radio-button-field
-            class="radio-option"
-            value="viewer"
-            label="Project viewer"
-            [checked]="memberForm.get('permission')?.value === 'viewer'"
-          ></ndd-radio-button-field>
-          <ndd-radio-button-field
-            class="radio-option"
-            value="admin"
-            label="Project admin"
-            [checked]="memberForm.get('permission')?.value === 'admin'"
-          ></ndd-radio-button-field>
+          <div class="radio-option mb-2">
+            <ndd-radio-button-field
+              value="viewer"
+              label="Project viewer"
+              [checked]="memberForm.get('permission')?.value === 'viewer'"
+            />
+            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+              >Read access to resources</span
+            >
+          </div>
+          <div class="radio-option">
+            <ndd-radio-button-field
+              value="admin"
+              label="Project admin"
+              [checked]="memberForm.get('permission')?.value === 'admin'"
+            />
+            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+              >Full access to resources</span
+            >
+          </div>
         </ndd-radio-button-group>
       </ndd-form-field>
     </div>

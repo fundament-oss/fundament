@@ -293,18 +293,26 @@
         name="editPermission"
         (change)="editPermission.set($any($event).detail.value)"
       >
-        <ndd-radio-button-field
-          class="radio-option"
-          value="viewer"
-          label="Viewer"
-          [checked]="editPermission() === 'viewer'"
-        ></ndd-radio-button-field>
-        <ndd-radio-button-field
-          class="radio-option"
-          value="admin"
-          label="Admin"
-          [checked]="editPermission() === 'admin'"
-        ></ndd-radio-button-field>
+        <div class="radio-option mb-2">
+          <ndd-radio-button-field
+            value="viewer"
+            label="Viewer"
+            [checked]="editPermission() === 'viewer'"
+          />
+          <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+            >Read access to resources</span
+          >
+        </div>
+        <div class="radio-option">
+          <ndd-radio-button-field
+            value="admin"
+            label="Admin"
+            [checked]="editPermission() === 'admin'"
+          />
+          <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+            >Full access to resources</span
+          >
+        </div>
       </ndd-radio-button-group>
     </ndd-form-field>
   </div>
@@ -359,18 +367,26 @@
           (change)="invitePermission.set($any($event).detail.value)"
           [disabled]="isSubmitting()"
         >
-          <ndd-radio-button-field
-            class="radio-option"
-            value="viewer"
-            label="Viewer"
-            [checked]="invitePermission() === 'viewer'"
-          ></ndd-radio-button-field>
-          <ndd-radio-button-field
-            class="radio-option"
-            value="admin"
-            label="Admin"
-            [checked]="invitePermission() === 'admin'"
-          ></ndd-radio-button-field>
+          <div class="radio-option mb-2">
+            <ndd-radio-button-field
+              value="viewer"
+              label="Viewer"
+              [checked]="invitePermission() === 'viewer'"
+            />
+            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+              >Read access to resources</span
+            >
+          </div>
+          <div class="radio-option">
+            <ndd-radio-button-field
+              value="admin"
+              label="Admin"
+              [checked]="invitePermission() === 'admin'"
+            />
+            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+              >Full access to resources</span
+            >
+          </div>
         </ndd-radio-button-group>
       </ndd-form-field>
     </div>

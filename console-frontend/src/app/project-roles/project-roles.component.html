@@ -141,24 +141,27 @@
             name="namespaceMode"
             (change)="onNamespaceModeChange($any($event).detail.value)"
           >
-            <ndd-radio-button-field
-              class="radio-option"
-              value="all"
-              label="All namespaces"
-              [checked]="namespaceMode() === 'all'"
-            ></ndd-radio-button-field>
-            <ndd-radio-button-field
-              class="radio-option"
-              value="specific"
-              label="Specific namespace"
-              [checked]="namespaceMode() === 'specific'"
-            ></ndd-radio-button-field>
-            <ndd-radio-button-field
-              class="radio-option"
-              value="custom"
-              label="Custom pattern"
-              [checked]="namespaceMode() === 'custom'"
-            ></ndd-radio-button-field>
+            <div class="radio-option mb-2 py-0.5">
+              <ndd-radio-button-field
+                value="all"
+                label="All namespaces"
+                [checked]="namespaceMode() === 'all'"
+              />
+            </div>
+            <div class="radio-option mb-2 py-0.5">
+              <ndd-radio-button-field
+                value="specific"
+                label="Specific namespace"
+                [checked]="namespaceMode() === 'specific'"
+              />
+            </div>
+            <div class="radio-option py-0.5">
+              <ndd-radio-button-field
+                value="custom"
+                label="Custom pattern"
+                [checked]="namespaceMode() === 'custom'"
+              />
+            </div>
           </ndd-radio-button-group>
         </ndd-form-field>
         @if (namespaceMode() === 'specific') {
