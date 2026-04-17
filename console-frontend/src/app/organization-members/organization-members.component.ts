@@ -29,7 +29,7 @@ const getInitials = (name: string): string =>
 
 const getAvatarColor = (name: string): string => {
   const colors = [
-    'bg-indigo-600',
+    'bg-accent-600',
     'bg-emerald-600',
     'bg-purple-600',
     'bg-rose-600',

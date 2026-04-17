@@ -13,7 +13,7 @@
             ? 'bg-rose-400/20 text-rose-400 dark:bg-rose-500/20 dark:text-rose-500'
             : toastService.toast()?.type === 'warning'
               ? 'bg-amber-400/20 text-amber-400 dark:bg-amber-500/20 dark:text-amber-500'
-              : 'bg-indigo-400/20 text-indigo-400 dark:bg-indigo-500/20 dark:text-indigo-500'
+              : 'bg-accent-400/20 text-accent-400 dark:bg-accent-500/20 dark:text-accent-500'
       "
     >
       @if (toastService.toast()?.type === 'success') {
@@ -93,7 +93,7 @@
         role="switch"
         aria-label="Toggle dark mode"
         [attr.aria-checked]="isDarkMode()"
-        class="group h-6 w-10 cursor-pointer rounded-full border border-gray-300 bg-gray-200 text-indigo-600 ring-indigo-500 outline-none focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:ring-offset-gray-900"
+        class="group h-6 w-10 cursor-pointer rounded-full border border-gray-300 bg-gray-200 text-accent-600 ring-accent-500 outline-none focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:ring-offset-gray-900"
       >
         <span
           class="flex h-5 w-5 translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow-xs transition-transform group-aria-checked:translate-x-4.5 dark:bg-gray-950 dark:text-gray-300"
@@ -110,7 +110,7 @@
         <div class="user-dropdown relative">
           <button
             (click)="toggleUserDropdown()"
-            class="flex cursor-pointer items-center rounded-full text-indigo-600 ring-indigo-500 hover:text-indigo-700 focus:ring-2 focus:outline-none dark:text-indigo-400 dark:ring-offset-gray-900 dark:hover:text-indigo-300"
+            class="flex cursor-pointer items-center rounded-full text-accent-600 ring-accent-500 hover:text-accent-700 focus:ring-2 focus:outline-none dark:text-accent-400 dark:ring-offset-gray-900 dark:hover:text-accent-300"
             aria-label="User menu"
           >
             <ndd-icon name="person-circle" class="h-7 w-7" />

@@ -35,7 +35,7 @@ As a rule of thumb, dark mode and light mode color values should add up to 1000 
 
 === Accent color
 
-The primary accent color is `indigo`. It is used for primary buttons, active navigation states, focus rings, and loading indicators. All interactive emphasis should use indigo rather than introducing other accent colors.
+The primary accent color is `accent`. It is used for primary buttons, active navigation states, focus rings, and loading indicators. All interactive emphasis should use accent rather than introducing other accent colors.
 
 === Semantic colors
 

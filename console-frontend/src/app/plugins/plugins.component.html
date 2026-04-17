@@ -87,7 +87,7 @@
         <div class="py-12 text-center">
           <div role="status" class="flex justify-center">
             <app-loading-indicator
-              class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+              class="h-8 w-8 animate-spin fill-accent-600 text-gray-200 dark:fill-accent-400 dark:text-gray-800"
             />
             <span class="sr-only">Loading...</span>
           </div>
@@ -123,7 +123,7 @@
               (click)="selectPreset(preset.id)"
               [class]="
                 selectedPreset === preset.id
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100'
+                  ? 'bg-accent-50 text-accent-700 dark:bg-accent-900 dark:text-accent-100'
                   : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
               "
               class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left transition-colors duration-200"
@@ -147,7 +147,7 @@
               (click)="selectCategory(category.id)"
               [class]="
                 selectedCategory === category.id
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100'
+                  ? 'bg-accent-50 text-accent-700 dark:bg-accent-900 dark:text-accent-100'
                   : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
               "
               class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left transition-colors duration-200"

@@ -8,8 +8,8 @@
     >
       <a
         class="relative flex items-center"
-        [class.hover:text-indigo-700]="canNavigate(i)"
-        [class.dark:hover:text-indigo-400]="canNavigate(i)"
+        [class.hover:text-accent-700]="canNavigate(i)"
+        [class.dark:hover:text-accent-400]="canNavigate(i)"
         [routerLink]="canNavigate(i) ? step.route : null"
         [attr.aria-disabled]="!canNavigate(i) ? 'true' : null"
       >

@@ -122,13 +122,13 @@
             ? 'border-rose-200 bg-rose-50 dark:border-rose-900/40 dark:bg-rose-950/30'
             : bannerState() === 'partial'
               ? 'border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30'
-              : 'border-indigo-200 bg-indigo-50 dark:border-indigo-900/40 dark:bg-indigo-950/30'
+              : 'border-accent-200 bg-accent-50 dark:border-accent-900/40 dark:bg-accent-950/30'
       "
     >
       <div class="flex items-center gap-3">
         @if (bannerState() === 'creating' || bannerState() === 'provisioning') {
           <app-loading-indicator
-            class="h-4 w-4 shrink-0 animate-spin fill-indigo-600 text-indigo-200 dark:fill-indigo-400 dark:text-indigo-900"
+            class="h-4 w-4 shrink-0 animate-spin fill-accent-600 text-accent-200 dark:fill-accent-400 dark:text-accent-900"
           />
         } @else if (bannerState() === 'ready') {
           <ndd-icon
@@ -156,7 +156,7 @@
                   ? 'text-rose-800 dark:text-rose-200'
                   : bannerState() === 'partial'
                     ? 'text-amber-800 dark:text-amber-200'
-                    : 'text-indigo-800 dark:text-indigo-200'
+                    : 'text-accent-800 dark:text-accent-200'
             "
           >
             @if (bannerState() === 'creating') {
@@ -238,7 +238,7 @@
             (item.requestStatus === 'succeeded' && item.syncStatus === 'syncing')
           ) {
             <app-loading-indicator
-              class="h-5 w-5 shrink-0 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+              class="h-5 w-5 shrink-0 animate-spin fill-accent-600 text-gray-200 dark:fill-accent-400 dark:text-gray-800"
             />
           } @else if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
             <ndd-icon name="dismiss-circle" class="h-5 w-5 shrink-0 text-rose-500!" />
@@ -258,13 +258,13 @@
             @if (item.requestStatus === 'pending') {
               <p class="text-sm text-gray-500 dark:text-gray-400">Waiting...</p>
             } @else if (item.requestStatus === 'in_progress') {
-              <p class="text-sm text-indigo-600 dark:text-indigo-400">
+              <p class="text-sm text-accent-600 dark:text-accent-400">
                 {{ item.type === 'plugin' ? 'Installing...' : 'Creating...' }}
               </p>
             } @else if (item.requestStatus === 'failed') {
               <p class="text-sm text-rose-600 dark:text-rose-400">{{ item.error }}</p>
             } @else if (item.syncStatus === 'syncing') {
-              <p class="text-sm text-indigo-600 dark:text-indigo-400">
+              <p class="text-sm text-accent-600 dark:text-accent-400">
                 Syncing{{ item.shootStatus ? ' (' + item.shootStatus + ')' : '' }}...
               </p>
             } @else if (item.syncStatus === 'failed') {
