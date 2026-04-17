@@ -100,6 +100,8 @@ export default class ModalComponent implements OnChanges, AfterViewChecked, OnDe
       'button:not([disabled])',
       'a[href]',
       '[tabindex]:not([tabindex="-1"])',
+      'ndd-text-field:not([disabled])',
+      'ndd-button:not([disabled])',
     ].join(', ');
 
     // Get all focusable elements in the modal (includes close button for tab cycle)

@@ -17,6 +17,7 @@
           type="button"
           text="Download CSV"
           start-icon="table-badge-arrow-down"
+          size="sm"
           variant="primary"
         ></ndd-button>
       </div>
@@ -27,18 +28,21 @@
   <div class="card-header">
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <!-- Date Range -->
-      <ndd-form-field label="Date range" class="lg:col-span-2">
+      <div class="lg:col-span-2">
+        <label for="date" class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200"
+          >Date range</label
+        >
         <app-date-range-picker
           [id]="'date'"
           [(dateFrom)]="dateFrom"
           [(dateTo)]="dateTo"
           (dateRangeChange)="onDateChange()"
         ></app-date-range-picker>
-      </ndd-form-field>
+      </div>
 
       <!-- Cluster filter — only shown in org-level view -->
       @if (viewMode() === 'org') {
-        <ndd-form-field label="Cluster">
+        <ndd-form-field label="Cluster" class="lg:col-span-2">
           <select
             id="cluster"
             [ngModel]="selectedClusterId()"
@@ -56,7 +60,7 @@
 
       <!-- Namespace filter — only shown in project-level view -->
       @if (viewMode() === 'project') {
-        <ndd-form-field label="Namespace">
+        <ndd-form-field label="Namespace" class="lg:col-span-2">
           <select
             id="namespace"
             [ngModel]="selectedNamespace()"
