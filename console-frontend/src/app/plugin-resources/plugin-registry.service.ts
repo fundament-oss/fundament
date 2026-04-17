@@ -8,7 +8,6 @@ import type {
 } from './types';
 import { parseObjectSchema } from './crd-schema.utils';
 import { ConfigService } from '../config.service';
-import OrganizationContextService from '../organization-context.service';
 
 function parseCrd(raw: RawCrdYaml): ParsedCrd {
   const version = raw.spec.versions.find((v) => v.storage) ?? raw.spec.versions[0];
@@ -87,30 +86,17 @@ export default class PluginRegistryService {
 
   private configService = inject(ConfigService);
 
-  private organizationContextService = inject(OrganizationContextService);
-
   async loadPlugins(clusterId: string): Promise<void> {
     if (clusterId === this.loadedForClusterId) return;
 
     const { kubeApiProxyUrl } = this.configService.getConfig();
 
-    const orgId =
-      this.organizationContextService.currentOrganizationId() ??
-      OrganizationContextService.getStoredOrganizationId();
-
-    if (!orgId) return;
-
-    const headers: Record<string, string> = {
-      'Fun-Organization': orgId,
-      'Fun-Cluster': clusterId,
-    };
-
     let listData: PluginInstallationListResponse;
 
     try {
       const listRes = await fetch(
-        `${kubeApiProxyUrl}/apis/plugins.fundament.io/v1/plugininstallations`,
-        { credentials: 'include', headers },
+        `${kubeApiProxyUrl}/clusters/${clusterId}/apis/plugins.fundament.io/v1/plugininstallations`,
+        { credentials: 'include' },
       );
       if (!listRes.ok) return;
 
@@ -127,8 +113,8 @@ export default class PluginRegistryService {
       runningPlugins.map(async (item) => {
         const { pluginName } = item.spec;
         const defRes = await fetch(
-          `${kubeApiProxyUrl}/api/v1/namespaces/plugin-${pluginName}/services/http:plugin-${pluginName}:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition`,
-          { credentials: 'include', headers },
+          `${kubeApiProxyUrl}/clusters/${clusterId}/api/v1/namespaces/plugin-${pluginName}/services/http:plugin-${pluginName}:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition`,
+          { credentials: 'include' },
         );
         if (!defRes.ok) {
           throw new Error(`Failed to fetch definition for ${pluginName}: ${defRes.status}`);
