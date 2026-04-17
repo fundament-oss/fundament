@@ -16,7 +16,7 @@
   <div class="py-12 text-center">
     <div role="status" class="flex justify-center">
       <app-loading-indicator
-        class="h-8 w-8 animate-spin fill-accent-600 text-gray-200 dark:fill-accent-400 dark:text-gray-800"
+        class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
       />
       <span class="sr-only">Loading...</span>
     </div>
@@ -155,7 +155,7 @@
             <summary class="inline-flex cursor-pointer items-center font-medium">
               <ndd-icon
                 name="caret-right"
-                class="mr-1 h-4 w-4 text-accent-500! transition-transform group-open:rotate-90"
+                class="text-accent-500! mr-1 h-4 w-4 transition-transform group-open:rotate-90"
               />
               Sync details
             </summary>
@@ -439,9 +439,9 @@
                 <div class="flex items-center space-x-3">
                   <div class="flex-0">
                     <div
-                      class="flex h-8 w-8 items-center justify-center rounded-full bg-accent-100 dark:bg-accent-900"
+                      class="bg-accent-100 dark:bg-accent-900 flex h-8 w-8 items-center justify-center rounded-full"
                     >
-                      <span class="font-medium text-accent-700 dark:text-accent-300">{{
+                      <span class="text-accent-700 dark:text-accent-300 font-medium">{{
                         member.name.charAt(0)
                       }}</span>
                     </div>
@@ -576,7 +576,7 @@
             <div class="space-y-3">
               @for (namespace of namespaces(); track namespace.id) {
                 <div class="card card-body-sm">
-                  <p class="font-mono dark:text-white">{{ namespace.name }}</p>
+                  <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
                   <p class="mt-1 text-gray-500 dark:text-gray-400">
                     Project: {{ getProjectName(namespace.projectId) }} &bull; Created
                     {{ formatDate(namespace.created) }}

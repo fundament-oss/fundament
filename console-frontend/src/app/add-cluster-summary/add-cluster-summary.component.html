@@ -128,7 +128,7 @@
       <div class="flex items-center gap-3">
         @if (bannerState() === 'creating' || bannerState() === 'provisioning') {
           <app-loading-indicator
-            class="h-4 w-4 shrink-0 animate-spin fill-accent-600 text-accent-200 dark:fill-accent-400 dark:text-accent-900"
+            class="fill-accent-600 text-accent-200 dark:fill-accent-400 dark:text-accent-900 h-4 w-4 shrink-0 animate-spin"
           />
         } @else if (bannerState() === 'ready') {
           <ndd-icon
@@ -238,7 +238,7 @@
             (item.requestStatus === 'succeeded' && item.syncStatus === 'syncing')
           ) {
             <app-loading-indicator
-              class="h-5 w-5 shrink-0 animate-spin fill-accent-600 text-gray-200 dark:fill-accent-400 dark:text-gray-800"
+              class="fill-accent-600 dark:fill-accent-400 h-5 w-5 shrink-0 animate-spin text-gray-200 dark:text-gray-800"
             />
           } @else if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
             <ndd-icon name="dismiss-circle" class="h-5 w-5 shrink-0 text-rose-500!" />
@@ -258,13 +258,13 @@
             @if (item.requestStatus === 'pending') {
               <p class="text-sm text-gray-500 dark:text-gray-400">Waiting...</p>
             } @else if (item.requestStatus === 'in_progress') {
-              <p class="text-sm text-accent-600 dark:text-accent-400">
+              <p class="text-accent-600 dark:text-accent-400 text-sm">
                 {{ item.type === 'plugin' ? 'Installing...' : 'Creating...' }}
               </p>
             } @else if (item.requestStatus === 'failed') {
               <p class="text-sm text-rose-600 dark:text-rose-400">{{ item.error }}</p>
             } @else if (item.syncStatus === 'syncing') {
-              <p class="text-sm text-accent-600 dark:text-accent-400">
+              <p class="text-accent-600 dark:text-accent-400 text-sm">
                 Syncing{{ item.shootStatus ? ' (' + item.shootStatus + ')' : '' }}...
               </p>
             } @else if (item.syncStatus === 'failed') {

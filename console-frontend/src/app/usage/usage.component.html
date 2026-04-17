@@ -257,7 +257,7 @@
               <tbody>
                 @for (c of clusterSummaries(); track c.id) {
                   <tr>
-                    <td class="font-mono font-medium dark:text-white">{{ c.name }}</td>
+                    <td class="font-mono text-sm font-medium dark:text-white">{{ c.name }}</td>
                     <td>
                       {{ c.cpu.used | number: '1.1-1' }} / {{ c.cpu.total | number: '1.0-0' }} cores
                       <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
@@ -305,7 +305,7 @@
             <div class="space-y-4">
               @for (node of nodeUsage(); track node.name) {
                 <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800">
-                  <h4 class="mb-3 font-mono font-medium dark:text-white">
+                  <h4 class="mb-3 font-mono text-sm font-medium dark:text-white">
                     {{ node.name }}
                   </h4>
                   <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">

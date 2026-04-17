@@ -10,11 +10,11 @@
   --color-accent-100: oklch(0.897 0.051 253.4);
   --color-accent-150: oklch(0.849 0.076 253.4);
   --color-accent-200: oklch(0.804 0.097 253.4);
-  --color-accent-250: oklch(0.760 0.097 253.4);
+  --color-accent-250: oklch(0.76 0.097 253.4);
   --color-accent-300: oklch(0.718 0.097 253.4);
   --color-accent-350: oklch(0.677 0.097 253.4);
   --color-accent-400: oklch(0.638 0.097 253.4);
-  --color-accent-450: oklch(0.600 0.097 253.4);
+  --color-accent-450: oklch(0.6 0.097 253.4);
   --color-accent-500: oklch(0.563 0.097 253.4);
   --color-accent-550: oklch(0.527 0.097 253.4);
   --color-accent-600: oklch(0.492 0.097 253.4);
@@ -277,7 +277,7 @@ ndd-radio-button-field.radio-option {
 /* Navigation link styles */
 
 .nav-link {
-  @apply flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left font-medium text-gray-700 ring-accent-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-200;
+  @apply ring-accent-500 flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-200;
 }
 
 .nav-link.active {

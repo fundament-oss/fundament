@@ -16,7 +16,7 @@
   <div class="py-12 text-center">
     <div role="status" class="flex justify-center">
       <app-loading-indicator
-        class="h-8 w-8 animate-spin fill-accent-600 text-gray-200 dark:fill-accent-400 dark:text-gray-800"
+        class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
       />
       <span class="sr-only">Loading...</span>
     </div>
@@ -48,7 +48,7 @@
           </dl>
           <dl>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Project ID</dt>
-            <dd class="mt-1 font-mono dark:text-white">{{ project()?.id }}</dd>
+            <dd class="mt-1 font-mono text-sm dark:text-white">{{ project()?.id }}</dd>
           </dl>
           <dl>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Created</dt>
@@ -89,7 +89,7 @@
                 class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
               >
                 <div>
-                  <p class="font-mono dark:text-white">{{ namespace.name }}</p>
+                  <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
                   <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     Created {{ formatDate(namespace.created) }}
                   </p>
