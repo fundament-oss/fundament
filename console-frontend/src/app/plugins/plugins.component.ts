@@ -20,12 +20,7 @@ import {
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import { ToastService } from '../toast.service';
-
-// TODO: plugin installs are moving to the kube-api-proxy. Re-wire once available.
-interface Install {
-  id: string;
-  pluginId: string;
-}
+import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
 
 const getPluginIconName = (pluginName: string): string =>
   pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
@@ -33,7 +28,7 @@ const getPluginIconName = (pluginName: string): string =>
 // Extended plugin type with presets array (computed from backend data)
 interface PluginWithPresets extends Pick<
   PluginSummary,
-  'id' | 'name' | 'descriptionShort' | 'description' | 'categories' | 'tags'
+  'id' | 'name' | 'descriptionShort' | 'description' | 'categories' | 'tags' | 'image'
 > {
   presets?: string[]; // Array of preset IDs this plugin belongs to
 }
@@ -44,8 +39,9 @@ interface ClusterWithState extends ClusterSummary {
 }
 
 // Extended install type with cluster ID
-interface InstallWithCluster extends Install {
+interface InstallWithCluster {
   clusterId: string;
+  pluginName: string;
 }
 
 // Extended category type with count for filtering
@@ -78,6 +74,8 @@ export default class PluginsComponent implements OnInit {
   private organizationDataService = inject(OrganizationDataService);
 
   private toastService = inject(ToastService);
+
+  private pluginInstallationService = inject(PluginInstallationService);
 
   selectedCategory = 'all';
 
@@ -168,6 +166,7 @@ export default class PluginsComponent implements OnInit {
           descriptionShort: backendPlugin.descriptionShort,
           categories: backendPlugin.categories,
           tags: backendPlugin.tags,
+          image: backendPlugin.image,
           presets: assignedPresets,
         };
       });
@@ -175,8 +174,14 @@ export default class PluginsComponent implements OnInit {
       // Use pre-fetched cluster summaries instead of making a duplicate ListClusters call
       this.clusters = this.organizationDataService.clusterSummaries();
 
-      // TODO: fetch installs via kube-api-proxy once that flow is implemented.
-      this.installs = [];
+      const installResults = await Promise.all(
+        this.clusters.map((cluster) =>
+          this.pluginInstallationService.listInstallations(cluster.id).catch(() => []),
+        ),
+      );
+      this.installs = this.clusters.flatMap((cluster, i) =>
+        installResults[i].map((item) => ({ clusterId: cluster.id, pluginName: item.metadata.name })),
+      );
 
       this.isLoading.set(false);
     } catch (error) {
@@ -276,7 +281,7 @@ export default class PluginsComponent implements OnInit {
       ...cluster,
       installed: this.installs.some(
         (install) =>
-          install.clusterId === cluster.id && install.pluginId === this.selectedPlugin!.id,
+          install.clusterId === cluster.id && install.pluginName === this.selectedPlugin!.name,
       ),
     }));
   }
@@ -297,18 +302,22 @@ export default class PluginsComponent implements OnInit {
       return;
     }
 
-    // Check if already installed
     const alreadyInstalled = this.installs.some(
-      (install) => install.clusterId === clusterId && install.pluginId === this.selectedPlugin!.id,
+      (install) => install.clusterId === clusterId && install.pluginName === this.selectedPlugin!.name,
     );
-    if (alreadyInstalled) {
-      return;
-    }
+    if (alreadyInstalled) return;
 
-    // TODO: install plugin via kube-api-proxy once that flow is implemented.
-    this.toastService.error(
-      `Installing ${this.selectedPlugin.name} on ${cluster.name} is temporarily unavailable`,
-    );
+    try {
+      await this.pluginInstallationService.installPlugin(
+        clusterId,
+        this.selectedPlugin.name,
+        this.selectedPlugin.image,
+      );
+      this.installs = [...this.installs, { clusterId, pluginName: this.selectedPlugin.name }];
+      this.toastService.success(`${this.selectedPlugin.name} installed on ${cluster.name}`);
+    } catch {
+      this.toastService.error(`Failed to install ${this.selectedPlugin.name} on ${cluster.name}`);
+    }
   }
 
   getPluginIconName = getPluginIconName;

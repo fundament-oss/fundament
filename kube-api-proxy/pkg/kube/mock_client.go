@@ -2,18 +2,81 @@ package kube
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 // MockClient returns hardcoded Kubernetes API responses for development and testing.
 // It implements http.Handler so it can be used in place of MultiClusterProxy.
-type MockClient struct{}
+type MockClient struct {
+	mu               sync.Mutex
+	installByCluster map[string][]map[string]any
+}
 
 const crdBasePath = "/apis/apiextensions.k8s.io/v1/customresourcedefinitions"
+const pluginInstallationsPath = "/apis/plugins.fundament.io/v1/plugininstallations"
 
-func (m *MockClient) Do(_ context.Context, _, path string, _ io.Reader) (int, io.ReadCloser, error) {
+var defaultMockInstallItems = []map[string]any{
+	{
+		"apiVersion": "plugins.fundament.io/v1",
+		"kind":       "PluginInstallation",
+		"metadata":   map[string]any{"name": "cert-manager", "namespace": "plugin-cert-manager"},
+		"spec":       map[string]any{"pluginName": "cert-manager", "image": "mock"},
+		"status":     map[string]any{"phase": "Running", "ready": true},
+	},
+	{
+		"apiVersion": "plugins.fundament.io/v1",
+		"kind":       "PluginInstallation",
+		"metadata":   map[string]any{"name": "CloudNativePG", "namespace": "plugin-CloudNativePG"},
+		"spec":       map[string]any{"pluginName": "CloudNativePG", "image": "mock"},
+		"status":     map[string]any{"phase": "Running", "ready": true},
+	},
+}
+
+func clusterIDFromContext(ctx context.Context) string {
+	id, _ := ctx.Value(ClusterIDContextKey{}).(string)
+	return id
+}
+
+func (m *MockClient) installItemsForCluster(clusterID string) []map[string]any {
+	if m.installByCluster == nil {
+		m.installByCluster = map[string][]map[string]any{}
+	}
+	items, ok := m.installByCluster[clusterID]
+	if !ok {
+		// Deep-copy the defaults so mutations don't affect other clusters.
+		copied := make([]map[string]any, len(defaultMockInstallItems))
+		for i, item := range defaultMockInstallItems {
+			cp := make(map[string]any, len(item))
+			for k, v := range item {
+				cp[k] = v
+			}
+			copied[i] = cp
+		}
+		m.installByCluster[clusterID] = copied
+		return copied
+	}
+	return items
+}
+
+func (m *MockClient) installationsListJSON(clusterID string) string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	items := m.installItemsForCluster(clusterID)
+	list := map[string]any{
+		"apiVersion": "plugins.fundament.io/v1",
+		"kind":       "PluginInstallationList",
+		"metadata":   map[string]any{"resourceVersion": "1"},
+		"items":      items,
+	}
+	b, _ := json.Marshal(list)
+	return string(b)
+}
+
+func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader) (int, io.ReadCloser, error) {
 	r := func(s string) io.ReadCloser { return io.NopCloser(strings.NewReader(s)) }
 
 	// Strip query string for matching.
@@ -21,7 +84,36 @@ func (m *MockClient) Do(_ context.Context, _, path string, _ io.Reader) (int, io
 		path = path[:i]
 	}
 
+	clusterID := clusterIDFromContext(ctx)
+
 	switch {
+	case path == pluginInstallationsPath && method == http.MethodPost:
+		var obj map[string]any
+		if err := json.NewDecoder(body).Decode(&obj); err != nil {
+			return 400, r(`{"message":"invalid body"}`), nil
+		}
+		obj["status"] = map[string]any{"phase": "Running", "ready": true}
+		m.mu.Lock()
+		items := m.installItemsForCluster(clusterID)
+		m.installByCluster[clusterID] = append(items, obj)
+		m.mu.Unlock()
+		b, _ := json.Marshal(obj)
+		return 201, r(string(b)), nil
+	case strings.HasPrefix(path, pluginInstallationsPath+"/") && method == http.MethodDelete:
+		name := path[len(pluginInstallationsPath)+1:]
+		m.mu.Lock()
+		items := m.installItemsForCluster(clusterID)
+		for i, item := range items {
+			meta, _ := item["metadata"].(map[string]any)
+			if meta["name"] == name {
+				m.installByCluster[clusterID] = append(items[:i], items[i+1:]...)
+				break
+			}
+		}
+		m.mu.Unlock()
+		return 200, r(`{}`), nil
+	case path == pluginInstallationsPath:
+		return 200, r(m.installationsListJSON(clusterID)), nil
 	case strings.HasPrefix(path, crdBasePath+"/"):
 		name := path[len(crdBasePath)+1:]
 		if crd, ok := mockCRDForName(name); ok {
@@ -30,11 +122,9 @@ func (m *MockClient) Do(_ context.Context, _, path string, _ io.Reader) (int, io
 		return 404, r(`{"message":"not found"}`), nil
 	case path == crdBasePath:
 		return 200, r(mockCRDListJSON), nil
-	case path == "/apis/plugins.fundament.io/v1/plugininstallations":
-		return 200, r(mockPluginInstallationListJSON), nil
 	case isPluginGetDefinition(path, "cert-manager"):
 		return 200, r(mockCertManagerDefinitionJSON), nil
-	case isPluginGetDefinition(path, "cnpg"):
+	case isPluginGetDefinition(path, "cnpg"), isPluginGetDefinition(path, "CloudNativePG"):
 		return 200, r(mockCnpgDefinitionJSON), nil
 	case isResourceList(path, "cert-manager.io", "v1", "certificates"):
 		return 200, r(mockCertificateListJSON), nil

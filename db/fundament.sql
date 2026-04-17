@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.3
+-- ** pgModeler version: 2.0.0-alpha
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -741,6 +741,7 @@ CREATE TABLE appstore.plugins (
 	author_name text,
 	author_url text,
 	repository_url text,
+	image text NOT NULL DEFAULT '',
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT plugins_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
@@ -1507,6 +1508,15 @@ CREATE POLICY organizations_users_authn_api_policy ON tenant.organizations_users
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_authn_api
+	USING (true);
+-- ddl-end --
+
+-- object: organizations_users_authz_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_users_authz_worker_policy ON tenant.organizations_users CASCADE;
+CREATE POLICY organizations_users_authz_worker_policy ON tenant.organizations_users
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_authz_worker
 	USING (true);
 -- ddl-end --
 
