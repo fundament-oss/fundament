@@ -36,19 +36,14 @@
         } @else {
           @for (plugin of plugins; track plugin.id) {
             <div>
-              <label class="inline-flex cursor-pointer items-center">
-                <input
-                  [id]="plugin.id"
-                  type="checkbox"
-                  [(ngModel)]="plugin.selected"
-                  [name]="plugin.id"
-                  [disabled]="selectedPreset !== 'custom'"
-                  class="peer sr-only"
-                />
-                <span class="switch"></span>
-                <span class="mr-1.5 ml-3 font-medium">{{ plugin.name }}</span>
-              </label>
-              <p class="-mt-0.5 ml-12 text-gray-500 dark:text-gray-400">
+              <ndd-switch-field
+                [label]="plugin.name"
+                [checked]="plugin.selected"
+                [disabled]="selectedPreset !== 'custom'"
+                [name]="plugin.id"
+                (change)="plugin.selected = $any($event).detail.checked"
+              ></ndd-switch-field>
+              <p class="-mt-0.5 ml-16 text-gray-500 dark:text-gray-400">
                 {{ plugin.descriptionShort }}
               </p>
             </div>
@@ -67,20 +62,12 @@
 
       <div class="space-y-4">
         <!-- Warning checkbox -->
-        <label class="inline-flex cursor-pointer items-center">
-          <input
-            id="customPluginUploadEnabled"
-            type="checkbox"
-            [(ngModel)]="customPluginUploadEnabled"
-            name="customPluginUploadEnabled"
-            class="peer sr-only"
-          />
-          <span class="switch"></span>
-          <span class="mr-1.5 ml-3 font-medium">
-            Enable uploading custom plugins
-            <span class="text-orange-700 dark:text-orange-400">(warranty on cluster void)</span>
-          </span>
-        </label>
+        <ndd-switch-field
+          label="Enable uploading custom plugins (warranty on cluster void)"
+          [checked]="customPluginUploadEnabled"
+          name="customPluginUploadEnabled"
+          (change)="customPluginUploadEnabled = $any($event).detail.checked"
+        ></ndd-switch-field>
 
         <!-- File upload input -->
         <div>

@@ -196,16 +196,11 @@
       <div class="space-y-3">
         @for (role of availableRoles; track role) {
           <div>
-            <label class="inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                [checked]="modalRoles()[role]"
-                (change)="toggleRole(role)"
-                class="peer sr-only"
-              />
-              <span class="switch"></span>
-              <span class="ml-3 font-medium dark:text-gray-300">{{ role }}</span>
-            </label>
+            <ndd-switch-field
+              [label]="role"
+              [checked]="modalRoles()[role]"
+              (change)="toggleRole(role)"
+            ></ndd-switch-field>
           </div>
         }
       </div>
