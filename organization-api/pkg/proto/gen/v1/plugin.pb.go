@@ -174,6 +174,7 @@ type PluginSummary struct {
 	xxx_hidden_DescriptionShort string                 `protobuf:"bytes,35,opt,name=description_short,json=descriptionShort"`
 	xxx_hidden_Tags             *[]*Tag                `protobuf:"bytes,40,rep,name=tags"`
 	xxx_hidden_Categories       *[]*Category           `protobuf:"bytes,50,rep,name=categories"`
+	xxx_hidden_Image            string                 `protobuf:"bytes,60,opt,name=image"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -249,6 +250,13 @@ func (x *PluginSummary) GetCategories() []*Category {
 	return nil
 }
 
+func (x *PluginSummary) GetImage() string {
+	if x != nil {
+		return x.xxx_hidden_Image
+	}
+	return ""
+}
+
 func (x *PluginSummary) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -273,6 +281,10 @@ func (x *PluginSummary) SetCategories(v []*Category) {
 	x.xxx_hidden_Categories = &v
 }
 
+func (x *PluginSummary) SetImage(v string) {
+	x.xxx_hidden_Image = v
+}
+
 type PluginSummary_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -282,6 +294,7 @@ type PluginSummary_builder struct {
 	DescriptionShort string
 	Tags             []*Tag
 	Categories       []*Category
+	Image            string
 }
 
 func (b0 PluginSummary_builder) Build() *PluginSummary {
@@ -294,6 +307,7 @@ func (b0 PluginSummary_builder) Build() *PluginSummary {
 	x.xxx_hidden_DescriptionShort = b.DescriptionShort
 	x.xxx_hidden_Tags = &b.Tags
 	x.xxx_hidden_Categories = &b.Categories
+	x.xxx_hidden_Image = b.Image
 	return m0
 }
 
@@ -1103,7 +1117,7 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\bCategory\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\"\xe7\x01\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\"\xfd\x01\n" +
 	"\rPluginSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -1113,7 +1127,8 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x04tags\x18( \x03(\v2\x14.organization.v1.TagR\x04tags\x129\n" +
 	"\n" +
 	"categories\x182 \x03(\v2\x19.organization.v1.CategoryR\n" +
-	"categories\"\x14\n" +
+	"categories\x12\x14\n" +
+	"\x05image\x18< \x01(\tR\x05image\"\x14\n" +
 	"\x12ListPluginsRequest\"O\n" +
 	"\x13ListPluginsResponse\x128\n" +
 	"\aplugins\x18\n" +

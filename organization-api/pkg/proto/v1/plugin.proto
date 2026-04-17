@@ -38,6 +38,7 @@ message PluginSummary {
   string description_short = 35;
   repeated Tag tags = 40;
   repeated Category categories = 50;
+  string image = 60;
 }
 
 // List plugins request

@@ -888,6 +888,9 @@ END;]]> </definition>
 	<column name="repository_url">
 		<type name="text" length="0"/>
 	</column>
+	<column name="image" not-null="true" default-value="''">
+		<type name="text" length="0"/>
+	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
