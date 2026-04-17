@@ -11,23 +11,21 @@ import { TitleService } from '../title.service';
 import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
-import { GetPluginDetailRequestSchema, type PluginDetail } from '../../generated/v1/plugin_pb';
+import {
+  GetPluginDetailRequestSchema,
+  ListPluginsRequestSchema,
+  type PluginDetail,
+} from '../../generated/v1/plugin_pb';
 import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import { ToastService } from '../toast.service';
+import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
 
 // Extended cluster type for UI state
 interface ClusterWithState extends ClusterSummary {
   installed: boolean;
-}
-
-// TODO: plugin installs are moving to the kube-api-proxy. Re-wire once available.
-interface InstallWithCluster {
-  id: string;
-  pluginId: string;
-  clusterId: string;
 }
 
 @Component({
@@ -56,15 +54,17 @@ export default class PluginDetailsComponent implements OnInit {
 
   private toastService = inject(ToastService);
 
+  private pluginInstallationService = inject(PluginInstallationService);
+
   private idempotency = createIdempotencyRef();
+
+  private pluginImage = '';
 
   pluginId = signal<string>('');
 
   plugin = signal<PluginDetail | null>(null);
 
   clusters = signal<ClusterWithState[]>([]);
-
-  installs = signal<InstallWithCluster[]>([]);
 
   isLoading = signal<boolean>(true);
 
@@ -84,15 +84,14 @@ export default class PluginDetailsComponent implements OnInit {
     this.pluginId.set(id);
 
     try {
-      // Fetch plugin, clusters, and installs in parallel
-      const [pluginResponse, clustersResponse] = await Promise.all([
+      const [pluginResponse, clustersResponse, pluginsResponse] = await Promise.all([
         firstValueFrom(
           this.pluginClient.getPluginDetail(create(GetPluginDetailRequestSchema, { pluginId: id })),
         ),
         firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
+        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
       ]);
 
-      // Check if plugin was found
       if (!pluginResponse.plugin) {
         this.errorMessage.set('Plugin not found');
         this.isLoading.set(false);
@@ -102,14 +101,19 @@ export default class PluginDetailsComponent implements OnInit {
       this.plugin.set(pluginResponse.plugin);
       this.titleService.setTitle(`${pluginResponse.plugin.name} — Plugins`);
 
-      // TODO: fetch installs via kube-api-proxy once that flow is implemented.
-      this.installs.set([]);
+      const pluginName = pluginResponse.plugin.name;
+      this.pluginImage = pluginsResponse.plugins.find((p) => p.id === id)?.image ?? '';
 
-      // Map clusters with install state (all false until kube-api-proxy is wired up)
+      const installResults = await Promise.all(
+        clustersResponse.clusters.map((cluster) =>
+          this.pluginInstallationService.listInstallations(cluster.id).catch(() => []),
+        ),
+      );
+
       this.clusters.set(
-        clustersResponse.clusters.map((cluster) => ({
+        clustersResponse.clusters.map((cluster, i) => ({
           ...cluster,
-          installed: false,
+          installed: installResults[i].some((item) => item.metadata.name === pluginName),
         })),
       );
 
@@ -158,10 +162,19 @@ export default class PluginDetailsComponent implements OnInit {
       return;
     }
 
-    // TODO: install plugin via kube-api-proxy once that flow is implemented.
-    this.toastService.error(
-      `Installing ${this.plugin()?.name} on ${cluster.name} is temporarily unavailable`,
-    );
+    try {
+      await this.pluginInstallationService.installPlugin(
+        clusterId,
+        this.plugin()!.name,
+        this.pluginImage,
+      );
+      this.clusters.update((clusters) =>
+        clusters.map((c) => (c.id === clusterId ? { ...c, installed: true } : c)),
+      );
+      this.toastService.success(`${this.plugin()?.name} installed on ${cluster.name}`);
+    } catch {
+      this.toastService.error(`Failed to install ${this.plugin()?.name} on ${cluster.name}`);
+    }
   }
 
   isInstalled(clusterId: string): boolean {

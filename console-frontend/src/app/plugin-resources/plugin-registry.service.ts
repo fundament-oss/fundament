@@ -64,7 +64,7 @@ function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
     description: def.description,
     author: def.author,
     menu: {
-      project: def.menu.project?.map((e) => ({
+      project: def.menu?.project?.map((e) => ({
         crd: e.crd,
         label: e.label,
         icon: e.icon ? toTablerIconName(e.icon) : undefined,
@@ -106,7 +106,7 @@ export default class PluginRegistryService {
     }
 
     const runningPlugins = (listData.items ?? []).filter(
-      (item) => item.status.phase === 'Running' && item.status.ready,
+      (item) => item.status?.phase === 'Running' && item.status?.ready,
     );
 
     const results = await Promise.allSettled(
