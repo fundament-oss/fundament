@@ -63,23 +63,25 @@
   [maxWidth]="'max-w-lg'"
   (modalClose)="showCreateNamespaceModal.set(false)"
 >
-  <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()" (keydown.enter)="createNamespace()">
+  <form
+    [formGroup]="namespaceForm"
+    (ngSubmit)="createNamespace()"
+    (keydown.enter)="createNamespace()"
+  >
     <!-- Namespace Name -->
-    <div class="mb-4">
-      <label for="namespaceName" class="mb-2 block font-medium text-gray-700 dark:text-white">
-        Namespace name
-      </label>
+    <ndd-form-field label="Namespace name" class="mb-4">
       <ndd-text-field
         id="namespaceName"
         [value]="namespaceForm.get('name')?.value ?? ''"
         placeholder="E.g. my-namespace"
         [invalid]="!!(namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty)"
+        error-message="namespace-name-error"
         (input)="onNameInput($event)"
       />
-      @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
-        <p class="mt-2 text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
-      }
-    </div>
+      <ndd-form-field-error-text id="namespace-name-error">
+        {{ getNameError() }}
+      </ndd-form-field-error-text>
+    </ndd-form-field>
 
     <div modal-footer class="modal-footer">
       <ndd-button

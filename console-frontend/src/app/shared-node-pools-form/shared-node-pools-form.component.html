@@ -23,52 +23,33 @@
 
         <div class="space-y-4">
           <!-- Node Pool Name -->
-          <div>
-            <label
-              [for]="'nodePoolName-' + $index"
-              class="mb-2 block font-medium text-gray-700 dark:text-white"
-            >
-              Node pool name
-            </label>
+          <ndd-form-field label="Node pool name">
             <ndd-text-field
               [id]="'nodePoolName-' + $index"
               [value]="nameControl?.value ?? ''"
               [appAutofocus]="$first"
               placeholder="E.g. my-pool-name"
               [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
+              [attr.error-message]="'node-pool-name-error-' + $index"
               (input)="onNodePoolNameInput($index, $event)"
             />
-            @if (nameControl?.invalid && nameControl?.dirty) {
-              <p class="mt-2 text-rose-600 dark:text-rose-400">
-                {{ getNodePoolNameError($index) }}
-              </p>
-            }
-          </div>
+            <ndd-form-field-error-text [id]="'node-pool-name-error-' + $index">
+              {{ getNodePoolNameError($index) }}
+            </ndd-form-field-error-text>
+          </ndd-form-field>
 
           <!-- Machine Type -->
-          <div>
-            <label
-              [for]="'machineType-' + $index"
-              class="mb-2 block font-medium text-gray-700 dark:text-white"
-            >
-              Machine type
-            </label>
+          <ndd-form-field label="Machine type">
             <select [id]="'machineType-' + $index" formControlName="machineType">
               @for (mt of machineTypes; track mt.value) {
                 <option [value]="mt.value">{{ mt.label }}</option>
               }
             </select>
-          </div>
+          </ndd-form-field>
 
           <!-- Autoscaling -->
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label
-                [for]="'autoscaleMin-' + $index"
-                class="mb-2 block font-medium text-gray-700 dark:text-white"
-              >
-                Autoscale minimum
-              </label>
+            <ndd-form-field label="Autoscale minimum">
               <ndd-number-field
                 [id]="'autoscaleMin-' + $index"
                 [value]="nodePoolControl.get('autoscaleMin')?.value"
@@ -77,15 +58,9 @@
                 max="100"
                 step="1"
               ></ndd-number-field>
-            </div>
+            </ndd-form-field>
 
-            <div>
-              <label
-                [for]="'autoscaleMax-' + $index"
-                class="mb-2 block font-medium text-gray-700 dark:text-white"
-              >
-                Autoscale maximum
-              </label>
+            <ndd-form-field label="Autoscale maximum">
               <ndd-number-field
                 [id]="'autoscaleMax-' + $index"
                 [value]="nodePoolControl.get('autoscaleMax')?.value"
@@ -94,7 +69,7 @@
                 max="100"
                 step="1"
               ></ndd-number-field>
-            </div>
+            </ndd-form-field>
           </div>
         </div>
       </div>

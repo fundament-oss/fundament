@@ -21,11 +21,16 @@
   </div>
 
   <!-- Form -->
-  <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" (keydown.enter)="onSubmit()" class="space-y-6 px-6 py-6">
-    <div>
-      <label for="clusterId" class="mb-2 block font-medium text-gray-700 dark:text-white">
-        Cluster
-      </label>
+  <form
+    [formGroup]="projectForm"
+    (ngSubmit)="onSubmit()"
+    (keydown.enter)="onSubmit()"
+    class="space-y-6 px-6 py-6"
+  >
+    <ndd-form-field
+      label="Cluster"
+      supporting-label="Select the cluster this project will belong to"
+    >
       @if (isLoadingClusters()) {
         <div class="flex items-center gap-2">
           <div role="status" class="flex justify-center">
@@ -37,44 +42,47 @@
           <p class="text-gray-600 dark:text-gray-300">Loading clusters...</p>
         </div>
       } @else if (clusters().length === 0) {
-        <p class="mt-2 text-rose-600 dark:text-rose-400">
+        <p class="text-rose-600 dark:text-rose-400">
           No clusters available. <a routerLink="/clusters/add" class="link">Add a cluster first</a>.
         </p>
       } @else {
-        <select id="clusterId" formControlName="clusterId" class="w-full">
+        <select
+          id="clusterId"
+          formControlName="clusterId"
+          class="w-full"
+          [class.invalid]="
+            !!(projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty)
+          "
+        >
           @for (cluster of clusters(); track cluster.id) {
             <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
           }
         </select>
-
-        @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
-          <p class="mt-2 text-rose-600 dark:text-rose-400">{{ getClusterError() }}</p>
-        }
-        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Select the cluster this project will belong to.
-        </p>
+        <ndd-form-field-error-text id="add-project-cluster-error">
+          @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
+            {{ getClusterError() }}
+          }
+        </ndd-form-field-error-text>
       }
-    </div>
+    </ndd-form-field>
 
-    <div>
-      <label for="name" class="mb-2 block font-medium text-gray-700 dark:text-white">
-        Project name
-      </label>
+    <ndd-form-field label="Project name">
       <ndd-text-field
         id="name"
         appAutofocus
         [value]="projectForm.get('name')?.value ?? ''"
         placeholder="E.g. my-project"
         [invalid]="!!(projectForm.get('name')?.invalid && projectForm.get('name')?.dirty)"
+        error-message="add-project-name-error"
         (input)="onNameInput($event)"
       />
-      @if (projectForm.get('name')?.invalid && projectForm.get('name')?.dirty) {
-        <p class="mt-2 text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
-      }
-      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+      <ndd-form-field-error-text id="add-project-name-error">
+        {{ getNameError() }}
+      </ndd-form-field-error-text>
+      <ndd-form-field-help-text>
         Must be lowercase, start with a letter, and contain only letters, numbers, and hyphens.
-      </p>
-    </div>
+      </ndd-form-field-help-text>
+    </ndd-form-field>
 
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
       <ndd-button routerLink="/projects" text="Cancel" variant="secondary"></ndd-button>

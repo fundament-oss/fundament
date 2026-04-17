@@ -71,6 +71,33 @@ export default class ProjectRolesComponent implements OnInit {
 
   modalRoles = signal<Record<string, boolean>>({});
 
+  formSubmitted = signal<boolean>(false);
+
+  memberIdError = computed(
+    () => this.formSubmitted() && !this.modalMemberId() && !this.editingBinding(),
+  );
+
+  namespaceError = computed(
+    () =>
+      this.formSubmitted() &&
+      !this.editingBinding() &&
+      this.namespaceMode() === 'specific' &&
+      !this.modalNamespace(),
+  );
+
+  customNamespaceError = computed(
+    () =>
+      this.formSubmitted() &&
+      !this.editingBinding() &&
+      this.namespaceMode() === 'custom' &&
+      !this.modalCustomNamespace().trim(),
+  );
+
+  rolesError = computed(() => {
+    const selected = Object.values(this.modalRoles()).some(Boolean);
+    return this.formSubmitted() && !selected;
+  });
+
   // Members available for role bindings (same users from project-members mock data)
   members = signal([
     { id: 'user-1', name: 'Alice' },
@@ -144,6 +171,7 @@ export default class ProjectRolesComponent implements OnInit {
     this.modalNamespace.set('');
     this.modalCustomNamespace.set('');
     this.modalRoles.set(Object.fromEntries(AVAILABLE_ROLES.map((r) => [r, false])));
+    this.formSubmitted.set(false);
     this.showCreateModal.set(true);
   }
 
@@ -154,11 +182,12 @@ export default class ProjectRolesComponent implements OnInit {
     this.modalRoles.set(
       Object.fromEntries(AVAILABLE_ROLES.map((r) => [r, binding.roles.includes(r)])),
     );
+    this.formSubmitted.set(false);
     this.showCreateModal.set(true);
   }
 
-  toggleRole(role: string) {
-    this.modalRoles.update((roles) => ({ ...roles, [role]: !roles[role] }));
+  toggleRole(role: string, checked: boolean) {
+    this.modalRoles.update((roles) => ({ ...roles, [role]: checked }));
   }
 
   onNamespaceModeChange(mode: 'all' | 'specific' | 'custom') {
@@ -184,6 +213,8 @@ export default class ProjectRolesComponent implements OnInit {
   }
 
   saveBinding() {
+    this.formSubmitted.set(true);
+
     const memberId = this.modalMemberId();
     const namespace = this.editingBinding()
       ? this.editingBinding()!.namespace

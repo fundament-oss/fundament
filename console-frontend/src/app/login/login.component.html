@@ -17,8 +17,7 @@
         (ngSubmit)="onSubmit()"
         (keydown.enter)="onSubmit()"
       >
-        <ndd-form-field>
-          <label for="email-overheid">Email address</label>
+        <ndd-form-field label="Email address">
           <ndd-text-field
             id="email-overheid"
             type="email"
@@ -28,16 +27,15 @@
             [value]="email?.value ?? ''"
             (input)="loginForm.get('email')!.setValue($any($event.target).value)"
             (blur)="loginForm.get('email')!.markAsTouched()"
+            [invalid]="!!(email?.invalid && email?.touched)"
+            error-message="login-email-error"
           ></ndd-text-field>
-          @if (email?.invalid && email?.touched) {
-            <span slot="description" class="text-rose-600 dark:text-rose-400">
-              {{ getEmailError() }}
-            </span>
-          }
+          <ndd-form-field-error-text id="login-email-error">
+            {{ getEmailError() }}
+          </ndd-form-field-error-text>
         </ndd-form-field>
 
-        <ndd-form-field>
-          <label for="password-overheid">Password</label>
+        <ndd-form-field label="Password">
           <ndd-password-field
             id="password-overheid"
             placeholder="Enter your password"
@@ -49,12 +47,12 @@
             show-accessible-label="Show password"
             hide-text="Hide"
             hide-accessible-label="Hide password"
+            [invalid]="!!(password?.invalid && password?.dirty)"
+            error-message="login-password-error"
           ></ndd-password-field>
-          @if (password?.invalid && password?.dirty) {
-            <span slot="description" class="text-rose-600 dark:text-rose-400">
-              {{ getPasswordError() }}
-            </span>
-          }
+          <ndd-form-field-error-text id="login-password-error">
+            {{ getPasswordError() }}
+          </ndd-form-field-error-text>
         </ndd-form-field>
 
         @if (error()) {
@@ -67,6 +65,7 @@
           variant="accent-filled"
           full-width
           [attr.disabled]="isLoading() ? '' : null"
+          text="Sign in"
           [text]="isLoading() ? 'Signing in...' : 'Sign in'"
           type="submit"
           (click)="onSubmit()"

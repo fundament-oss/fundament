@@ -61,7 +61,7 @@
       </p>
 
       <div class="space-y-4">
-        <!-- Warning checkbox -->
+        <!-- Warning switch -->
         <ndd-switch-field
           label="Enable uploading custom plugins (warranty on cluster void)"
           [checked]="customPluginUploadEnabled"
@@ -70,10 +70,10 @@
         ></ndd-switch-field>
 
         <!-- File upload input -->
-        <div>
-          <label for="customPluginFile" class="mb-2 block text-gray-700 dark:text-gray-300">
-            Upload plugin ZIP file
-          </label>
+        <ndd-form-field
+          label="Upload plugin ZIP file"
+          supporting-label="Only ZIP files are accepted"
+        >
           <input
             id="customPluginFile"
             type="file"
@@ -82,8 +82,7 @@
             (change)="onCustomPluginFileChange($event)"
             class="ring-accent-500 file:bg-accent-50 file:text-accent-700 hover:file:bg-accent-100 block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 file:mr-4 file:rounded-l-lg file:border-0 file:px-4 file:py-2 file:text-sm file:font-semibold focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:ring-offset-gray-950 dark:file:bg-gray-700 dark:file:text-gray-300 dark:hover:file:bg-gray-600"
           />
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Only ZIP files are accepted</p>
-        </div>
+        </ndd-form-field>
       </div>
     </div>
 

@@ -173,10 +173,7 @@
   <form [formGroup]="memberForm" (ngSubmit)="saveMember()" (keydown.enter)="saveMember()">
     <!-- User Selection (only show when adding) -->
     @if (!editingMemberView()) {
-      <div class="mb-4">
-        <label for="userId" class="mb-2 block font-medium text-gray-700 dark:text-white">
-          User
-        </label>
+      <ndd-form-field label="User" class="mb-4">
         <select id="userId" formControlName="userId" class="w-full">
           <option value="">Select a user</option>
           @for (user of availableUsers(); track user.id) {
@@ -184,15 +181,17 @@
           }
         </select>
         @if (availableUsers().length === 0) {
-          <p class="mt-2 text-gray-600 dark:text-gray-400">No users available to add.</p>
+          <p class="text-gray-600 dark:text-gray-400">No users available to add.</p>
         }
-        @if (
-          memberForm.get('userId')?.invalid &&
-          (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
-        ) {
-          <p class="mt-2 text-rose-600 dark:text-rose-400">Please select a user.</p>
-        }
-      </div>
+        <ndd-form-field-error-text id="project-member-user-error">
+          @if (
+            memberForm.get('userId')?.invalid &&
+            (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
+          ) {
+            Please select a user.
+          }
+        </ndd-form-field-error-text>
+      </ndd-form-field>
     }
 
     <!-- Member name (only show when editing) -->

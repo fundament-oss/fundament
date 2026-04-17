@@ -335,26 +335,22 @@
   </p>
 
   <form (ngSubmit)="submitInvitation()" (keydown.enter)="submitInvitation()" novalidate>
-    <div class="mb-4">
-      <label for="email" class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
-        Email address
-      </label>
+    <ndd-form-field label="Email address" class="mb-4">
       <ndd-text-field
-        #emailModel="ngModel"
         type="email"
         id="email"
-        email
-        [ngModel]="inviteEmail()"
-        (ngModelChange)="inviteEmail.set($event); inviteError.set(null)"
-        name="email"
+        [value]="inviteEmail()"
+        (input)="inviteEmail.set($any($event.target).value); inviteError.set(null)"
+        (blur)="inviteEmailTouched.set(true)"
         placeholder="user@example.com"
         [disabled]="isSubmitting()"
-        [invalid]="!!(inviteError() || (emailModel.invalid && emailModel.touched))"
+        [invalid]="!!(inviteError() || (inviteEmailTouched() && !inviteEmail().trim()))"
+        error-message="org-invite-email-error"
       />
-      @if (inviteError()) {
-        <p class="mt-2 text-rose-600 dark:text-rose-400">{{ inviteError() }}</p>
-      }
-    </div>
+      <ndd-form-field-error-text id="org-invite-email-error">
+        {{ inviteError() }}
+      </ndd-form-field-error-text>
+    </ndd-form-field>
 
     <div class="mb-6">
       <ndd-form-field label="Permission">

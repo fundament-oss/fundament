@@ -7,12 +7,14 @@
 </div>
 
 <!-- Form -->
-<form [formGroup]="clusterForm" (ngSubmit)="onSubmit()" class="space-y-6 px-6 py-6">
+<form
+  [formGroup]="clusterForm"
+  (ngSubmit)="onSubmit()"
+  (keydown.enter)="onSubmit()"
+  class="space-y-6 px-6 py-6"
+>
   <!-- Cluster Name -->
-  <div>
-    <label for="clusterName" class="mb-2 block font-medium text-gray-700 dark:text-white">
-      Cluster name
-    </label>
+  <ndd-form-field label="Cluster name">
     <ndd-text-field
       id="clusterName"
       appAutofocus
@@ -23,16 +25,17 @@
       [invalid]="
         (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) || clusterNameExists()
       "
+      error-message="add-cluster-name-error"
     ></ndd-text-field>
-    @if (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) {
-      <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getClusterNameError() }}</p>
-    }
-    @if (clusterNameExists()) {
-      <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+    <ndd-form-field-error-text id="add-cluster-name-error">
+      @if (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) {
+        {{ getClusterNameError() }}
+      }
+      @if (clusterNameExists()) {
         A cluster with this name already exists.
-      </p>
-    }
-  </div>
+      }
+    </ndd-form-field-error-text>
+  </ndd-form-field>
 
   <!-- Region -->
   <ndd-form-field label="Region">

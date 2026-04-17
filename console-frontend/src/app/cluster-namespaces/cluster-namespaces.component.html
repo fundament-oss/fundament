@@ -59,6 +59,7 @@
                 (click)="openDeleteNamespaceModal(namespace.id, namespace.name)"
                 text="Delete"
                 start-icon="trash"
+                size="sm"
                 variant="destructive"
               ></ndd-button>
             </div>
@@ -85,12 +86,13 @@
   [maxWidth]="'max-w-lg'"
   (modalClose)="showAddNamespaceModal.set(false)"
 >
-  <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()" (keydown.enter)="createNamespace()">
+  <form
+    [formGroup]="namespaceForm"
+    (ngSubmit)="createNamespace()"
+    (keydown.enter)="createNamespace()"
+  >
     <!-- Project Selection -->
-    <div class="mb-4">
-      <label for="projectId" class="mb-2 block font-medium text-gray-700 dark:text-white">
-        Project
-      </label>
+    <ndd-form-field label="Project" class="mb-4">
       @if (isLoadingProjects()) {
         <div role="status" class="flex justify-center">
           <app-loading-indicator
@@ -106,32 +108,28 @@
           }
         </select>
         @if (projects().length === 0) {
-          <p class="mt-2 text-gray-600 dark:text-gray-400">
+          <p class="text-gray-600 dark:text-gray-400">
             No projects available.
             <a routerLink="/projects/add" class="link">Add a project first</a>.
           </p>
         }
       }
-    </div>
+    </ndd-form-field>
 
     <!-- Namespace Name -->
-    <div class="mb-4">
-      <label for="namespaceName" class="mb-2 block font-medium text-gray-700 dark:text-white">
-        Namespace name
-      </label>
+    <ndd-form-field label="Namespace name" class="mb-4">
       <ndd-text-field
         id="namespaceName"
         [value]="namespaceForm.get('name')?.value ?? ''"
         placeholder="E.g. my-namespace"
         [invalid]="!!(namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty)"
+        error-message="cluster-namespace-name-error"
         (input)="onNamespaceNameInput($event)"
       />
-      @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
-        <p class="mt-2 text-rose-600 dark:text-rose-400">
-          {{ getNamespaceNameError() }}
-        </p>
-      }
-    </div>
+      <ndd-form-field-error-text id="cluster-namespace-name-error">
+        {{ getNamespaceNameError() }}
+      </ndd-form-field-error-text>
+    </ndd-form-field>
 
     <div modal-footer class="modal-footer">
       <ndd-button

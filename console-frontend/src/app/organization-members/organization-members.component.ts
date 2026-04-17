@@ -7,7 +7,6 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
@@ -53,7 +52,7 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [FormsModule, ModalComponent, LoadingIndicatorComponent],
+  imports: [ModalComponent, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './organization-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -80,6 +79,8 @@ export default class OrganizationMembersComponent implements OnInit {
   isModalOpen = signal(false);
 
   inviteEmail = signal('');
+
+  inviteEmailTouched = signal(false);
 
   invitePermission = signal('viewer');
 
@@ -143,6 +144,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
   openModal() {
     this.inviteEmail.set('');
+    this.inviteEmailTouched.set(false);
     this.invitePermission.set('viewer');
     this.inviteError.set(null);
     this.isModalOpen.set(true);

@@ -108,10 +108,7 @@
 >
   <form (ngSubmit)="saveBinding()" (keydown.enter)="saveBinding()" novalidate>
     <!-- Member selection -->
-    <div class="mb-4">
-      <label for="rb-member" class="mb-2 block font-medium text-gray-700 dark:text-white">
-        Member
-      </label>
+    <ndd-form-field label="Member" class="mb-4">
       @if (editingBinding()) {
         <p class="dark:text-white">{{ editingBinding()?.memberName }}</p>
       } @else {
@@ -121,14 +118,18 @@
           [ngModel]="modalMemberId()"
           (ngModelChange)="modalMemberId.set($event)"
           name="memberId"
+          [attr.aria-invalid]="memberIdError() ? 'true' : null"
         >
           <option value="">Select a member</option>
           @for (member of members(); track member.id) {
             <option [value]="member.id">{{ member.name }}</option>
           }
         </select>
+        @if (memberIdError()) {
+          <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">Please select a member.</p>
+        }
       }
-    </div>
+    </ndd-form-field>
 
     <!-- Namespace selection -->
     <div class="mb-4">
@@ -168,12 +169,18 @@
               [ngModel]="modalNamespace()"
               (ngModelChange)="modalNamespace.set($event)"
               name="namespace"
+              [attr.aria-invalid]="namespaceError() ? 'true' : null"
             >
               <option value="">Select a namespace</option>
               @for (ns of namespaces(); track ns) {
                 <option [value]="ns">{{ ns }}</option>
               }
             </select>
+            @if (namespaceError()) {
+              <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">
+                Please select a namespace.
+              </p>
+            }
           </div>
         }
         @if (namespaceMode() === 'custom') {
@@ -181,10 +188,14 @@
             <ndd-text-field
               id="rb-custom-namespace"
               placeholder="E.g. staging-* or my-namespace"
-              [ngModel]="modalCustomNamespace()"
-              (ngModelChange)="modalCustomNamespace.set($event)"
-              name="customNamespace"
+              [value]="modalCustomNamespace()"
+              (input)="modalCustomNamespace.set($any($event.target).value)"
             />
+            @if (customNamespaceError()) {
+              <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">
+                Please enter a namespace pattern.
+              </p>
+            }
           </div>
         }
       }
@@ -193,13 +204,18 @@
     <!-- Roles switches -->
     <div class="mb-4">
       <span class="mb-2 block font-medium text-gray-700 dark:text-white">Roles</span>
+      @if (rolesError()) {
+        <p class="mb-2 text-sm text-rose-600 dark:text-rose-400">
+          Please select at least one role.
+        </p>
+      }
       <div class="space-y-3">
         @for (role of availableRoles; track role) {
           <div>
             <ndd-switch-field
               [label]="role"
               [checked]="modalRoles()[role]"
-              (change)="toggleRole(role)"
+              (change)="toggleRole(role, $any($event).detail.checked)"
             ></ndd-switch-field>
           </div>
         }
@@ -215,7 +231,7 @@
         variant="secondary"
       ></ndd-button>
       <ndd-button
-        type="button"
+        type="submit"
         (click)="saveBinding()"
         [text]="isSubmitting() ? 'Saving...' : editingBinding() ? 'Save changes' : 'Create binding'"
         [disabled]="isSubmitting()"
