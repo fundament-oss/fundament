@@ -515,6 +515,7 @@ export default class App implements OnInit {
       this.showOrgPicker.set(false);
       this.selectedOrgId.set(null);
       this.selectedProjectId.set(null);
+      this.userDropdownOpen.set(false);
       this.router.navigate(['/login']);
     } catch (error) {
       // eslint-disable-next-line no-console

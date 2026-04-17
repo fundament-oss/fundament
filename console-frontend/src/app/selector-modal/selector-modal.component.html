@@ -1,18 +1,16 @@
 <app-modal [show]="show()" title="Select organization or project" (modalClose)="onClose()">
   <!-- Filter Input -->
   <div class="mb-4">
-    <div class="relative">
-      <div class="pointer-events-none absolute inset-y-0 left-0 ml-3 flex items-center">
-        <ndd-icon name="magnifier" class="h-4 w-4 text-gray-400! dark:text-gray-500!" />
-      </div>
-      <input
-        type="search"
-        placeholder="Search..."
-        [value]="filterInputValue()"
-        (input)="updateFilter($event)"
-        class="pl-9!"
-      />
-    </div>
+    <ndd-search-field
+      [value]="filterInputValue()"
+      placeholder="Search..."
+      accessible-label="Search"
+      size="md"
+      name="filter"
+      (input)="updateFilter($event)"
+      (change)="updateFilter($event)"
+      size="sm"
+    ></ndd-search-field>
   </div>
 
   <!-- Nested Tree -->

@@ -77,17 +77,29 @@ export default class ModalComponent implements OnChanges, AfterViewChecked, OnDe
   }
 
   private setInitialFocus(): boolean {
-    // Get focusable elements excluding the close button for initial focus
+    // Exclude the close button (ndd-icon-button with text="Close") from initial focus
     const elements = this.getFocusableElements().filter(
-      (el) => !el.hasAttribute('aria-label') || el.getAttribute('aria-label') !== 'Close',
+      (el) => el.getAttribute('text') !== 'Close',
     );
     const element = elements[0] || this.modalDialog?.nativeElement;
     if (!element) {
       return false;
     }
 
-    element.focus();
-    return document.activeElement === element;
+    ModalComponent.focusElement(element);
+
+    const shadowRoot = (element as HTMLElement & { shadowRoot?: ShadowRoot }).shadowRoot;
+    return document.activeElement === element || !!shadowRoot?.activeElement;
+  }
+
+  // Focus an element, piercing into shadow DOM when the host doesn't delegate focus natively.
+  // Pass focusVisible: true so the browser shows the focus ring even for programmatic focus.
+  private static focusElement(element: HTMLElement): void {
+    const shadowRoot = (element as HTMLElement & { shadowRoot?: ShadowRoot }).shadowRoot;
+    const focusTarget =
+      shadowRoot?.querySelector<HTMLElement>('input:not([disabled]), button:not([disabled])') ??
+      element;
+    focusTarget.focus({ focusVisible: true } as FocusOptions & { focusVisible?: boolean });
   }
 
   private getFocusableElements(): HTMLElement[] {
@@ -101,7 +113,9 @@ export default class ModalComponent implements OnChanges, AfterViewChecked, OnDe
       'a[href]',
       '[tabindex]:not([tabindex="-1"])',
       'ndd-text-field:not([disabled])',
+      'ndd-search-field:not([disabled])',
       'ndd-button:not([disabled])',
+      'ndd-icon-button:not([disabled])',
     ].join(', ');
 
     // Get all focusable elements in the modal (includes close button for tab cycle)

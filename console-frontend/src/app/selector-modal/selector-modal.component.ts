@@ -85,9 +85,9 @@ export default class SelectorModalComponent {
   }
 
   updateFilter(event: Event): void {
-    const inputEl = event.target as HTMLInputElement;
-    this.filterInputValue.set(inputEl.value);
-    this.filterText.set(inputEl.value.toLowerCase());
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.filterInputValue.set(value);
+    this.filterText.set(value.toLowerCase());
   }
 
   onSelectOrganization(orgId: string): void {
