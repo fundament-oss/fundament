@@ -27,7 +27,7 @@
         text="Create role binding"
         start-icon="plus-small"
         variant="primary"
-      ></ndd-button>
+      />
 
       <!-- Filters -->
       <select
@@ -77,10 +77,10 @@
                     (click)="openEditModal(binding)"
                     text="Edit"
                     start-icon="pencil"
-                    variant="accent-outlined"
+                    variant="secondary"
                     size="sm"
                     class="mr-2"
-                  ></ndd-button>
+                  />
 
                   <ndd-button
                     (click)="openRemoveModal(binding.id)"
@@ -88,7 +88,7 @@
                     start-icon="trash"
                     variant="destructive"
                     size="sm"
-                  ></ndd-button>
+                  />
                 </td>
               </tr>
             }
@@ -232,14 +232,14 @@
         [disabled]="isSubmitting()"
         text="Cancel"
         variant="secondary"
-      ></ndd-button>
+      />
       <ndd-button
         type="submit"
         (click)="saveBinding()"
         [text]="isSubmitting() ? 'Saving...' : editingBinding() ? 'Save changes' : 'Create binding'"
         [disabled]="isSubmitting()"
         variant="primary"
-      ></ndd-button>
+      />
     </div>
   </form>
 </app-modal>
@@ -276,12 +276,12 @@
       (click)="showRemoveModal.set(false)"
       text="Cancel"
       variant="secondary"
-    ></ndd-button>
+    />
     <ndd-button
       type="button"
       (click)="confirmRemoveBinding()"
       text="Yes, remove this binding"
       variant="destructive"
-    ></ndd-button>
+    />
   </div>
 </app-modal>

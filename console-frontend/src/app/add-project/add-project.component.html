@@ -85,14 +85,14 @@
     </ndd-form-field>
 
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-      <ndd-button routerLink="/projects" text="Cancel" variant="secondary"></ndd-button>
+      <ndd-button routerLink="/projects" text="Cancel" variant="secondary" />
       <ndd-button
         type="button"
         (click)="onSubmit()"
         [text]="isSubmitting() ? 'Creating...' : 'Create project'"
         [disabled]="isSubmitting()"
         variant="primary"
-      ></ndd-button>
+      />
     </div>
   </form>
 </div>

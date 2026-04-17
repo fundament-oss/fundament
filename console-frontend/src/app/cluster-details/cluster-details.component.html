@@ -47,7 +47,7 @@
             variant="secondary"
             start-icon="terminal"
             size="sm"
-          ></ndd-button>
+          />
           <ndd-button
             type="button"
             (click)="downloadKubeconfig()"
@@ -55,7 +55,7 @@
             start-icon="arrow-down-in-bucket"
             variant="primary"
             size="sm"
-          ></ndd-button>
+          />
         </div>
       </div>
     </div>
@@ -94,9 +94,10 @@
               <ndd-button
                 text="Upgrade"
                 start-icon="arrow-up"
-                variant="accent-outlined"
+                variant="secondary"
                 size="xs"
-              ></ndd-button>
+                class="ml-1"
+              />
             </dd>
           </dl>
         </div>
@@ -432,7 +433,7 @@
           <h3 class="mb-4 text-xl font-medium dark:text-white">
             Members
             <!-- TODO: Update this link - clusters belong to organizations, not projects
-            <ndd-button routerLink="/project-members" text="Edit" start-icon="pencil" variant="accent-outlined" size="xs"></ndd-button>
+            <ndd-button routerLink="/project-members" text="Edit" start-icon="pencil" variant="secondary" size="xs" class="ml-1" />
             -->
           </h3>
           <div class="space-y-3">
@@ -476,9 +477,10 @@
               [routerLink]="['/clusters', clusterData.basics.id, 'nodes']"
               text="Edit"
               start-icon="pencil"
-              variant="accent-outlined"
+              variant="secondary"
               size="xs"
-            ></ndd-button>
+              class="ml-1"
+            />
           </h3>
           @if (clusterData.nodePools.length === 0) {
             <p class="text-gray-500 dark:text-gray-400">No node pools are configured yet.</p>
@@ -536,9 +538,10 @@
               [routerLink]="['/clusters', clusterData.basics.id, 'plugins']"
               text="Edit"
               start-icon="pencil"
-              variant="accent-outlined"
+              variant="secondary"
               size="xs"
-            ></ndd-button>
+              class="ml-1"
+            />
           </h3>
           @if (isLoadingPlugins()) {
             <p class="text-gray-500 dark:text-gray-400">Loading plugins...</p>
@@ -568,9 +571,10 @@
               [routerLink]="['/clusters', clusterData.basics.id, 'namespaces']"
               text="Edit"
               start-icon="pencil"
-              variant="accent-outlined"
+              variant="secondary"
               size="xs"
-            ></ndd-button>
+              class="ml-1"
+            />
           </h3>
           @if (namespaces().length === 0) {
             <p class="text-gray-500 dark:text-gray-400">No namespaces in this cluster yet.</p>
@@ -602,7 +606,7 @@
           (click)="showDeleteModal.set(true)"
           text="Delete this cluster"
           variant="destructive"
-        ></ndd-button>
+        />
       </div>
     </div>
   </div>
@@ -641,12 +645,12 @@
       (click)="showDeleteModal.set(false)"
       text="Cancel"
       variant="secondary"
-    ></ndd-button>
+    />
     <ndd-button
       type="button"
       (click)="deleteCluster()"
       text="Yes, delete this cluster"
       variant="destructive"
-    ></ndd-button>
+    />
   </div>
 </app-modal>

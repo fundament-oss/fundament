@@ -13,17 +13,8 @@
 <div class="card-body-lg">
   <app-shared-plugins-form (formSubmit)="onFormSubmit($event)">
     <div class="flex space-x-3">
-      <ndd-button
-        routerLink="/clusters/add/nodes"
-        text="Previous step"
-        variant="secondary"
-      ></ndd-button>
-      <ndd-button
-        type="button"
-        (click)="pluginsForm.submit()"
-        text="Next step"
-        variant="primary"
-      ></ndd-button>
+      <ndd-button routerLink="/clusters/add/nodes" text="Previous step" variant="secondary" />
+      <ndd-button type="button" (click)="pluginsForm.submit()" text="Next step" variant="primary" />
     </div>
   </app-shared-plugins-form>
 </div>

@@ -36,14 +36,14 @@
             [disabled]="isSubmitting()"
             text="Cancel"
             variant="secondary"
-          ></ndd-button>
+          />
           <ndd-button
             type="button"
             (click)="nodePoolsForm.submit()"
             [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
             [disabled]="isSubmitting()"
             variant="primary"
-          ></ndd-button>
+          />
         </div>
       </app-shared-node-pools-form>
     }

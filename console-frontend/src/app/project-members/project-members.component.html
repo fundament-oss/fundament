@@ -46,7 +46,7 @@
       start-icon="plus-small"
       variant="primary"
       class="mb-6"
-    ></ndd-button>
+    />
 
     @if (error()) {
       <div
@@ -56,12 +56,7 @@
         <div class="flex-1">
           <p class="text-rose-600 dark:text-rose-400">{{ error() }}</p>
         </div>
-        <ndd-button
-          type="button"
-          (click)="error.set(null)"
-          text="Dismiss"
-          variant="primary"
-        ></ndd-button>
+        <ndd-button type="button" (click)="error.set(null)" text="Dismiss" variant="primary" />
       </div>
     }
 
@@ -130,9 +125,9 @@
                       (click)="openEditMemberModal(view)"
                       text="Edit"
                       start-icon="pencil"
-                      variant="accent-outlined"
+                      variant="secondary"
                       size="sm"
-                    ></ndd-button>
+                    />
                     @if (view.source === 'project' && view.orgPermission !== null) {
                       <ndd-button
                         (click)="resetToOrgDefault(view)"
@@ -141,7 +136,7 @@
                         variant="destructive"
                         size="sm"
                         class="ml-2"
-                      ></ndd-button>
+                      />
                     } @else if (view.source === 'project') {
                       <ndd-button
                         (click)="openRemoveMemberModal(view)"
@@ -150,7 +145,7 @@
                         variant="destructive"
                         size="sm"
                         class="ml-2"
-                      ></ndd-button>
+                      />
                     }
                   }
                 </td>
@@ -237,7 +232,7 @@
         [disabled]="isAddingMember()"
         text="Cancel"
         variant="secondary"
-      ></ndd-button>
+      />
       <ndd-button
         type="button"
         (click)="saveMember()"
@@ -246,7 +241,7 @@
         "
         [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
         variant="primary"
-      ></ndd-button>
+      />
     </div>
   </form>
 </app-modal>
@@ -283,12 +278,12 @@
       (click)="showRemoveMemberModal.set(false)"
       text="Cancel"
       variant="secondary"
-    ></ndd-button>
+    />
     <ndd-button
       type="button"
       (click)="confirmRemoveMember()"
       text="Yes, remove this member"
       variant="destructive"
-    ></ndd-button>
+    />
   </div>
 </app-modal>

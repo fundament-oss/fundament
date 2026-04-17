@@ -37,7 +37,7 @@
         start-icon="plus-small"
         variant="primary"
         class="mb-4"
-      ></ndd-button>
+      />
 
       @if (namespaces().length === 0) {
         <p class="text-gray-500 dark:text-gray-400">No namespaces in this cluster yet.</p>
@@ -61,19 +61,14 @@
                 start-icon="trash"
                 size="sm"
                 variant="destructive"
-              ></ndd-button>
+              />
             </div>
           }
         </div>
       }
 
       <div class="mt-6 flex space-x-3">
-        <ndd-button
-          type="button"
-          (click)="onCancel()"
-          text="Back to cluster"
-          variant="secondary"
-        ></ndd-button>
+        <ndd-button type="button" (click)="onCancel()" text="Back to cluster" variant="secondary" />
       </div>
     }
   </div>
@@ -138,14 +133,14 @@
         [disabled]="isCreatingNamespace()"
         text="Cancel"
         variant="secondary"
-      ></ndd-button>
+      />
       <ndd-button
         type="button"
         (click)="createNamespace()"
         [text]="isCreatingNamespace() ? 'Creating...' : 'Add namespace'"
         [disabled]="isCreatingNamespace() || !namespaceForm.valid"
         variant="primary"
-      ></ndd-button>
+      />
     </div>
   </form>
 </app-modal>
@@ -185,12 +180,12 @@
       (click)="showDeleteNamespaceModal.set(false)"
       text="Cancel"
       variant="secondary"
-    ></ndd-button>
+    />
     <ndd-button
       type="button"
       (click)="confirmDeleteNamespace()"
       text="Yes, delete this namespace"
       variant="destructive"
-    ></ndd-button>
+    />
   </div>
 </app-modal>

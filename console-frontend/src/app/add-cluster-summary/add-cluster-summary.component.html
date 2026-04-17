@@ -180,14 +180,14 @@
           (click)="reopenModal()"
           text="View progress"
           variant="secondary"
-        ></ndd-button>
+        />
         @if (clusterId()) {
           <ndd-button
             type="button"
             (click)="navigateToCluster()"
             text="Go to cluster"
             variant="primary"
-          ></ndd-button>
+          />
         }
       </div>
     </div>
@@ -202,14 +202,14 @@
         [class.pointer-events-none]="isCreating() || showModal()"
         [class.opacity-50]="isCreating() || showModal()"
         variant="secondary"
-      ></ndd-button>
+      />
       <ndd-button
         type="button"
         (click)="onCreateCluster()"
         [text]="isCreating() ? 'Creating...' : 'Create cluster'"
         [disabled]="isCreating() || showModal()"
         variant="primary"
-      ></ndd-button>
+      />
     </div>
   }
 </div>
@@ -279,14 +279,14 @@
           </div>
         </div>
 
-        @if (item.requestStatus === 'failed') {
+        @if (item.requestStatus !== 'failed') {
           <ndd-button
             (click)="retryItem(item.key)"
             text="Retry"
-            start-icon="arrow-u-turn-backward"
-            variant="accent-outlined"
-            size="sm"
-          ></ndd-button>
+            start-icon="arrow-u-turn-forward"
+            variant="secondary"
+            size="xs"
+          />
         }
       </div>
     }
@@ -299,14 +299,9 @@
         (click)="navigateToCluster()"
         text="Go to cluster"
         variant="primary"
-      ></ndd-button>
+      />
     } @else if (!isCreating()) {
-      <ndd-button
-        type="button"
-        (click)="onModalClose()"
-        text="Cancel"
-        variant="secondary"
-      ></ndd-button>
+      <ndd-button type="button" (click)="onModalClose()" text="Cancel" variant="secondary" />
     }
   </div>
 </app-modal>

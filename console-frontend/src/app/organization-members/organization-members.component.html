@@ -40,7 +40,7 @@
       start-icon="plus-small"
       variant="primary"
       class="mb-4"
-    ></ndd-button>
+    />
 
     <!-- Pending Invitations Section -->
     <div class="mb-8">
@@ -98,7 +98,7 @@
                       start-icon="trash"
                       variant="destructive"
                       size="sm"
-                    ></ndd-button>
+                    />
                   </td>
                 </tr>
               }
@@ -136,12 +136,7 @@
         >
           <ndd-icon name="exclamation-circle" class="mx-auto h-12 w-12 text-rose-400!" />
           <p class="mt-2 text-rose-600 dark:text-rose-400">{{ error() }}</p>
-          <ndd-button
-            type="button"
-            (click)="loadMembers()"
-            text="Try again"
-            variant="primary"
-          ></ndd-button>
+          <ndd-button type="button" (click)="loadMembers()" text="Try again" variant="primary" />
         </div>
       } @else if (activeMembers().length === 0) {
         <div
@@ -204,17 +199,17 @@
                         (click)="openEditModal(member)"
                         text="Edit"
                         start-icon="pencil"
-                        variant="accent-outlined"
+                        variant="secondary"
                         size="sm"
-                        class="mr-3"
-                      ></ndd-button>
+                        class="mr-2"
+                      />
                       <ndd-button
                         (click)="openDeleteModal(member)"
                         text="Remove"
                         start-icon="trash"
                         variant="destructive"
                         size="sm"
-                      ></ndd-button>
+                      />
                     }
                   </td>
                 </tr>
@@ -262,13 +257,13 @@
       (click)="showDeleteModal.set(false)"
       text="Cancel"
       variant="secondary"
-    ></ndd-button>
+    />
     <ndd-button
       type="button"
       (click)="confirmDeleteMember()"
       text="Yes, remove member"
       variant="destructive"
-    ></ndd-button>
+    />
   </div>
 </app-modal>
 
@@ -324,14 +319,14 @@
       [disabled]="isSubmitting()"
       text="Cancel"
       variant="secondary"
-    ></ndd-button>
+    />
     <ndd-button
       type="button"
       (click)="confirmEditMember()"
       [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
       [disabled]="isSubmitting()"
       variant="primary"
-    ></ndd-button>
+    />
   </div>
 </app-modal>
 
@@ -398,14 +393,14 @@
         [disabled]="isSubmitting()"
         text="Cancel"
         variant="secondary"
-      ></ndd-button>
+      />
       <ndd-button
         type="button"
         (click)="submitInvitation()"
         [text]="isSubmitting() ? 'Sending...' : 'Send invitation'"
         [disabled]="isSubmitting()"
         variant="primary"
-      ></ndd-button>
+      />
     </div>
   </form>
 </app-modal>

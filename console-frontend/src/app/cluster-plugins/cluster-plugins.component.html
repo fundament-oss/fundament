@@ -29,14 +29,14 @@
           [disabled]="isSubmitting()"
           text="Cancel"
           variant="secondary"
-        ></ndd-button>
+        />
         <ndd-button
           type="button"
           (click)="pluginsForm.submit()"
           [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
           [disabled]="isSubmitting()"
           variant="primary"
-        ></ndd-button>
+        />
       </div>
     </app-shared-plugins-form>
   </div>

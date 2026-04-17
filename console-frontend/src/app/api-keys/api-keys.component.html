@@ -31,7 +31,7 @@
                 text="Copy"
                 start-icon="squares-stack-plus"
                 variant="primary"
-              ></ndd-button>
+              />
             </div>
           </ndd-form-field>
         </div>
@@ -41,7 +41,7 @@
           text="I've saved the token"
           start-icon="check-mark"
           variant="primary"
-        ></ndd-button>
+        />
       </div>
     }
 
@@ -92,14 +92,14 @@
               [disabled]="loading()"
               text="Create"
               variant="primary"
-            ></ndd-button>
+            />
             <ndd-button
               type="button"
               (click)="cancelCreating()"
               [disabled]="loading()"
               text="Cancel"
               variant="secondary"
-            ></ndd-button>
+            />
           </div>
         </form>
       </div>
@@ -113,7 +113,7 @@
         start-icon="plus-small"
         variant="primary"
         class="mb-6"
-      ></ndd-button>
+      />
     }
 
     <!-- Loading State -->
@@ -181,10 +181,10 @@
                         (click)="openRevokeModal(apiKey.id, apiKey.name)"
                         [disabled]="loading()"
                         text="Revoke"
-                        start-icon="trash"
+                        start-icon="slash-circle"
                         size="sm"
-                        variant="accent-outlined"
-                      ></ndd-button>
+                        variant="secondary"
+                      />
                     }
                     <ndd-button
                       (click)="openDeleteModal(apiKey.id, apiKey.name)"
@@ -193,7 +193,7 @@
                       start-icon="trash"
                       size="sm"
                       variant="destructive"
-                    ></ndd-button>
+                    />
                   </div>
                 </td>
               </tr>
@@ -243,13 +243,13 @@
       (click)="showRevokeModal.set(false)"
       text="Cancel"
       variant="secondary"
-    ></ndd-button>
+    />
     <ndd-button
       type="button"
       (click)="confirmRevoke()"
       text="Yes, revoke this key"
       variant="destructive"
-    ></ndd-button>
+    />
   </div>
 </app-modal>
 
@@ -283,12 +283,12 @@
       (click)="showDeleteModal.set(false)"
       text="Cancel"
       variant="secondary"
-    ></ndd-button>
+    />
     <ndd-button
       type="button"
       (click)="confirmDelete()"
       text="Yes, delete this key"
       variant="destructive"
-    ></ndd-button>
+    />
   </div>
 </app-modal>

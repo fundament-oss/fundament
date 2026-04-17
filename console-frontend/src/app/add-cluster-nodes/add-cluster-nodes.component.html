@@ -13,13 +13,13 @@
 <div class="px-6 py-6">
   <app-shared-node-pools-form (formSubmit)="onFormSubmit($event)">
     <div class="flex space-x-3">
-      <ndd-button routerLink="/clusters/add" text="Previous step" variant="secondary"></ndd-button>
+      <ndd-button routerLink="/clusters/add" text="Previous step" variant="secondary" />
       <ndd-button
         type="button"
         (click)="nodePoolsForm.submit()"
         text="Next step"
         variant="primary"
-      ></ndd-button>
+      />
     </div>
   </app-shared-node-pools-form>
 </div>
