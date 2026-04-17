@@ -3,6 +3,7 @@ import {
   inject,
   signal,
   OnInit,
+  ViewChild,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
@@ -20,6 +21,8 @@ import { fetchClusterName } from '../utils/cluster-status';
   templateUrl: './cluster-plugins.component.html',
 })
 export default class ClusterPluginsComponent implements OnInit {
+  @ViewChild(SharedPluginsFormComponent) pluginsForm!: SharedPluginsFormComponent;
+
   private titleService = inject(TitleService);
 
   private router = inject(Router);

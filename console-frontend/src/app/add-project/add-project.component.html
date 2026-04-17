@@ -21,7 +21,7 @@
   </div>
 
   <!-- Form -->
-  <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" class="space-y-6 px-6 py-6">
+  <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" (keydown.enter)="onSubmit()" class="space-y-6 px-6 py-6">
     <div>
       <label for="clusterId" class="mb-2 block font-medium text-gray-700 dark:text-white">
         Cluster
@@ -79,7 +79,8 @@
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
       <ndd-button routerLink="/projects" text="Cancel" variant="secondary"></ndd-button>
       <ndd-button
-        type="submit"
+        type="button"
+        (click)="onSubmit()"
         [text]="isSubmitting() ? 'Creating...' : 'Create project'"
         [disabled]="isSubmitting()"
         variant="primary"

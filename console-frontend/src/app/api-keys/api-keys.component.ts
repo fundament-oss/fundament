@@ -6,7 +6,6 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
@@ -21,6 +20,7 @@ import {
 } from '../../generated/v1/apikey_pb';
 import { APIKEY } from '../../connect/tokens';
 import { TitleService } from '../title.service';
+import { ToastService } from '../toast.service';
 import {
   formatDate as formatDateUtil,
   formatDateTime as formatDateTimeUtil,
@@ -48,13 +48,15 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
 
 @Component({
   selector: 'app-api-keys',
-  imports: [FormsModule, ModalComponent, AutofocusDirective],
+  imports: [ModalComponent, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './api-keys.component.html',
 })
 export default class ApiKeysComponent implements OnInit {
   private titleService = inject(TitleService);
+
+  private toastService = inject(ToastService);
 
   private apiKeyClient = inject(APIKEY);
 
@@ -70,6 +72,8 @@ export default class ApiKeysComponent implements OnInit {
   isCreating = signal(false);
 
   newKeyName = signal('');
+
+  newKeyNameTouched = signal(false);
 
   newKeyExpiresIn = signal('');
 
@@ -181,6 +185,7 @@ export default class ApiKeysComponent implements OnInit {
   startCreating() {
     this.isCreating.set(true);
     this.newKeyName.set('');
+    this.newKeyNameTouched.set(false);
     this.newKeyExpiresIn.set('');
     this.error.set(null);
   }
@@ -188,6 +193,7 @@ export default class ApiKeysComponent implements OnInit {
   cancelCreating() {
     this.isCreating.set(false);
     this.newKeyName.set('');
+    this.newKeyNameTouched.set(false);
     this.newKeyExpiresIn.set('');
   }
 
@@ -253,6 +259,7 @@ export default class ApiKeysComponent implements OnInit {
         document.execCommand('copy');
         document.body.removeChild(textarea);
       }
+      this.toastService.success('API key copied to clipboard');
     } catch {
       this.error.set('Failed to copy token to clipboard. Please copy it manually.');
     }

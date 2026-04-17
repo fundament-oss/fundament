@@ -334,7 +334,7 @@
     once added.
   </p>
 
-  <form (ngSubmit)="submitInvitation()" novalidate>
+  <form (ngSubmit)="submitInvitation()" (keydown.enter)="submitInvitation()" novalidate>
     <div class="mb-4">
       <label for="email" class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
         Email address
@@ -388,7 +388,8 @@
         variant="secondary"
       ></ndd-button>
       <ndd-button
-        type="submit"
+        type="button"
+        (click)="submitInvitation()"
         [text]="isSubmitting() ? 'Sending...' : 'Send invitation'"
         [disabled]="isSubmitting()"
         variant="primary"

@@ -106,7 +106,7 @@
   [maxWidth]="'max-w-lg'"
   (modalClose)="showCreateModal.set(false)"
 >
-  <form (ngSubmit)="saveBinding()" novalidate>
+  <form (ngSubmit)="saveBinding()" (keydown.enter)="saveBinding()" novalidate>
     <!-- Member selection -->
     <div class="mb-4">
       <label for="rb-member" class="mb-2 block font-medium text-gray-700 dark:text-white">
@@ -215,7 +215,8 @@
         variant="secondary"
       ></ndd-button>
       <ndd-button
-        type="submit"
+        type="button"
+        (click)="saveBinding()"
         [text]="isSubmitting() ? 'Saving...' : editingBinding() ? 'Save changes' : 'Create binding'"
         [disabled]="isSubmitting()"
         variant="primary"

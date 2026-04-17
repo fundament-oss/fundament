@@ -318,7 +318,7 @@ ndd-radio-button-field.radio-option {
 }
 
 .modal-title {
-  @apply text-xl font-semibold dark:text-white;
+  @apply text-2xl font-semibold dark:text-white;
 }
 
 .modal-body {

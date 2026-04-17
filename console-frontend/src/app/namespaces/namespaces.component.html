@@ -63,7 +63,7 @@
   [maxWidth]="'max-w-lg'"
   (modalClose)="showCreateNamespaceModal.set(false)"
 >
-  <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
+  <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()" (keydown.enter)="createNamespace()">
     <!-- Namespace Name -->
     <div class="mb-4">
       <label for="namespaceName" class="mb-2 block font-medium text-gray-700 dark:text-white">
@@ -90,7 +90,8 @@
         variant="secondary"
       ></ndd-button>
       <ndd-button
-        type="submit"
+        type="button"
+        (click)="createNamespace()"
         [text]="isCreatingNamespace() ? 'Creating...' : 'Create namespace'"
         [disabled]="isCreatingNamespace() || !namespaceForm.valid"
         variant="primary"

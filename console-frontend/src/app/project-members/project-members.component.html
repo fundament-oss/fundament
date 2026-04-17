@@ -170,7 +170,7 @@
   [maxWidth]="'max-w-lg'"
   (modalClose)="showAddMemberModal.set(false)"
 >
-  <form [formGroup]="memberForm" (ngSubmit)="saveMember()">
+  <form [formGroup]="memberForm" (ngSubmit)="saveMember()" (keydown.enter)="saveMember()">
     <!-- User Selection (only show when adding) -->
     @if (!editingMemberView()) {
       <div class="mb-4">
@@ -232,7 +232,8 @@
         variant="secondary"
       ></ndd-button>
       <ndd-button
-        type="submit"
+        type="button"
+        (click)="saveMember()"
         [text]="
           isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'
         "

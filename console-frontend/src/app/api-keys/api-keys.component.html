@@ -30,7 +30,7 @@
               id="apiToken"
               [value]="createdToken()"
               readonly
-              class="block flex-1 rounded-md border border-green-300 bg-white px-3 py-2 font-mono text-sm dark:border-green-700 dark:bg-gray-900 dark:text-white"
+              class="flex-1"
             />
             <ndd-button
               type="button"
@@ -62,27 +62,23 @@
     @if (isCreating()) {
       <div class="card card-body-lg mb-6 bg-gray-50! dark:bg-gray-900!">
         <h3 class="-mt-2 mb-4 text-lg font-semibold dark:text-white">Create new API key</h3>
-        <div class="space-y-4">
+        <form class="space-y-4" (ngSubmit)="createApiKey()" (keydown.enter)="createApiKey()">
           <div>
             <label for="name" class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
               Name
             </label>
             <ndd-text-field
               appAutofocus
-              #nameField="ngModel"
               id="name"
-              class="validate-on-touch"
-              [(ngModel)]="newKeyName"
+              [value]="newKeyName()"
               placeholder="E.g. CLI key"
-              (keyup.enter)="createApiKey()"
+              (input)="newKeyName.set($any($event.target).value)"
+              (blur)="newKeyNameTouched.set(true)"
               (keyup.escape)="cancelCreating()"
-              required
-              [invalid]="!!getNameError(nameField)"
+              [invalid]="!newKeyName().trim() && newKeyNameTouched()"
             />
-            @if (getNameError(nameField)) {
-              <p class="mt-2 text-rose-600 dark:text-rose-400">
-                {{ getNameError(nameField) }}
-              </p>
+            @if (!newKeyName().trim() && newKeyNameTouched()) {
+              <p class="mt-2 text-rose-600 dark:text-rose-400">Name is required</p>
             }
           </div>
           <div>
@@ -91,9 +87,9 @@
             </label>
             <ndd-text-field
               id="expiresIn"
-              [(ngModel)]="newKeyExpiresIn"
+              [value]="newKeyExpiresIn()"
               placeholder="Leave blank if you don't want the key to expire."
-              (keyup.enter)="createApiKey()"
+              (input)="newKeyExpiresIn.set($any($event.target).value)"
               (keyup.escape)="cancelCreating()"
             />
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -116,7 +112,7 @@
               variant="secondary"
             ></ndd-button>
           </div>
-        </div>
+        </form>
       </div>
     } @else {
       <!-- Create Button -->
@@ -127,6 +123,7 @@
         text="Create new API key"
         start-icon="plus-small"
         variant="primary"
+        class="mb-6"
       ></ndd-button>
     }
 
@@ -196,6 +193,7 @@
                         [disabled]="loading()"
                         text="Revoke"
                         start-icon="trash"
+                        size="sm"
                         variant="accent-outlined"
                       ></ndd-button>
                     }
@@ -204,6 +202,7 @@
                       [disabled]="loading()"
                       text="Delete"
                       start-icon="trash"
+                      size="sm"
                       variant="destructive"
                     ></ndd-button>
                   </div>

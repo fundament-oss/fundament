@@ -31,7 +31,8 @@
           variant="secondary"
         ></ndd-button>
         <ndd-button
-          type="submit"
+          type="button"
+          (click)="pluginsForm.submit()"
           [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
           [disabled]="isSubmitting()"
           variant="primary"

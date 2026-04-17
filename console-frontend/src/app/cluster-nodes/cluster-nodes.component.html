@@ -38,7 +38,8 @@
             variant="secondary"
           ></ndd-button>
           <ndd-button
-            type="submit"
+            type="button"
+            (click)="nodePoolsForm.submit()"
             [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
             [disabled]="isSubmitting()"
             variant="primary"
