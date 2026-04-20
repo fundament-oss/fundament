@@ -83,7 +83,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
   inviteEmail = signal('');
 
-  inviteEmailTouched = signal(false);
+  inviteEmailDirty = signal(false);
 
   invitePermission = signal('viewer');
 
@@ -147,7 +147,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
   openModal() {
     this.inviteEmail.set('');
-    this.inviteEmailTouched.set(false);
+    this.inviteEmailDirty.set(false);
     this.invitePermission.set('viewer');
     this.inviteError.set(null);
     this.isModalOpen.set(true);

@@ -282,7 +282,7 @@
           </div>
         </div>
 
-        @if (item.requestStatus !== 'failed') {
+        @if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
           <ndd-button
             (click)="retryItem(item.key)"
             text="Retry"

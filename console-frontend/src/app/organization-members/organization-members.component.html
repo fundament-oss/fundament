@@ -358,15 +358,14 @@
         type="email"
         id="email"
         [value]="inviteEmail()"
-        (input)="inviteEmail.set($any($event.target).value); inviteError.set(null)"
-        (blur)="inviteEmailTouched.set(true)"
+        (input)="inviteEmail.set($any($event.target).value); inviteEmailDirty.set(true); inviteError.set(null)"
         placeholder="user@example.com"
         [disabled]="isSubmitting()"
-        [invalid]="!!(inviteError() || (inviteEmailTouched() && !inviteEmail().trim()))"
+        [invalid]="!!(inviteError() || (inviteEmailDirty() && !inviteEmail().trim()))"
         error-message="org-invite-email-error"
       />
       <ndd-form-field-error-text id="org-invite-email-error">
-        {{ inviteError() }}
+        {{ inviteError() || 'The user email is required' }}
       </ndd-form-field-error-text>
     </ndd-form-field>
 
