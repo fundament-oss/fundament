@@ -219,17 +219,31 @@
   [show]="showRevokeModal()"
   text="Revoke API key"
   variant="alert"
+  (open)="onRevokeModalOpen($event)"
   (close)="showRevokeModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
 
   <p>
     Are you sure you want to revoke API key
-    <strong class="font-semibold">{{ pendingKeyName() }}</strong>? It will no longer be usable.
+    <strong class="font-semibold">{{ pendingKeyName() }}</strong
+    >? It will no longer be usable.
   </p>
 
-  <ndd-button slot="actions" type="button" (click)="showRevokeModal.set(false)" text="Cancel" variant="secondary"></ndd-button>
-  <ndd-button slot="actions" type="button" (click)="confirmRevoke()" text="Yes, revoke this key" variant="destructive"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="showRevokeModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="confirmRevoke()"
+    text="Yes, revoke this key"
+    variant="destructive"
+  ></ndd-button>
 </ndd-modal-dialog>
 
 <!-- Delete API Key Modal -->
@@ -238,15 +252,29 @@
   [show]="showDeleteModal()"
   text="Delete API key"
   variant="alert"
+  (open)="onDeleteModalOpen($event)"
   (close)="showDeleteModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
 
   <p>
     Are you sure you want to delete API key
-    <strong class="font-semibold">{{ pendingKeyName() }}</strong>?
+    <strong class="font-semibold">{{ pendingKeyName() }}</strong
+    >?
   </p>
 
-  <ndd-button slot="actions" type="button" (click)="showDeleteModal.set(false)" text="Cancel" variant="secondary"></ndd-button>
-  <ndd-button slot="actions" type="button" (click)="confirmDelete()" text="Yes, delete this key" variant="destructive"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="showDeleteModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="confirmDelete()"
+    text="Yes, delete this key"
+    variant="destructive"
+  ></ndd-button>
 </ndd-modal-dialog>

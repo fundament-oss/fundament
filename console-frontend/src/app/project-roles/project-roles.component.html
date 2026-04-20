@@ -101,9 +101,11 @@
 
 <!-- Create/Edit Role Binding Modal -->
 <ndd-modal-dialog
+  #createModal
   appDialogSync
   [show]="showCreateModal()"
   [attr.text]="editingBinding() ? 'Edit role binding' : 'Create role binding'"
+  (open)="onCreateModalOpen()"
   (close)="showCreateModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
@@ -225,8 +227,22 @@
     </div>
   </form>
 
-  <ndd-button slot="actions" type="button" (click)="showCreateModal.set(false)" [disabled]="isSubmitting()" text="Cancel" variant="secondary"></ndd-button>
-  <ndd-button slot="actions" type="button" (click)="saveBinding()" [text]="isSubmitting() ? 'Saving...' : editingBinding() ? 'Save changes' : 'Create binding'" [disabled]="isSubmitting()" variant="primary"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="showCreateModal.set(false)"
+    [disabled]="isSubmitting()"
+    text="Cancel"
+    variant="secondary"
+  ></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="saveBinding()"
+    [text]="isSubmitting() ? 'Saving...' : editingBinding() ? 'Save changes' : 'Create binding'"
+    [disabled]="isSubmitting()"
+    variant="primary"
+  ></ndd-button>
 </ndd-modal-dialog>
 
 <!-- Remove Role Binding Modal -->
@@ -235,15 +251,29 @@
   [show]="showRemoveModal()"
   text="Remove role binding"
   variant="alert"
+  (open)="onRemoveModalOpen($event)"
   (close)="showRemoveModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
 
   <p>
     Are you sure you want to remove the role binding for
-    <strong class="font-semibold">{{ pendingBindingDescription() }}</strong>?
+    <strong class="font-semibold">{{ pendingBindingDescription() }}</strong
+    >?
   </p>
 
-  <ndd-button slot="actions" type="button" (click)="showRemoveModal.set(false)" text="Cancel" variant="secondary"></ndd-button>
-  <ndd-button slot="actions" type="button" (click)="confirmRemoveBinding()" text="Yes, remove this binding" variant="destructive"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="showRemoveModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="confirmRemoveBinding()"
+    text="Yes, remove this binding"
+    variant="destructive"
+  ></ndd-button>
 </ndd-modal-dialog>

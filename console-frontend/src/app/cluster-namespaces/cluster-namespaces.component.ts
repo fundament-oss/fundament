@@ -5,6 +5,8 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -24,6 +26,7 @@ import {
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { fetchClusterName } from '../utils/cluster-status';
 import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
@@ -245,5 +248,16 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   onCancel() {
     this.router.navigate(['/clusters', this.clusterId]);
+  }
+
+  addNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('addNamespaceDialog');
+
+  onAddNamespaceModalOpen(): void {
+    const el = this.addNamespaceDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  onDeleteNamespaceModalOpen(event: Event): void {
+    if (this.showDeleteNamespaceModal()) focusFirstModalInput(event.target as HTMLElement);
   }
 }

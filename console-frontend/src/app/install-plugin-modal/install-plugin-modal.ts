@@ -4,8 +4,11 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   input,
   output,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 
 interface Cluster {
   id: string;
@@ -30,6 +33,13 @@ export default class InstallPluginModalComponent {
   closeModal = output<void>();
 
   install = output<string>();
+
+  dialogRef = viewChild<ElementRef<HTMLElement>>('dialog');
+
+  onOpen(): void {
+    const el = this.dialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
 
   onClose(): void {
     this.closeModal.emit();

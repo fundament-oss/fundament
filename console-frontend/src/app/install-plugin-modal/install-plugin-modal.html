@@ -1,4 +1,11 @@
-<ndd-modal-dialog appDialogSync [show]="show()" text="Install plugin" (close)="onClose()">
+<ndd-modal-dialog
+  #dialog
+  appDialogSync
+  [show]="show()"
+  text="Install plugin"
+  (open)="onOpen()"
+  (close)="onClose()"
+>
   <ndd-spacer size="24"></ndd-spacer>
 
   <p class="mb-4 text-gray-600 dark:text-gray-400">
@@ -35,5 +42,11 @@
     }
   </div>
 
-  <ndd-button slot="actions" type="button" (click)="onClose()" text="Close" variant="secondary"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="onClose()"
+    text="Close"
+    variant="secondary"
+  ></ndd-button>
 </ndd-modal-dialog>

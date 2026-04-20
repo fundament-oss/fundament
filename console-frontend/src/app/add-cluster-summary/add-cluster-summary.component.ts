@@ -30,6 +30,7 @@ import {
 } from '../../generated/v1/plugin_pb';
 import { NodePoolStatus } from '../../generated/v1/common_pb';
 import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 
 interface ProgressItem {
@@ -487,5 +488,9 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     if (cid) {
       this.router.navigate(['/clusters', cid]);
     }
+  }
+
+  onModalOpen(event: Event): void {
+    if (this.showModal()) focusFirstModalInput(event.target as HTMLElement);
   }
 }

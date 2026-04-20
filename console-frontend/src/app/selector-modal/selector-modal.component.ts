@@ -97,9 +97,8 @@ export default class SelectorModalComponent {
   onOpen(): void {
     const el = this.searchFieldRef()?.nativeElement;
     if (!el) return;
-    const input =
-      el.shadowRoot?.querySelector<HTMLElement>('input:not([disabled])') ?? el;
-    input.focus({ focusVisible: true } as FocusOptions & { focusVisible?: boolean });
+    const focusTarget = el.shadowRoot?.querySelector<HTMLElement>('input:not([disabled])') ?? el;
+    focusTarget.focus({ focusVisible: true } as FocusOptions & { focusVisible?: boolean });
   }
 
   onClose(): void {
@@ -109,7 +108,8 @@ export default class SelectorModalComponent {
   updateFilter(event: Event): void {
     const value =
       (event as CustomEvent<{ value?: string }>).detail?.value ??
-      ((event.target as HTMLInputElement).value ?? '');
+      (event.target as HTMLInputElement).value ??
+      '';
     this.filterInputValue.set(value);
     this.filterText.set(value.toLowerCase());
   }

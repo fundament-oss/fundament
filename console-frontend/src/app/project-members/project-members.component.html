@@ -160,9 +160,11 @@
 
 <!-- Add/Edit Member Modal -->
 <ndd-modal-dialog
+  #addMemberDialog
   appDialogSync
   [show]="showAddMemberModal()"
   [attr.text]="editingMemberView() ? 'Edit member' : 'Add member to project'"
+  (open)="onAddMemberModalOpen()"
   (close)="showAddMemberModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
@@ -225,8 +227,22 @@
     </div>
   </form>
 
-  <ndd-button slot="actions" type="button" (click)="showAddMemberModal.set(false)" [disabled]="isAddingMember()" text="Cancel" variant="secondary"></ndd-button>
-  <ndd-button slot="actions" type="button" (click)="saveMember()" [text]="isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'" [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)" variant="primary"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="showAddMemberModal.set(false)"
+    [disabled]="isAddingMember()"
+    text="Cancel"
+    variant="secondary"
+  ></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="saveMember()"
+    [text]="isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'"
+    [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
+    variant="primary"
+  ></ndd-button>
 </ndd-modal-dialog>
 
 <!-- Remove Member Modal -->
@@ -235,6 +251,7 @@
   [show]="showRemoveMemberModal()"
   text="Remove member"
   variant="alert"
+  (open)="onRemoveMemberModalOpen($event)"
   (close)="showRemoveMemberModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
@@ -245,6 +262,18 @@
     from this project?
   </p>
 
-  <ndd-button slot="actions" type="button" (click)="showRemoveMemberModal.set(false)" text="Cancel" variant="secondary"></ndd-button>
-  <ndd-button slot="actions" type="button" (click)="confirmRemoveMember()" text="Yes, remove this member" variant="destructive"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="showRemoveMemberModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="confirmRemoveMember()"
+    text="Yes, remove this member"
+    variant="destructive"
+  ></ndd-button>
 </ndd-modal-dialog>

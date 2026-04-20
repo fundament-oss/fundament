@@ -228,6 +228,7 @@
   [show]="showDeleteModal()"
   text="Remove member"
   variant="alert"
+  (open)="onDeleteModalOpen($event)"
   (close)="showDeleteModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
@@ -241,8 +242,20 @@
     This will revoke their access to all organization resources.
   </p>
 
-  <ndd-button slot="actions" type="button" (click)="showDeleteModal.set(false)" text="Cancel" variant="secondary"></ndd-button>
-  <ndd-button slot="actions" type="button" (click)="confirmDeleteMember()" text="Yes, remove member" variant="destructive"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="showDeleteModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="confirmDeleteMember()"
+    text="Yes, remove member"
+    variant="destructive"
+  ></ndd-button>
 </ndd-modal-dialog>
 
 <!-- Edit Member Modal -->
@@ -250,6 +263,7 @@
   appDialogSync
   [show]="showEditModal()"
   text="Edit member"
+  (open)="onEditModalOpen($event)"
   (close)="showEditModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
@@ -290,15 +304,31 @@
     </ndd-radio-button-group>
   </ndd-form-field>
 
-  <ndd-button slot="actions" type="button" (click)="showEditModal.set(false)" [disabled]="isSubmitting()" text="Cancel" variant="secondary"></ndd-button>
-  <ndd-button slot="actions" type="button" (click)="confirmEditMember()" [text]="isSubmitting() ? 'Saving...' : 'Save changes'" [disabled]="isSubmitting()" variant="primary"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="showEditModal.set(false)"
+    [disabled]="isSubmitting()"
+    text="Cancel"
+    variant="secondary"
+  ></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="confirmEditMember()"
+    [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
+    [disabled]="isSubmitting()"
+    variant="primary"
+  ></ndd-button>
 </ndd-modal-dialog>
 
 <!-- Invite Modal -->
 <ndd-modal-dialog
+  #inviteDialog
   appDialogSync
   [show]="isModalOpen()"
   text="Invite user"
+  (open)="onInviteModalOpen()"
   (close)="closeModal()"
 >
   <ndd-spacer size="24"></ndd-spacer>
@@ -358,6 +388,20 @@
     </div>
   </form>
 
-  <ndd-button slot="actions" type="button" (click)="closeModal()" [disabled]="isSubmitting()" text="Cancel" variant="secondary"></ndd-button>
-  <ndd-button slot="actions" type="button" (click)="submitInvitation()" [text]="isSubmitting() ? 'Sending...' : 'Send invitation'" [disabled]="isSubmitting()" variant="primary"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="closeModal()"
+    [disabled]="isSubmitting()"
+    text="Cancel"
+    variant="secondary"
+  ></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="submitInvitation()"
+    [text]="isSubmitting() ? 'Sending...' : 'Send invitation'"
+    [disabled]="isSubmitting()"
+    variant="primary"
+  ></ndd-button>
 </ndd-modal-dialog>

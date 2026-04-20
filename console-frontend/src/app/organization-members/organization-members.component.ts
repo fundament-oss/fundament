@@ -6,6 +6,8 @@ import {
   computed,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
@@ -15,6 +17,7 @@ import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatTimeAgo } from '../utils/date-format';
 
@@ -268,4 +271,19 @@ export default class OrganizationMembersComponent implements OnInit {
   getInitials = getInitials;
 
   getAvatarColor = getAvatarColor;
+
+  inviteDialogRef = viewChild<ElementRef<HTMLElement>>('inviteDialog');
+
+  onInviteModalOpen(): void {
+    const el = this.inviteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  onDeleteModalOpen(event: Event): void {
+    if (this.showDeleteModal()) focusFirstModalInput(event.target as HTMLElement);
+  }
+
+  onEditModalOpen(event: Event): void {
+    if (this.showEditModal()) focusFirstModalInput(event.target as HTMLElement);
+  }
 }

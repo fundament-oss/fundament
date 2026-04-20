@@ -5,6 +5,8 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -22,6 +24,7 @@ import {
   Namespace,
 } from '../../generated/v1/namespace_pb';
 import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
@@ -193,5 +196,16 @@ export default class NamespacesComponent implements OnInit {
       return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
     }
     return '';
+  }
+
+  createNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('createNamespaceDialog');
+
+  onCreateNamespaceModalOpen(): void {
+    const el = this.createNamespaceDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  onDeleteNamespaceModalOpen(event: Event): void {
+    if (this.showDeleteNamespaceModal()) focusFirstModalInput(event.target as HTMLElement);
   }
 }

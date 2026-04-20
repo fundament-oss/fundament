@@ -14,6 +14,7 @@ import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
 import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import { PROJECT } from '../../connect/tokens';
 import {
   GetProjectRequestSchema,
@@ -166,4 +167,8 @@ export default class ProjectSettingsComponent implements OnInit {
   }
 
   readonly formatDate = formatDateUtil;
+
+  onDeleteModalOpen(event: Event): void {
+    if (this.showDeleteModal()) focusFirstModalInput(event.target as HTMLElement);
+  }
 }

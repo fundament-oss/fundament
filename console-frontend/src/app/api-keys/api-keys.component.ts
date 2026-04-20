@@ -11,6 +11,7 @@ import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import {
   type APIKey,
   ListAPIKeysRequestSchema,
@@ -279,4 +280,12 @@ export default class ApiKeysComponent implements OnInit {
   isExpired = isExpired;
 
   isRevoked = isRevoked;
+
+  onRevokeModalOpen(event: Event): void {
+    if (this.showRevokeModal()) focusFirstModalInput(event.target as HTMLElement);
+  }
+
+  onDeleteModalOpen(event: Event): void {
+    if (this.showDeleteModal()) focusFirstModalInput(event.target as HTMLElement);
+  }
 }

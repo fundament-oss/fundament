@@ -112,16 +112,30 @@
   [show]="showDeleteModal()"
   text="Delete project"
   variant="alert"
+  (open)="onDeleteModalOpen($event)"
   (close)="showDeleteModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
 
   <p>
     Are you sure you want to delete project
-    <strong class="font-semibold">{{ project()?.name }}</strong>?
+    <strong class="font-semibold">{{ project()?.name }}</strong
+    >?
   </p>
   <p class="mt-2 text-rose-600 dark:text-rose-400">This cannot be undone.</p>
 
-  <ndd-button slot="actions" type="button" (click)="showDeleteModal.set(false)" text="Cancel" variant="secondary"></ndd-button>
-  <ndd-button slot="actions" type="button" (click)="deleteProject()" text="Yes, delete this project" variant="destructive"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="showDeleteModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="deleteProject()"
+    text="Yes, delete this project"
+    variant="destructive"
+  ></ndd-button>
 </ndd-modal-dialog>

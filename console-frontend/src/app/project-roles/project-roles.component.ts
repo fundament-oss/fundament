@@ -6,11 +6,14 @@ import {
   ChangeDetectionStrategy,
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
 import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 
 interface RoleBinding {
   id: string;
@@ -265,5 +268,16 @@ export default class ProjectRolesComponent implements OnInit {
 
     this.roleBindings.update((bindings) => bindings.filter((rb) => rb.id !== bindingId));
     this.showRemoveModal.set(false);
+  }
+
+  createModalDialogRef = viewChild<ElementRef<HTMLElement>>('createModal');
+
+  onCreateModalOpen(): void {
+    const el = this.createModalDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  onRemoveModalOpen(event: Event): void {
+    if (this.showRemoveModal()) focusFirstModalInput(event.target as HTMLElement);
   }
 }

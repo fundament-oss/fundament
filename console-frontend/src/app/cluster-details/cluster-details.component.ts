@@ -30,6 +30,7 @@ import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
 import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 const getUsagePercentage = (used: number, limit: number): number =>
@@ -436,4 +437,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   getEventTypeColor = getEventTypeColor;
 
   getEventDetails = getEventDetails;
+
+  onDeleteModalOpen(event: Event): void {
+    if (this.showDeleteModal()) focusFirstModalInput(event.target as HTMLElement);
+  }
 }

@@ -618,16 +618,30 @@
   [show]="showDeleteModal()"
   text="Delete cluster"
   variant="alert"
+  (open)="onDeleteModalOpen($event)"
   (close)="showDeleteModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
 
   <p>
     Are you sure you want to delete cluster
-    <strong class="font-semibold">{{ clusterData.basics.name }}</strong>?
+    <strong class="font-semibold">{{ clusterData.basics.name }}</strong
+    >?
   </p>
   <p class="mt-2 text-rose-600 dark:text-rose-400">This cannot be undone.</p>
 
-  <ndd-button slot="actions" type="button" (click)="showDeleteModal.set(false)" text="Cancel" variant="secondary"></ndd-button>
-  <ndd-button slot="actions" type="button" (click)="deleteCluster()" text="Yes, delete this cluster" variant="destructive"></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="showDeleteModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></ndd-button>
+  <ndd-button
+    slot="actions"
+    type="button"
+    (click)="deleteCluster()"
+    text="Yes, delete this cluster"
+    variant="destructive"
+  ></ndd-button>
 </ndd-modal-dialog>
