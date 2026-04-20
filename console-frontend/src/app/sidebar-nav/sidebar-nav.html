@@ -11,16 +11,16 @@
     <div class="flex min-w-0 flex-1 items-center">
       @if (selectedItemDisplay(); as selected) {
         @if (selected.type === 'organization') {
-          <ndd-icon name="apartment-building" class="mr-2 h-3.5 w-3.5 shrink-0" />
+          <ndd-icon name="apartment-building" class="mr-2 h-3.5 w-3.5 shrink-0" ></ndd-icon>
         } @else if (selected.type === 'project') {
-          <ndd-icon name="folder" class="mr-2 h-3.5 w-3.5 shrink-0" />
+          <ndd-icon name="folder" class="mr-2 h-3.5 w-3.5 shrink-0" ></ndd-icon>
         }
         <span class="truncate font-medium">{{ selected.name }}</span>
       } @else {
         <span class="text-gray-400 dark:text-gray-500">Select...</span>
       }
     </div>
-    <ndd-icon name="chevron-right-small" class="ml-2 h-3.5 w-3.5 shrink-0" />
+    <ndd-icon name="chevron-right-small" class="ml-2 h-3.5 w-3.5 shrink-0" ></ndd-icon>
   </button>
 </div>
 
@@ -42,7 +42,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="ship-wheel" class="mr-3 h-5 w-5" />
+          <ndd-icon name="ship-wheel" class="mr-3 h-5 w-5" ></ndd-icon>
           Clusters
         </a>
       </li>
@@ -53,7 +53,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="folder-stack" class="mr-3 h-5 w-5" />
+          <ndd-icon name="folder-stack" class="mr-3 h-5 w-5" ></ndd-icon>
           Projects
         </a>
       </li>
@@ -64,7 +64,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="puzzle-piece" class="mr-3 h-5 w-5" />
+          <ndd-icon name="puzzle-piece" class="mr-3 h-5 w-5" ></ndd-icon>
           Plugins
         </a>
       </li>
@@ -75,7 +75,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="person-2" class="mr-3 h-5 w-5" />
+          <ndd-icon name="person-2" class="mr-3 h-5 w-5" ></ndd-icon>
           Members
         </a>
       </li>
@@ -86,7 +86,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="chart-x-y-axis-line" class="mr-3 h-5 w-5" />
+          <ndd-icon name="chart-x-y-axis-line" class="mr-3 h-5 w-5" ></ndd-icon>
           Usage
         </a>
       </li>
@@ -98,7 +98,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="gear" class="mr-3 h-5 w-5" />
+          <ndd-icon name="gear" class="mr-3 h-5 w-5" ></ndd-icon>
           Settings
         </a>
       </li>
@@ -111,7 +111,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="folder" class="mr-3 h-5 w-5" />
+          <ndd-icon name="folder" class="mr-3 h-5 w-5" ></ndd-icon>
           General
         </a>
       </li>
@@ -122,7 +122,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="brackets-ellipsis" class="mr-3 h-5 w-5" />
+          <ndd-icon name="brackets-ellipsis" class="mr-3 h-5 w-5" ></ndd-icon>
           Namespaces
         </a>
       </li>
@@ -133,7 +133,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="person-2" class="mr-3 h-5 w-5" />
+          <ndd-icon name="person-2" class="mr-3 h-5 w-5" ></ndd-icon>
           Members
         </a>
       </li>
@@ -144,7 +144,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="person-badge-gear" class="mr-3 h-5 w-5" />
+          <ndd-icon name="person-badge-gear" class="mr-3 h-5 w-5" ></ndd-icon>
           Roles
         </a>
       </li>
@@ -155,7 +155,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="chart-x-y-axis-line" class="mr-3 h-5 w-5" />
+          <ndd-icon name="chart-x-y-axis-line" class="mr-3 h-5 w-5" ></ndd-icon>
           Usage
         </a>
       </li>
@@ -166,7 +166,7 @@
           class="nav-link"
           (click)="closeSidebar.emit()"
         >
-          <ndd-icon name="gear" class="mr-3 h-5 w-5" />
+          <ndd-icon name="gear" class="mr-3 h-5 w-5" ></ndd-icon>
           Settings
         </a>
       </li>
@@ -194,7 +194,7 @@
                   (click)="closeSidebar.emit()"
                 >
                   @if (item.icon) {
-                    <ndd-icon [name]="item.icon" class="mr-3 h-5 w-5" />
+                    <ndd-icon [name]="item.icon" class="mr-3 h-5 w-5" ></ndd-icon>
                   }
                   {{ item.label }}
                 </a>

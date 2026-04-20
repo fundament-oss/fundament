@@ -65,7 +65,7 @@
                       "
                     >
                       @if (tag.name.toLowerCase() === 'official') {
-                        <ndd-icon name="check-mark" class="mr-1 h-3 w-3" />
+                        <ndd-icon name="check-mark" class="mr-1 h-3 w-3" ></ndd-icon>
                       }
                       {{ tag.name }}
                     </span>
@@ -74,7 +74,7 @@
                     <span
                       class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     >
-                      <ndd-icon name="check-mark" class="mr-1 h-3 w-3" />
+                      <ndd-icon name="check-mark" class="mr-1 h-3 w-3" ></ndd-icon>
                       Installed on {{ getInstalledClusterCount() }} cluster{{
                         getInstalledClusterCount() > 1 ? 's' : ''
                       }}

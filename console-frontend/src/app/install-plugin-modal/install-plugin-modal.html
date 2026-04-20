@@ -10,14 +10,14 @@
 
   <p class="mb-4 text-gray-600 dark:text-gray-400">
     Select cluster(s) to install plugin
-    <strong class="font-semibold">{{ pluginName }}</strong> on:
+    <strong class="font-semibold">{{ pluginName() }}</strong> on:
   </p>
 
   <div class="space-y-2">
-    @if (clusters.length === 0) {
+    @if (clusters().length === 0) {
       <p class="text-gray-600 dark:text-gray-400">No clusters found</p>
     } @else {
-      @for (cluster of clusters; track cluster.id) {
+      @for (cluster of clusters(); track cluster.id) {
         <div
           class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
         >
@@ -26,7 +26,7 @@
             <span
               class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
             >
-              <ndd-icon name="check-mark" class="mr-1 h-3 w-3" /> Installed
+              <ndd-icon name="check-mark" class="mr-1 h-3 w-3" ></ndd-icon> Installed
             </span>
           } @else {
             <ndd-button
