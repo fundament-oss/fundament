@@ -10,7 +10,7 @@ import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
 import {
   type APIKey,
   ListAPIKeysRequestSchema,
@@ -48,7 +48,7 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
 
 @Component({
   selector: 'app-api-keys',
-  imports: [ModalComponent, AutofocusDirective],
+  imports: [DialogSyncDirective, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './api-keys.component.html',

@@ -29,7 +29,7 @@ import {
   type Preset,
 } from '../../generated/v1/plugin_pb';
 import { NodePoolStatus } from '../../generated/v1/common_pb';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 
 interface ProgressItem {
@@ -52,7 +52,7 @@ interface ProgressItem {
 
 @Component({
   selector: 'app-add-cluster-summary',
-  imports: [RouterLink, ModalComponent, LoadingIndicatorComponent],
+  imports: [RouterLink, DialogSyncDirective, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-summary.component.html',

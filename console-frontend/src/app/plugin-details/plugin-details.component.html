@@ -215,7 +215,7 @@
 <app-install-plugin-modal
   [pluginName]="plugin()?.name || ''"
   [clusters]="clusters()"
-  [show]="showInstallModal"
+  [show]="showInstallModal()"
   (closeModal)="closeInstallModal()"
   (install)="onInstallOnCluster($event)"
 ></app-install-plugin-modal>

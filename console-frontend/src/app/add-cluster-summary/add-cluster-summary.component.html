@@ -215,12 +215,14 @@
 </div>
 
 <!-- Creation Progress Modal -->
-<app-modal
+<ndd-modal-dialog
+  appDialogSync
   [show]="showModal()"
-  title="Creating cluster"
-  (modalClose)="onModalClose()"
-  maxWidth="max-w-lg"
+  text="Creating cluster"
+  (close)="onModalClose()"
 >
+  <ndd-spacer size="24"></ndd-spacer>
+
   <p class="mb-4 text-gray-600 dark:text-gray-400">
     Your cluster is being provisioned. You can track the progress of each step below.
   </p>
@@ -228,7 +230,6 @@
     @for (item of progressItems(); track item.key) {
       <div class="flex items-center justify-between gap-1 py-3">
         <div class="flex items-center space-x-3">
-          <!-- Status icon -->
           @if (item.requestStatus === 'pending') {
             <div
               class="h-5 w-5 shrink-0 rounded-full border-2 border-gray-300 dark:border-gray-600"
@@ -292,16 +293,9 @@
     }
   </div>
 
-  <div modal-footer class="mt-6">
-    @if (clusterId()) {
-      <ndd-button
-        type="button"
-        (click)="navigateToCluster()"
-        text="Go to cluster"
-        variant="primary"
-      />
-    } @else if (!isCreating()) {
-      <ndd-button type="button" (click)="onModalClose()" text="Cancel" variant="secondary" />
-    }
-  </div>
-</app-modal>
+  @if (clusterId()) {
+    <ndd-button slot="actions" type="button" (click)="navigateToCluster()" text="Go to cluster" variant="primary"></ndd-button>
+  } @else if (!isCreating()) {
+    <ndd-button slot="actions" type="button" (click)="onModalClose()" text="Cancel" variant="secondary"></ndd-button>
+  }
+</ndd-modal-dialog>

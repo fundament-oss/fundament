@@ -21,12 +21,12 @@ import {
   DeleteNamespaceRequestSchema,
   Namespace,
 } from '../../generated/v1/namespace_pb';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-namespaces',
-  imports: [ReactiveFormsModule, ModalComponent],
+  imports: [ReactiveFormsModule, DialogSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './namespaces.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

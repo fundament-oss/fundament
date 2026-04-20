@@ -1,12 +1,11 @@
 import {
   Component,
-  EventEmitter,
-  Input,
-  Output,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  input,
+  output,
 } from '@angular/core';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
 
 interface Cluster {
   id: string;
@@ -16,21 +15,21 @@ interface Cluster {
 
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [ModalComponent],
+  imports: [DialogSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class InstallPluginModalComponent {
-  @Input() pluginName = '';
+  pluginName = input('');
 
-  @Input() clusters: Cluster[] = [];
+  clusters = input<Cluster[]>([]);
 
-  @Input() show = false;
+  show = input(false);
 
-  @Output() closeModal = new EventEmitter<void>();
+  closeModal = output<void>();
 
-  @Output() install = new EventEmitter<string>();
+  install = output<string>();
 
   onClose(): void {
     this.closeModal.emit();

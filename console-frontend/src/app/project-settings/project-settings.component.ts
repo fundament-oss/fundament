@@ -13,7 +13,7 @@ import AutofocusDirective from '../autofocus.directive';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
 import { PROJECT } from '../../connect/tokens';
 import {
   GetProjectRequestSchema,
@@ -25,7 +25,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-settings',
-  imports: [ModalComponent, AutofocusDirective],
+  imports: [DialogSyncDirective, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-settings.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -29,7 +29,7 @@ import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 const getUsagePercentage = (used: number, limit: number): number =>
@@ -115,7 +115,7 @@ const getEventDetails = (event: ClusterEvent): string => {
 
 @Component({
   selector: 'app-cluster-details',
-  imports: [RouterLink, LoadingIndicatorComponent, ModalComponent],
+  imports: [RouterLink, LoadingIndicatorComponent, DialogSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

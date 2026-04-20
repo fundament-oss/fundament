@@ -159,14 +159,15 @@
 </div>
 
 <!-- Add/Edit Member Modal -->
-<app-modal
+<ndd-modal-dialog
+  appDialogSync
   [show]="showAddMemberModal()"
-  [title]="editingMemberView() ? 'Edit member' : 'Add member to project'"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showAddMemberModal.set(false)"
+  [attr.text]="editingMemberView() ? 'Edit member' : 'Add member to project'"
+  (close)="showAddMemberModal.set(false)"
 >
+  <ndd-spacer size="24"></ndd-spacer>
+
   <form [formGroup]="memberForm" (ngSubmit)="saveMember()" (keydown.enter)="saveMember()">
-    <!-- User Selection (only show when adding) -->
     @if (!editingMemberView()) {
       <ndd-form-field label="User" class="mb-4">
         <select id="userId" formControlName="userId" class="w-full">
@@ -189,15 +190,13 @@
       </ndd-form-field>
     }
 
-    <!-- Member name (only show when editing) -->
     @if (editingMemberView()) {
       <div class="mb-4">
-        <span class="mb-2 block font-medium text-gray-700 dark:text-white"> Member </span>
+        <span class="mb-2 block font-medium text-gray-700 dark:text-white">Member</span>
         <p class="dark:text-white">{{ editingMemberView()?.member?.userName }}</p>
       </div>
     }
 
-    <!-- Permissions Selection -->
     <div class="mb-4">
       <ndd-form-field label="Permission">
         <ndd-radio-button-group name="permission" (change)="onPermissionChange($event)">
@@ -224,66 +223,28 @@
         </ndd-radio-button-group>
       </ndd-form-field>
     </div>
-
-    <div modal-footer class="modal-footer">
-      <ndd-button
-        type="button"
-        (click)="showAddMemberModal.set(false)"
-        [disabled]="isAddingMember()"
-        text="Cancel"
-        variant="secondary"
-      />
-      <ndd-button
-        type="button"
-        (click)="saveMember()"
-        [text]="
-          isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'
-        "
-        [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
-        variant="primary"
-      />
-    </div>
   </form>
-</app-modal>
+
+  <ndd-button slot="actions" type="button" (click)="showAddMemberModal.set(false)" [disabled]="isAddingMember()" text="Cancel" variant="secondary"></ndd-button>
+  <ndd-button slot="actions" type="button" (click)="saveMember()" [text]="isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'" [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)" variant="primary"></ndd-button>
+</ndd-modal-dialog>
 
 <!-- Remove Member Modal -->
-<app-modal
+<ndd-modal-dialog
+  appDialogSync
   [show]="showRemoveMemberModal()"
-  title="Remove member"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showRemoveMemberModal.set(false)"
+  text="Remove member"
+  variant="alert"
+  (close)="showRemoveMemberModal.set(false)"
 >
-  <div class="sm:flex sm:items-start">
-    <div
-      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
-    >
-      <ndd-icon name="exclamation-triangle" class="h-5 w-5 text-rose-600! dark:text-rose-400!" />
-    </div>
-    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-      <div class="mt-2">
-        <p class="text-gray-600 dark:text-gray-400">
-          Are you sure you want to remove
-          <span class="font-semibold text-gray-800 dark:text-white">{{
-            pendingRemoveView()?.member?.userName
-          }}</span>
-          from this project?
-        </p>
-      </div>
-    </div>
-  </div>
+  <ndd-spacer size="24"></ndd-spacer>
 
-  <div modal-footer class="modal-footer">
-    <ndd-button
-      type="button"
-      (click)="showRemoveMemberModal.set(false)"
-      text="Cancel"
-      variant="secondary"
-    />
-    <ndd-button
-      type="button"
-      (click)="confirmRemoveMember()"
-      text="Yes, remove this member"
-      variant="destructive"
-    />
-  </div>
-</app-modal>
+  <p>
+    Are you sure you want to remove
+    <strong class="font-semibold">{{ pendingRemoveView()?.member?.userName }}</strong>
+    from this project?
+  </p>
+
+  <ndd-button slot="actions" type="button" (click)="showRemoveMemberModal.set(false)" text="Cancel" variant="secondary"></ndd-button>
+  <ndd-button slot="actions" type="button" (click)="confirmRemoveMember()" text="Yes, remove this member" variant="destructive"></ndd-button>
+</ndd-modal-dialog>

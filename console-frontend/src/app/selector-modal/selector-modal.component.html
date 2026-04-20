@@ -1,15 +1,23 @@
-<app-modal [show]="show()" title="Select organization or project" (modalClose)="onClose()">
+<ndd-modal-dialog
+  #dialog
+  text="Select organization or project"
+  accessible-label="Select organization or project"
+  (open)="onOpen()"
+  (close)="onClose()"
+>
+  <ndd-spacer size="24"></ndd-spacer>
+
   <!-- Filter Input -->
   <div class="mb-4">
     <ndd-search-field
+      #searchField
       [value]="filterInputValue()"
       placeholder="Search..."
       accessible-label="Search"
-      size="md"
+      size="sm"
       name="filter"
       (input)="updateFilter($event)"
       (change)="updateFilter($event)"
-      size="sm"
     ></ndd-search-field>
   </div>
 
@@ -76,4 +84,6 @@
       }
     }
   </div>
-</app-modal>
+
+  <ndd-button slot="actions" variant="neutral-tinted" text="Close" (click)="onClose()"></ndd-button>
+</ndd-modal-dialog>

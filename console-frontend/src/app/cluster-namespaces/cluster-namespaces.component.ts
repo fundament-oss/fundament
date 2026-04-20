@@ -23,13 +23,13 @@ import {
 } from '../../generated/v1/namespace_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { fetchClusterName } from '../utils/cluster-status';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-cluster-namespaces',
-  imports: [ReactiveFormsModule, ModalComponent, RouterLink, LoadingIndicatorComponent],
+  imports: [ReactiveFormsModule, DialogSyncDirective, RouterLink, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-namespaces.component.html',

@@ -68,7 +68,7 @@ export default class PluginDetailsComponent implements OnInit {
 
   errorMessage = signal<string | null>(null);
 
-  showInstallModal = false;
+  showInstallModal = signal(false);
 
   async ngOnInit() {
     // Get plugin ID from route
@@ -143,11 +143,11 @@ export default class PluginDetailsComponent implements OnInit {
   }
 
   openInstallModal(): void {
-    this.showInstallModal = true;
+    this.showInstallModal.set(true);
   }
 
   closeInstallModal(): void {
-    this.showInstallModal = false;
+    this.showInstallModal.set(false);
   }
 
   async onInstallOnCluster(clusterId: string): Promise<void> {

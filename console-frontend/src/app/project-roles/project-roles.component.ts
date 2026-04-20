@@ -10,7 +10,7 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
 
 interface RoleBinding {
   id: string;
@@ -24,7 +24,7 @@ const AVAILABLE_ROLES = ['deploy', 'view-pods', 'view-logs', 'manage-services'];
 
 @Component({
   selector: 'app-project-roles',
-  imports: [FormsModule, ModalComponent],
+  imports: [FormsModule, DialogSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-roles.component.html',

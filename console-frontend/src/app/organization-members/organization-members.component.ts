@@ -14,7 +14,7 @@ import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatTimeAgo } from '../utils/date-format';
 
@@ -52,7 +52,7 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [ModalComponent, LoadingIndicatorComponent],
+  imports: [DialogSyncDirective, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './organization-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

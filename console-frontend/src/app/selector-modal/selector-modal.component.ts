@@ -5,10 +5,11 @@ import {
   signal,
   computed,
   effect,
+  viewChild,
+  ElementRef,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import ModalComponent from '../modal/modal.component';
 
 interface Project {
   id: string;
@@ -23,7 +24,7 @@ interface Organization {
 
 @Component({
   selector: 'app-selector-modal',
-  imports: [ModalComponent],
+  imports: [],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './selector-modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,7 +48,20 @@ export default class SelectorModalComponent {
 
   filterInputValue = signal('');
 
-  // Reset filter when modal opens
+  dialogRef = viewChild<ElementRef<HTMLElement & { show(): void; hide(): void }>>('dialog');
+
+  searchFieldRef = viewChild<ElementRef<HTMLElement>>('searchField');
+
+  private syncDialog = effect(() => {
+    const dialog = this.dialogRef();
+    if (!dialog) return;
+    if (this.show()) {
+      dialog.nativeElement.show();
+    } else {
+      dialog.nativeElement.hide();
+    }
+  });
+
   private resetOnOpen = effect(() => {
     if (this.show()) {
       this.filterText.set('');
@@ -80,12 +94,22 @@ export default class SelectorModalComponent {
       .filter((org): org is Organization => org !== null);
   });
 
+  onOpen(): void {
+    const el = this.searchFieldRef()?.nativeElement;
+    if (!el) return;
+    const input =
+      el.shadowRoot?.querySelector<HTMLElement>('input:not([disabled])') ?? el;
+    input.focus({ focusVisible: true } as FocusOptions & { focusVisible?: boolean });
+  }
+
   onClose(): void {
     this.closeModal.emit();
   }
 
   updateFilter(event: Event): void {
-    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    const value =
+      (event as CustomEvent<{ value?: string }>).detail?.value ??
+      ((event.target as HTMLInputElement).value ?? '');
     this.filterInputValue.set(value);
     this.filterText.set(value.toLowerCase());
   }

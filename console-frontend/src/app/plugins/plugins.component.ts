@@ -81,7 +81,7 @@ export default class PluginsComponent implements OnInit {
 
   selectedPreset = 'all';
 
-  showInstallModal = false;
+  showInstallModal = signal(false);
 
   selectedPlugin: PluginWithPresets | null = null;
 
@@ -281,11 +281,11 @@ export default class PluginsComponent implements OnInit {
 
   onInstallPlugin(plugin: PluginWithPresets) {
     this.selectedPlugin = plugin;
-    this.showInstallModal = true;
+    this.showInstallModal.set(true);
   }
 
   closeInstallModal(): void {
-    this.showInstallModal = false;
+    this.showInstallModal.set(false);
     this.selectedPlugin = null;
   }
 

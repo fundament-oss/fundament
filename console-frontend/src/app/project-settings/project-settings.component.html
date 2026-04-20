@@ -107,42 +107,21 @@
 </div>
 
 <!-- Delete Project Modal -->
-<app-modal
+<ndd-modal-dialog
+  appDialogSync
   [show]="showDeleteModal()"
-  title="Delete project"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showDeleteModal.set(false)"
+  text="Delete project"
+  variant="alert"
+  (close)="showDeleteModal.set(false)"
 >
-  <div class="sm:flex sm:items-start">
-    <div
-      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
-    >
-      <ndd-icon name="exclamation-triangle" class="h-5 w-5 text-rose-600! dark:text-rose-400!" />
-    </div>
-    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-      <div class="mt-2">
-        <p class="text-gray-600 dark:text-gray-400">
-          Are you sure you want to delete project
-          <span class="font-semibold text-gray-800 dark:text-white">{{ project()?.name }}</span
-          >?
-        </p>
-        <p class="mt-2 text-rose-600 dark:text-rose-400">This cannot be undone.</p>
-      </div>
-    </div>
-  </div>
+  <ndd-spacer size="24"></ndd-spacer>
 
-  <div modal-footer class="modal-footer">
-    <ndd-button
-      type="button"
-      (click)="showDeleteModal.set(false)"
-      text="Cancel"
-      variant="secondary"
-    />
-    <ndd-button
-      type="button"
-      (click)="deleteProject()"
-      text="Yes, delete this project"
-      variant="destructive"
-    />
-  </div>
-</app-modal>
+  <p>
+    Are you sure you want to delete project
+    <strong class="font-semibold">{{ project()?.name }}</strong>?
+  </p>
+  <p class="mt-2 text-rose-600 dark:text-rose-400">This cannot be undone.</p>
+
+  <ndd-button slot="actions" type="button" (click)="showDeleteModal.set(false)" text="Cancel" variant="secondary"></ndd-button>
+  <ndd-button slot="actions" type="button" (click)="deleteProject()" text="Yes, delete this project" variant="destructive"></ndd-button>
+</ndd-modal-dialog>

@@ -223,57 +223,37 @@
 </div>
 
 <!-- Delete Member Modal -->
-<app-modal
+<ndd-modal-dialog
+  appDialogSync
   [show]="showDeleteModal()"
-  title="Remove member"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showDeleteModal.set(false)"
+  text="Remove member"
+  variant="alert"
+  (close)="showDeleteModal.set(false)"
 >
-  <div class="sm:flex sm:items-start">
-    <div
-      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
-    >
-      <ndd-icon name="exclamation-triangle" class="h-5 w-5 text-rose-600! dark:text-rose-400!" />
-    </div>
-    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-      <div class="mt-2">
-        <p class="text-gray-500 dark:text-gray-400">
-          Are you sure you want to remove
-          <span class="font-semibold text-gray-900 dark:text-white">{{
-            deletingMember()?.name
-          }}</span>
-          from this organization?
-        </p>
-        <p class="mt-2 text-rose-600 dark:text-rose-400">
-          This will revoke their access to all organization resources.
-        </p>
-      </div>
-    </div>
-  </div>
+  <ndd-spacer size="24"></ndd-spacer>
 
-  <div modal-footer class="modal-footer">
-    <ndd-button
-      type="button"
-      (click)="showDeleteModal.set(false)"
-      text="Cancel"
-      variant="secondary"
-    />
-    <ndd-button
-      type="button"
-      (click)="confirmDeleteMember()"
-      text="Yes, remove member"
-      variant="destructive"
-    />
-  </div>
-</app-modal>
+  <p>
+    Are you sure you want to remove
+    <strong class="font-semibold">{{ deletingMember()?.name }}</strong>
+    from this organization?
+  </p>
+  <p class="mt-2 text-rose-600 dark:text-rose-400">
+    This will revoke their access to all organization resources.
+  </p>
+
+  <ndd-button slot="actions" type="button" (click)="showDeleteModal.set(false)" text="Cancel" variant="secondary"></ndd-button>
+  <ndd-button slot="actions" type="button" (click)="confirmDeleteMember()" text="Yes, remove member" variant="destructive"></ndd-button>
+</ndd-modal-dialog>
 
 <!-- Edit Member Modal -->
-<app-modal
+<ndd-modal-dialog
+  appDialogSync
   [show]="showEditModal()"
-  title="Edit member"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showEditModal.set(false)"
+  text="Edit member"
+  (close)="showEditModal.set(false)"
 >
+  <ndd-spacer size="24"></ndd-spacer>
+
   <div class="mb-4">
     <span class="mb-2 block font-medium text-gray-700 dark:text-white">Member</span>
     <p class="dark:text-white">{{ editingMember()?.name }}</p>
@@ -282,56 +262,47 @@
     </p>
   </div>
 
-  <div class="mb-4">
-    <ndd-form-field label="Permission">
-      <ndd-radio-button-group
-        name="editPermission"
-        (change)="editPermission.set($any($event).detail.value)"
-      >
-        <div class="radio-option mb-2">
-          <ndd-radio-button-field
-            value="viewer"
-            label="Viewer"
-            [checked]="editPermission() === 'viewer'"
-          />
-          <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-            >Read access to resources</span
-          >
-        </div>
-        <div class="radio-option">
-          <ndd-radio-button-field
-            value="admin"
-            label="Admin"
-            [checked]="editPermission() === 'admin'"
-          />
-          <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-            >Full access to resources</span
-          >
-        </div>
-      </ndd-radio-button-group>
-    </ndd-form-field>
-  </div>
+  <ndd-form-field label="Permission">
+    <ndd-radio-button-group
+      name="editPermission"
+      (change)="editPermission.set($any($event).detail.value)"
+    >
+      <div class="radio-option mb-2">
+        <ndd-radio-button-field
+          value="viewer"
+          label="Viewer"
+          [checked]="editPermission() === 'viewer'"
+        />
+        <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+          >Read access to resources</span
+        >
+      </div>
+      <div class="radio-option">
+        <ndd-radio-button-field
+          value="admin"
+          label="Admin"
+          [checked]="editPermission() === 'admin'"
+        />
+        <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+          >Full access to resources</span
+        >
+      </div>
+    </ndd-radio-button-group>
+  </ndd-form-field>
 
-  <div modal-footer class="modal-footer">
-    <ndd-button
-      type="button"
-      (click)="showEditModal.set(false)"
-      [disabled]="isSubmitting()"
-      text="Cancel"
-      variant="secondary"
-    />
-    <ndd-button
-      type="button"
-      (click)="confirmEditMember()"
-      [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
-      [disabled]="isSubmitting()"
-      variant="primary"
-    />
-  </div>
-</app-modal>
+  <ndd-button slot="actions" type="button" (click)="showEditModal.set(false)" [disabled]="isSubmitting()" text="Cancel" variant="secondary"></ndd-button>
+  <ndd-button slot="actions" type="button" (click)="confirmEditMember()" [text]="isSubmitting() ? 'Saving...' : 'Save changes'" [disabled]="isSubmitting()" variant="primary"></ndd-button>
+</ndd-modal-dialog>
 
 <!-- Invite Modal -->
-<app-modal [show]="isModalOpen()" title="Invite user" (modalClose)="closeModal()">
+<ndd-modal-dialog
+  appDialogSync
+  [show]="isModalOpen()"
+  text="Invite user"
+  (close)="closeModal()"
+>
+  <ndd-spacer size="24"></ndd-spacer>
+
   <p class="mb-6 text-gray-600 dark:text-gray-400">
     Enter the email address of the user you want to invite. They will be able to sign in via SSO
     once added.
@@ -385,22 +356,8 @@
         </ndd-radio-button-group>
       </ndd-form-field>
     </div>
-
-    <div modal-footer class="modal-footer">
-      <ndd-button
-        type="button"
-        (click)="closeModal()"
-        [disabled]="isSubmitting()"
-        text="Cancel"
-        variant="secondary"
-      />
-      <ndd-button
-        type="button"
-        (click)="submitInvitation()"
-        [text]="isSubmitting() ? 'Sending...' : 'Send invitation'"
-        [disabled]="isSubmitting()"
-        variant="primary"
-      />
-    </div>
   </form>
-</app-modal>
+
+  <ndd-button slot="actions" type="button" (click)="closeModal()" [disabled]="isSubmitting()" text="Cancel" variant="secondary"></ndd-button>
+  <ndd-button slot="actions" type="button" (click)="submitInvitation()" [text]="isSubmitting() ? 'Sending...' : 'Send invitation'" [disabled]="isSubmitting()" variant="primary"></ndd-button>
+</ndd-modal-dialog>

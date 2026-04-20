@@ -100,14 +100,15 @@
 </div>
 
 <!-- Create/Edit Role Binding Modal -->
-<app-modal
+<ndd-modal-dialog
+  appDialogSync
   [show]="showCreateModal()"
-  [title]="editingBinding() ? 'Edit role binding' : 'Create role binding'"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showCreateModal.set(false)"
+  [attr.text]="editingBinding() ? 'Edit role binding' : 'Create role binding'"
+  (close)="showCreateModal.set(false)"
 >
+  <ndd-spacer size="24"></ndd-spacer>
+
   <form (ngSubmit)="saveBinding()" (keydown.enter)="saveBinding()" novalidate>
-    <!-- Member selection -->
     <ndd-form-field label="Member" class="mb-4">
       @if (editingBinding()) {
         <p class="dark:text-white">{{ editingBinding()?.memberName }}</p>
@@ -131,7 +132,6 @@
       }
     </ndd-form-field>
 
-    <!-- Namespace selection -->
     <div class="mb-4">
       @if (editingBinding()) {
         <p class="dark:text-white">{{ editingBinding()?.namespace }}</p>
@@ -204,7 +204,6 @@
       }
     </div>
 
-    <!-- Roles switches -->
     <div class="mb-4">
       <span class="mb-2 block font-medium text-gray-700 dark:text-white">Roles</span>
       @if (rolesError()) {
@@ -224,64 +223,27 @@
         }
       </div>
     </div>
-
-    <div modal-footer class="modal-footer">
-      <ndd-button
-        type="button"
-        (click)="showCreateModal.set(false)"
-        [disabled]="isSubmitting()"
-        text="Cancel"
-        variant="secondary"
-      />
-      <ndd-button
-        type="submit"
-        (click)="saveBinding()"
-        [text]="isSubmitting() ? 'Saving...' : editingBinding() ? 'Save changes' : 'Create binding'"
-        [disabled]="isSubmitting()"
-        variant="primary"
-      />
-    </div>
   </form>
-</app-modal>
+
+  <ndd-button slot="actions" type="button" (click)="showCreateModal.set(false)" [disabled]="isSubmitting()" text="Cancel" variant="secondary"></ndd-button>
+  <ndd-button slot="actions" type="button" (click)="saveBinding()" [text]="isSubmitting() ? 'Saving...' : editingBinding() ? 'Save changes' : 'Create binding'" [disabled]="isSubmitting()" variant="primary"></ndd-button>
+</ndd-modal-dialog>
 
 <!-- Remove Role Binding Modal -->
-<app-modal
+<ndd-modal-dialog
+  appDialogSync
   [show]="showRemoveModal()"
-  title="Remove role binding"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showRemoveModal.set(false)"
+  text="Remove role binding"
+  variant="alert"
+  (close)="showRemoveModal.set(false)"
 >
-  <div class="sm:flex sm:items-start">
-    <div
-      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
-    >
-      <ndd-icon name="exclamation-triangle" class="h-5 w-5 text-rose-600! dark:text-rose-400!" />
-    </div>
-    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-      <div class="mt-2">
-        <p class="text-gray-600 dark:text-gray-400">
-          Are you sure you want to remove the role binding for
-          <span class="font-semibold text-gray-800 dark:text-white">{{
-            pendingBindingDescription()
-          }}</span
-          >?
-        </p>
-      </div>
-    </div>
-  </div>
+  <ndd-spacer size="24"></ndd-spacer>
 
-  <div modal-footer class="modal-footer">
-    <ndd-button
-      type="button"
-      (click)="showRemoveModal.set(false)"
-      text="Cancel"
-      variant="secondary"
-    />
-    <ndd-button
-      type="button"
-      (click)="confirmRemoveBinding()"
-      text="Yes, remove this binding"
-      variant="destructive"
-    />
-  </div>
-</app-modal>
+  <p>
+    Are you sure you want to remove the role binding for
+    <strong class="font-semibold">{{ pendingBindingDescription() }}</strong>?
+  </p>
+
+  <ndd-button slot="actions" type="button" (click)="showRemoveModal.set(false)" text="Cancel" variant="secondary"></ndd-button>
+  <ndd-button slot="actions" type="button" (click)="confirmRemoveBinding()" text="Yes, remove this binding" variant="destructive"></ndd-button>
+</ndd-modal-dialog>
