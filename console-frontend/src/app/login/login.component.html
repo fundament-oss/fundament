@@ -19,8 +19,8 @@
       >
         <ndd-form-field label="Email address">
           <ndd-text-field
-            id="email-overheid"
             type="email"
+            id="email"
             placeholder="Enter your email address"
             autocomplete="email"
             appAutofocus
@@ -29,7 +29,7 @@
             (blur)="loginForm.get('email')!.markAsTouched()"
             [invalid]="!!(email?.invalid && email?.touched)"
             error-message="login-email-error"
-          ></ndd-text-field>
+          />
           <ndd-form-field-error-text id="login-email-error">
             {{ getEmailError() }}
           </ndd-form-field-error-text>
@@ -37,7 +37,7 @@
 
         <ndd-form-field label="Password">
           <ndd-password-field
-            id="password-overheid"
+            id="password"
             placeholder="Enter your password"
             autocomplete="current-password"
             [value]="password?.value ?? ''"
@@ -49,7 +49,7 @@
             hide-accessible-label="Hide password"
             [invalid]="!!(password?.invalid && password?.dirty)"
             error-message="login-password-error"
-          ></ndd-password-field>
+          />
           <ndd-form-field-error-text id="login-password-error">
             {{ getPasswordError() }}
           </ndd-form-field-error-text>

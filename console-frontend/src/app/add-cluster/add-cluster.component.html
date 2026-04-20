@@ -26,7 +26,7 @@
         (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) || clusterNameExists()
       "
       error-message="add-cluster-name-error"
-    ></ndd-text-field>
+    />
     <ndd-form-field-error-text id="add-cluster-name-error">
       @if (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) {
         {{ getClusterNameError() }}
