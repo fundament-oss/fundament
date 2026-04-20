@@ -358,7 +358,11 @@
         type="email"
         id="email"
         [value]="inviteEmail()"
-        (input)="inviteEmail.set($any($event.target).value); inviteEmailDirty.set(true); inviteError.set(null)"
+        (input)="
+          inviteEmail.set($any($event.target).value);
+          inviteEmailDirty.set(true);
+          inviteError.set(null)
+        "
         placeholder="user@example.com"
         [disabled]="isSubmitting()"
         [invalid]="!!(inviteError() || (inviteEmailDirty() && !inviteEmail().trim()))"

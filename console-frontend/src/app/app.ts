@@ -11,7 +11,23 @@ import {
   ViewChild,
   ElementRef,
 } from '@angular/core';
-import '@minbzk/storybook';
+import '@minbzk/storybook/icon';
+import '@minbzk/storybook/icon-button';
+import '@minbzk/storybook/sheet';
+import '@minbzk/storybook/page';
+import '@minbzk/storybook/top-title-bar';
+import '@minbzk/storybook/box';
+import '@minbzk/storybook/button';
+import '@minbzk/storybook/form-field';
+import '@minbzk/storybook/modal-dialog';
+import '@minbzk/storybook/number-field';
+import '@minbzk/storybook/password-field';
+import '@minbzk/storybook/radio-button-field';
+import '@minbzk/storybook/radio-button-group';
+import '@minbzk/storybook/search-field';
+import '@minbzk/storybook/spacer';
+import '@minbzk/storybook/switch-field';
+import '@minbzk/storybook/text-field';
 import {
   RouterOutlet,
   RouterLink,
