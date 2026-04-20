@@ -13,6 +13,6 @@ spec:
     {{- toYaml $.Values.docsFrontend.httproute.hostnames | nindent 4 }}
   rules:
     - backendRefs:
-        - name: {{ $.Release.Name }}-docs-frontend
+        - name: docs-frontend
           port: 80
 {{- end }}

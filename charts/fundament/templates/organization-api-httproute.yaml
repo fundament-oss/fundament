@@ -13,6 +13,6 @@ spec:
     {{- toYaml $.Values.organizationApi.httproute.hostnames | nindent 4 }}
   rules:
     - backendRefs:
-        - name: {{ $.Release.Name }}-organization-api
+        - name: organization-api
           port: 8080
 {{- end }}
