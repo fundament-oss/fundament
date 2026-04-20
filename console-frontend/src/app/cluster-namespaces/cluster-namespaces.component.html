@@ -146,6 +146,7 @@
     slot="actions"
     type="button"
     (click)="createNamespace()"
+    text="Add namespace"
     [text]="isCreatingNamespace() ? 'Creating...' : 'Add namespace'"
     [disabled]="isCreatingNamespace() || !namespaceForm.valid"
     variant="primary"

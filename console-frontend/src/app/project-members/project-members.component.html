@@ -248,6 +248,7 @@
     slot="actions"
     type="button"
     (click)="saveMember()"
+    text="Save changes"
     [text]="isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'"
     [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
     variant="primary"
