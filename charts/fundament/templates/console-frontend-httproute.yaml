@@ -13,6 +13,6 @@ spec:
     {{- toYaml $.Values.consoleFrontend.httproute.hostnames | nindent 4 }}
   rules:
     - backendRefs:
-        - name: {{ $.Release.Name }}-console-frontend
+        - name: console-frontend
           port: 80
 {{- end }}

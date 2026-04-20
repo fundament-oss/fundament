@@ -13,6 +13,6 @@ spec:
     {{- toYaml $.Values.dex.httproute.hostnames | nindent 4 }}
   rules:
     - backendRefs:
-        - name: {{ $.Release.Name }}-dex
+        - name: dex
           port: 5556
 {{- end }}
