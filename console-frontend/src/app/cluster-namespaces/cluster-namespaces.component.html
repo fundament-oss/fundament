@@ -68,7 +68,12 @@
       }
 
       <div class="mt-6 flex space-x-3">
-        <ndd-button type="button" (click)="onCancel()" text="Back to cluster" variant="secondary" ></ndd-button>
+        <ndd-button
+          type="button"
+          (click)="onCancel()"
+          text="Back to cluster"
+          variant="secondary"
+        ></ndd-button>
       </div>
     }
   </div>
@@ -149,11 +154,12 @@
 
 <!-- Delete Namespace Modal -->
 <ndd-modal-dialog
+  #deleteNamespaceDialog
   appDialogSync
   [show]="showDeleteNamespaceModal()"
   text="Delete namespace"
   variant="alert"
-  (open)="onDeleteNamespaceModalOpen($event)"
+  (open)="onDeleteNamespaceModalOpen()"
   (close)="showDeleteNamespaceModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>

@@ -205,7 +205,10 @@ export default class NamespacesComponent implements OnInit {
     if (el) focusFirstModalInput(el);
   }
 
-  onDeleteNamespaceModalOpen(event: Event): void {
-    if (this.showDeleteNamespaceModal()) focusFirstModalInput(event.target as HTMLElement);
+  deleteNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('deleteNamespaceDialog');
+
+  onDeleteNamespaceModalOpen(): void {
+    const el = this.deleteNamespaceDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }

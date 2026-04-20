@@ -5,6 +5,8 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
@@ -168,7 +170,10 @@ export default class ProjectSettingsComponent implements OnInit {
 
   readonly formatDate = formatDateUtil;
 
-  onDeleteModalOpen(event: Event): void {
-    if (this.showDeleteModal()) focusFirstModalInput(event.target as HTMLElement);
+  deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
+
+  onDeleteModalOpen(): void {
+    const el = this.deleteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }

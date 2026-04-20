@@ -7,6 +7,8 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
@@ -438,7 +440,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   getEventDetails = getEventDetails;
 
-  onDeleteModalOpen(event: Event): void {
-    if (this.showDeleteModal()) focusFirstModalInput(event.target as HTMLElement);
+  deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
+
+  onDeleteModalOpen(): void {
+    const el = this.deleteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }

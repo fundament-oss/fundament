@@ -11,5 +11,5 @@ export default function focusFirstModalInput(dialog: HTMLElement): void {
   const inner =
     el.shadowRoot?.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled])') ??
     el;
-  inner.focus();
+  inner.focus({ focusVisible: true } as FocusOptions);
 }

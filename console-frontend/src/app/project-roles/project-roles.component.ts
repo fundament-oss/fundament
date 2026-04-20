@@ -277,7 +277,10 @@ export default class ProjectRolesComponent implements OnInit {
     if (el) focusFirstModalInput(el);
   }
 
-  onRemoveModalOpen(event: Event): void {
-    if (this.showRemoveModal()) focusFirstModalInput(event.target as HTMLElement);
+  removeModalDialogRef = viewChild<ElementRef<HTMLElement>>('removeModal');
+
+  onRemoveModalOpen(): void {
+    const el = this.removeModalDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }

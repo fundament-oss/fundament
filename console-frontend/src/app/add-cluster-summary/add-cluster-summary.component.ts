@@ -7,6 +7,8 @@ import {
   OnDestroy,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
@@ -490,7 +492,10 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  onModalOpen(event: Event): void {
-    if (this.showModal()) focusFirstModalInput(event.target as HTMLElement);
+  modalDialogRef = viewChild<ElementRef<HTMLElement>>('modalDialog');
+
+  onModalOpen(): void {
+    const el = this.modalDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }

@@ -5,6 +5,8 @@ import {
   signal,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
@@ -281,11 +283,17 @@ export default class ApiKeysComponent implements OnInit {
 
   isRevoked = isRevoked;
 
-  onRevokeModalOpen(event: Event): void {
-    if (this.showRevokeModal()) focusFirstModalInput(event.target as HTMLElement);
+  revokeDialogRef = viewChild<ElementRef<HTMLElement>>('revokeDialog');
+
+  onRevokeModalOpen(): void {
+    const el = this.revokeDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 
-  onDeleteModalOpen(event: Event): void {
-    if (this.showDeleteModal()) focusFirstModalInput(event.target as HTMLElement);
+  deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
+
+  onDeleteModalOpen(): void {
+    const el = this.deleteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }

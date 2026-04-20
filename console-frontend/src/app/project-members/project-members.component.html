@@ -19,8 +19,9 @@
       <div class="text-accent-700 dark:text-accent-300">
         <p class="mb-2">
           Members marked with
-          <ndd-icon name="lock-closed" class="inline-block h-3.5 w-3.5 align-middle" ></ndd-icon> inherit
-          their permission from the organization level and cannot be changed here. Modify these in
+          <ndd-icon name="lock-closed" class="inline-block h-3.5 w-3.5 align-middle"></ndd-icon>
+          inherit their permission from the organization level and cannot be changed here. Modify
+          these in
           <a
             [routerLink]="['/organization/members']"
             class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 font-medium underline hover:no-underline"
@@ -52,11 +53,19 @@
       <div
         class="mb-5 flex items-start gap-3 rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
       >
-        <ndd-icon name="exclamation-circle" class="mt-0.5 h-5 w-5 shrink-0 text-rose-400!" ></ndd-icon>
+        <ndd-icon
+          name="exclamation-circle"
+          class="mt-0.5 h-5 w-5 shrink-0 text-rose-400!"
+        ></ndd-icon>
         <div class="flex-1">
           <p class="text-rose-600 dark:text-rose-400">{{ error() }}</p>
         </div>
-        <ndd-button type="button" (click)="error.set(null)" text="Dismiss" variant="primary" ></ndd-button>
+        <ndd-button
+          type="button"
+          (click)="error.set(null)"
+          text="Dismiss"
+          variant="primary"
+        ></ndd-button>
       </div>
     }
 
@@ -106,7 +115,7 @@
                 <td>
                   @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
                     <span class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                      <ndd-icon name="lock-closed" class="h-3.5 w-3.5" ></ndd-icon>
+                      <ndd-icon name="lock-closed" class="h-3.5 w-3.5"></ndd-icon>
                       Organization
                     </span>
                   } @else if (view.source === 'org') {
@@ -247,11 +256,12 @@
 
 <!-- Remove Member Modal -->
 <ndd-modal-dialog
+  #removeMemberDialog
   appDialogSync
   [show]="showRemoveMemberModal()"
   text="Remove member"
   variant="alert"
-  (open)="onRemoveMemberModalOpen($event)"
+  (open)="onRemoveMemberModalOpen()"
   (close)="showRemoveMemberModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>

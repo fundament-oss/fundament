@@ -247,11 +247,12 @@
 
 <!-- Remove Role Binding Modal -->
 <ndd-modal-dialog
+  #removeModal
   appDialogSync
   [show]="showRemoveModal()"
   text="Remove role binding"
   variant="alert"
-  (open)="onRemoveModalOpen($event)"
+  (open)="onRemoveModalOpen()"
   (close)="showRemoveModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>

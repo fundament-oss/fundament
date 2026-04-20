@@ -108,11 +108,12 @@
 
 <!-- Delete Project Modal -->
 <ndd-modal-dialog
+  #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
   text="Delete project"
   variant="alert"
-  (open)="onDeleteModalOpen($event)"
+  (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>

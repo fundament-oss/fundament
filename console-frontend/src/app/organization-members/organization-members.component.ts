@@ -279,11 +279,17 @@ export default class OrganizationMembersComponent implements OnInit {
     if (el) focusFirstModalInput(el);
   }
 
-  onDeleteModalOpen(event: Event): void {
-    if (this.showDeleteModal()) focusFirstModalInput(event.target as HTMLElement);
+  deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
+
+  onDeleteModalOpen(): void {
+    const el = this.deleteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 
-  onEditModalOpen(event: Event): void {
-    if (this.showEditModal()) focusFirstModalInput(event.target as HTMLElement);
+  editDialogRef = viewChild<ElementRef<HTMLElement>>('editDialog');
+
+  onEditModalOpen(): void {
+    const el = this.editDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }

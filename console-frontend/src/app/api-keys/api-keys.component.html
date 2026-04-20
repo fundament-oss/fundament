@@ -24,7 +24,12 @@
         <div class="mb-4">
           <ndd-form-field label="Your API token">
             <div class="flex gap-2">
-              <ndd-text-field id="apiToken" [value]="createdToken()" readonly class="flex-1" ></ndd-text-field>
+              <ndd-text-field
+                id="apiToken"
+                [value]="createdToken()"
+                readonly
+                class="flex-1"
+              ></ndd-text-field>
               <ndd-button
                 type="button"
                 (click)="copyToken()"
@@ -215,11 +220,12 @@
 
 <!-- Revoke API Key Modal -->
 <ndd-modal-dialog
+  #revokeDialog
   appDialogSync
   [show]="showRevokeModal()"
   text="Revoke API key"
   variant="alert"
-  (open)="onRevokeModalOpen($event)"
+  (open)="onRevokeModalOpen()"
   (close)="showRevokeModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
@@ -248,11 +254,12 @@
 
 <!-- Delete API Key Modal -->
 <ndd-modal-dialog
+  #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
   text="Delete API key"
   variant="alert"
-  (open)="onDeleteModalOpen($event)"
+  (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>

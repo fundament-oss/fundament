@@ -108,11 +108,12 @@
 
 <!-- Delete Namespace Modal -->
 <ndd-modal-dialog
+  #deleteNamespaceDialog
   appDialogSync
   [show]="showDeleteNamespaceModal()"
   text="Delete namespace"
   variant="alert"
-  (open)="onDeleteNamespaceModalOpen($event)"
+  (open)="onDeleteNamespaceModalOpen()"
   (close)="showDeleteNamespaceModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>

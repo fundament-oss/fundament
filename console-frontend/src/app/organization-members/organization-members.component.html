@@ -107,7 +107,10 @@
         </div>
       } @else {
         <div class="rounded-md border border-gray-200 p-4 text-center dark:border-gray-800">
-          <ndd-icon name="envelope" class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!" ></ndd-icon>
+          <ndd-icon
+            name="envelope"
+            class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!"
+          ></ndd-icon>
           <p class="mt-2 text-gray-600 dark:text-gray-400">No pending invitations</p>
         </div>
       }
@@ -134,15 +137,23 @@
         <div
           class="rounded-md border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-800 dark:bg-rose-950"
         >
-          <ndd-icon name="exclamation-circle" class="mx-auto h-12 w-12 text-rose-400!" ></ndd-icon>
+          <ndd-icon name="exclamation-circle" class="mx-auto h-12 w-12 text-rose-400!"></ndd-icon>
           <p class="mt-2 text-rose-600 dark:text-rose-400">{{ error() }}</p>
-          <ndd-button type="button" (click)="loadMembers()" text="Try again" variant="primary" ></ndd-button>
+          <ndd-button
+            type="button"
+            (click)="loadMembers()"
+            text="Try again"
+            variant="primary"
+          ></ndd-button>
         </div>
       } @else if (activeMembers().length === 0) {
         <div
           class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700"
         >
-          <ndd-icon name="person-2" class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!" ></ndd-icon>
+          <ndd-icon
+            name="person-2"
+            class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!"
+          ></ndd-icon>
           <p class="mt-2 text-gray-600 dark:text-gray-400">No members found</p>
         </div>
       } @else {
@@ -224,11 +235,12 @@
 
 <!-- Delete Member Modal -->
 <ndd-modal-dialog
+  #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
   text="Remove member"
   variant="alert"
-  (open)="onDeleteModalOpen($event)"
+  (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>
@@ -260,10 +272,11 @@
 
 <!-- Edit Member Modal -->
 <ndd-modal-dialog
+  #editDialog
   appDialogSync
   [show]="showEditModal()"
   text="Edit member"
-  (open)="onEditModalOpen($event)"
+  (open)="onEditModalOpen()"
   (close)="showEditModal.set(false)"
 >
   <ndd-spacer size="24"></ndd-spacer>

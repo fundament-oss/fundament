@@ -278,7 +278,10 @@ export default class ProjectMembersComponent implements OnInit {
     if (el) focusFirstModalInput(el);
   }
 
-  onRemoveMemberModalOpen(event: Event): void {
-    if (this.showRemoveMemberModal()) focusFirstModalInput(event.target as HTMLElement);
+  removeMemberDialogRef = viewChild<ElementRef<HTMLElement>>('removeMemberDialog');
+
+  onRemoveMemberModalOpen(): void {
+    const el = this.removeMemberDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }
