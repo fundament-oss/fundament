@@ -11,7 +11,6 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 import { Calendar } from 'vanilla-calendar-pro';
-import 'vanilla-calendar-pro/styles/layout.css';
 
 @Component({
   selector: 'app-date-range-picker',

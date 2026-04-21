@@ -1,3 +1,4 @@
+@import 'vanilla-calendar-pro/styles/layout.css';
 @reference 'tailwindcss';
 @custom-variant dark (&:where(.dark, .dark *));
 
