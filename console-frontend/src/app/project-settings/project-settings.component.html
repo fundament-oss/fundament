@@ -45,7 +45,7 @@
                 class="flex-1"
                 (keyup.enter)="saveEdit()"
                 (keyup.escape)="cancelEdit()"
-              />
+              ></ndd-text-field>
               <ndd-button
                 type="button"
                 (click)="saveEdit()"
@@ -53,7 +53,7 @@
                 text="Save"
                 start-icon="check-mark"
                 variant="primary"
-              />
+              ></ndd-button>
               <ndd-button
                 type="button"
                 (click)="cancelEdit()"
@@ -61,7 +61,7 @@
                 text="Cancel"
                 start-icon="dismiss-small"
                 variant="secondary"
-              />
+              ></ndd-button>
             </div>
           } @else {
             <div class="flex items-center gap-3">
@@ -74,7 +74,7 @@
                 start-icon="pencil"
                 variant="secondary"
                 size="sm"
-              />
+              ></ndd-button>
             </div>
           }
         </div>
@@ -99,7 +99,7 @@
             (click)="showDeleteModal.set(true)"
             text="Delete this project"
             variant="destructive"
-          />
+          ></ndd-button>
         </div>
       </div>
     }

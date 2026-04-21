@@ -29,7 +29,7 @@
             (blur)="loginForm.get('email')!.markAsTouched()"
             [invalid]="!!(email?.invalid && email?.touched)"
             error-message="login-email-error"
-          />
+          ></ndd-text-field>
           <ndd-form-field-error-text id="login-email-error">
             {{ getEmailError() }}
           </ndd-form-field-error-text>
@@ -49,7 +49,7 @@
             hide-accessible-label="Hide password"
             [invalid]="!!(password?.invalid && password?.dirty)"
             error-message="login-password-error"
-          />
+          ></ndd-password-field>
           <ndd-form-field-error-text id="login-password-error">
             {{ getPasswordError() }}
           </ndd-form-field-error-text>
@@ -69,7 +69,7 @@
           [text]="isLoading() ? 'Signing in...' : 'Sign in'"
           type="submit"
           (click)="onSubmit()"
-        />
+        ></ndd-button>
       </form>
     </div>
   </div>

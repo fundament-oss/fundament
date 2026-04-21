@@ -6,7 +6,7 @@
     <ndd-icon
       name="dismiss-circle"
       class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-    />
+    ></ndd-icon>
     <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -26,7 +26,7 @@
       start-icon="plus-small"
       variant="primary"
       class="mb-6"
-    />
+    ></ndd-button>
 
     @if (namespaces().length === 0) {
       <p class="text-gray-500 dark:text-gray-400">No namespaces belong to this project yet.</p>
@@ -49,7 +49,7 @@
               start-icon="trash"
               variant="destructive"
               size="sm"
-            />
+            ></ndd-button>
           </div>
         }
       </div>
@@ -81,7 +81,7 @@
         [invalid]="!!(namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty)"
         error-message="namespace-name-error"
         (input)="onNameInput($event)"
-      />
+      ></ndd-text-field>
       <ndd-form-field-error-text id="namespace-name-error">
         {{ getNameError() }}
       </ndd-form-field-error-text>

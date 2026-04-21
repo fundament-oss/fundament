@@ -6,7 +6,7 @@
     <ndd-icon
       name="dismiss-circle"
       class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-    />
+    ></ndd-icon>
     <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -75,7 +75,7 @@
         [invalid]="!!(projectForm.get('name')?.invalid && projectForm.get('name')?.dirty)"
         error-message="add-project-name-error"
         (input)="onNameInput($event)"
-      />
+      ></ndd-text-field>
       <ndd-form-field-error-text id="add-project-name-error">
         {{ getNameError() }}
       </ndd-form-field-error-text>
@@ -93,7 +93,7 @@
         [text]="isSubmitting() ? 'Creating...' : 'Create project'"
         [disabled]="isSubmitting()"
         variant="primary"
-      />
+      ></ndd-button>
     </div>
   </form>
 </div>

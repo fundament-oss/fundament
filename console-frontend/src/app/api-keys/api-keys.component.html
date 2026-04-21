@@ -36,7 +36,7 @@
                 text="Copy"
                 start-icon="squares-stack-plus"
                 variant="primary"
-              />
+              ></ndd-button>
             </div>
           </ndd-form-field>
         </div>
@@ -46,7 +46,7 @@
           text="I've saved the token"
           start-icon="check-mark"
           variant="primary"
-        />
+        ></ndd-button>
       </div>
     }
 
@@ -73,7 +73,7 @@
               (keyup.escape)="cancelCreating()"
               [invalid]="!newKeyName().trim() && newKeyNameTouched()"
               error-message="api-key-name-error"
-            />
+            ></ndd-text-field>
             <ndd-form-field-error-text id="api-key-name-error">
               Name is required
             </ndd-form-field-error-text>
@@ -85,7 +85,7 @@
               placeholder="Leave blank if you don't want the key to expire."
               (input)="newKeyExpiresIn.set($any($event.target).value)"
               (keyup.escape)="cancelCreating()"
-            />
+            ></ndd-text-field>
             <ndd-form-field-help-text>
               Optional. Formatted as duration, eg. 300s, 5m or 1h.
             </ndd-form-field-help-text>
@@ -97,14 +97,14 @@
               [disabled]="loading()"
               text="Create"
               variant="primary"
-            />
+            ></ndd-button>
             <ndd-button
               type="button"
               (click)="cancelCreating()"
               [disabled]="loading()"
               text="Cancel"
               variant="secondary"
-            />
+            ></ndd-button>
           </div>
         </form>
       </div>
@@ -118,7 +118,7 @@
         start-icon="plus-small"
         variant="primary"
         class="mb-6"
-      />
+      ></ndd-button>
     }
 
     <!-- Loading State -->
@@ -189,7 +189,7 @@
                         start-icon="slash-circle"
                         size="sm"
                         variant="secondary"
-                      />
+                      ></ndd-button>
                     }
                     <ndd-button
                       (click)="openDeleteModal(apiKey.id, apiKey.name)"
@@ -198,7 +198,7 @@
                       start-icon="trash"
                       size="sm"
                       variant="destructive"
-                    />
+                    ></ndd-button>
                   </div>
                 </td>
               </tr>

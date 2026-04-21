@@ -6,7 +6,7 @@
     <ndd-icon
       name="dismiss-circle"
       class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-    />
+    ></ndd-icon>
     <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -47,7 +47,7 @@
             variant="secondary"
             start-icon="terminal"
             size="sm"
-          />
+          ></ndd-button>
           <ndd-button
             type="button"
             (click)="downloadKubeconfig()"
@@ -55,7 +55,7 @@
             start-icon="arrow-down-in-bucket"
             variant="primary"
             size="sm"
-          />
+          ></ndd-button>
         </div>
       </div>
     </div>
@@ -97,7 +97,7 @@
                 variant="secondary"
                 size="xs"
                 class="ml-1"
-              />
+              ></ndd-button>
             </dd>
           </dl>
         </div>
@@ -159,7 +159,7 @@
               <ndd-icon
                 name="caret-right"
                 class="text-accent-500! mr-1 h-4 w-4 transition-transform group-open:rotate-90"
-              />
+              ></ndd-icon>
               Sync details
             </summary>
 
@@ -480,7 +480,7 @@
               variant="secondary"
               size="xs"
               class="ml-1"
-            />
+            ></ndd-button>
           </h3>
           @if (clusterData.nodePools.length === 0) {
             <p class="text-gray-500 dark:text-gray-400">No node pools are configured yet.</p>
@@ -541,7 +541,7 @@
               variant="secondary"
               size="xs"
               class="ml-1"
-            />
+            ></ndd-button>
           </h3>
           @if (isLoadingPlugins()) {
             <p class="text-gray-500 dark:text-gray-400">Loading plugins...</p>
@@ -574,7 +574,7 @@
               variant="secondary"
               size="xs"
               class="ml-1"
-            />
+            ></ndd-button>
           </h3>
           @if (namespaces().length === 0) {
             <p class="text-gray-500 dark:text-gray-400">No namespaces in this cluster yet.</p>
@@ -606,7 +606,7 @@
           (click)="showDeleteModal.set(true)"
           text="Delete this cluster"
           variant="destructive"
-        />
+        ></ndd-button>
       </div>
     </div>
   </div>

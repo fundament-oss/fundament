@@ -13,7 +13,7 @@
       <ndd-icon
         name="info-circle"
         class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
-      />
+      ></ndd-icon>
       <p class="text-accent-700 dark:text-accent-300">
         Roles provide actual access to namespace resources. Only admins (on organization or project
         level) can manage roles.
@@ -27,7 +27,7 @@
         text="Create role binding"
         start-icon="plus-small"
         variant="primary"
-      />
+      ></ndd-button>
 
       <!-- Filters -->
       <select
@@ -80,7 +80,7 @@
                     variant="secondary"
                     size="sm"
                     class="mr-2"
-                  />
+                  ></ndd-button>
 
                   <ndd-button
                     (click)="openRemoveModal(binding.id)"
@@ -88,7 +88,7 @@
                     start-icon="trash"
                     variant="destructive"
                     size="sm"
-                  />
+                  ></ndd-button>
                 </td>
               </tr>
             }
@@ -148,21 +148,21 @@
                 value="all"
                 label="All namespaces"
                 [checked]="namespaceMode() === 'all'"
-              />
+              ></ndd-radio-button-field>
             </div>
             <div class="radio-option mb-2 py-0.5">
               <ndd-radio-button-field
                 value="specific"
                 label="Specific namespace"
                 [checked]="namespaceMode() === 'specific'"
-              />
+              ></ndd-radio-button-field>
             </div>
             <div class="radio-option py-0.5">
               <ndd-radio-button-field
                 value="custom"
                 label="Custom pattern"
                 [checked]="namespaceMode() === 'custom'"
-              />
+              ></ndd-radio-button-field>
             </div>
           </ndd-radio-button-group>
         </ndd-form-field>
@@ -195,7 +195,7 @@
               placeholder="E.g. staging-* or my-namespace"
               [value]="modalCustomNamespace()"
               (input)="modalCustomNamespace.set($any($event.target).value)"
-            />
+            ></ndd-text-field>
             @if (customNamespaceError()) {
               <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">
                 Please enter a namespace pattern.

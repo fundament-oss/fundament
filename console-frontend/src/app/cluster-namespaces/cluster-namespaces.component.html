@@ -14,7 +14,7 @@
         <ndd-icon
           name="dismiss-circle"
           class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-        />
+        ></ndd-icon>
         <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
       </div>
     }
@@ -37,7 +37,7 @@
         start-icon="plus-small"
         variant="primary"
         class="mb-4"
-      />
+      ></ndd-button>
 
       @if (namespaces().length === 0) {
         <p class="text-gray-500 dark:text-gray-400">No namespaces in this cluster yet.</p>
@@ -61,7 +61,7 @@
                 start-icon="trash"
                 size="sm"
                 variant="destructive"
-              />
+              ></ndd-button>
             </div>
           }
         </div>
@@ -127,7 +127,7 @@
         [invalid]="!!(namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty)"
         error-message="cluster-namespace-name-error"
         (input)="onNamespaceNameInput($event)"
-      />
+      ></ndd-text-field>
       <ndd-form-field-error-text id="cluster-namespace-name-error">
         {{ getNamespaceNameError() }}
       </ndd-form-field-error-text>

@@ -17,7 +17,7 @@
               start-icon="trash"
               size="sm"
               variant="destructive"
-            />
+            ></ndd-button>
           }
         </div>
 
@@ -32,7 +32,7 @@
               [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
               [attr.error-message]="'node-pool-name-error-' + $index"
               (input)="onNodePoolNameInput($index, $event)"
-            />
+            ></ndd-text-field>
             <ndd-form-field-error-text [id]="'node-pool-name-error-' + $index">
               {{ getNodePoolNameError($index) }}
             </ndd-form-field-error-text>
@@ -83,7 +83,7 @@
     start-icon="plus-small"
     variant="secondary"
     size="sm"
-  />
+  ></ndd-button>
 
   <!-- Form Actions slot -->
   <div class="border-t border-gray-200 pt-6 dark:border-gray-800">

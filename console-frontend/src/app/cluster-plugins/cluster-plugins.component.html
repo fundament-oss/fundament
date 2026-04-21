@@ -14,7 +14,7 @@
         <ndd-icon
           name="dismiss-circle"
           class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-        />
+        ></ndd-icon>
         <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
       </div>
     }
@@ -29,14 +29,14 @@
           [disabled]="isSubmitting()"
           text="Cancel"
           variant="secondary"
-        />
+        ></ndd-button>
         <ndd-button
           type="button"
           (click)="pluginsForm.submit()"
           [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
           [disabled]="isSubmitting()"
           variant="primary"
-        />
+        ></ndd-button>
       </div>
     </app-shared-plugins-form>
   </div>

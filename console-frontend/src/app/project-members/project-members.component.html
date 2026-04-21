@@ -15,7 +15,7 @@
       <ndd-icon
         name="info-circle"
         class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
-      />
+      ></ndd-icon>
       <div class="text-accent-700 dark:text-accent-300">
         <p class="mb-2">
           Members marked with
@@ -47,7 +47,7 @@
       start-icon="plus-small"
       variant="primary"
       class="mb-6"
-    />
+    ></ndd-button>
 
     @if (error()) {
       <div
@@ -136,7 +136,7 @@
                       start-icon="pencil"
                       variant="secondary"
                       size="sm"
-                    />
+                    ></ndd-button>
                     @if (view.source === 'project' && view.orgPermission !== null) {
                       <ndd-button
                         (click)="resetToOrgDefault(view)"
@@ -145,7 +145,7 @@
                         variant="destructive"
                         size="sm"
                         class="ml-2"
-                      />
+                      ></ndd-button>
                     } @else if (view.source === 'project') {
                       <ndd-button
                         (click)="openRemoveMemberModal(view)"
@@ -154,7 +154,7 @@
                         variant="destructive"
                         size="sm"
                         class="ml-2"
-                      />
+                      ></ndd-button>
                     }
                   }
                 </td>
@@ -216,7 +216,7 @@
               value="viewer"
               label="Project viewer"
               [checked]="memberForm.get('permission')?.value === 'viewer'"
-            />
+            ></ndd-radio-button-field>
             <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
               >Read access to resources</span
             >
@@ -226,7 +226,7 @@
               value="admin"
               label="Project admin"
               [checked]="memberForm.get('permission')?.value === 'admin'"
-            />
+            ></ndd-radio-button-field>
             <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
               >Full access to resources</span
             >

@@ -19,7 +19,7 @@
       <ndd-icon
         name="info-circle"
         class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
-      />
+      ></ndd-icon>
       <div class="text-accent-700 dark:text-accent-300">
         <p class="mb-2">
           Organization admins can manage members across all projects. This permission overrides
@@ -40,7 +40,7 @@
       start-icon="plus-small"
       variant="primary"
       class="mb-4"
-    />
+    ></ndd-button>
 
     <!-- Pending Invitations Section -->
     <div class="mb-8">
@@ -98,7 +98,7 @@
                       start-icon="trash"
                       variant="destructive"
                       size="sm"
-                    />
+                    ></ndd-button>
                   </td>
                 </tr>
               }
@@ -213,14 +213,14 @@
                         variant="secondary"
                         size="sm"
                         class="mr-2"
-                      />
+                      ></ndd-button>
                       <ndd-button
                         (click)="openDeleteModal(member)"
                         text="Remove"
                         start-icon="trash"
                         variant="destructive"
                         size="sm"
-                      />
+                      ></ndd-button>
                     }
                   </td>
                 </tr>
@@ -299,7 +299,7 @@
           value="viewer"
           label="Viewer"
           [checked]="editPermission() === 'viewer'"
-        />
+        ></ndd-radio-button-field>
         <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
           >Read access to resources</span
         >
@@ -309,7 +309,7 @@
           value="admin"
           label="Admin"
           [checked]="editPermission() === 'admin'"
-        />
+        ></ndd-radio-button-field>
         <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
           >Full access to resources</span
         >
@@ -367,7 +367,7 @@
         [disabled]="isSubmitting()"
         [invalid]="!!(inviteError() || (inviteEmailDirty() && !inviteEmail().trim()))"
         error-message="org-invite-email-error"
-      />
+      ></ndd-text-field>
       <ndd-form-field-error-text id="org-invite-email-error">
         {{ inviteError() || 'The user email is required' }}
       </ndd-form-field-error-text>
@@ -385,7 +385,7 @@
               value="viewer"
               label="Viewer"
               [checked]="invitePermission() === 'viewer'"
-            />
+            ></ndd-radio-button-field>
             <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
               >Read access to resources</span
             >
@@ -395,7 +395,7 @@
               value="admin"
               label="Admin"
               [checked]="invitePermission() === 'admin'"
-            />
+            ></ndd-radio-button-field>
             <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
               >Full access to resources</span
             >

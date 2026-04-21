@@ -106,7 +106,7 @@
       <ndd-icon
         name="dismiss-circle"
         class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-      />
+      ></ndd-icon>
       <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
     </div>
   }
@@ -134,17 +134,17 @@
           <ndd-icon
             name="check-mark-circle"
             class="h-5 w-5 shrink-0 text-green-500! dark:text-green-400!"
-          />
+          ></ndd-icon>
         } @else if (bannerState() === 'partial') {
           <ndd-icon
             name="exclamation-circle"
             class="h-4.5 w-4.5 shrink-0 text-amber-500! dark:text-amber-400!"
-          />
+          ></ndd-icon>
         } @else {
           <ndd-icon
             name="dismiss-circle"
             class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-          />
+          ></ndd-icon>
         }
         <div>
           <p
@@ -180,14 +180,14 @@
           (click)="reopenModal()"
           text="View progress"
           variant="secondary"
-        />
+        ></ndd-button>
         @if (clusterId()) {
           <ndd-button
             type="button"
             (click)="navigateToCluster()"
             text="Go to cluster"
             variant="primary"
-          />
+          ></ndd-button>
         }
       </div>
     </div>
@@ -202,14 +202,14 @@
         [class.pointer-events-none]="isCreating() || showModal()"
         [class.opacity-50]="isCreating() || showModal()"
         variant="secondary"
-      />
+      ></ndd-button>
       <ndd-button
         type="button"
         (click)="onCreateCluster()"
         [text]="isCreating() ? 'Creating...' : 'Create cluster'"
         [disabled]="isCreating() || showModal()"
         variant="primary"
-      />
+      ></ndd-button>
     </div>
   }
 </div>
@@ -289,7 +289,7 @@
             start-icon="arrow-u-turn-forward"
             variant="secondary"
             size="xs"
-          />
+          ></ndd-button>
         }
       </div>
     }
