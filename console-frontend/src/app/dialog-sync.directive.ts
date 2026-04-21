@@ -3,7 +3,7 @@ import { Directive, ElementRef, effect, inject, input } from '@angular/core';
 type DialogElement = HTMLElement & { show(): void; hide(): void };
 
 @Directive({
-  selector: 'ndd-modal-dialog[appDialogSync]',
+  selector: 'nldd-modal-dialog[appDialogSync]',
 })
 export default class DialogSyncDirective {
   private el = inject<ElementRef<DialogElement>>(ElementRef);

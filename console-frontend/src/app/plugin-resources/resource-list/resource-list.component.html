@@ -24,9 +24,9 @@
       <!-- Cluster select + refresh -->
       <div class="mt-2 flex items-center gap-3">
         @if (clusterContext.isLoadingClusters()) {
-          <ndd-form-field label="Cluster">
+          <nldd-form-field label="Cluster">
             <div class="select animate-pulse bg-gray-100 dark:bg-gray-800">&nbsp;</div>
-          </ndd-form-field>
+          </nldd-form-field>
         } @else if (clusterContext.clusters().length === 0) {
           <p class="text-gray-600 dark:text-gray-400">
             No clusters found.
@@ -34,7 +34,7 @@
             plugin.
           </p>
         } @else {
-          <ndd-form-field label="Cluster">
+          <nldd-form-field label="Cluster">
             <select
               id="cluster-select"
               class="select"
@@ -45,14 +45,14 @@
                 <option [value]="cluster.id">{{ cluster.name }}</option>
               }
             </select>
-          </ndd-form-field>
-          <ndd-button
+          </nldd-form-field>
+          <nldd-button
             (click)="onRefresh()"
             text="Refresh"
             start-icon="arrow-2-counter-clockwise"
             variant="secondary"
             size="sm"
-          ></ndd-button>
+          ></nldd-button>
         }
       </div>
     </div>
@@ -111,13 +111,13 @@
                     }
                     <td>
                       <div class="flex gap-1">
-                        <ndd-button
+                        <nldd-button
                           [routerLink]="detailLink(resource)"
                           text="View"
                           start-icon="eye"
                           variant="secondary"
                           size="sm"
-                        ></ndd-button>
+                        ></nldd-button>
                       </div>
                     </td>
                   </tr>
@@ -130,10 +130,10 @@
         <!-- Empty State -->
         @if (resources().length === 0) {
           <div class="py-8 text-center">
-            <ndd-icon
+            <nldd-icon
               name="cylinder-split-slash"
               class="mx-auto mb-3 h-12 w-12 text-gray-400!"
-            ></ndd-icon>
+            ></nldd-icon>
             <p class="text-gray-600 dark:text-gray-300">No {{ kindLabel().toLowerCase() }} found</p>
           </div>
         }

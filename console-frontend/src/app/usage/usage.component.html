@@ -13,13 +13,13 @@
         </p>
       </div>
       <div class="flex gap-2 sm:justify-end">
-        <ndd-button
+        <nldd-button
           type="button"
           text="Download CSV"
           start-icon="table-badge-arrow-down"
           size="sm"
           variant="primary"
-        ></ndd-button>
+        ></nldd-button>
       </div>
     </div>
   </div>
@@ -42,7 +42,7 @@
 
       <!-- Cluster filter — only shown in org-level view -->
       @if (viewMode() === 'org') {
-        <ndd-form-field label="Cluster" class="lg:col-span-2">
+        <nldd-form-field label="Cluster" class="lg:col-span-2">
           <select
             id="cluster"
             [ngModel]="selectedClusterId()"
@@ -55,12 +55,12 @@
               <option [value]="cluster.id">{{ cluster.name }}</option>
             }
           </select>
-        </ndd-form-field>
+        </nldd-form-field>
       }
 
       <!-- Namespace filter — only shown in project-level view -->
       @if (viewMode() === 'project') {
-        <ndd-form-field label="Namespace" class="lg:col-span-2">
+        <nldd-form-field label="Namespace" class="lg:col-span-2">
           <select
             id="namespace"
             [ngModel]="selectedNamespace()"
@@ -72,7 +72,7 @@
               <option [value]="ns.name">{{ ns.name }}</option>
             }
           </select>
-        </ndd-form-field>
+        </nldd-form-field>
       }
     </div>
   </div>
@@ -91,10 +91,10 @@
       <div
         class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
       >
-        <ndd-icon
+        <nldd-icon
           name="dismiss-circle"
           class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-        ></ndd-icon>
+        ></nldd-icon>
         <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
       </div>
     }

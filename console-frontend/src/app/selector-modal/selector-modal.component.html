@@ -1,15 +1,15 @@
-<ndd-modal-dialog
+<nldd-modal-dialog
   #dialog
   text="Select organization or project"
   accessible-label="Select organization or project"
   (open)="onOpen()"
   (close)="onClose()"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <!-- Filter Input -->
   <div class="mb-4">
-    <ndd-search-field
+    <nldd-search-field
       #searchField
       [value]="filterInputValue()"
       placeholder="Search..."
@@ -18,7 +18,7 @@
       name="filter"
       (input)="updateFilter($event)"
       (change)="updateFilter($event)"
-    ></ndd-search-field>
+    ></nldd-search-field>
   </div>
 
   <!-- Nested Tree -->
@@ -44,7 +44,7 @@
                 : 'text-gray-700 dark:text-gray-300')
             "
           >
-            <ndd-icon name="apartment-building" class="mr-2 h-4 w-4 shrink-0"></ndd-icon>
+            <nldd-icon name="apartment-building" class="mr-2 h-4 w-4 shrink-0"></nldd-icon>
             <span class="truncate">{{ org.alias }}</span>
           </button>
 
@@ -73,7 +73,7 @@
                         : 'text-gray-700 dark:text-gray-300')
                     "
                   >
-                    <ndd-icon name="folder" class="mr-2 h-4 w-4 shrink-0"></ndd-icon>
+                    <nldd-icon name="folder" class="mr-2 h-4 w-4 shrink-0"></nldd-icon>
                     <span class="truncate">{{ project.name }}</span>
                   </button>
                 </div>
@@ -85,5 +85,5 @@
     }
   </div>
 
-  <ndd-button slot="actions" variant="neutral-tinted" text="Close" (click)="onClose()"></ndd-button>
-</ndd-modal-dialog>
+  <nldd-button slot="actions" variant="neutral-tinted" text="Close" (click)="onClose()"></nldd-button>
+</nldd-modal-dialog>

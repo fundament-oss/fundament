@@ -52,35 +52,35 @@
           </div>
           @if (isEditing()) {
             <div class="flex gap-2">
-              <ndd-text-field
+              <nldd-text-field
                 appAutofocus
                 [value]="editingName()"
                 (input)="editingName.set($any($event.target).value)"
                 (keyup.enter)="saveEdit()"
                 (keyup.escape)="cancelEdit()"
                 class="flex-1"
-              ></ndd-text-field>
-              <ndd-button
+              ></nldd-text-field>
+              <nldd-button
                 type="button"
                 (click)="saveEdit()"
                 [disabled]="loading()"
                 text="Save"
                 start-icon="check-mark"
                 variant="primary"
-              ></ndd-button>
-              <ndd-button
+              ></nldd-button>
+              <nldd-button
                 type="button"
                 (click)="cancelEdit()"
                 [disabled]="loading()"
                 text="Cancel"
                 start-icon="dismiss-small"
                 variant="secondary"
-              ></ndd-button>
+              ></nldd-button>
             </div>
           } @else {
             <div class="flex items-center gap-3">
               <p class="text-gray-900 dark:text-white">{{ organization()!.alias }}</p>
-              <ndd-button
+              <nldd-button
                 type="button"
                 (click)="startEdit()"
                 [disabled]="loading()"
@@ -88,7 +88,7 @@
                 start-icon="pencil"
                 variant="secondary"
                 size="sm"
-              ></ndd-button>
+              ></nldd-button>
             </div>
           }
         </div>

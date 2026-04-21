@@ -17,8 +17,8 @@
         (ngSubmit)="onSubmit()"
         (keydown.enter)="onSubmit()"
       >
-        <ndd-form-field label="Email address">
-          <ndd-text-field
+        <nldd-form-field label="Email address">
+          <nldd-text-field
             type="email"
             id="email"
             placeholder="Enter your email address"
@@ -29,14 +29,14 @@
             (blur)="loginForm.get('email')!.markAsTouched()"
             [invalid]="!!(email?.invalid && email?.touched)"
             error-message="login-email-error"
-          ></ndd-text-field>
-          <ndd-form-field-error-text id="login-email-error">
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="login-email-error">
             {{ getEmailError() }}
-          </ndd-form-field-error-text>
-        </ndd-form-field>
+          </nldd-form-field-error-text>
+        </nldd-form-field>
 
-        <ndd-form-field label="Password">
-          <ndd-password-field
+        <nldd-form-field label="Password">
+          <nldd-password-field
             id="password"
             placeholder="Enter your password"
             autocomplete="current-password"
@@ -49,11 +49,11 @@
             hide-accessible-label="Hide password"
             [invalid]="!!(password?.invalid && password?.dirty)"
             error-message="login-password-error"
-          ></ndd-password-field>
-          <ndd-form-field-error-text id="login-password-error">
+          ></nldd-password-field>
+          <nldd-form-field-error-text id="login-password-error">
             {{ getPasswordError() }}
-          </ndd-form-field-error-text>
-        </ndd-form-field>
+          </nldd-form-field-error-text>
+        </nldd-form-field>
 
         @if (error()) {
           <div class="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
@@ -61,7 +61,7 @@
           </div>
         }
 
-        <ndd-button
+        <nldd-button
           variant="accent-filled"
           full-width
           [attr.disabled]="isLoading() ? '' : null"
@@ -69,7 +69,7 @@
           [text]="isLoading() ? 'Signing in...' : 'Sign in'"
           type="submit"
           (click)="onSubmit()"
-        ></ndd-button>
+        ></nldd-button>
       </form>
     </div>
   </div>

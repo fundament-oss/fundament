@@ -1,7 +1,7 @@
 export default function focusFirstModalInput(dialog: HTMLElement): void {
   const candidates = Array.from(
     dialog.querySelectorAll<HTMLElement>(
-      'input:not([disabled]), select:not([disabled]), ndd-text-field:not([disabled]), ndd-search-field:not([disabled]), ndd-button:not([disabled]), button:not([disabled])',
+      'input:not([disabled]), select:not([disabled]), nldd-text-field:not([disabled]), nldd-search-field:not([disabled]), nldd-button:not([disabled]), button:not([disabled])',
     ),
   );
   const el =

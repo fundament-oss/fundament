@@ -20,13 +20,13 @@
       <p class="mt-1 text-gray-600 dark:text-gray-300">Manage projects across your clusters</p>
 
       @if (clusters().length > 0) {
-        <ndd-button
+        <nldd-button
           routerLink="/projects/add"
           text="Add project"
           start-icon="plus-small"
           variant="primary"
           class="mt-4"
-        ></ndd-button>
+        ></nldd-button>
       }
     </div>
 
@@ -66,10 +66,10 @@
                 <div
                   class="flex items-center gap-3 rounded-lg border border-dashed border-gray-200 px-5 py-4 dark:border-gray-800"
                 >
-                  <ndd-icon
+                  <nldd-icon
                     name="folder-stack"
                     class="h-4.5 w-4.5 shrink-0 text-gray-300 dark:text-gray-600"
-                  ></ndd-icon>
+                  ></nldd-icon>
                   <p class="text-gray-500 dark:text-gray-400">No projects in this cluster yet.</p>
                 </div>
               } @else {
@@ -84,15 +84,15 @@
                       <div
                         class="bg-accent-50 text-accent-600 dark:bg-accent-950/50 dark:text-accent-400 flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
                       >
-                        <ndd-icon name="folder" class="h-5 w-5"></ndd-icon>
+                        <nldd-icon name="folder" class="h-5 w-5"></nldd-icon>
                       </div>
                       <span class="min-w-0 flex-1 font-medium">
                         {{ project.name }}
                       </span>
-                      <ndd-icon
+                      <nldd-icon
                         name="chevron-right-small"
                         class="h-4.5 w-4.5 shrink-0 text-gray-300 group-hover:text-gray-400 dark:text-gray-600 dark:group-hover:text-gray-500"
-                      ></ndd-icon>
+                      ></nldd-icon>
                     </a>
                   }
                 </div>

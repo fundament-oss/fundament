@@ -46,7 +46,7 @@
                       "
                     >
                       @if (tag.name.toLowerCase() === 'official') {
-                        <ndd-icon name="check-mark" class="mr-1 h-3 w-3"></ndd-icon>
+                        <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
                       }
                       {{ tag.name }}
                     </span>
@@ -63,19 +63,19 @@
             <!-- Plugin Card Actions -->
             <div class="px-6 pb-6">
               <div class="flex space-x-3">
-                <ndd-button
+                <nldd-button
                   [routerLink]="['/plugins', plugin.id]"
                   text="Details"
                   variant="secondary"
                   size="sm"
-                ></ndd-button>
-                <ndd-button
+                ></nldd-button>
+                <nldd-button
                   (click)="onInstallPlugin(plugin)"
                   type="button"
                   text="Install"
                   variant="primary"
                   size="sm"
-                ></ndd-button>
+                ></nldd-button>
               </div>
             </div>
           </div>
@@ -98,10 +98,10 @@
       <!-- Empty State -->
       @if (!isLoading() && filteredPlugins.length === 0) {
         <div class="py-12 text-center">
-          <ndd-icon
+          <nldd-icon
             name="question-mark-circle"
             class="mx-auto h-8 w-8 text-gray-400! dark:text-gray-600!"
-          ></ndd-icon>
+          ></nldd-icon>
           <h3 class="mt-2 text-sm font-medium dark:text-white">No plugins found</h3>
           <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
             Please try selecting a different category.

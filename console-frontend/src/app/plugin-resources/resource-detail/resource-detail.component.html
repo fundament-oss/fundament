@@ -13,7 +13,7 @@
         <a
           [routerLink]="listLink"
           class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 mb-1 inline-flex items-center"
-          ><ndd-icon name="arrow-left" class="mr-1 h-4 w-4"></ndd-icon> Back to list</a
+          ><nldd-icon name="arrow-left" class="mr-1 h-4 w-4"></nldd-icon> Back to list</a
         >
         <h1 class="text-3xl font-semibold dark:text-white">{{ resource()!.metadata.name }}</h1>
         @if (resource()!.metadata.namespace) {
@@ -140,7 +140,7 @@
   <div class="card">
     <div class="card-body text-center">
       <p class="mb-4 text-gray-600 dark:text-gray-300">Resource not found</p>
-      <ndd-button [routerLink]="listLink" text="Back to list" variant="primary"></ndd-button>
+      <nldd-button [routerLink]="listLink" text="Back to list" variant="primary"></nldd-button>
     </div>
   </div>
 }

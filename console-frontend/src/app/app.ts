@@ -503,7 +503,7 @@ export default class App implements OnInit {
     // nav bar host (which contains the account button) the same as clicks inside
     // the dropdown to avoid the dropdown being closed immediately on open.
     const isInsideDropdown = !!target.closest('.user-dropdown');
-    const isNavBarHost = target.tagName?.toLowerCase() === 'ndd-top-navigation-bar';
+    const isNavBarHost = target.tagName?.toLowerCase() === 'nldd-top-navigation-bar';
 
     if (!isInsideDropdown && !isNavBarHost) {
       this.userDropdownOpen.set(false);

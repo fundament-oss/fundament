@@ -10,21 +10,21 @@
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-lg font-medium dark:text-white">Node pool {{ $index + 1 }}</h3>
           @if (nodePools.length > 1) {
-            <ndd-button
+            <nldd-button
               type="button"
               (click)="removeNodePool($index)"
               text="Remove"
               start-icon="trash"
               size="sm"
               variant="destructive"
-            ></ndd-button>
+            ></nldd-button>
           }
         </div>
 
         <div class="space-y-4">
           <!-- Node Pool Name -->
-          <ndd-form-field label="Node pool name">
-            <ndd-text-field
+          <nldd-form-field label="Node pool name">
+            <nldd-text-field
               [id]="'nodePoolName-' + $index"
               [value]="nameControl?.value ?? ''"
               [appAutofocus]="$first"
@@ -32,58 +32,58 @@
               [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
               [attr.error-message]="'node-pool-name-error-' + $index"
               (input)="onNodePoolNameInput($index, $event)"
-            ></ndd-text-field>
-            <ndd-form-field-error-text [id]="'node-pool-name-error-' + $index">
+            ></nldd-text-field>
+            <nldd-form-field-error-text [id]="'node-pool-name-error-' + $index">
               {{ getNodePoolNameError($index) }}
-            </ndd-form-field-error-text>
-          </ndd-form-field>
+            </nldd-form-field-error-text>
+          </nldd-form-field>
 
           <!-- Machine Type -->
-          <ndd-form-field label="Machine type">
+          <nldd-form-field label="Machine type">
             <select [id]="'machineType-' + $index" formControlName="machineType">
               @for (mt of machineTypes; track mt.value) {
                 <option [value]="mt.value">{{ mt.label }}</option>
               }
             </select>
-          </ndd-form-field>
+          </nldd-form-field>
 
           <!-- Autoscaling -->
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ndd-form-field label="Autoscale minimum">
-              <ndd-number-field
+            <nldd-form-field label="Autoscale minimum">
+              <nldd-number-field
                 [id]="'autoscaleMin-' + $index"
                 [value]="nodePoolControl.get('autoscaleMin')?.value"
                 (input)="nodePoolControl.get('autoscaleMin')?.setValue($any($event).detail.value)"
                 min="1"
                 max="100"
                 step="1"
-              ></ndd-number-field>
-            </ndd-form-field>
+              ></nldd-number-field>
+            </nldd-form-field>
 
-            <ndd-form-field label="Autoscale maximum">
-              <ndd-number-field
+            <nldd-form-field label="Autoscale maximum">
+              <nldd-number-field
                 [id]="'autoscaleMax-' + $index"
                 [value]="nodePoolControl.get('autoscaleMax')?.value"
                 (input)="nodePoolControl.get('autoscaleMax')?.setValue($any($event).detail.value)"
                 min="1"
                 max="100"
                 step="1"
-              ></ndd-number-field>
-            </ndd-form-field>
+              ></nldd-number-field>
+            </nldd-form-field>
           </div>
         </div>
       </div>
     }
   </div>
 
-  <ndd-button
+  <nldd-button
     type="button"
     (click)="addNodePool()"
     text="Add another node pool"
     start-icon="plus-small"
     variant="secondary"
     size="sm"
-  ></ndd-button>
+  ></nldd-button>
 
   <!-- Form Actions slot -->
   <div class="border-t border-gray-200 pt-6 dark:border-gray-800">

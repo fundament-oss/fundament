@@ -9,22 +9,22 @@
   } @else {
     <!-- Plugin Preset Selection -->
     <div class="space-y-4">
-      <ndd-form-field label="Plugin preset">
-        <ndd-radio-button-group name="preset" (change)="onPresetRadioChange($event)">
+      <nldd-form-field label="Plugin preset">
+        <nldd-radio-button-group name="preset" (change)="onPresetRadioChange($event)">
           @for (preset of presets; track preset.id) {
-            <ndd-radio-button-field
+            <nldd-radio-button-field
               [value]="preset.id"
               [label]="preset.name"
               [checked]="selectedPreset === preset.id"
-            ></ndd-radio-button-field>
+            ></nldd-radio-button-field>
           }
-          <ndd-radio-button-field
+          <nldd-radio-button-field
             value="custom"
             label="Custom plugin selection"
             [checked]="selectedPreset === 'custom'"
-          ></ndd-radio-button-field>
-        </ndd-radio-button-group>
-      </ndd-form-field>
+          ></nldd-radio-button-field>
+        </nldd-radio-button-group>
+      </nldd-form-field>
     </div>
 
     <!-- Plugin Selection -->
@@ -36,13 +36,13 @@
         } @else {
           @for (plugin of plugins; track plugin.id) {
             <div>
-              <ndd-switch-field
+              <nldd-switch-field
                 [label]="plugin.name"
                 [checked]="plugin.selected"
                 [disabled]="selectedPreset !== 'custom'"
                 [name]="plugin.id"
                 (change)="plugin.selected = $any($event).detail.checked"
-              ></ndd-switch-field>
+              ></nldd-switch-field>
               <p class="-mt-0.5 ml-16 text-gray-500 dark:text-gray-400">
                 {{ plugin.descriptionShort }}
               </p>
@@ -62,15 +62,15 @@
 
       <div class="space-y-4">
         <!-- Warning switch -->
-        <ndd-switch-field
+        <nldd-switch-field
           label="Enable uploading custom plugins (warranty on cluster void)"
           [checked]="customPluginUploadEnabled"
           name="customPluginUploadEnabled"
           (change)="customPluginUploadEnabled = $any($event).detail.checked"
-        ></ndd-switch-field>
+        ></nldd-switch-field>
 
         <!-- File upload input -->
-        <ndd-form-field
+        <nldd-form-field
           label="Upload plugin ZIP file"
           supporting-label="Only ZIP files are accepted"
         >
@@ -82,7 +82,7 @@
             (change)="onCustomPluginFileChange($event)"
             class="ring-accent-500 file:bg-accent-50 file:text-accent-700 hover:file:bg-accent-100 block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 file:mr-4 file:rounded-l-lg file:border-0 file:px-4 file:py-2 file:text-sm file:font-semibold focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:ring-offset-gray-950 dark:file:bg-gray-700 dark:file:text-gray-300 dark:hover:file:bg-gray-600"
           />
-        </ndd-form-field>
+        </nldd-form-field>
       </div>
     </div>
 

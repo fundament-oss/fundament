@@ -12,14 +12,14 @@
     <div
       class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
     >
-      <ndd-icon
+      <nldd-icon
         name="info-circle"
         class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
-      ></ndd-icon>
+      ></nldd-icon>
       <div class="text-accent-700 dark:text-accent-300">
         <p class="mb-2">
           Members marked with
-          <ndd-icon name="lock-closed" class="inline-block h-3.5 w-3.5 align-middle"></ndd-icon>
+          <nldd-icon name="lock-closed" class="inline-block h-3.5 w-3.5 align-middle"></nldd-icon>
           inherit their permission from the organization level and cannot be changed here. Modify
           these in
           <a
@@ -40,32 +40,32 @@
       </div>
     </div>
 
-    <ndd-button
+    <nldd-button
       type="button"
       (click)="openAddMemberModal()"
       text="Add a member"
       start-icon="plus-small"
       variant="primary"
       class="mb-6"
-    ></ndd-button>
+    ></nldd-button>
 
     @if (error()) {
       <div
         class="mb-5 flex items-start gap-3 rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
       >
-        <ndd-icon
+        <nldd-icon
           name="exclamation-circle"
           class="mt-0.5 h-5 w-5 shrink-0 text-rose-400!"
-        ></ndd-icon>
+        ></nldd-icon>
         <div class="flex-1">
           <p class="text-rose-600 dark:text-rose-400">{{ error() }}</p>
         </div>
-        <ndd-button
+        <nldd-button
           type="button"
           (click)="error.set(null)"
           text="Dismiss"
           variant="primary"
-        ></ndd-button>
+        ></nldd-button>
       </div>
     }
 
@@ -115,7 +115,7 @@
                 <td>
                   @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
                     <span class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                      <ndd-icon name="lock-closed" class="h-3.5 w-3.5"></ndd-icon>
+                      <nldd-icon name="lock-closed" class="h-3.5 w-3.5"></nldd-icon>
                       Organization
                     </span>
                   } @else if (view.source === 'org') {
@@ -129,32 +129,32 @@
                     <!-- Org admin: locked, no actions -->
                     <span class="text-gray-400 dark:text-gray-600">&mdash;</span>
                   } @else {
-                    <ndd-button
+                    <nldd-button
                       type="button"
                       (click)="openEditMemberModal(view)"
                       text="Edit"
                       start-icon="pencil"
                       variant="secondary"
                       size="sm"
-                    ></ndd-button>
+                    ></nldd-button>
                     @if (view.source === 'project' && view.orgPermission !== null) {
-                      <ndd-button
+                      <nldd-button
                         (click)="resetToOrgDefault(view)"
                         text="Reset"
                         start-icon="arrow-u-turn-backward"
                         variant="destructive"
                         size="sm"
                         class="ml-2"
-                      ></ndd-button>
+                      ></nldd-button>
                     } @else if (view.source === 'project') {
-                      <ndd-button
+                      <nldd-button
                         (click)="openRemoveMemberModal(view)"
                         text="Remove"
                         start-icon="trash"
                         variant="destructive"
                         size="sm"
                         class="ml-2"
-                      ></ndd-button>
+                      ></nldd-button>
                     }
                   }
                 </td>
@@ -168,7 +168,7 @@
 </div>
 
 <!-- Add/Edit Member Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #addMemberDialog
   appDialogSync
   [show]="showAddMemberModal()"
@@ -176,11 +176,11 @@
   (open)="onAddMemberModalOpen()"
   (close)="showAddMemberModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <form [formGroup]="memberForm" (ngSubmit)="saveMember()" (keydown.enter)="saveMember()">
     @if (!editingMemberView()) {
-      <ndd-form-field label="User" class="mb-4">
+      <nldd-form-field label="User" class="mb-4">
         <select id="userId" formControlName="userId" class="w-full">
           <option value="">Select a user</option>
           @for (user of availableUsers(); track user.id) {
@@ -190,15 +190,15 @@
         @if (availableUsers().length === 0) {
           <p class="text-gray-600 dark:text-gray-400">No users available to add.</p>
         }
-        <ndd-form-field-error-text id="project-member-user-error">
+        <nldd-form-field-error-text id="project-member-user-error">
           @if (
             memberForm.get('userId')?.invalid &&
             (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
           ) {
             Please select a user.
           }
-        </ndd-form-field-error-text>
-      </ndd-form-field>
+        </nldd-form-field-error-text>
+      </nldd-form-field>
     }
 
     @if (editingMemberView()) {
@@ -209,42 +209,42 @@
     }
 
     <div class="mb-4">
-      <ndd-form-field label="Permission">
-        <ndd-radio-button-group name="permission" (change)="onPermissionChange($event)">
+      <nldd-form-field label="Permission">
+        <nldd-radio-button-group name="permission" (change)="onPermissionChange($event)">
           <div class="radio-option mb-2">
-            <ndd-radio-button-field
+            <nldd-radio-button-field
               value="viewer"
               label="Project viewer"
               [checked]="memberForm.get('permission')?.value === 'viewer'"
-            ></ndd-radio-button-field>
+            ></nldd-radio-button-field>
             <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
               >Read access to resources</span
             >
           </div>
           <div class="radio-option">
-            <ndd-radio-button-field
+            <nldd-radio-button-field
               value="admin"
               label="Project admin"
               [checked]="memberForm.get('permission')?.value === 'admin'"
-            ></ndd-radio-button-field>
+            ></nldd-radio-button-field>
             <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
               >Full access to resources</span
             >
           </div>
-        </ndd-radio-button-group>
-      </ndd-form-field>
+        </nldd-radio-button-group>
+      </nldd-form-field>
     </div>
   </form>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showAddMemberModal.set(false)"
     [disabled]="isAddingMember()"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="saveMember()"
@@ -252,11 +252,11 @@
     [text]="isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'"
     [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
     variant="primary"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Remove Member Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #removeMemberDialog
   appDialogSync
   [show]="showRemoveMemberModal()"
@@ -265,7 +265,7 @@
   (open)="onRemoveMemberModalOpen()"
   (close)="showRemoveMemberModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <p>
     Are you sure you want to remove
@@ -273,18 +273,18 @@
     from this project?
   </p>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showRemoveMemberModal.set(false)"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="confirmRemoveMember()"
     text="Yes, remove this member"
     variant="destructive"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>

@@ -5,13 +5,13 @@
     <p class="mt-1 text-gray-600 dark:text-gray-300">Manage your Kubernetes clusters</p>
 
     @if (clusters().length > 0) {
-      <ndd-button
+      <nldd-button
         routerLink="/clusters/add"
         text="Add cluster"
         start-icon="plus-small"
         variant="primary"
         class="mt-4"
-      ></ndd-button>
+      ></nldd-button>
     }
   </div>
 
@@ -21,10 +21,10 @@
       <div
         class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
       >
-        <ndd-icon
+        <nldd-icon
           name="dismiss-circle"
           class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-        ></ndd-icon>
+        ></nldd-icon>
         <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
       </div>
     }
@@ -33,7 +33,7 @@
     @if (clusters().length > 0) {
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         @for (cluster of clusters(); track cluster.id) {
-          <ndd-box>
+          <nldd-box>
             <!-- Card Header -->
             <div class="flex items-start justify-between gap-3 py-2 pb-2">
               <h2 class="min-w-0 truncate text-base font-semibold">
@@ -71,15 +71,15 @@
 
               <!-- Card Actions -->
               <div class="mt-auto pt-5">
-                <ndd-button
+                <nldd-button
                   routerLink="/clusters/{{ cluster.id }}"
                   text="View details"
                   start-icon="eye"
                   variant="primary"
-                ></ndd-button>
+                ></nldd-button>
               </div>
             </div>
-          </ndd-box>
+          </nldd-box>
         }
       </div>
     } @else {
@@ -91,13 +91,13 @@
         <p class="mt-1 text-gray-500 dark:text-gray-400">
           Add your first Kubernetes cluster to get started.
         </p>
-        <ndd-button
+        <nldd-button
           routerLink="/clusters/add"
           text="Add cluster"
           start-icon="plus-small"
           variant="primary"
           class="mt-5"
-        ></ndd-button>
+        ></nldd-button>
       </div>
     }
   </div>

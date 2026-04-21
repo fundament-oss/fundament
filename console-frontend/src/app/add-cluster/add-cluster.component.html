@@ -14,8 +14,8 @@
   class="space-y-6 px-6 py-6"
 >
   <!-- Cluster Name -->
-  <ndd-form-field label="Cluster name">
-    <ndd-text-field
+  <nldd-form-field label="Cluster name">
+    <nldd-text-field
       id="clusterName"
       appAutofocus
       [value]="clusterName?.value"
@@ -26,49 +26,49 @@
         (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) || clusterNameExists()
       "
       error-message="add-cluster-name-error"
-    ></ndd-text-field>
-    <ndd-form-field-error-text id="add-cluster-name-error">
+    ></nldd-text-field>
+    <nldd-form-field-error-text id="add-cluster-name-error">
       @if (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) {
         {{ getClusterNameError() }}
       }
       @if (clusterNameExists()) {
         A cluster with this name already exists.
       }
-    </ndd-form-field-error-text>
-  </ndd-form-field>
+    </nldd-form-field-error-text>
+  </nldd-form-field>
 
   <!-- Region -->
-  <ndd-form-field label="Region">
-    <ndd-radio-button-group name="region" (change)="onRadioChange('region', $event)">
+  <nldd-form-field label="Region">
+    <nldd-radio-button-group name="region" (change)="onRadioChange('region', $event)">
       @for (r of regions; track r.value) {
-        <ndd-radio-button-field
+        <nldd-radio-button-field
           [value]="r.value"
           [label]="r.label"
           [checked]="clusterForm.get('region')?.value === r.value"
-        ></ndd-radio-button-field>
+        ></nldd-radio-button-field>
       }
-    </ndd-radio-button-group>
-  </ndd-form-field>
+    </nldd-radio-button-group>
+  </nldd-form-field>
 
   <!-- Kubernetes Version -->
-  <ndd-form-field label="Kubernetes version">
-    <ndd-radio-button-group
+  <nldd-form-field label="Kubernetes version">
+    <nldd-radio-button-group
       name="kubernetesVersion"
       (change)="onRadioChange('kubernetesVersion', $event)"
     >
       @for (kv of kubernetesVersions; track kv) {
-        <ndd-radio-button-field
+        <nldd-radio-button-field
           [value]="kv"
           [label]="kv"
           [checked]="clusterForm.get('kubernetesVersion')?.value === kv"
-        ></ndd-radio-button-field>
+        ></nldd-radio-button-field>
       }
-    </ndd-radio-button-group>
-  </ndd-form-field>
+    </nldd-radio-button-group>
+  </nldd-form-field>
 
   <!-- Form Actions -->
   <div class="flex items-center space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-    <ndd-button type="button" (click)="onCancel()" text="Cancel" variant="secondary"></ndd-button>
-    <ndd-button type="button" (click)="onSubmit()" text="Next step" variant="primary"></ndd-button>
+    <nldd-button type="button" (click)="onCancel()" text="Cancel" variant="secondary"></nldd-button>
+    <nldd-button type="button" (click)="onSubmit()" text="Next step" variant="primary"></nldd-button>
   </div>
 </form>

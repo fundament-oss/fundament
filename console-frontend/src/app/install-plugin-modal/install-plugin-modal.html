@@ -1,4 +1,4 @@
-<ndd-modal-dialog
+<nldd-modal-dialog
   #dialog
   appDialogSync
   [show]="show()"
@@ -6,7 +6,7 @@
   (open)="onOpen()"
   (close)="onClose()"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <p class="mb-4 text-gray-600 dark:text-gray-400">
     Select cluster(s) to install plugin
@@ -26,27 +26,27 @@
             <span
               class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
             >
-              <ndd-icon name="check-mark" class="mr-1 h-3 w-3"></ndd-icon> Installed
+              <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon> Installed
             </span>
           } @else {
-            <ndd-button
+            <nldd-button
               type="button"
               (click)="onInstall(cluster.id)"
               text="Install"
               variant="primary"
               size="xs"
-            ></ndd-button>
+            ></nldd-button>
           }
         </div>
       }
     }
   </div>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="onClose()"
     text="Close"
     variant="secondary"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>

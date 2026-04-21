@@ -18,10 +18,10 @@
   <div
     class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
   >
-    <ndd-icon
+    <nldd-icon
       name="dismiss-circle"
       class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-    ></ndd-icon>
+    ></nldd-icon>
     <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -65,7 +65,7 @@
                       "
                     >
                       @if (tag.name.toLowerCase() === 'official') {
-                        <ndd-icon name="check-mark" class="mr-1 h-3 w-3"></ndd-icon>
+                        <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
                       }
                       {{ tag.name }}
                     </span>
@@ -74,7 +74,7 @@
                     <span
                       class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     >
-                      <ndd-icon name="check-mark" class="mr-1 h-3 w-3"></ndd-icon>
+                      <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
                       Installed on {{ getInstalledClusterCount() }} cluster{{
                         getInstalledClusterCount() > 1 ? 's' : ''
                       }}
@@ -97,34 +97,34 @@
         <div
           class="mb-6 rounded-md border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950"
         >
-          <ndd-button
+          <nldd-button
             type="button"
             (click)="openInstallModal()"
             text="Install plugin"
             variant="primary"
             class="w-full"
-          ></ndd-button>
+          ></nldd-button>
 
           <div class="mt-6 space-y-3 border-t border-gray-200 pt-6 dark:border-gray-800">
             <div class="flex items-start">
-              <ndd-icon
+              <nldd-icon
                 name="check-mark"
                 class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
-              ></ndd-icon>
+              ></nldd-icon>
               <span class="text-gray-600 dark:text-gray-300">Community support</span>
             </div>
             <div class="flex items-start">
-              <ndd-icon
+              <nldd-icon
                 name="check-mark"
                 class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
-              ></ndd-icon>
+              ></nldd-icon>
               <span class="text-gray-600 dark:text-gray-300">Open source</span>
             </div>
             <div class="flex items-start">
-              <ndd-icon
+              <nldd-icon
                 name="check-mark"
                 class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
-              ></ndd-icon>
+              ></nldd-icon>
               <span class="text-gray-600 dark:text-gray-300">Regular updates</span>
             </div>
           </div>

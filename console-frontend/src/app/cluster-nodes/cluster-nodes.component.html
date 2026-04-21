@@ -13,10 +13,10 @@
       <div
         class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
       >
-        <ndd-icon
+        <nldd-icon
           name="dismiss-circle"
           class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-        ></ndd-icon>
+        ></nldd-icon>
         <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
       </div>
     }
@@ -30,20 +30,20 @@
         (formSubmit)="onFormSubmit($event)"
       >
         <div class="flex space-x-3">
-          <ndd-button
+          <nldd-button
             type="button"
             (click)="onCancel()"
             [disabled]="isSubmitting()"
             text="Cancel"
             variant="secondary"
-          ></ndd-button>
-          <ndd-button
+          ></nldd-button>
+          <nldd-button
             type="button"
             (click)="nodePoolsForm.submit()"
             [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
             [disabled]="isSubmitting()"
             variant="primary"
-          ></ndd-button>
+          ></nldd-button>
         </div>
       </app-shared-node-pools-form>
     }

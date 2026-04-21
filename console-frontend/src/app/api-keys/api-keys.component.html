@@ -22,31 +22,31 @@
           </p>
         </div>
         <div class="mb-4">
-          <ndd-form-field label="Your API token">
+          <nldd-form-field label="Your API token">
             <div class="flex gap-2">
-              <ndd-text-field
+              <nldd-text-field
                 id="apiToken"
                 [value]="createdToken()"
                 readonly
                 class="flex-1"
-              ></ndd-text-field>
-              <ndd-button
+              ></nldd-text-field>
+              <nldd-button
                 type="button"
                 (click)="copyToken()"
                 text="Copy"
                 start-icon="squares-stack-plus"
                 variant="primary"
-              ></ndd-button>
+              ></nldd-button>
             </div>
-          </ndd-form-field>
+          </nldd-form-field>
         </div>
-        <ndd-button
+        <nldd-button
           type="button"
           (click)="dismissToken()"
           text="I've saved the token"
           start-icon="check-mark"
           variant="primary"
-        ></ndd-button>
+        ></nldd-button>
       </div>
     }
 
@@ -62,8 +62,8 @@
       <div class="card card-body-lg mb-6 bg-gray-50! dark:bg-gray-900!">
         <h3 class="-mt-2 mb-4 text-lg font-semibold dark:text-white">Create new API key</h3>
         <form class="space-y-4" (ngSubmit)="createApiKey()" (keydown.enter)="createApiKey()">
-          <ndd-form-field label="Name">
-            <ndd-text-field
+          <nldd-form-field label="Name">
+            <nldd-text-field
               appAutofocus
               id="name"
               [value]="newKeyName()"
@@ -73,44 +73,44 @@
               (keyup.escape)="cancelCreating()"
               [invalid]="!newKeyName().trim() && newKeyNameTouched()"
               error-message="api-key-name-error"
-            ></ndd-text-field>
-            <ndd-form-field-error-text id="api-key-name-error">
+            ></nldd-text-field>
+            <nldd-form-field-error-text id="api-key-name-error">
               Name is required
-            </ndd-form-field-error-text>
-          </ndd-form-field>
-          <ndd-form-field label="Expires after (duration)">
-            <ndd-text-field
+            </nldd-form-field-error-text>
+          </nldd-form-field>
+          <nldd-form-field label="Expires after (duration)">
+            <nldd-text-field
               id="expiresIn"
               [value]="newKeyExpiresIn()"
               placeholder="Leave blank if you don't want the key to expire."
               (input)="newKeyExpiresIn.set($any($event.target).value)"
               (keyup.escape)="cancelCreating()"
-            ></ndd-text-field>
-            <ndd-form-field-help-text>
+            ></nldd-text-field>
+            <nldd-form-field-help-text>
               Optional. Formatted as duration, eg. 300s, 5m or 1h.
-            </ndd-form-field-help-text>
-          </ndd-form-field>
+            </nldd-form-field-help-text>
+          </nldd-form-field>
           <div class="flex gap-2">
-            <ndd-button
+            <nldd-button
               type="button"
               (click)="createApiKey()"
               [disabled]="loading()"
               text="Create"
               variant="primary"
-            ></ndd-button>
-            <ndd-button
+            ></nldd-button>
+            <nldd-button
               type="button"
               (click)="cancelCreating()"
               [disabled]="loading()"
               text="Cancel"
               variant="secondary"
-            ></ndd-button>
+            ></nldd-button>
           </div>
         </form>
       </div>
     } @else {
       <!-- Create Button -->
-      <ndd-button
+      <nldd-button
         type="button"
         (click)="startCreating()"
         [disabled]="loading()"
@@ -118,7 +118,7 @@
         start-icon="plus-small"
         variant="primary"
         class="mb-6"
-      ></ndd-button>
+      ></nldd-button>
     }
 
     <!-- Loading State -->
@@ -182,23 +182,23 @@
                 <td>
                   <div class="flex gap-2">
                     @if (!isRevoked(apiKey.revoked) && !isExpired(apiKey.expires)) {
-                      <ndd-button
+                      <nldd-button
                         (click)="openRevokeModal(apiKey.id, apiKey.name)"
                         [disabled]="loading()"
                         text="Revoke"
                         start-icon="slash-circle"
                         size="sm"
                         variant="secondary"
-                      ></ndd-button>
+                      ></nldd-button>
                     }
-                    <ndd-button
+                    <nldd-button
                       (click)="openDeleteModal(apiKey.id, apiKey.name)"
                       [disabled]="loading()"
                       text="Delete"
                       start-icon="trash"
                       size="sm"
                       variant="destructive"
-                    ></ndd-button>
+                    ></nldd-button>
                   </div>
                 </td>
               </tr>
@@ -219,7 +219,7 @@
 </div>
 
 <!-- Revoke API Key Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #revokeDialog
   appDialogSync
   [show]="showRevokeModal()"
@@ -228,7 +228,7 @@
   (open)="onRevokeModalOpen()"
   (close)="showRevokeModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <p>
     Are you sure you want to revoke API key
@@ -236,24 +236,24 @@
     >? It will no longer be usable.
   </p>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showRevokeModal.set(false)"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="confirmRevoke()"
     text="Yes, revoke this key"
     variant="destructive"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Delete API Key Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
@@ -262,7 +262,7 @@
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <p>
     Are you sure you want to delete API key
@@ -270,18 +270,18 @@
     >?
   </p>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="confirmDelete()"
     text="Yes, delete this key"
     variant="destructive"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>

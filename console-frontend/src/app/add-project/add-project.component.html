@@ -3,10 +3,10 @@
   <div
     class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
   >
-    <ndd-icon
+    <nldd-icon
       name="dismiss-circle"
       class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-    ></ndd-icon>
+    ></nldd-icon>
     <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -27,7 +27,7 @@
     (keydown.enter)="onSubmit()"
     class="space-y-6 px-6 py-6"
   >
-    <ndd-form-field
+    <nldd-form-field
       label="Cluster"
       supporting-label="Select the cluster this project will belong to"
     >
@@ -58,16 +58,16 @@
             <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
           }
         </select>
-        <ndd-form-field-error-text id="add-project-cluster-error">
+        <nldd-form-field-error-text id="add-project-cluster-error">
           @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
             {{ getClusterError() }}
           }
-        </ndd-form-field-error-text>
+        </nldd-form-field-error-text>
       }
-    </ndd-form-field>
+    </nldd-form-field>
 
-    <ndd-form-field label="Project name">
-      <ndd-text-field
+    <nldd-form-field label="Project name">
+      <nldd-text-field
         id="name"
         appAutofocus
         [value]="projectForm.get('name')?.value ?? ''"
@@ -75,25 +75,25 @@
         [invalid]="!!(projectForm.get('name')?.invalid && projectForm.get('name')?.dirty)"
         error-message="add-project-name-error"
         (input)="onNameInput($event)"
-      ></ndd-text-field>
-      <ndd-form-field-error-text id="add-project-name-error">
+      ></nldd-text-field>
+      <nldd-form-field-error-text id="add-project-name-error">
         {{ getNameError() }}
-      </ndd-form-field-error-text>
-      <ndd-form-field-help-text>
+      </nldd-form-field-error-text>
+      <nldd-form-field-help-text>
         Must be lowercase, start with a letter, and contain only letters, numbers, and hyphens.
-      </ndd-form-field-help-text>
-    </ndd-form-field>
+      </nldd-form-field-help-text>
+    </nldd-form-field>
 
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-      <ndd-button routerLink="/projects" text="Cancel" variant="secondary"></ndd-button>
-      <ndd-button
+      <nldd-button routerLink="/projects" text="Cancel" variant="secondary"></nldd-button>
+      <nldd-button
         type="button"
         (click)="onSubmit()"
         text="Create project"
         [text]="isSubmitting() ? 'Creating...' : 'Create project'"
         [disabled]="isSubmitting()"
         variant="primary"
-      ></ndd-button>
+      ></nldd-button>
     </div>
   </form>
 </div>

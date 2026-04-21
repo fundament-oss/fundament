@@ -11,10 +11,10 @@
       <div
         class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
       >
-        <ndd-icon
+        <nldd-icon
           name="dismiss-circle"
           class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-        ></ndd-icon>
+        ></nldd-icon>
         <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
       </div>
     }
@@ -30,14 +30,14 @@
         <p class="text-gray-600 dark:text-gray-300">Loading namespaces...</p>
       </div>
     } @else {
-      <ndd-button
+      <nldd-button
         type="button"
         (click)="openAddNamespaceModal()"
         text="Add namespace"
         start-icon="plus-small"
         variant="primary"
         class="mb-4"
-      ></ndd-button>
+      ></nldd-button>
 
       @if (namespaces().length === 0) {
         <p class="text-gray-500 dark:text-gray-400">No namespaces in this cluster yet.</p>
@@ -54,33 +54,33 @@
                   {{ formatDate(namespace.created) }}
                 </p>
               </div>
-              <ndd-button
+              <nldd-button
                 type="button"
                 (click)="openDeleteNamespaceModal(namespace.id, namespace.name)"
                 text="Delete"
                 start-icon="trash"
                 size="sm"
                 variant="destructive"
-              ></ndd-button>
+              ></nldd-button>
             </div>
           }
         </div>
       }
 
       <div class="mt-6 flex space-x-3">
-        <ndd-button
+        <nldd-button
           type="button"
           (click)="onCancel()"
           text="Back to cluster"
           variant="secondary"
-        ></ndd-button>
+        ></nldd-button>
       </div>
     }
   </div>
 </div>
 
 <!-- Add Namespace Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #addNamespaceDialog
   appDialogSync
   [show]="showAddNamespaceModal()"
@@ -88,14 +88,14 @@
   (open)="onAddNamespaceModalOpen()"
   (close)="showAddNamespaceModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <form
     [formGroup]="namespaceForm"
     (ngSubmit)="createNamespace()"
     (keydown.enter)="createNamespace()"
   >
-    <ndd-form-field label="Project" class="mb-4">
+    <nldd-form-field label="Project" class="mb-4">
       @if (isLoadingProjects()) {
         <div role="status" class="flex justify-center">
           <app-loading-indicator
@@ -117,32 +117,32 @@
           </p>
         }
       }
-    </ndd-form-field>
+    </nldd-form-field>
 
-    <ndd-form-field label="Namespace name" class="mb-4">
-      <ndd-text-field
+    <nldd-form-field label="Namespace name" class="mb-4">
+      <nldd-text-field
         id="namespaceName"
         [value]="namespaceForm.get('name')?.value ?? ''"
         placeholder="E.g. my-namespace"
         [invalid]="!!(namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty)"
         error-message="cluster-namespace-name-error"
         (input)="onNamespaceNameInput($event)"
-      ></ndd-text-field>
-      <ndd-form-field-error-text id="cluster-namespace-name-error">
+      ></nldd-text-field>
+      <nldd-form-field-error-text id="cluster-namespace-name-error">
         {{ getNamespaceNameError() }}
-      </ndd-form-field-error-text>
-    </ndd-form-field>
+      </nldd-form-field-error-text>
+    </nldd-form-field>
   </form>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showAddNamespaceModal.set(false)"
     [disabled]="isCreatingNamespace()"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="createNamespace()"
@@ -150,11 +150,11 @@
     [text]="isCreatingNamespace() ? 'Creating...' : 'Add namespace'"
     [disabled]="isCreatingNamespace() || !namespaceForm.valid"
     variant="primary"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Delete Namespace Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #deleteNamespaceDialog
   appDialogSync
   [show]="showDeleteNamespaceModal()"
@@ -163,7 +163,7 @@
   (open)="onDeleteNamespaceModalOpen()"
   (close)="showDeleteNamespaceModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <p>
     Are you sure you want to delete namespace
@@ -174,18 +174,18 @@
     This will remove the namespace and all resources running on it. This cannot be undone.
   </p>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showDeleteNamespaceModal.set(false)"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="confirmDeleteNamespace()"
     text="Yes, delete this namespace"
     variant="destructive"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>

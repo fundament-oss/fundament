@@ -16,7 +16,7 @@
                 (click)="onSelect(org.id)"
                 class="ring-accent-500 hover:bg-accent-50 dark:hover:bg-accent-950 flex w-full cursor-pointer items-center rounded-md px-3 py-2.5 text-left font-medium text-gray-700 transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950"
               >
-                <ndd-icon name="apartment-building" class="mr-3 h-5 w-5 shrink-0"></ndd-icon>
+                <nldd-icon name="apartment-building" class="mr-3 h-5 w-5 shrink-0"></nldd-icon>
                 <span class="truncate">{{ org.alias }}</span>
               </button>
             }
@@ -33,27 +33,27 @@
             @for (invitation of pendingInvitationList(); track invitation.id) {
               <div class="flex items-center justify-between rounded-md px-3 py-2.5">
                 <div class="flex min-w-0 items-center">
-                  <ndd-icon
+                  <nldd-icon
                     name="apartment-building"
                     class="mr-3 h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500"
-                  ></ndd-icon>
+                  ></nldd-icon>
                   <span class="truncate font-medium text-gray-500 dark:text-gray-400">{{
                     invitation.organizationAlias
                   }}</span>
                 </div>
                 <div class="ml-3 flex shrink-0 space-x-2">
-                  <ndd-button
+                  <nldd-button
                     type="button"
                     (click)="onAccept(invitation)"
                     text="Accept"
                     variant="primary"
-                  ></ndd-button>
-                  <ndd-button
+                  ></nldd-button>
+                  <nldd-button
                     type="button"
                     (click)="onDecline(invitation)"
                     text="Decline"
                     variant="secondary"
-                  ></ndd-button>
+                  ></nldd-button>
                 </div>
               </div>
             }

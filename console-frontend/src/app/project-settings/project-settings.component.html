@@ -38,35 +38,35 @@
           <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">Name</div>
           @if (isEditing()) {
             <div class="flex gap-2">
-              <ndd-text-field
+              <nldd-text-field
                 appAutofocus
                 [value]="editingName()"
                 (input)="editingName.set($any($event.target).value)"
                 class="flex-1"
                 (keyup.enter)="saveEdit()"
                 (keyup.escape)="cancelEdit()"
-              ></ndd-text-field>
-              <ndd-button
+              ></nldd-text-field>
+              <nldd-button
                 type="button"
                 (click)="saveEdit()"
                 [disabled]="loading()"
                 text="Save"
                 start-icon="check-mark"
                 variant="primary"
-              ></ndd-button>
-              <ndd-button
+              ></nldd-button>
+              <nldd-button
                 type="button"
                 (click)="cancelEdit()"
                 [disabled]="loading()"
                 text="Cancel"
                 start-icon="dismiss-small"
                 variant="secondary"
-              ></ndd-button>
+              ></nldd-button>
             </div>
           } @else {
             <div class="flex items-center gap-3">
               <p class="text-gray-900 dark:text-white">{{ project()!.name }}</p>
-              <ndd-button
+              <nldd-button
                 type="button"
                 (click)="startEdit()"
                 [disabled]="loading()"
@@ -74,7 +74,7 @@
                 start-icon="pencil"
                 variant="secondary"
                 size="sm"
-              ></ndd-button>
+              ></nldd-button>
             </div>
           }
         </div>
@@ -95,11 +95,11 @@
           <p class="mb-4 text-rose-700 dark:text-rose-300">
             Deleting a project is permanent and cannot be undone.
           </p>
-          <ndd-button
+          <nldd-button
             (click)="showDeleteModal.set(true)"
             text="Delete this project"
             variant="destructive"
-          ></ndd-button>
+          ></nldd-button>
         </div>
       </div>
     }
@@ -107,7 +107,7 @@
 </div>
 
 <!-- Delete Project Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
@@ -116,7 +116,7 @@
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <p>
     Are you sure you want to delete project
@@ -125,18 +125,18 @@
   </p>
   <p class="mt-2 text-rose-600 dark:text-rose-400">This cannot be undone.</p>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="deleteProject()"
     text="Yes, delete this project"
     variant="destructive"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>

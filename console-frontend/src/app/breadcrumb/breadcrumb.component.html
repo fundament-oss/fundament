@@ -9,7 +9,7 @@
     }
   </a>
   @for (segment of allSegments; track $index; let isLast = $last) {
-    <ndd-icon name="chevron-right-small" class="h-3.5 w-3.5"></ndd-icon>
+    <nldd-icon name="chevron-right-small" class="h-3.5 w-3.5"></nldd-icon>
     @if (segment.route && !isLast) {
       <a [routerLink]="segment.route">{{ segment.label }}</a>
     } @else {

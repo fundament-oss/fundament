@@ -39,7 +39,7 @@
     "@connectrpc/connect": "2.1.1",
     "@connectrpc/connect-web": "2.1.1",
     "@hey-api/client-fetch": "0.13.1",
-    "@minbzk/storybook": "^0.8.33",
+    "@minbzk/storybook": "^0.8.34",
     "chart.js": "4.5.1",
     "rxjs": "7.8.2",
     "tslib": "2.8.1",

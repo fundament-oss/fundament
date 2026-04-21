@@ -3,10 +3,10 @@
   <div
     class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
   >
-    <ndd-icon
+    <nldd-icon
       name="dismiss-circle"
       class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-    ></ndd-icon>
+    ></nldd-icon>
     <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -73,13 +73,13 @@
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-xl font-medium dark:text-white">Namespaces</h3>
-          <ndd-button
+          <nldd-button
             [routerLink]="['/projects', project()?.id, 'namespaces']"
             text="Edit"
             start-icon="pencil"
             variant="secondary"
             size="sm"
-          ></ndd-button>
+          ></nldd-button>
         </div>
         @if (namespaces().length === 0) {
           <p class="text-gray-500 dark:text-gray-400">No namespaces belong to this project yet.</p>

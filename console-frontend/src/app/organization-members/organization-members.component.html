@@ -16,10 +16,10 @@
     <div
       class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
     >
-      <ndd-icon
+      <nldd-icon
         name="info-circle"
         class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
-      ></ndd-icon>
+      ></nldd-icon>
       <div class="text-accent-700 dark:text-accent-300">
         <p class="mb-2">
           Organization admins can manage members across all projects. This permission overrides
@@ -33,14 +33,14 @@
       </div>
     </div>
 
-    <ndd-button
+    <nldd-button
       type="button"
       (click)="openModal()"
       text="Invite member"
       start-icon="plus-small"
       variant="primary"
       class="mb-4"
-    ></ndd-button>
+    ></nldd-button>
 
     <!-- Pending Invitations Section -->
     <div class="mb-8">
@@ -92,13 +92,13 @@
                     </span>
                   </td>
                   <td>
-                    <ndd-button
+                    <nldd-button
                       (click)="cancelInvitation(invitation.id)"
                       text="Cancel"
                       start-icon="trash"
                       variant="destructive"
                       size="sm"
-                    ></ndd-button>
+                    ></nldd-button>
                   </td>
                 </tr>
               }
@@ -107,10 +107,10 @@
         </div>
       } @else {
         <div class="rounded-md border border-gray-200 p-4 text-center dark:border-gray-800">
-          <ndd-icon
+          <nldd-icon
             name="envelope"
             class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!"
-          ></ndd-icon>
+          ></nldd-icon>
           <p class="mt-2 text-gray-600 dark:text-gray-400">No pending invitations</p>
         </div>
       }
@@ -137,23 +137,23 @@
         <div
           class="rounded-md border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-800 dark:bg-rose-950"
         >
-          <ndd-icon name="exclamation-circle" class="mx-auto h-12 w-12 text-rose-400!"></ndd-icon>
+          <nldd-icon name="exclamation-circle" class="mx-auto h-12 w-12 text-rose-400!"></nldd-icon>
           <p class="mt-2 text-rose-600 dark:text-rose-400">{{ error() }}</p>
-          <ndd-button
+          <nldd-button
             type="button"
             (click)="loadMembers()"
             text="Try again"
             variant="primary"
-          ></ndd-button>
+          ></nldd-button>
         </div>
       } @else if (activeMembers().length === 0) {
         <div
           class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700"
         >
-          <ndd-icon
+          <nldd-icon
             name="person-2"
             class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!"
-          ></ndd-icon>
+          ></nldd-icon>
           <p class="mt-2 text-gray-600 dark:text-gray-400">No members found</p>
         </div>
       } @else {
@@ -205,7 +205,7 @@
                     @if (member.isCurrentUser) {
                       <span class="text-gray-400 dark:text-gray-600">&mdash;</span>
                     } @else {
-                      <ndd-button
+                      <nldd-button
                         type="button"
                         (click)="openEditModal(member)"
                         text="Edit"
@@ -213,14 +213,14 @@
                         variant="secondary"
                         size="sm"
                         class="mr-2"
-                      ></ndd-button>
-                      <ndd-button
+                      ></nldd-button>
+                      <nldd-button
                         (click)="openDeleteModal(member)"
                         text="Remove"
                         start-icon="trash"
                         variant="destructive"
                         size="sm"
-                      ></ndd-button>
+                      ></nldd-button>
                     }
                   </td>
                 </tr>
@@ -234,7 +234,7 @@
 </div>
 
 <!-- Delete Member Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
@@ -243,7 +243,7 @@
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <p>
     Are you sure you want to remove
@@ -254,24 +254,24 @@
     This will revoke their access to all organization resources.
   </p>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="confirmDeleteMember()"
     text="Yes, remove member"
     variant="destructive"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Edit Member Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #editDialog
   appDialogSync
   [show]="showEditModal()"
@@ -279,7 +279,7 @@
   (open)="onEditModalOpen()"
   (close)="showEditModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <div class="mb-4">
     <span class="mb-2 block font-medium text-gray-700 dark:text-white">Member</span>
@@ -289,43 +289,43 @@
     </p>
   </div>
 
-  <ndd-form-field label="Permission">
-    <ndd-radio-button-group
+  <nldd-form-field label="Permission">
+    <nldd-radio-button-group
       name="editPermission"
       (change)="editPermission.set($any($event).detail.value)"
     >
       <div class="radio-option mb-2">
-        <ndd-radio-button-field
+        <nldd-radio-button-field
           value="viewer"
           label="Viewer"
           [checked]="editPermission() === 'viewer'"
-        ></ndd-radio-button-field>
+        ></nldd-radio-button-field>
         <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
           >Read access to resources</span
         >
       </div>
       <div class="radio-option">
-        <ndd-radio-button-field
+        <nldd-radio-button-field
           value="admin"
           label="Admin"
           [checked]="editPermission() === 'admin'"
-        ></ndd-radio-button-field>
+        ></nldd-radio-button-field>
         <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
           >Full access to resources</span
         >
       </div>
-    </ndd-radio-button-group>
-  </ndd-form-field>
+    </nldd-radio-button-group>
+  </nldd-form-field>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showEditModal.set(false)"
     [disabled]="isSubmitting()"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="confirmEditMember()"
@@ -333,11 +333,11 @@
     [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
     [disabled]="isSubmitting()"
     variant="primary"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Invite Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #inviteDialog
   appDialogSync
   [show]="isModalOpen()"
@@ -345,7 +345,7 @@
   (open)="onInviteModalOpen()"
   (close)="closeModal()"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <p class="mb-6 text-gray-600 dark:text-gray-400">
     Enter the email address of the user you want to invite. They will be able to sign in via SSO
@@ -353,8 +353,8 @@
   </p>
 
   <form (ngSubmit)="submitInvitation()" (keydown.enter)="submitInvitation()" novalidate>
-    <ndd-form-field label="Email address" class="mb-4">
-      <ndd-text-field
+    <nldd-form-field label="Email address" class="mb-4">
+      <nldd-text-field
         type="email"
         id="email"
         [value]="inviteEmail()"
@@ -367,53 +367,53 @@
         [disabled]="isSubmitting()"
         [invalid]="!!(inviteError() || (inviteEmailDirty() && !inviteEmail().trim()))"
         error-message="org-invite-email-error"
-      ></ndd-text-field>
-      <ndd-form-field-error-text id="org-invite-email-error">
+      ></nldd-text-field>
+      <nldd-form-field-error-text id="org-invite-email-error">
         {{ inviteError() || 'The user email is required' }}
-      </ndd-form-field-error-text>
-    </ndd-form-field>
+      </nldd-form-field-error-text>
+    </nldd-form-field>
 
     <div class="mb-6">
-      <ndd-form-field label="Permission">
-        <ndd-radio-button-group
+      <nldd-form-field label="Permission">
+        <nldd-radio-button-group
           name="permission"
           (change)="invitePermission.set($any($event).detail.value)"
           [disabled]="isSubmitting()"
         >
           <div class="radio-option mb-2">
-            <ndd-radio-button-field
+            <nldd-radio-button-field
               value="viewer"
               label="Viewer"
               [checked]="invitePermission() === 'viewer'"
-            ></ndd-radio-button-field>
+            ></nldd-radio-button-field>
             <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
               >Read access to resources</span
             >
           </div>
           <div class="radio-option">
-            <ndd-radio-button-field
+            <nldd-radio-button-field
               value="admin"
               label="Admin"
               [checked]="invitePermission() === 'admin'"
-            ></ndd-radio-button-field>
+            ></nldd-radio-button-field>
             <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
               >Full access to resources</span
             >
           </div>
-        </ndd-radio-button-group>
-      </ndd-form-field>
+        </nldd-radio-button-group>
+      </nldd-form-field>
     </div>
   </form>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="closeModal()"
     [disabled]="isSubmitting()"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="submitInvitation()"
@@ -421,5 +421,5 @@
     [text]="isSubmitting() ? 'Sending...' : 'Send invitation'"
     [disabled]="isSubmitting()"
     variant="primary"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>

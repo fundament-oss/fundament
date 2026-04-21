@@ -17,13 +17,13 @@
       "
     >
       @if (toastService.toast()?.type === 'success') {
-        <ndd-icon name="check-mark-circle" class="block! h-5 w-5"></ndd-icon>
+        <nldd-icon name="check-mark-circle" class="block! h-5 w-5"></nldd-icon>
       } @else if (toastService.toast()?.type === 'error') {
-        <ndd-icon name="exclamation-circle" class="block! h-5 w-5"></ndd-icon>
+        <nldd-icon name="exclamation-circle" class="block! h-5 w-5"></nldd-icon>
       } @else if (toastService.toast()?.type === 'warning') {
-        <ndd-icon name="exclamation-circle" class="block! h-5 w-5"></ndd-icon>
+        <nldd-icon name="exclamation-circle" class="block! h-5 w-5"></nldd-icon>
       } @else {
-        <ndd-icon name="info-circle" class="block! h-5 w-5"></ndd-icon>
+        <nldd-icon name="info-circle" class="block! h-5 w-5"></nldd-icon>
       }
     </div>
     <span class="min-w-0 flex-1 wrap-break-word">{{ toastService.toast()?.message }}</span>
@@ -33,7 +33,7 @@
       aria-label="Dismiss notification"
       class="ml-auto cursor-pointer text-gray-300 hover:text-white dark:text-gray-600 dark:hover:text-gray-800"
     >
-      <ndd-icon name="dismiss-small" class="block! h-4 w-4"></ndd-icon>
+      <nldd-icon name="dismiss-small" class="block! h-4 w-4"></nldd-icon>
     </button>
   </div>
 }
@@ -45,7 +45,7 @@
     role="alert"
   >
     <div class="flex items-center">
-      <ndd-icon name="exclamation-circle" class="mr-3 h-6 w-6 shrink-0"></ndd-icon>
+      <nldd-icon name="exclamation-circle" class="mr-3 h-6 w-6 shrink-0"></nldd-icon>
       <div>
         <p class="font-semibold">New version available</p>
         <p class="text-sm">The API has been updated. Please reload to use the latest version.</p>
@@ -69,13 +69,13 @@
     <!-- Left: mobile sidebar toggle + logo -->
     <div class="flex items-center">
       @if (!isLoginPage()) {
-        <ndd-icon-button
+        <nldd-icon-button
           icon="list"
           size="xs"
           accessible-label="Toggle sidebar"
           (click)="toggleSidebar()"
           class="mr-3 flex items-center lg:hidden"
-        ></ndd-icon-button>
+        ></nldd-icon-button>
       }
       <h1 class="text-xl font-semibold tracking-tight dark:text-white">
         <a class="flex items-center gap-2" routerLink="/">
@@ -99,9 +99,9 @@
           class="flex h-5 w-5 translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow-xs transition-transform group-aria-checked:translate-x-4.5 dark:bg-gray-950 dark:text-gray-300"
         >
           @if (isDarkMode()) {
-            <ndd-icon name="moon" class="h-3 w-3"></ndd-icon>
+            <nldd-icon name="moon" class="h-3 w-3"></nldd-icon>
           } @else {
-            <ndd-icon name="sun" class="h-3 w-3"></ndd-icon>
+            <nldd-icon name="sun" class="h-3 w-3"></nldd-icon>
           }
         </span>
       </button>
@@ -113,7 +113,7 @@
             class="text-accent-600 ring-accent-500 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 flex cursor-pointer items-center rounded-full focus:ring-2 focus:outline-none dark:ring-offset-gray-900"
             aria-label="User menu"
           >
-            <ndd-icon name="person-circle" class="h-7 w-7"></ndd-icon>
+            <nldd-icon name="person-circle" class="h-7 w-7"></nldd-icon>
           </button>
 
           @if (userDropdownOpen()) {
@@ -186,9 +186,9 @@
       </aside>
 
       <!-- Mobile sheet -->
-      <ndd-sheet #mobileSheet placement="left" accessible-label="Navigation">
-        <ndd-page sticky-header="">
-          <ndd-top-title-bar slot="header" dismiss-text="Close"></ndd-top-title-bar>
+      <nldd-sheet #mobileSheet placement="left" accessible-label="Navigation">
+        <nldd-page sticky-header="">
+          <nldd-top-title-bar slot="header" dismiss-text="Close"></nldd-top-title-bar>
           <app-sidebar-nav
             [selectedType]="selectedType()"
             [selectedItemDisplay]="selectedItemDisplay()"
@@ -199,8 +199,8 @@
             (openSelectorModal)="openSelectorModal()"
             (closeSidebar)="closeSidebar()"
           />
-        </ndd-page>
-      </ndd-sheet>
+        </nldd-page>
+      </nldd-sheet>
     }
 
     <!-- Main content -->

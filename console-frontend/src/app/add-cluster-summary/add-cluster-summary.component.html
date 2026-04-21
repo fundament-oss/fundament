@@ -103,10 +103,10 @@
     <div
       class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
     >
-      <ndd-icon
+      <nldd-icon
         name="dismiss-circle"
         class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-      ></ndd-icon>
+      ></nldd-icon>
       <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
     </div>
   }
@@ -131,20 +131,20 @@
             class="fill-accent-600 text-accent-200 dark:fill-accent-400 dark:text-accent-900 h-4 w-4 shrink-0 animate-spin"
           />
         } @else if (bannerState() === 'ready') {
-          <ndd-icon
+          <nldd-icon
             name="check-mark-circle"
             class="h-5 w-5 shrink-0 text-green-500! dark:text-green-400!"
-          ></ndd-icon>
+          ></nldd-icon>
         } @else if (bannerState() === 'partial') {
-          <ndd-icon
+          <nldd-icon
             name="exclamation-circle"
             class="h-4.5 w-4.5 shrink-0 text-amber-500! dark:text-amber-400!"
-          ></ndd-icon>
+          ></nldd-icon>
         } @else {
-          <ndd-icon
+          <nldd-icon
             name="dismiss-circle"
             class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-          ></ndd-icon>
+          ></nldd-icon>
         }
         <div>
           <p
@@ -175,19 +175,19 @@
         </div>
       </div>
       <div class="flex shrink-0 gap-2">
-        <ndd-button
+        <nldd-button
           type="button"
           (click)="reopenModal()"
           text="View progress"
           variant="secondary"
-        ></ndd-button>
+        ></nldd-button>
         @if (clusterId()) {
-          <ndd-button
+          <nldd-button
             type="button"
             (click)="navigateToCluster()"
             text="Go to cluster"
             variant="primary"
-          ></ndd-button>
+          ></nldd-button>
         }
       </div>
     </div>
@@ -196,26 +196,26 @@
   <!-- Form Actions (hidden once creation has started) -->
   @if (!hasCreationStarted()) {
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-      <ndd-button
+      <nldd-button
         routerLink="/clusters/add/plugins"
         text="Previous step"
         [class.pointer-events-none]="isCreating() || showModal()"
         [class.opacity-50]="isCreating() || showModal()"
         variant="secondary"
-      ></ndd-button>
-      <ndd-button
+      ></nldd-button>
+      <nldd-button
         type="button"
         (click)="onCreateCluster()"
         [text]="isCreating() ? 'Creating...' : 'Create cluster'"
         [disabled]="isCreating() || showModal()"
         variant="primary"
-      ></ndd-button>
+      ></nldd-button>
     </div>
   }
 </div>
 
 <!-- Creation Progress Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #modalDialog
   appDialogSync
   [show]="showModal()"
@@ -223,7 +223,7 @@
   (open)="onModalOpen()"
   (close)="onModalClose()"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <p class="mb-4 text-gray-600 dark:text-gray-400">
     Your cluster is being provisioned. You can track the progress of each step below.
@@ -244,9 +244,9 @@
               class="fill-accent-600 dark:fill-accent-400 h-5 w-5 shrink-0 animate-spin text-gray-200 dark:text-gray-800"
             />
           } @else if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
-            <ndd-icon name="dismiss-circle" class="h-5 w-5 shrink-0 text-rose-500!"></ndd-icon>
+            <nldd-icon name="dismiss-circle" class="h-5 w-5 shrink-0 text-rose-500!"></nldd-icon>
           } @else {
-            <ndd-icon name="check-mark-circle" class="h-5 w-5 shrink-0 text-green-500"></ndd-icon>
+            <nldd-icon name="check-mark-circle" class="h-5 w-5 shrink-0 text-green-500"></nldd-icon>
           }
 
           <div>
@@ -283,33 +283,33 @@
         </div>
 
         @if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
-          <ndd-button
+          <nldd-button
             (click)="retryItem(item.key)"
             text="Retry"
             start-icon="arrow-u-turn-forward"
             variant="secondary"
             size="xs"
-          ></ndd-button>
+          ></nldd-button>
         }
       </div>
     }
   </div>
 
   @if (clusterId()) {
-    <ndd-button
+    <nldd-button
       slot="actions"
       type="button"
       (click)="navigateToCluster()"
       text="Go to cluster"
       variant="primary"
-    ></ndd-button>
+    ></nldd-button>
   } @else if (!isCreating()) {
-    <ndd-button
+    <nldd-button
       slot="actions"
       type="button"
       (click)="onModalClose()"
       text="Cancel"
       variant="secondary"
-    ></ndd-button>
+    ></nldd-button>
   }
-</ndd-modal-dialog>
+</nldd-modal-dialog>

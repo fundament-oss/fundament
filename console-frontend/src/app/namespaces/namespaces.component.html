@@ -3,10 +3,10 @@
   <div
     class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
   >
-    <ndd-icon
+    <nldd-icon
       name="dismiss-circle"
       class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-    ></ndd-icon>
+    ></nldd-icon>
     <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -19,14 +19,14 @@
   </div>
 
   <div class="p-6">
-    <ndd-button
+    <nldd-button
       type="button"
       (click)="openCreateNamespaceModal()"
       text="Create namespace"
       start-icon="plus-small"
       variant="primary"
       class="mb-6"
-    ></ndd-button>
+    ></nldd-button>
 
     @if (namespaces().length === 0) {
       <p class="text-gray-500 dark:text-gray-400">No namespaces belong to this project yet.</p>
@@ -42,14 +42,14 @@
                 Created {{ formatDate(namespace.created) }}
               </p>
             </div>
-            <ndd-button
+            <nldd-button
               type="button"
               (click)="openDeleteNamespaceModal(namespace.id, namespace.name)"
               text="Delete"
               start-icon="trash"
               variant="destructive"
               size="sm"
-            ></ndd-button>
+            ></nldd-button>
           </div>
         }
       </div>
@@ -58,7 +58,7 @@
 </div>
 
 <!-- Create Namespace Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #createNamespaceDialog
   appDialogSync
   [show]="showCreateNamespaceModal()"
@@ -66,37 +66,37 @@
   (open)="onCreateNamespaceModalOpen()"
   (close)="showCreateNamespaceModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <form
     [formGroup]="namespaceForm"
     (ngSubmit)="createNamespace()"
     (keydown.enter)="createNamespace()"
   >
-    <ndd-form-field label="Namespace name" class="mb-4">
-      <ndd-text-field
+    <nldd-form-field label="Namespace name" class="mb-4">
+      <nldd-text-field
         id="namespaceName"
         [value]="namespaceForm.get('name')?.value ?? ''"
         placeholder="E.g. my-namespace"
         [invalid]="!!(namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty)"
         error-message="namespace-name-error"
         (input)="onNameInput($event)"
-      ></ndd-text-field>
-      <ndd-form-field-error-text id="namespace-name-error">
+      ></nldd-text-field>
+      <nldd-form-field-error-text id="namespace-name-error">
         {{ getNameError() }}
-      </ndd-form-field-error-text>
-    </ndd-form-field>
+      </nldd-form-field-error-text>
+    </nldd-form-field>
   </form>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showCreateNamespaceModal.set(false)"
     [disabled]="isCreatingNamespace()"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="createNamespace()"
@@ -104,11 +104,11 @@
     [text]="isCreatingNamespace() ? 'Creating...' : 'Create namespace'"
     [disabled]="isCreatingNamespace() || !namespaceForm.valid"
     variant="primary"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Delete Namespace Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #deleteNamespaceDialog
   appDialogSync
   [show]="showDeleteNamespaceModal()"
@@ -117,7 +117,7 @@
   (open)="onDeleteNamespaceModalOpen()"
   (close)="showDeleteNamespaceModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <p>
     Are you sure you want to delete namespace
@@ -128,18 +128,18 @@
     This will remove the namespace and all resources running on it. This cannot be undone.
   </p>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showDeleteNamespaceModal.set(false)"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="confirmDeleteNamespace()"
     text="Yes, delete this namespace"
     variant="destructive"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>

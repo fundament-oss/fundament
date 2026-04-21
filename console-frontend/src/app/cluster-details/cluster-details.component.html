@@ -3,10 +3,10 @@
   <div
     class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
   >
-    <ndd-icon
+    <nldd-icon
       name="dismiss-circle"
       class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
-    ></ndd-icon>
+    ></nldd-icon>
     <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -40,22 +40,22 @@
         </div>
 
         <div class="flex gap-2 lg:justify-end">
-          <ndd-button
+          <nldd-button
             type="button"
             (click)="openTerminal()"
             text="Open terminal"
             variant="secondary"
             start-icon="terminal"
             size="sm"
-          ></ndd-button>
-          <ndd-button
+          ></nldd-button>
+          <nldd-button
             type="button"
             (click)="downloadKubeconfig()"
             text="Download kubeconfig"
             start-icon="arrow-down-in-bucket"
             variant="primary"
             size="sm"
-          ></ndd-button>
+          ></nldd-button>
         </div>
       </div>
     </div>
@@ -91,13 +91,13 @@
             <dt class="font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
             <dd class="mt-1 dark:text-white">
               {{ clusterData.basics.kubernetesVersion }}
-              <ndd-button
+              <nldd-button
                 text="Upgrade"
                 start-icon="arrow-up"
                 variant="secondary"
                 size="xs"
                 class="ml-1"
-              ></ndd-button>
+              ></nldd-button>
             </dd>
           </dl>
         </div>
@@ -156,10 +156,10 @@
         @if (clusterData.syncState) {
           <details class="group mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
             <summary class="inline-flex cursor-pointer items-center font-medium">
-              <ndd-icon
+              <nldd-icon
                 name="caret-right"
                 class="text-accent-500! mr-1 h-4 w-4 transition-transform group-open:rotate-90"
-              ></ndd-icon>
+              ></nldd-icon>
               Sync details
             </summary>
 
@@ -433,7 +433,7 @@
           <h3 class="mb-4 text-xl font-medium dark:text-white">
             Members
             <!-- TODO: Update this link - clusters belong to organizations, not projects
-            <ndd-button routerLink="/project-members" text="Edit" start-icon="pencil" variant="secondary" size="xs" class="ml-1" ></ndd-button>
+            <nldd-button routerLink="/project-members" text="Edit" start-icon="pencil" variant="secondary" size="xs" class="ml-1" ></nldd-button>
             -->
           </h3>
           <div class="space-y-3">
@@ -473,14 +473,14 @@
         <div class="card card-body">
           <h3 class="mb-4 text-xl font-medium dark:text-white">
             Node pools
-            <ndd-button
+            <nldd-button
               [routerLink]="['/clusters', clusterData.basics.id, 'nodes']"
               text="Edit"
               start-icon="pencil"
               variant="secondary"
               size="xs"
               class="ml-1"
-            ></ndd-button>
+            ></nldd-button>
           </h3>
           @if (clusterData.nodePools.length === 0) {
             <p class="text-gray-500 dark:text-gray-400">No node pools are configured yet.</p>
@@ -534,14 +534,14 @@
         <div class="card card-body">
           <h3 class="mb-4 text-xl font-medium dark:text-white">
             Plugins
-            <ndd-button
+            <nldd-button
               [routerLink]="['/clusters', clusterData.basics.id, 'plugins']"
               text="Edit"
               start-icon="pencil"
               variant="secondary"
               size="xs"
               class="ml-1"
-            ></ndd-button>
+            ></nldd-button>
           </h3>
           @if (isLoadingPlugins()) {
             <p class="text-gray-500 dark:text-gray-400">Loading plugins...</p>
@@ -567,14 +567,14 @@
         <div class="card card-body">
           <h3 class="mb-4 text-xl font-medium dark:text-white">
             Namespaces
-            <ndd-button
+            <nldd-button
               [routerLink]="['/clusters', clusterData.basics.id, 'namespaces']"
               text="Edit"
               start-icon="pencil"
               variant="secondary"
               size="xs"
               class="ml-1"
-            ></ndd-button>
+            ></nldd-button>
           </h3>
           @if (namespaces().length === 0) {
             <p class="text-gray-500 dark:text-gray-400">No namespaces in this cluster yet.</p>
@@ -602,18 +602,18 @@
         <p class="mb-4 text-rose-700 dark:text-rose-300">
           Deleting a cluster is permanent and cannot be undone.
         </p>
-        <ndd-button
+        <nldd-button
           (click)="showDeleteModal.set(true)"
           text="Delete this cluster"
           variant="destructive"
-        ></ndd-button>
+        ></nldd-button>
       </div>
     </div>
   </div>
 }
 
 <!-- Delete Cluster Modal -->
-<ndd-modal-dialog
+<nldd-modal-dialog
   #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
@@ -622,7 +622,7 @@
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
-  <ndd-spacer size="24"></ndd-spacer>
+  <nldd-spacer size="24"></nldd-spacer>
 
   <p>
     Are you sure you want to delete cluster
@@ -631,18 +631,18 @@
   </p>
   <p class="mt-2 text-rose-600 dark:text-rose-400">This cannot be undone.</p>
 
-  <ndd-button
+  <nldd-button
     slot="actions"
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Cancel"
     variant="secondary"
-  ></ndd-button>
-  <ndd-button
+  ></nldd-button>
+  <nldd-button
     slot="actions"
     type="button"
     (click)="deleteCluster()"
     text="Yes, delete this cluster"
     variant="destructive"
-  ></ndd-button>
-</ndd-modal-dialog>
+  ></nldd-button>
+</nldd-modal-dialog>
