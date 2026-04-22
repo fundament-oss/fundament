@@ -13,7 +13,11 @@
 <div class="px-6 py-6">
   <app-shared-node-pools-form (formSubmit)="onFormSubmit($event)">
     <div class="flex space-x-3">
-      <nldd-button routerLink="/clusters/add" text="Previous step" variant="secondary"></nldd-button>
+      <nldd-button
+        routerLink="/clusters/add"
+        text="Previous step"
+        variant="secondary"
+      ></nldd-button>
       <nldd-button
         type="button"
         (click)="nodePoolsForm.submit()"

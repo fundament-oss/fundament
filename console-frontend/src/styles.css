@@ -294,7 +294,7 @@ select {
   @apply px-6 py-3 whitespace-nowrap dark:text-gray-300;
 }
 
-/* Date range picker styles */
+/* Date range picker styles, defined here since the 'accent' and 'neutral' colors are not available in the component styles */
 app-date-range-picker input {
-  @apply border-neutral-550 ring-accent-200 dark:border-neutral-650 dark:ring-accent-800 w-full appearance-none rounded-md border-2 py-2 pr-10 pl-3 ring-offset-2 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950;
+  @apply border-neutral-550 ring-accent-200 dark:border-neutral-650 dark:ring-accent-800 w-full appearance-none rounded-[9px] border-2 px-2.5 py-2 ring-offset-2 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950;
 }
