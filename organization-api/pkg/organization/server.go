@@ -10,6 +10,7 @@ import (
 	"connectrpc.com/validate"
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/circuitbreaker"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/idempotency"
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -37,13 +38,24 @@ type Server struct {
 	logger         *slog.Logger
 	authValidator  *auth.Validator
 	authz          *authz.Client
+	circuitBreaker *circuitbreaker.Breaker
 	clock          clock.Clock
 	handler        http.Handler
 	mockPromClient *prom.MockClient
 	prometheusURL  string
 }
 
-func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client, idempotencyStore *idempotency.Store) (*Server, error) {
+// Option configures optional Server dependencies.
+type Option func(*Server)
+
+// WithCircuitBreaker adds a circuit breaker that blocks all requests when tripped.
+func WithCircuitBreaker(b *circuitbreaker.Breaker) Option {
+	return func(s *Server) {
+		s.circuitBreaker = b
+	}
+}
+
+func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client, idempotencyStore *idempotency.Store, opts ...Option) (*Server, error) {
 	clk := cfg.Clock
 	if clk == nil {
 		clk = clock.New()
@@ -61,6 +73,10 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		prometheusURL:  cfg.PrometheusURL,
 	}
 
+	for _, opt := range opts {
+		opt(s)
+	}
+
 	mux := http.NewServeMux()
 	loggingInterceptor := logging.UnaryServerInterceptor(
 		logging.LoggerFunc(func(ctx context.Context, level logging.Level, msg string, fields ...any) {
@@ -71,13 +87,21 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 
 	procedures := buildProcedures(s.queries)
 
-	interceptors := connect.WithInterceptors(
+	chain := []connect.Interceptor{
 		connectrecovery.NewInterceptor(logger),
+	}
+
+	if s.circuitBreaker != nil {
+		chain = append(chain, circuitbreaker.NewInterceptor(s.circuitBreaker))
+	}
+
+	chain = append(chain,
 		s.authInterceptor(),
 		validate.NewInterceptor(),
 		loggingInterceptor,
 		idempotency.NewInterceptor(logger, idempotencyStore, UserIDFromContext, procedures),
 	)
+	interceptors := connect.WithInterceptors(chain...)
 
 	orgPath, orgHandler := organizationv1connect.NewOrganizationServiceHandler(s, interceptors)
 	mux.Handle(orgPath, orgHandler)
