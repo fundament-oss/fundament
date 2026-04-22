@@ -1,13 +1,13 @@
 <!-- Error Message -->
 @if (errorMessage()) {
   <div
-    class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+    class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
   >
     <nldd-icon
       name="dismiss-circle"
-      class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
+      class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
     ></nldd-icon>
-    <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+    <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
   </div>
 }
 
@@ -42,7 +42,7 @@
           <p class="text-gray-600 dark:text-gray-300">Loading clusters...</p>
         </div>
       } @else if (clusters().length === 0) {
-        <p class="text-rose-600 dark:text-rose-400">
+        <p class="text-danger-600 dark:text-danger-400">
           No clusters available. <a routerLink="/clusters/add" class="link">Add a cluster first</a>.
         </p>
       } @else {

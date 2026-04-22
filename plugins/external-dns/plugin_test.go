@@ -18,7 +18,7 @@ func TestLoadDefinition(t *testing.T) {
 	assert.Equal(t, "v1.16.1", def.Metadata.Version)
 	assert.Equal(t, "Fundament", def.Metadata.Author)
 	assert.Equal(t, "Apache-2.0", def.Metadata.License)
-	assert.Equal(t, "stack", def.Metadata.Icon)
+	assert.Equal(t, "rectangle-stack", def.Metadata.Icon)
 	assert.Equal(t, "https://kubernetes-sigs.github.io/external-dns/", def.Metadata.URLs.Homepage)
 	assert.NotEmpty(t, def.Spec.Permissions.Capabilities)
 	assert.NotEmpty(t, def.Spec.Permissions.RBAC)

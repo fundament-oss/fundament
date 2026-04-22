@@ -135,10 +135,13 @@
         </div>
       } @else if (error()) {
         <div
-          class="rounded-md border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-800 dark:bg-rose-950"
+          class="bg-danger-50 dark:bg-danger-950 rounded-md border border-rose-200 p-8 text-center dark:border-rose-800"
         >
-          <nldd-icon name="exclamation-circle" class="mx-auto h-12 w-12 text-rose-400!"></nldd-icon>
-          <p class="mt-2 text-rose-600 dark:text-rose-400">{{ error() }}</p>
+          <nldd-icon
+            name="exclamation-circle"
+            class="text-danger-400! mx-auto h-12 w-12"
+          ></nldd-icon>
+          <p class="text-danger-600 dark:text-danger-400 mt-2">{{ error() }}</p>
           <nldd-button
             type="button"
             (click)="loadMembers()"
@@ -250,7 +253,7 @@
     <strong class="font-semibold">{{ deletingMember()?.name }}</strong>
     from this organization?
   </p>
-  <p class="mt-2 text-rose-600 dark:text-rose-400">
+  <p class="text-danger-600 dark:text-danger-400 mt-2">
     This will revoke their access to all organization resources.
   </p>
 

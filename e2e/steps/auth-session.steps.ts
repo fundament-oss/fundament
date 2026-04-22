@@ -122,7 +122,7 @@ Then(
   'I should not see an authentication error',
   async function (this: ICustomWorld) {
     // Check that no error message is visible
-    const errorMessage = this.page!.locator('.bg-red-50, .bg-red-950');
+    const errorMessage = this.page!.locator('.bg-danger-50, .bg-danger-950');
     await expect(errorMessage).not.toBeVisible();
   }
 );

@@ -1,13 +1,13 @@
 <!-- Error Message -->
 @if (errorMessage()) {
   <div
-    class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+    class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
   >
     <nldd-icon
       name="dismiss-circle"
-      class="h-4.5 w-4.5 shrink-0 text-rose-500! dark:text-rose-400!"
+      class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
     ></nldd-icon>
-    <p class="text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+    <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
   </div>
 }
 
@@ -129,7 +129,7 @@
           @if (clusterData.syncState?.outboxError) {
             <dl class="sm:col-span-2">
               <dt class="font-medium text-gray-500 dark:text-gray-400">Sync error</dt>
-              <dd class="mt-1 text-red-600 dark:text-red-400">
+              <dd class="text-danger-600 dark:text-danger-400 mt-1">
                 {{ clusterData.syncState?.outboxError }}
               </dd>
             </dl>
@@ -213,7 +213,7 @@
                   @if (clusterData.syncState.outboxError) {
                     <tr>
                       <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Outbox error</td>
-                      <td class="px-3 py-2 text-red-600 dark:text-red-400">
+                      <td class="text-danger-600 dark:text-danger-400 px-3 py-2">
                         {{ clusterData.syncState.outboxError }}
                       </td>
                     </tr>
@@ -596,10 +596,10 @@
 
       <!-- Danger Zone -->
       <div
-        class="rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-900/20"
+        class="bg-danger-50 dark:bg-danger-900/20 rounded-md border border-rose-200 p-4 dark:border-rose-900"
       >
-        <h3 class="mb-2 text-lg font-medium text-rose-800 dark:text-rose-200">Danger zone</h3>
-        <p class="mb-4 text-rose-700 dark:text-rose-300">
+        <h3 class="text-danger-800 dark:text-danger-200 mb-2 text-lg font-medium">Danger zone</h3>
+        <p class="text-danger-700 dark:text-danger-300 mb-4">
           Deleting a cluster is permanent and cannot be undone.
         </p>
         <nldd-button
@@ -629,7 +629,7 @@
     <strong class="font-semibold">{{ clusterData.basics.name }}</strong
     >?
   </p>
-  <p class="mt-2 text-rose-600 dark:text-rose-400">This cannot be undone.</p>
+  <p class="text-danger-600 dark:text-danger-400 mt-2">This cannot be undone.</p>
 
   <nldd-button
     slot="actions"

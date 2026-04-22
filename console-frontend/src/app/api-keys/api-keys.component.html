@@ -34,7 +34,7 @@
                 type="button"
                 (click)="copyToken()"
                 text="Copy"
-                start-icon="squares-stack-plus"
+                start-icon="rectangle-stack"
                 variant="primary"
               ></nldd-button>
             </div>
@@ -52,8 +52,8 @@
 
     <!-- Error Message -->
     @if (error()) {
-      <div class="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-950">
-        <p class="text-red-800 dark:text-red-200">{{ error() }}</p>
+      <div class="bg-danger-50 dark:bg-danger-950 mb-4 rounded-md p-4">
+        <p class="text-danger-800 dark:text-danger-200">{{ error() }}</p>
       </div>
     }
 
@@ -161,7 +161,7 @@
                 <td class="text-gray-600 dark:text-gray-400">
                   @if (apiKey.expires) {
                     <span
-                      [class.text-red-600]="isExpired(apiKey.expires)"
+                      [class.text-danger-600]="isExpired(apiKey.expires)"
                       title="{{ formatDateTime(apiKey.expires) }}"
                     >
                       {{ formatDate(apiKey.expires) }}

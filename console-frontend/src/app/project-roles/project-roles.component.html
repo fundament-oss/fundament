@@ -129,7 +129,7 @@
           }
         </select>
         @if (memberIdError()) {
-          <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">Please select a member.</p>
+          <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">Please select a member.</p>
         }
       }
     </nldd-form-field>
@@ -182,7 +182,7 @@
               }
             </select>
             @if (namespaceError()) {
-              <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">
+              <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">
                 Please select a namespace.
               </p>
             }
@@ -197,7 +197,7 @@
               (input)="modalCustomNamespace.set($any($event.target).value)"
             ></nldd-text-field>
             @if (customNamespaceError()) {
-              <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">
+              <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">
                 Please enter a namespace pattern.
               </p>
             }
@@ -209,7 +209,7 @@
     <div class="mb-4">
       <span class="mb-2 block font-medium text-gray-700 dark:text-white">Roles</span>
       @if (rolesError()) {
-        <p class="mb-2 text-sm text-rose-600 dark:text-rose-400">
+        <p class="text-danger-600 dark:text-danger-400 mb-2 text-sm">
           Please select at least one role.
         </p>
       }

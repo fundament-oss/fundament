@@ -39,7 +39,7 @@ const getUsagePercentage = (used: number, limit: number): number =>
   Math.round((used / limit) * 100);
 
 const getUsageColor = (percentage: number): string => {
-  if (percentage >= 90) return 'bg-red-500';
+  if (percentage >= 90) return 'bg-danger-500';
   if (percentage >= 75) return 'bg-yellow-500';
   return 'bg-green-500';
 };
@@ -94,10 +94,10 @@ const getEventTypeColor = (eventType: string): string => {
     sync_requested: 'bg-blue-500',
     sync_claimed: 'bg-blue-500',
     sync_succeeded: 'bg-green-500',
-    sync_failed: 'bg-red-500',
+    sync_failed: 'bg-danger-500',
     status_progressing: 'bg-blue-500',
     status_ready: 'bg-green-500',
-    status_error: 'bg-red-500',
+    status_error: 'bg-danger-500',
     status_deleted: 'bg-gray-500',
   };
   return colors[eventType] || 'bg-gray-500';

@@ -47,6 +47,28 @@
   --color-neutral-850: oklch(0.307 0.018 253.4);
   --color-neutral-900: oklch(0.261 0.015 253.4);
   --color-neutral-950: oklch(0.202 0.011 253.4);
+
+  --color-danger-25: oklch(0.975 0.012 29.5);
+  --color-danger-50: oklch(0.951 0.025 29.5);
+  --color-danger-75: oklch(0.927 0.037 29.5);
+  --color-danger-100: oklch(0.903 0.05 29.5);
+  --color-danger-150: oklch(0.859 0.077 29.5);
+  --color-danger-200: oklch(0.816 0.104 29.5);
+  --color-danger-250: oklch(0.776 0.132 29.5);
+  --color-danger-300: oklch(0.737 0.161 29.5);
+  --color-danger-350: oklch(0.7 0.191 29.5);
+  --color-danger-400: oklch(0.663 0.207 29.5);
+  --color-danger-450: oklch(0.625 0.207 29.5);
+  --color-danger-500: oklch(0.588 0.207 29.5);
+  --color-danger-550: oklch(0.552 0.207 29.5);
+  --color-danger-600: oklch(0.517 0.207 29.5);
+  --color-danger-650: oklch(0.48 0.195 29.5);
+  --color-danger-700: oklch(0.443 0.18 29.5);
+  --color-danger-750: oklch(0.405 0.165 29.5);
+  --color-danger-800: oklch(0.365 0.148 29.5);
+  --color-danger-850: oklch(0.323 0.131 29.5);
+  --color-danger-900: oklch(0.275 0.112 29.5);
+  --color-danger-950: oklch(0.212 0.086 29.5);
 }
 
 :root {
@@ -187,7 +209,7 @@ input.validate-on-touch.ng-invalid.ng-touched {
 }
 
 .badge-rose {
-  @apply bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200;
+  @apply bg-danger-100 text-danger-800 dark:bg-danger-950 dark:text-danger-200;
 }
 
 .badge-yellow {
@@ -251,7 +273,7 @@ select {
 }
 
 .breadcrumb .error-message {
-  @apply cursor-pointer text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300;
+  @apply text-danger-600 hover:text-danger-700 dark:text-danger-400 dark:hover:text-danger-300 cursor-pointer;
 }
 
 /* Navigation link styles */

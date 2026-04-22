@@ -51,7 +51,7 @@ spec:
         list: true
         detail: true
         create: true
-        icon: stack
+        icon: rectangle-stack
     project:
       - crd: certificates.cert-manager.io
         list: true

@@ -34,7 +34,7 @@ const getAvatarColor = (name: string): string => {
     'bg-accent-600',
     'bg-emerald-600',
     'bg-purple-600',
-    'bg-rose-600',
+    'bg-danger-600',
     'bg-amber-600',
     'bg-cyan-600',
   ];
