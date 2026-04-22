@@ -197,3 +197,6 @@ spec:
           redirectURIs:
             - https://authn.pr${PR_NUM}.${DOMAIN}/callback
           public: true
+
+    ingress:
+      enabled: false
