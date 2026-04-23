@@ -27,7 +27,7 @@ type Config struct {
 	Clock                clock.Clock
 	MockPrometheusClient *prom.MockClient
 	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
-	KubeAPIProxyURL string // Base URL for the kube-api-proxy (e.g. "https://kube-proxy.fundament.example")
+	KubeAPIProxyURL      string // Base URL for the kube-api-proxy (e.g. "https://kube-proxy.fundament.example")
 }
 
 type Server struct {

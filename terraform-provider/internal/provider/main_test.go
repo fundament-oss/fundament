@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 
 	apiKeyClient := organizationv1connect.NewAPIKeyServiceClient(http.DefaultClient, endpoint)
 
-	const maxRetries = 15
+	const maxRetries = 30
 	const retryInterval = 2 * time.Second
 
 	// Create a dynamic test API key.

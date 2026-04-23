@@ -128,4 +128,3 @@ func Test_GetKubeconfig_Ready(t *testing.T) {
 	// Verify it's valid YAML (basic structure check).
 	assert.True(t, strings.HasPrefix(kc, "apiVersion: v1"))
 }
-

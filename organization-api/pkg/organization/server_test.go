@@ -39,11 +39,11 @@ type testUser struct {
 }
 
 type apiOptions struct {
-	t                    testing.TB
-	organizations        map[uuid.UUID]string
-	users                map[uuid.UUID]testUser
-	clock                clock.Clock
-	idempotency          bool
+	t               testing.TB
+	organizations   map[uuid.UUID]string
+	users           map[uuid.UUID]testUser
+	clock           clock.Clock
+	idempotency     bool
 	kubeAPIProxyURL string
 }
 
@@ -134,10 +134,10 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	jwtSecret := []byte(uuid.New().String())
 
 	organizationCfg := &organization.Config{
-		JWTSecret:            jwtSecret,
-		CORSAllowedOrigins:   []string{"*"},
-		Clock:                opts.clock,
-		KubeAPIProxyURL: opts.kubeAPIProxyURL,
+		JWTSecret:          jwtSecret,
+		CORSAllowedOrigins: []string{"*"},
+		Clock:              opts.clock,
+		KubeAPIProxyURL:    opts.kubeAPIProxyURL,
 	}
 
 	var idempotencyStore *idempotency.Store

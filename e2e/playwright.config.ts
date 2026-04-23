@@ -2,7 +2,7 @@ import { PlaywrightTestConfig } from '@playwright/test';
 
 const config: PlaywrightTestConfig = {
   use: {
-    baseURL: process.env.BASE_URL || 'http://console.fundament.localhost:8080',
+    baseURL: process.env.BASE_URL || 'https://console.fundament.localhost:8443',
     headless: process.env.HEADED !== 'true',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
