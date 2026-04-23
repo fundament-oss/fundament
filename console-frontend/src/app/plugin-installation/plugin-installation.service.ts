@@ -18,12 +18,13 @@ export class PluginInstallationService {
 
   async listInstallations(clusterId: string): Promise<PluginInstallationItem[]> {
     const res = await fetch(this.url(clusterId), { credentials: 'include' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const body: PluginInstallationListResponse = await res.json();
     return body.items ?? [];
   }
 
   async installPlugin(clusterId: string, pluginName: string, image: string): Promise<void> {
-    await fetch(this.url(clusterId), {
+    const res = await fetch(this.url(clusterId), {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -34,12 +35,14 @@ export class PluginInstallationService {
         spec: { pluginName, image },
       }),
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
   }
 
   async uninstallPlugin(clusterId: string, pluginName: string): Promise<void> {
-    await fetch(this.url(clusterId, pluginName), {
+    const res = await fetch(this.url(clusterId, pluginName), {
       method: 'DELETE',
       credentials: 'include',
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
   }
 }

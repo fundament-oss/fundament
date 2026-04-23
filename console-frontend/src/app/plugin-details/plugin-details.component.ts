@@ -158,22 +158,23 @@ export default class PluginDetailsComponent implements OnInit {
 
   async onInstallOnCluster(clusterId: string): Promise<void> {
     const cluster = this.clusters().find((c) => c.id === clusterId);
-    if (!cluster || cluster.installed) {
+    const plugin = this.plugin();
+    if (!cluster || cluster.installed || !plugin) {
       return;
     }
 
     try {
       await this.pluginInstallationService.installPlugin(
         clusterId,
-        this.plugin()!.name,
+        plugin.name,
         this.pluginImage,
       );
       this.clusters.update((clusters) =>
         clusters.map((c) => (c.id === clusterId ? { ...c, installed: true } : c)),
       );
-      this.toastService.success(`${this.plugin()?.name} installed on ${cluster.name}`);
+      this.toastService.success(`${plugin.name} installed on ${cluster.name}`);
     } catch {
-      this.toastService.error(`Failed to install ${this.plugin()?.name} on ${cluster.name}`);
+      this.toastService.error(`Failed to install ${plugin.name} on ${cluster.name}`);
     }
   }
 

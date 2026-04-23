@@ -44,7 +44,7 @@ setup-certs:
         [ "$(date +%s)" -ge "$deadline" ] && { echo "Timed out waiting for cert-manager namespace"; exit 1; }
         sleep 5
     done
-    kubectl wait --for=condition=Available deployment/cert-manager -n cert-manager --timeout=300s
+    kubectl wait --for=condition=Available deployment/cert-manager deployment/cert-manager-webhook -n cert-manager --timeout=300s
     helm upgrade --install mkcert-setup charts/mkcert-setup \
         --namespace cert-manager \
         --set-file ca.cert="$(mkcert -CAROOT)/rootCA.pem" \

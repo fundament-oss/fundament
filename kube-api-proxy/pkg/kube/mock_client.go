@@ -11,16 +11,13 @@ import (
 
 // MockClient returns hardcoded Kubernetes API responses for development and testing.
 // It implements http.Handler so it can be used in place of MultiClusterProxy.
-type MockClient struct{}
+type MockClient struct {
+	mu               sync.Mutex
+	installByCluster map[string][]map[string]any
+}
 
 const crdBasePath = "/apis/apiextensions.k8s.io/v1/customresourcedefinitions"
 const pluginInstallationsPath = "/apis/plugins.fundament.io/v1/plugininstallations"
-
-// mockInstallByCluster holds per-cluster plugin installation state for mock mode.
-var (
-	mockInstallMu        sync.Mutex
-	mockInstallByCluster = map[string][]map[string]any{}
-)
 
 var defaultMockInstallItems = []map[string]any{
 	{
@@ -44,28 +41,31 @@ func clusterIDFromContext(ctx context.Context) string {
 	return id
 }
 
-func mockInstallItemsForCluster(clusterID string) []map[string]any {
-	items, ok := mockInstallByCluster[clusterID]
+func (m *MockClient) installItemsForCluster(clusterID string) []map[string]any {
+	if m.installByCluster == nil {
+		m.installByCluster = map[string][]map[string]any{}
+	}
+	items, ok := m.installByCluster[clusterID]
 	if !ok {
 		// Deep-copy the defaults so mutations don't affect other clusters.
 		copied := make([]map[string]any, len(defaultMockInstallItems))
 		for i, item := range defaultMockInstallItems {
-			m := make(map[string]any, len(item))
+			cp := make(map[string]any, len(item))
 			for k, v := range item {
-				m[k] = v
+				cp[k] = v
 			}
-			copied[i] = m
+			copied[i] = cp
 		}
-		mockInstallByCluster[clusterID] = copied
+		m.installByCluster[clusterID] = copied
 		return copied
 	}
 	return items
 }
 
-func mockInstallationsListJSON(clusterID string) string {
-	mockInstallMu.Lock()
-	defer mockInstallMu.Unlock()
-	items := mockInstallItemsForCluster(clusterID)
+func (m *MockClient) installationsListJSON(clusterID string) string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	items := m.installItemsForCluster(clusterID)
 	list := map[string]any{
 		"apiVersion": "plugins.fundament.io/v1",
 		"kind":       "PluginInstallationList",
@@ -93,27 +93,27 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 			return 400, r(`{"message":"invalid body"}`), nil
 		}
 		obj["status"] = map[string]any{"phase": "Running", "ready": true}
-		mockInstallMu.Lock()
-		items := mockInstallItemsForCluster(clusterID)
-		mockInstallByCluster[clusterID] = append(items, obj)
-		mockInstallMu.Unlock()
+		m.mu.Lock()
+		items := m.installItemsForCluster(clusterID)
+		m.installByCluster[clusterID] = append(items, obj)
+		m.mu.Unlock()
 		b, _ := json.Marshal(obj)
 		return 201, r(string(b)), nil
 	case strings.HasPrefix(path, pluginInstallationsPath+"/") && method == http.MethodDelete:
 		name := path[len(pluginInstallationsPath)+1:]
-		mockInstallMu.Lock()
-		items := mockInstallItemsForCluster(clusterID)
+		m.mu.Lock()
+		items := m.installItemsForCluster(clusterID)
 		for i, item := range items {
 			meta, _ := item["metadata"].(map[string]any)
 			if meta["name"] == name {
-				mockInstallByCluster[clusterID] = append(items[:i], items[i+1:]...)
+				m.installByCluster[clusterID] = append(items[:i], items[i+1:]...)
 				break
 			}
 		}
-		mockInstallMu.Unlock()
+		m.mu.Unlock()
 		return 200, r(`{}`), nil
 	case path == pluginInstallationsPath:
-		return 200, r(mockInstallationsListJSON(clusterID)), nil
+		return 200, r(m.installationsListJSON(clusterID)), nil
 	case strings.HasPrefix(path, crdBasePath+"/"):
 		name := path[len(crdBasePath)+1:]
 		if crd, ok := mockCRDForName(name); ok {
