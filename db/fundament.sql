@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.3
+-- ** pgModeler version: 2.0.0-alpha
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -97,12 +97,12 @@ ALTER TABLE tenant.namespaces ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_deleted ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
 	IF NEW.deleted IS NOT NULL AND EXISTS (
@@ -126,12 +126,12 @@ ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO postgres;
 CREATE OR REPLACE FUNCTION tenant.node_pool_outbox_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     INSERT INTO tenant.cluster_outbox (node_pool_id, event, source)
@@ -156,12 +156,12 @@ ALTER FUNCTION tenant.node_pool_outbox_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_cluster_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     IF TG_OP = 'INSERT'
@@ -190,12 +190,12 @@ ALTER FUNCTION tenant.cluster_outbox_cluster_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_organization_user_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
@@ -222,12 +222,12 @@ ALTER FUNCTION tenant.cluster_outbox_organization_user_trigger() OWNER TO fun_ow
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_project_member_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
@@ -254,12 +254,12 @@ ALTER FUNCTION tenant.cluster_outbox_project_member_trigger() OWNER TO fun_owner
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_notify ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     PERFORM pg_notify('cluster_outbox', '');
@@ -275,12 +275,12 @@ ALTER FUNCTION tenant.cluster_outbox_notify() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_update_cluster_status ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 DECLARE
     resolved_cluster_id uuid;
@@ -316,12 +316,12 @@ ALTER FUNCTION tenant.cluster_outbox_update_cluster_status() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authn.current_user_id ()
 	RETURNS uuid
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT NULLIF(current_setting('app.current_user_id', true), '')::uuid
 $function$;
@@ -334,12 +334,12 @@ ALTER FUNCTION authn.current_user_id() OWNER TO fun_fundament_api;
 CREATE OR REPLACE FUNCTION authn.current_organization_id ()
 	RETURNS uuid
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT NULLIF(current_setting('app.current_organization_id', true), '')::uuid
 $function$;
@@ -352,12 +352,12 @@ ALTER FUNCTION authn.current_organization_id() OWNER TO fun_fundament_api;
 CREATE OR REPLACE FUNCTION authn.is_project_in_organization (IN p_project_id uuid)
 	RETURNS boolean
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.projects
@@ -375,12 +375,12 @@ ALTER FUNCTION authn.is_project_in_organization(uuid) OWNER TO fun_authz;
 CREATE OR REPLACE FUNCTION authn.is_cluster_in_organization (IN p_cluster_id uuid)
 	RETURNS boolean
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.clusters
@@ -397,12 +397,12 @@ ALTER FUNCTION authn.is_cluster_in_organization(uuid) OWNER TO fun_authz;
 CREATE OR REPLACE FUNCTION authn.is_organization_member (IN p_organization_id uuid)
 	RETURNS boolean
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.organizations_users
@@ -420,12 +420,12 @@ ALTER FUNCTION authn.is_organization_member(uuid) OWNER TO fun_authz;
 CREATE OR REPLACE FUNCTION tenant.projects_tr_verify_deleted ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
 	IF EXISTS (
@@ -449,12 +449,12 @@ ALTER FUNCTION tenant.projects_tr_verify_deleted() OWNER TO postgres;
 CREATE OR REPLACE FUNCTION tenant.project_members_tr_protect_last_admin ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 DECLARE
     admin_count integer;
@@ -489,12 +489,12 @@ ALTER FUNCTION tenant.project_members_tr_protect_last_admin() OWNER TO postgres;
 CREATE OR REPLACE FUNCTION tenant.projects_tr_require_admin ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     IF NOT EXISTS (
@@ -577,12 +577,12 @@ CREATE POLICY api_keys_organization_policy ON authn.api_keys
 CREATE OR REPLACE FUNCTION authn.api_key_get_by_hash (IN p_token_hash bytea)
 	RETURNS authn.api_keys
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 10
-	AS
+	AS 
 $function$
 DECLARE
 	result authn.api_keys;
@@ -605,12 +605,12 @@ ALTER FUNCTION authn.api_key_get_by_hash(bytea) OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authn.api_key_update_last_used (IN p_id uuid)
 	RETURNS void
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 10
-	AS
+	AS 
 $function$
 BEGIN
 	UPDATE authn.api_keys SET last_used = NOW() WHERE id = p_id;
@@ -651,7 +651,7 @@ ALTER TABLE tenant.clusters ENABLE ROW LEVEL SECURITY;
 CREATE CONSTRAINT TRIGGER verify_deleted
 	AFTER INSERT OR UPDATE
 	ON tenant.clusters
-	NOT DEFERRABLE
+	NOT DEFERRABLE 
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.clusters_tr_verify_deleted();
 -- ddl-end --
@@ -842,7 +842,7 @@ ALTER TABLE appstore.plugin_documentation_links OWNER TO fun_owner;
 -- object: require_admin | type: TRIGGER --
 -- require_admin ON tenant.projects CASCADE;
 CREATE CONSTRAINT TRIGGER require_admin
-	AFTER INSERT
+	AFTER INSERT 
 	ON tenant.projects
 	DEFERRABLE INITIALLY DEFERRED
 	FOR EACH ROW
@@ -854,7 +854,7 @@ CREATE CONSTRAINT TRIGGER require_admin
 CREATE CONSTRAINT TRIGGER verify_deleted
 	AFTER UPDATE
 	ON tenant.projects
-	NOT DEFERRABLE
+	NOT DEFERRABLE 
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.projects_tr_verify_deleted();
 -- ddl-end --
@@ -1155,12 +1155,12 @@ WHERE (processed IS NULL);
 CREATE OR REPLACE FUNCTION authz.projects_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1180,12 +1180,12 @@ ALTER FUNCTION authz.projects_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.project_members_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1205,12 +1205,12 @@ ALTER FUNCTION authz.project_members_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.clusters_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1230,12 +1230,12 @@ ALTER FUNCTION authz.clusters_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.node_pools_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1255,12 +1255,12 @@ ALTER FUNCTION authz.node_pools_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.namespaces_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1280,12 +1280,12 @@ ALTER FUNCTION authz.namespaces_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.api_keys_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
@@ -1305,12 +1305,12 @@ ALTER FUNCTION authz.api_keys_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.organizations_users_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1330,12 +1330,12 @@ ALTER FUNCTION authz.organizations_users_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.outbox_notify_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     PERFORM pg_notify('authz_outbox', '');
@@ -1422,7 +1422,7 @@ CREATE OR REPLACE TRIGGER api_keys_outbox
 -- object: outbox_notify | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS outbox_notify ON authz.outbox CASCADE;
 CREATE OR REPLACE TRIGGER outbox_notify
-	AFTER INSERT
+	AFTER INSERT 
 	ON authz.outbox
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.outbox_notify_trigger();
@@ -1440,7 +1440,7 @@ CREATE OR REPLACE TRIGGER cluster_outbox_cluster
 -- object: cluster_outbox_notify | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS cluster_outbox_notify ON tenant.cluster_outbox CASCADE;
 CREATE OR REPLACE TRIGGER cluster_outbox_notify
-	AFTER INSERT
+	AFTER INSERT 
 	ON tenant.cluster_outbox
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.cluster_outbox_notify();
@@ -1508,6 +1508,15 @@ CREATE POLICY organizations_users_authn_api_policy ON tenant.organizations_users
 	AS PERMISSIVE
 	FOR ALL
 	TO fun_authn_api
+	USING (true);
+-- ddl-end --
+
+-- object: organizations_users_authz_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_users_authz_worker_policy ON tenant.organizations_users CASCADE;
+CREATE POLICY organizations_users_authz_worker_policy ON tenant.organizations_users
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_authz_worker
 	USING (true);
 -- ddl-end --
 

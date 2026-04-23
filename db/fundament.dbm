@@ -1714,6 +1714,10 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
+<policy name="organizations_users_authz_worker_policy" table="tenant.organizations_users" command="SELECT" permissive="true">	<roles names="fun_authz_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <trigger name="organizations_users_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.organizations_users">
