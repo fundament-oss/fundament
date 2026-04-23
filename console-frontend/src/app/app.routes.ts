@@ -51,6 +51,7 @@ const routes: Routes = [
               breadcrumbs: [{ label: 'Summary' }],
             },
           },
+          { path: '**', redirectTo: '' },
         ],
       },
       {
