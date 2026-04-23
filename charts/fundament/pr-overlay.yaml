@@ -3,6 +3,45 @@ kind: Namespace
 metadata:
   name: tn-fundament-pr-${PR_NUM}
 ---
+# we have to create this Certificate ourselves as XListenerSet is not supported by cert-manager
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tn-fundament-pr-${PR_NUM}-wildcard-tls
+  namespace: istio-gateway
+spec:
+  secretName: tn-fundament-pr-${PR_NUM}-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.pr${PR_NUM}.${DOMAIN}"
+---
+apiVersion: gateway.networking.x-k8s.io/v1alpha1
+kind: XListenerSet
+metadata:
+  name: tn-fundament-pr-${PR_NUM}
+  namespace: istio-gateway
+spec:
+  parentRef:
+    name: public-gateway
+    namespace: istio-gateway
+  listeners:
+    - name: tn-fundament-pr-${PR_NUM}
+      hostname: "*.pr${PR_NUM}.${DOMAIN}"
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: tn-fundament-pr-${PR_NUM}-wildcard-tls
+            kind: Secret
+      allowedRoutes:
+        kinds:
+          - kind: HTTPRoute
+        namespaces:
+          from: All
+---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
@@ -65,15 +104,55 @@ spec:
 
     authnApi:
       replicas: 1
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.x-k8s.io
+            kind: XListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - authn.pr${PR_NUM}.${DOMAIN}
 
     organizationApi:
       replicas: 1
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.x-k8s.io
+            kind: XListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - organization.pr${PR_NUM}.${DOMAIN}
 
     consoleFrontend:
       replicas: 1
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.x-k8s.io
+            kind: XListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - console.pr${PR_NUM}.${DOMAIN}
 
     docsFrontend:
       replicas: 1
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.x-k8s.io
+            kind: XListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - docs.pr${PR_NUM}.${DOMAIN}
 
     db:
       instances: 1
@@ -102,6 +181,16 @@ spec:
 
     dex:
       issuer: https://dex.pr${PR_NUM}.${DOMAIN}
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.x-k8s.io
+            kind: XListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - dex.pr${PR_NUM}.${DOMAIN}
       staticClients:
         - id: fundament
           name: Fundament
@@ -110,5 +199,4 @@ spec:
           public: true
 
     ingress:
-      subdomainInfix: "pr${PR_NUM}."
-      domain: ${DOMAIN}
+      enabled: false
