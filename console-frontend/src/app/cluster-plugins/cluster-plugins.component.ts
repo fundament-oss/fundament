@@ -7,7 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { CLUSTER, PLUGIN } from '../../connect/tokens';
-import { fetchClusterDetails, getStatusLabel, getStatusColor } from '../utils/cluster-status';
+import { fetchClusterDetails, getStatusLabel } from '../utils/cluster-status';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
@@ -56,8 +56,6 @@ export default class ClusterPluginsComponent implements OnInit {
   isClusterRunning = computed(() => this.clusterStatus() === ClusterStatus.RUNNING);
 
   protected readonly getStatusLabel = getStatusLabel;
-
-  protected readonly getStatusColor = getStatusColor;
 
   constructor() {
     this.titleService.setTitle('Cluster plugins');
