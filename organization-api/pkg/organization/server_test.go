@@ -44,8 +44,7 @@ type apiOptions struct {
 	users                map[uuid.UUID]testUser
 	clock                clock.Clock
 	idempotency          bool
-	kubeAPIProxyURL      string
-	kubeAPIProxyInsecure bool
+	kubeAPIProxyURL string
 }
 
 type APIOption func(*apiOptions)
@@ -110,10 +109,9 @@ func WithIdempotency() APIOption {
 	}
 }
 
-func WithKubeAPIProxy(url string, insecure bool) APIOption {
+func WithKubeAPIProxy(url string) APIOption {
 	return func(o *apiOptions) {
 		o.kubeAPIProxyURL = url
-		o.kubeAPIProxyInsecure = insecure
 	}
 }
 
@@ -139,8 +137,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		JWTSecret:            jwtSecret,
 		CORSAllowedOrigins:   []string{"*"},
 		Clock:                opts.clock,
-		KubeAPIProxyURL:      opts.kubeAPIProxyURL,
-		KubeAPIProxyInsecure: opts.kubeAPIProxyInsecure,
+		KubeAPIProxyURL: opts.kubeAPIProxyURL,
 	}
 
 	var idempotencyStore *idempotency.Store

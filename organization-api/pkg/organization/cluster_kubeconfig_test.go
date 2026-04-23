@@ -74,7 +74,7 @@ func Test_GetKubeconfig_Ready(t *testing.T) {
 			Name:   "test-user",
 			OrgIDs: []uuid.UUID{orgID},
 		}),
-		WithKubeAPIProxy("https://k8s-api.example.com", false),
+		WithKubeAPIProxy("https://k8s-api.example.com"),
 	)
 
 	token := env.createAuthnToken(t, userID)
@@ -129,59 +129,3 @@ func Test_GetKubeconfig_Ready(t *testing.T) {
 	assert.True(t, strings.HasPrefix(kc, "apiVersion: v1"))
 }
 
-func Test_GetKubeconfig_ProxyInsecure(t *testing.T) {
-	t.Parallel()
-
-	orgID := uuid.New()
-	userID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(orgID, "test-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "test-user",
-			OrgIDs: []uuid.UUID{orgID},
-		}),
-		WithKubeAPIProxy("https://k8s-api.example.com", true),
-	)
-
-	token := env.createAuthnToken(t, userID)
-
-	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
-
-	// Create a cluster.
-	createReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
-		Name:              "proxy-cluster",
-		Region:            "eu-west-1",
-		KubernetesVersion: "1.28",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgID.String())
-
-	createRes, err := client.CreateCluster(context.Background(), createReq)
-	require.NoError(t, err)
-
-	clusterID := createRes.Msg.GetClusterId()
-
-	// Simulate shoot becoming ready.
-	_, err = env.adminPool.Exec(t.Context(),
-		"UPDATE tenant.clusters SET shoot_status = 'ready' WHERE id = $1",
-		clusterID,
-	)
-	require.NoError(t, err)
-
-	kcReq := connect.NewRequest(organizationv1.GetKubeconfigRequest_builder{
-		ClusterId: clusterID,
-	}.Build())
-	kcReq.Header().Set("Authorization", "Bearer "+token)
-	kcReq.Header().Set("Fun-Organization", orgID.String())
-
-	res, err := client.GetKubeconfig(context.Background(), kcReq)
-	require.NoError(t, err)
-
-	kc := res.Msg.GetKubeconfigContent()
-
-	// Kubeconfig should point at the proxy with insecure-skip-tls-verify.
-	assert.Contains(t, kc, "server: https://k8s-api.example.com/clusters/"+clusterID)
-	assert.Contains(t, kc, "insecure-skip-tls-verify: true")
-}
