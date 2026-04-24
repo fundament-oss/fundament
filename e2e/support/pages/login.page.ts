@@ -14,8 +14,8 @@ export class LoginPage {
     this.emailInput = page.locator('#email');
     this.passwordInput = page.locator('#password');
     this.submitButton = page.locator('button[type="submit"]');
-    this.errorMessage = page.locator('.text-red-800, .text-red-200');
-    this.validationError = page.locator('.text-rose-600, .text-rose-400');
+    this.errorMessage = page.locator('.text-danger-800, .text-danger-200');
+    this.validationError = page.locator('.text-danger-600, .text-danger-400');
     this.heading = page.locator('h2');
   }
 

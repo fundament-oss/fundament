@@ -43,7 +43,7 @@ function toObjectEntries(val: unknown): [string, unknown][] {
             @for (item of asArray(value()); track $index) {
               <div class="rounded border border-gray-200 p-2 dark:border-gray-700">
                 @for (entry of objectEntries(item); track entry[0]) {
-                  <div class="text-sm">
+                  <div>
                     <span class="font-medium text-gray-600 dark:text-gray-400"
                       >{{ formatLabel(entry[0]) }}:</span
                     >
@@ -61,7 +61,7 @@ function toObjectEntries(val: unknown): [string, unknown][] {
         @if (value() && objectEntries(value()).length > 0) {
           <dl class="space-y-1">
             @for (entry of objectEntries(value()); track entry[0]) {
-              <div class="text-sm">
+              <div>
                 <dt class="inline font-medium text-gray-600 dark:text-gray-400">
                   {{ formatLabel(entry[0]) }}:
                 </dt>

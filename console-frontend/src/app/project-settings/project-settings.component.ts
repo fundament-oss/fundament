@@ -4,19 +4,19 @@ import {
   signal,
   OnInit,
   ChangeDetectionStrategy,
-  ViewChild,
+  CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
   ElementRef,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { tablerX, tablerPencil, tablerCheck, tablerAlertTriangle } from '@ng-icons/tabler-icons';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import AutofocusDirective from '../autofocus.directive';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import { PROJECT } from '../../connect/tokens';
 import {
   GetProjectRequestSchema,
@@ -28,15 +28,8 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-settings',
-  imports: [FormsModule, NgIconComponent, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerX,
-      tablerPencil,
-      tablerCheck,
-      tablerAlertTriangle,
-    }),
-  ],
+  imports: [DialogSyncDirective, AutofocusDirective],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-settings.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -64,8 +57,6 @@ export default class ProjectSettingsComponent implements OnInit {
   loading = signal(false);
 
   error = signal<string | null>(null);
-
-  @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   showDeleteModal = signal<boolean>(false);
 
@@ -104,10 +95,6 @@ export default class ProjectSettingsComponent implements OnInit {
     if (currentProject) {
       this.isEditing.set(true);
       this.editingName.set(currentProject.name);
-
-      setTimeout(() => {
-        this.nameInput?.nativeElement.focus();
-      });
     }
   }
 
@@ -182,4 +169,11 @@ export default class ProjectSettingsComponent implements OnInit {
   }
 
   readonly formatDate = formatDateUtil;
+
+  deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
+
+  onDeleteModalOpen(): void {
+    const el = this.deleteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
 }

@@ -2,10 +2,11 @@ FROM oven/bun:1-alpine
 WORKDIR /app
 
 # Copy package files
-COPY console-frontend/package.json console-frontend/bun.lock ./
+COPY console-frontend/package.json console-frontend/bun.lock console-frontend/bunfig.toml ./
 
-# Install dependencies
-RUN bun install --frozen-lockfile
+# Install dependencies (token for @minbzk/* packages on npm.pkg.github.com, not stored in image)
+RUN --mount=type=secret,id=github_token \
+    GITHUB_TOKEN=$(cat /run/secrets/github_token) bun install --frozen-lockfile
 
 # Copy proto files (needed for generate-proto-version.js)
 COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/

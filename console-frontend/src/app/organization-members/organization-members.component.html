@@ -3,8 +3,8 @@
   <div class="card-header">
     <div class="grid items-center gap-3 sm:grid-cols-2">
       <div>
-        <h1 class="text-2xl font-semibold dark:text-white">Organization members</h1>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        <h1 class="text-3xl font-semibold dark:text-white">Organization members</h1>
+        <p class="mt-1 text-gray-600 dark:text-gray-300">
           Manage who has access to your organization
         </p>
       </div>
@@ -14,14 +14,13 @@
   <div class="p-6">
     <!-- Info banner -->
     <div
-      class="mb-6 flex items-start gap-3 rounded-md border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
+      class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
     >
-      <ng-icon
-        name="tablerInfoCircle"
-        size="1.25rem"
-        class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
-      />
-      <div class="text-sm text-indigo-700 dark:text-indigo-300">
+      <nldd-icon
+        name="info-circle"
+        class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
+      ></nldd-icon>
+      <div class="text-accent-700 dark:text-accent-300">
         <p class="mb-2">
           Organization admins can manage members across all projects. This permission overrides
           project-level permissions.
@@ -34,15 +33,19 @@
       </div>
     </div>
 
-    <button type="button" (click)="openModal()" class="btn-primary mb-6 inline-flex items-center">
-      <ng-icon name="tablerPlus" class="mr-2" />
-      Invite member
-    </button>
+    <nldd-button
+      type="button"
+      (click)="openModal()"
+      text="Invite member"
+      start-icon="plus-small"
+      variant="primary"
+      class="mb-4"
+    ></nldd-button>
 
     <!-- Pending Invitations Section -->
     <div class="mb-8">
       <h2 class="mb-4 text-lg font-semibold dark:text-white">Pending invitations</h2>
-      <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+      <p class="mb-4 text-gray-500 dark:text-gray-400">
         Users who have been invited but haven't accepted yet
       </p>
 
@@ -50,11 +53,11 @@
         <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
           <div role="status" class="flex justify-center">
             <app-loading-indicator
-              class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+              class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
             />
             <span class="sr-only">Loading...</span>
           </div>
-          <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading invitations...</p>
+          <p class="mt-4 text-gray-600 dark:text-gray-300">Loading invitations...</p>
         </div>
       } @else if (pendingInvitations().length > 0) {
         <div class="table-container">
@@ -74,7 +77,7 @@
                       <span class="font-medium dark:text-white">
                         {{ invitation.email || invitation.name }}
                       </span>
-                      <p class="text-sm text-gray-500 dark:text-gray-400">
+                      <p class="text-gray-500 dark:text-gray-400">
                         Invited {{ formatTimeAgo(invitation.created) }}
                       </p>
                     </div>
@@ -89,13 +92,13 @@
                     </span>
                   </td>
                   <td>
-                    <button
-                      type="button"
+                    <nldd-button
                       (click)="cancelInvitation(invitation.id)"
-                      class="btn-remove shrink-0"
-                    >
-                      <ng-icon name="tablerTrash" class="mr-1.5" /> Cancel
-                    </button>
+                      text="Cancel"
+                      start-icon="trash"
+                      variant="destructive"
+                      size="sm"
+                    ></nldd-button>
                   </td>
                 </tr>
               }
@@ -104,12 +107,11 @@
         </div>
       } @else {
         <div class="rounded-md border border-gray-200 p-4 text-center dark:border-gray-800">
-          <ng-icon
-            name="tablerMail"
-            size="3rem"
-            class="mx-auto text-gray-400! dark:text-gray-600!"
-          />
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No pending invitations</p>
+          <nldd-icon
+            name="envelope"
+            class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!"
+          ></nldd-icon>
+          <p class="mt-2 text-gray-600 dark:text-gray-400">No pending invitations</p>
         </div>
       }
     </div>
@@ -117,7 +119,7 @@
     <!-- Active Members Section -->
     <div>
       <h2 class="mb-4 text-lg font-semibold dark:text-white">Active members</h2>
-      <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+      <p class="mb-4 text-gray-500 dark:text-gray-400">
         Users who have signed in to the organization
       </p>
 
@@ -125,36 +127,37 @@
         <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
           <div role="status" class="flex justify-center">
             <app-loading-indicator
-              class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+              class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
             />
             <span class="sr-only">Loading...</span>
           </div>
-          <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading members...</p>
+          <p class="mt-4 text-gray-600 dark:text-gray-300">Loading members...</p>
         </div>
       } @else if (error()) {
         <div
-          class="rounded-md border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-800 dark:bg-rose-950"
+          class="bg-danger-50 dark:bg-danger-950 rounded-md border border-rose-200 p-8 text-center dark:border-rose-800"
         >
-          <ng-icon name="tablerAlertTriangle" size="3rem" class="mx-auto text-rose-400!" />
-          <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
-          <button
+          <nldd-icon
+            name="exclamation-circle"
+            class="text-danger-400! mx-auto h-12 w-12"
+          ></nldd-icon>
+          <p class="text-danger-600 dark:text-danger-400 mt-2">{{ error() }}</p>
+          <nldd-button
             type="button"
             (click)="loadMembers()"
-            class="mt-4 inline-flex cursor-pointer items-center rounded-md border border-transparent bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700"
-          >
-            Try again
-          </button>
+            text="Try again"
+            variant="primary"
+          ></nldd-button>
         </div>
       } @else if (activeMembers().length === 0) {
         <div
           class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700"
         >
-          <ng-icon
-            name="tablerUsersGroup"
-            size="3rem"
-            class="mx-auto text-gray-400! dark:text-gray-600!"
-          />
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No members found</p>
+          <nldd-icon
+            name="person-2"
+            class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!"
+          ></nldd-icon>
+          <p class="mt-2 text-gray-600 dark:text-gray-400">No members found</p>
         </div>
       } @else {
         <div class="table-container">
@@ -172,7 +175,7 @@
                   <td>
                     <div class="flex items-center gap-3">
                       <div
-                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-medium text-white"
+                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-medium text-white"
                         [class]="getAvatarColor(member.name)"
                       >
                         {{ getInitials(member.name) }}
@@ -181,13 +184,12 @@
                         <div class="flex items-center gap-2">
                           <span class="font-medium dark:text-white">{{ member.name }}</span>
                           @if (member.isCurrentUser) {
-                            <span
-                              class="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                            <span class="badge badge-gray text-gray-600! dark:text-gray-400!"
                               >You</span
                             >
                           }
                         </div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                        <p class="text-gray-500 dark:text-gray-400">
                           Joined {{ formatTimeAgo(member.created) }}
                         </p>
                       </div>
@@ -204,22 +206,24 @@
                   </td>
                   <td>
                     @if (member.isCurrentUser) {
-                      <span class="text-sm text-gray-400 dark:text-gray-600">&mdash;</span>
+                      <span class="text-gray-400 dark:text-gray-600">&mdash;</span>
                     } @else {
-                      <button
+                      <nldd-button
                         type="button"
                         (click)="openEditModal(member)"
-                        class="btn-light mr-2 inline-flex shrink-0 items-center"
-                      >
-                        <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
-                      </button>
-                      <button
-                        type="button"
+                        text="Edit"
+                        start-icon="pencil"
+                        variant="secondary"
+                        size="sm"
+                        class="mr-2"
+                      ></nldd-button>
+                      <nldd-button
                         (click)="openDeleteModal(member)"
-                        class="btn-remove shrink-0"
-                      >
-                        <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
-                      </button>
+                        text="Remove"
+                        start-icon="trash"
+                        variant="destructive"
+                        size="sm"
+                      ></nldd-button>
                     }
                   </td>
                 </tr>
@@ -233,212 +237,192 @@
 </div>
 
 <!-- Delete Member Modal -->
-<app-modal
+<nldd-modal-dialog
+  #deleteDialog
+  appDialogSync
   [show]="showDeleteModal()"
-  title="Remove member"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showDeleteModal.set(false)"
+  text="Remove member"
+  variant="alert"
+  (open)="onDeleteModalOpen()"
+  (close)="showDeleteModal.set(false)"
 >
-  <div class="sm:flex sm:items-start">
-    <div
-      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
-    >
-      <ng-icon
-        name="tablerAlertTriangle"
-        size="1.5rem"
-        class="text-rose-600! dark:text-rose-400!"
-      />
-    </div>
-    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-      <div class="mt-2">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          Are you sure you want to remove
-          <span class="font-semibold text-gray-900 dark:text-white">{{
-            deletingMember()?.name
-          }}</span>
-          from this organization?
-        </p>
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
-          This will revoke their access to all organization resources.
-        </p>
-      </div>
-    </div>
-  </div>
+  <nldd-spacer size="24"></nldd-spacer>
 
-  <div modal-footer class="modal-footer">
-    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
-    <button
-      type="button"
-      (click)="confirmDeleteMember()"
-      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
-    >
-      Yes, remove member
-    </button>
-  </div>
-</app-modal>
+  <p>
+    Are you sure you want to remove
+    <strong class="font-semibold">{{ deletingMember()?.name }}</strong>
+    from this organization?
+  </p>
+  <p class="text-danger-600 dark:text-danger-400 mt-2">
+    This will revoke their access to all organization resources.
+  </p>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showDeleteModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmDeleteMember()"
+    text="Yes, remove member"
+    variant="destructive"
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Edit Member Modal -->
-<app-modal
+<nldd-modal-dialog
+  #editDialog
+  appDialogSync
   [show]="showEditModal()"
-  title="Edit member"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showEditModal.set(false)"
+  text="Edit member"
+  (open)="onEditModalOpen()"
+  (close)="showEditModal.set(false)"
 >
+  <nldd-spacer size="24"></nldd-spacer>
+
   <div class="mb-4">
-    <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Member</span>
-    <p class="text-sm dark:text-white">{{ editingMember()?.name }}</p>
-    <p class="text-xs text-gray-500 dark:text-gray-400">
+    <span class="mb-2 block font-medium text-gray-700 dark:text-white">Member</span>
+    <p class="dark:text-white">{{ editingMember()?.name }}</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
       {{ editingMember()?.email || editingMember()?.externalRef }}
     </p>
   </div>
 
-  <div class="mb-4">
-    <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
-    <div class="space-y-2">
-      <label class="radio-option">
-        <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-          <input
-            name="editPermission"
-            type="radio"
-            value="viewer"
-            [ngModel]="editPermission()"
-            (ngModelChange)="editPermission.set($event)"
-          />
-          Viewer
-        </span>
-        <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-          Read access to resources
-        </span>
-      </label>
-      <label class="radio-option">
-        <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-          <input
-            name="editPermission"
-            type="radio"
-            value="admin"
-            [ngModel]="editPermission()"
-            (ngModelChange)="editPermission.set($event)"
-          />
-          Admin
-        </span>
-        <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-          Full access to resources
-        </span>
-      </label>
-    </div>
-  </div>
+  <nldd-form-field label="Permission">
+    <nldd-radio-button-group
+      name="editPermission"
+      (change)="editPermission.set($any($event).detail.value)"
+    >
+      <div class="radio-option mb-2">
+        <nldd-radio-button-field
+          value="viewer"
+          label="Viewer"
+          [checked]="editPermission() === 'viewer'"
+        ></nldd-radio-button-field>
+        <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+          >Read access to resources</span
+        >
+      </div>
+      <div class="radio-option">
+        <nldd-radio-button-field
+          value="admin"
+          label="Admin"
+          [checked]="editPermission() === 'admin'"
+        ></nldd-radio-button-field>
+        <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+          >Full access to resources</span
+        >
+      </div>
+    </nldd-radio-button-group>
+  </nldd-form-field>
 
-  <div modal-footer class="modal-footer">
-    <button
-      type="button"
-      (click)="showEditModal.set(false)"
-      class="btn-secondary"
-      [disabled]="isSubmitting()"
-    >
-      Cancel
-    </button>
-    <button
-      type="button"
-      (click)="confirmEditMember()"
-      class="btn-primary"
-      [disabled]="isSubmitting()"
-    >
-      @if (isSubmitting()) {
-        Saving...
-      } @else {
-        Save changes
-      }
-    </button>
-  </div>
-</app-modal>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showEditModal.set(false)"
+    [disabled]="isSubmitting()"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmEditMember()"
+    text="Save changes"
+    [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
+    [disabled]="isSubmitting()"
+    variant="primary"
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Invite Modal -->
-<app-modal [show]="isModalOpen()" title="Invite user" (modalClose)="closeModal()">
-  <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
+<nldd-modal-dialog
+  #inviteDialog
+  appDialogSync
+  [show]="isModalOpen()"
+  text="Invite user"
+  (open)="onInviteModalOpen()"
+  (close)="closeModal()"
+>
+  <nldd-spacer size="24"></nldd-spacer>
+
+  <p class="mb-6 text-gray-600 dark:text-gray-400">
     Enter the email address of the user you want to invite. They will be able to sign in via SSO
     once added.
   </p>
 
-  <form (ngSubmit)="submitInvitation()" novalidate>
-    <div class="mb-4">
-      <label for="email" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Email address
-      </label>
-      <input
-        #emailModel="ngModel"
+  <form (ngSubmit)="submitInvitation()" (keydown.enter)="submitInvitation()" novalidate>
+    <nldd-form-field label="Email address" class="mb-4">
+      <nldd-text-field
         type="email"
         id="email"
-        email
-        [ngModel]="inviteEmail()"
-        (ngModelChange)="inviteEmail.set($event); inviteError.set(null)"
-        name="email"
+        [value]="inviteEmail()"
+        (input)="
+          inviteEmail.set($any($event.target).value);
+          inviteEmailDirty.set(true);
+          inviteError.set(null)
+        "
         placeholder="user@example.com"
         [disabled]="isSubmitting()"
-        [class]="
-          inviteError() || (emailModel.invalid && emailModel.touched)
-            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-            : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700'
-        "
-      />
-      @if (inviteError()) {
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ inviteError() }}</p>
-      }
-    </div>
+        [invalid]="!!(inviteError() || (inviteEmailDirty() && !inviteEmail().trim()))"
+        error-message="org-invite-email-error"
+      ></nldd-text-field>
+      <nldd-form-field-error-text id="org-invite-email-error">
+        {{ inviteError() || 'The user email is required' }}
+      </nldd-form-field-error-text>
+    </nldd-form-field>
 
     <div class="mb-6">
-      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
-      <div class="space-y-2">
-        <label class="radio-option">
-          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-            <input
-              name="permission"
-              type="radio"
+      <nldd-form-field label="Permission">
+        <nldd-radio-button-group
+          name="permission"
+          (change)="invitePermission.set($any($event).detail.value)"
+          [disabled]="isSubmitting()"
+        >
+          <div class="radio-option mb-2">
+            <nldd-radio-button-field
               value="viewer"
-              [ngModel]="invitePermission()"
-              (ngModelChange)="invitePermission.set($event)"
-              [disabled]="isSubmitting()"
-            />
-            Viewer
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-            Read access to resources
-          </span>
-        </label>
-        <label class="radio-option">
-          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-            <input
-              name="permission"
-              type="radio"
+              label="Viewer"
+              [checked]="invitePermission() === 'viewer'"
+            ></nldd-radio-button-field>
+            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+              >Read access to resources</span
+            >
+          </div>
+          <div class="radio-option">
+            <nldd-radio-button-field
               value="admin"
-              [ngModel]="invitePermission()"
-              (ngModelChange)="invitePermission.set($event)"
-              [disabled]="isSubmitting()"
-            />
-            Admin
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-            Full access to resources
-          </span>
-        </label>
-      </div>
-    </div>
-
-    <div modal-footer class="modal-footer">
-      <button
-        type="button"
-        (click)="closeModal()"
-        class="btn-secondary"
-        [disabled]="isSubmitting()"
-      >
-        Cancel
-      </button>
-      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
-        @if (isSubmitting()) {
-          Sending...
-        } @else {
-          Send invitation
-        }
-      </button>
+              label="Admin"
+              [checked]="invitePermission() === 'admin'"
+            ></nldd-radio-button-field>
+            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+              >Full access to resources</span
+            >
+          </div>
+        </nldd-radio-button-group>
+      </nldd-form-field>
     </div>
   </form>
-</app-modal>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="closeModal()"
+    [disabled]="isSubmitting()"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="submitInvitation()"
+    text="Send invitation"
+    [text]="isSubmitting() ? 'Sending...' : 'Send invitation'"
+    [disabled]="isSubmitting()"
+    variant="primary"
+  ></nldd-button>
+</nldd-modal-dialog>

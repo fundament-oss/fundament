@@ -1,7 +1,7 @@
 <!-- Header -->
 <div class="card-header">
-  <h1 class="text-2xl font-semibold dark:text-white">Cluster summary</h1>
-  <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+  <h1 class="text-3xl font-semibold dark:text-white">Cluster summary</h1>
+  <p class="mt-1 text-gray-600 dark:text-gray-300">
     Review your cluster configuration before creating it.
   </p>
 </div>
@@ -13,16 +13,16 @@
     <h3 class="mb-4 text-lg font-medium dark:text-white">Basics</h3>
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <dl>
-        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
-        <dd class="mt-1 text-sm dark:text-white">{{ state().clusterName || 'N/A' }}</dd>
+        <dt class="font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
+        <dd class="mt-1 dark:text-white">{{ state().clusterName || 'N/A' }}</dd>
       </dl>
       <dl>
-        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
-        <dd class="mt-1 text-sm dark:text-white">{{ state().region?.toUpperCase() || 'N/A' }}</dd>
+        <dt class="font-medium text-gray-500 dark:text-gray-400">Region</dt>
+        <dd class="mt-1 dark:text-white">{{ state().region?.toUpperCase() || 'N/A' }}</dd>
       </dl>
       <dl>
-        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
-        <dd class="mt-1 text-sm dark:text-white">
+        <dt class="font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
+        <dd class="mt-1 dark:text-white">
           {{ state().kubernetesVersion || 'N/A' }}
         </dd>
       </dl>
@@ -38,30 +38,30 @@
           <div
             class="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900"
           >
-            <h4 class="mb-3 text-sm font-medium dark:text-white">{{ nodePool.name }}</h4>
+            <h4 class="mb-3 font-medium dark:text-white">{{ nodePool.name }}</h4>
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <dl>
-                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Machine type</dt>
-                <dd class="mt-1 text-sm dark:text-white">{{ nodePool.machineType }}</dd>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Machine type</dt>
+                <dd class="mt-1 dark:text-white">{{ nodePool.machineType }}</dd>
               </dl>
               <dl>
-                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Min autoscaling
                 </dt>
-                <dd class="mt-1 text-sm dark:text-white">{{ nodePool.autoscaleMin }} nodes</dd>
+                <dd class="mt-1 dark:text-white">{{ nodePool.autoscaleMin }} nodes</dd>
               </dl>
               <dl>
-                <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Max autoscaling
                 </dt>
-                <dd class="mt-1 text-sm dark:text-white">{{ nodePool.autoscaleMax }} nodes</dd>
+                <dd class="mt-1 dark:text-white">{{ nodePool.autoscaleMax }} nodes</dd>
               </dl>
             </div>
           </div>
         }
       </div>
     } @else {
-      <p class="text-sm text-gray-500 dark:text-gray-400">No node pools configured</p>
+      <p class="text-gray-500 dark:text-gray-400">No node pools configured</p>
     }
   </div>
 
@@ -69,22 +69,22 @@
   <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
     <h3 class="mb-4 text-lg font-medium dark:text-white">Plugins</h3>
     @if (isLoadingPlugins()) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">Loading plugin information...</p>
+      <p class="text-gray-500 dark:text-gray-400">Loading plugin information...</p>
     } @else if (state().preset || (state().plugins && state().plugins!.length > 0)) {
       <div class="space-y-2">
         @if (state().preset) {
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Preset</dt>
-            <dd class="mt-1 text-sm dark:text-white">{{ getPresetName(state().preset!) }}</dd>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Preset</dt>
+            <dd class="mt-1 dark:text-white">{{ getPresetName(state().preset!) }}</dd>
           </dl>
         }
         @if (state().plugins && state().plugins!.length > 0) {
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Selected plugins</dt>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Selected plugins</dt>
             <dd class="mt-2 flex flex-wrap gap-1">
               @for (pluginName of getPluginNames(state().plugins!); track pluginName) {
                 <span
-                  class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                  class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
                 >
                   {{ pluginName }}
                 </span>
@@ -94,21 +94,20 @@
         }
       </div>
     } @else {
-      <p class="text-sm text-gray-500 dark:text-gray-400">No plugins configured</p>
+      <p class="text-gray-500 dark:text-gray-400">No plugins configured</p>
     }
   </div>
 
   <!-- Error Message -->
   @if (errorMessage()) {
     <div
-      class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+      class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
     >
-      <ng-icon
-        name="tablerCircleXFill"
-        class="shrink-0 text-rose-500! dark:text-rose-400!"
-        size="1.125rem"
-      />
-      <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+      <nldd-icon
+        name="dismiss-circle"
+        class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+      ></nldd-icon>
+      <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
     </div>
   }
 
@@ -120,47 +119,44 @@
         bannerState() === 'ready'
           ? 'border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30'
           : bannerState() === 'failed'
-            ? 'border-rose-200 bg-rose-50 dark:border-rose-900/40 dark:bg-rose-950/30'
+            ? 'bg-danger-50 dark:bg-danger-950/30 border-rose-200 dark:border-rose-900/40'
             : bannerState() === 'partial'
               ? 'border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30'
-              : 'border-indigo-200 bg-indigo-50 dark:border-indigo-900/40 dark:bg-indigo-950/30'
+              : 'border-accent-200 bg-accent-50 dark:border-accent-900/40 dark:bg-accent-950/30'
       "
     >
       <div class="flex items-center gap-3">
         @if (bannerState() === 'creating' || bannerState() === 'provisioning') {
           <app-loading-indicator
-            class="h-4 w-4 shrink-0 animate-spin fill-indigo-600 text-indigo-200 dark:fill-indigo-400 dark:text-indigo-900"
+            class="fill-accent-600 text-accent-200 dark:fill-accent-400 dark:text-accent-900 h-4 w-4 shrink-0 animate-spin"
           />
         } @else if (bannerState() === 'ready') {
-          <ng-icon
-            name="tablerCircleCheck"
-            class="shrink-0 text-green-500! dark:text-green-400!"
-            size="1.125rem"
-          />
+          <nldd-icon
+            name="check-mark-circle"
+            class="h-5 w-5 shrink-0 text-green-500! dark:text-green-400!"
+          ></nldd-icon>
         } @else if (bannerState() === 'partial') {
-          <ng-icon
-            name="tablerAlertTriangle"
-            class="shrink-0 text-amber-500! dark:text-amber-400!"
-            size="1.125rem"
-          />
+          <nldd-icon
+            name="exclamation-circle"
+            class="h-4.5 w-4.5 shrink-0 text-amber-500! dark:text-amber-400!"
+          ></nldd-icon>
         } @else {
-          <ng-icon
-            name="tablerCircleXFill"
-            class="shrink-0 text-rose-500! dark:text-rose-400!"
-            size="1.125rem"
-          />
+          <nldd-icon
+            name="dismiss-circle"
+            class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+          ></nldd-icon>
         }
         <div>
           <p
-            class="text-sm font-medium"
+            class="font-medium"
             [class]="
               bannerState() === 'ready'
                 ? 'text-green-800 dark:text-green-200'
                 : bannerState() === 'failed'
-                  ? 'text-rose-800 dark:text-rose-200'
+                  ? 'text-danger-800 dark:text-danger-200'
                   : bannerState() === 'partial'
                     ? 'text-amber-800 dark:text-amber-200'
-                    : 'text-indigo-800 dark:text-indigo-200'
+                    : 'text-accent-800 dark:text-accent-200'
             "
           >
             @if (bannerState() === 'creating') {
@@ -175,15 +171,23 @@
               Cluster creation failed
             }
           </p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">{{ clusterDisplayName() }}</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">{{ clusterDisplayName() }}</p>
         </div>
       </div>
       <div class="flex shrink-0 gap-2">
-        <button type="button" (click)="reopenModal()" class="btn-secondary">View progress</button>
+        <nldd-button
+          type="button"
+          (click)="reopenModal()"
+          text="View progress"
+          variant="secondary"
+        ></nldd-button>
         @if (clusterId()) {
-          <button type="button" (click)="navigateToCluster()" class="btn-primary">
-            Go to cluster
-          </button>
+          <nldd-button
+            type="button"
+            (click)="navigateToCluster()"
+            text="Go to cluster"
+            variant="primary"
+          ></nldd-button>
         }
       </div>
     </div>
@@ -192,40 +196,42 @@
   <!-- Form Actions (hidden once creation has started) -->
   @if (!hasCreationStarted()) {
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-      <a
+      <nldd-button
         routerLink="/clusters/add/plugins"
-        class="btn-secondary"
+        text="Previous step"
         [class.pointer-events-none]="isCreating() || showModal()"
         [class.opacity-50]="isCreating() || showModal()"
-        >Previous step</a
-      >
-      <button
+        variant="secondary"
+      ></nldd-button>
+      <nldd-button
         type="button"
         (click)="onCreateCluster()"
-        class="btn-primary"
+        [text]="isCreating() ? 'Creating...' : 'Create cluster'"
         [disabled]="isCreating() || showModal()"
-      >
-        {{ isCreating() ? 'Creating...' : 'Create cluster' }}
-      </button>
+        variant="primary"
+      ></nldd-button>
     </div>
   }
 </div>
 
 <!-- Creation Progress Modal -->
-<app-modal
+<nldd-modal-dialog
+  #modalDialog
+  appDialogSync
   [show]="showModal()"
-  title="Creating cluster"
-  (modalClose)="onModalClose()"
-  maxWidth="max-w-lg"
+  text="Creating cluster"
+  (open)="onModalOpen()"
+  (close)="onModalClose()"
 >
-  <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+  <nldd-spacer size="24"></nldd-spacer>
+
+  <p class="mb-4 text-gray-600 dark:text-gray-400">
     Your cluster is being provisioned. You can track the progress of each step below.
   </p>
   <div class="max-h-[60vh] divide-y divide-gray-200 overflow-y-auto dark:divide-gray-800">
     @for (item of progressItems(); track item.key) {
       <div class="flex items-center justify-between gap-1 py-3">
         <div class="flex items-center space-x-3">
-          <!-- Status icon -->
           @if (item.requestStatus === 'pending') {
             <div
               class="h-5 w-5 shrink-0 rounded-full border-2 border-gray-300 dark:border-gray-600"
@@ -235,16 +241,16 @@
             (item.requestStatus === 'succeeded' && item.syncStatus === 'syncing')
           ) {
             <app-loading-indicator
-              class="h-5 w-5 shrink-0 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+              class="fill-accent-600 dark:fill-accent-400 h-5 w-5 shrink-0 animate-spin text-gray-200 dark:text-gray-800"
             />
           } @else if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
-            <ng-icon name="tablerCircleXFill" class="shrink-0 text-rose-500!" size="1.25rem" />
+            <nldd-icon name="dismiss-circle" class="text-danger-500! h-5 w-5 shrink-0"></nldd-icon>
           } @else {
-            <ng-icon name="tablerCircleCheck" class="shrink-0 text-green-500!" size="1.25rem" />
+            <nldd-icon name="check-mark-circle" class="h-5 w-5 shrink-0 text-green-500"></nldd-icon>
           }
 
           <div>
-            <p class="text-sm font-medium dark:text-white">
+            <p class="font-medium dark:text-white">
               @if (item.type === 'nodepool') {
                 <span class="text-gray-500 dark:text-gray-400">Node pool:</span>
               } @else if (item.type === 'plugin') {
@@ -253,48 +259,57 @@
               {{ item.name }}
             </p>
             @if (item.requestStatus === 'pending') {
-              <p class="text-xs text-gray-500 dark:text-gray-400">Waiting...</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Waiting...</p>
             } @else if (item.requestStatus === 'in_progress') {
-              <p class="text-xs text-indigo-600 dark:text-indigo-400">
+              <p class="text-accent-600 dark:text-accent-400 text-sm">
                 {{ item.type === 'plugin' ? 'Installing...' : 'Creating...' }}
               </p>
             } @else if (item.requestStatus === 'failed') {
-              <p class="text-xs text-rose-600 dark:text-rose-400">{{ item.error }}</p>
+              <p class="text-danger-600 dark:text-danger-400 text-sm">{{ item.error }}</p>
             } @else if (item.syncStatus === 'syncing') {
-              <p class="text-xs text-indigo-600 dark:text-indigo-400">
+              <p class="text-accent-600 dark:text-accent-400 text-sm">
                 Syncing{{ item.shootStatus ? ' (' + item.shootStatus + ')' : '' }}...
               </p>
             } @else if (item.syncStatus === 'failed') {
-              <p class="text-xs text-rose-600 dark:text-rose-400">{{ item.error }}</p>
+              <p class="text-danger-600 dark:text-danger-400 text-sm">{{ item.error }}</p>
             } @else if (item.syncStatus === 'synced') {
-              <p class="text-xs text-green-600 dark:text-green-400">Ready</p>
+              <p class="text-sm text-green-600 dark:text-green-400">Ready</p>
             } @else {
-              <p class="text-xs text-green-600 dark:text-green-400">
+              <p class="text-sm text-green-600 dark:text-green-400">
                 {{ item.type === 'plugin' ? 'Installed' : 'Done' }}
               </p>
             }
           </div>
         </div>
 
-        @if (item.requestStatus === 'failed') {
-          <button
-            type="button"
+        @if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
+          <nldd-button
             (click)="retryItem(item.key)"
-            class="btn-light flex items-center gap-1 px-2! py-1! text-xs!"
-          >
-            <ng-icon name="tablerArrowBackUp" />
-            Retry
-          </button>
+            text="Retry"
+            start-icon="arrow-u-turn-forward"
+            variant="secondary"
+            size="xs"
+          ></nldd-button>
         }
       </div>
     }
   </div>
 
-  <div modal-footer class="mt-6">
-    @if (clusterId()) {
-      <button type="button" (click)="navigateToCluster()" class="btn-primary">Go to cluster</button>
-    } @else if (!isCreating()) {
-      <button type="button" (click)="onModalClose()" class="btn-secondary">Cancel</button>
-    }
-  </div>
-</app-modal>
+  @if (clusterId()) {
+    <nldd-button
+      slot="actions"
+      type="button"
+      (click)="navigateToCluster()"
+      text="Go to cluster"
+      variant="primary"
+    ></nldd-button>
+  } @else if (!isCreating()) {
+    <nldd-button
+      slot="actions"
+      type="button"
+      (click)="onModalClose()"
+      text="Cancel"
+      variant="secondary"
+    ></nldd-button>
+  }
+</nldd-modal-dialog>

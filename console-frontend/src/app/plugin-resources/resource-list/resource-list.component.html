@@ -1,6 +1,6 @@
 @if (errorMessage()) {
-  <div class="mb-6 flex items-center rounded-md bg-rose-50 p-4 dark:bg-rose-900/20">
-    <p class="text-sm font-medium text-rose-800 dark:text-rose-200">{{ errorMessage() }}</p>
+  <div class="bg-danger-50 dark:bg-danger-900/20 mb-6 flex items-center rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200 font-medium">{{ errorMessage() }}</p>
   </div>
 }
 
@@ -14,21 +14,56 @@
 } @else {
   <div class="card">
     <div class="card-header">
-      <h1 class="text-2xl font-semibold dark:text-white">{{ kindLabel() }}</h1>
+      <h1 class="text-3xl font-semibold dark:text-white">{{ kindLabel() }}</h1>
       @if (plugin()?.description) {
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        <p class="mt-1 text-gray-600 dark:text-gray-300">
           {{ plugin()?.description }}
         </p>
       }
+
+      <!-- Cluster select + refresh -->
+      <div class="mt-2 flex items-center gap-3">
+        @if (clusterContext.isLoadingClusters()) {
+          <nldd-form-field label="Cluster">
+            <div class="select animate-pulse bg-gray-100 dark:bg-gray-800">&nbsp;</div>
+          </nldd-form-field>
+        } @else if (clusterContext.clusters().length === 0) {
+          <p class="text-gray-600 dark:text-gray-400">
+            No clusters found.
+            <a routerLink="/clusters/add" class="link">Create a cluster first</a> to use this
+            plugin.
+          </p>
+        } @else {
+          <nldd-form-field label="Cluster">
+            <select
+              id="cluster-select"
+              class="select"
+              [value]="clusterContext.selectedClusterId()"
+              (change)="onClusterChange($any($event.target).value)"
+            >
+              @for (cluster of clusterContext.clusters(); track cluster.id) {
+                <option [value]="cluster.id">{{ cluster.name }}</option>
+              }
+            </select>
+          </nldd-form-field>
+          <nldd-button
+            (click)="onRefresh()"
+            text="Refresh"
+            start-icon="arrow-2-counter-clockwise"
+            variant="secondary"
+            size="sm"
+          ></nldd-button>
+        }
+      </div>
     </div>
 
     <div class="p-6">
       @if (isLoading()) {
         <div class="py-8 text-center">
           <span
-            class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"
+            class="border-accent-500 inline-block h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
           ></span>
-          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading…</p>
+          <p class="mt-2 text-gray-500 dark:text-gray-400">Loading…</p>
         </div>
       } @else {
         <!-- Table -->
@@ -60,7 +95,7 @@
                         >{{ resource.metadata.name }}</a
                       >
                       @if (resource.metadata.namespace) {
-                        <div class="mt-0.5 font-mono text-xs text-gray-500 dark:text-gray-400">
+                        <div class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
                           {{ resource.metadata.namespace }}
                         </div>
                       }
@@ -76,14 +111,13 @@
                     }
                     <td>
                       <div class="flex gap-1">
-                        <a
+                        <nldd-button
                           [routerLink]="detailLink(resource)"
-                          class="btn-light inline-flex shrink-0 items-center px-2!"
-                          aria-label="View"
-                          title="View"
-                        >
-                          <ng-icon name="tablerEye" />
-                        </a>
+                          text="View"
+                          start-icon="eye"
+                          variant="secondary"
+                          size="sm"
+                        ></nldd-button>
                       </div>
                     </td>
                   </tr>
@@ -96,7 +130,10 @@
         <!-- Empty State -->
         @if (resources().length === 0) {
           <div class="py-8 text-center">
-            <ng-icon name="tablerDatabaseOff" size="3rem" class="mx-auto mb-3 text-gray-400!" />
+            <nldd-icon
+              name="cylinder-split-slash"
+              class="mx-auto mb-3 h-12 w-12 text-gray-400!"
+            ></nldd-icon>
             <p class="text-gray-600 dark:text-gray-300">No {{ kindLabel().toLowerCase() }} found</p>
           </div>
         }

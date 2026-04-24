@@ -34,11 +34,11 @@ body {
 }
 
 .plugin-heading {
-  @apply mb-2 text-2xl font-bold;
+  @apply mb-2 text-3xl font-bold;
 }
 
 .plugin-text {
-  @apply text-sm leading-relaxed opacity-80;
+  @apply text-base leading-relaxed opacity-80;
 }
 
 .plugin-table {

@@ -8,7 +8,7 @@ menu:
   organization:
     - crd: demoitems
       label: Demo items
-      icon: tablerInfoHexagon
+      icon: business-suitcase
 crds:
   - demoitems.demo.fundament.io
 customUI:

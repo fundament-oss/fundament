@@ -2,26 +2,24 @@ import {
   Component,
   inject,
   OnInit,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
   signal,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import AutofocusDirective from '../autofocus.directive';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, AutofocusDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.component.html',
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export default class LoginComponent implements OnInit, AfterViewInit {
-  @ViewChild('emailInput') emailInput!: ElementRef<HTMLInputElement>;
-
+export default class LoginComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -77,12 +75,8 @@ export default class LoginComponent implements OnInit, AfterViewInit {
     }
   }
 
-  ngAfterViewInit() {
-    // Focus the email input after the view is initialized
-    this.emailInput.nativeElement.focus();
-  }
-
   async onSubmit() {
+    if (this.isLoading()) return;
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       return;

@@ -1,8 +1,8 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Project members</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+    <h1 class="text-3xl font-semibold dark:text-white">Project members</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">
       Manage members and their permissions for this project
     </p>
   </div>
@@ -10,21 +10,21 @@
   <div class="p-6">
     <!-- Info banner -->
     <div
-      class="mb-6 flex items-start gap-3 rounded-md border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
+      class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
     >
-      <ng-icon
-        name="tablerInfoCircle"
-        size="1.25rem"
-        class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
-      />
-      <div class="text-sm text-indigo-700 dark:text-indigo-300">
+      <nldd-icon
+        name="info-circle"
+        class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
+      ></nldd-icon>
+      <div class="text-accent-700 dark:text-accent-300">
         <p class="mb-2">
           Members marked with
-          <ng-icon name="tablerLock" size="0.875rem" /> inherit their permission from the
-          organization level and cannot be changed here. Modify these in
+          <nldd-icon name="lock-closed" class="inline-block h-3.5 w-3.5 align-middle"></nldd-icon>
+          inherit their permission from the organization level and cannot be changed here. Modify
+          these in
           <a
             [routerLink]="['/organization/members']"
-            class="font-medium text-indigo-600 underline hover:text-indigo-700 hover:no-underline dark:text-indigo-400 dark:hover:text-indigo-300"
+            class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 font-medium underline hover:no-underline"
             >Organization members</a
           >. Organization viewers can be upgraded to admin at the project level.
         </p>
@@ -33,37 +33,39 @@
           configure
           <a
             [routerLink]="['/projects', projectId(), 'roles']"
-            class="font-medium text-indigo-600 underline hover:text-indigo-700 hover:no-underline dark:text-indigo-400 dark:hover:text-indigo-300"
+            class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 font-medium underline hover:no-underline"
             >Roles</a
           >.
         </p>
       </div>
     </div>
 
-    <button
+    <nldd-button
       type="button"
       (click)="openAddMemberModal()"
-      class="btn-primary mb-5 inline-flex items-center"
-    >
-      <ng-icon name="tablerPlus" class="mr-1.5" />
-      Add a member
-    </button>
+      text="Add a member"
+      start-icon="plus-small"
+      variant="primary"
+      class="mb-6"
+    ></nldd-button>
 
     @if (error()) {
       <div
-        class="mb-5 flex items-start gap-3 rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
+        class="bg-danger-50 dark:bg-danger-950 mb-5 flex items-start gap-3 rounded-md border border-rose-200 p-4 dark:border-rose-800"
       >
-        <ng-icon name="tablerAlertTriangle" size="1.25rem" class="mt-0.5 shrink-0 text-rose-400!" />
+        <nldd-icon
+          name="exclamation-circle"
+          class="text-danger-400! mt-0.5 h-5 w-5 shrink-0"
+        ></nldd-icon>
         <div class="flex-1">
-          <p class="text-sm text-rose-600 dark:text-rose-400">{{ error() }}</p>
+          <p class="text-danger-600 dark:text-danger-400">{{ error() }}</p>
         </div>
-        <button
+        <nldd-button
           type="button"
           (click)="error.set(null)"
-          class="shrink-0 cursor-pointer text-sm text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
-        >
-          Dismiss
-        </button>
+          text="Dismiss"
+          variant="primary"
+        ></nldd-button>
       </div>
     }
 
@@ -71,14 +73,14 @@
       <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
         <div role="status" class="flex justify-center">
           <app-loading-indicator
-            class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+            class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
           />
           <span class="sr-only">Loading...</span>
         </div>
-        <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading members...</p>
+        <p class="mt-4 text-gray-600 dark:text-gray-300">Loading members...</p>
       </div>
     } @else if (memberViews().length === 0) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">
+      <p class="text-gray-500 dark:text-gray-400">
         No members have been added to this project yet.
       </p>
     } @else {
@@ -97,7 +99,7 @@
               <tr>
                 <td>
                   <div class="font-medium dark:text-white">{{ view.member.userName }}</div>
-                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                  <div class="text-sm text-gray-500 dark:text-gray-400">
                     Added to project {{ formatMemberDate(view.member) }}
                   </div>
                 </td>
@@ -112,46 +114,47 @@
                 </td>
                 <td>
                   @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
-                    <span
-                      class="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400"
-                    >
-                      <ng-icon name="tablerLock" size="0.875rem" />
+                    <span class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                      <nldd-icon name="lock-closed" class="h-3.5 w-3.5"></nldd-icon>
                       Organization
                     </span>
                   } @else if (view.source === 'org') {
-                    <span class="text-sm text-gray-600 dark:text-gray-400">Organization</span>
+                    <span class="text-gray-600 dark:text-gray-400">Organization</span>
                   } @else {
-                    <span class="text-sm text-gray-600 dark:text-gray-400">Project</span>
+                    <span class="text-gray-600 dark:text-gray-400">Project</span>
                   }
                 </td>
                 <td>
                   @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
                     <!-- Org admin: locked, no actions -->
-                    <span class="text-sm text-gray-400 dark:text-gray-600">&mdash;</span>
+                    <span class="text-gray-400 dark:text-gray-600">&mdash;</span>
                   } @else {
-                    <button
+                    <nldd-button
                       type="button"
                       (click)="openEditMemberModal(view)"
-                      class="btn-light mr-2 inline-flex shrink-0 items-center"
-                    >
-                      <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
-                    </button>
+                      text="Edit"
+                      start-icon="pencil"
+                      variant="secondary"
+                      size="sm"
+                    ></nldd-button>
                     @if (view.source === 'project' && view.orgPermission !== null) {
-                      <button
-                        type="button"
+                      <nldd-button
                         (click)="resetToOrgDefault(view)"
-                        class="btn-remove shrink-0"
-                      >
-                        <ng-icon name="tablerArrowBackUp" class="mr-1.5" /> Reset
-                      </button>
+                        text="Reset"
+                        start-icon="arrow-u-turn-backward"
+                        variant="destructive"
+                        size="sm"
+                        class="ml-2"
+                      ></nldd-button>
                     } @else if (view.source === 'project') {
-                      <button
-                        type="button"
+                      <nldd-button
                         (click)="openRemoveMemberModal(view)"
-                        class="btn-remove shrink-0"
-                      >
-                        <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
-                      </button>
+                        text="Remove"
+                        start-icon="trash"
+                        variant="destructive"
+                        size="sm"
+                        class="ml-2"
+                      ></nldd-button>
                     }
                   }
                 </td>
@@ -165,19 +168,19 @@
 </div>
 
 <!-- Add/Edit Member Modal -->
-<app-modal
+<nldd-modal-dialog
+  #addMemberDialog
+  appDialogSync
   [show]="showAddMemberModal()"
-  [title]="editingMemberView() ? 'Edit member' : 'Add member to project'"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showAddMemberModal.set(false)"
+  [attr.text]="editingMemberView() ? 'Edit member' : 'Add member to project'"
+  (open)="onAddMemberModalOpen()"
+  (close)="showAddMemberModal.set(false)"
 >
-  <form [formGroup]="memberForm" (ngSubmit)="saveMember()">
-    <!-- User Selection (only show when adding) -->
+  <nldd-spacer size="24"></nldd-spacer>
+
+  <form [formGroup]="memberForm" (ngSubmit)="saveMember()" (keydown.enter)="saveMember()">
     @if (!editingMemberView()) {
-      <div class="mb-4">
-        <label for="userId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-          User
-        </label>
+      <nldd-form-field label="User" class="mb-4">
         <select id="userId" formControlName="userId" class="w-full">
           <option value="">Select a user</option>
           @for (user of availableUsers(); track user.id) {
@@ -185,116 +188,103 @@
           }
         </select>
         @if (availableUsers().length === 0) {
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">No users available to add.</p>
+          <p class="text-gray-600 dark:text-gray-400">No users available to add.</p>
         }
-        @if (
-          memberForm.get('userId')?.invalid &&
-          (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
-        ) {
-          <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">Please select a user.</p>
-        }
-      </div>
+        <nldd-form-field-error-text id="project-member-user-error">
+          @if (
+            memberForm.get('userId')?.invalid &&
+            (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
+          ) {
+            Please select a user.
+          }
+        </nldd-form-field-error-text>
+      </nldd-form-field>
     }
 
-    <!-- Member name (only show when editing) -->
     @if (editingMemberView()) {
       <div class="mb-4">
-        <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"> Member </span>
-        <p class="text-sm dark:text-white">{{ editingMemberView()?.member?.userName }}</p>
+        <span class="mb-2 block font-medium text-gray-700 dark:text-white">Member</span>
+        <p class="dark:text-white">{{ editingMemberView()?.member?.userName }}</p>
       </div>
     }
 
-    <!-- Permissions Selection -->
     <div class="mb-4">
-      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Permission</span>
-      <div class="space-y-2">
-        <label class="radio-option">
-          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-            <input name="permission" type="radio" value="viewer" formControlName="permission" />
-            Project viewer
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-            Read access to project resources
-          </span>
-        </label>
-        <label class="radio-option">
-          <span class="mb-1 flex items-center text-sm font-medium text-gray-700 dark:text-white">
-            <input name="permission" type="radio" value="admin" formControlName="permission" />
-            Project admin
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-            Full access to project resources
-          </span>
-        </label>
-      </div>
-    </div>
-
-    <div modal-footer class="modal-footer">
-      <button
-        type="button"
-        (click)="showAddMemberModal.set(false)"
-        class="btn-secondary"
-        [disabled]="isAddingMember()"
-      >
-        Cancel
-      </button>
-      <button
-        type="submit"
-        class="btn-primary"
-        [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
-      >
-        @if (isAddingMember()) {
-          Saving...
-        } @else if (editingMemberView()) {
-          Save changes
-        } @else {
-          Add member
-        }
-      </button>
+      <nldd-form-field label="Permission">
+        <nldd-radio-button-group name="permission" (change)="onPermissionChange($event)">
+          <div class="radio-option mb-2">
+            <nldd-radio-button-field
+              value="viewer"
+              label="Project viewer"
+              [checked]="memberForm.get('permission')?.value === 'viewer'"
+            ></nldd-radio-button-field>
+            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+              >Read access to resources</span
+            >
+          </div>
+          <div class="radio-option">
+            <nldd-radio-button-field
+              value="admin"
+              label="Project admin"
+              [checked]="memberForm.get('permission')?.value === 'admin'"
+            ></nldd-radio-button-field>
+            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+              >Full access to resources</span
+            >
+          </div>
+        </nldd-radio-button-group>
+      </nldd-form-field>
     </div>
   </form>
-</app-modal>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showAddMemberModal.set(false)"
+    [disabled]="isAddingMember()"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="saveMember()"
+    text="Save changes"
+    [text]="isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'"
+    [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
+    variant="primary"
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Remove Member Modal -->
-<app-modal
+<nldd-modal-dialog
+  #removeMemberDialog
+  appDialogSync
   [show]="showRemoveMemberModal()"
-  title="Remove member"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showRemoveMemberModal.set(false)"
+  text="Remove member"
+  variant="alert"
+  (open)="onRemoveMemberModalOpen()"
+  (close)="showRemoveMemberModal.set(false)"
 >
-  <div class="sm:flex sm:items-start">
-    <div
-      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
-    >
-      <ng-icon
-        name="tablerAlertTriangle"
-        size="1.5rem"
-        class="text-rose-600! dark:text-rose-400!"
-      />
-    </div>
-    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-      <div class="mt-2">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
-          Are you sure you want to remove
-          <span class="font-semibold text-gray-800 dark:text-white">{{
-            pendingRemoveView()?.member?.userName
-          }}</span>
-          from this project?
-        </p>
-      </div>
-    </div>
-  </div>
+  <nldd-spacer size="24"></nldd-spacer>
 
-  <div modal-footer class="modal-footer">
-    <button type="button" (click)="showRemoveMemberModal.set(false)" class="btn-secondary">
-      Cancel
-    </button>
-    <button
-      type="button"
-      (click)="confirmRemoveMember()"
-      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
-    >
-      Yes, remove this member
-    </button>
-  </div>
-</app-modal>
+  <p>
+    Are you sure you want to remove
+    <strong class="font-semibold">{{ pendingRemoveView()?.member?.userName }}</strong>
+    from this project?
+  </p>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showRemoveMemberModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmRemoveMember()"
+    text="Yes, remove this member"
+    variant="destructive"
+  ></nldd-button>
+</nldd-modal-dialog>

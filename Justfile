@@ -86,7 +86,6 @@ generate:
     go generate -x ./...
     cd console-frontend && buf generate
     cd console-frontend && openapi-ts
-    cd console-frontend && bun run scripts/generate-plugin-icons.ts
     cd e2e && buf generate
     just fmt
 

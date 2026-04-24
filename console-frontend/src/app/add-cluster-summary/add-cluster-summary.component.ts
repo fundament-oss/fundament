@@ -6,11 +6,11 @@ import {
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleCheck, tablerArrowBackUp, tablerAlertTriangle } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
@@ -31,7 +31,8 @@ import {
   type Preset,
 } from '../../generated/v1/plugin_pb';
 import { NodePoolStatus } from '../../generated/v1/common_pb';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 
 interface ProgressItem {
@@ -54,15 +55,8 @@ interface ProgressItem {
 
 @Component({
   selector: 'app-add-cluster-summary',
-  imports: [RouterLink, NgIcon, ModalComponent, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-      tablerCircleCheck,
-      tablerArrowBackUp,
-      tablerAlertTriangle,
-    }),
-  ],
+  imports: [RouterLink, DialogSyncDirective, LoadingIndicatorComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-summary.component.html',
 })
@@ -264,10 +258,9 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
         kubernetesVersion: this.clusterConfig.kubernetesVersion,
       });
 
-      const response = await withIdempotency(
-        (opts) => this.client.createCluster(request, opts),
-        { signal: this.idempotency.reset() },
-      );
+      const response = await withIdempotency((opts) => this.client.createCluster(request, opts), {
+        signal: this.idempotency.reset(),
+      });
       this.clusterId.set(response.clusterId);
       this.updateItem('cluster', {
         requestStatus: 'succeeded',
@@ -300,7 +293,9 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     const abortSignal = this.idempotency.reset();
 
     await Promise.allSettled([
-      ...nodePoolItems.map((item) => this.createNodePool(item.key, item.nodePoolConfig!, cid, abortSignal)),
+      ...nodePoolItems.map((item) =>
+        this.createNodePool(item.key, item.nodePoolConfig!, cid, abortSignal),
+      ),
       ...pluginItems.map((item) => this.installPlugin(item.key, item.pluginId!, cid, abortSignal)),
     ]);
 
@@ -329,10 +324,9 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
         autoscaleMax: config.autoscaleMax,
       });
 
-      const response = await withIdempotency(
-        (opts) => this.client.createNodePool(request, opts),
-        { signal: abortSignal },
-      );
+      const response = await withIdempotency((opts) => this.client.createNodePool(request, opts), {
+        signal: abortSignal,
+      });
       this.updateItem(key, {
         requestStatus: 'succeeded',
         syncStatus: 'none',
@@ -346,14 +340,19 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async installPlugin(key: string, _pluginId: string, clusterId?: string, abortSignal?: AbortSignal) {
+  private async installPlugin(
+    key: string,
+    _pluginId: string,
+    clusterId?: string,
+    _abortSignal?: AbortSignal,
+  ) {
     const cid = clusterId || this.clusterId();
     if (!cid) return;
 
     this.updateItem(key, { requestStatus: 'in_progress', error: undefined });
 
     try {
-    // TODO: install plugin via kube-api-proxy once that flow is implemented.
+      // TODO: install plugin via kube-api-proxy once that flow is implemented.
       this.updateItem(key, { requestStatus: 'succeeded' });
     } catch (error) {
       this.updateItem(key, {
@@ -491,5 +490,12 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     if (cid) {
       this.router.navigate(['/clusters', cid]);
     }
+  }
+
+  modalDialogRef = viewChild<ElementRef<HTMLElement>>('modalDialog');
+
+  onModalOpen(): void {
+    const el = this.modalDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }

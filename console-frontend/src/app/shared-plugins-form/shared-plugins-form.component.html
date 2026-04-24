@@ -3,52 +3,30 @@
   @if (isLoading()) {
     <div class="text-center text-gray-600 dark:text-gray-300">Loading plugins and presets...</div>
   } @else if (errorMessage()) {
-    <div class="rounded-md bg-red-50 p-4 text-red-800 dark:bg-red-900 dark:text-red-200">
+    <div
+      class="bg-danger-50 text-danger-800 dark:bg-danger-900 dark:text-danger-200 rounded-md p-4"
+    >
       {{ errorMessage() }}
     </div>
   } @else {
     <!-- Plugin Preset Selection -->
     <div class="space-y-4">
-      <h3 class="text-lg font-medium dark:text-white">Plugin preset</h3>
-      <div class="grid gap-4 md:grid-cols-3">
-        @for (preset of presets; track preset.id) {
-          <label
-            class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
-          >
-            <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
-              <input
-                name="preset"
-                type="radio"
-                [value]="preset.id"
-                [(ngModel)]="selectedPreset"
-                (change)="onPresetChange()"
-              />
-              {{ preset.name }}
-            </span>
-            <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300">
-              {{ preset.description }}
-            </span>
-          </label>
-        }
-
-        <label
-          class="block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
-        >
-          <span class="mb-1 flex items-center font-medium text-gray-700 dark:text-white">
-            <input
-              name="preset"
-              type="radio"
-              value="custom"
-              [(ngModel)]="selectedPreset"
-              (change)="onPresetChange()"
-            />
-            Custom plugin selection
-          </span>
-          <span class="ml-6 block text-sm text-gray-600 dark:text-gray-300"
-            >Cherry pick plugins you need.</span
-          >
-        </label>
-      </div>
+      <nldd-form-field label="Plugin preset">
+        <nldd-radio-button-group name="preset" (change)="onPresetRadioChange($event)">
+          @for (preset of presets; track preset.id) {
+            <nldd-radio-button-field
+              [value]="preset.id"
+              [label]="preset.name"
+              [checked]="selectedPreset === preset.id"
+            ></nldd-radio-button-field>
+          }
+          <nldd-radio-button-field
+            value="custom"
+            label="Custom plugin selection"
+            [checked]="selectedPreset === 'custom'"
+          ></nldd-radio-button-field>
+        </nldd-radio-button-group>
+      </nldd-form-field>
     </div>
 
     <!-- Plugin Selection -->
@@ -56,23 +34,18 @@
       <h3 class="text-lg font-medium dark:text-white">Plugins</h3>
       <div class="space-y-4">
         @if (plugins.length === 0) {
-          <p class="text-sm text-gray-600 dark:text-gray-400">No plugins found</p>
+          <p class="text-gray-600 dark:text-gray-400">No plugins found</p>
         } @else {
           @for (plugin of plugins; track plugin.id) {
             <div>
-              <label class="inline-flex cursor-pointer items-center">
-                <input
-                  [id]="plugin.id"
-                  type="checkbox"
-                  [(ngModel)]="plugin.selected"
-                  [name]="plugin.id"
-                  [disabled]="selectedPreset !== 'custom'"
-                  class="peer sr-only"
-                />
-                <span class="switch"></span>
-                <span class="mr-1.5 ml-3 font-medium">{{ plugin.name }}</span>
-              </label>
-              <p class="-mt-0.5 ml-12 text-gray-500 dark:text-gray-400">
+              <nldd-switch-field
+                [label]="plugin.name"
+                [checked]="plugin.selected"
+                [disabled]="selectedPreset !== 'custom'"
+                [name]="plugin.id"
+                (change)="plugin.selected = $any($event).detail.checked"
+              ></nldd-switch-field>
+              <p class="-mt-0.5 ml-16 text-gray-500 dark:text-gray-400">
                 {{ plugin.descriptionShort }}
               </p>
             </div>
@@ -84,46 +57,34 @@
     <!-- Custom Plugin Upload Section -->
     <div class="space-y-4">
       <h3 class="text-lg font-medium dark:text-white">Custom plugins</h3>
-      <p class="text-sm text-gray-600 dark:text-gray-300">
+      <p class="text-gray-600 dark:text-gray-300">
         Upload a custom plugin as a ZIP file. Custom plugins can extend the functionality of your
         cluster.
       </p>
 
       <div class="space-y-4">
-        <!-- Warning checkbox -->
-        <label class="inline-flex cursor-pointer items-center">
-          <input
-            id="customPluginUploadEnabled"
-            type="checkbox"
-            [(ngModel)]="customPluginUploadEnabled"
-            name="customPluginUploadEnabled"
-            class="peer sr-only"
-          />
-          <span class="switch"></span>
-          <span class="mr-1.5 ml-3 font-medium">
-            Enable uploading custom plugins
-            <span class="text-orange-700 dark:text-orange-400">(warranty on cluster void)</span>
-          </span>
-        </label>
+        <!-- Warning switch -->
+        <nldd-switch-field
+          label="Enable uploading custom plugins (warranty on cluster void)"
+          [checked]="customPluginUploadEnabled"
+          name="customPluginUploadEnabled"
+          (change)="customPluginUploadEnabled = $any($event).detail.checked"
+        ></nldd-switch-field>
 
         <!-- File upload input -->
-        <div>
-          <label
-            for="customPluginFile"
-            class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
-            Upload plugin ZIP file
-          </label>
+        <nldd-form-field
+          label="Upload plugin ZIP file"
+          supporting-label="Only ZIP files are accepted"
+        >
           <input
             id="customPluginFile"
             type="file"
             accept=".zip"
             [disabled]="!customPluginUploadEnabled"
             (change)="onCustomPluginFileChange($event)"
-            class="block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 ring-indigo-500 file:mr-4 file:rounded-l-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:ring-offset-gray-950 dark:file:bg-gray-700 dark:file:text-gray-300 dark:hover:file:bg-gray-600"
+            class="ring-accent-500 file:bg-accent-50 file:text-accent-700 hover:file:bg-accent-100 block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 file:mr-4 file:rounded-l-lg file:border-0 file:px-4 file:py-2 file:text-sm file:font-semibold focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:ring-offset-gray-950 dark:file:bg-gray-700 dark:file:text-gray-300 dark:hover:file:bg-gray-600"
           />
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Only ZIP files are accepted</p>
-        </div>
+        </nldd-form-field>
       </div>
     </div>
 

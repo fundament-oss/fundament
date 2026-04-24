@@ -3,8 +3,8 @@
   <div class="card-header">
     <div class="grid items-center gap-3 sm:grid-cols-2">
       <div>
-        <h1 class="text-2xl font-semibold dark:text-white">Usage</h1>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        <h1 class="text-3xl font-semibold dark:text-white">Usage</h1>
+        <p class="mt-1 text-gray-600 dark:text-gray-300">
           @if (viewMode() === 'project') {
             Monitor resource usage for this project
           } @else {
@@ -13,10 +13,13 @@
         </p>
       </div>
       <div class="flex gap-2 sm:justify-end">
-        <button type="button" class="btn-primary inline-flex items-center px-3!">
-          <ng-icon name="tablerTableDown" class="mr-2" />
-          Download CSV
-        </button>
+        <nldd-button
+          type="button"
+          text="Download CSV"
+          start-icon="table-badge-arrow-down"
+          size="sm"
+          variant="primary"
+        ></nldd-button>
       </div>
     </div>
   </div>
@@ -26,7 +29,7 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <!-- Date Range -->
       <div class="lg:col-span-2">
-        <label for="date" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+        <label for="date" class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200"
           >Date range</label
         >
         <app-date-range-picker
@@ -39,12 +42,7 @@
 
       <!-- Cluster filter — only shown in org-level view -->
       @if (viewMode() === 'org') {
-        <div>
-          <label
-            for="cluster"
-            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >Cluster</label
-          >
+        <nldd-form-field label="Cluster" class="lg:col-span-2">
           <select
             id="cluster"
             [ngModel]="selectedClusterId()"
@@ -57,17 +55,12 @@
               <option [value]="cluster.id">{{ cluster.name }}</option>
             }
           </select>
-        </div>
+        </nldd-form-field>
       }
 
       <!-- Namespace filter — only shown in project-level view -->
       @if (viewMode() === 'project') {
-        <div>
-          <label
-            for="namespace"
-            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >Namespace</label
-          >
+        <nldd-form-field label="Namespace" class="lg:col-span-2">
           <select
             id="namespace"
             [ngModel]="selectedNamespace()"
@@ -79,7 +72,7 @@
               <option [value]="ns.name">{{ ns.name }}</option>
             }
           </select>
-        </div>
+        </nldd-form-field>
       }
     </div>
   </div>
@@ -89,21 +82,20 @@
     <!-- Loading indicator -->
     @if (isLoading()) {
       <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Loading metrics…</p>
+        <p class="text-gray-500 dark:text-gray-400">Loading metrics…</p>
       </div>
     }
 
     <!-- Error message -->
     @if (errorMessage()) {
       <div
-        class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+        class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
       >
-        <ng-icon
-          name="tablerCircleXFill"
-          class="shrink-0 text-rose-500! dark:text-rose-400!"
-          size="1.125rem"
-        />
-        <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+        <nldd-icon
+          name="dismiss-circle"
+          class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+        ></nldd-icon>
+        <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
       </div>
     }
 
@@ -123,7 +115,7 @@
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <!-- CPU -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
+              <div class="mb-1 flex justify-between">
                 <span class="font-medium text-gray-700 dark:text-white">CPU</span>
                 <span class="text-gray-500 dark:text-gray-400">
                   {{ totals.cpu.used | number: '1.1-1' }} / {{ totals.cpu.total | number: '1.0-0' }}
@@ -137,14 +129,14 @@
                   [style.width.%]="getUsagePercentage(totals.cpu.used, totals.cpu.total)"
                 ></div>
               </div>
-              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {{ getUsagePercentage(totals.cpu.used, totals.cpu.total) }}% used
               </div>
             </div>
 
             <!-- Memory -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
+              <div class="mb-1 flex justify-between">
                 <span class="font-medium text-gray-700 dark:text-white">Memory</span>
                 <span class="text-gray-500 dark:text-gray-400">
                   {{ totals.memory.used | number: '1.1-1' }} /
@@ -161,14 +153,14 @@
                   [style.width.%]="getUsagePercentage(totals.memory.used, totals.memory.total)"
                 ></div>
               </div>
-              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{ getUsagePercentage(totals.memory.used, totals.memory.total) }}% used
               </div>
             </div>
 
             <!-- Pods -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
+              <div class="mb-1 flex justify-between">
                 <span class="font-medium text-gray-700 dark:text-white">Pods</span>
                 <span class="text-gray-500 dark:text-gray-400">
                   {{ totals.pods.used | number: '1.0-0' }} /
@@ -183,7 +175,7 @@
                   [style.width.%]="getUsagePercentage(totals.pods.used, totals.pods.total)"
                 ></div>
               </div>
-              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{ getUsagePercentage(totals.pods.used, totals.pods.total) }}% used
               </div>
             </div>
@@ -199,9 +191,7 @@
             @if (hasCpuData) {
               <canvas #cpuChart></canvas>
             } @else {
-              <p
-                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
-              >
+              <p class="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">
                 No data available
               </p>
             }
@@ -213,9 +203,7 @@
             @if (hasMemoryData) {
               <canvas #memoryChart></canvas>
             } @else {
-              <p
-                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
-              >
+              <p class="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">
                 No data available
               </p>
             }
@@ -227,9 +215,7 @@
             @if (hasPodData) {
               <canvas #podChart></canvas>
             } @else {
-              <p
-                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
-              >
+              <p class="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">
                 No data available
               </p>
             }
@@ -241,9 +227,7 @@
             @if (hasNetworkData) {
               <canvas #networkChart></canvas>
             } @else {
-              <p
-                class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500"
-              >
+              <p class="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">
                 No data available
               </p>
             }
@@ -268,7 +252,7 @@
               <tbody>
                 @for (c of clusterSummaries(); track c.id) {
                   <tr>
-                    <td class="font-mono font-medium dark:text-white">{{ c.name }}</td>
+                    <td class="font-mono text-sm font-medium dark:text-white">{{ c.name }}</td>
                     <td>
                       {{ c.cpu.used | number: '1.1-1' }} / {{ c.cpu.total | number: '1.0-0' }} cores
                       <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
@@ -321,7 +305,7 @@
                   </h4>
                   <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
-                      <div class="mb-1 flex justify-between text-xs">
+                      <div class="mb-1 flex justify-between">
                         <span class="text-gray-600 dark:text-gray-300">CPU</span>
                         <span class="text-gray-500 dark:text-gray-400">
                           {{ node.cpu.used | number: '1.1-1' }} /
@@ -337,7 +321,7 @@
                       </div>
                     </div>
                     <div>
-                      <div class="mb-1 flex justify-between text-xs">
+                      <div class="mb-1 flex justify-between">
                         <span class="text-gray-600 dark:text-gray-300">Memory</span>
                         <span class="text-gray-500 dark:text-gray-400">
                           {{ node.memory.used | number: '1.1-1' }} /
@@ -355,7 +339,7 @@
                       </div>
                     </div>
                     <div>
-                      <div class="mb-1 flex justify-between text-xs">
+                      <div class="mb-1 flex justify-between">
                         <span class="text-gray-600 dark:text-gray-300">Pods</span>
                         <span class="text-gray-500 dark:text-gray-400">
                           {{ node.pods.used | number: '1.0-0' }} /
@@ -377,7 +361,7 @@
               }
             </div>
           } @else {
-            <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
+            <p class="text-gray-400 dark:text-gray-500">No data available</p>
           }
         </div>
       }
@@ -423,7 +407,7 @@
             </table>
           </div>
         } @else {
-          <p class="text-sm text-gray-400 dark:text-gray-500">No data available</p>
+          <p class="text-gray-400 dark:text-gray-500">No data available</p>
         }
       </div>
     }

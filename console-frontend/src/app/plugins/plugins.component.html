@@ -1,8 +1,8 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Plugins</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+    <h1 class="text-3xl font-semibold dark:text-white">Plugins</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">
       Discover and install plugins to expand your Kubernetes clusters
     </p>
   </div>
@@ -46,7 +46,7 @@
                       "
                     >
                       @if (tag.name.toLowerCase() === 'official') {
-                        <ng-icon name="tablerCheck" size="0.75rem" class="mr-1" />
+                        <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
                       }
                       {{ tag.name }}
                     </span>
@@ -63,12 +63,19 @@
             <!-- Plugin Card Actions -->
             <div class="px-6 pb-6">
               <div class="flex space-x-3">
-                <a class="btn-secondary flex-1 text-center" [routerLink]="['/plugins', plugin.id]">
-                  Details
-                </a>
-                <button (click)="onInstallPlugin(plugin)" type="button" class="btn-primary flex-1">
-                  Install
-                </button>
+                <nldd-button
+                  [routerLink]="['/plugins', plugin.id]"
+                  text="Details"
+                  variant="secondary"
+                  size="sm"
+                ></nldd-button>
+                <nldd-button
+                  (click)="onInstallPlugin(plugin)"
+                  type="button"
+                  text="Install"
+                  variant="primary"
+                  size="sm"
+                ></nldd-button>
               </div>
             </div>
           </div>
@@ -80,7 +87,7 @@
         <div class="py-12 text-center">
           <div role="status" class="flex justify-center">
             <app-loading-indicator
-              class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+              class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
             />
             <span class="sr-only">Loading...</span>
           </div>
@@ -91,11 +98,10 @@
       <!-- Empty State -->
       @if (!isLoading() && filteredPlugins.length === 0) {
         <div class="py-12 text-center">
-          <ng-icon
-            name="tablerHelpCircle"
-            size="2rem"
-            class="mx-auto text-gray-400! dark:text-gray-600!"
-          />
+          <nldd-icon
+            name="question-mark-circle"
+            class="mx-auto h-8 w-8 text-gray-400! dark:text-gray-600!"
+          ></nldd-icon>
           <h3 class="mt-2 text-sm font-medium dark:text-white">No plugins found</h3>
           <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
             Please try selecting a different category.
@@ -110,21 +116,21 @@
       <div
         class="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
       >
-        <h2 class="mb-3 text-sm font-semibold dark:text-white">Presets</h2>
+        <h2 class="mb-3 font-semibold dark:text-white">Presets</h2>
         <nav class="space-y-1">
           @for (preset of presets; track preset.id) {
             <button
               (click)="selectPreset(preset.id)"
               [class]="
                 selectedPreset === preset.id
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100'
+                  ? 'bg-accent-50 text-accent-700 dark:bg-accent-900 dark:text-accent-100'
                   : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
               "
-              class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors duration-200"
+              class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left transition-colors duration-200"
               [title]="preset.description"
             >
               <span>{{ preset.name }}</span>
-              <span class="text-xs text-gray-600 dark:text-gray-300">{{ preset.count }}</span>
+              <span class="text-gray-600 dark:text-gray-300">{{ preset.count }}</span>
             </button>
           }
         </nav>
@@ -134,20 +140,20 @@
       <div
         class="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
       >
-        <h2 class="mb-3 text-sm font-semibold dark:text-white">Categories</h2>
+        <h2 class="mb-3 font-semibold dark:text-white">Categories</h2>
         <nav class="space-y-1">
           @for (category of categories; track category.id) {
             <button
               (click)="selectCategory(category.id)"
               [class]="
                 selectedCategory === category.id
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100'
+                  ? 'bg-accent-50 text-accent-700 dark:bg-accent-900 dark:text-accent-100'
                   : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
               "
-              class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors duration-200"
+              class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left transition-colors duration-200"
             >
               <span>{{ category.name }}</span>
-              <span class="text-xs text-gray-600 dark:text-gray-300">{{ category.count }}</span>
+              <span class="text-sm text-gray-600 dark:text-gray-300">{{ category.count }}</span>
             </button>
           }
         </nav>
@@ -160,7 +166,7 @@
 <app-install-plugin-modal
   [pluginName]="selectedPlugin?.name || ''"
   [clusters]="clustersForModal"
-  [show]="showInstallModal"
+  [show]="showInstallModal()"
   (closeModal)="closeInstallModal()"
   (install)="onInstallOnCluster($event)"
 ></app-install-plugin-modal>

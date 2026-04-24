@@ -31,10 +31,10 @@ const mockCertManagerDefinitionJSON = `{
   "version": "v1.17.2",
   "description": "Automated TLS certificate management for Kubernetes using cert-manager.",
   "author": "Fundament",
-  "icon": "shield-check",
+  "icon": "shield-check-mark",
   "menu": {
     "project": [
-      {"crd": "clusterissuers.cert-manager.io", "label": "Cluster Issuers", "icon": "shield-check"},
+      {"crd": "clusterissuers.cert-manager.io", "label": "Cluster Issuers", "icon": "shield-check-mark"},
       {"crd": "certificates.cert-manager.io", "label": "Certificates", "icon": "certificate"},
       {"crd": "certificaterequests.cert-manager.io", "label": "Certificate Requests", "icon": "folder"}
     ]

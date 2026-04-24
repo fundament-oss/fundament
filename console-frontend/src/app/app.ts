@@ -7,38 +7,35 @@ import {
   untracked,
   OnInit,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+  ViewChild,
+  ElementRef,
 } from '@angular/core';
+import '@minbzk/storybook/icon';
+import '@minbzk/storybook/icon-button';
+import '@minbzk/storybook/sheet';
+import '@minbzk/storybook/page';
+import '@minbzk/storybook/top-title-bar';
+import '@minbzk/storybook/box';
+import '@minbzk/storybook/button';
+import '@minbzk/storybook/form-field';
+import '@minbzk/storybook/modal-dialog';
+import '@minbzk/storybook/number-field';
+import '@minbzk/storybook/password-field';
+import '@minbzk/storybook/radio-button-field';
+import '@minbzk/storybook/radio-button-group';
+import '@minbzk/storybook/search-field';
+import '@minbzk/storybook/spacer';
+import '@minbzk/storybook/switch-field';
+import '@minbzk/storybook/text-field';
 import {
   RouterOutlet,
   RouterLink,
-  RouterLinkActive,
   Router,
   NavigationEnd,
   ActivatedRouteSnapshot,
 } from '@angular/router';
 import { filter, skip } from 'rxjs/operators';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerCircleCheck,
-  tablerCircleX,
-  tablerAlertTriangle,
-  tablerInfoCircle,
-  tablerX,
-  tablerMenu2,
-  tablerMoon,
-  tablerSun,
-  tablerUserCircle,
-  tablerFolder,
-  tablerFolders,
-  tablerPuzzle,
-  tablerUsers,
-  tablerSettings,
-  tablerChartLine,
-  tablerChevronRight,
-  tablerBuilding,
-  tablerBracketsContain,
-  tablerUserCog,
-} from '@ng-icons/tabler-icons';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
@@ -49,7 +46,7 @@ import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 import type { Invitation } from '../generated/v1/invite_pb';
-import { FundamentLogoIconComponent, KubernetesIconComponent } from './icons';
+import { FundamentLogoIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
@@ -57,6 +54,7 @@ import KubeClusterContextService from './plugin-resources/kube-cluster-context.s
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
+import SidebarNavComponent from './sidebar-nav/sidebar-nav';
 
 const reloadApp = () => {
   window.location.reload();
@@ -67,42 +65,18 @@ const reloadApp = () => {
   imports: [
     RouterOutlet,
     RouterLink,
-    RouterLinkActive,
     SelectorModalComponent,
     OrgPickerComponent,
     FundamentLogoIconComponent,
-    KubernetesIconComponent,
     BreadcrumbComponent,
-    NgIcon,
-  ],
-  viewProviders: [
-    provideIcons({
-      tablerCircleCheck,
-      tablerCircleX,
-      tablerAlertTriangle,
-      tablerInfoCircle,
-      tablerX,
-      tablerMenu2,
-      tablerMoon,
-      tablerSun,
-      tablerUserCircle,
-      tablerFolder,
-      tablerFolders,
-      tablerPuzzle,
-      tablerUsers,
-      tablerSettings,
-      tablerChartLine,
-      tablerChevronRight,
-      tablerBuilding,
-      tablerBracketsContain,
-      tablerUserCog,
-    }),
+    SidebarNavComponent,
   ],
   host: {
     '(document:click)': 'onDocumentClick($event)',
   },
   templateUrl: './app.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class App implements OnInit {
   protected readonly title = signal('fundament-console');
@@ -131,6 +105,8 @@ export default class App implements OnInit {
 
   private inviteClient = inject(INVITE);
 
+  @ViewChild('mobileSheet') private mobileSheetRef?: ElementRef<HTMLElement>;
+
   private clusterNameCache = new Map<string, string>();
 
   // Version mismatch state
@@ -138,8 +114,6 @@ export default class App implements OnInit {
 
   // Dropdown states
   userDropdownOpen = signal(false);
-
-  sidebarOpen = signal(false);
 
   selectorModalOpen = signal(false);
 
@@ -525,9 +499,13 @@ export default class App implements OnInit {
 
   onDocumentClick(event: Event) {
     const target = event.target as HTMLElement;
-    const userDropdown = target.closest('.user-dropdown');
+    // Shadow DOM events re-target to the host element, so treat clicks on the
+    // nav bar host (which contains the account button) the same as clicks inside
+    // the dropdown to avoid the dropdown being closed immediately on open.
+    const isInsideDropdown = !!target.closest('.user-dropdown');
+    const isNavBarHost = target.tagName?.toLowerCase() === 'nldd-top-navigation-bar';
 
-    if (!userDropdown) {
+    if (!isInsideDropdown && !isNavBarHost) {
       this.userDropdownOpen.set(false);
     }
   }
@@ -553,6 +531,7 @@ export default class App implements OnInit {
       this.showOrgPicker.set(false);
       this.selectedOrgId.set(null);
       this.selectedProjectId.set(null);
+      this.userDropdownOpen.set(false);
       this.router.navigate(['/login']);
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -561,11 +540,11 @@ export default class App implements OnInit {
   }
 
   toggleSidebar() {
-    this.sidebarOpen.update((value) => !value);
+    (this.mobileSheetRef?.nativeElement as (HTMLElement & { show(): void }) | undefined)?.show();
   }
 
   closeSidebar() {
-    this.sidebarOpen.set(false);
+    (this.mobileSheetRef?.nativeElement as (HTMLElement & { hide(): void }) | undefined)?.hide();
   }
 
   // Nested selector methods

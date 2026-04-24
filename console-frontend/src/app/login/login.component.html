@@ -1,67 +1,75 @@
+<!-- Overheid-themed login form -->
 <div class="flex min-h-[calc(100vh-7.0625rem)] flex-col justify-center py-12 sm:px-6 lg:px-8">
   <div class="sm:mx-auto sm:w-full sm:max-w-md">
-    <h2 class="text-center text-3xl font-extrabold dark:text-white">Login</h2>
-    <p class="mt-2 text-center text-gray-600 dark:text-gray-300">
+    <h2 class="mb-6 text-center text-3xl font-bold">Log in</h2>
+    <p class="mb-8 text-center text-gray-600 dark:text-gray-300">
       Please enter your credentials to continue.
     </p>
   </div>
 
-  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
     <div
       class="rounded-lg border border-gray-200 bg-white px-4 py-8 sm:px-10 dark:border-gray-800 dark:bg-gray-950"
     >
-      <form [formGroup]="loginForm" class="space-y-6" (ngSubmit)="onSubmit()">
-        <div>
-          <label for="email" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-            Email address
-          </label>
-          <input
-            #emailInput
-            id="email"
-            formControlName="email"
+      <form
+        [formGroup]="loginForm"
+        class="space-y-6"
+        (ngSubmit)="onSubmit()"
+        (keydown.enter)="onSubmit()"
+      >
+        <nldd-form-field label="Email address">
+          <nldd-text-field
             type="email"
+            id="email"
             placeholder="Enter your email address"
             autocomplete="email"
-          />
-          @if (email?.invalid && email?.touched) {
-            <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getEmailError() }}</p>
-          }
-        </div>
+            appAutofocus
+            [value]="email?.value ?? ''"
+            (input)="loginForm.get('email')!.setValue($any($event.target).value)"
+            (blur)="loginForm.get('email')!.markAsTouched()"
+            [invalid]="!!(email?.invalid && email?.touched)"
+            error-message="login-email-error"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="login-email-error">
+            {{ getEmailError() }}
+          </nldd-form-field-error-text>
+        </nldd-form-field>
 
-        <div>
-          <label
-            for="password"
-            class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-          >
-            Password
-          </label>
-          <input
+        <nldd-form-field label="Password">
+          <nldd-password-field
             id="password"
-            formControlName="password"
-            type="password"
             placeholder="Enter your password"
             autocomplete="current-password"
-          />
-          @if (password?.invalid && password?.dirty) {
-            <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getPasswordError() }}</p>
-          }
-        </div>
+            [value]="password?.value ?? ''"
+            (input)="loginForm.get('password')!.setValue($any($event.target).value)"
+            (blur)="loginForm.get('password')!.markAsTouched()"
+            show-text="Show"
+            show-accessible-label="Show password"
+            hide-text="Hide"
+            hide-accessible-label="Hide password"
+            [invalid]="!!(password?.invalid && password?.dirty)"
+            error-message="login-password-error"
+          ></nldd-password-field>
+          <nldd-form-field-error-text id="login-password-error">
+            {{ getPasswordError() }}
+          </nldd-form-field-error-text>
+        </nldd-form-field>
 
         @if (error()) {
-          <div class="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
-            <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+          <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+            <p class="text-danger-800 dark:text-danger-200">{{ error() }}</p>
           </div>
         }
 
-        <div>
-          <button
-            type="submit"
-            [disabled]="isLoading()"
-            class="w-full cursor-pointer rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-indigo-500 transition-colors duration-200 hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950"
-          >
-            {{ isLoading() ? 'Signing in...' : 'Sign in' }}
-          </button>
-        </div>
+        <nldd-button
+          variant="accent-filled"
+          full-width
+          [attr.disabled]="isLoading() ? '' : null"
+          text="Sign in"
+          [text]="isLoading() ? 'Signing in...' : 'Sign in'"
+          type="submit"
+          (click)="onSubmit()"
+        ></nldd-button>
       </form>
     </div>
   </div>

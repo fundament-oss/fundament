@@ -1,17 +1,15 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Organization</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-      Manage your organization's information
-    </p>
+    <h1 class="text-3xl font-semibold dark:text-white">Organization</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">Manage your organization's information</p>
   </div>
 
   <div class="p-6">
     <!-- Error Message -->
     @if (error()) {
-      <div class="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-950">
-        <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+      <div class="bg-danger-50 dark:bg-danger-950 mb-4 rounded-md p-4">
+        <p class="text-danger-800 dark:text-danger-200">{{ error() }}</p>
       </div>
     }
 
@@ -27,9 +25,7 @@
       <div class="space-y-6">
         <!-- Organization ID -->
         <div>
-          <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Organization ID
-          </div>
+          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">Organization ID</div>
           <p
             class="rounded-md bg-gray-50 px-4 py-2 font-mono text-sm text-gray-900 dark:bg-gray-900 dark:text-white"
           >
@@ -39,7 +35,7 @@
 
         <!-- Organization Name -->
         <div>
-          <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
             Name <span class="font-normal text-gray-500">(cannot be changed)</span>
           </div>
           <p
@@ -51,56 +47,56 @@
 
         <!-- Organization Alias -->
         <div>
-          <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
             Alias <span class="font-normal text-gray-500">(name that is displayed)</span>
           </div>
           @if (isEditing()) {
             <div class="flex gap-2">
-              <input
-                #nameInput
-                type="text"
-                [ngModel]="editingName()"
-                (ngModelChange)="editingName.set($event)"
-                class="block flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+              <nldd-text-field
+                appAutofocus
+                [value]="editingName()"
+                (input)="editingName.set($any($event.target).value)"
                 (keyup.enter)="saveEdit()"
                 (keyup.escape)="cancelEdit()"
-              />
-              <button
+                class="flex-1"
+              ></nldd-text-field>
+              <nldd-button
                 type="button"
                 (click)="saveEdit()"
                 [disabled]="loading()"
-                class="btn-primary inline-flex shrink-0 items-center"
-              >
-                <ng-icon name="tablerCheck" class="mr-1.5" /> Save
-              </button>
-              <button
+                text="Save"
+                start-icon="check-mark"
+                variant="primary"
+              ></nldd-button>
+              <nldd-button
                 type="button"
                 (click)="cancelEdit()"
                 [disabled]="loading()"
-                class="btn-secondary inline-flex shrink-0 items-center"
-              >
-                <ng-icon name="tablerX" class="mr-1.5" /> Cancel
-              </button>
+                text="Cancel"
+                start-icon="dismiss-small"
+                variant="secondary"
+              ></nldd-button>
             </div>
           } @else {
             <div class="flex items-center gap-3">
-              <p class="text-sm text-gray-900 dark:text-white">{{ organization()!.alias }}</p>
-              <button
+              <p class="text-gray-900 dark:text-white">{{ organization()!.alias }}</p>
+              <nldd-button
                 type="button"
                 (click)="startEdit()"
                 [disabled]="loading()"
-                class="btn-light inline-flex shrink-0 items-center"
-              >
-                <ng-icon name="tablerPencil" class="mr-1.5" /> Rename
-              </button>
+                text="Rename"
+                start-icon="pencil"
+                variant="secondary"
+                size="sm"
+              ></nldd-button>
             </div>
           }
         </div>
 
         <!-- Created Date -->
         <div>
-          <div class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Created</div>
-          <p class="text-sm text-gray-900 dark:text-white">
+          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">Created</div>
+          <p class="text-gray-900 dark:text-white">
             {{ formatDate(organization()!.created) }}
           </p>
         </div>

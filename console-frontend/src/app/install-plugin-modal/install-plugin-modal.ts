@@ -1,7 +1,14 @@
-import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCheck } from '@ng-icons/tabler-icons';
-import ModalComponent from '../modal/modal.component';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+  input,
+  output,
+  viewChild,
+  ElementRef,
+} from '@angular/core';
+import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 
 interface Cluster {
   id: string;
@@ -11,25 +18,28 @@ interface Cluster {
 
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [NgIcon, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCheck,
-    }),
-  ],
+  imports: [DialogSyncDirective],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class InstallPluginModalComponent {
-  @Input() pluginName = '';
+  pluginName = input('');
 
-  @Input() clusters: Cluster[] = [];
+  clusters = input<Cluster[]>([]);
 
-  @Input() show = false;
+  show = input(false);
 
-  @Output() closeModal = new EventEmitter<void>();
+  closeModal = output<void>();
 
-  @Output() install = new EventEmitter<string>();
+  install = output<string>();
+
+  dialogRef = viewChild<ElementRef<HTMLElement>>('dialog');
+
+  onOpen(): void {
+    const el = this.dialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
 
   onClose(): void {
     this.closeModal.emit();

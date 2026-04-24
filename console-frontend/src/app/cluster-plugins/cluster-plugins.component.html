@@ -1,24 +1,21 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Cluster plugins</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-      Configure plugins for cluster 'cluster-1'.
-    </p>
+    <h1 class="text-3xl font-semibold dark:text-white">Cluster plugins</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">Configure plugins for cluster 'cluster-1'.</p>
   </div>
 
   <!-- Form -->
   <div class="px-6 py-6">
     @if (errorMessage()) {
       <div
-        class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+        class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
       >
-        <ng-icon
-          name="tablerCircleXFill"
-          class="shrink-0 text-rose-500! dark:text-rose-400!"
-          size="1.125rem"
-        />
-        <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+        <nldd-icon
+          name="dismiss-circle"
+          class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+        ></nldd-icon>
+        <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
       </div>
     }
     <app-shared-plugins-form
@@ -26,21 +23,20 @@
       [initialPluginIds]="currentPluginIds()"
     >
       <div class="flex space-x-3">
-        <button
+        <nldd-button
           type="button"
           (click)="onCancel()"
-          class="btn-secondary"
           [disabled]="isSubmitting()"
-        >
-          Cancel
-        </button>
-        <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
-          @if (isSubmitting()) {
-            Saving...
-          } @else {
-            Save changes
-          }
-        </button>
+          text="Cancel"
+          variant="secondary"
+        ></nldd-button>
+        <nldd-button
+          type="button"
+          (click)="pluginsForm.submit()"
+          [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
+          [disabled]="isSubmitting()"
+          variant="primary"
+        ></nldd-button>
       </div>
     </app-shared-plugins-form>
   </div>

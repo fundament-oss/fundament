@@ -1,7 +1,13 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ViewChild,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { CLUSTER } from '../../connect/tokens';
@@ -9,16 +15,14 @@ import { fetchClusterName } from '../utils/cluster-status';
 
 @Component({
   selector: 'app-cluster-plugins',
-  imports: [SharedPluginsFormComponent, NgIcon],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-    }),
-  ],
+  imports: [SharedPluginsFormComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-plugins.component.html',
 })
 export default class ClusterPluginsComponent implements OnInit {
+  @ViewChild(SharedPluginsFormComponent) pluginsForm!: SharedPluginsFormComponent;
+
   private titleService = inject(TitleService);
 
   private router = inject(Router);

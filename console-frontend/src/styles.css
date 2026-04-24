@@ -1,10 +1,102 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'tailwindcss';
-@plugin '@tailwindcss/forms';
+@import '@minbzk/storybook/styles';
+
+@theme {
+  --color-accent-25: oklch(0.973 0.013 253.4);
+  --color-accent-50: oklch(0.947 0.026 253.4);
+  --color-accent-75: oklch(0.922 0.038 253.4);
+  --color-accent-100: oklch(0.897 0.051 253.4);
+  --color-accent-150: oklch(0.849 0.076 253.4);
+  --color-accent-200: oklch(0.804 0.097 253.4);
+  --color-accent-250: oklch(0.76 0.097 253.4);
+  --color-accent-300: oklch(0.718 0.097 253.4);
+  --color-accent-350: oklch(0.677 0.097 253.4);
+  --color-accent-400: oklch(0.638 0.097 253.4);
+  --color-accent-450: oklch(0.6 0.097 253.4);
+  --color-accent-500: oklch(0.563 0.097 253.4);
+  --color-accent-550: oklch(0.527 0.097 253.4);
+  --color-accent-600: oklch(0.492 0.097 253.4);
+  --color-accent-650: oklch(0.457 0.097 253.4);
+  --color-accent-700: oklch(0.421 0.097 253.4);
+  --color-accent-750: oklch(0.386 0.097 253.4);
+  --color-accent-800: oklch(0.348 0.097 253.4);
+  --color-accent-850: oklch(0.308 0.096 253.4);
+  --color-accent-900: oklch(0.262 0.082 253.4);
+  --color-accent-950: oklch(0.203 0.063 253.4);
+
+  --color-neutral-25: oklch(0.974 0.004 253.4);
+  --color-neutral-50: oklch(0.948 0.007 253.4);
+  --color-neutral-75: oklch(0.923 0.009 253.4);
+  --color-neutral-100: oklch(0.898 0.011 253.4);
+  --color-neutral-150: oklch(0.85 0.015 253.4);
+  --color-neutral-200: oklch(0.804 0.019 253.4);
+  --color-neutral-250: oklch(0.76 0.023 253.4);
+  --color-neutral-300: oklch(0.718 0.026 253.4);
+  --color-neutral-350: oklch(0.677 0.03 253.4);
+  --color-neutral-400: oklch(0.638 0.033 253.4);
+  --color-neutral-450: oklch(0.6 0.037 253.4);
+  --color-neutral-500: oklch(0.563 0.04 253.4);
+  --color-neutral-550: oklch(0.527 0.036 253.4);
+  --color-neutral-600: oklch(0.491 0.032 253.4);
+  --color-neutral-650: oklch(0.456 0.029 253.4);
+  --color-neutral-700: oklch(0.421 0.026 253.4);
+  --color-neutral-750: oklch(0.385 0.023 253.4);
+  --color-neutral-800: oklch(0.347 0.02 253.4);
+  --color-neutral-850: oklch(0.307 0.018 253.4);
+  --color-neutral-900: oklch(0.261 0.015 253.4);
+  --color-neutral-950: oklch(0.202 0.011 253.4);
+
+  --color-danger-25: oklch(0.975 0.012 29.5);
+  --color-danger-50: oklch(0.951 0.025 29.5);
+  --color-danger-75: oklch(0.927 0.037 29.5);
+  --color-danger-100: oklch(0.903 0.05 29.5);
+  --color-danger-150: oklch(0.859 0.077 29.5);
+  --color-danger-200: oklch(0.816 0.104 29.5);
+  --color-danger-250: oklch(0.776 0.132 29.5);
+  --color-danger-300: oklch(0.737 0.161 29.5);
+  --color-danger-350: oklch(0.7 0.191 29.5);
+  --color-danger-400: oklch(0.663 0.207 29.5);
+  --color-danger-450: oklch(0.625 0.207 29.5);
+  --color-danger-500: oklch(0.588 0.207 29.5);
+  --color-danger-550: oklch(0.552 0.207 29.5);
+  --color-danger-600: oklch(0.517 0.207 29.5);
+  --color-danger-650: oklch(0.48 0.195 29.5);
+  --color-danger-700: oklch(0.443 0.18 29.5);
+  --color-danger-750: oklch(0.405 0.165 29.5);
+  --color-danger-800: oklch(0.365 0.148 29.5);
+  --color-danger-850: oklch(0.323 0.131 29.5);
+  --color-danger-900: oklch(0.275 0.112 29.5);
+  --color-danger-950: oklch(0.212 0.086 29.5);
+}
+
+:root {
+  --primitives-font-size-100: theme('fontSize.base');
+
+  /* Button colors. Note: for dark mode, set similar styles using `html.dark { ... }` */
+  /* --semantics-buttons-accent-filled-background-color: theme('colors.indigo.600');
+  --semantics-buttons-accent-filled-is-hovered-background-color: theme('colors.indigo.700');
+  --semantics-buttons-accent-filled-is-active-background-color: theme('colors.indigo.800'); */
+
+  --semantics-focus-ring-outline: none;
+  --semantics-focus-ring-box-shadow:
+    var(--semantics-surfaces-background-color) 0 0 0 2px,
+    var(--primitives-color-accent-200) 0 0 0 4px;
+}
 
 /* Dark mode variant using the 'dark' class on the HTML element */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Make the CSS color-scheme follow the app's .dark class so that Overheid web
+   components using light-dark() respond to our toggle instead of the OS setting.
+   html.dark specificity (0,1,1) beats :root (0,1,0) from the storybook tokens. */
+html:not(.dark) {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
 
 /* View transition styles for switching between light and dark mode, see https://theme-toggle.rdsx.dev/ */
 ::view-transition-group(root) {
@@ -45,7 +137,16 @@
   }
 }
 
+@font-face {
+  font-family: 'RijksSansVF';
+  src: url('/fonts/RijksSansVF-Regular.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 body {
+  font-family: RijksSansVF, system-ui, sans-serif;
   @apply min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-white;
 }
 
@@ -82,18 +183,19 @@ input.validate-on-touch.ng-invalid.ng-touched {
 /* Badge styles */
 
 .badge {
-  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-medium;
 }
 
 .badge-sm {
-  @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium;
+  @apply inline-flex items-center rounded-full px-2 py-1 text-sm font-medium;
 }
 
 .badge-md {
-  @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium;
+  @apply inline-flex items-center rounded-full px-2 py-1 text-sm font-medium;
 }
 
 /* Badge color variants */
+
 .badge-green {
   @apply bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200;
 }
@@ -107,7 +209,7 @@ input.validate-on-touch.ng-invalid.ng-touched {
 }
 
 .badge-rose {
-  @apply bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200;
+  @apply bg-danger-100 text-danger-800 dark:bg-danger-950 dark:text-danger-200;
 }
 
 .badge-yellow {
@@ -122,46 +224,12 @@ input.validate-on-touch.ng-invalid.ng-touched {
   @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200;
 }
 
-/* Form styles */
-
-.btn-primary {
-  @apply cursor-pointer rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-indigo-500 hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950;
-}
-
-.btn-secondary {
-  @apply cursor-pointer rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-xs ring-indigo-500 hover:bg-gray-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950 dark:hover:bg-gray-700;
-}
-
-.btn-light {
-  @apply cursor-pointer rounded-md border border-indigo-300 bg-white px-4 py-2 text-sm font-medium text-indigo-700 shadow-sm ring-indigo-500 hover:bg-indigo-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300 dark:ring-offset-gray-950 dark:hover:bg-indigo-900 dark:hover:text-white;
-}
-
-.btn-remove {
-  @apply inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-4 py-2 text-sm font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white;
-}
-
-input:disabled,
-select:disabled,
-button:disabled {
-  @apply cursor-not-allowed opacity-50;
-}
-
-input[type='text'],
-input[type='search'],
-input[type='number'],
-input[type='date'],
-input[type='email'],
-input[type='password'],
-textarea {
-  @apply w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 ring-indigo-500 focus:border-indigo-500 focus:ring-1 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:placeholder-gray-600 dark:ring-offset-gray-950 dark:autofill:scheme-dark;
-}
-
-input[type='radio'] {
-  @apply mr-2 text-indigo-600 ring-indigo-500 dark:border-gray-800 dark:bg-gray-900 dark:ring-offset-gray-950 dark:checked:bg-indigo-600;
-}
+/* Custom select styles until nldd-dropdown has been fixed */
 
 select {
-  @apply rounded-md border border-gray-300 text-sm ring-indigo-500 focus:border-indigo-500 focus:ring-1 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950;
+  @apply ring-accent-200 dark:ring-accent-800 appearance-none rounded-[9px] bg-size-[1.5em_1.5em] bg-position-[right_0.625rem_center] bg-no-repeat py-2.5 pr-10 pl-3 ring-offset-2 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:text-white dark:ring-offset-gray-950;
+  background-color: var(--semantics-buttons-neutral-tinted-background-color);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3e%3cpath fill='currentColor' d='M12 5.828 7.4 10.4 6 9l6-6 6 6-1.4 1.4zm0 12.344L7.4 13.6 6 15l6 6 6-6-1.4-1.4z'%3e%3c/path%3e%3c/svg%3e");
 }
 
 .link {
@@ -171,79 +239,51 @@ select {
 /* Radio option label styles */
 
 .radio-option {
-  @apply block cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 has-checked:border-indigo-300 has-checked:bg-indigo-50 dark:border-gray-800 dark:hover:bg-gray-900 dark:has-checked:border-indigo-700 dark:has-checked:bg-indigo-950;
-}
+  @apply block cursor-pointer rounded-md border border-gray-200 px-3 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900;
 
-/* Switch (toggle) styles */
-
-.switch {
-  @apply relative h-5 w-9 rounded-full bg-gray-200 peer-checked:bg-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-200 peer-focus:outline-none peer-disabled:opacity-60 after:absolute after:start-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full focus:ring-offset-2 rtl:peer-checked:after:-translate-x-full dark:bg-gray-800 dark:ring-offset-gray-950 dark:peer-focus:ring-indigo-800 dark:after:bg-gray-950;
+  &[checked] {
+    @apply border-accent-300 bg-accent-50 dark:border-accent-700 dark:bg-accent-950;
+  }
 }
 
 /* Tab styles */
 
-.tabs {
+/* .tabs {
   @apply mt-4 -mb-px flex space-x-2;
 }
 
 .tabs a,
 .tabs button {
-  @apply rounded-t-lg border border-gray-200 border-b-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 dark:border-gray-800 dark:border-b-gray-800 dark:text-gray-400 dark:hover:text-gray-200;
+  @apply rounded-t-lg border border-gray-200 border-b-gray-200 px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:border-gray-800 dark:border-b-gray-800 dark:text-gray-400 dark:hover:text-gray-200;
 }
 
 .tabs a.active,
 .tabs button.active {
   @apply border-b-white text-gray-700 dark:border-b-gray-950 dark:text-gray-200;
-}
+} */
 
 /* Breadcrumb styles */
 
 .breadcrumb {
-  @apply -mt-2 mb-4 flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400;
+  @apply -mt-2 mb-4 flex items-center space-x-2 text-gray-600 dark:text-gray-400;
 }
 
 .breadcrumb a {
-  @apply hover:text-indigo-600 dark:hover:text-indigo-400;
+  @apply hover:text-blue-700 dark:hover:text-blue-300;
 }
 
 .breadcrumb .error-message {
-  @apply cursor-pointer text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300;
+  @apply text-danger-600 hover:text-danger-700 dark:text-danger-400 dark:hover:text-danger-300 cursor-pointer;
 }
 
 /* Navigation link styles */
 
 .nav-link {
-  @apply flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-200;
+  @apply ring-accent-500 flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-200;
 }
 
 .nav-link.active {
-  @apply bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300;
-}
-
-/* Modal styles */
-
-.modal-backdrop {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50;
-}
-
-.modal-container {
-  @apply rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950;
-}
-
-.modal-header {
-  @apply mb-4 flex items-start justify-between;
-}
-
-.modal-title {
-  @apply text-xl font-semibold dark:text-white;
-}
-
-.modal-body {
-  @apply space-y-4;
-}
-
-.modal-footer {
-  @apply mt-6 flex justify-end space-x-3;
+  @apply bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300;
 }
 
 /* Table styles */
@@ -261,7 +301,7 @@ select {
 }
 
 .table thead th {
-  @apply px-6 py-3.5 text-left text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400;
+  @apply px-6 py-3.5 text-left font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400;
 }
 
 .table tbody {
@@ -273,5 +313,10 @@ select {
 } */
 
 .table tbody td {
-  @apply px-6 py-3 text-sm whitespace-nowrap dark:text-gray-300;
+  @apply px-6 py-3 whitespace-nowrap dark:text-gray-300;
+}
+
+/* Date range picker styles, defined here since the 'accent' and 'neutral' colors are not available in the component styles */
+app-date-range-picker input {
+  @apply border-neutral-550 ring-accent-200 dark:border-neutral-650 dark:ring-accent-800 w-full appearance-none rounded-[9px] border-2 px-2.5 py-2 ring-offset-2 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950;
 }

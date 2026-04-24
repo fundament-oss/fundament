@@ -1,91 +1,99 @@
 <!-- Error Message -->
 @if (errorMessage()) {
   <div
-    class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+    class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
   >
-    <ng-icon
-      name="tablerCircleXFill"
-      class="shrink-0 text-rose-500! dark:text-rose-400!"
-      size="1.125rem"
-    />
-    <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+    <nldd-icon
+      name="dismiss-circle"
+      class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+    ></nldd-icon>
+    <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
   </div>
 }
 
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Add project</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+    <h1 class="text-3xl font-semibold dark:text-white">Add project</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">
       Create a new project to organize your namespaces and resources.
     </p>
   </div>
 
   <!-- Form -->
-  <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" class="space-y-6 px-6 py-6">
-    <div>
-      <label for="clusterId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-        Cluster
-      </label>
+  <form
+    [formGroup]="projectForm"
+    (ngSubmit)="onSubmit()"
+    (keydown.enter)="onSubmit()"
+    class="space-y-6 px-6 py-6"
+  >
+    <nldd-form-field
+      label="Cluster"
+      supporting-label="Select the cluster this project will belong to"
+    >
       @if (isLoadingClusters()) {
         <div class="flex items-center gap-2">
           <div role="status" class="flex justify-center">
             <app-loading-indicator
-              class="h-4 w-4 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+              class="fill-accent-600 dark:fill-accent-400 h-4 w-4 animate-spin text-gray-200 dark:text-gray-800"
             />
             <span class="sr-only">Loading...</span>
           </div>
-          <p class="text-sm text-gray-600 dark:text-gray-300">Loading clusters...</p>
+          <p class="text-gray-600 dark:text-gray-300">Loading clusters...</p>
         </div>
       } @else if (clusters().length === 0) {
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">
+        <p class="text-danger-600 dark:text-danger-400">
           No clusters available. <a routerLink="/clusters/add" class="link">Add a cluster first</a>.
         </p>
       } @else {
-        <select id="clusterId" formControlName="clusterId" class="w-full">
+        <select
+          id="clusterId"
+          formControlName="clusterId"
+          class="w-full"
+          [class.invalid]="
+            !!(projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty)
+          "
+        >
           @for (cluster of clusters(); track cluster.id) {
             <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
           }
         </select>
-
-        @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
-          <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getClusterError() }}</p>
-        }
-        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Select the cluster this project will belong to.
-        </p>
+        <nldd-form-field-error-text id="add-project-cluster-error">
+          @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
+            {{ getClusterError() }}
+          }
+        </nldd-form-field-error-text>
       }
-    </div>
+    </nldd-form-field>
 
-    <div>
-      <label for="name" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-        Project name
-      </label>
-      <input
-        #projectNameInput
+    <nldd-form-field label="Project name">
+      <nldd-text-field
         id="name"
-        formControlName="name"
-        type="text"
+        appAutofocus
+        [value]="projectForm.get('name')?.value ?? ''"
         placeholder="E.g. my-project"
-        class="w-full"
-      />
-      @if (projectForm.get('name')?.invalid && projectForm.get('name')?.dirty) {
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
-      }
-      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        [invalid]="!!(projectForm.get('name')?.invalid && projectForm.get('name')?.dirty)"
+        error-message="add-project-name-error"
+        (input)="onNameInput($event)"
+      ></nldd-text-field>
+      <nldd-form-field-error-text id="add-project-name-error">
+        {{ getNameError() }}
+      </nldd-form-field-error-text>
+      <nldd-form-field-help-text>
         Must be lowercase, start with a letter, and contain only letters, numbers, and hyphens.
-      </p>
-    </div>
+      </nldd-form-field-help-text>
+    </nldd-form-field>
 
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-      <a routerLink="/projects" class="btn-secondary">Cancel</a>
-      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
-        @if (isSubmitting()) {
-          Creating...
-        } @else {
-          Create project
-        }
-      </button>
+      <nldd-button routerLink="/projects" text="Cancel" variant="secondary"></nldd-button>
+      <nldd-button
+        type="button"
+        (click)="onSubmit()"
+        text="Create project"
+        [text]="isSubmitting() ? 'Creating...' : 'Create project'"
+        [disabled]="isSubmitting()"
+        variant="primary"
+      ></nldd-button>
     </div>
   </form>
 </div>

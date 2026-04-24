@@ -1,7 +1,12 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCheck, tablerHelpCircle } from '@ng-icons/tabler-icons';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
@@ -16,9 +21,7 @@ import {
   type Preset,
   type PluginSummary,
 } from '../../generated/v1/plugin_pb';
-import {
-  type ListClustersResponse_ClusterSummary as ClusterSummary,
-} from '../../generated/v1/cluster_pb';
+import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ToastService } from '../toast.service';
 
 // TODO: plugin installs are moving to the kube-api-proxy. Re-wire once available.
@@ -60,13 +63,8 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
 
 @Component({
   selector: 'app-plugins',
-  imports: [RouterLink, InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCheck,
-      tablerHelpCircle,
-    }),
-  ],
+  imports: [RouterLink, InstallPluginModalComponent, LoadingIndicatorComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',
 })
@@ -83,7 +81,7 @@ export default class PluginsComponent implements OnInit {
 
   selectedPreset = 'all';
 
-  showInstallModal = false;
+  showInstallModal = signal(false);
 
   selectedPlugin: PluginWithPresets | null = null;
 
@@ -283,11 +281,11 @@ export default class PluginsComponent implements OnInit {
 
   onInstallPlugin(plugin: PluginWithPresets) {
     this.selectedPlugin = plugin;
-    this.showInstallModal = true;
+    this.showInstallModal.set(true);
   }
 
   closeInstallModal(): void {
-    this.showInstallModal = false;
+    this.showInstallModal.set(false);
     this.selectedPlugin = null;
   }
 
