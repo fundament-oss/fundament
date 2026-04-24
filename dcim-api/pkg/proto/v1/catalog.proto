@@ -1,0 +1,228 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+import "v1/asset.proto";
+import "v1/common.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// DeviceCatalog is a device type definition (dcim.device_catalog).
+message DeviceCatalog {
+  string              id           = 10;
+  string              manufacturer = 20;
+  string              model        = 30;
+  string              part_number  = 40;
+  AssetCategory       category     = 50;
+  string              form_factor  = 60;
+  // rack_units is absent for sub-components that do not occupy rack units (e.g. cables, DIMMs).
+  int32               rack_units   = 70 [features.field_presence = EXPLICIT];
+  double              weight_kg    = 80;
+  double              power_draw_w = 90;
+  map<string, string> specs        = 100;
+  google.protobuf.Timestamp created = 110;
+  google.protobuf.Timestamp deleted = 120 [features.field_presence = EXPLICIT];
+}
+
+// PortDefinition describes a port or slot on a device catalog entry (dcim.port_definition).
+message PortDefinition {
+  string        id                = 10;
+  string        device_catalog_id = 20;
+  string        name              = 30;
+  PortType      port_type         = 40;
+  string        media_type        = 50;
+  // speed is absent for non-network ports.
+  string        speed             = 60 [features.field_presence = EXPLICIT];
+  // max_power_w is present only for power ports.
+  double        max_power_w       = 70 [features.field_presence = EXPLICIT];
+  PortDirection direction         = 80;
+  int32         ordinal           = 90;
+}
+
+// PortCompatibility records that a sub-component catalog entry fits a port (dcim.port_compatibility).
+message PortCompatibility {
+  string port_definition_id    = 10;
+  string compatible_catalog_id = 20;
+  string notes                 = 30;
+}
+
+// ── CatalogService ────────────────────────────────────────────────────────────
+
+service CatalogService {
+  // Device catalog entries
+  rpc ListCatalog              (ListCatalogRequest)              returns (ListCatalogResponse);
+  rpc GetCatalogEntry          (GetCatalogEntryRequest)          returns (GetCatalogEntryResponse);
+  rpc CreateCatalogEntry       (CreateCatalogEntryRequest)       returns (CreateCatalogEntryResponse);
+  rpc UpdateCatalogEntry       (UpdateCatalogEntryRequest)       returns (UpdateCatalogEntryResponse);
+  rpc DeleteCatalogEntry       (DeleteCatalogEntryRequest)       returns (DeleteCatalogEntryResponse);
+  rpc ListAssetsByCatalogEntry (ListAssetsByCatalogEntryRequest) returns (ListAssetsByCatalogEntryResponse);
+  // Port definitions
+  rpc ListPortDefinitions      (ListPortDefinitionsRequest)      returns (ListPortDefinitionsResponse);
+  rpc GetPortDefinition        (GetPortDefinitionRequest)        returns (GetPortDefinitionResponse);
+  rpc CreatePortDefinition     (CreatePortDefinitionRequest)     returns (CreatePortDefinitionResponse);
+  rpc UpdatePortDefinition     (UpdatePortDefinitionRequest)     returns (UpdatePortDefinitionResponse);
+  rpc DeletePortDefinition     (DeletePortDefinitionRequest)     returns (DeletePortDefinitionResponse);
+  // Port compatibilities
+  rpc ListPortCompatibilities  (ListPortCompatibilitiesRequest)  returns (ListPortCompatibilitiesResponse);
+  rpc CreatePortCompatibility  (CreatePortCompatibilityRequest)  returns (CreatePortCompatibilityResponse);
+  rpc DeletePortCompatibility  (DeletePortCompatibilityRequest)  returns (DeletePortCompatibilityResponse);
+}
+
+// ── Device catalog requests/responses ─────────────────────────────────────────
+
+message ListCatalogRequest {
+  AssetCategory category_filter = 10 [features.field_presence = EXPLICIT];
+  string        search          = 20;
+}
+
+message ListCatalogResponse {
+  message CatalogSummary {
+    DeviceCatalog entry    = 10;
+    int32         total    = 20;
+    int32         deployed = 30;
+    int32         in_stock = 40;
+    int32         issues   = 50;
+  }
+
+  repeated CatalogSummary entries = 10;
+}
+
+message GetCatalogEntryRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetCatalogEntryResponse {
+  DeviceCatalog entry = 10;
+}
+
+message CreateCatalogEntryRequest {
+  string              manufacturer = 10 [(buf.validate.field).string.min_len = 1];
+  string              model        = 20 [(buf.validate.field).string.min_len = 1];
+  string              part_number  = 30 [(buf.validate.field).string.min_len = 1];
+  AssetCategory       category     = 40 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string              form_factor  = 50;
+  int32               rack_units   = 60 [features.field_presence = EXPLICIT];
+  double              weight_kg    = 70;
+  double              power_draw_w = 80;
+  map<string, string> specs        = 90;
+}
+
+message CreateCatalogEntryResponse {
+  DeviceCatalog entry = 10;
+}
+
+message UpdateCatalogEntryRequest {
+  string              id           = 10 [(buf.validate.field).string = {uuid: true}];
+  string              manufacturer = 20 [features.field_presence = EXPLICIT];
+  string              model        = 30 [features.field_presence = EXPLICIT];
+  string              part_number  = 40 [features.field_presence = EXPLICIT];
+  string              form_factor  = 50 [features.field_presence = EXPLICIT];
+  int32               rack_units   = 60 [features.field_presence = EXPLICIT];
+  double              weight_kg    = 70 [features.field_presence = EXPLICIT];
+  double              power_draw_w = 80 [features.field_presence = EXPLICIT];
+  map<string, string> specs        = 90;
+}
+
+message UpdateCatalogEntryResponse {
+  DeviceCatalog entry = 10;
+}
+
+message DeleteCatalogEntryRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteCatalogEntryResponse {}
+
+message ListAssetsByCatalogEntryRequest {
+  string device_catalog_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListAssetsByCatalogEntryResponse {
+  repeated Asset assets = 10;
+}
+
+// ── Port definition requests/responses ────────────────────────────────────────
+
+message ListPortDefinitionsRequest {
+  string device_catalog_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListPortDefinitionsResponse {
+  repeated PortDefinition port_definitions = 10;
+}
+
+message GetPortDefinitionRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetPortDefinitionResponse {
+  PortDefinition port_definition = 10;
+}
+
+message CreatePortDefinitionRequest {
+  string        device_catalog_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string        name              = 20 [(buf.validate.field).string.min_len = 1];
+  PortType      port_type         = 30 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string        media_type        = 40;
+  string        speed             = 50 [features.field_presence = EXPLICIT];
+  double        max_power_w       = 60 [features.field_presence = EXPLICIT];
+  PortDirection direction         = 70 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  int32         ordinal           = 80;
+}
+
+message CreatePortDefinitionResponse {
+  PortDefinition port_definition = 10;
+}
+
+message UpdatePortDefinitionRequest {
+  string        id          = 10 [(buf.validate.field).string = {uuid: true}];
+  string        name        = 20 [features.field_presence = EXPLICIT];
+  PortType      port_type   = 30 [features.field_presence = EXPLICIT];
+  string        media_type  = 40 [features.field_presence = EXPLICIT];
+  string        speed       = 50 [features.field_presence = EXPLICIT];
+  double        max_power_w = 60 [features.field_presence = EXPLICIT];
+  PortDirection direction   = 70 [features.field_presence = EXPLICIT];
+  int32         ordinal     = 80 [features.field_presence = EXPLICIT];
+}
+
+message UpdatePortDefinitionResponse {
+  PortDefinition port_definition = 10;
+}
+
+message DeletePortDefinitionRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeletePortDefinitionResponse {}
+
+// ── Port compatibility requests/responses ─────────────────────────────────────
+
+message ListPortCompatibilitiesRequest {
+  string port_definition_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListPortCompatibilitiesResponse {
+  repeated PortCompatibility compatibilities = 10;
+}
+
+message CreatePortCompatibilityRequest {
+  string port_definition_id    = 10 [(buf.validate.field).string = {uuid: true}];
+  string compatible_catalog_id = 20 [(buf.validate.field).string = {uuid: true}];
+  string notes                 = 30;
+}
+
+message CreatePortCompatibilityResponse {
+  PortCompatibility compatibility = 10;
+}
+
+message DeletePortCompatibilityRequest {
+  string port_definition_id    = 10 [(buf.validate.field).string = {uuid: true}];
+  string compatible_catalog_id = 20 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeletePortCompatibilityResponse {}
