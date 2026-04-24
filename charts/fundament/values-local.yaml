@@ -3,13 +3,13 @@
 jwtSecret: "local-dev-jwt-secret"
 
 externalUrls:
-  authn: http://authn.fundament.localhost:8080
-  organization: http://organization.fundament.localhost:8080
+  authn: https://authn.fundament.localhost:8443
+  organization: https://organization.fundament.localhost:8443
   kubeApiProxy: https://k8s-api.fundament.localhost:8443
-  console: http://console.fundament.localhost:8080
-  docs: http://docs.fundament.localhost:8080
+  console: https://console.fundament.localhost:8443
+  docs: https://docs.fundament.localhost:8443
   cookieDomain: fundament.localhost
-  corsAllowedOrigins: "http://console.fundament.localhost:8080,http://localhost:4200,http://localhost:5173"
+  corsAllowedOrigins: "https://console.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true
@@ -69,13 +69,13 @@ docsFrontend:
 
 dex:
   enabled: true
-  issuer: http://dex.fundament.localhost:8080
+  issuer: https://dex.fundament.localhost:8443
   discoveryUrl: http://dex:5556
   staticClients:
     - id: fundament
       name: "Fundament Auth API"
       redirectURIs:
-        - http://authn.fundament.localhost:8080/callback
+        - https://authn.fundament.localhost:8443/callback
       public: true
   staticPasswords:
     # All passwords are 'password' (echo 'password' | htpasswd -BinC 10 user)
@@ -143,3 +143,5 @@ ingress:
   enabled: true
   className: nginx
   domain: fundament.localhost
+  tls:
+    clusterIssuer: mkcert-local

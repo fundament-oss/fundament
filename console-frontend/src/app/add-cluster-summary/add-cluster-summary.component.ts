@@ -17,6 +17,7 @@ import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
+import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
 import { CLUSTER, PLUGIN } from '../../connect/tokens';
 import {
   CreateClusterRequestSchema,
@@ -78,6 +79,8 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
   protected stateService = inject(ClusterWizardStateService);
 
   private organizationDataService = inject(OrganizationDataService);
+
+  private pluginInstallationService = inject(PluginInstallationService);
 
   protected state = computed(() => this.stateService.getState());
 
@@ -346,14 +349,20 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async installPlugin(key: string, _pluginId: string, clusterId?: string, abortSignal?: AbortSignal) {
+  private async installPlugin(key: string, pluginId: string, clusterId?: string, _abortSignal?: AbortSignal) {
     const cid = clusterId || this.clusterId();
     if (!cid) return;
+
+    const plugin = this.plugins().find((p) => p.id === pluginId);
+    if (!plugin) {
+      this.updateItem(key, { requestStatus: 'failed', error: 'Plugin not found' });
+      return;
+    }
 
     this.updateItem(key, { requestStatus: 'in_progress', error: undefined });
 
     try {
-    // TODO: install plugin via kube-api-proxy once that flow is implemented.
+      await this.pluginInstallationService.installPlugin(cid, plugin.name, plugin.image);
       this.updateItem(key, { requestStatus: 'succeeded' });
     } catch (error) {
       this.updateItem(key, {

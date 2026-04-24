@@ -35,6 +35,7 @@ import {
 import { ListClusterNamespacesRequestSchema, Namespace } from '../../generated/v1/namespace_pb';
 import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
+import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
@@ -155,6 +156,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   private pluginClient = inject(PLUGIN);
 
   private toastService = inject(ToastService);
+
+  private pluginInstallationService = inject(PluginInstallationService);
 
   private cdr = inject(ChangeDetectorRef);
 
@@ -408,16 +411,19 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   // Load installed plugins for the cluster
-  async loadInstalledPlugins(_clusterId: string): Promise<void> {
+  async loadInstalledPlugins(clusterId: string): Promise<void> {
     try {
       this.isLoadingPlugins.set(true);
 
-      // Plugin metadata comes from organization-api; installs will be resolved
-      // against the kube-api-proxy once that flow is implemented.
-      await firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {})));
+      const [pluginsResponse, installations] = await Promise.all([
+        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
+        this.pluginInstallationService.listInstallations(clusterId).catch(() => []),
+      ]);
 
-      // TODO: filter by installed plugin IDs from the kube-api-proxy.
-      this.installedPlugins.set([]);
+      const installedNames = new Set(installations.map((item) => item.spec.pluginName));
+      this.installedPlugins.set(
+        pluginsResponse.plugins.filter((p) => installedNames.has(p.name)),
+      );
     } catch (error) {
       this.toastService.error(
         error instanceof Error

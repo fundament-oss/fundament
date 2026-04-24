@@ -9,6 +9,33 @@ sidebar:
 - [Mise](https://mise.jdx.dev)
 - [Just](https://just.systems)
 - [Docker](https://www.docker.com)
+- `certutil` (part of NSS tools). Required for `mkcert` to install the CA into system trust stores
+
+### Installing certutil
+
+**macOS:**
+
+```shell
+brew install nss
+```
+
+**Debian/Ubuntu:**
+
+```shell
+apt install libnss3-tools
+```
+
+**Fedora/RHEL:**
+
+```shell
+dnf install nss-tools
+```
+
+**Arch:**
+
+```shell
+pacman -S nss
+```
 
 ## MacOS
 

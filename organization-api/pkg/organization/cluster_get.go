@@ -147,7 +147,7 @@ func (s *Server) GetKubeconfig(
 	}
 	proxyURL := s.config.KubeAPIProxyURL + "/clusters/" + clusterID.String()
 
-	kubeconfig := buildKubeconfig(clusterID.String(), proxyURL, s.config.KubeAPIProxyInsecure)
+	kubeconfig := buildKubeconfig(clusterID.String(), proxyURL)
 
 	return connect.NewResponse(organizationv1.GetKubeconfigResponse_builder{
 		KubeconfigContent: kubeconfig,
@@ -175,20 +175,15 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 	return builder.Build()
 }
 
-func buildKubeconfig(clusterID, serverURL string, insecure bool) string {
+func buildKubeconfig(clusterID, serverURL string) string {
 	clusterName := "fundament-" + clusterID
 	userName := "fundament-user-" + clusterID
-
-	tlsLine := ""
-	if insecure {
-		tlsLine = "\n    insecure-skip-tls-verify: true"
-	}
 
 	return fmt.Sprintf(`apiVersion: v1
 kind: Config
 clusters:
 - cluster:
-    server: %s%s
+    server: %s
   name: %s
 contexts:
 - context:
@@ -208,5 +203,5 @@ users:
       - %s
       interactiveMode: Never
       provideClusterInfo: false
-`, serverURL, tlsLine, clusterName, clusterName, userName, clusterName, clusterName, userName, clusterID)
+`, serverURL, clusterName, clusterName, userName, clusterName, clusterName, userName, clusterID)
 }

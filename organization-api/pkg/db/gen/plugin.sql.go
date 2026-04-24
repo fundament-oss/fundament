@@ -122,7 +122,7 @@ func (q *Queries) PluginDocumentationLinksList(ctx context.Context, arg PluginDo
 }
 
 const pluginGetByID = `-- name: PluginGetByID :one
-SELECT id, name, description_short, description, author_name, author_url, repository_url
+SELECT id, name, description_short, description, image, author_name, author_url, repository_url
 FROM appstore.plugins
 WHERE id = $1 AND deleted IS NULL
 `
@@ -136,6 +136,7 @@ type PluginGetByIDRow struct {
 	Name             string
 	DescriptionShort string
 	Description      string
+	Image            string
 	AuthorName       pgtype.Text
 	AuthorUrl        pgtype.Text
 	RepositoryUrl    pgtype.Text
@@ -149,6 +150,7 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 		&i.Name,
 		&i.DescriptionShort,
 		&i.Description,
+		&i.Image,
 		&i.AuthorName,
 		&i.AuthorUrl,
 		&i.RepositoryUrl,
@@ -157,7 +159,7 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 }
 
 const pluginList = `-- name: PluginList :many
-SELECT id, name, description_short, description
+SELECT id, name, description_short, description, image
 FROM appstore.plugins
 WHERE deleted IS NULL
 ORDER BY name
@@ -168,6 +170,7 @@ type PluginListRow struct {
 	Name             string
 	DescriptionShort string
 	Description      string
+	Image            string
 }
 
 func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
@@ -184,6 +187,7 @@ func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
 			&i.Name,
 			&i.DescriptionShort,
 			&i.Description,
+			&i.Image,
 		); err != nil {
 			return nil, err
 		}

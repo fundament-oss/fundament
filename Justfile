@@ -16,6 +16,7 @@ fmt:
 # Create a local k3d cluster for development with local registry
 cluster-create:
     k3d cluster create --config=deploy/k3d/config.yaml
+    just setup-certs
 
 # Start the cluster (creates if it doesn't exist)
 cluster-start:
@@ -29,6 +30,25 @@ cluster-stop:
 cluster-delete:
     k3d cluster delete fundament
     @k3d registry delete registry.localhost 2>/dev/null || true
+
+# Install mkcert CA as a cert-manager ClusterIssuer for local HTTPS
+setup-certs:
+    #!/usr/bin/env bash
+    set -e
+    which mkcert > /dev/null 2>&1 || { echo "mkcert not installed. Run: mise install"; exit 1; }
+    which certutil > /dev/null 2>&1 || { echo "certutil not installed. See docs/development-setup.md for installation instructions."; exit 1; }
+    mkcert -install
+    echo "Waiting for cert-manager to become available..."
+    deadline=$(( $(date +%s) + 120 ))
+    until kubectl get ns cert-manager > /dev/null 2>&1; do
+        [ "$(date +%s)" -ge "$deadline" ] && { echo "Timed out waiting for cert-manager namespace"; exit 1; }
+        sleep 5
+    done
+    kubectl wait --for=condition=Available deployment/cert-manager deployment/cert-manager-webhook -n cert-manager --timeout=300s
+    helm upgrade --install mkcert-setup charts/mkcert-setup \
+        --namespace cert-manager \
+        --set-file ca.cert="$(mkcert -CAROOT)/rootCA.pem" \
+        --set-file ca.key="$(mkcert -CAROOT)/rootCA-key.pem"
 
 # --- Deployment commands ---
 

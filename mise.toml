@@ -12,6 +12,7 @@ act = "0.2.84"
 "go:github.com/printeers/trek" = "0.12.1"
 
 # Kubernetes & Deployment
+mkcert = "1.4.4"
 kubectl = "1.31.4"
 helm = "3.16.3"
 skaffold = "2.17.0"

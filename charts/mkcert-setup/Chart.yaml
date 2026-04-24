@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mkcert-setup
+description: Local development - mkcert CA secret and ClusterIssuer for cert-manager
+version: 0.1.0
