@@ -33,7 +33,7 @@ authnApi:
 organizationApi:
   enabled: true
   replicas: 1
-  logLevel: debug
+  logLevel: info
   prometheusURL: mock
 
 kubeApiProxy:
