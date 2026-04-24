@@ -16,7 +16,6 @@
   "devDependencies": {
     "@astrojs/check": "0.9.6",
     "@eslint/js": "9.39.2",
-    "@fullhuman/postcss-purgecss": "7.0.2",
     "@typescript-eslint/parser": "8.53.1",
     "astro-eslint-parser": "1.2.2",
     "eslint": "9.39.2",

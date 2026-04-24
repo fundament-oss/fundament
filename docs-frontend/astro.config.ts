@@ -18,7 +18,7 @@ export default defineConfig({
   },
   vite: {
     css: {
-      postcss: './postcss.config.cjs',
+      postcss: './postcss.config.mjs',
     },
 
     plugins: [tailwindcss()],
