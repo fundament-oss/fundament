@@ -104,6 +104,15 @@ func (c *Client) orgInterceptor() connect.UnaryInterceptorFunc {
 	}
 }
 
+// Organizations returns the organization service client.
+func (c *Client) Organizations() organizationv1connect.OrganizationServiceClient {
+	return organizationv1connect.NewOrganizationServiceClient(
+		c.httpClient,
+		c.apiEndpoint,
+		connect.WithInterceptors(c.authInterceptor()),
+	)
+}
+
 // Clusters returns the cluster service client.
 func (c *Client) Clusters() organizationv1connect.ClusterServiceClient {
 	return organizationv1connect.NewClusterServiceClient(
