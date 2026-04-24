@@ -1,0 +1,82 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// PhysicalConnection records a cable between two placement ports (dcim.physical_connection).
+message PhysicalConnection {
+  string                    id                    = 10;
+  string                    source_placement_id   = 20;
+  string                    source_port_name      = 30;
+  string                    target_placement_id   = 40;
+  string                    target_port_name      = 50;
+  // cable_asset_id is absent when the cable itself is not individually tracked.
+  string                    cable_asset_id        = 60 [features.field_presence = EXPLICIT];
+  // logical_connection_id links this physical cable to the intended logical design.
+  string                    logical_connection_id = 70 [features.field_presence = EXPLICIT];
+  string                    notes                 = 80;
+  google.protobuf.Timestamp created               = 90;
+  google.protobuf.Timestamp deleted               = 100 [features.field_presence = EXPLICIT];
+}
+
+service PhysicalConnectionService {
+  rpc CreatePhysicalConnection  (CreatePhysicalConnectionRequest)  returns (CreatePhysicalConnectionResponse);
+  rpc GetPhysicalConnection     (GetPhysicalConnectionRequest)     returns (GetPhysicalConnectionResponse);
+  rpc UpdatePhysicalConnection  (UpdatePhysicalConnectionRequest)  returns (UpdatePhysicalConnectionResponse);
+  rpc DeletePhysicalConnection  (DeletePhysicalConnectionRequest)  returns (DeletePhysicalConnectionResponse);
+  rpc ListConnectionsByPlacement(ListConnectionsByPlacementRequest) returns (ListConnectionsByPlacementResponse);
+}
+
+message CreatePhysicalConnectionRequest {
+  string source_placement_id   = 10 [(buf.validate.field).string = {uuid: true}];
+  string source_port_name      = 20 [(buf.validate.field).string.min_len = 1];
+  string target_placement_id   = 30 [(buf.validate.field).string = {uuid: true}];
+  string target_port_name      = 40 [(buf.validate.field).string.min_len = 1];
+  string cable_asset_id        = 50 [features.field_presence = EXPLICIT];
+  string logical_connection_id = 60 [features.field_presence = EXPLICIT];
+  string notes                 = 70;
+}
+
+message CreatePhysicalConnectionResponse {
+  PhysicalConnection connection = 10;
+}
+
+message GetPhysicalConnectionRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetPhysicalConnectionResponse {
+  PhysicalConnection connection = 10;
+}
+
+message UpdatePhysicalConnectionRequest {
+  string id                    = 10 [(buf.validate.field).string = {uuid: true}];
+  string cable_asset_id        = 20 [features.field_presence = EXPLICIT];
+  string logical_connection_id = 30 [features.field_presence = EXPLICIT];
+  string notes                 = 40 [features.field_presence = EXPLICIT];
+}
+
+message UpdatePhysicalConnectionResponse {
+  PhysicalConnection connection = 10;
+}
+
+message DeletePhysicalConnectionRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeletePhysicalConnectionResponse {}
+
+message ListConnectionsByPlacementRequest {
+  string placement_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListConnectionsByPlacementResponse {
+  repeated PhysicalConnection connections = 10;
+}

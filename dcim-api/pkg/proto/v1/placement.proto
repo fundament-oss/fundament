@@ -1,0 +1,108 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+import "v1/common.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// RackLocation places an asset directly in a rack.
+message RackLocation {
+  string       rack_id         = 10;
+  int32        rack_unit_start = 20;
+  RackSlotType rack_slot_type  = 30;
+}
+
+// SubComponentLocation places an asset inside another placement's port/slot.
+message SubComponentLocation {
+  string parent_placement_id = 10;
+  string parent_port_name    = 20;
+}
+
+// Placement maps an asset to a physical location (dcim.placement).
+message Placement {
+  string                    id                = 10;
+  string                    asset_id          = 20;
+  oneof location {
+    RackLocation         rack          = 30;
+    SubComponentLocation sub_component = 40;
+  }
+  // Optional link to the logical design.
+  string                    logical_device_id = 50 [features.field_presence = EXPLICIT];
+  string                    notes             = 60;
+  google.protobuf.Timestamp created           = 70;
+  google.protobuf.Timestamp deleted           = 80 [features.field_presence = EXPLICIT];
+}
+
+service PlacementService {
+  rpc CreatePlacement     (CreatePlacementRequest)      returns (CreatePlacementResponse);
+  rpc GetPlacement        (GetPlacementRequest)         returns (GetPlacementResponse);
+  rpc UpdatePlacement     (UpdatePlacementRequest)      returns (UpdatePlacementResponse);
+  rpc DeletePlacement     (DeletePlacementRequest)      returns (DeletePlacementResponse);
+  rpc ListPlacementsByRack(ListPlacementsByRackRequest) returns (ListPlacementsByRackResponse);
+  rpc ListChildPlacements (ListChildPlacementsRequest)  returns (ListChildPlacementsResponse);
+}
+
+message CreatePlacementRequest {
+  string asset_id = 10 [(buf.validate.field).string = {uuid: true}];
+  oneof location {
+    option (buf.validate.oneof).required = true;
+    RackLocation         rack          = 20;
+    SubComponentLocation sub_component = 30;
+  }
+  string logical_device_id = 70 [features.field_presence = EXPLICIT];
+  string notes             = 80;
+}
+
+message CreatePlacementResponse {
+  Placement placement = 10;
+}
+
+message GetPlacementRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetPlacementResponse {
+  Placement placement = 10;
+}
+
+message UpdatePlacementRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+  oneof location {
+    RackLocation         rack          = 20;
+    SubComponentLocation sub_component = 30;
+  }
+  string logical_device_id = 70 [features.field_presence = EXPLICIT];
+  string notes             = 80 [features.field_presence = EXPLICIT];
+}
+
+message UpdatePlacementResponse {
+  Placement placement = 10;
+}
+
+message DeletePlacementRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeletePlacementResponse {}
+
+message ListPlacementsByRackRequest {
+  string rack_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListPlacementsByRackResponse {
+  repeated Placement placements = 10;
+}
+
+message ListChildPlacementsRequest {
+  string parent_placement_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListChildPlacementsResponse {
+  repeated Placement placements = 10;
+}

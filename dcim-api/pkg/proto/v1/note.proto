@@ -1,0 +1,57 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+import "v1/common.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// Note is a polymorphic comment attached to any DCIM entity (dcim.note).
+// There is no FK on entity_id — integrity is enforced at the application layer.
+message Note {
+  string                    id          = 10;
+  NoteEntityType            entity_type = 20;
+  string                    entity_id   = 30;
+  string                    body        = 40;
+  string                    created_by  = 50;
+  google.protobuf.Timestamp created     = 60;
+  google.protobuf.Timestamp deleted     = 70 [features.field_presence = EXPLICIT];
+}
+
+service NoteService {
+  rpc ListNotes (ListNotesRequest)  returns (ListNotesResponse);
+  rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
+  rpc DeleteNote(DeleteNoteRequest) returns (DeleteNoteResponse);
+}
+
+message ListNotesRequest {
+  NoteEntityType entity_type = 10 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string         entity_id   = 20 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListNotesResponse {
+  repeated Note notes = 10;
+}
+
+message CreateNoteRequest {
+  NoteEntityType entity_type = 10 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string         entity_id   = 20 [(buf.validate.field).string = {uuid: true}];
+  string         body        = 30 [(buf.validate.field).string.min_len = 1];
+  string         created_by  = 40 [(buf.validate.field).string.min_len = 1];
+}
+
+message CreateNoteResponse {
+  Note note = 10;
+}
+
+// DeleteNote soft-deletes the note by setting its deleted timestamp.
+message DeleteNoteRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteNoteResponse {}

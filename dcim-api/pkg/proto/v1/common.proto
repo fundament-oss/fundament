@@ -1,0 +1,114 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// AssetCategory aligns with dcim.device_catalog category check constraint.
+enum AssetCategory {
+  ASSET_CATEGORY_UNSPECIFIED    = 0;
+  ASSET_CATEGORY_SERVER         = 10;
+  ASSET_CATEGORY_SWITCH         = 20;
+  ASSET_CATEGORY_PDU            = 30;
+  ASSET_CATEGORY_PATCH_PANEL    = 40;
+  ASSET_CATEGORY_SFP            = 50;
+  ASSET_CATEGORY_NIC            = 60;
+  ASSET_CATEGORY_CPU            = 70;
+  ASSET_CATEGORY_DIMM           = 80;
+  ASSET_CATEGORY_DISK           = 90;
+  ASSET_CATEGORY_CABLE          = 100;
+  ASSET_CATEGORY_ADAPTER        = 110;
+  ASSET_CATEGORY_POWER_SUPPLY   = 120;
+  ASSET_CATEGORY_CABLE_MANAGER  = 130;
+  ASSET_CATEGORY_CONSOLE_SERVER = 140;
+}
+
+// AssetStatus aligns with dcim.asset status check constraint.
+enum AssetStatus {
+  ASSET_STATUS_UNSPECIFIED    = 0;
+  ASSET_STATUS_IN_STOCK       = 10;
+  ASSET_STATUS_DEPLOYED       = 20;
+  ASSET_STATUS_RMA            = 30;
+  ASSET_STATUS_DECOMMISSIONED = 40;
+  ASSET_STATUS_IN_TRANSIT     = 50;
+  ASSET_STATUS_RESERVED       = 60;
+}
+
+// AssetEventType aligns with dcim.asset_event event_type check constraint.
+enum AssetEventType {
+  ASSET_EVENT_TYPE_UNSPECIFIED    = 0;
+  ASSET_EVENT_TYPE_RECEIVED       = 10;
+  ASSET_EVENT_TYPE_DEPLOYED       = 20;
+  ASSET_EVENT_TYPE_MOVED          = 30;
+  ASSET_EVENT_TYPE_RMA_SENT       = 40;
+  ASSET_EVENT_TYPE_RMA_RECEIVED   = 50;
+  ASSET_EVENT_TYPE_DECOMMISSIONED = 60;
+  ASSET_EVENT_TYPE_RESERVED       = 70;
+  ASSET_EVENT_TYPE_NOTE           = 80;
+}
+
+// RackSlotType aligns with dcim.placement rack_slot_type check constraint.
+enum RackSlotType {
+  RACK_SLOT_TYPE_UNSPECIFIED = 0;
+  RACK_SLOT_TYPE_UNIT        = 10;
+  RACK_SLOT_TYPE_POWER       = 20;
+  RACK_SLOT_TYPE_ZERO_U      = 30;
+}
+
+// PortType aligns with dcim.port_definition port_type check constraint.
+enum PortType {
+  PORT_TYPE_UNSPECIFIED = 0;
+  PORT_TYPE_NETWORK     = 10;
+  PORT_TYPE_POWER_IN    = 20;
+  PORT_TYPE_POWER_OUT   = 30;
+  PORT_TYPE_SLOT        = 40;
+  PORT_TYPE_BAY         = 50;
+  PORT_TYPE_CONSOLE     = 60;
+}
+
+// PortDirection aligns with dcim.port_definition direction check constraint.
+enum PortDirection {
+  PORT_DIRECTION_UNSPECIFIED = 0;
+  PORT_DIRECTION_IN          = 10;
+  PORT_DIRECTION_OUT         = 20;
+  PORT_DIRECTION_BIDIR       = 30;
+}
+
+// NoteEntityType covers all entity types that support notes.
+enum NoteEntityType {
+  NOTE_ENTITY_TYPE_UNSPECIFIED         = 0;
+  NOTE_ENTITY_TYPE_DEVICE_CATALOG      = 10;
+  NOTE_ENTITY_TYPE_PORT_DEFINITION     = 20;
+  NOTE_ENTITY_TYPE_ASSET               = 30;
+  NOTE_ENTITY_TYPE_SITE                = 40;
+  NOTE_ENTITY_TYPE_ROOM                = 50;
+  NOTE_ENTITY_TYPE_RACK_ROW            = 60;
+  NOTE_ENTITY_TYPE_RACK                = 70;
+  NOTE_ENTITY_TYPE_PLACEMENT           = 80;
+  NOTE_ENTITY_TYPE_PHYSICAL_CONNECTION = 90;
+  NOTE_ENTITY_TYPE_LOGICAL_DESIGN      = 100;
+  NOTE_ENTITY_TYPE_LOGICAL_DEVICE      = 110;
+  NOTE_ENTITY_TYPE_LOGICAL_CONNECTION  = 120;
+}
+
+// SortDirection is the sort order for list endpoints.
+enum SortDirection {
+  SORT_DIRECTION_UNSPECIFIED = 0;
+  SORT_DIRECTION_ASC         = 10;
+  SORT_DIRECTION_DESC        = 20;
+}
+
+// AssetEvent is an append-only audit record for asset lifecycle changes.
+message AssetEvent {
+  string                    id           = 10;
+  string                    asset_id     = 20;
+  AssetEventType            event_type   = 30;
+  string                    details      = 40;
+  string                    performed_by = 50;
+  google.protobuf.Timestamp created      = 60;
+}
