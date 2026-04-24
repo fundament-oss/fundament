@@ -23,13 +23,11 @@ type OrgMemberCmd struct {
 }
 
 // OrgMemberListCmd handles listing organization members.
-type OrgMemberListCmd struct {
-	OrgID string `help:"Organization ID." required:"" name:"org"`
-}
+type OrgMemberListCmd struct{}
 
 // Run executes the org member list command.
 func (c *OrgMemberListCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig(WithOrg(c.OrgID))
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -71,14 +69,13 @@ func (c *OrgMemberListCmd) Run(ctx *Context) error {
 
 // OrgMemberInviteCmd handles inviting a member to the organization.
 type OrgMemberInviteCmd struct {
-	OrgID      string `help:"Organization ID." required:"" name:"org"`
 	Email      string `help:"Email address of the user to invite." required:""`
 	Permission string `help:"Permission for the member (admin or viewer)." required:"" enum:"admin,viewer"`
 }
 
 // Run executes the org member invite command.
 func (c *OrgMemberInviteCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig(WithOrg(c.OrgID))
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -103,14 +100,13 @@ func (c *OrgMemberInviteCmd) Run(ctx *Context) error {
 
 // OrgMemberUpdatePermissionCmd handles updating a member's permission.
 type OrgMemberUpdatePermissionCmd struct {
-	OrgID      string `help:"Organization ID." required:"" name:"org"`
 	UserID     string `help:"User ID of the member to update." required:"" name:"user-id"`
 	Permission string `help:"New permission for the member (admin or viewer)." required:"" enum:"admin,viewer"`
 }
 
 // Run executes the org member update-permission command.
 func (c *OrgMemberUpdatePermissionCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig(WithOrg(c.OrgID))
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -141,14 +137,13 @@ func (c *OrgMemberUpdatePermissionCmd) Run(ctx *Context) error {
 
 // OrgMemberRemoveCmd handles removing a member from the organization.
 type OrgMemberRemoveCmd struct {
-	OrgID  string `help:"Organization ID." required:"" name:"org"`
 	UserID string `help:"User ID of the member to remove." required:"" name:"user-id"`
 	Yes    bool   `help:"Skip confirmation prompt." short:"y"`
 }
 
 // Run executes the org member remove command.
 func (c *OrgMemberRemoveCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig(WithOrg(c.OrgID))
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
