@@ -7,6 +7,7 @@ interface Cluster {
   id: string;
   name: string;
   installed: boolean;
+  running: boolean;
 }
 
 @Component({
