@@ -230,7 +230,7 @@ func (p *GatewayAPIPlugin) isIstiodHealthy(ctx context.Context) bool {
 	if !ok {
 		return false
 	}
-	available, _ := status["availableReplicas"].(int64)
+	available, _ := status["availableReplicas"].(float64)
 	return available > 0
 }
 

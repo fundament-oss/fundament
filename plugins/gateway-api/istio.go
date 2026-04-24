@@ -31,9 +31,14 @@ func newIstioInstaller(cfg pluginConfig) *istioInstaller {
 }
 
 func (i *istioInstaller) installOrder() []chartRelease {
-	autoInject := "disabled"
-	if i.cfg.IstioProfile == "full" {
+	var autoInject string
+	switch i.cfg.IstioProfile {
+	case "minimal":
+		autoInject = "disabled"
+	case "full":
 		autoInject = "enabled"
+	default:
+		panic(fmt.Sprintf("unsupported istio profile: %q", i.cfg.IstioProfile))
 	}
 
 	return []chartRelease{
