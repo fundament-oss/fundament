@@ -310,7 +310,25 @@ func useGlobalTrustAuth(dataDir string, pool *pgxpool.Pool) {
 }
 
 func trekApply(projectRoot string) {
-	cmd := exec.Command("trek", "apply",
+	trekBin, err := exec.LookPath("trek")
+	if err != nil {
+		// Fallback: check common mise/asdf install locations.
+		candidates := []string{
+			filepath.Join(os.Getenv("HOME"), ".local/share/mise/shims/trek"),
+			filepath.Join(os.Getenv("HOME"), ".asdf/shims/trek"),
+		}
+		for _, c := range candidates {
+			if _, statErr := os.Stat(c); statErr == nil {
+				trekBin = c
+				break
+			}
+		}
+		if trekBin == "" {
+			log.Fatalf("trek binary not found in PATH or common tool-manager locations: %v", err)
+		}
+	}
+
+	cmd := exec.Command(trekBin, "apply",
 		"--reset-database",
 		"--insert-test-data",
 		"--postgres-host", "localhost",
