@@ -19,23 +19,6 @@ type MockClient struct {
 const crdBasePath = "/apis/apiextensions.k8s.io/v1/customresourcedefinitions"
 const pluginInstallationsPath = "/apis/plugins.fundament.io/v1/plugininstallations"
 
-var defaultMockInstallItems = []map[string]any{
-	{
-		"apiVersion": "plugins.fundament.io/v1",
-		"kind":       "PluginInstallation",
-		"metadata":   map[string]any{"name": "cert-manager", "namespace": "plugin-cert-manager"},
-		"spec":       map[string]any{"pluginName": "cert-manager", "image": "mock"},
-		"status":     map[string]any{"phase": "Running", "ready": true},
-	},
-	{
-		"apiVersion": "plugins.fundament.io/v1",
-		"kind":       "PluginInstallation",
-		"metadata":   map[string]any{"name": "CloudNativePG", "namespace": "plugin-CloudNativePG"},
-		"spec":       map[string]any{"pluginName": "CloudNativePG", "image": "mock"},
-		"status":     map[string]any{"phase": "Running", "ready": true},
-	},
-}
-
 func clusterIDFromContext(ctx context.Context) string {
 	id, _ := ctx.Value(ClusterIDContextKey{}).(string)
 	return id
@@ -47,17 +30,8 @@ func (m *MockClient) installItemsForCluster(clusterID string) []map[string]any {
 	}
 	items, ok := m.installByCluster[clusterID]
 	if !ok {
-		// Deep-copy the defaults so mutations don't affect other clusters.
-		copied := make([]map[string]any, len(defaultMockInstallItems))
-		for i, item := range defaultMockInstallItems {
-			cp := make(map[string]any, len(item))
-			for k, v := range item {
-				cp[k] = v
-			}
-			copied[i] = cp
-		}
-		m.installByCluster[clusterID] = copied
-		return copied
+		m.installByCluster[clusterID] = []map[string]any{}
+		return m.installByCluster[clusterID]
 	}
 	return items
 }

@@ -23,6 +23,24 @@ export async function fetchClusterName(
   }
 }
 
+export async function fetchClusterDetails(
+  client: ClusterClient,
+  clusterId: string,
+): Promise<{ name: string | null; status: ClusterStatus }> {
+  try {
+    const request = create(GetClusterRequestSchema, { clusterId });
+    const response = await firstValueFrom(client.getCluster(request));
+    return {
+      name: response.cluster?.name ?? null,
+      status: response.cluster?.status ?? ClusterStatus.UNSPECIFIED,
+    };
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load cluster details:', error);
+    return { name: null, status: ClusterStatus.UNSPECIFIED };
+  }
+}
+
 const TRANSITIONAL_STATUSES: ReadonlySet<ClusterStatus> = new Set([
   ClusterStatus.PROVISIONING,
   ClusterStatus.STARTING,

@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
@@ -7,7 +7,8 @@ import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { CLUSTER, PLUGIN } from '../../connect/tokens';
-import { fetchClusterName } from '../utils/cluster-status';
+import { fetchClusterDetails, getStatusLabel } from '../utils/cluster-status';
+import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
 import type { PluginInstallationItem } from '../plugin-resources/types';
@@ -50,6 +51,12 @@ export default class ClusterPluginsComponent implements OnInit {
 
   clusterName = signal<string | null>(null);
 
+  clusterStatus = signal<ClusterStatus>(ClusterStatus.UNSPECIFIED);
+
+  isClusterRunning = computed(() => this.clusterStatus() === ClusterStatus.RUNNING);
+
+  protected readonly getStatusLabel = getStatusLabel;
+
   constructor() {
     this.titleService.setTitle('Cluster plugins');
     this.clusterId = this.route.snapshot.paramMap.get('id') || '';
@@ -57,7 +64,10 @@ export default class ClusterPluginsComponent implements OnInit {
 
   async ngOnInit() {
     const [, pluginsResponse, installations] = await Promise.all([
-      fetchClusterName(this.client, this.clusterId).then((name) => this.clusterName.set(name)),
+      fetchClusterDetails(this.client, this.clusterId).then(({ name, status }) => {
+        this.clusterName.set(name);
+        this.clusterStatus.set(status);
+      }),
       firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
       this.pluginInstallationService.listInstallations(this.clusterId).catch(() => []),
     ]);
@@ -72,7 +82,7 @@ export default class ClusterPluginsComponent implements OnInit {
   }
 
   async onFormSubmit(data: { preset: string; plugins: string[] }) {
-    if (this.isSubmitting()) return;
+    if (this.isSubmitting() || !this.isClusterRunning()) return;
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
 

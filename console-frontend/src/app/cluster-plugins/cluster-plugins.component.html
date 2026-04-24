@@ -3,12 +3,22 @@
   <div class="card-header">
     <h1 class="text-2xl font-semibold dark:text-white">Cluster plugins</h1>
     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-      Configure plugins for cluster 'cluster-1'.
+      Configure plugins for cluster '{{ clusterName() }}'.
     </p>
   </div>
 
   <!-- Form -->
   <div class="px-6 py-6">
+    @if (!isClusterRunning()) {
+      <div
+        class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/30"
+      >
+        <p class="text-sm text-amber-800 dark:text-amber-200">
+          Plugin management is only available when the cluster is running. Current status:
+          <span class="font-medium">{{ getStatusLabel(clusterStatus()) }}</span>.
+        </p>
+      </div>
+    }
     @if (errorMessage()) {
       <div
         class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
@@ -34,7 +44,7 @@
         >
           Cancel
         </button>
-        <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+        <button type="submit" class="btn-primary" [disabled]="isSubmitting() || !isClusterRunning()">
           @if (isSubmitting()) {
             Saving...
           } @else {

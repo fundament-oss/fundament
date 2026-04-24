@@ -20,12 +20,14 @@ import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
+import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ToastService } from '../toast.service';
 import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
 
 // Extended cluster type for UI state
 interface ClusterWithState extends ClusterSummary {
   installed: boolean;
+  running: boolean;
 }
 
 @Component({
@@ -114,6 +116,7 @@ export default class PluginDetailsComponent implements OnInit {
         clustersResponse.clusters.map((cluster, i) => ({
           ...cluster,
           installed: installResults[i].some((item) => item.metadata.name === pluginName),
+          running: cluster.status === ClusterStatus.RUNNING,
         })),
       );
 

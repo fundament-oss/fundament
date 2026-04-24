@@ -3,7 +3,6 @@ import {
   inject,
   computed,
   signal,
-  OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
 } from '@angular/core';
@@ -17,27 +16,20 @@ import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
-import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
-import { CLUSTER, PLUGIN } from '../../connect/tokens';
+import { CLUSTER } from '../../connect/tokens';
 import {
   CreateClusterRequestSchema,
   CreateNodePoolRequestSchema,
   GetClusterRequestSchema,
   GetNodePoolRequestSchema,
 } from '../../generated/v1/cluster_pb';
-import {
-  ListPluginsRequestSchema,
-  ListPresetsRequestSchema,
-  type PluginSummary,
-  type Preset,
-} from '../../generated/v1/plugin_pb';
 import { NodePoolStatus } from '../../generated/v1/common_pb';
 import ModalComponent from '../modal/modal.component';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 
 interface ProgressItem {
   key: string;
-  type: 'cluster' | 'nodepool' | 'plugin';
+  type: 'cluster' | 'nodepool';
   name: string;
   requestStatus: 'pending' | 'in_progress' | 'succeeded' | 'failed';
   syncStatus: 'none' | 'syncing' | 'synced' | 'failed';
@@ -49,7 +41,6 @@ interface ProgressItem {
     autoscaleMin: number;
     autoscaleMax: number;
   };
-  pluginId?: string;
   createdId?: string;
 }
 
@@ -67,33 +58,22 @@ interface ProgressItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-summary.component.html',
 })
-export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
+export default class AddClusterSummaryComponent implements OnDestroy {
   private titleService = inject(TitleService);
 
   private router = inject(Router);
 
   private client = inject(CLUSTER);
 
-  private pluginClient = inject(PLUGIN);
-
   protected stateService = inject(ClusterWizardStateService);
 
   private organizationDataService = inject(OrganizationDataService);
-
-  private pluginInstallationService = inject(PluginInstallationService);
 
   protected state = computed(() => this.stateService.getState());
 
   protected errorMessage = signal<string | null>(null);
 
   protected isCreating = signal<boolean>(false);
-
-  // Plugin and preset data
-  protected plugins = signal<PluginSummary[]>([]);
-
-  protected presets = signal<Preset[]>([]);
-
-  protected isLoadingPlugins = signal<boolean>(true);
 
   // Modal state
   protected showModal = signal(false);
@@ -140,48 +120,6 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopPolling();
-  }
-
-  async ngOnInit() {
-    try {
-      // Fetch plugins and presets to display names
-      const [pluginsResponse, presetsResponse] = await Promise.all([
-        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
-        firstValueFrom(this.pluginClient.listPresets(create(ListPresetsRequestSchema, {}))),
-      ]);
-
-      this.plugins.set(pluginsResponse.plugins);
-      this.presets.set(presetsResponse.presets);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to load plugins and presets:', error);
-    } finally {
-      this.isLoadingPlugins.set(false);
-    }
-  }
-
-  // Helper to get preset name
-  getPresetName(presetId: string): string {
-    if (presetId === 'custom') {
-      return 'Custom plugin selection';
-    }
-    const preset = this.presets().find((p) => p.id === presetId);
-    return preset?.name || presetId;
-  }
-
-  // Helper to get plugin names
-  getPluginNames(pluginIds: string[]): string[] {
-    return pluginIds
-      .map((id) => {
-        const plugin = this.plugins().find((p) => p.id === id);
-        return plugin?.name || id;
-      })
-      .sort();
-  }
-
-  private getPluginName(pluginId: string): string {
-    const plugin = this.plugins().find((p) => p.id === pluginId);
-    return plugin?.name || pluginId;
   }
 
   private updateItem(key: string, updates: Partial<ProgressItem>) {
@@ -235,19 +173,6 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
       );
     }
 
-    if (wizardState.plugins) {
-      items.push(
-        ...wizardState.plugins.map((pluginId) => ({
-          key: `plugin-${pluginId}`,
-          type: 'plugin' as const,
-          name: this.getPluginName(pluginId),
-          requestStatus: 'pending' as const,
-          syncStatus: 'none' as const,
-          pluginId,
-        })),
-      );
-    }
-
     this.progressItems.set(items);
     this.showModal.set(true);
 
@@ -292,19 +217,15 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
 
     const cid = this.clusterId()!;
 
-    // Step 2: Create node pools and install plugins in parallel
+    // Step 2: Create node pools
     const nodePoolItems = this.progressItems().filter(
       (item) => item.type === 'nodepool' && item.nodePoolConfig,
-    );
-    const pluginItems = this.progressItems().filter(
-      (item) => item.type === 'plugin' && item.pluginId,
     );
 
     const abortSignal = this.idempotency.reset();
 
     await Promise.allSettled([
       ...nodePoolItems.map((item) => this.createNodePool(item.key, item.nodePoolConfig!, cid, abortSignal)),
-      ...pluginItems.map((item) => this.installPlugin(item.key, item.pluginId!, cid, abortSignal)),
     ]);
 
     // Start polling for sync status
@@ -345,29 +266,6 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
       this.updateItem(key, {
         requestStatus: 'failed',
         error: error instanceof Error ? error.message : 'Failed to create node pool',
-      });
-    }
-  }
-
-  private async installPlugin(key: string, pluginId: string, clusterId?: string, _abortSignal?: AbortSignal) {
-    const cid = clusterId || this.clusterId();
-    if (!cid) return;
-
-    const plugin = this.plugins().find((p) => p.id === pluginId);
-    if (!plugin) {
-      this.updateItem(key, { requestStatus: 'failed', error: 'Plugin not found' });
-      return;
-    }
-
-    this.updateItem(key, { requestStatus: 'in_progress', error: undefined });
-
-    try {
-      await this.pluginInstallationService.installPlugin(cid, plugin.name, plugin.image);
-      this.updateItem(key, { requestStatus: 'succeeded' });
-    } catch (error) {
-      this.updateItem(key, {
-        requestStatus: 'failed',
-        error: error instanceof Error ? error.message : 'Failed to install plugin',
       });
     }
   }
@@ -477,8 +375,6 @@ export default class AddClusterSummaryComponent implements OnInit, OnDestroy {
       if (!this.pollInterval && this.progressItems().some((i) => i.syncStatus === 'syncing')) {
         this.startPolling();
       }
-    } else if (item.type === 'plugin' && item.pluginId) {
-      await this.installPlugin(key, item.pluginId, undefined, this.idempotency.reset());
     }
   }
 
