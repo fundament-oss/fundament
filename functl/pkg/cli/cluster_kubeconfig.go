@@ -11,13 +11,12 @@ import (
 
 // ClusterKubeconfigCmd handles the cluster kubeconfig command.
 type ClusterKubeconfigCmd struct {
-	OrgID     string `help:"Organization ID." required:"" name:"org"`
 	ClusterID string `arg:"" help:"Cluster ID to generate kubeconfig for."`
 }
 
 // Run executes the cluster kubeconfig command.
 func (c *ClusterKubeconfigCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig(WithOrg(c.OrgID))
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
