@@ -318,17 +318,19 @@ import Layout from '../layouts/Landing.astro';
       </div>
       <div class="lp-btnrow">
         <a class="lp-btn lp-btn--primary" href="/docs">
-          Read the documentation
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="18"
+            viewBox="0 0 384 512"
+            width="14"
             height="18"
             aria-hidden="true"
           >
-            <path fill="currentColor" d="m12 4 8 8-8 8-1.41-1.42L16.172 13H3v-2h13.172L10.59 5.42z"
+            <path
+              fill="currentColor"
+              d="M64 48l112 0 0 88c0 39.8 32.2 72 72 72l88 0 0 240c0 8.8-7.2 16-16 16L64 464c-8.8 0-16-7.2-16-16L48 64c0-8.8 7.2-16 16-16zM224 67.9l92.1 92.1-68.1 0c-13.3 0-24-10.7-24-24l0-68.1zM64 0C28.7 0 0 28.7 0 64L0 448c0 35.3 28.7 64 64 64l256 0c35.3 0 64-28.7 64-64l0-261.5c0-17-6.7-33.3-18.7-45.3L242.7 18.7C230.7 6.7 214.5 0 197.5 0L64 0zm56 256c-13.3 0-24 10.7-24 24s10.7 24 24 24l144 0c13.3 0 24-10.7 24-24s-10.7-24-24-24l-144 0zm0 96c-13.3 0-24 10.7-24 24s10.7 24 24 24l144 0c13.3 0 24-10.7 24-24s-10.7-24-24-24l-144 0z"
             ></path>
           </svg>
+          Read the documentation
         </a>
         <a
           class="lp-btn lp-btn--secondary"
@@ -336,6 +338,12 @@ import Layout from '../layouts/Landing.astro';
           target="_blank"
           rel="nofollow noopener noreferrer"
         >
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill-rule="evenodd"
+              d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+              clip-rule="evenodd"></path>
+          </svg>
           Explore on GitHub
         </a>
       </div>
@@ -487,12 +495,12 @@ import Layout from '../layouts/Landing.astro';
   .lp-caps {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--semantics-dividers-color);
-    border: 1px solid var(--semantics-dividers-color);
+    border-top: 1px solid var(--semantics-dividers-color);
+    border-left: 1px solid var(--semantics-dividers-color);
   }
   .lp-cap {
-    background: var(--semantics-surfaces-background-color);
+    border-right: 1px solid var(--semantics-dividers-color);
+    border-bottom: 1px solid var(--semantics-dividers-color);
     padding: var(--primitives-space-28);
     display: flex;
     flex-direction: column;
