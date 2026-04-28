@@ -13,9 +13,10 @@ import (
 
 // Config holds the Fundament CLI configuration.
 type Config struct {
-	APIEndpoint string `yaml:"api_endpoint"`
-	AuthnURL    string `yaml:"authn_url"`
-	Output      string `yaml:"output"`
+	APIEndpoint  string `yaml:"api_endpoint"`
+	AuthnURL     string `yaml:"authn_url"`
+	Output       string `yaml:"output"`
+	Organization string `yaml:"organization,omitempty"`
 }
 
 // Credentials holds the API key for authentication.
