@@ -72,7 +72,7 @@ export default class DateRangePickerComponent {
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
 
-    return Array.from({ length: 42 }, (_, i) => {
+    return Array.from({ length: 6 * 7 }, (_, i) => {
       const d = new Date(startDate);
       d.setDate(startDate.getDate() + i);
       const dateStr = DateRangePickerComponent.toISO(d);
@@ -91,7 +91,8 @@ export default class DateRangePickerComponent {
       return;
     }
     const from = this.dateFrom();
-    const ref = from ? new Date(`${from}T00:00:00`) : new Date();
+    const candidate = from ? new Date(`${from}T00:00:00`) : null;
+    const ref = candidate && !Number.isNaN(candidate.getTime()) ? candidate : new Date();
     this.viewYear.set(ref.getFullYear());
     this.viewMonth.set(ref.getMonth());
     this.open.set(true);

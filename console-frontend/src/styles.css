@@ -139,7 +139,8 @@ html.dark {
 
 @font-face {
   font-family: 'RijksSansVF';
-  src: url('/fonts/RijksSansVF-Regular.ttf') format('truetype');
+  src: url('/fonts/RijksSansVF-Regular.woff2') format('woff2'),
+    url('/fonts/RijksSansVF-Regular.ttf') format('truetype');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;

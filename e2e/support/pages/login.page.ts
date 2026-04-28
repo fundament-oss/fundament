@@ -13,7 +13,7 @@ export class LoginPage {
     this.page = page;
     this.emailInput = page.locator('#email');
     this.passwordInput = page.locator('#password');
-    this.submitButton = page.locator('button[type="submit"]');
+    this.submitButton = page.locator('nldd-button[type="submit"]');
     this.errorMessage = page.locator('.text-danger-800, .text-danger-200');
     this.validationError = page.locator('.text-danger-600, .text-danger-400');
     this.heading = page.locator('h2');
