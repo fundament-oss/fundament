@@ -2,331 +2,615 @@
 import Layout from '../layouts/Landing.astro';
 ---
 
-<Layout title="Fundament - Self-Hosted Kubernetes Platform">
-  <div class="relative z-10 mx-auto max-w-4xl text-center" slot="hero">
-    <h1 class="hero-title">Deploy and manage Kubernetes clusters with confidence</h1>
-    <p class="mx-auto mb-10 max-w-3xl text-lg text-gray-700 sm:text-xl dark:text-gray-300">
-      Fundament is an open-source platform that combines bare-metal provisioning with managed
-      Kubernetes, delivering a complete IaaS and PaaS solution for self-hosted infrastructure.
-    </p>
-    <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
-      <a
-        href="/docs"
-        class="inline-flex items-center gap-2 rounded-lg border border-indigo-500 bg-indigo-600 px-6 py-3 font-medium text-white no-underline transition-all duration-200 hover:bg-indigo-700 dark:border-indigo-500 dark:bg-indigo-600 dark:hover:bg-indigo-700"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24"
-          ><path
-            fill="currentColor"
-            d="m10.65 15.75l4.875-3.125q.35-.225.35-.625t-.35-.625L10.65 8.25q-.375-.25-.763-.038t-.387.663v6.25q0 .45.388.663t.762-.038M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22m0-2q3.35 0 5.675-2.325T20 12t-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20m0-8"
-          ></path></svg
+<Layout title="Fundament — Self-hosted Kubernetes platform">
+  <section class="lp-hero">
+    <div class="lp-hero__inner">
+      <p class="lp-eyebrow">Self-hosted Kubernetes platform</p>
+      <h1 class="lp-hero__title">Deploy and manage Kubernetes clusters with confidence.</h1>
+      <p class="lp-hero__lede">
+        Fundament is an open-source platform that combines bare-metal provisioning with managed
+        Kubernetes, delivering a complete IaaS and PaaS solution for self-hosted infrastructure.
+      </p>
+      <div class="lp-btnrow">
+        <a class="lp-btn lp-btn--primary" href="/docs">
+          Get started
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            aria-hidden="true"
+          >
+            <path fill="currentColor" d="m12 4 8 8-8 8-1.41-1.42L16.172 13H3v-2h13.172L10.59 5.42z"
+            ></path>
+          </svg>
+        </a>
+        <a
+          class="lp-btn lp-btn--secondary"
+          href="https://github.com/fundament-oss/fundament"
+          target="_blank"
+          rel="nofollow noopener noreferrer"
         >
-        Get started
-      </a>
-      <a
-        href="https://github.com/fundament-oss/fundament"
-        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-800 no-underline transition-all duration-200 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-900"
-        rel="nofollow noopener noreferrer"
-      >
-        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            fill-rule="evenodd"
-            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-            clip-rule="evenodd"></path>
-        </svg>
-        View on GitHub
-      </a>
+          View on GitHub
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            aria-hidden="true"
+          >
+            <path
+              fill="currentColor"
+              d="M11.772 8H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-6.765l2-2V19c0 1.66-1.34 3-3 3H5c-1.66 0-3-1.34-3-3V9a3 3 0 0 1 3-3h8.772z"
+            ></path>
+            <path fill="currentColor" d="M22 11h-2V5.407l-9.296 9.296L9.3 13.3 18.6 4H13V2h9z"
+            ></path>
+          </svg>
+        </a>
+      </div>
+
+      <div class="lp-metastrip">
+        <div class="lp-metastrip__cell">
+          <p class="lp-metastrip__label">Model</p>
+          <div class="lp-metastrip__value">Open source</div>
+        </div>
+        <div class="lp-metastrip__cell">
+          <p class="lp-metastrip__label">Layer</p>
+          <div class="lp-metastrip__value">IaaS + PaaS</div>
+        </div>
+        <div class="lp-metastrip__cell">
+          <p class="lp-metastrip__label">Tenants</p>
+          <div class="lp-metastrip__value">Thousands</div>
+        </div>
+        <div class="lp-metastrip__cell">
+          <p class="lp-metastrip__label">Stance</p>
+          <div class="lp-metastrip__value">Zero-trust</div>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="bg-white py-20 sm:py-24 dark:bg-gray-900">
-    <div class="mx-auto max-w-7xl px-6 lg:px-8">
-      <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Developer-friendly
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Simple, intuitive platform for deploying and operating applications without wrestling
-            with infrastructure complexity.
-          </p>
-        </div>
+  <!-- Capabilities -->
+  <div class="lp-section">
+    <div class="lp-section__head">
+      <div>
+        <p class="lp-section__kicker">01 — Capabilities</p>
+      </div>
+      <div>
+        <h2 class="lp-section__title">A complete cloud platform, self-hosted.</h2>
+        <p class="lp-section__intro">
+          Eight capabilities that define Fundament. No managed service required, no proprietary
+          lock-in, no compromises on isolation.
+        </p>
+      </div>
+    </div>
 
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Multi-tenant architecture
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Built for organizational growth with strict tenant isolation and shared-nothing compute
-            and storage architecture.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Secure by default
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Security built into every layer with zero-trust principles and comprehensive isolation
-            between tenants.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Managed infrastructure
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Compute, storage, and networking abstracted and managed, with automated bare-metal
-            provisioning via metal-stack.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Highly available
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Designed to remain operational under heavy demand or failure conditions with built-in
-            resilience.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Horizontally scalable
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Scale from handful to thousands of tenants with large infrastructure footprints without
-            architectural changes.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Extensible platform
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Pluggable services allow tenants to autonomously evolve and customize their technology
-            stack.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">Open source</h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Built on proven open-source projects like metal-stack and Gardener, avoiding proprietary
-            lock-in.
-          </p>
-        </div>
+    <div class="lp-caps">
+      <div class="lp-cap">
+        <span class="lp-cap__icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            aria-hidden="true"
+          >
+            <path fill="currentColor" d="m11.4 12-4 4L6 14.6 8.57 12 6 9.4 7.4 8zM18 16h-6v-2h6z"
+            ></path>
+            <path
+              fill="currentColor"
+              d="M19 4a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3zM5 6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"
+            ></path>
+          </svg>
+        </span>
+        <h3>Developer-friendly</h3>
+        <p>
+          Simple, intuitive platform for deploying and operating applications without wrestling with
+          infrastructure complexity.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <span class="lp-cap__icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            aria-hidden="true"
+          >
+            <path
+              fill="currentColor"
+              d="M19 8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3zM5 10a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1z"
+            ></path>
+            <path
+              fill="currentColor"
+              d="M18 5a2 2 0 0 1 2 2H4c0-1.1.9-2 2-2zM16 2a2 2 0 0 1 2 2H6c0-1.1.9-2 2-2z"></path>
+          </svg>
+        </span>
+        <h3>Multi-tenant architecture</h3>
+        <p>
+          Built for organizational growth with strict tenant isolation and shared-nothing compute
+          and storage architecture.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <span class="lp-cap__icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            aria-hidden="true"
+          >
+            <path fill="currentColor" d="m16.41 9.41-5.2 5.21L8 11.42 9.41 10l1.8 1.8L15 8z"></path>
+            <path
+              fill="currentColor"
+              d="M20.39 4.83A14 14 0 0 1 12 22 14 14 0 0 1 3.62 4.8L12 2zM5.28 6.35A12 12 0 0 0 12 19.83a12 12 0 0 0 6.73-13.45L12 4.1z"
+            ></path>
+          </svg>
+        </span>
+        <h3>Secure by default</h3>
+        <p>
+          Security built into every layer with zero-trust principles and comprehensive isolation
+          between tenants.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <span class="lp-cap__icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            aria-hidden="true"
+          >
+            <path
+              fill="currentColor"
+              d="M1 13.5a5.5 5.5 0 0 1 4.64-5.43 7 7 0 0 1 13.29 1.95A4.5 4.5 0 0 1 18.5 19v-2a2.5 2.5 0 0 0 .24-4.99l-1.57-.15-.22-1.56a5 5 0 0 0-9.5-1.4l-.44.98-1.06.16A3.5 3.5 0 0 0 6.5 17v2A5.5 5.5 0 0 1 1 13.5M18.5 17v2h-12v-2z"
+            ></path>
+          </svg>
+        </span>
+        <h3>Managed infrastructure</h3>
+        <p>
+          Compute, storage, and networking abstracted and managed, with automated bare-metal
+          provisioning via metal-stack.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <span class="lp-cap__icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            aria-hidden="true"
+          >
+            <path
+              fill="currentColor"
+              d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12m14.707-2.113L11 15.594l-3.707-3.707 1.414-1.415L11 12.765l4.293-4.293z"
+            ></path>
+          </svg>
+        </span>
+        <h3>Highly available</h3>
+        <p>
+          Designed to remain operational under heavy demand or failure conditions with built-in
+          resilience.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <span class="lp-cap__icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            aria-hidden="true"
+          >
+            <path fill="currentColor" d="M4 19h18v2H2V3h2z"></path>
+            <path
+              fill="currentColor"
+              d="M20.7 7.7 14 14.42l-3-3-3.3 3.3-1.4-1.42L11 8.6l3 3 5.3-5.3z"></path>
+          </svg>
+        </span>
+        <h3>Horizontally scalable</h3>
+        <p>
+          Scale from a handful to thousands of tenants with large infrastructure footprints without
+          architectural changes.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <span class="lp-cap__icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            aria-hidden="true"
+          >
+            <path
+              fill="currentColor"
+              d="M10.5 1.5A3.5 3.5 0 0 1 14 5v.75c0 .14.11.25.25.25h3.25a1 1 0 0 1 1 1v2.75q.02.23.25.25H19a3.5 3.5 0 1 1 0 7h-.25a.25.25 0 0 0-.25.25V21a1 1 0 0 1-1 1h-4.75a.25.25 0 0 1-.25-.25V20.5a1.5 1.5 0 0 0-3 0v1.25q-.02.23-.25.25H3.5a1 1 0 0 1-1-1v-5.75c0-.14.11-.25.25-.25H4a1.5 1.5 0 0 0 0-3H2.75a.25.25 0 0 1-.25-.25V7a1 1 0 0 1 1-1h3.25c.14 0 .25-.11.25-.25V5a3.5 3.5 0 0 1 3.5-3.5m0 2C9.67 3.5 9 4.17 9 5v.75C9 6.99 8 8 6.75 8H4.5v2.04a3.5 3.5 0 0 1 0 6.92V20h3.04a3.5 3.5 0 0 1 6.92 0h2.04v-2.75c0-1.24 1-2.25 2.25-2.25H19a1.5 1.5 0 0 0 0-3h-.25c-1.24 0-2.25-1-2.25-2.25V8h-2.25C13.01 8 12 7 12 5.75V5c0-.83-.67-1.5-1.5-1.5"
+            ></path>
+          </svg>
+        </span>
+        <h3>Extensible platform</h3>
+        <p>
+          Pluggable services allow tenants to autonomously evolve and customize their technology
+          stack.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <span class="lp-cap__icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            aria-hidden="true"
+          >
+            <path fill="currentColor" d="M7 6H4v12h3v2H2V4h5zM22 20h-5v-2h3V6h-3V4h5z"></path>
+            <path
+              fill="currentColor"
+              d="M7.5 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3M12 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3M16.5 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3"
+            ></path>
+          </svg>
+        </span>
+        <h3>Open source</h3>
+        <p>
+          Built on proven open-source projects like metal-stack and Gardener, avoiding proprietary
+          lock-in.
+        </p>
       </div>
     </div>
   </div>
 
-  <div class="architecture">
-    <div class="mx-auto max-w-7xl px-6 lg:px-8">
-      <div class="mb-16 text-center">
-        <h2 class="mb-4 text-3xl font-bold text-gray-800 sm:text-4xl dark:text-gray-100">
-          Built on proven foundations
-        </h2>
-        <p class="mx-auto max-w-2xl text-lg text-gray-600 dark:text-gray-400">
+  <!-- Architecture -->
+  <div class="lp-section">
+    <div class="lp-section__head">
+      <div>
+        <p class="lp-section__kicker">02 — Foundations</p>
+      </div>
+      <div>
+        <h2 class="lp-section__title">Built on proven foundations.</h2>
+        <p class="lp-section__intro">
           Fundament combines best-in-class open-source technologies to deliver a complete cloud
-          solution
+          solution.
         </p>
       </div>
-      <div
-        class="mx-auto flex max-w-5xl flex-col items-stretch justify-center gap-x-8 gap-y-4 md:flex-row"
-      >
-        <div
-          class="flex min-w-0 flex-1 flex-col rounded-xl border border-gray-300 bg-white p-8 dark:border-gray-700 dark:bg-gray-950"
-        >
-          <div
-            class="mb-4 text-sm font-semibold tracking-wider text-blue-600 uppercase dark:text-blue-400"
-          >
-            IaaS layer
-          </div>
-          <div class="flex flex-1 flex-col">
-            <h4 class="mb-2 text-2xl font-bold text-gray-800 dark:text-gray-100">metal-stack</h4>
-            <p class="text-gray-600 dark:text-gray-400">
-              Automated bare-metal provisioning for reliable, high-performance infrastructure
-            </p>
-          </div>
-        </div>
-        <div
-          class="items-center text-center text-4xl font-bold text-gray-400 md:flex dark:text-gray-600"
-        >
-          +
-        </div>
-        <div
-          class="flex min-w-0 flex-1 flex-col rounded-xl border border-gray-300 bg-white p-8 dark:border-gray-700 dark:bg-gray-950"
-        >
-          <div
-            class="mb-4 text-sm font-semibold tracking-wider text-blue-600 uppercase dark:text-blue-400"
-          >
-            Orchestration
-          </div>
-          <div class="flex flex-1 flex-col">
-            <h4 class="mb-2 text-2xl font-bold text-gray-800 dark:text-gray-100">Gardener</h4>
-            <p class="text-gray-600 dark:text-gray-400">
-              Enterprise-grade Kubernetes cluster management at scale
-            </p>
-          </div>
-        </div>
-        <div
-          class="items-center text-center text-4xl font-bold text-gray-400 md:flex dark:text-gray-600"
-        >
-          =
-        </div>
-        <div
-          class="flex min-w-0 flex-1 flex-col rounded-xl border border-blue-500 bg-blue-50 p-8 dark:border-blue-500 dark:bg-blue-950/60"
-        >
-          <div
-            class="mb-4 text-sm font-semibold tracking-wider text-blue-600 uppercase dark:text-blue-400"
-          >
-            Complete solution
-          </div>
-          <div class="flex flex-1 flex-col">
-            <h4 class="mb-2 text-2xl font-bold text-gray-800 dark:text-gray-100">Fundament</h4>
-            <p class="text-gray-600 dark:text-gray-400">
-              IaaS + PaaS for self-hosted infrastructure
-            </p>
-          </div>
-        </div>
+    </div>
+
+    <div class="lp-arch">
+      <div class="lp-arch__piece">
+        <span class="lp-arch__layer">IaaS layer</span>
+        <h3 class="lp-arch__name">metal-stack</h3>
+        <p class="lp-arch__desc">
+          Automated bare-metal provisioning for reliable, high-performance infrastructure.
+        </p>
+      </div>
+      <div class="lp-arch__op" aria-hidden="true">+</div>
+      <div class="lp-arch__piece">
+        <span class="lp-arch__layer">Orchestration</span>
+        <h3 class="lp-arch__name">Gardener</h3>
+        <p class="lp-arch__desc">Enterprise-grade Kubernetes cluster management at scale.</p>
+      </div>
+      <div class="lp-arch__op" aria-hidden="true">=</div>
+      <div class="lp-arch__piece lp-arch__piece--final">
+        <span class="lp-arch__layer">Complete solution</span>
+        <h3 class="lp-arch__name">Fundament</h3>
+        <p class="lp-arch__desc">IaaS + PaaS for self-hosted infrastructure.</p>
       </div>
     </div>
   </div>
 
-  <div class="bg-white py-20 sm:py-24 dark:bg-gray-900">
-    <div class="mx-auto max-w-7xl px-6 lg:px-8">
-      <div class="mx-auto max-w-3xl text-center">
-        <h2 class="mt-0 mb-4 text-3xl font-bold text-gray-800 sm:text-4xl dark:text-gray-100">
-          Ready to get started?
-        </h2>
-        <p class="mb-10 text-lg text-gray-700 dark:text-gray-300">
-          Deploy Fundament in your infrastructure and start managing Kubernetes clusters today.
-        </p>
-        <div class="mb-18 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <a
-            href="/docs"
-            class="inline-flex items-center gap-2 rounded-lg border-2 border-indigo-500 bg-indigo-600 px-8 py-4 text-lg font-semibold text-white no-underline transition-all duration-200 hover:bg-indigo-700 dark:border-indigo-500 dark:bg-indigo-600 dark:hover:bg-indigo-700"
+  <!-- End CTA -->
+  <section class="lp-endcta">
+    <div class="lp-endcta__inner">
+      <div>
+        <h2>Ready to get started?</h2>
+        <p>Deploy Fundament in your infrastructure and start managing Kubernetes clusters today.</p>
+      </div>
+      <div class="lp-btnrow">
+        <a class="lp-btn lp-btn--primary" href="/docs">
+          Read the documentation
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            aria-hidden="true"
           >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              ></path>
-            </svg>
-            Read the documentation
-          </a>
-          <a
-            href="https://github.com/fundament-oss/fundament"
-            class="inline-flex items-center gap-2 rounded-lg border-2 border-gray-300 bg-transparent px-8 py-4 text-lg font-semibold text-gray-800 no-underline transition-all duration-200 hover:border-gray-400 dark:border-gray-700 dark:text-gray-100 dark:hover:border-gray-500"
-            rel="nofollow noopener noreferrer"
-          >
-            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill-rule="evenodd"
-                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                clip-rule="evenodd"></path>
-            </svg>
-            Explore on GitHub
-          </a>
-        </div>
+            <path fill="currentColor" d="m12 4 8 8-8 8-1.41-1.42L16.172 13H3v-2h13.172L10.59 5.42z"
+            ></path>
+          </svg>
+        </a>
+        <a
+          class="lp-btn lp-btn--secondary"
+          href="https://github.com/fundament-oss/fundament"
+          target="_blank"
+          rel="nofollow noopener noreferrer"
+        >
+          Explore on GitHub
+        </a>
       </div>
     </div>
-  </div>
+  </section>
 </Layout>
+
+<style is:global>
+  /* Hero */
+  .lp-hero {
+    border-bottom: 1px solid var(--semantics-dividers-color);
+    background: var(--semantics-surfaces-background-color);
+  }
+  .lp-hero__inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--primitives-space-80) var(--primitives-space-32) var(--primitives-space-64);
+  }
+  .lp-eyebrow {
+    font: var(--primitives-font-body-sm-bold-snug);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--semantics-content-secondary-color);
+    margin: 0 0 var(--primitives-space-16);
+    display: flex;
+    align-items: center;
+    gap: var(--primitives-space-10);
+  }
+  .lp-eyebrow::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--semantics-content-secondary-color);
+  }
+  .lp-hero__title {
+    font: var(--primitives-font-display-1-lg);
+    margin: 0 0 var(--primitives-space-24);
+    max-width: 900px;
+    letter-spacing: -0.02em;
+    color: var(--semantics-content-color);
+  }
+  .lp-hero__lede {
+    font: var(--primitives-font-body-lg-regular-snug);
+    max-width: 720px;
+    color: var(--semantics-content-color);
+    margin: 0 0 var(--primitives-space-32);
+  }
+
+  /* Buttons */
+  .lp-btnrow {
+    display: flex;
+    gap: var(--primitives-space-12);
+    flex-wrap: wrap;
+  }
+  .lp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--primitives-space-8);
+    min-height: var(--semantics-controls-md-min-size);
+    padding: 0 var(--semantics-controls-md-inline-padding);
+    border-radius: var(--semantics-controls-md-corner-radius);
+    border: 0;
+    cursor: pointer;
+    font: var(--semantics-buttons-md-font);
+    text-decoration: none;
+    transition: background-color 0.12s ease;
+  }
+  .lp-btn--primary {
+    background: var(--semantics-buttons-accent-filled-background-color);
+    color: var(--semantics-buttons-accent-filled-content-color);
+  }
+  .lp-btn--primary:hover {
+    background: var(--semantics-buttons-accent-filled-is-hovered-background-color);
+    color: var(--semantics-buttons-accent-filled-content-color);
+  }
+  .lp-btn--secondary {
+    background: transparent;
+    color: var(--semantics-content-color);
+    border: 1px solid var(--semantics-dividers-color);
+  }
+  .lp-btn--secondary:hover {
+    background: var(--semantics-surfaces-tinted-background-color);
+    color: var(--semantics-content-color);
+  }
+
+  /* Metastrip */
+  .lp-metastrip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--semantics-dividers-color);
+    margin-top: var(--primitives-space-56);
+    padding-top: var(--primitives-space-24);
+  }
+  .lp-metastrip__cell {
+    padding-right: var(--primitives-space-24);
+  }
+  .lp-metastrip__cell + .lp-metastrip__cell {
+    border-left: 1px solid var(--semantics-dividers-color);
+    padding-left: var(--primitives-space-24);
+  }
+  .lp-metastrip__label {
+    font: var(--primitives-font-body-xs-regular-snug);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--semantics-content-secondary-color);
+    margin: 0 0 var(--primitives-space-6);
+  }
+  .lp-metastrip__value {
+    font: var(--primitives-font-display-5-lg);
+    font-weight: 400;
+    color: var(--semantics-content-color);
+    letter-spacing: -0.01em;
+  }
+
+  /* Sections */
+  .lp-section {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--primitives-space-80) var(--primitives-space-32);
+    border-top: 1px solid var(--semantics-dividers-color);
+  }
+  .lp-section__head {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: var(--primitives-space-48);
+    margin-bottom: var(--primitives-space-48);
+    align-items: start;
+  }
+  .lp-section__kicker {
+    font: var(--primitives-font-body-sm-bold-snug);
+    color: var(--semantics-content-secondary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 6px 0 0;
+  }
+  .lp-section__title {
+    font: var(--primitives-font-display-3-lg);
+    margin: 0 0 var(--primitives-space-16);
+    letter-spacing: -0.015em;
+    color: var(--semantics-content-color);
+  }
+  .lp-section__intro {
+    font: var(--primitives-font-body-md-regular-snug);
+    color: var(--semantics-content-color);
+    max-width: 640px;
+    margin: 0;
+  }
+
+  /* Capabilities grid */
+  .lp-caps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--semantics-dividers-color);
+    border: 1px solid var(--semantics-dividers-color);
+  }
+  .lp-cap {
+    background: var(--semantics-surfaces-background-color);
+    padding: var(--primitives-space-28);
+    display: flex;
+    flex-direction: column;
+    gap: var(--primitives-space-16);
+    min-height: 220px;
+  }
+  .lp-cap:hover {
+    background: var(--semantics-surfaces-tinted-background-color);
+  }
+  .lp-cap__icon {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primitives-color-accent-100);
+    color: var(--primitives-color-accent-700);
+    flex-shrink: 0;
+  }
+  .lp-cap h3 {
+    font: var(--primitives-font-body-lg-bold-snug);
+    margin: 0;
+    letter-spacing: -0.005em;
+    color: var(--semantics-content-color);
+  }
+  .lp-cap p {
+    font: var(--primitives-font-body-sm-regular-snug);
+    color: var(--semantics-content-secondary-color);
+    margin: 0;
+  }
+
+  /* Architecture equation */
+  .lp-arch {
+    background: var(--semantics-surfaces-tinted-background-color);
+    padding: var(--primitives-space-48);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: var(--primitives-space-32);
+    align-items: center;
+  }
+  .lp-arch__piece {
+    display: flex;
+    flex-direction: column;
+    gap: var(--primitives-space-8);
+  }
+  .lp-arch__layer {
+    font: var(--primitives-font-body-xs-regular-snug);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--semantics-content-secondary-color);
+  }
+  .lp-arch__name {
+    font: var(--primitives-font-display-4-lg);
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--semantics-content-color);
+  }
+  .lp-arch__desc {
+    font: var(--primitives-font-body-sm-regular-snug);
+    color: var(--semantics-content-color);
+    margin: 0;
+  }
+  .lp-arch__op {
+    font-family: var(--primitives-font-family-monospace);
+    font-size: 32px;
+    color: var(--primitives-color-accent-600);
+    text-align: center;
+    font-weight: 400;
+    text-decoration: none;
+  }
+  .lp-arch__piece--final .lp-arch__name {
+    color: var(--primitives-color-accent-600);
+  }
+
+  /* End CTA */
+  .lp-endcta {
+    border-top: 1px solid var(--semantics-dividers-color);
+    background: var(--semantics-surfaces-tinted-background-color);
+  }
+  .lp-endcta__inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--primitives-space-64) var(--primitives-space-32);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--primitives-space-32);
+    align-items: center;
+  }
+  .lp-endcta h2 {
+    font: var(--primitives-font-display-3-lg);
+    margin: 0 0 var(--primitives-space-8);
+    letter-spacing: -0.015em;
+    color: var(--semantics-content-color);
+  }
+  .lp-endcta p {
+    font: var(--primitives-font-body-md-regular-snug);
+    color: var(--semantics-content-color);
+    margin: 0;
+    max-width: 640px;
+  }
+
+  /* Responsive */
+  @media (max-width: 1000px) {
+    .lp-caps {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 900px) {
+    .lp-section__head,
+    .lp-endcta__inner {
+      grid-template-columns: 1fr;
+    }
+    .lp-caps {
+      grid-template-columns: 1fr;
+    }
+    .lp-arch {
+      grid-template-columns: 1fr;
+    }
+    .lp-arch__op {
+      transform: rotate(90deg);
+    }
+    .lp-metastrip {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>
