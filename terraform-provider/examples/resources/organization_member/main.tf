@@ -9,7 +9,7 @@ terraform {
 # David Brown is a Globex admin and owns the API key.
 # This provider instance operates on the Globex organization.
 provider "fundament" {
-  endpoint        = "http://organization.fundament.localhost:8080"
+  endpoint        = "https://organization.fundament.localhost:8443"
   organization_id = "019b4000-0000-7000-8000-000000000002" # Globex
   # API Key can be set via FUNDAMENT_API_KEY environment variable
   # api_key = ""
