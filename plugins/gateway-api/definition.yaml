@@ -1,0 +1,174 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: gateway-api
+  displayName: Gateway API
+  version: v0.1.0
+  description: Gateway API implementation powered by Istio. Manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, and TLSRoutes.
+  author: Fundament
+  license: Apache-2.0
+  icon: network
+  urls:
+    homepage: https://gateway-api.sigs.k8s.io
+    repository: https://github.com/istio/istio
+    documentation: https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/
+  tags:
+    - networking
+    - gateway
+    - istio
+    - ingress
+spec:
+  permissions:
+    capabilities:
+      - internet_access
+    rbac:
+      - apiGroups:
+          - gateway.networking.k8s.io
+        resources:
+          - gateways
+          - httproutes
+          - grpcroutes
+          - tcproutes
+          - tlsroutes
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - gateway.networking.k8s.io
+        resources:
+          - gateways/status
+          - httproutes/status
+          - grpcroutes/status
+          - tcproutes/status
+          - tlsroutes/status
+        verbs:
+          - get
+          - update
+      - apiGroups:
+          - networking.istio.io
+        resources:
+          - "*"
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - ""
+        resources:
+          - secrets
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - ""
+        resources:
+          - namespaces
+        verbs:
+          - get
+          - list
+          - watch
+  menu:
+    project:
+      - crd: gateways.gateway.networking.k8s.io
+        list: true
+        detail: true
+        create: true
+        icon: server
+      - crd: httproutes.gateway.networking.k8s.io
+        list: true
+        detail: true
+        create: true
+        icon: globe
+      - crd: grpcroutes.gateway.networking.k8s.io
+        list: true
+        detail: true
+        create: true
+        icon: zap
+      - crd: tcproutes.gateway.networking.k8s.io
+        list: true
+        detail: true
+        create: true
+        icon: cable
+      - crd: tlsroutes.gateway.networking.k8s.io
+        list: true
+        detail: true
+        create: true
+        icon: lock
+    organization:
+      - crd: gateways.gateway.networking.k8s.io
+        list: true
+        detail: true
+        create: true
+        icon: server
+  uiHints:
+    gateways.gateway.networking.k8s.io:
+      statusMapping:
+        jsonPath: ".status.conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True":
+            badge: success
+            label: Accepted
+          "False":
+            badge: danger
+            label: Rejected
+        default:
+          badge: info
+          label: Pending
+    httproutes.gateway.networking.k8s.io:
+      statusMapping:
+        jsonPath: ".status.parents[0].conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True":
+            badge: success
+            label: Accepted
+          "False":
+            badge: danger
+            label: Rejected
+        default:
+          badge: info
+          label: Pending
+    grpcroutes.gateway.networking.k8s.io:
+      statusMapping:
+        jsonPath: ".status.parents[0].conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True":
+            badge: success
+            label: Accepted
+          "False":
+            badge: danger
+            label: Rejected
+        default:
+          badge: info
+          label: Pending
+    tcproutes.gateway.networking.k8s.io:
+      statusMapping:
+        jsonPath: ".status.parents[0].conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True":
+            badge: success
+            label: Accepted
+          "False":
+            badge: danger
+            label: Rejected
+        default:
+          badge: info
+          label: Pending
+    tlsroutes.gateway.networking.k8s.io:
+      statusMapping:
+        jsonPath: ".status.parents[0].conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True":
+            badge: success
+            label: Accepted
+          "False":
+            badge: danger
+            label: Rejected
+        default:
+          badge: info
+          label: Pending
