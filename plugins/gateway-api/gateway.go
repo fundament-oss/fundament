@@ -23,6 +23,8 @@ spec:
       port: 443
       tls:
         mode: Terminate
+        certificateRefs:
+          - name: %s-tls
       allowedRoutes:
         namespaces:
           from: All
@@ -49,6 +51,8 @@ spec:
       port: 443
       tls:
         mode: Terminate
+        certificateRefs:
+          - name: %s-tls
       allowedRoutes:
         namespaces:
           from: All
@@ -56,7 +60,7 @@ spec:
 
 func buildDefaultGateway(cfg pluginConfig, certManagerAvailable bool) []byte {
 	if certManagerAvailable {
-		return fmt.Appendf(nil, gatewayWithCertManagerTemplate, cfg.GatewayName, cfg.GatewayNamespace)
+		return fmt.Appendf(nil, gatewayWithCertManagerTemplate, cfg.GatewayName, cfg.GatewayNamespace, cfg.GatewayName)
 	}
-	return fmt.Appendf(nil, gatewayTemplate, cfg.GatewayName, cfg.GatewayNamespace)
+	return fmt.Appendf(nil, gatewayTemplate, cfg.GatewayName, cfg.GatewayNamespace, cfg.GatewayName)
 }

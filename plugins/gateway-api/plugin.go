@@ -158,11 +158,11 @@ func (p *GatewayAPIPlugin) Reconcile(ctx context.Context, host pluginruntime.Hos
 		return fmt.Errorf("reconcile: istiod unhealthy: %w", pluginerrors.NewTransient(fmt.Errorf("istiod not ready")))
 	}
 
+	p.certManagerAvailable = p.detectCertManager(ctx)
+
 	if err := p.ensureDefaultGateway(ctx); err != nil {
 		host.Logger().Warn("reconcile: failed to ensure default gateway", "error", err)
 	}
-
-	p.certManagerAvailable = p.detectCertManager(ctx)
 
 	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseRunning, Message: "Gateway API is running"})
 	return nil
@@ -230,6 +230,7 @@ func (p *GatewayAPIPlugin) isIstiodHealthy(ctx context.Context) bool {
 	if !ok {
 		return false
 	}
+	// Unstructured JSON decodes numbers as float64.
 	available, _ := status["availableReplicas"].(float64)
 	return available > 0
 }
@@ -255,7 +256,7 @@ func (p *GatewayAPIPlugin) listUserResources(ctx context.Context) ([]string, err
 			Kind:    g.listKind,
 		})
 		if err := p.k8sClient.List(ctx, list); err != nil {
-			continue
+			return nil, fmt.Errorf("list %s: %w", g.gvk.Kind, err)
 		}
 		for _, item := range list.Items {
 			if item.GetKind() == "Gateway" &&
