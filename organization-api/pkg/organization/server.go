@@ -91,6 +91,8 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		connectrecovery.NewInterceptor(logger),
 	}
 
+	// Circuit breaker is placed before auth so that open-breaker requests
+	// are rejected early with CodeUnavailable, avoiding unnecessary auth work.
 	if s.circuitBreaker != nil {
 		chain = append(chain, circuitbreaker.NewInterceptor(s.circuitBreaker))
 	}

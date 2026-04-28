@@ -26,15 +26,15 @@ import (
 )
 
 type config struct {
-	Database           psqldb.Config
-	OpenFGA            authz.Config
-	JWTSecret          string     `env:"JWT_SECRET,required,notEmpty" `
-	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
-	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
-	PrometheusURL      string     `env:"PROMETHEUS_URL" envDefault:"mock"`
-	KubeAPIProxyURL    string     `env:"KUBE_API_PROXY_URL"`
-	CircuitBreakerThreshold    float64       `env:"CIRCUIT_BREAKER_THRESHOLD_SECONDS" envDefault:"5"`
+	Database                   psqldb.Config
+	OpenFGA                    authz.Config
+	JWTSecret                  string        `env:"JWT_SECRET,required,notEmpty" `
+	ListenAddr                 string        `env:"LISTEN_ADDR" envDefault:":8080"`
+	LogLevel                   slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins         []string      `env:"CORS_ALLOWED_ORIGINS"`
+	PrometheusURL              string        `env:"PROMETHEUS_URL" envDefault:"mock"`
+	KubeAPIProxyURL            string        `env:"KUBE_API_PROXY_URL"`
+	CircuitBreakerThreshold    time.Duration `env:"CIRCUIT_BREAKER_THRESHOLD" envDefault:"5s"`
 	CircuitBreakerPollInterval time.Duration `env:"CIRCUIT_BREAKER_POLL_INTERVAL" envDefault:"2s"`
 }
 
@@ -132,7 +132,7 @@ func run() error {
 		if err != nil {
 			return false, err
 		}
-		return lag > cfg.CircuitBreakerThreshold, nil
+		return lag > cfg.CircuitBreakerThreshold.Seconds(), nil
 	}
 
 	breaker := circuitbreaker.New(logger, cbcfg, cbfn)
@@ -140,7 +140,7 @@ func run() error {
 
 	opts = append(opts, organization.WithCircuitBreaker(breaker))
 
-	orgcfg :=  &organization.Config{
+	orgcfg := &organization.Config{
 		JWTSecret:            []byte(cfg.JWTSecret),
 		CORSAllowedOrigins:   cfg.CORSAllowedOrigins,
 		Clock:                clock.New(),
