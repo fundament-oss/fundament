@@ -1,5 +1,5 @@
 ---
-import '../styles/nldd-settings.css';
+import '@minbzk/storybook/styles';
 import '../styles/global.css';
 
 export interface Props {
@@ -48,54 +48,28 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
           <a href="/docs" aria-current={isActive('/docs') ? 'page' : undefined}>Docs</a>
         </nav>
         <div class="topbar__spacer"></div>
-        <button id="theme-toggle" class="iconbtn" aria-label="Toggle theme" type="button">
-          <svg
-            id="theme-icon-moon"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="18"
-            height="18"
-          >
-            <path
-              fill="currentColor"
-              d="M10.47 2.12a8.99 8.99 0 0 0 11.41 11.4 10 10 0 1 1-11.4-11.4M8 5.07A8 8 0 1 0 18.93 16 11 11 0 0 1 8 5.07"
-            ></path>
-          </svg>
-          <svg
-            id="theme-icon-sun"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="18"
-            height="18"
-            style="display:none"
-          >
-            <path
-              fill="currentColor"
-              d="M13 22h-2v-3.07c.65.09 1.35.09 2 0zM6.4 16.2q.6.8 1.4 1.4l-2.16 2.18-1.42-1.42zM19.78 18.36l-1.42 1.42-2.17-2.17q.8-.6 1.42-1.42z"
-            ></path>
-            <path
-              fill="currentColor"
-              d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10m0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6"></path>
-            <path
-              fill="currentColor"
-              d="M5.07 11c-.1.65-.1 1.35 0 2H2v-2zM22 13h-3.07c.1-.65.1-1.35 0-2H22zM7.8 6.4Q7 7 6.4 7.8L4.21 5.65l1.42-1.42zM19.78 5.64 17.6 7.8a7 7 0 0 0-1.42-1.42l2.17-2.17zM13 5.07c-.65-.1-1.35-.1-2 0V2h2z"
-            ></path>
-          </svg>
-        </button>
-        <a
+        <nldd-icon-button id="theme-toggle" icon="moon" aria-label="Toggle theme" type="button"
+        ></nldd-icon-button>
+        <nldd-icon-button
           href="https://github.com/fundament-oss/fundament"
-          class="iconbtn -ml-5.5"
           target="_blank"
           rel="nofollow noopener noreferrer"
           aria-label="GitHub repository"
         >
-          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg
+            slot="icon"
+            width="18"
+            height="18"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
             <path
               fill-rule="evenodd"
               d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
               clip-rule="evenodd"></path>
           </svg>
-        </a>
+        </nldd-icon-button>
       </div>
     </header>
 
@@ -103,7 +77,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
 
     <footer class="foot">
       <div class="foot__inner">
-        <span class="wordmark" style="cursor:default;">
+        <span class="wordmark cursor-default">
           <span class="wordmark__logo" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <path
@@ -128,6 +102,10 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   </body>
 </html>
 
+<script>
+  import '@minbzk/storybook';
+</script>
+
 <script is:inline>
   /* eslint-disable */
   (function () {
@@ -137,10 +115,8 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
       htmlEl.dataset.scheme = isDark ? 'dark' : 'light';
       htmlEl.classList.toggle('dark', isDark);
 
-      var moon = document.getElementById('theme-icon-moon');
-      var sun = document.getElementById('theme-icon-sun');
-      if (moon) moon.style.display = isDark ? 'none' : '';
-      if (sun) sun.style.display = isDark ? '' : 'none';
+      var btn = document.getElementById('theme-toggle');
+      if (btn) btn.setAttribute('icon', isDark ? 'sun' : 'moon');
     }
 
     var saved = localStorage.getItem('starlight-theme') || localStorage.getItem('fnd-scheme');
@@ -256,24 +232,6 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   .topbar__spacer {
     flex: 1;
   }
-  .iconbtn {
-    width: 36px;
-    height: 36px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid var(--semantics-dividers-color);
-    color: var(--semantics-content-color);
-    cursor: pointer;
-    border-radius: var(--semantics-controls-sm-corner-radius);
-    text-decoration: none;
-  }
-  .iconbtn:hover {
-    background: var(--semantics-surfaces-tinted-background-color);
-    color: var(--semantics-content-color);
-  }
-
   /* Footer */
   .foot {
     border-top: 1px solid var(--semantics-dividers-color);

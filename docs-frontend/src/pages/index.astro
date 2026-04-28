@@ -12,41 +12,29 @@ import Layout from '../layouts/Landing.astro';
         Kubernetes, delivering a complete IaaS and PaaS solution for self-hosted infrastructure.
       </p>
       <div class="lp-btnrow">
-        <a class="lp-btn lp-btn--primary" href="/docs">
-          Get started
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="18"
-            height="18"
-            aria-hidden="true"
-          >
-            <path fill="currentColor" d="m12 4 8 8-8 8-1.41-1.42L16.172 13H3v-2h13.172L10.59 5.42z"
-            ></path>
-          </svg>
-        </a>
-        <a
-          class="lp-btn lp-btn--secondary"
+        <nldd-button variant="accent-filled" href="/docs" text="Get started" end-icon="arrow-right">
+        </nldd-button>
+        <nldd-button
+          variant="accent-outlined"
           href="https://github.com/fundament-oss/fundament"
           target="_blank"
           rel="nofollow noopener noreferrer"
+          text="View on GitHub"
         >
-          View on GitHub
           <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
+            slot="end-icon"
             width="18"
             height="18"
+            fill="currentColor"
+            viewBox="0 0 24 24"
             aria-hidden="true"
           >
             <path
-              fill="currentColor"
-              d="M11.772 8H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-6.765l2-2V19c0 1.66-1.34 3-3 3H5c-1.66 0-3-1.34-3-3V9a3 3 0 0 1 3-3h8.772z"
-            ></path>
-            <path fill="currentColor" d="M22 11h-2V5.407l-9.296 9.296L9.3 13.3 18.6 4H13V2h9z"
-            ></path>
+              fill-rule="evenodd"
+              d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+              clip-rule="evenodd"></path>
           </svg>
-        </a>
+        </nldd-button>
       </div>
 
       <div class="lp-metastrip">
@@ -84,20 +72,7 @@ import Layout from '../layouts/Landing.astro';
       <div class="lp-cap">
         <div class="lp-cap__header">
           <span class="lp-cap__icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="22"
-              height="22"
-              aria-hidden="true"
-            >
-              <path fill="currentColor" d="m11.4 12-4 4L6 14.6 8.57 12 6 9.4 7.4 8zM18 16h-6v-2h6z"
-              ></path>
-              <path
-                fill="currentColor"
-                d="M19 4a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3zM5 6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"
-              ></path>
-            </svg>
+            <nldd-icon name="terminal" class="h-5.5 w-5.5"></nldd-icon>
           </span>
           <h3>Developer-friendly</h3>
         </div>
@@ -109,21 +84,7 @@ import Layout from '../layouts/Landing.astro';
       <div class="lp-cap">
         <div class="lp-cap__header">
           <span class="lp-cap__icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="22"
-              height="22"
-              aria-hidden="true"
-            >
-              <path
-                fill="currentColor"
-                d="M19 8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3zM5 10a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1z"
-              ></path>
-              <path
-                fill="currentColor"
-                d="M18 5a2 2 0 0 1 2 2H4c0-1.1.9-2 2-2zM16 2a2 2 0 0 1 2 2H6c0-1.1.9-2 2-2z"></path>
-            </svg>
+            <nldd-icon name="rectangle-stack" class="h-5.5 w-5.5"></nldd-icon>
           </span>
           <h3>Multi-tenant architecture</h3>
         </div>
@@ -135,20 +96,7 @@ import Layout from '../layouts/Landing.astro';
       <div class="lp-cap">
         <div class="lp-cap__header">
           <span class="lp-cap__icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="22"
-              height="22"
-              aria-hidden="true"
-            >
-              <path fill="currentColor" d="m16.41 9.41-5.2 5.21L8 11.42 9.41 10l1.8 1.8L15 8z"
-              ></path>
-              <path
-                fill="currentColor"
-                d="M20.39 4.83A14 14 0 0 1 12 22 14 14 0 0 1 3.62 4.8L12 2zM5.28 6.35A12 12 0 0 0 12 19.83a12 12 0 0 0 6.73-13.45L12 4.1z"
-              ></path>
-            </svg>
+            <nldd-icon name="shield-check-mark" class="h-5.5 w-5.5"></nldd-icon>
           </span>
           <h3>Secure by default</h3>
         </div>
@@ -160,18 +108,7 @@ import Layout from '../layouts/Landing.astro';
       <div class="lp-cap">
         <div class="lp-cap__header">
           <span class="lp-cap__icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="22"
-              height="22"
-              aria-hidden="true"
-            >
-              <path
-                fill="currentColor"
-                d="M1 13.5a5.5 5.5 0 0 1 4.64-5.43 7 7 0 0 1 13.29 1.95A4.5 4.5 0 0 1 18.5 19v-2a2.5 2.5 0 0 0 .24-4.99l-1.57-.15-.22-1.56a5 5 0 0 0-9.5-1.4l-.44.98-1.06.16A3.5 3.5 0 0 0 6.5 17v2A5.5 5.5 0 0 1 1 13.5M18.5 17v2h-12v-2z"
-              ></path>
-            </svg>
+            <nldd-icon name="cloud" class="h-5.5 w-5.5"></nldd-icon>
           </span>
           <h3>Managed infrastructure</h3>
         </div>
@@ -183,18 +120,7 @@ import Layout from '../layouts/Landing.astro';
       <div class="lp-cap">
         <div class="lp-cap__header">
           <span class="lp-cap__icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="22"
-              height="22"
-              aria-hidden="true"
-            >
-              <path
-                fill="currentColor"
-                d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12m14.707-2.113L11 15.594l-3.707-3.707 1.414-1.415L11 12.765l4.293-4.293z"
-              ></path>
-            </svg>
+            <nldd-icon name="check-mark-circle" class="h-5.5 w-5.5"></nldd-icon>
           </span>
           <h3>Highly available</h3>
         </div>
@@ -206,18 +132,7 @@ import Layout from '../layouts/Landing.astro';
       <div class="lp-cap">
         <div class="lp-cap__header">
           <span class="lp-cap__icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="22"
-              height="22"
-              aria-hidden="true"
-            >
-              <path fill="currentColor" d="M4 19h18v2H2V3h2z"></path>
-              <path
-                fill="currentColor"
-                d="M20.7 7.7 14 14.42l-3-3-3.3 3.3-1.4-1.42L11 8.6l3 3 5.3-5.3z"></path>
-            </svg>
+            <nldd-icon name="chart-x-y-axis-line" class="h-5.5 w-5.5"></nldd-icon>
           </span>
           <h3>Horizontally scalable</h3>
         </div>
@@ -229,18 +144,7 @@ import Layout from '../layouts/Landing.astro';
       <div class="lp-cap">
         <div class="lp-cap__header">
           <span class="lp-cap__icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="22"
-              height="22"
-              aria-hidden="true"
-            >
-              <path
-                fill="currentColor"
-                d="M10.5 1.5A3.5 3.5 0 0 1 14 5v.75c0 .14.11.25.25.25h3.25a1 1 0 0 1 1 1v2.75q.02.23.25.25H19a3.5 3.5 0 1 1 0 7h-.25a.25.25 0 0 0-.25.25V21a1 1 0 0 1-1 1h-4.75a.25.25 0 0 1-.25-.25V20.5a1.5 1.5 0 0 0-3 0v1.25q-.02.23-.25.25H3.5a1 1 0 0 1-1-1v-5.75c0-.14.11-.25.25-.25H4a1.5 1.5 0 0 0 0-3H2.75a.25.25 0 0 1-.25-.25V7a1 1 0 0 1 1-1h3.25c.14 0 .25-.11.25-.25V5a3.5 3.5 0 0 1 3.5-3.5m0 2C9.67 3.5 9 4.17 9 5v.75C9 6.99 8 8 6.75 8H4.5v2.04a3.5 3.5 0 0 1 0 6.92V20h3.04a3.5 3.5 0 0 1 6.92 0h2.04v-2.75c0-1.24 1-2.25 2.25-2.25H19a1.5 1.5 0 0 0 0-3h-.25c-1.24 0-2.25-1-2.25-2.25V8h-2.25C13.01 8 12 7 12 5.75V5c0-.83-.67-1.5-1.5-1.5"
-              ></path>
-            </svg>
+            <nldd-icon name="puzzle-piece" class="h-5.5 w-5.5"></nldd-icon>
           </span>
           <h3>Extensible platform</h3>
         </div>
@@ -252,19 +156,7 @@ import Layout from '../layouts/Landing.astro';
       <div class="lp-cap">
         <div class="lp-cap__header">
           <span class="lp-cap__icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="22"
-              height="22"
-              aria-hidden="true"
-            >
-              <path fill="currentColor" d="M7 6H4v12h3v2H2V4h5zM22 20h-5v-2h3V6h-3V4h5z"></path>
-              <path
-                fill="currentColor"
-                d="M7.5 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3M12 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3M16.5 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3"
-              ></path>
-            </svg>
+            <nldd-icon name="brackets-ellipsis" class="h-5.5 w-5.5"></nldd-icon>
           </span>
           <h3>Open source</h3>
         </div>
@@ -317,35 +209,32 @@ import Layout from '../layouts/Landing.astro';
         <p>Deploy Fundament in your infrastructure and start managing Kubernetes clusters today.</p>
       </div>
       <div class="lp-btnrow">
-        <a class="lp-btn lp-btn--primary" href="/docs">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 384 512"
-            width="14"
-            height="18"
-            aria-hidden="true"
-          >
-            <path
-              fill="currentColor"
-              d="M64 48l112 0 0 88c0 39.8 32.2 72 72 72l88 0 0 240c0 8.8-7.2 16-16 16L64 464c-8.8 0-16-7.2-16-16L48 64c0-8.8 7.2-16 16-16zM224 67.9l92.1 92.1-68.1 0c-13.3 0-24-10.7-24-24l0-68.1zM64 0C28.7 0 0 28.7 0 64L0 448c0 35.3 28.7 64 64 64l256 0c35.3 0 64-28.7 64-64l0-261.5c0-17-6.7-33.3-18.7-45.3L242.7 18.7C230.7 6.7 214.5 0 197.5 0L64 0zm56 256c-13.3 0-24 10.7-24 24s10.7 24 24 24l144 0c13.3 0 24-10.7 24-24s-10.7-24-24-24l-144 0zm0 96c-13.3 0-24 10.7-24 24s10.7 24 24 24l144 0c13.3 0 24-10.7 24-24s-10.7-24-24-24l-144 0z"
-            ></path>
-          </svg>
-          Read the documentation
-        </a>
-        <a
-          class="lp-btn lp-btn--secondary"
+        <nldd-button
+          variant="accent-filled"
+          href="/docs"
+          text="Read the documentation"
+          start-icon="file-text"></nldd-button>
+        <nldd-button
+          variant="accent-outlined"
+          text="Explore on GitHub"
           href="https://github.com/fundament-oss/fundament"
           target="_blank"
           rel="nofollow noopener noreferrer"
         >
-          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg
+            slot="start-icon"
+            width="18"
+            height="18"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
             <path
               fill-rule="evenodd"
               d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
               clip-rule="evenodd"></path>
           </svg>
-          Explore on GitHub
-        </a>
+        </nldd-button>
       </div>
     </div>
   </section>
@@ -391,38 +280,6 @@ import Layout from '../layouts/Landing.astro';
     display: flex;
     gap: var(--primitives-space-12);
     flex-wrap: wrap;
-  }
-  .lp-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--primitives-space-8);
-    min-height: var(--semantics-controls-md-min-size);
-    padding: 0 var(--semantics-controls-md-inline-padding);
-    border-radius: var(--semantics-controls-md-corner-radius);
-    border: 0;
-    cursor: pointer;
-    font: var(--semantics-buttons-md-font);
-    text-decoration: none;
-    transition: background-color 0.12s ease;
-  }
-  .lp-btn--primary {
-    background: var(--semantics-buttons-accent-filled-background-color);
-    color: var(--semantics-buttons-accent-filled-content-color);
-  }
-  .lp-btn--primary:hover {
-    background: var(--semantics-buttons-accent-filled-is-hovered-background-color);
-    color: var(--semantics-buttons-accent-filled-content-color);
-  }
-  .lp-btn--secondary {
-    background: transparent;
-    color: var(--semantics-content-color);
-    border-width: var(--semantics-buttons-accent-outlined-border-thickness);
-    border-style: solid;
-    border-color: var(--semantics-buttons-accent-outlined-border-color);
-  }
-  .lp-btn--secondary:hover {
-    background: var(--semantics-surfaces-tinted-background-color);
-    color: var(--semantics-content-color);
   }
 
   /* Metastrip */
