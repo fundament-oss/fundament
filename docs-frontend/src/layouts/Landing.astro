@@ -59,7 +59,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
         >
           <svg
             slot="icon"
-            class="h-5.5 w-5.5"
+            class="h-6 w-6"
             fill="currentColor"
             viewBox="0 0 24 24"
             aria-hidden="true"
@@ -96,7 +96,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
             rel="nofollow noopener noreferrer">GitHub</a
           >
         </div>
-        <div class="foot__meta">Open source · Apache 2.0</div>
+        <div class="foot__meta">Open source · AGPL</div>
       </div>
     </footer>
   </body>
@@ -145,13 +145,10 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
 </script>
 
 <style is:global>
-  @reference "tailwindcss/theme";
+  @reference "../styles/global.css";
 
   body {
-    font: var(--primitives-font-body-md-regular-snug);
-    color: var(--semantics-content-color);
-    background: var(--semantics-surfaces-background-color);
-    @apply m-0 antialiased;
+    @apply text-body-md font-body text-content bg-surface-bg m-0 font-normal antialiased;
   }
 
   *:focus-visible {
@@ -160,31 +157,24 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   }
 
   a {
-    color: var(--semantics-links-color);
-    @apply underline decoration-1 underline-offset-[3px];
+    @apply text-links underline decoration-1 underline-offset-[3px];
   }
   a:hover {
-    color: var(--semantics-links-is-hovered-color);
+    @apply text-links-hover;
   }
 
   /* Top bar */
   .topbar {
-    border-bottom: 1px solid var(--semantics-dividers-color);
-    background: var(--semantics-surfaces-background-color);
-    @apply sticky top-0 z-100;
+    @apply border-dividers bg-surface-bg sticky top-0 z-100 border-b;
   }
   .topbar__inner {
-    @apply mx-auto flex h-16 max-w-7xl items-center;
-    padding: 0 var(--primitives-space-32);
-    gap: var(--primitives-space-32);
+    @apply gap-primitives-space-32 px-primitives-space-32 mx-auto flex h-16 max-w-7xl items-center py-0;
   }
   .wordmark {
-    font: var(--primitives-font-body-lg-bold-tight);
-    color: var(--semantics-content-color);
-    @apply inline-flex items-center gap-2.5 tracking-[-0.01em] no-underline;
+    @apply text-content text-body-lg font-body inline-flex items-center gap-2.5 leading-tight font-medium tracking-[-0.01em] no-underline;
   }
   .wordmark:hover {
-    color: var(--semantics-content-color);
+    @apply text-content;
   }
   .wordmark__logo {
     @apply inline-flex h-5.5 w-5.5 items-center justify-center;
@@ -194,44 +184,34 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   }
 
   .topnav {
-    @apply flex;
-    gap: var(--primitives-space-24);
-    margin-left: var(--primitives-space-16);
+    @apply gap-primitives-space-24 ml-primitives-space-16 flex;
   }
   .topnav a {
-    font: var(--primitives-font-body-md-regular-snug);
-    color: var(--semantics-content-color);
-    @apply px-0 py-1 no-underline;
+    @apply text-body-md font-body text-content px-0 py-1 font-normal no-underline;
   }
   .topnav a[aria-current='page'] {
-    @apply font-medium;
-    border-bottom: 2px solid var(--primitives-color-accent-600);
+    @apply border-accent-600 border-b-2 font-medium;
   }
   .topnav a:hover {
-    color: var(--semantics-links-is-hovered-color);
+    @apply text-links-hover;
   }
   .topbar__spacer {
     @apply flex-1;
   }
   /* Footer */
   .foot {
-    border-top: 1px solid var(--semantics-dividers-color);
+    @apply border-dividers border-t;
   }
   .foot__inner {
-    @apply mx-auto flex max-w-7xl items-center justify-between;
-    padding: var(--primitives-space-32);
-    gap: var(--primitives-space-24);
+    @apply gap-primitives-space-24 p-primitives-space-32 mx-auto flex max-w-7xl items-center justify-between;
   }
   .foot__links {
-    @apply flex;
-    gap: var(--primitives-space-24);
-    font: var(--primitives-font-body-sm-regular-snug);
+    @apply text-body-sm font-body gap-primitives-space-24 flex font-normal;
   }
   .foot__links a:hover {
     @apply no-underline;
   }
   .foot__meta {
-    font: var(--primitives-font-body-sm-regular-snug);
-    color: var(--semantics-content-secondary-color);
+    @apply text-body-sm font-body text-content-secondary font-normal;
   }
 </style>

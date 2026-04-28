@@ -3,32 +3,29 @@ import Layout from '../layouts/Landing.astro';
 ---
 
 <Layout title="About - Fundament">
-  <div class="about-hero">
-    <div class="about-hero__inner">
-      <h1 class="about-hero__title">About Fundament</h1>
-      <p class="about-hero__body">
-        Fundament is software for running an Autonomous Private Cloud. It is designed to provide
-        organizations with a minimal, reliable foundation for running modern applications. Unlike
-        traditional platforms that bundle every service by default, Fundament is basic at its
-        &mdash; delivering only the essential infrastructure and orchestration layers &mdash; while
-        allowing each tenant to extend their environment with exactly the services and tools they
-        they need.
-      </p>
-      <p class="about-hero__body">
-        On top of this foundation, Fundament serves as an internal developer platform (IDP):
-        enabling developers to build, deploy, and operate applications with speed and confidence.
-        Its API-first design, multi-tenant architecture, and focus on autonomy and scalability make
-        it suitable for organizations that want cloud capabilities on their own terms; secure,
-        reliable, and without unnecessary complexity.
-      </p>
-    </div>
-  </div>
+  <section class="about-hero">
+    <h1 class="about-hero-title">About Fundament</h1>
+    <p class="about-hero-body">
+      Fundament is software for running an Autonomous Private Cloud. It is designed to provide
+      organizations with a minimal, reliable foundation for running modern applications. Unlike
+      traditional platforms that bundle every service by default, Fundament is basic at its &mdash;
+      delivering only the essential infrastructure and orchestration layers &mdash; while allowing
+      each tenant to extend their environment with exactly the services and tools they they need.
+    </p>
+    <p class="about-hero-body">
+      On top of this foundation, Fundament serves as an internal developer platform (IDP): enabling
+      developers to build, deploy, and operate applications with speed and confidence. Its API-first
+      design, multi-tenant architecture, and focus on autonomy and scalability make it suitable for
+      organizations that want cloud capabilities on their own terms; secure, reliable, and without
+      unnecessary complexity.
+    </p>
+  </section>
 
   <div class="about-section">
-    <div class="about-section__inner">
-      <h2 class="about-section__title">Project status</h2>
-      <p class="about-section__subtitle">Concept &amp; Development</p>
-      <p class="about-section__body">
+    <div class="about-section-inner">
+      <h2 class="about-section-title">Project status</h2>
+      <p class="about-section-subtitle">Concept &amp; Development</p>
+      <p class="about-section-body">
         The focus of the project is currently on research and ideation. Some initial PoC
         applications may be built to give shape to ideas and to provide early feedback from testing
         users.
@@ -37,9 +34,9 @@ import Layout from '../layouts/Landing.astro';
   </div>
 
   <div class="about-section">
-    <div class="about-section__inner">
-      <h2 class="about-section__title">Organization</h2>
-      <p class="about-section__body">
+    <div class="about-section-inner">
+      <h2 class="about-section-title">Organization</h2>
+      <p class="about-section-body">
         Fundament is being developed by <a href="https://digilab.overheid.nl/" target="_blank"
           >Digilab</a
         >. Digilab is a technical innovation team and testing environment initiated by the Dutch
@@ -51,55 +48,34 @@ import Layout from '../layouts/Landing.astro';
 </Layout>
 
 <style is:global>
+  @reference "../styles/global.css";
+
   .about-hero {
-    border-bottom: 1px solid var(--semantics-dividers-color);
-    background: var(--semantics-surfaces-background-color);
+    @apply py-primitives-space-64 px-primitives-space-32 mx-auto max-w-200;
   }
-  .about-hero__inner {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: var(--primitives-space-64) var(--primitives-space-32);
-    max-width: 800px;
+  .about-hero-title {
+    @apply text-display-2 font-display mb-primitives-space-24 text-content m-0 font-medium tracking-[-0.02em];
   }
-  .about-hero__title {
-    font: var(--primitives-font-display-2-lg);
-    margin: 0 0 var(--primitives-space-24);
-    letter-spacing: -0.02em;
-    color: var(--semantics-content-color);
+  .about-hero-body {
+    @apply text-body-lg font-body text-content mb-primitives-space-16 m-0 max-w-180 font-normal;
   }
-  .about-hero__body {
-    font: var(--primitives-font-body-lg-regular-snug);
-    color: var(--semantics-content-color);
-    margin: 0 0 var(--primitives-space-16);
-    max-width: 720px;
-  }
-  .about-hero__body:last-child {
-    margin-bottom: 0;
+  .about-hero-body:last-child {
+    @apply mb-0;
   }
 
   .about-section {
-    border-top: 1px solid var(--semantics-dividers-color);
+    @apply border-dividers border-t;
   }
-  .about-section__inner {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: var(--primitives-space-48) var(--primitives-space-32);
+  .about-section-inner {
+    @apply py-primitives-space-48 px-primitives-space-32 mx-auto max-w-200;
   }
-  .about-section__title {
-    font: var(--primitives-font-display-4-lg);
-    margin: 0 0 var(--primitives-space-8);
-    letter-spacing: -0.01em;
-    color: var(--primitives-color-accent-600);
+  .about-section-title {
+    @apply text-display-4 font-display text-accent-600 mb-primitives-space-8 m-0 font-medium tracking-[-0.01em];
   }
-  .about-section__subtitle {
-    font: var(--primitives-font-body-lg-bold-snug);
-    color: var(--semantics-content-color);
-    margin: 0 0 var(--primitives-space-8);
+  .about-section-subtitle {
+    @apply text-body-lg font-body text-content mb-primitives-space-8 m-0 font-medium;
   }
-  .about-section__body {
-    font: var(--primitives-font-body-lg-regular-snug);
-    color: var(--semantics-content-color);
-    margin: 0;
-    max-width: 720px;
+  .about-section-body {
+    @apply text-body-lg font-body text-content m-0 max-w-180 font-normal;
   }
 </style>

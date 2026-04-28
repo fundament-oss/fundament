@@ -4,55 +4,53 @@ import Layout from '../layouts/Landing.astro';
 
 <Layout title="Fundament — Self-hosted Kubernetes platform">
   <section class="lp-hero">
-    <div class="lp-hero-inner">
-      <p class="lp-eyebrow">Self-hosted Kubernetes platform</p>
-      <h1 class="lp-hero-title">Deploy and manage Kubernetes clusters with confidence.</h1>
-      <p class="lp-hero-lede">
-        Fundament is an open-source platform that combines bare-metal provisioning with managed
-        Kubernetes, delivering a complete IaaS and PaaS solution for self-hosted infrastructure.
-      </p>
-      <div class="lp-btnrow">
-        <nldd-button variant="accent-filled" href="/docs" text="Get started" end-icon="arrow-right">
-        </nldd-button>
-        <nldd-button
-          variant="accent-outlined"
-          href="https://github.com/fundament-oss/fundament"
-          target="_blank"
-          rel="nofollow noopener noreferrer"
-          text="View on GitHub"
+    <p class="lp-eyebrow">Self-hosted Kubernetes platform</p>
+    <h1 class="lp-hero-title">Deploy and manage Kubernetes clusters with confidence.</h1>
+    <p class="lp-hero-lede">
+      Fundament is an open-source platform that combines bare-metal provisioning with managed
+      Kubernetes, delivering a complete IaaS and PaaS solution for self-hosted infrastructure.
+    </p>
+    <div class="lp-btnrow">
+      <nldd-button variant="accent-filled" href="/docs" text="Get started" end-icon="arrow-right">
+      </nldd-button>
+      <nldd-button
+        variant="accent-outlined"
+        href="https://github.com/fundament-oss/fundament"
+        target="_blank"
+        rel="nofollow noopener noreferrer"
+        text="View on GitHub"
+      >
+        <svg
+          slot="end-icon"
+          class="h-5 w-5"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
         >
-          <svg
-            slot="end-icon"
-            class="h-5 w-5"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-              clip-rule="evenodd"></path>
-          </svg>
-        </nldd-button>
-      </div>
+          <path
+            fill-rule="evenodd"
+            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+            clip-rule="evenodd"></path>
+        </svg>
+      </nldd-button>
+    </div>
 
-      <div class="lp-metastrip">
-        <div class="lp-metastrip-cell">
-          <p class="lp-metastrip-label">Model</p>
-          <div class="lp-metastrip-value">Open source</div>
-        </div>
-        <div class="lp-metastrip-cell">
-          <p class="lp-metastrip-label">Layer</p>
-          <div class="lp-metastrip-value">IaaS + PaaS</div>
-        </div>
-        <div class="lp-metastrip-cell">
-          <p class="lp-metastrip-label">Tenants</p>
-          <div class="lp-metastrip-value">Thousands</div>
-        </div>
-        <div class="lp-metastrip-cell">
-          <p class="lp-metastrip-label">Stance</p>
-          <div class="lp-metastrip-value">Zero-trust</div>
-        </div>
+    <div class="lp-metastrip">
+      <div class="lp-metastrip-cell">
+        <p class="lp-metastrip-label">Model</p>
+        <div class="lp-metastrip-value">Open source</div>
+      </div>
+      <div class="lp-metastrip-cell">
+        <p class="lp-metastrip-label">Layer</p>
+        <div class="lp-metastrip-value">IaaS + PaaS</div>
+      </div>
+      <div class="lp-metastrip-cell">
+        <p class="lp-metastrip-label">Tenants</p>
+        <div class="lp-metastrip-value">Thousands</div>
+      </div>
+      <div class="lp-metastrip-cell">
+        <p class="lp-metastrip-label">Stance</p>
+        <div class="lp-metastrip-value">Zero-trust</div>
       </div>
     </div>
   </section>
@@ -239,255 +237,116 @@ import Layout from '../layouts/Landing.astro';
 </Layout>
 
 <style is:global>
-  @reference "tailwindcss";
-
-  @theme {
-    --color-accent-25: oklch(0.973 0.013 253.4);
-    --color-accent-50: oklch(0.947 0.026 253.4);
-    --color-accent-75: oklch(0.922 0.038 253.4);
-    --color-accent-100: oklch(0.897 0.051 253.4);
-    --color-accent-150: oklch(0.849 0.076 253.4);
-    --color-accent-200: oklch(0.804 0.097 253.4);
-    --color-accent-250: oklch(0.76 0.097 253.4);
-    --color-accent-300: oklch(0.718 0.097 253.4);
-    --color-accent-350: oklch(0.677 0.097 253.4);
-    --color-accent-400: oklch(0.638 0.097 253.4);
-    --color-accent-450: oklch(0.6 0.097 253.4);
-    --color-accent-500: oklch(0.563 0.097 253.4);
-    --color-accent-550: oklch(0.527 0.097 253.4);
-    --color-accent-600: oklch(0.492 0.097 253.4);
-    --color-accent-650: oklch(0.457 0.097 253.4);
-    --color-accent-700: oklch(0.421 0.097 253.4);
-    --color-accent-750: oklch(0.386 0.097 253.4);
-    --color-accent-800: oklch(0.348 0.097 253.4);
-    --color-accent-850: oklch(0.308 0.096 253.4);
-    --color-accent-900: oklch(0.262 0.082 253.4);
-    --color-accent-950: oklch(0.203 0.063 253.4);
-
-    --color-neutral-25: oklch(0.974 0.004 253.4);
-    --color-neutral-50: oklch(0.948 0.007 253.4);
-    --color-neutral-75: oklch(0.923 0.009 253.4);
-    --color-neutral-100: oklch(0.898 0.011 253.4);
-    --color-neutral-150: oklch(0.85 0.015 253.4);
-    --color-neutral-200: oklch(0.804 0.019 253.4);
-    --color-neutral-250: oklch(0.76 0.023 253.4);
-    --color-neutral-300: oklch(0.718 0.026 253.4);
-    --color-neutral-350: oklch(0.677 0.03 253.4);
-    --color-neutral-400: oklch(0.638 0.033 253.4);
-    --color-neutral-450: oklch(0.6 0.037 253.4);
-    --color-neutral-500: oklch(0.563 0.04 253.4);
-    --color-neutral-550: oklch(0.527 0.036 253.4);
-    --color-neutral-600: oklch(0.491 0.032 253.4);
-    --color-neutral-650: oklch(0.456 0.029 253.4);
-    --color-neutral-700: oklch(0.421 0.026 253.4);
-    --color-neutral-750: oklch(0.385 0.023 253.4);
-    --color-neutral-800: oklch(0.347 0.02 253.4);
-    --color-neutral-850: oklch(0.307 0.018 253.4);
-    --color-neutral-900: oklch(0.261 0.015 253.4);
-    --color-neutral-950: oklch(0.202 0.011 253.4);
-
-    --color-danger-25: oklch(0.975 0.012 29.5);
-    --color-danger-50: oklch(0.951 0.025 29.5);
-    --color-danger-75: oklch(0.927 0.037 29.5);
-    --color-danger-100: oklch(0.903 0.05 29.5);
-    --color-danger-150: oklch(0.859 0.077 29.5);
-    --color-danger-200: oklch(0.816 0.104 29.5);
-    --color-danger-250: oklch(0.776 0.132 29.5);
-    --color-danger-300: oklch(0.737 0.161 29.5);
-    --color-danger-350: oklch(0.7 0.191 29.5);
-    --color-danger-400: oklch(0.663 0.207 29.5);
-    --color-danger-450: oklch(0.625 0.207 29.5);
-    --color-danger-500: oklch(0.588 0.207 29.5);
-    --color-danger-550: oklch(0.552 0.207 29.5);
-    --color-danger-600: oklch(0.517 0.207 29.5);
-    --color-danger-650: oklch(0.48 0.195 29.5);
-    --color-danger-700: oklch(0.443 0.18 29.5);
-    --color-danger-750: oklch(0.405 0.165 29.5);
-    --color-danger-800: oklch(0.365 0.148 29.5);
-    --color-danger-850: oklch(0.323 0.131 29.5);
-    --color-danger-900: oklch(0.275 0.112 29.5);
-    --color-danger-950: oklch(0.212 0.086 29.5);
-  }
+  @reference "../styles/global.css";
 
   /* Hero */
   .lp-hero {
-    border-bottom: 1px solid var(--semantics-dividers-color);
-    background: var(--semantics-surfaces-background-color);
-  }
-  .lp-hero-inner {
-    @apply mx-auto max-w-7xl;
-    padding: var(--primitives-space-80) var(--primitives-space-32) var(--primitives-space-64);
+    @apply pt-primitives-space-80 px-primitives-space-32 pb-primitives-space-64 mx-auto max-w-7xl;
   }
   .lp-eyebrow {
-    font: var(--primitives-font-body-sm-bold-snug);
-    @apply flex items-center tracking-[0.08em] uppercase;
-    color: var(--semantics-content-secondary-color);
-    margin: 0 0 var(--primitives-space-16);
-    gap: var(--primitives-space-10);
+    @apply text-body-sm font-body text-content-secondary mb-primitives-space-16 gap-primitives-space-10 m-0 flex items-center font-medium tracking-[0.08em] uppercase;
   }
   .lp-hero-title {
-    font: var(--primitives-font-display-1-lg);
-    margin: 0 0 var(--primitives-space-24);
-    @apply max-w-225 tracking-[-0.02em];
-    color: var(--semantics-content-color);
+    @apply text-display-1 font-display mb-primitives-space-24 text-content m-0 max-w-225 font-medium tracking-[-0.02em];
   }
   .lp-hero-lede {
-    font: var(--primitives-font-body-lg-regular-snug);
-    @apply max-w-180;
-    color: var(--semantics-content-color);
-    margin: 0 0 var(--primitives-space-32);
+    @apply text-body-lg font-body text-content mb-primitives-space-32 m-0 max-w-180 font-normal;
   }
 
   /* Buttons */
   .lp-btnrow {
-    @apply flex flex-wrap;
-    gap: var(--primitives-space-12);
+    @apply gap-primitives-space-12 flex flex-wrap;
   }
 
   /* Metastrip */
   .lp-metastrip {
-    @apply grid grid-cols-4 gap-0;
-    border-top: 1px solid var(--semantics-dividers-color);
-    margin-top: var(--primitives-space-56);
-    padding-top: var(--primitives-space-24);
+    @apply border-dividers mt-primitives-space-56 pt-primitives-space-24 grid grid-cols-4 gap-0 border-t;
   }
   .lp-metastrip-cell {
-    padding-right: var(--primitives-space-24);
+    @apply pr-primitives-space-24;
   }
   .lp-metastrip-cell + .lp-metastrip-cell {
-    border-left: 1px solid var(--semantics-dividers-color);
-    padding-left: var(--primitives-space-24);
+    @apply border-dividers pl-primitives-space-24 border-l;
   }
   .lp-metastrip-label {
-    font: var(--primitives-font-body-xs-regular-snug);
-    @apply tracking-[0.06em] uppercase;
-    color: var(--semantics-content-secondary-color);
-    margin: 0 0 var(--primitives-space-6);
+    @apply text-body-xs font-body text-content-secondary mb-primitives-space-6 m-0 font-normal tracking-[0.06em] uppercase;
   }
   .lp-metastrip-value {
-    font: var(--primitives-font-display-5-lg);
-    @apply font-normal tracking-[-0.01em];
-    color: var(--semantics-content-color);
+    @apply text-display-5 font-display text-content font-normal tracking-[-0.01em];
   }
 
   /* Sections */
   .lp-section {
-    @apply mx-auto max-w-7xl;
-    padding: var(--primitives-space-80) var(--primitives-space-32);
-  }
-  .lp-section:not(:first-of-type) {
-    border-top: 1px solid var(--semantics-dividers-color);
+    @apply py-primitives-space-80 px-primitives-space-32 mx-auto max-w-7xl;
   }
   .lp-section-head {
-    @apply grid grid-cols-[1fr_2fr] items-start;
-    gap: var(--primitives-space-48);
-    margin-bottom: var(--primitives-space-48);
+    @apply gap-primitives-space-48 mb-primitives-space-48 grid grid-cols-[1fr_2fr] items-start;
   }
   .lp-section-kicker {
-    font: var(--primitives-font-body-sm-bold-snug);
-    color: var(--semantics-content-secondary-color);
-    @apply mx-0 mt-1.5 mb-0 tracking-[0.08em] uppercase;
+    @apply text-body-sm font-body text-content-secondary mx-0 mt-1.5 mb-0 font-medium tracking-[0.08em] uppercase;
   }
   .lp-section-title {
-    font: var(--primitives-font-display-3-lg);
-    margin: 0 0 var(--primitives-space-16);
-    @apply tracking-[-0.015em];
-    color: var(--semantics-content-color);
+    @apply text-display-3 font-display mb-primitives-space-16 text-content m-0 font-medium tracking-[-0.015em];
   }
   .lp-section-intro {
-    font: var(--primitives-font-body-md-regular-snug);
-    color: var(--semantics-content-color);
-    @apply m-0 max-w-160;
+    @apply text-body-md font-body text-content m-0 max-w-160 font-normal;
   }
 
   /* Capabilities grid */
   .lp-caps {
-    @apply grid grid-cols-3;
-    border-top: 1px solid var(--semantics-dividers-color);
-    border-left: 1px solid var(--semantics-dividers-color);
+    @apply border-dividers grid grid-cols-3 border-t border-l;
   }
   .lp-cap {
-    border-right: 1px solid var(--semantics-dividers-color);
-    border-bottom: 1px solid var(--semantics-dividers-color);
-    padding: var(--primitives-space-28);
-    @apply flex min-h-55 flex-col;
-    gap: var(--primitives-space-16);
+    @apply border-dividers p-primitives-space-28 gap-primitives-space-16 flex min-h-55 flex-col border-r border-b;
   }
   .lp-cap-header {
-    @apply flex items-center;
-    gap: var(--primitives-space-12);
+    @apply gap-primitives-space-12 flex items-center;
   }
   .lp-cap-icon {
-    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-sm;
-    background: var(--primitives-color-accent-100);
-    color: var(--primitives-color-accent-700);
+    @apply bg-accent-100 text-accent-700 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-sm;
   }
   .lp-cap h3 {
-    font: var(--primitives-font-body-lg-bold-snug);
-    @apply m-0 tracking-[-0.005em];
-    color: var(--semantics-content-color);
+    @apply text-body-lg font-body text-content m-0 font-medium tracking-[-0.005em];
   }
   .lp-cap p {
-    font: var(--primitives-font-body-sm-regular-snug);
-    color: var(--semantics-content-secondary-color);
-    @apply m-0;
+    @apply text-body-sm font-body text-content-secondary m-0 font-normal;
   }
 
   /* Architecture equation */
   .lp-arch {
-    background: var(--semantics-surfaces-tinted-background-color);
-    padding: var(--primitives-space-48);
-    @apply grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center;
-    gap: var(--primitives-space-32);
+    @apply bg-surface-tinted p-primitives-space-48 gap-primitives-space-32 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center;
   }
   .lp-arch-piece {
-    @apply flex flex-col;
-    gap: var(--primitives-space-8);
+    @apply gap-primitives-space-8 flex flex-col;
   }
   .lp-arch-layer {
-    font: var(--primitives-font-body-xs-regular-snug);
-    @apply tracking-widest uppercase;
-    color: var(--semantics-content-secondary-color);
+    @apply text-body-xs font-body text-content-secondary font-normal tracking-widest uppercase;
   }
   .lp-arch-name {
-    font: var(--primitives-font-display-4-lg);
-    @apply m-0 tracking-[-0.01em];
-    color: var(--semantics-content-color);
+    @apply text-display-4 font-display text-content m-0 font-medium tracking-[-0.01em];
   }
   .lp-arch-desc {
-    font: var(--primitives-font-body-sm-regular-snug);
-    color: var(--semantics-content-color);
-    @apply m-0;
+    @apply text-body-sm font-body text-content m-0 font-normal;
   }
   .lp-arch-op {
-    font-family: var(--primitives-font-family-monospace);
-    @apply text-center text-[32px] font-normal no-underline;
-    color: var(--primitives-color-accent-600);
+    @apply text-accent-600 text-center font-mono text-[32px] font-normal no-underline;
   }
   .lp-arch-piece--final .lp-arch-name {
-    color: var(--primitives-color-accent-600);
+    @apply text-accent-600;
   }
 
   /* End CTA */
   .lp-endcta {
-    border-top: 1px solid var(--semantics-dividers-color);
-    background: var(--semantics-surfaces-tinted-background-color);
+    @apply border-dividers bg-surface-tinted border-t;
   }
   .lp-endcta-inner {
-    @apply mx-auto grid max-w-7xl grid-cols-[1fr_auto] items-center;
-    padding: var(--primitives-space-64) var(--primitives-space-32);
-    gap: var(--primitives-space-32);
+    @apply py-primitives-space-64 px-primitives-space-32 gap-primitives-space-32 mx-auto grid max-w-7xl grid-cols-[1fr_auto] items-center;
   }
   .lp-endcta h2 {
-    font: var(--primitives-font-display-3-lg);
-    margin: 0 0 var(--primitives-space-8);
-    @apply tracking-[-0.015em];
-    color: var(--semantics-content-color);
+    @apply text-display-3 font-display mb-primitives-space-8 text-content m-0 font-medium tracking-[-0.015em];
   }
   .lp-endcta p {
-    font: var(--primitives-font-body-md-regular-snug);
-    color: var(--semantics-content-color);
-    @apply m-0 max-w-160;
+    @apply text-body-md font-body text-content m-0 max-w-160 font-normal;
   }
 
   /* Responsive */
