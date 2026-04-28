@@ -32,7 +32,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
     <header class="topbar">
       <div class="topbar__inner">
         <a href="/" class="wordmark">
-          <span class="wordmark__logo" aria-hidden="true">
+          <span class="wordmark__logo text-indigo-600 dark:text-indigo-400" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <path
                 fill="currentColor"
@@ -84,7 +84,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
         </button>
         <a
           href="https://github.com/fundament-oss/fundament"
-          class="iconbtn"
+          class="iconbtn -ml-5.5"
           target="_blank"
           rel="nofollow noopener noreferrer"
           aria-label="GitHub repository"
@@ -226,7 +226,6 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   .wordmark__logo {
     width: 22px;
     height: 22px;
-    color: var(--primitives-color-accent-600);
     display: inline-flex;
     align-items: center;
     justify-content: center;

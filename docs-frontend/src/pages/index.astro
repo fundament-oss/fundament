@@ -73,189 +73,201 @@ import Layout from '../layouts/Landing.astro';
   <!-- Capabilities -->
   <div class="lp-section">
     <div class="lp-section__head">
-      <div>
-        <p class="lp-section__kicker">01 — Capabilities</p>
-      </div>
-      <div>
-        <h2 class="lp-section__title">A complete cloud platform, self-hosted.</h2>
-        <p class="lp-section__intro">
-          Eight capabilities that define Fundament. No managed service required, no proprietary
-          lock-in, no compromises on isolation.
-        </p>
-      </div>
+      <h2 class="lp-section__title">A complete cloud platform, self-hosted.</h2>
+      <p class="lp-section__intro">
+        Eight capabilities that define Fundament. No managed service required, no proprietary
+        lock-in, no compromises on isolation.
+      </p>
     </div>
 
-    <div class="lp-caps">
+    <div class="lp-caps overflow-hidden rounded">
       <div class="lp-cap">
-        <span class="lp-cap__icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            aria-hidden="true"
-          >
-            <path fill="currentColor" d="m11.4 12-4 4L6 14.6 8.57 12 6 9.4 7.4 8zM18 16h-6v-2h6z"
-            ></path>
-            <path
-              fill="currentColor"
-              d="M19 4a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3zM5 6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"
-            ></path>
-          </svg>
-        </span>
-        <h3>Developer-friendly</h3>
+        <div class="lp-cap__header">
+          <span class="lp-cap__icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="22"
+              height="22"
+              aria-hidden="true"
+            >
+              <path fill="currentColor" d="m11.4 12-4 4L6 14.6 8.57 12 6 9.4 7.4 8zM18 16h-6v-2h6z"
+              ></path>
+              <path
+                fill="currentColor"
+                d="M19 4a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3zM5 6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"
+              ></path>
+            </svg>
+          </span>
+          <h3>Developer-friendly</h3>
+        </div>
         <p>
           Simple, intuitive platform for deploying and operating applications without wrestling with
           infrastructure complexity.
         </p>
       </div>
       <div class="lp-cap">
-        <span class="lp-cap__icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            aria-hidden="true"
-          >
-            <path
-              fill="currentColor"
-              d="M19 8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3zM5 10a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1z"
-            ></path>
-            <path
-              fill="currentColor"
-              d="M18 5a2 2 0 0 1 2 2H4c0-1.1.9-2 2-2zM16 2a2 2 0 0 1 2 2H6c0-1.1.9-2 2-2z"></path>
-          </svg>
-        </span>
-        <h3>Multi-tenant architecture</h3>
+        <div class="lp-cap__header">
+          <span class="lp-cap__icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="22"
+              height="22"
+              aria-hidden="true"
+            >
+              <path
+                fill="currentColor"
+                d="M19 8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3zM5 10a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1z"
+              ></path>
+              <path
+                fill="currentColor"
+                d="M18 5a2 2 0 0 1 2 2H4c0-1.1.9-2 2-2zM16 2a2 2 0 0 1 2 2H6c0-1.1.9-2 2-2z"></path>
+            </svg>
+          </span>
+          <h3>Multi-tenant architecture</h3>
+        </div>
         <p>
           Built for organizational growth with strict tenant isolation and shared-nothing compute
           and storage architecture.
         </p>
       </div>
       <div class="lp-cap">
-        <span class="lp-cap__icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            aria-hidden="true"
-          >
-            <path fill="currentColor" d="m16.41 9.41-5.2 5.21L8 11.42 9.41 10l1.8 1.8L15 8z"></path>
-            <path
-              fill="currentColor"
-              d="M20.39 4.83A14 14 0 0 1 12 22 14 14 0 0 1 3.62 4.8L12 2zM5.28 6.35A12 12 0 0 0 12 19.83a12 12 0 0 0 6.73-13.45L12 4.1z"
-            ></path>
-          </svg>
-        </span>
-        <h3>Secure by default</h3>
+        <div class="lp-cap__header">
+          <span class="lp-cap__icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="22"
+              height="22"
+              aria-hidden="true"
+            >
+              <path fill="currentColor" d="m16.41 9.41-5.2 5.21L8 11.42 9.41 10l1.8 1.8L15 8z"
+              ></path>
+              <path
+                fill="currentColor"
+                d="M20.39 4.83A14 14 0 0 1 12 22 14 14 0 0 1 3.62 4.8L12 2zM5.28 6.35A12 12 0 0 0 12 19.83a12 12 0 0 0 6.73-13.45L12 4.1z"
+              ></path>
+            </svg>
+          </span>
+          <h3>Secure by default</h3>
+        </div>
         <p>
           Security built into every layer with zero-trust principles and comprehensive isolation
           between tenants.
         </p>
       </div>
       <div class="lp-cap">
-        <span class="lp-cap__icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            aria-hidden="true"
-          >
-            <path
-              fill="currentColor"
-              d="M1 13.5a5.5 5.5 0 0 1 4.64-5.43 7 7 0 0 1 13.29 1.95A4.5 4.5 0 0 1 18.5 19v-2a2.5 2.5 0 0 0 .24-4.99l-1.57-.15-.22-1.56a5 5 0 0 0-9.5-1.4l-.44.98-1.06.16A3.5 3.5 0 0 0 6.5 17v2A5.5 5.5 0 0 1 1 13.5M18.5 17v2h-12v-2z"
-            ></path>
-          </svg>
-        </span>
-        <h3>Managed infrastructure</h3>
+        <div class="lp-cap__header">
+          <span class="lp-cap__icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="22"
+              height="22"
+              aria-hidden="true"
+            >
+              <path
+                fill="currentColor"
+                d="M1 13.5a5.5 5.5 0 0 1 4.64-5.43 7 7 0 0 1 13.29 1.95A4.5 4.5 0 0 1 18.5 19v-2a2.5 2.5 0 0 0 .24-4.99l-1.57-.15-.22-1.56a5 5 0 0 0-9.5-1.4l-.44.98-1.06.16A3.5 3.5 0 0 0 6.5 17v2A5.5 5.5 0 0 1 1 13.5M18.5 17v2h-12v-2z"
+              ></path>
+            </svg>
+          </span>
+          <h3>Managed infrastructure</h3>
+        </div>
         <p>
           Compute, storage, and networking abstracted and managed, with automated bare-metal
           provisioning via metal-stack.
         </p>
       </div>
       <div class="lp-cap">
-        <span class="lp-cap__icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            aria-hidden="true"
-          >
-            <path
-              fill="currentColor"
-              d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12m14.707-2.113L11 15.594l-3.707-3.707 1.414-1.415L11 12.765l4.293-4.293z"
-            ></path>
-          </svg>
-        </span>
-        <h3>Highly available</h3>
+        <div class="lp-cap__header">
+          <span class="lp-cap__icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="22"
+              height="22"
+              aria-hidden="true"
+            >
+              <path
+                fill="currentColor"
+                d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12m14.707-2.113L11 15.594l-3.707-3.707 1.414-1.415L11 12.765l4.293-4.293z"
+              ></path>
+            </svg>
+          </span>
+          <h3>Highly available</h3>
+        </div>
         <p>
           Designed to remain operational under heavy demand or failure conditions with built-in
           resilience.
         </p>
       </div>
       <div class="lp-cap">
-        <span class="lp-cap__icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            aria-hidden="true"
-          >
-            <path fill="currentColor" d="M4 19h18v2H2V3h2z"></path>
-            <path
-              fill="currentColor"
-              d="M20.7 7.7 14 14.42l-3-3-3.3 3.3-1.4-1.42L11 8.6l3 3 5.3-5.3z"></path>
-          </svg>
-        </span>
-        <h3>Horizontally scalable</h3>
+        <div class="lp-cap__header">
+          <span class="lp-cap__icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="22"
+              height="22"
+              aria-hidden="true"
+            >
+              <path fill="currentColor" d="M4 19h18v2H2V3h2z"></path>
+              <path
+                fill="currentColor"
+                d="M20.7 7.7 14 14.42l-3-3-3.3 3.3-1.4-1.42L11 8.6l3 3 5.3-5.3z"></path>
+            </svg>
+          </span>
+          <h3>Horizontally scalable</h3>
+        </div>
         <p>
           Scale from a handful to thousands of tenants with large infrastructure footprints without
           architectural changes.
         </p>
       </div>
       <div class="lp-cap">
-        <span class="lp-cap__icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            aria-hidden="true"
-          >
-            <path
-              fill="currentColor"
-              d="M10.5 1.5A3.5 3.5 0 0 1 14 5v.75c0 .14.11.25.25.25h3.25a1 1 0 0 1 1 1v2.75q.02.23.25.25H19a3.5 3.5 0 1 1 0 7h-.25a.25.25 0 0 0-.25.25V21a1 1 0 0 1-1 1h-4.75a.25.25 0 0 1-.25-.25V20.5a1.5 1.5 0 0 0-3 0v1.25q-.02.23-.25.25H3.5a1 1 0 0 1-1-1v-5.75c0-.14.11-.25.25-.25H4a1.5 1.5 0 0 0 0-3H2.75a.25.25 0 0 1-.25-.25V7a1 1 0 0 1 1-1h3.25c.14 0 .25-.11.25-.25V5a3.5 3.5 0 0 1 3.5-3.5m0 2C9.67 3.5 9 4.17 9 5v.75C9 6.99 8 8 6.75 8H4.5v2.04a3.5 3.5 0 0 1 0 6.92V20h3.04a3.5 3.5 0 0 1 6.92 0h2.04v-2.75c0-1.24 1-2.25 2.25-2.25H19a1.5 1.5 0 0 0 0-3h-.25c-1.24 0-2.25-1-2.25-2.25V8h-2.25C13.01 8 12 7 12 5.75V5c0-.83-.67-1.5-1.5-1.5"
-            ></path>
-          </svg>
-        </span>
-        <h3>Extensible platform</h3>
+        <div class="lp-cap__header">
+          <span class="lp-cap__icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="22"
+              height="22"
+              aria-hidden="true"
+            >
+              <path
+                fill="currentColor"
+                d="M10.5 1.5A3.5 3.5 0 0 1 14 5v.75c0 .14.11.25.25.25h3.25a1 1 0 0 1 1 1v2.75q.02.23.25.25H19a3.5 3.5 0 1 1 0 7h-.25a.25.25 0 0 0-.25.25V21a1 1 0 0 1-1 1h-4.75a.25.25 0 0 1-.25-.25V20.5a1.5 1.5 0 0 0-3 0v1.25q-.02.23-.25.25H3.5a1 1 0 0 1-1-1v-5.75c0-.14.11-.25.25-.25H4a1.5 1.5 0 0 0 0-3H2.75a.25.25 0 0 1-.25-.25V7a1 1 0 0 1 1-1h3.25c.14 0 .25-.11.25-.25V5a3.5 3.5 0 0 1 3.5-3.5m0 2C9.67 3.5 9 4.17 9 5v.75C9 6.99 8 8 6.75 8H4.5v2.04a3.5 3.5 0 0 1 0 6.92V20h3.04a3.5 3.5 0 0 1 6.92 0h2.04v-2.75c0-1.24 1-2.25 2.25-2.25H19a1.5 1.5 0 0 0 0-3h-.25c-1.24 0-2.25-1-2.25-2.25V8h-2.25C13.01 8 12 7 12 5.75V5c0-.83-.67-1.5-1.5-1.5"
+              ></path>
+            </svg>
+          </span>
+          <h3>Extensible platform</h3>
+        </div>
         <p>
           Pluggable services allow tenants to autonomously evolve and customize their technology
           stack.
         </p>
       </div>
       <div class="lp-cap">
-        <span class="lp-cap__icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            aria-hidden="true"
-          >
-            <path fill="currentColor" d="M7 6H4v12h3v2H2V4h5zM22 20h-5v-2h3V6h-3V4h5z"></path>
-            <path
-              fill="currentColor"
-              d="M7.5 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3M12 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3M16.5 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3"
-            ></path>
-          </svg>
-        </span>
-        <h3>Open source</h3>
+        <div class="lp-cap__header">
+          <span class="lp-cap__icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="22"
+              height="22"
+              aria-hidden="true"
+            >
+              <path fill="currentColor" d="M7 6H4v12h3v2H2V4h5zM22 20h-5v-2h3V6h-3V4h5z"></path>
+              <path
+                fill="currentColor"
+                d="M7.5 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3M12 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3M16.5 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3"
+              ></path>
+            </svg>
+          </span>
+          <h3>Open source</h3>
+        </div>
         <p>
           Built on proven open-source projects like metal-stack and Gardener, avoiding proprietary
           lock-in.
@@ -267,19 +279,14 @@ import Layout from '../layouts/Landing.astro';
   <!-- Architecture -->
   <div class="lp-section">
     <div class="lp-section__head">
-      <div>
-        <p class="lp-section__kicker">02 — Foundations</p>
-      </div>
-      <div>
-        <h2 class="lp-section__title">Built on proven foundations.</h2>
-        <p class="lp-section__intro">
-          Fundament combines best-in-class open-source technologies to deliver a complete cloud
-          solution.
-        </p>
-      </div>
+      <h2 class="lp-section__title">Built on proven foundations.</h2>
+      <p class="lp-section__intro">
+        Fundament combines best-in-class open-source technologies to deliver a complete cloud
+        solution.
+      </p>
     </div>
 
-    <div class="lp-arch">
+    <div class="lp-arch rounded-md">
       <div class="lp-arch__piece">
         <span class="lp-arch__layer">IaaS layer</span>
         <h3 class="lp-arch__name">metal-stack</h3>
@@ -357,12 +364,6 @@ import Layout from '../layouts/Landing.astro';
     align-items: center;
     gap: var(--primitives-space-10);
   }
-  .lp-eyebrow::before {
-    content: '';
-    width: 24px;
-    height: 1px;
-    background: var(--semantics-content-secondary-color);
-  }
   .lp-hero__title {
     font: var(--primitives-font-display-1-lg);
     margin: 0 0 var(--primitives-space-24);
@@ -407,7 +408,9 @@ import Layout from '../layouts/Landing.astro';
   .lp-btn--secondary {
     background: transparent;
     color: var(--semantics-content-color);
-    border: 1px solid var(--semantics-dividers-color);
+    border-width: var(--semantics-buttons-accent-outlined-border-thickness);
+    border-style: solid;
+    border-color: var(--semantics-buttons-accent-outlined-border-color);
   }
   .lp-btn--secondary:hover {
     background: var(--semantics-surfaces-tinted-background-color);
@@ -449,6 +452,8 @@ import Layout from '../layouts/Landing.astro';
     max-width: 1280px;
     margin: 0 auto;
     padding: var(--primitives-space-80) var(--primitives-space-32);
+  }
+  .lp-section:not(:first-of-type) {
     border-top: 1px solid var(--semantics-dividers-color);
   }
   .lp-section__head {
@@ -494,8 +499,10 @@ import Layout from '../layouts/Landing.astro';
     gap: var(--primitives-space-16);
     min-height: 220px;
   }
-  .lp-cap:hover {
-    background: var(--semantics-surfaces-tinted-background-color);
+  .lp-cap__header {
+    display: flex;
+    align-items: center;
+    gap: var(--primitives-space-12);
   }
   .lp-cap__icon {
     width: 40px;
@@ -605,9 +612,6 @@ import Layout from '../layouts/Landing.astro';
     }
     .lp-arch {
       grid-template-columns: 1fr;
-    }
-    .lp-arch__op {
-      transform: rotate(90deg);
     }
     .lp-metastrip {
       grid-template-columns: repeat(2, 1fr);
