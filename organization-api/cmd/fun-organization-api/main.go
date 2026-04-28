@@ -16,6 +16,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/circuitbreaker"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/idempotency"
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -25,14 +26,16 @@ import (
 )
 
 type config struct {
-	Database           psqldb.Config
-	OpenFGA            authz.Config
-	JWTSecret          string     `env:"JWT_SECRET,required,notEmpty" `
-	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
-	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
-	PrometheusURL      string     `env:"PROMETHEUS_URL" envDefault:"mock"`
-	KubeAPIProxyURL    string     `env:"KUBE_API_PROXY_URL"`
+	Database                   psqldb.Config
+	OpenFGA                    authz.Config
+	JWTSecret                  string        `env:"JWT_SECRET,required,notEmpty" `
+	ListenAddr                 string        `env:"LISTEN_ADDR" envDefault:":8080"`
+	LogLevel                   slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins         []string      `env:"CORS_ALLOWED_ORIGINS"`
+	PrometheusURL              string        `env:"PROMETHEUS_URL" envDefault:"mock"`
+	KubeAPIProxyURL            string        `env:"KUBE_API_PROXY_URL"`
+	CircuitBreakerThreshold    time.Duration `env:"CIRCUIT_BREAKER_THRESHOLD" envDefault:"5s"`
+	CircuitBreakerPollInterval time.Duration `env:"CIRCUIT_BREAKER_POLL_INTERVAL" envDefault:"2s"`
 }
 
 func main() {
@@ -84,8 +87,9 @@ func run() error {
 
 	logger.Debug("OpenFGA client connected")
 
+	q := dbgen.New(db.Pool)
+
 	mockClient := prom.NewMockClient(func(ctx context.Context) ([]prom.ClusterInfo, error) {
-		q := dbgen.New(db.Pool)
 		rows, err := q.ClusterList(ctx)
 		if err != nil {
 			return nil, err
@@ -114,17 +118,38 @@ func run() error {
 		return clusters, nil
 	})
 
+	opts := []organization.Option{}
+
 	idempotencyStore := idempotency.NewStore(db.Pool, idempotency.Config{}, logger)
 	go idempotencyStore.StartCleanup(ctx)
 
-	server, err := organization.New(logger, &organization.Config{
+	cbcfg := circuitbreaker.Config{
+		PollInterval: cfg.CircuitBreakerPollInterval,
+	}
+
+	cbfn := func(ctx context.Context) (bool, error) {
+		lag, err := q.AuthzOutboxLagSeconds(ctx)
+		if err != nil {
+			return false, err
+		}
+		return lag > cfg.CircuitBreakerThreshold.Seconds(), nil
+	}
+
+	breaker := circuitbreaker.New(logger, cbcfg, cbfn)
+	go breaker.Start(ctx)
+
+	opts = append(opts, organization.WithCircuitBreaker(breaker))
+
+	orgcfg := &organization.Config{
 		JWTSecret:            []byte(cfg.JWTSecret),
 		CORSAllowedOrigins:   cfg.CORSAllowedOrigins,
 		Clock:                clock.New(),
 		MockPrometheusClient: mockClient,
 		PrometheusURL:        cfg.PrometheusURL,
 		KubeAPIProxyURL:      cfg.KubeAPIProxyURL,
-	}, db, authzClient, idempotencyStore)
+	}
+
+	server, err := organization.New(logger, orgcfg, db, authzClient, idempotencyStore, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to create organization server: %w", err)
 	}
@@ -146,6 +171,9 @@ func run() error {
 		}
 		if err := authzClient.Healthy(ctx); err != nil {
 			errs = append(errs, "openfga: "+err.Error())
+		}
+		if breaker.IsOpen() {
+			errs = append(errs, "authz_outbox: sync lag exceeds threshold")
 		}
 
 		if len(errs) > 0 {
