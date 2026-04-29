@@ -1,6 +1,6 @@
 <!-- Header -->
 <div class="card-header">
-  <h1 class="text-3xl font-semibold dark:text-white">Cluster summary</h1>
+  <h1 class="text-3xl font-semibold">Cluster summary</h1>
   <p class="mt-1 text-gray-600 dark:text-gray-300">
     Review your cluster configuration before creating it.
   </p>
@@ -10,19 +10,19 @@
 <div class="space-y-6 px-6 py-6">
   <!-- Basics Block -->
   <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-    <h3 class="mb-4 text-lg font-medium dark:text-white">Basics</h3>
+    <h3 class="mb-4 text-lg font-medium">Basics</h3>
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <dl>
         <dt class="font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
-        <dd class="mt-1 dark:text-white">{{ state().clusterName || 'N/A' }}</dd>
+        <dd class="mt-1">{{ state().clusterName || 'N/A' }}</dd>
       </dl>
       <dl>
         <dt class="font-medium text-gray-500 dark:text-gray-400">Region</dt>
-        <dd class="mt-1 dark:text-white">{{ state().region?.toUpperCase() || 'N/A' }}</dd>
+        <dd class="mt-1">{{ state().region?.toUpperCase() || 'N/A' }}</dd>
       </dl>
       <dl>
         <dt class="font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
-        <dd class="mt-1 dark:text-white">
+        <dd class="mt-1">
           {{ state().kubernetesVersion || 'N/A' }}
         </dd>
       </dl>
@@ -31,30 +31,30 @@
 
   <!-- Node Pools Block -->
   <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-    <h3 class="mb-4 text-lg font-medium dark:text-white">Node pools</h3>
+    <h3 class="mb-4 text-lg font-medium">Node pools</h3>
     @if (state().nodePools && state().nodePools!.length > 0) {
       <div class="space-y-4">
         @for (nodePool of state().nodePools; track nodePool.name) {
           <div
             class="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900"
           >
-            <h4 class="mb-3 font-medium dark:text-white">{{ nodePool.name }}</h4>
+            <h4 class="mb-3 font-medium">{{ nodePool.name }}</h4>
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <dl>
                 <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Machine type</dt>
-                <dd class="mt-1 dark:text-white">{{ nodePool.machineType }}</dd>
+                <dd class="mt-1">{{ nodePool.machineType }}</dd>
               </dl>
               <dl>
                 <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Min autoscaling
                 </dt>
-                <dd class="mt-1 dark:text-white">{{ nodePool.autoscaleMin }} nodes</dd>
+                <dd class="mt-1">{{ nodePool.autoscaleMin }} nodes</dd>
               </dl>
               <dl>
                 <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Max autoscaling
                 </dt>
-                <dd class="mt-1 dark:text-white">{{ nodePool.autoscaleMax }} nodes</dd>
+                <dd class="mt-1">{{ nodePool.autoscaleMax }} nodes</dd>
               </dl>
             </div>
           </div>
@@ -67,7 +67,7 @@
 
   <!-- Plugins Block -->
   <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-    <h3 class="mb-4 text-lg font-medium dark:text-white">Plugins</h3>
+    <h3 class="mb-4 text-lg font-medium">Plugins</h3>
     @if (isLoadingPlugins()) {
       <p class="text-gray-500 dark:text-gray-400">Loading plugin information...</p>
     } @else if (state().preset || (state().plugins && state().plugins!.length > 0)) {
@@ -75,7 +75,7 @@
         @if (state().preset) {
           <dl>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Preset</dt>
-            <dd class="mt-1 dark:text-white">{{ getPresetName(state().preset!) }}</dd>
+            <dd class="mt-1">{{ getPresetName(state().preset!) }}</dd>
           </dl>
         }
         @if (state().plugins && state().plugins!.length > 0) {
@@ -250,7 +250,7 @@
           }
 
           <div>
-            <p class="font-medium dark:text-white">
+            <p class="font-medium">
               @if (item.type === 'nodepool') {
                 <span class="text-gray-500 dark:text-gray-400">Node pool:</span>
               } @else if (item.type === 'plugin') {

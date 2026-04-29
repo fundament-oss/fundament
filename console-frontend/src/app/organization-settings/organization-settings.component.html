@@ -1,7 +1,7 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-3xl font-semibold dark:text-white">Organization</h1>
+    <h1 class="text-3xl font-semibold">Organization</h1>
     <p class="mt-1 text-gray-600 dark:text-gray-300">Manage your organization's information</p>
   </div>
 
@@ -79,7 +79,7 @@
             </div>
           } @else {
             <div class="flex items-center gap-3">
-              <p class="text-gray-900 dark:text-white">{{ organization()!.alias }}</p>
+              <p>{{ organization()!.alias }}</p>
               <nldd-button
                 type="button"
                 (click)="startEdit()"
@@ -96,7 +96,7 @@
         <!-- Created Date -->
         <div>
           <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">Created</div>
-          <p class="text-gray-900 dark:text-white">
+          <p>
             {{ formatDate(organization()!.created) }}
           </p>
         </div>

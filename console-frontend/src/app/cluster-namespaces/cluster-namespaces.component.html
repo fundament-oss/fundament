@@ -1,7 +1,7 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-3xl font-semibold dark:text-white">Cluster namespaces</h1>
+    <h1 class="text-3xl font-semibold">Cluster namespaces</h1>
     <p class="mt-1 text-gray-600 dark:text-gray-300">Manage namespaces for this cluster.</p>
   </div>
 
@@ -48,7 +48,7 @@
               class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
             >
               <div>
-                <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
+                <p class="font-mono text-sm">{{ namespace.name }}</p>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   Project: {{ getProjectName(namespace.projectId) }} &bull; Created
                   {{ formatDate(namespace.created) }}

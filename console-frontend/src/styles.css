@@ -69,6 +69,54 @@
   --color-danger-850: oklch(0.323 0.131 29.5);
   --color-danger-900: oklch(0.275 0.112 29.5);
   --color-danger-950: oklch(0.212 0.086 29.5);
+
+  /* Semantic colors */
+  --color-dividers: var(--semantics-dividers-color);
+  --color-surface-bg: var(--semantics-surfaces-background-color);
+  --color-surface-tinted: var(--semantics-surfaces-tinted-background-color);
+  --color-content: var(--semantics-content-color);
+  --color-content-secondary: var(--semantics-content-secondary-color);
+  --color-links: var(--semantics-links-color);
+  --color-links-hover: var(--semantics-links-is-hovered-color);
+
+  /* Spacing */
+  --spacing-primitives-space-6: 6px;
+  --spacing-primitives-space-8: 8px;
+  --spacing-primitives-space-10: 10px;
+  --spacing-primitives-space-12: 12px;
+  --spacing-primitives-space-16: 16px;
+  --spacing-primitives-space-24: 24px;
+  --spacing-primitives-space-28: 28px;
+  --spacing-primitives-space-32: 32px;
+  --spacing-primitives-space-48: 48px;
+  --spacing-primitives-space-56: 56px;
+  --spacing-primitives-space-64: 64px;
+  --spacing-primitives-space-80: 80px;
+
+  /* Text sizes with line-heights (snug = 1.5, flat = 1.125) */
+  --text-body-xs: var(--primitives-font-size-80);
+  --text-body-xs--line-height: 1.5;
+  --text-body-sm: var(--primitives-font-size-90);
+  --text-body-sm--line-height: 1.5;
+  --text-body-md: var(--primitives-font-size-100);
+  --text-body-md--line-height: 1.5;
+  --text-body-lg: var(--primitives-font-size-200);
+  --text-body-lg--line-height: 1.5;
+  --text-display-1: var(--primitives-font-size-1000);
+  --text-display-1--line-height: 1.125;
+  --text-display-2: var(--primitives-font-size-800);
+  --text-display-2--line-height: 1.125;
+  --text-display-3: var(--primitives-font-size-600);
+  --text-display-3--line-height: 1.125;
+  --text-display-4: var(--primitives-font-size-400);
+  --text-display-4--line-height: 1.125;
+  --text-display-5: var(--primitives-font-size-200);
+  --text-display-5--line-height: 1.125;
+
+  /* Font families */
+  --font-body: var(--primitives-font-family-body);
+  --font-display: var(--primitives-font-family-display);
+  --font-mono: var(--primitives-font-family-monospace);
 }
 
 :root {
@@ -137,18 +185,8 @@ html.dark {
   }
 }
 
-@font-face {
-  font-family: 'RijksSansVF';
-  src: url('/fonts/RijksSansVF-Regular.woff2') format('woff2'),
-    url('/fonts/RijksSansVF-Regular.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
 body {
-  font-family: RijksSansVF, system-ui, sans-serif;
-  @apply min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-white;
+  @apply font-body bg-neutral-25 min-h-screen text-gray-800 dark:bg-gray-900 dark:text-white;
 }
 
 /* Form validation */
@@ -162,7 +200,7 @@ input.validate-on-touch.ng-invalid.ng-touched {
 /* Card styles */
 
 .card {
-  @apply rounded-lg border border-gray-200 bg-white shadow-xs dark:border-gray-800 dark:bg-gray-950;
+  @apply rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950;
 }
 
 .card-header {
@@ -298,7 +336,7 @@ select {
 }
 
 .table thead {
-  @apply bg-gray-50 dark:bg-gray-800;
+  @apply bg-neutral-25 dark:bg-gray-800;
 }
 
 .table thead th {

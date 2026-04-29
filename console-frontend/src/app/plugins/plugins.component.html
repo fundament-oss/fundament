@@ -1,7 +1,7 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-3xl font-semibold dark:text-white">Plugins</h1>
+    <h1 class="text-3xl font-semibold">Plugins</h1>
     <p class="mt-1 text-gray-600 dark:text-gray-300">
       Discover and install plugins to expand your Kubernetes clusters
     </p>
@@ -29,7 +29,7 @@
                 />
 
                 <!-- Plugin Title -->
-                <h3 class="flex-1 text-lg font-semibold dark:text-white">
+                <h3 class="flex-1 text-lg font-semibold">
                   {{ plugin.name }}
                 </h3>
               </div>
@@ -102,7 +102,7 @@
             name="question-mark-circle"
             class="mx-auto h-8 w-8 text-gray-400! dark:text-gray-600!"
           ></nldd-icon>
-          <h3 class="mt-2 text-sm font-medium dark:text-white">No plugins found</h3>
+          <h3 class="mt-2 text-sm font-medium">No plugins found</h3>
           <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
             Please try selecting a different category.
           </p>
@@ -116,7 +116,7 @@
       <div
         class="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
       >
-        <h2 class="mb-3 font-semibold dark:text-white">Presets</h2>
+        <h2 class="mb-3 font-semibold">Presets</h2>
         <nav class="space-y-1">
           @for (preset of presets; track preset.id) {
             <button
@@ -140,7 +140,7 @@
       <div
         class="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
       >
-        <h2 class="mb-3 font-semibold dark:text-white">Categories</h2>
+        <h2 class="mb-3 font-semibold">Categories</h2>
         <nav class="space-y-1">
           @for (category of categories; track category.id) {
             <button

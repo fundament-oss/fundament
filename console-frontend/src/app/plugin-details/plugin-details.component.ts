@@ -127,11 +127,8 @@ export default class PluginDetailsComponent implements OnInit {
 
     // Simple markdown to HTML conversion
     let html = description
-      .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-semibold mb-3 dark:text-white">$1</h1>')
-      .replace(
-        /^## (.*$)/gim,
-        '<h2 class="text-xl font-semibold mb-2 mt-4 dark:text-white">$1</h2>',
-      )
+      .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-semibold mb-3">$1</h1>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mb-2 mt-4">$1</h2>')
       .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
       .replace(/\n\n/g, '</p><p class="mb-3">')

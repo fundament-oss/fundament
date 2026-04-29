@@ -3,7 +3,7 @@
   <div class="card-header">
     <div class="grid items-center gap-3 sm:grid-cols-2">
       <div>
-        <h1 class="text-3xl font-semibold dark:text-white">Organization members</h1>
+        <h1 class="text-3xl font-semibold">Organization members</h1>
         <p class="mt-1 text-gray-600 dark:text-gray-300">
           Manage who has access to your organization
         </p>
@@ -44,7 +44,7 @@
 
     <!-- Pending Invitations Section -->
     <div class="mb-8">
-      <h2 class="mb-4 text-lg font-semibold dark:text-white">Pending invitations</h2>
+      <h2 class="mb-4 text-lg font-semibold">Pending invitations</h2>
       <p class="mb-4 text-gray-500 dark:text-gray-400">
         Users who have been invited but haven't accepted yet
       </p>
@@ -74,7 +74,7 @@
                 <tr>
                   <td>
                     <div>
-                      <span class="font-medium dark:text-white">
+                      <span class="font-medium">
                         {{ invitation.email || invitation.name }}
                       </span>
                       <p class="text-gray-500 dark:text-gray-400">
@@ -118,7 +118,7 @@
 
     <!-- Active Members Section -->
     <div>
-      <h2 class="mb-4 text-lg font-semibold dark:text-white">Active members</h2>
+      <h2 class="mb-4 text-lg font-semibold">Active members</h2>
       <p class="mb-4 text-gray-500 dark:text-gray-400">
         Users who have signed in to the organization
       </p>
@@ -182,7 +182,7 @@
                       </div>
                       <div>
                         <div class="flex items-center gap-2">
-                          <span class="font-medium dark:text-white">{{ member.name }}</span>
+                          <span class="font-medium">{{ member.name }}</span>
                           @if (member.isCurrentUser) {
                             <span class="badge badge-gray text-gray-600! dark:text-gray-400!"
                               >You</span
@@ -285,8 +285,8 @@
   <nldd-spacer size="24"></nldd-spacer>
 
   <div class="mb-4">
-    <span class="mb-2 block font-medium text-gray-700 dark:text-white">Member</span>
-    <p class="dark:text-white">{{ editingMember()?.name }}</p>
+    <span class="mb-2 block text-neutral-800 dark:text-neutral-200">Member</span>
+    <p>{{ editingMember()?.name }}</p>
     <p class="text-sm text-gray-500 dark:text-gray-400">
       {{ editingMember()?.email || editingMember()?.externalRef }}
     </p>

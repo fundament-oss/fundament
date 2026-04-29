@@ -1,7 +1,7 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-3xl font-semibold dark:text-white">Project roles</h1>
+    <h1 class="text-3xl font-semibold">Project roles</h1>
     <p class="mt-1 text-gray-600 dark:text-gray-300">Manage roles for members of this project</p>
   </div>
 
@@ -58,7 +58,7 @@
           <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
             @for (binding of filteredBindings(); track binding.id) {
               <tr>
-                <td class="font-medium dark:text-white">
+                <td class="font-medium">
                   {{ binding.memberName }}
                 </td>
                 <td>
@@ -113,7 +113,7 @@
   <form (ngSubmit)="saveBinding()" (keydown.enter)="saveBinding()" novalidate>
     <nldd-form-field label="Member" class="mb-4">
       @if (editingBinding()) {
-        <p class="dark:text-white">{{ editingBinding()?.memberName }}</p>
+        <p>{{ editingBinding()?.memberName }}</p>
       } @else {
         <select
           id="rb-member"
@@ -136,7 +136,7 @@
 
     <div class="mb-4">
       @if (editingBinding()) {
-        <p class="dark:text-white">{{ editingBinding()?.namespace }}</p>
+        <p>{{ editingBinding()?.namespace }}</p>
       } @else {
         <nldd-form-field label="Namespace">
           <nldd-radio-button-group

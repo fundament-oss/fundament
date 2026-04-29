@@ -1,7 +1,7 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-3xl font-semibold dark:text-white">Project members</h1>
+    <h1 class="text-3xl font-semibold">Project members</h1>
     <p class="mt-1 text-gray-600 dark:text-gray-300">
       Manage members and their permissions for this project
     </p>
@@ -98,7 +98,7 @@
             @for (view of memberViews(); track view.member.id) {
               <tr>
                 <td>
-                  <div class="font-medium dark:text-white">{{ view.member.userName }}</div>
+                  <div class="font-medium">{{ view.member.userName }}</div>
                   <div class="text-sm text-gray-500 dark:text-gray-400">
                     Added to project {{ formatMemberDate(view.member) }}
                   </div>
@@ -203,8 +203,8 @@
 
     @if (editingMemberView()) {
       <div class="mb-4">
-        <span class="mb-2 block font-medium text-gray-700 dark:text-white">Member</span>
-        <p class="dark:text-white">{{ editingMemberView()?.member?.userName }}</p>
+        <span class="mb-2 block text-neutral-800 dark:text-neutral-200">Member</span>
+        <p>{{ editingMemberView()?.member?.userName }}</p>
       </div>
     }
 

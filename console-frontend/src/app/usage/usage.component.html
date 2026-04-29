@@ -3,7 +3,7 @@
   <div class="card-header">
     <div class="grid items-center gap-3 sm:grid-cols-2">
       <div>
-        <h1 class="text-3xl font-semibold dark:text-white">Usage</h1>
+        <h1 class="text-3xl font-semibold">Usage</h1>
         <p class="mt-1 text-gray-600 dark:text-gray-300">
           @if (viewMode() === 'project') {
             Monitor resource usage for this project
@@ -103,7 +103,7 @@
       <!-- Totals summary cards (all views)                        -->
       @if (currentTotals(); as totals) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">
+          <h3 class="mb-4 text-lg font-medium">
             @if (selectedClusterId()) {
               Cluster usage
             } @else if (viewMode() === 'project') {
@@ -186,7 +186,7 @@
       <!-- Time-series charts (all views)                          -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">CPU usage over time</h3>
+          <h3 class="mb-4 text-lg font-medium">CPU usage over time</h3>
           <div class="relative h-64">
             @if (hasCpuData) {
               <canvas #cpuChart></canvas>
@@ -198,7 +198,7 @@
           </div>
         </div>
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Memory usage over time</h3>
+          <h3 class="mb-4 text-lg font-medium">Memory usage over time</h3>
           <div class="relative h-64">
             @if (hasMemoryData) {
               <canvas #memoryChart></canvas>
@@ -210,7 +210,7 @@
           </div>
         </div>
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Pod count over time</h3>
+          <h3 class="mb-4 text-lg font-medium">Pod count over time</h3>
           <div class="relative h-64">
             @if (hasPodData) {
               <canvas #podChart></canvas>
@@ -222,7 +222,7 @@
           </div>
         </div>
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Network I/O over time</h3>
+          <h3 class="mb-4 text-lg font-medium">Network I/O over time</h3>
           <div class="relative h-64">
             @if (hasNetworkData) {
               <canvas #networkChart></canvas>
@@ -238,7 +238,7 @@
       <!-- Per-cluster breakdown — org-level, no cluster selected  -->
       @if (viewMode() === 'org' && !selectedClusterId() && clusterSummaries().length > 0) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Per cluster</h3>
+          <h3 class="mb-4 text-lg font-medium">Per cluster</h3>
           <div class="overflow-x-auto">
             <table class="table">
               <thead>
@@ -252,7 +252,7 @@
               <tbody>
                 @for (c of clusterSummaries(); track c.id) {
                   <tr>
-                    <td class="font-mono text-sm font-medium dark:text-white">{{ c.name }}</td>
+                    <td class="font-mono text-sm font-medium">{{ c.name }}</td>
                     <td>
                       {{ c.cpu.used | number: '1.1-1' }} / {{ c.cpu.total | number: '1.0-0' }} cores
                       <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
@@ -295,12 +295,12 @@
       <!-- Per-node breakdown — cluster-level only                 -->
       @if (selectedClusterId()) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Per node</h3>
+          <h3 class="mb-4 text-lg font-medium">Per node</h3>
           @if (nodeUsage().length > 0) {
             <div class="space-y-4">
               @for (node of nodeUsage(); track node.name) {
                 <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800">
-                  <h4 class="mb-3 font-mono text-sm font-medium dark:text-white">
+                  <h4 class="mb-3 font-mono text-sm font-medium">
                     {{ node.name }}
                   </h4>
                   <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -368,7 +368,7 @@
 
       <!-- Per-namespace breakdown (all views)                     -->
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-        <h3 class="mb-4 text-lg font-medium dark:text-white">Per namespace</h3>
+        <h3 class="mb-4 text-lg font-medium">Per namespace</h3>
         @if (namespaceUsage().length > 0) {
           <div class="overflow-x-auto">
             <table class="table">
@@ -387,7 +387,7 @@
               <tbody>
                 @for (ns of filteredNamespaceUsage(); track ns.name) {
                   <tr>
-                    <td class="font-medium dark:text-white">{{ ns.name }}</td>
+                    <td class="font-medium">{{ ns.name }}</td>
                     <td>{{ ns.cpu | number: '1.2-2' }} cores</td>
                     <td class="text-gray-500 dark:text-gray-400">
                       {{ ns.cpuRequests | number: '1.1-1' }} /

@@ -29,7 +29,7 @@
   <div class="card">
     <!-- Header -->
     <div class="card-header">
-      <h1 class="text-3xl font-semibold dark:text-white">
+      <h1 class="text-3xl font-semibold">
         {{ project()?.name || 'Unknown project' }}
       </h1>
       <p class="mt-1 text-gray-600 dark:text-gray-300">
@@ -40,31 +40,31 @@
     <div class="space-y-6 p-6">
       <!-- Basics Block -->
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-        <h3 class="mb-4 text-xl font-medium dark:text-white">Project details</h3>
+        <h3 class="mb-4 text-xl font-medium">Project details</h3>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <dl>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Project name</dt>
-            <dd class="mt-1 dark:text-white">{{ project()?.name }}</dd>
+            <dd class="mt-1">{{ project()?.name }}</dd>
           </dl>
           <dl>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Project ID</dt>
-            <dd class="mt-1 font-mono text-sm dark:text-white">{{ project()?.id }}</dd>
+            <dd class="mt-1 font-mono text-sm">{{ project()?.id }}</dd>
           </dl>
           <dl>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Created</dt>
-            <dd class="mt-1 dark:text-white">
+            <dd class="mt-1">
               {{ formatDate(project()?.created) }}
             </dd>
           </dl>
           <dl>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Cluster</dt>
-            <dd class="mt-1 dark:text-white">
+            <dd class="mt-1">
               {{ getClusterName(project()?.clusterId ?? '') }}
             </dd>
           </dl>
           <dl>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Namespaces</dt>
-            <dd class="mt-1 dark:text-white">{{ namespaces().length }}</dd>
+            <dd class="mt-1">{{ namespaces().length }}</dd>
           </dl>
         </div>
       </div>
@@ -72,7 +72,7 @@
       <!-- Namespaces Block (Read-only) -->
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
         <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-xl font-medium dark:text-white">Namespaces</h3>
+          <h3 class="text-xl font-medium">Namespaces</h3>
           <nldd-button
             [routerLink]="['/projects', project()?.id, 'namespaces']"
             text="Edit"
@@ -90,7 +90,7 @@
                 class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
               >
                 <div>
-                  <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
+                  <p class="font-mono text-sm">{{ namespace.name }}</p>
                   <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     Created {{ formatDate(namespace.created) }}
                   </p>

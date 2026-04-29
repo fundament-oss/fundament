@@ -1,7 +1,7 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-3xl font-semibold dark:text-white">API keys</h1>
+    <h1 class="text-3xl font-semibold">API keys</h1>
     <p class="mt-1 text-gray-600 dark:text-gray-300">
       Manage API keys for programmatic access to your organization
     </p>
@@ -60,7 +60,7 @@
     <!-- Create Form -->
     @if (isCreating()) {
       <div class="card card-body-lg mb-6 bg-gray-50! dark:bg-gray-900!">
-        <h3 class="-mt-2 mb-4 text-lg font-semibold dark:text-white">Create new API key</h3>
+        <h3 class="-mt-2 mb-4 text-lg font-semibold">Create new API key</h3>
         <form class="space-y-4" (ngSubmit)="createApiKey()" (keydown.enter)="createApiKey()">
           <nldd-form-field label="Name">
             <nldd-text-field
@@ -146,7 +146,7 @@
           <tbody>
             @for (apiKey of apiKeys(); track apiKey.id) {
               <tr>
-                <td class="font-medium dark:text-white">
+                <td class="font-medium">
                   {{ apiKey.name }}
                 </td>
                 <td class="font-mono text-sm text-gray-600 dark:text-gray-400">
