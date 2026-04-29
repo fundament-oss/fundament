@@ -2,10 +2,13 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -24,6 +27,11 @@ func (s *Server) DeleteProject(
 
 	rowsAffected, err := s.queries.ProjectDelete(ctx, db.ProjectDeleteParams{ID: projectID})
 	if err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			if pgErr.Code == pgerrcode.RaiseException {
+				return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("project has namespaces that must be deleted first"))
+			}
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete project: %w", err))
 	}
 
