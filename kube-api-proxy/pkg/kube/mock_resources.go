@@ -2,28 +2,6 @@ package kube
 
 // Mock resource instance lists, mirroring the former frontend mock-resources.ts
 
-const mockPluginInstallationListJSON = `{
-  "apiVersion": "plugins.fundament.io/v1",
-  "kind": "PluginInstallationList",
-  "metadata": {"resourceVersion": "1"},
-  "items": [
-    {
-      "apiVersion": "plugins.fundament.io/v1",
-      "kind": "PluginInstallation",
-      "metadata": {"name": "cert-manager", "namespace": "plugin-cert-manager"},
-      "spec": {"pluginName": "cert-manager", "image": "mock"},
-      "status": {"phase": "Running", "ready": true}
-    },
-    {
-      "apiVersion": "plugins.fundament.io/v1",
-      "kind": "PluginInstallation",
-      "metadata": {"name": "cnpg", "namespace": "plugin-cnpg"},
-      "spec": {"pluginName": "cnpg", "image": "mock"},
-      "status": {"phase": "Running", "ready": true}
-    }
-  ]
-}`
-
 const mockCertManagerDefinitionJSON = `{
   "apiVersion": "plugins.fundament.io/v1",
   "name": "cert-manager",

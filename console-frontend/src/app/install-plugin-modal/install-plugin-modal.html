@@ -19,6 +19,8 @@
             >
               <ng-icon name="tablerCheck" size="0.75rem" class="mr-1" /> Installed
             </span>
+          } @else if (!cluster.running) {
+            <span class="badge badge-sm badge-gray">Not running</span>
           } @else {
             <button
               type="button"
