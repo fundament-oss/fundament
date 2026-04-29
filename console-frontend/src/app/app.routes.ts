@@ -204,6 +204,14 @@ const routes: Routes = [
         },
       },
       {
+        path: 'organization/limits',
+        loadComponent: () =>
+          import('./organization-limits/organization-limits.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: 'Limits' }],
+        },
+      },
+      {
         path: 'api-keys',
         loadComponent: () => import('./api-keys/api-keys.component').then((m) => m.default),
         data: {

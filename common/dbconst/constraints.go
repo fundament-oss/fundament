@@ -69,6 +69,28 @@ const (
 	ConstraintNodePoolsFkCluster = "node_pools_fk_cluster"
 	// ConstraintNodePoolsUqName is defined on tenant.node_pools.
 	ConstraintNodePoolsUqName = "node_pools_uq_name"
+	// ConstraintOrganizationLimitsCkCpuLimitGteRequest is defined on tenant.organization_limits.
+	ConstraintOrganizationLimitsCkCpuLimitGteRequest = "organization_limits_ck_cpu_limit_gte_request"
+	// ConstraintOrganizationLimitsCkDefaultCpuLimitM is defined on tenant.organization_limits.
+	ConstraintOrganizationLimitsCkDefaultCpuLimitM = "organization_limits_ck_default_cpu_limit_m"
+	// ConstraintOrganizationLimitsCkDefaultCpuRequestM is defined on tenant.organization_limits.
+	ConstraintOrganizationLimitsCkDefaultCpuRequestM = "organization_limits_ck_default_cpu_request_m"
+	// ConstraintOrganizationLimitsCkDefaultMemoryLimitMi is defined on tenant.organization_limits.
+	ConstraintOrganizationLimitsCkDefaultMemoryLimitMi = "organization_limits_ck_default_memory_limit_mi"
+	// ConstraintOrganizationLimitsCkDefaultMemoryRequestMi is defined on tenant.organization_limits.
+	ConstraintOrganizationLimitsCkDefaultMemoryRequestMi = "organization_limits_ck_default_memory_request_mi"
+	// ConstraintOrganizationLimitsCkMaxNodePoolsPerCluster is defined on tenant.organization_limits.
+	ConstraintOrganizationLimitsCkMaxNodePoolsPerCluster = "organization_limits_ck_max_node_pools_per_cluster"
+	// ConstraintOrganizationLimitsCkMaxNodesPerCluster is defined on tenant.organization_limits.
+	ConstraintOrganizationLimitsCkMaxNodesPerCluster = "organization_limits_ck_max_nodes_per_cluster"
+	// ConstraintOrganizationLimitsCkMaxNodesPerNodePool is defined on tenant.organization_limits.
+	ConstraintOrganizationLimitsCkMaxNodesPerNodePool = "organization_limits_ck_max_nodes_per_node_pool"
+	// ConstraintOrganizationLimitsCkMemoryLimitGteRequest is defined on tenant.organization_limits.
+	ConstraintOrganizationLimitsCkMemoryLimitGteRequest = "organization_limits_ck_memory_limit_gte_request"
+	// ConstraintOrganizationLimitsFkOrganization is defined on tenant.organization_limits.
+	ConstraintOrganizationLimitsFkOrganization = "organization_limits_fk_organization"
+	// ConstraintOrganizationLimitsUqOrg is defined on tenant.organization_limits.
+	ConstraintOrganizationLimitsUqOrg = "organization_limits_uq_org"
 	// ConstraintOrganizationsCkAlias is defined on tenant.organizations.
 	ConstraintOrganizationsCkAlias = "organizations_ck_alias"
 	// ConstraintOrganizationsCkName is defined on tenant.organizations.
