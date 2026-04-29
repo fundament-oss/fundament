@@ -1,9 +1,26 @@
+@import '@minbzk/storybook/styles';
 @reference "tailwindcss/theme";
 
+/* Use NLDD design system fonts */
+:root {
+  --sl-font: var(--primitives-font-family-body);
+  --sl-font-mono: var(--primitives-font-family-monospace);
+}
+
+/* Site title — match landing page wordmark */
 .site-title {
-  @apply gap-1.5;
+  @apply gap-2.5 text-xl font-semibold tracking-tight text-gray-800 no-underline;
+}
+
+[data-theme='dark'] .site-title {
+  @apply text-white; /* Since dark:text-white does not work with Starlight's dark mode, we use a custom selector */
 }
 
 .site-title img {
-  @apply h-8;
+  @apply h-5.5;
+}
+
+/* Content headings — match landing page heading tracking */
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6) {
+  @apply tracking-[-0.02em];
 }
