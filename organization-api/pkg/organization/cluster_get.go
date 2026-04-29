@@ -75,6 +75,10 @@ func (s *Server) GetCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
+	if cluster.Deleted.Valid {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+	}
+
 	return connect.NewResponse(organizationv1.GetClusterResponse_builder{
 		Cluster: clusterDetailsFromRow(&cluster),
 	}.Build()), nil
