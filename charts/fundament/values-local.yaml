@@ -3,13 +3,13 @@
 jwtSecret: "local-dev-jwt-secret"
 
 externalUrls:
-  authn: https://authn.fundament.localhost:8443
-  organization: https://organization.fundament.localhost:8443
-  kubeApiProxy: https://k8s-api.fundament.localhost:8443
-  console: https://console.fundament.localhost:8443
-  docs: https://docs.fundament.localhost:8443
+  authn: https://authn.fundament.localhost:10443
+  organization: https://organization.fundament.localhost:10443
+  kubeApiProxy: https://k8s-api.fundament.localhost:10443
+  console: https://console.fundament.localhost:10443
+  docs: https://docs.fundament.localhost:10443
   cookieDomain: fundament.localhost
-  corsAllowedOrigins: "https://console.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
+  corsAllowedOrigins: "https://console.fundament.localhost:10443,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true
@@ -69,13 +69,13 @@ docsFrontend:
 
 dex:
   enabled: true
-  issuer: https://dex.fundament.localhost:8443
+  issuer: https://dex.fundament.localhost:10443
   discoveryUrl: http://dex:5556
   staticClients:
     - id: fundament
       name: "Fundament Auth API"
       redirectURIs:
-        - https://authn.fundament.localhost:8443/callback
+        - https://authn.fundament.localhost:10443/callback
       public: true
   staticPasswords:
     # All passwords are 'password' (echo 'password' | htpasswd -BinC 10 user)
@@ -128,7 +128,7 @@ authzWorker:
 
 openfga:
   enabled: true
-  # Use a non-standard API port since 8080 is used by ingress.
+  # Use a non-standard API port since 10080 is used by ingress.
   # The playground auto-detects the API port from the URL it's served from.
   apiPort: 18080
   playground:

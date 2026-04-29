@@ -39,6 +39,13 @@ type ProviderConfig struct {
 	MachineImageName    string // e.g., "local", "gardenlinux"
 	MachineImageVersion string // e.g., "1.0.0", "1592.2.0"
 	DefaultMachineType  string // e.g., "local", "n1-standard-4" (fallback when no node pools configured)
+
+	InfrastructureConfigRaw []byte // Raw JSON for Provider.InfrastructureConfig
+	ControlPlaneConfigRaw   []byte // Raw JSON for Provider.ControlPlaneConfig
+	NetworkingType          string // Override default CNI type ("calico")
+	NetworkingNodes         string // Override default nodes CIDR ("10.0.0.0/16")
+
+	ShootAnnotations map[string]string // Extra annotations to add to all Shoots (e.g., "cluster.metal-stack.io/tenant")
 }
 
 // NewProviderConfig creates a ProviderConfig with defaults for the local provider.
@@ -571,7 +578,7 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 			},
 			Networking: &gardencorev1beta1.Networking{
 				Type:  new("calico"), // Default CNI
-				Nodes: new("10.0.0.0/16"),
+				Nodes: r.networkingNodes(),
 			},
 		},
 	}
@@ -581,7 +588,42 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 		shoot.Spec.CredentialsBindingName = new(r.provider.CredentialsBindingName)
 	}
 
+	if r.provider.InfrastructureConfigRaw != nil {
+		shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{Raw: r.provider.InfrastructureConfigRaw}
+	}
+	if r.provider.ControlPlaneConfigRaw != nil {
+		shoot.Spec.Provider.ControlPlaneConfig = &runtime.RawExtension{Raw: r.provider.ControlPlaneConfigRaw}
+	}
+	if r.provider.NetworkingType != "" {
+		shoot.Spec.Networking.Type = &r.provider.NetworkingType
+	}
+
 	return shoot
+}
+
+// networkingNodes returns the nodes CIDR, using the provider override if set.
+// Returns nil when NetworkingNodes is "auto", which lets the cloud provider
+// extension allocate a network and determine the CIDR (required for metal-stack).
+func (r *RealClient) networkingNodes() *string {
+	if r.provider.NetworkingNodes == "auto" {
+		return nil
+	}
+	if r.provider.NetworkingNodes != "" {
+		return &r.provider.NetworkingNodes
+	}
+	nodes := "10.0.0.0/16"
+	return &nodes
+}
+
+// buildShootAnnotations creates the annotations map for a Shoot,
+// merging provider-specific extra annotations with standard ones.
+func (r *RealClient) buildShootAnnotations(cluster *ClusterToSync) map[string]string {
+	annotations := make(map[string]string, len(r.provider.ShootAnnotations)+1)
+	for k, v := range r.provider.ShootAnnotations {
+		annotations[k] = v
+	}
+	annotations[AnnotationClusterName] = cluster.Name
+	return annotations
 }
 
 // buildWorkers converts node pools to Gardener worker groups.
@@ -664,9 +706,19 @@ func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *Cl
 	if shoot.Annotations == nil {
 		shoot.Annotations = make(map[string]string)
 	}
+	for k, v := range r.provider.ShootAnnotations {
+		shoot.Annotations[k] = v
+	}
 	shoot.Annotations[AnnotationClusterName] = cluster.Name
 
 	shoot.Spec.Region = cluster.Region
 	shoot.Spec.Kubernetes.Version = cluster.KubernetesVersion
 	shoot.Spec.Provider.Workers = r.buildWorkers(cluster)
+
+	if r.provider.InfrastructureConfigRaw != nil {
+		shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{Raw: r.provider.InfrastructureConfigRaw}
+	}
+	if r.provider.ControlPlaneConfigRaw != nil {
+		shoot.Spec.Provider.ControlPlaneConfig = &runtime.RawExtension{Raw: r.provider.ControlPlaneConfigRaw}
+	}
 }
