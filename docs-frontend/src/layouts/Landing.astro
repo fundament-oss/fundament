@@ -30,9 +30,9 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   </head>
   <body>
     <header class="topbar">
-      <div class="topbar__inner">
+      <div class="topbar-inner">
         <a href="/" class="wordmark">
-          <span class="wordmark__logo text-indigo-600 dark:text-indigo-400" aria-hidden="true">
+          <span class="wordmark-logo text-indigo-600 dark:text-indigo-400" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <path
                 fill="currentColor"
@@ -47,7 +47,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
           <a href="/about" aria-current={isActive('/about') ? 'page' : undefined}>About</a>
           <a href="/docs" aria-current={isActive('/docs') ? 'page' : undefined}>Docs</a>
         </nav>
-        <div class="topbar__spacer"></div>
+        <div class="topbar-spacer"></div>
         <nldd-icon-button id="theme-toggle" icon="moon" aria-label="Toggle theme" type="button"
         ></nldd-icon-button>
         <nldd-icon-button
@@ -76,9 +76,9 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
     <slot />
 
     <footer class="foot">
-      <div class="foot__inner">
+      <div class="foot-inner">
         <span class="wordmark cursor-default">
-          <span class="wordmark__logo" aria-hidden="true">
+          <span class="wordmark-logo" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <path
                 fill="currentColor"
@@ -88,7 +88,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
           </span>
           Fundament
         </span>
-        <div class="foot__links">
+        <div class="foot-links">
           <a href="https://digilab.overheid.nl/" target="_blank">Digilab</a>
           <a
             href="https://github.com/fundament-oss/fundament"
@@ -96,7 +96,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
             rel="nofollow noopener noreferrer">GitHub</a
           >
         </div>
-        <div class="foot__meta">Open source · AGPL</div>
+        <div class="foot-meta">Open source · AGPL</div>
       </div>
     </footer>
   </body>
@@ -167,19 +167,19 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   .topbar {
     @apply border-dividers bg-surface-bg sticky top-0 z-100 border-b;
   }
-  .topbar__inner {
+  .topbar-inner {
     @apply gap-primitives-space-32 px-primitives-space-32 mx-auto flex h-16 max-w-7xl items-center py-0;
   }
   .wordmark {
-    @apply text-content text-body-lg font-body inline-flex items-center gap-2.5 leading-tight font-medium tracking-[-0.01em] no-underline;
+    @apply text-content text-body-lg font-body inline-flex items-center gap-2.5 leading-tight font-semibold tracking-tight no-underline;
   }
   .wordmark:hover {
     @apply text-content;
   }
-  .wordmark__logo {
+  .wordmark-logo {
     @apply inline-flex h-5.5 w-5.5 items-center justify-center;
   }
-  .wordmark__logo svg {
+  .wordmark-logo svg {
     @apply h-full w-full;
   }
 
@@ -195,23 +195,23 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   .topnav a:hover {
     @apply text-links-hover;
   }
-  .topbar__spacer {
+  .topbar-spacer {
     @apply flex-1;
   }
   /* Footer */
   .foot {
     @apply border-dividers border-t;
   }
-  .foot__inner {
+  .foot-inner {
     @apply gap-primitives-space-24 p-primitives-space-32 mx-auto flex max-w-7xl items-center justify-between;
   }
-  .foot__links {
+  .foot-links {
     @apply text-body-sm font-body gap-primitives-space-24 flex font-normal;
   }
-  .foot__links a:hover {
+  .foot-links a:hover {
     @apply no-underline;
   }
-  .foot__meta {
+  .foot-meta {
     @apply text-body-sm font-body text-content-secondary font-normal;
   }
 </style>
