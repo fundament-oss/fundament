@@ -45,6 +45,9 @@
       },
     },
   },
+  "overrides": {
+    "@bufbuild/protobuf": "2.11.0",
+  },
   "packages": {
     "@algolia/abtesting": ["@algolia/abtesting@1.14.1", "", { "dependencies": { "@algolia/client-common": "5.48.1", "@algolia/requester-browser-xhr": "5.48.1", "@algolia/requester-fetch": "5.48.1", "@algolia/requester-node-http": "5.48.1" } }, "sha512-Dkj0BgPiLAaim9sbQ97UKDFHJE/880wgStAM18U++NaJ/2Cws34J5731ovJifr6E3Pv4T2CqvMXf8qLCC417Ew=="],
 
@@ -1861,8 +1864,6 @@
     "@babel/template/@babel/types": ["@babel/types@7.28.6", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-0ZrskXVEHSWIqZM/sQZ4EV3jZJXRkio/WCxaqKZP1g//CEWEPSfeZFcms4XeKBCHU0ZKnIkdJeU/kF+eRp5lBg=="],
 
     "@bufbuild/protoplugin/typescript": ["typescript@5.4.5", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-vcI4UpRgg81oIRUFwR0WSIHKt11nJ7SAVlYNIu+QpqeyXP+gpQJy/Z4+F0aGxSE4MqwjyXvW/TzgkLAx2AGHwQ=="],
-
-    "@connectrpc/protoc-gen-connect-es/@bufbuild/protobuf": ["@bufbuild/protobuf@1.10.1", "", {}, "sha512-wJ8ReQbHxsAfXhrf9ixl0aYbZorRuOWpBNzm8pL8ftmSxQx/wnJD5Eg861NwJU/czy2VXFIebCeZnZrI9rktIQ=="],
 
     "@connectrpc/protoc-gen-connect-es/@bufbuild/protoplugin": ["@bufbuild/protoplugin@1.10.1", "", { "dependencies": { "@bufbuild/protobuf": "1.10.1", "@typescript/vfs": "^1.4.0", "typescript": "4.5.2" } }, "sha512-LaSbfwabAFIvbVnbn8jWwElRoffCIxhVraO8arliVwWupWezHLXgqPHEYLXZY/SsAR+/YsFBQJa8tAGtNPJyaQ=="],
 

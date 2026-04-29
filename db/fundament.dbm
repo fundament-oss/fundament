@@ -888,6 +888,9 @@ END;]]> </definition>
 	<column name="repository_url">
 		<type name="text" length="0"/>
 	</column>
+	<column name="image" not-null="true" default-value="''">
+		<type name="text" length="0"/>
+	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
@@ -1708,6 +1711,10 @@ END;]]> </definition>
 </policy>
 
 <policy name="organizations_users_authn_api_policy" table="tenant.organizations_users" command="ALL" permissive="true">	<roles names="fun_authn_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="organizations_users_authz_worker_policy" table="tenant.organizations_users" command="SELECT" permissive="true">	<roles names="fun_authz_worker"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 

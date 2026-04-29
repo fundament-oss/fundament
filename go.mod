@@ -22,7 +22,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
-	github.com/jackc/pgx/v5 v5.9.0
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/oapi-codegen/runtime v1.2.0
 	github.com/openfga/go-sdk v0.7.5

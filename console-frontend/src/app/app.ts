@@ -159,6 +159,7 @@ export default class App implements OnInit {
   }
 
   private async loadPluginsForProject(projectId: string): Promise<void> {
+    this.pluginRegistry.reset();
     await this.organizationDataService.loadProjectsAndNamespaces().catch((err) => {
       // eslint-disable-next-line no-console
       console.error('Unexpected error while loading projects and namespaces: ', err);

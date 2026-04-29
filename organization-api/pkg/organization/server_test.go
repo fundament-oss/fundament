@@ -39,13 +39,12 @@ type testUser struct {
 }
 
 type apiOptions struct {
-	t                    testing.TB
-	organizations        map[uuid.UUID]string
-	users                map[uuid.UUID]testUser
-	clock                clock.Clock
-	idempotency          bool
-	kubeAPIProxyURL      string
-	kubeAPIProxyInsecure bool
+	t               testing.TB
+	organizations   map[uuid.UUID]string
+	users           map[uuid.UUID]testUser
+	clock           clock.Clock
+	idempotency     bool
+	kubeAPIProxyURL string
 }
 
 type APIOption func(*apiOptions)
@@ -110,10 +109,9 @@ func WithIdempotency() APIOption {
 	}
 }
 
-func WithKubeAPIProxy(url string, insecure bool) APIOption {
+func WithKubeAPIProxy(url string) APIOption {
 	return func(o *apiOptions) {
 		o.kubeAPIProxyURL = url
-		o.kubeAPIProxyInsecure = insecure
 	}
 }
 
@@ -136,11 +134,10 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	jwtSecret := []byte(uuid.New().String())
 
 	organizationCfg := &organization.Config{
-		JWTSecret:            jwtSecret,
-		CORSAllowedOrigins:   []string{"*"},
-		Clock:                opts.clock,
-		KubeAPIProxyURL:      opts.kubeAPIProxyURL,
-		KubeAPIProxyInsecure: opts.kubeAPIProxyInsecure,
+		JWTSecret:          jwtSecret,
+		CORSAllowedOrigins: []string{"*"},
+		Clock:              opts.clock,
+		KubeAPIProxyURL:    opts.kubeAPIProxyURL,
 	}
 
 	var idempotencyStore *idempotency.Store
