@@ -14,10 +14,6 @@ export interface ClusterWizardState {
     autoscaleMax: number;
   }[];
 
-  // Plugins (step 3)
-  preset?: string;
-  plugins?: string[];
-
   // Track which steps are completed
   completedSteps: Set<number>;
 }
@@ -45,14 +41,6 @@ export class ClusterWizardStateService {
     this.state.update((current) => ({
       ...current,
       nodePools,
-    }));
-  }
-
-  updatePlugins(data: { preset?: string; plugins?: string[] }) {
-    this.state.update((current) => ({
-      ...current,
-      preset: data.preset,
-      plugins: data.plugins,
     }));
   }
 
