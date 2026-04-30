@@ -65,39 +65,6 @@
     }
   </div>
 
-  <!-- Plugins Block -->
-  <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-    <h3 class="mb-4 text-lg font-medium">Plugins</h3>
-    @if (isLoadingPlugins()) {
-      <p class="text-gray-500 dark:text-gray-400">Loading plugin information...</p>
-    } @else if (state().preset || (state().plugins && state().plugins!.length > 0)) {
-      <div class="space-y-2">
-        @if (state().preset) {
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Preset</dt>
-            <dd class="mt-1">{{ getPresetName(state().preset!) }}</dd>
-          </dl>
-        }
-        @if (state().plugins && state().plugins!.length > 0) {
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Selected plugins</dt>
-            <dd class="mt-2 flex flex-wrap gap-1">
-              @for (pluginName of getPluginNames(state().plugins!); track pluginName) {
-                <span
-                  class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                >
-                  {{ pluginName }}
-                </span>
-              }
-            </dd>
-          </dl>
-        }
-      </div>
-    } @else {
-      <p class="text-gray-500 dark:text-gray-400">No plugins configured</p>
-    }
-  </div>
-
   <!-- Error Message -->
   @if (errorMessage()) {
     <div
@@ -197,7 +164,7 @@
   @if (!hasCreationStarted()) {
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
       <nldd-button
-        routerLink="/clusters/add/plugins"
+        routerLink="/clusters/add/nodes"
         text="Previous step"
         [class.pointer-events-none]="isCreating() || showModal()"
         [class.opacity-50]="isCreating() || showModal()"
@@ -253,17 +220,13 @@
             <p class="font-medium">
               @if (item.type === 'nodepool') {
                 <span class="text-gray-500 dark:text-gray-400">Node pool:</span>
-              } @else if (item.type === 'plugin') {
-                <span class="text-gray-500 dark:text-gray-400">Plugin:</span>
               }
               {{ item.name }}
             </p>
             @if (item.requestStatus === 'pending') {
               <p class="text-sm text-gray-500 dark:text-gray-400">Waiting...</p>
             } @else if (item.requestStatus === 'in_progress') {
-              <p class="text-accent-600 dark:text-accent-400 text-sm">
-                {{ item.type === 'plugin' ? 'Installing...' : 'Creating...' }}
-              </p>
+              <p class="text-sm text-accent-600 dark:text-accent-400">Creating...</p>
             } @else if (item.requestStatus === 'failed') {
               <p class="text-danger-600 dark:text-danger-400 text-sm">{{ item.error }}</p>
             } @else if (item.syncStatus === 'syncing') {
@@ -275,9 +238,7 @@
             } @else if (item.syncStatus === 'synced') {
               <p class="text-sm text-green-600 dark:text-green-400">Ready</p>
             } @else {
-              <p class="text-sm text-green-600 dark:text-green-400">
-                {{ item.type === 'plugin' ? 'Installed' : 'Done' }}
-              </p>
+              <p class="text-sm text-green-600 dark:text-green-400">Done</p>
             }
           </div>
         </div>

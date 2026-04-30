@@ -28,6 +28,8 @@
             >
               <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon> Installed
             </span>
+          } @else if (!cluster.running) {
+            <span class="badge badge-sm badge-gray">Not running</span>
           } @else {
             <nldd-button
               type="button"

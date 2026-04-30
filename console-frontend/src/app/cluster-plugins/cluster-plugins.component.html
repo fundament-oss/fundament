@@ -7,6 +7,16 @@
 
   <!-- Form -->
   <div class="px-6 py-6">
+    @if (!isClusterRunning()) {
+      <div
+        class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/30"
+      >
+        <p class="text-sm text-amber-800 dark:text-amber-200">
+          Plugin management is only available when the cluster is running. Current status:
+          <span class="font-medium">{{ getStatusLabel(clusterStatus()) }}</span>.
+        </p>
+      </div>
+    }
     @if (errorMessage()) {
       <div
         class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
@@ -34,7 +44,7 @@
           type="button"
           (click)="pluginsForm.submit()"
           [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
-          [disabled]="isSubmitting()"
+          [disabled]="isSubmitting() || !isClusterRunning()"
           variant="primary"
         ></nldd-button>
       </div>

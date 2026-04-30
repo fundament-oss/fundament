@@ -428,7 +428,7 @@ CREATE OR REPLACE FUNCTION tenant.projects_tr_verify_deleted ()
 	AS 
 $function$
 BEGIN
-	IF EXISTS (
+	IF NEW.deleted IS NOT NULL AND EXISTS (
 		SELECT 1
 		FROM tenant.namespaces
 		WHERE

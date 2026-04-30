@@ -45,10 +45,16 @@ setup-certs:
         sleep 5
     done
     kubectl wait --for=condition=Available deployment/cert-manager deployment/cert-manager-webhook -n cert-manager --timeout=300s
-    helm upgrade --install mkcert-setup charts/mkcert-setup \
-        --namespace cert-manager \
-        --set-file ca.cert="$(mkcert -CAROOT)/rootCA.pem" \
-        --set-file ca.key="$(mkcert -CAROOT)/rootCA-key.pem"
+    echo "Waiting for cert-manager webhook to be ready..."
+    for i in $(seq 1 12); do
+        helm upgrade --install mkcert-setup charts/mkcert-setup \
+            --namespace cert-manager \
+            --set-file ca.cert="$(mkcert -CAROOT)/rootCA.pem" \
+            --set-file ca.key="$(mkcert -CAROOT)/rootCA-key.pem" && break
+        [ "$i" -eq 12 ] && { echo "cert-manager webhook did not become ready in time"; exit 1; }
+        echo "Webhook not ready yet, retrying in 5s... ($i/12)"
+        sleep 5
+    done
 
 # --- Deployment commands ---
 

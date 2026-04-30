@@ -21,7 +21,10 @@ import {
   type Preset,
   type PluginSummary,
 } from '../../generated/v1/plugin_pb';
-import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
+import {
+  type ListClustersResponse_ClusterSummary as ClusterSummary,
+} from '../../generated/v1/cluster_pb';
+import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ToastService } from '../toast.service';
 import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
 
@@ -39,6 +42,7 @@ interface PluginWithPresets extends Pick<
 // Extended cluster type for UI state
 interface ClusterWithState extends ClusterSummary {
   installed: boolean;
+  running: boolean;
 }
 
 // Extended install type with cluster ID
@@ -281,6 +285,7 @@ export default class PluginsComponent implements OnInit {
         (install) =>
           install.clusterId === cluster.id && install.pluginName === this.selectedPlugin!.name,
       ),
+      running: cluster.status === ClusterStatus.RUNNING,
     }));
   }
 

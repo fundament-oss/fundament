@@ -43,15 +43,6 @@ const routes: Routes = [
             },
           },
           {
-            path: 'plugins',
-            loadComponent: () =>
-              import('./add-cluster-plugins/add-cluster-plugins.component').then((m) => m.default),
-            canActivate: [clusterWizardGuard],
-            data: {
-              breadcrumbs: [{ label: 'Plugins' }],
-            },
-          },
-          {
             path: 'summary',
             loadComponent: () =>
               import('./add-cluster-summary/add-cluster-summary.component').then((m) => m.default),
@@ -60,6 +51,7 @@ const routes: Routes = [
               breadcrumbs: [{ label: 'Summary' }],
             },
           },
+          { path: '**', redirectTo: '' },
         ],
       },
       {
