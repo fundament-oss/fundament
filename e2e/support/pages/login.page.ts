@@ -15,7 +15,7 @@ export class LoginPage {
     this.passwordInput = page.locator('nldd-password-field#password').locator('input');
     this.submitButton = page.locator('nldd-button[type="submit"]');
     this.errorMessage = page.locator('.text-danger-800, .text-danger-200');
-    this.validationError = page.locator('nldd-form-field-error-text').filter({ hasText: /.+/ });
+    this.validationError = page.locator('nldd-form-field-error-text').filter({ hasText: /\S/ });
     this.heading = page.getByRole('heading', { name: 'Log in' });
   }
 

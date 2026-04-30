@@ -8,8 +8,11 @@ import * as dotenv from 'dotenv';
 // Load environment variables
 dotenv.config({ path: '.env.local' });
 
-// Allow self-signed TLS certs used by the local cluster for Node.js fetch calls
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+ // Allow self-signed TLS certs used by the local cluster for Node.js fetch calls
+ // only when explicitly opted in for local/dev runs
+ if (process.env.ALLOW_INSECURE_TLS === 'true') {
+   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+ }
 
 // Increase default step timeout for browser-based tests (default is 5000ms)
 setDefaultTimeout(30000);
