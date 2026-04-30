@@ -1,0 +1,238 @@
+<div class="space-y-6">
+  @if (initialLoading()) {
+    <div class="py-8 text-center">
+      <p class="text-gray-600 dark:text-gray-300">Loading limits…</p>
+    </div>
+  }
+
+  @if (!initialLoading()) {
+  <!-- Cluster Limits (Gardener) -->
+  <form class="card" (ngSubmit)="saveClusterLimits()" ngNativeValidate>
+    <div class="card-header">
+      <h2 class="text-xl font-semibold dark:text-white">Cluster Limits</h2>
+      <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        Maximum resource quotas enforced by Gardener for shoot clusters in this organization.
+      </p>
+    </div>
+
+    <div class="card-body-lg">
+      <div class="space-y-5">
+        <!-- Max nodes per cluster -->
+        <div>
+          <label
+            for="maxNodesPerCluster"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Max nodes per cluster
+          </label>
+          <input
+            id="maxNodesPerCluster"
+            name="maxNodesPerCluster"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="50"
+            [ngModel]="maxNodesPerCluster()"
+            (ngModelChange)="maxNodesPerCluster.set(toInt($event))"
+            [disabled]="clusterSaving()"
+            class="w-48"
+          />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Maximum total number of nodes across all node pools in a shoot cluster.
+          </p>
+        </div>
+
+        <!-- Max node pools -->
+        <div>
+          <label
+            for="maxNodePools"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Max node pools per cluster
+          </label>
+          <input
+            id="maxNodePools"
+            name="maxNodePools"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="10"
+            [ngModel]="maxNodePools()"
+            (ngModelChange)="maxNodePools.set(toInt($event))"
+            [disabled]="clusterSaving()"
+            class="w-48"
+          />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Maximum number of node pools that can be configured per shoot cluster.
+          </p>
+        </div>
+
+        <!-- Max nodes per node pool -->
+        <div>
+          <label
+            for="maxNodesPerNodePool"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Max nodes per node pool
+          </label>
+          <input
+            id="maxNodesPerNodePool"
+            name="maxNodesPerNodePool"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="20"
+            [ngModel]="maxNodesPerNodePool()"
+            (ngModelChange)="maxNodesPerNodePool.set(toInt($event))"
+            [disabled]="clusterSaving()"
+            class="w-48"
+          />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Maximum number of nodes allowed in a single node pool (applies to autoscaler max).
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6">
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="clusterSaving()"
+        >
+          {{ clusterSaving() ? 'Saving…' : 'Save cluster limits' }}
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Namespace Resource Defaults (Kubernetes) -->
+  <form class="card" (ngSubmit)="saveNamespaceLimits()" ngNativeValidate>
+    <div class="card-header">
+      <h2 class="text-xl font-semibold dark:text-white">Namespace resource defaults</h2>
+      <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        Default resource requests and limits applied to containers in namespaces via a
+        <span class="font-mono text-xs">LimitRange</span>. These values are used when a workload
+        does not specify its own resource constraints.
+      </p>
+    </div>
+
+    <div class="card-body-lg">
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <!-- Default memory request -->
+        <div>
+          <label
+            for="defaultMemoryRequest"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Default memory request
+          </label>
+          <div class="flex items-center gap-2">
+            <input
+              id="defaultMemoryRequest"
+              name="defaultMemoryRequest"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="128"
+              [ngModel]="defaultMemoryRequestMi()"
+              (ngModelChange)="defaultMemoryRequestMi.set(toInt($event))"
+              [disabled]="namespaceSaving()"
+              class="w-32"
+            />
+            <span class="text-sm text-gray-500 dark:text-gray-400">Mi</span>
+          </div>
+        </div>
+
+        <!-- Default memory limit -->
+        <div>
+          <label
+            for="defaultMemoryLimit"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Default memory limit
+          </label>
+          <div class="flex items-center gap-2">
+            <input
+              id="defaultMemoryLimit"
+              name="defaultMemoryLimit"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="256"
+              [ngModel]="defaultMemoryLimitMi()"
+              (ngModelChange)="defaultMemoryLimitMi.set(toInt($event))"
+              [disabled]="namespaceSaving()"
+              class="w-32"
+            />
+            <span class="text-sm text-gray-500 dark:text-gray-400">Mi</span>
+          </div>
+        </div>
+
+        <!-- Default CPU request -->
+        <div>
+          <label
+            for="defaultCpuRequest"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Default CPU request
+          </label>
+          <div class="flex items-center gap-2">
+            <input
+              id="defaultCpuRequest"
+              name="defaultCpuRequest"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="100"
+              [ngModel]="defaultCpuRequestM()"
+              (ngModelChange)="defaultCpuRequestM.set(toInt($event))"
+              [disabled]="namespaceSaving()"
+              class="w-32"
+            />
+            <span class="text-sm text-gray-500 dark:text-gray-400">m</span>
+          </div>
+        </div>
+
+        <!-- Default CPU limit -->
+        <div>
+          <label
+            for="defaultCpuLimit"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Default CPU limit
+          </label>
+          <div class="flex items-center gap-2">
+            <input
+              id="defaultCpuLimit"
+              name="defaultCpuLimit"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="500"
+              [ngModel]="defaultCpuLimitM()"
+              (ngModelChange)="defaultCpuLimitM.set(toInt($event))"
+              [disabled]="namespaceSaving()"
+              class="w-32"
+            />
+            <span class="text-sm text-gray-500 dark:text-gray-400">m</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+        Memory is in mebibytes (Mi). CPU is in millicores (m) — 1000 m = 1 vCPU.
+      </p>
+
+      <div class="mt-6">
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="namespaceSaving()"
+        >
+          {{ namespaceSaving() ? 'Saving…' : 'Save namespace defaults' }}
+        </button>
+      </div>
+    </div>
+  </form>
+  } <!-- end @if (!initialLoading()) -->
+</div>

@@ -20,6 +20,12 @@ service OrganizationService {
 
   // UpdateOrganization updates the user's organization
   rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse);
+
+  // GetOrganizationLimits retrieves the resource limits for an organization
+  rpc GetOrganizationLimits(GetOrganizationLimitsRequest) returns (GetOrganizationLimitsResponse);
+
+  // UpdateOrganizationLimits sets the resource limits for an organization
+  rpc UpdateOrganizationLimits(UpdateOrganizationLimitsRequest) returns (UpdateOrganizationLimitsResponse);
 }
 
 // Organization information
@@ -68,3 +74,77 @@ message ListOrganizationsResponse {
   // List of organizations the user belongs to
   repeated Organization organizations = 10;
 }
+
+// OrganizationLimits holds Gardener cluster quotas and Kubernetes namespace LimitRange defaults
+message OrganizationLimits {
+  // Maximum total number of nodes across all node pools in a shoot cluster
+  int32 max_nodes_per_cluster = 10 [features.field_presence = EXPLICIT];
+  // Maximum number of node pools per shoot cluster
+  int32 max_node_pools_per_cluster = 20 [features.field_presence = EXPLICIT];
+  // Maximum number of nodes in a single node pool (autoscaler max)
+  int32 max_nodes_per_node_pool = 30 [features.field_presence = EXPLICIT];
+  // Default memory request applied to containers via LimitRange (mebibytes)
+  int32 default_memory_request_mi = 40 [features.field_presence = EXPLICIT];
+  // Default memory limit applied to containers via LimitRange (mebibytes)
+  int32 default_memory_limit_mi = 50 [features.field_presence = EXPLICIT];
+  // Default CPU request applied to containers via LimitRange (millicores)
+  int32 default_cpu_request_m = 60 [features.field_presence = EXPLICIT];
+  // Default CPU limit applied to containers via LimitRange (millicores)
+  int32 default_cpu_limit_m = 70 [features.field_presence = EXPLICIT];
+}
+
+// GetOrganizationLimits request
+message GetOrganizationLimitsRequest {
+  // ID of the organization
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// GetOrganizationLimits response
+message GetOrganizationLimitsResponse {
+  // The current limits for the organization (absent fields mean no limit is set)
+  OrganizationLimits limits = 10;
+}
+
+// UpdateOrganizationLimits request
+message UpdateOrganizationLimitsRequest {
+  // ID of the organization to update
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Maximum total number of nodes across all node pools in a shoot cluster
+  int32 max_nodes_per_cluster = 20 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // Maximum number of node pools per shoot cluster
+  int32 max_node_pools_per_cluster = 30 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // Maximum number of nodes in a single node pool (autoscaler max)
+  int32 max_nodes_per_node_pool = 40 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // Default memory request applied to containers via LimitRange (mebibytes)
+  int32 default_memory_request_mi = 50 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // Default memory limit applied to containers via LimitRange (mebibytes)
+  int32 default_memory_limit_mi = 60 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // Default CPU request applied to containers via LimitRange (millicores)
+  int32 default_cpu_request_m = 70 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // Default CPU limit applied to containers via LimitRange (millicores)
+  int32 default_cpu_limit_m = 80 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+}
+
+// UpdateOrganizationLimits response
+message UpdateOrganizationLimitsResponse {}

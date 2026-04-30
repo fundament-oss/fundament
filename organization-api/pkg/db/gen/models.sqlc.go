@@ -38,6 +38,15 @@ type TenantClusterEvent struct {
 	Attempt    pgtype.Int4
 }
 
+type TenantNamespace struct {
+	ID        uuid.UUID
+	ProjectID uuid.UUID
+	ClusterID uuid.UUID
+	Name      string
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
+}
+
 type TenantNodePool struct {
 	ID           uuid.UUID
 	ClusterID    uuid.UUID

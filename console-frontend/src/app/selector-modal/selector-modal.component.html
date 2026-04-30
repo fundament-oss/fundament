@@ -51,28 +51,26 @@
                 </div>
               }
             } @else {
+              <!-- Projects -->
+              <div class="mb-0.5 px-2">
+                <span
+                  class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                  >Projects</span
+                >
+              </div>
               @for (project of org.projects; track project.id) {
-                <div>
-                  <!-- Project -->
-                  <div class="mb-0.5 px-2">
-                    <span
-                      class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                      >Project</span
-                    >
-                  </div>
-                  <button
-                    (click)="onSelectProject(project.id)"
-                    [class]="
-                      'flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950 dark:hover:bg-gray-800 ' +
-                      (isProjectSelected(project.id)
-                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
-                        : 'text-gray-700 dark:text-gray-300')
-                    "
-                  >
-                    <ng-icon name="tablerFolder" class="mr-2 shrink-0" />
-                    <span class="truncate">{{ project.name }}</span>
-                  </button>
-                </div>
+                <button
+                  (click)="onSelectProject(project.id)"
+                  [class]="
+                    'flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-medium ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950 dark:hover:bg-gray-800 ' +
+                    (isProjectSelected(project.id)
+                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+                      : 'text-gray-700 dark:text-gray-300')
+                  "
+                >
+                  <ng-icon name="tablerFolder" class="mr-2 shrink-0" />
+                  <span class="truncate">{{ project.name }}</span>
+                </button>
               }
             }
           </div>

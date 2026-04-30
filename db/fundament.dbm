@@ -3,7 +3,7 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="73"
+<dbmodel pgmodeler-ver="1.2.2" use-changelog="false" max-obj-count="81"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
 	 last-position="0,0" last-zoom="0.5" scene-rect="-588,-87,3186.2,2626.52"
 	 default-owner="postgres"
@@ -100,6 +100,132 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
+<table name="organization_limits" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="11" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<position x="260" y="800"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="organization_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="max_nodes_per_cluster">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="max_node_pools_per_cluster">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="max_nodes_per_node_pool">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_memory_request_mi">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_memory_limit_mi">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_cpu_request_m">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_cpu_limit_m">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="organization_limits_pk" type="pk-constr" table="tenant.organization_limits">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="organization_limits_uq_org" type="uq-constr" nulls-not-distinct="true" table="tenant.organization_limits">
+		<columns names="organization_id,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="organization_limits_ck_max_nodes_per_cluster" type="ck-constr" table="tenant.organization_limits">
+			<expression> <![CDATA[max_nodes_per_cluster IS NULL OR max_nodes_per_cluster > 0]]> </expression>
+	</constraint>
+	<constraint name="organization_limits_ck_max_node_pools_per_cluster" type="ck-constr" table="tenant.organization_limits">
+			<expression> <![CDATA[max_node_pools_per_cluster IS NULL OR max_node_pools_per_cluster > 0]]> </expression>
+	</constraint>
+	<constraint name="organization_limits_ck_max_nodes_per_node_pool" type="ck-constr" table="tenant.organization_limits">
+			<expression> <![CDATA[max_nodes_per_node_pool IS NULL OR max_nodes_per_node_pool > 0]]> </expression>
+	</constraint>
+	<constraint name="organization_limits_ck_default_memory_request_mi" type="ck-constr" table="tenant.organization_limits">
+			<expression> <![CDATA[default_memory_request_mi IS NULL OR default_memory_request_mi > 0]]> </expression>
+	</constraint>
+	<constraint name="organization_limits_ck_default_memory_limit_mi" type="ck-constr" table="tenant.organization_limits">
+			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0]]> </expression>
+	</constraint>
+	<constraint name="organization_limits_ck_default_cpu_request_m" type="ck-constr" table="tenant.organization_limits">
+			<expression> <![CDATA[default_cpu_request_m IS NULL OR default_cpu_request_m > 0]]> </expression>
+	</constraint>
+	<constraint name="organization_limits_ck_default_cpu_limit_m" type="ck-constr" table="tenant.organization_limits">
+			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_limit_m > 0]]> </expression>
+	</constraint>
+	<constraint name="organization_limits_ck_memory_limit_gte_request" type="ck-constr" table="tenant.organization_limits">
+			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi]]> </expression>
+	</constraint>
+	<constraint name="organization_limits_ck_cpu_limit_gte_request" type="ck-constr" table="tenant.organization_limits">
+			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m]]> </expression>
+	</constraint>
+</table>
+
+<table name="project_limits" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<position x="880" y="800"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="project_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="default_memory_request_mi">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_memory_limit_mi">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_cpu_request_m">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_cpu_limit_m">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="project_limits_pk" type="pk-constr" table="tenant.project_limits">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="project_limits_uq_project" type="uq-constr" nulls-not-distinct="true" table="tenant.project_limits">
+		<columns names="project_id,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="project_limits_ck_default_memory_request_mi" type="ck-constr" table="tenant.project_limits">
+			<expression> <![CDATA[default_memory_request_mi IS NULL OR default_memory_request_mi > 0]]> </expression>
+	</constraint>
+	<constraint name="project_limits_ck_default_memory_limit_mi" type="ck-constr" table="tenant.project_limits">
+			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0]]> </expression>
+	</constraint>
+	<constraint name="project_limits_ck_default_cpu_request_m" type="ck-constr" table="tenant.project_limits">
+			<expression> <![CDATA[default_cpu_request_m IS NULL OR default_cpu_request_m > 0]]> </expression>
+	</constraint>
+	<constraint name="project_limits_ck_default_cpu_limit_m" type="ck-constr" table="tenant.project_limits">
+			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_limit_m > 0]]> </expression>
+	</constraint>
+	<constraint name="project_limits_ck_memory_limit_gte_request" type="ck-constr" table="tenant.project_limits">
+			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi]]> </expression>
+	</constraint>
+	<constraint name="project_limits_ck_cpu_limit_gte_request" type="ck-constr" table="tenant.project_limits">
+			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m]]> </expression>
+	</constraint>
+</table>
+
 <table name="projects" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
@@ -127,7 +253,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
-<table name="namespaces" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="6" z-value="0">
+<table name="namespaces" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
 	<position x="1520" y="-20"/>
@@ -135,6 +261,9 @@ CAUTION: Do not modify this file unless you know what you are doing.
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="project_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="cluster_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="name" not-null="true">
@@ -149,11 +278,8 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<constraint name="namespaces_pk" type="pk-constr" table="tenant.namespaces">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
-	<constraint name="namespaces_ck_name" type="ck-constr" table="tenant.namespaces">
-			<expression> <![CDATA[name = name]]> </expression>
-	</constraint>
 	<constraint name="namespaces_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.namespaces">
-		<columns names="project_id,name,deleted" ref-type="src-columns"/>
+		<columns names="cluster_id,name,deleted" ref-type="src-columns"/>
 	</constraint>
 </table>
 
@@ -1143,6 +1269,14 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
+<policy name="organization_limits_organization_policy" table="tenant.organization_limits" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<policy name="project_limits_project_policy" table="tenant.project_limits" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)]]> </expression>
+</policy>
+
 <table name="cluster_events" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
@@ -1760,6 +1894,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="namespaces_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.namespaces">
+	<columns names="cluster_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="api_keys_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="authn.api_keys">
 	<columns names="organization_id" ref-type="src-columns"/>
@@ -1910,6 +2050,18 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="organization_limits_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.organization_limits">
+	<columns names="organization_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="project_limits_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.project_limits">
+	<columns names="project_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="organizations_users_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.organizations_users">
 	<columns names="organization_id" ref-type="src-columns"/>
@@ -1932,9 +2084,24 @@ END;]]> </definition>
 	 dst-table="tenant.projects" reference-fk="namespaces_fk_project"
 	 src-required="false" dst-required="true"/>
 
+<relationship name="rel_namespaces_clusters" type="relfk" layers="0"
+	 src-table="tenant.namespaces"
+	 dst-table="tenant.clusters" reference-fk="namespaces_fk_cluster"
+	 src-required="false" dst-required="true"/>
+
 <relationship name="rel_clusters_organizations" type="relfk" layers="0"
 	 src-table="tenant.clusters"
 	 dst-table="tenant.organizations" reference-fk="clusters_fk_organization"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_organization_limits_organizations" type="relfk" layers="0"
+	 src-table="tenant.organization_limits"
+	 dst-table="tenant.organizations" reference-fk="organization_limits_fk_organization"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_project_limits_projects" type="relfk" layers="0"
+	 src-table="tenant.project_limits"
+	 dst-table="tenant.projects" reference-fk="project_limits_fk_project"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_cluster_events_clusters" type="relfk" layers="0"
@@ -2090,6 +2257,16 @@ END;]]> </definition>
 	<object name="tenant" type="schema"/>
 	<roles names="fun_cluster_worker"/>
 	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="tenant.organization_limits" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.project_limits" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
 	<object name="tenant.organizations" type="table"/>
