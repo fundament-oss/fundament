@@ -1,7 +1,7 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'tailwindcss';
-@import '@minbzk/storybook/styles';
+@import '@nldd/design-system/styles';
 
 @theme {
   --color-accent-25: oklch(0.973 0.013 253.4);

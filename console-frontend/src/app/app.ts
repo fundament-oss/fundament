@@ -11,23 +11,23 @@ import {
   ViewChild,
   ElementRef,
 } from '@angular/core';
-import '@minbzk/storybook/icon';
-import '@minbzk/storybook/icon-button';
-import '@minbzk/storybook/sheet';
-import '@minbzk/storybook/page';
-import '@minbzk/storybook/top-title-bar';
-import '@minbzk/storybook/box';
-import '@minbzk/storybook/button';
-import '@minbzk/storybook/form-field';
-import '@minbzk/storybook/modal-dialog';
-import '@minbzk/storybook/number-field';
-import '@minbzk/storybook/password-field';
-import '@minbzk/storybook/radio-button-field';
-import '@minbzk/storybook/radio-button-group';
-import '@minbzk/storybook/search-field';
-import '@minbzk/storybook/spacer';
-import '@minbzk/storybook/switch-field';
-import '@minbzk/storybook/text-field';
+import '@nldd/design-system/icon';
+import '@nldd/design-system/icon-button';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/page';
+import '@nldd/design-system/top-title-bar';
+import '@nldd/design-system/box';
+import '@nldd/design-system/button';
+import '@nldd/design-system/form-field';
+import '@nldd/design-system/modal-dialog';
+import '@nldd/design-system/number-field';
+import '@nldd/design-system/password-field';
+import '@nldd/design-system/radio-button-field';
+import '@nldd/design-system/radio-button-group';
+import '@nldd/design-system/search-field';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/switch-field';
+import '@nldd/design-system/text-field';
 import {
   RouterOutlet,
   RouterLink,

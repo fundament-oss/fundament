@@ -78,7 +78,7 @@ Preferably, do not capitalize every word in titles, headers, and buttons. Capita
 
 === Icon set
 
-The primary icon set is the https://minbzk.github.io/storybook/?path=/story/components-content-icon--icon-gallery[NDD icon gallery] from the `@minbzk/storybook` library. Icon names are referenced using their kebab-case identifiers (e.g. `info-circle`, `check-mark`).
+The primary icon set is the https://minbzk.github.io/storybook/?path=/story/components-content-icon--icon-gallery[NLDD icon gallery] from the `@nldd/design-system` library. Icon names are referenced using their kebab-case identifiers (e.g. `info-circle`, `check-mark`).
 
 === Icon style
 
