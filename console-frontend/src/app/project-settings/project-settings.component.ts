@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerX, tablerPencil, tablerCheck, tablerAlertTriangle } from '@ng-icons/tabler-icons';
+import { ConnectError, Code } from '@connectrpc/connect';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
@@ -173,11 +174,15 @@ export default class ProjectSettingsComponent implements OnInit {
       this.router.navigate(['/projects']);
     } catch (err) {
       this.showDeleteModal.set(false);
-      this.error.set(
-        err instanceof Error
-          ? `Failed to delete project: ${err.message}`
-          : 'Failed to delete project',
-      );
+      if (err instanceof ConnectError && err.code === Code.FailedPrecondition) {
+        this.error.set('Delete all namespaces in this project before deleting the project.');
+      } else {
+        this.error.set(
+          err instanceof Error
+            ? `Failed to delete project: ${err.message}`
+            : 'Failed to delete project',
+        );
+      }
     }
   }
 

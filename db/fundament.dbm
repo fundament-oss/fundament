@@ -510,7 +510,7 @@ END;]]> </definition>
 	<type name="trigger" length="0"/>
 	</return-type>
 	<definition> <![CDATA[BEGIN
-	IF EXISTS (
+	IF NEW.deleted IS NOT NULL AND EXISTS (
 		SELECT 1
 		FROM tenant.namespaces
 		WHERE
