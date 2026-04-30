@@ -2,331 +2,372 @@
 import Layout from '../layouts/Landing.astro';
 ---
 
-<Layout title="Fundament - Self-Hosted Kubernetes Platform">
-  <div class="relative z-10 mx-auto max-w-4xl text-center" slot="hero">
-    <h1 class="hero-title">Deploy and manage Kubernetes clusters with confidence</h1>
-    <p class="mx-auto mb-10 max-w-3xl text-lg text-gray-700 sm:text-xl dark:text-gray-300">
+<Layout title="Fundament — Self-hosted Kubernetes platform">
+  <section class="lp-hero">
+    <p class="lp-eyebrow">Self-hosted Kubernetes platform</p>
+    <h1 class="lp-hero-title">Deploy and manage Kubernetes clusters with confidence.</h1>
+    <p class="lp-hero-lede">
       Fundament is an open-source platform that combines bare-metal provisioning with managed
       Kubernetes, delivering a complete IaaS and PaaS solution for self-hosted infrastructure.
     </p>
-    <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
-      <a
-        href="/docs"
-        class="inline-flex items-center gap-2 rounded-lg border border-indigo-500 bg-indigo-600 px-6 py-3 font-medium text-white no-underline transition-all duration-200 hover:bg-indigo-700 dark:border-indigo-500 dark:bg-indigo-600 dark:hover:bg-indigo-700"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24"
-          ><path
-            fill="currentColor"
-            d="m10.65 15.75l4.875-3.125q.35-.225.35-.625t-.35-.625L10.65 8.25q-.375-.25-.763-.038t-.387.663v6.25q0 .45.388.663t.762-.038M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22m0-2q3.35 0 5.675-2.325T20 12t-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20m0-8"
-          ></path></svg
-        >
-        Get started
-      </a>
-      <a
+    <div class="lp-btnrow">
+      <nldd-button variant="accent-filled" href="/docs" text="Get started" end-icon="arrow-right">
+      </nldd-button>
+      <nldd-button
+        variant="accent-outlined"
         href="https://github.com/fundament-oss/fundament"
-        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-800 no-underline transition-all duration-200 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-900"
+        target="_blank"
         rel="nofollow noopener noreferrer"
+        text="View on GitHub"
       >
-        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <svg
+          slot="end-icon"
+          class="h-5 w-5"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
           <path
             fill-rule="evenodd"
             d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
             clip-rule="evenodd"></path>
         </svg>
-        View on GitHub
-      </a>
+      </nldd-button>
     </div>
-  </div>
 
-  <div class="bg-white py-20 sm:py-24 dark:bg-gray-900">
-    <div class="mx-auto max-w-7xl px-6 lg:px-8">
-      <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Developer-friendly
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Simple, intuitive platform for deploying and operating applications without wrestling
-            with infrastructure complexity.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Multi-tenant architecture
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Built for organizational growth with strict tenant isolation and shared-nothing compute
-            and storage architecture.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Secure by default
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Security built into every layer with zero-trust principles and comprehensive isolation
-            between tenants.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Managed infrastructure
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Compute, storage, and networking abstracted and managed, with automated bare-metal
-            provisioning via metal-stack.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Highly available
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Designed to remain operational under heavy demand or failure conditions with built-in
-            resilience.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Horizontally scalable
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Scale from handful to thousands of tenants with large infrastructure footprints without
-            architectural changes.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">
-            Extensible platform
-          </h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Pluggable services allow tenants to autonomously evolve and customize their technology
-            stack.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl border border-gray-200 bg-gray-50 p-8 transition-all duration-300 hover:border-blue-500/50 dark:border-gray-700/50 dark:bg-gray-800/50"
-        >
-          <div class="mb-4 h-12 w-12 text-blue-600 dark:text-blue-400">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="h-full w-full">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-            </svg>
-          </div>
-          <h3 class="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-100">Open source</h3>
-          <p class="leading-relaxed text-gray-600 dark:text-gray-400">
-            Built on proven open-source projects like metal-stack and Gardener, avoiding proprietary
-            lock-in.
-          </p>
-        </div>
+    <div class="lp-metastrip">
+      <div class="lp-metastrip-cell">
+        <p class="lp-metastrip-label">Model</p>
+        <div class="lp-metastrip-value">Open source</div>
+      </div>
+      <div class="lp-metastrip-cell">
+        <p class="lp-metastrip-label">Layer</p>
+        <div class="lp-metastrip-value">IaaS + PaaS</div>
+      </div>
+      <div class="lp-metastrip-cell">
+        <p class="lp-metastrip-label">Tenants</p>
+        <div class="lp-metastrip-value">Thousands</div>
+      </div>
+      <div class="lp-metastrip-cell">
+        <p class="lp-metastrip-label">Stance</p>
+        <div class="lp-metastrip-value">Zero-trust</div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="architecture">
-    <div class="mx-auto max-w-7xl px-6 lg:px-8">
-      <div class="mb-16 text-center">
-        <h2 class="mb-4 text-3xl font-bold text-gray-800 sm:text-4xl dark:text-gray-100">
-          Built on proven foundations
-        </h2>
-        <p class="mx-auto max-w-2xl text-lg text-gray-600 dark:text-gray-400">
-          Fundament combines best-in-class open-source technologies to deliver a complete cloud
-          solution
+  <!-- Capabilities -->
+  <div class="lp-section">
+    <div class="lp-section-head">
+      <h2 class="lp-section-title">A complete cloud platform, self-hosted.</h2>
+      <p class="lp-section-intro">
+        Eight capabilities that define Fundament. No managed service required, no proprietary
+        lock-in, no compromises on isolation.
+      </p>
+    </div>
+
+    <div class="lp-caps overflow-hidden rounded-md">
+      <div class="lp-cap">
+        <div class="lp-cap-header">
+          <span class="lp-cap-icon">
+            <nldd-icon name="terminal" class="h-5.5 w-5.5"></nldd-icon>
+          </span>
+          <h3>Developer-friendly</h3>
+        </div>
+        <p>
+          Simple, intuitive platform for deploying and operating applications without wrestling with
+          infrastructure complexity.
         </p>
       </div>
-      <div
-        class="mx-auto flex max-w-5xl flex-col items-stretch justify-center gap-x-8 gap-y-4 md:flex-row"
-      >
-        <div
-          class="flex min-w-0 flex-1 flex-col rounded-xl border border-gray-300 bg-white p-8 dark:border-gray-700 dark:bg-gray-950"
-        >
-          <div
-            class="mb-4 text-sm font-semibold tracking-wider text-blue-600 uppercase dark:text-blue-400"
-          >
-            IaaS layer
-          </div>
-          <div class="flex flex-1 flex-col">
-            <h4 class="mb-2 text-2xl font-bold text-gray-800 dark:text-gray-100">metal-stack</h4>
-            <p class="text-gray-600 dark:text-gray-400">
-              Automated bare-metal provisioning for reliable, high-performance infrastructure
-            </p>
-          </div>
+      <div class="lp-cap">
+        <div class="lp-cap-header">
+          <span class="lp-cap-icon">
+            <nldd-icon name="rectangle-stack" class="h-5.5 w-5.5"></nldd-icon>
+          </span>
+          <h3>Multi-tenant architecture</h3>
         </div>
-        <div
-          class="items-center text-center text-4xl font-bold text-gray-400 md:flex dark:text-gray-600"
-        >
-          +
+        <p>
+          Built for organizational growth with strict tenant isolation and shared-nothing compute
+          and storage architecture.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <div class="lp-cap-header">
+          <span class="lp-cap-icon">
+            <nldd-icon name="shield-check-mark" class="h-5.5 w-5.5"></nldd-icon>
+          </span>
+          <h3>Secure by default</h3>
         </div>
-        <div
-          class="flex min-w-0 flex-1 flex-col rounded-xl border border-gray-300 bg-white p-8 dark:border-gray-700 dark:bg-gray-950"
-        >
-          <div
-            class="mb-4 text-sm font-semibold tracking-wider text-blue-600 uppercase dark:text-blue-400"
-          >
-            Orchestration
-          </div>
-          <div class="flex flex-1 flex-col">
-            <h4 class="mb-2 text-2xl font-bold text-gray-800 dark:text-gray-100">Gardener</h4>
-            <p class="text-gray-600 dark:text-gray-400">
-              Enterprise-grade Kubernetes cluster management at scale
-            </p>
-          </div>
+        <p>
+          Security built into every layer with zero-trust principles and comprehensive isolation
+          between tenants.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <div class="lp-cap-header">
+          <span class="lp-cap-icon">
+            <nldd-icon name="cloud" class="h-5.5 w-5.5"></nldd-icon>
+          </span>
+          <h3>Managed infrastructure</h3>
         </div>
-        <div
-          class="items-center text-center text-4xl font-bold text-gray-400 md:flex dark:text-gray-600"
-        >
-          =
+        <p>
+          Compute, storage, and networking abstracted and managed, with automated bare-metal
+          provisioning via metal-stack.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <div class="lp-cap-header">
+          <span class="lp-cap-icon">
+            <nldd-icon name="check-mark-circle" class="h-5.5 w-5.5"></nldd-icon>
+          </span>
+          <h3>Highly available</h3>
         </div>
-        <div
-          class="flex min-w-0 flex-1 flex-col rounded-xl border border-blue-500 bg-blue-50 p-8 dark:border-blue-500 dark:bg-blue-950/60"
-        >
-          <div
-            class="mb-4 text-sm font-semibold tracking-wider text-blue-600 uppercase dark:text-blue-400"
-          >
-            Complete solution
-          </div>
-          <div class="flex flex-1 flex-col">
-            <h4 class="mb-2 text-2xl font-bold text-gray-800 dark:text-gray-100">Fundament</h4>
-            <p class="text-gray-600 dark:text-gray-400">
-              IaaS + PaaS for self-hosted infrastructure
-            </p>
-          </div>
+        <p>
+          Designed to remain operational under heavy demand or failure conditions with built-in
+          resilience.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <div class="lp-cap-header">
+          <span class="lp-cap-icon">
+            <nldd-icon name="chart-x-y-axis-line" class="h-5.5 w-5.5"></nldd-icon>
+          </span>
+          <h3>Horizontally scalable</h3>
         </div>
+        <p>
+          Scale from a handful to thousands of tenants with large infrastructure footprints without
+          architectural changes.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <div class="lp-cap-header">
+          <span class="lp-cap-icon">
+            <nldd-icon name="puzzle-piece" class="h-5.5 w-5.5"></nldd-icon>
+          </span>
+          <h3>Extensible platform</h3>
+        </div>
+        <p>
+          Pluggable services allow tenants to autonomously evolve and customize their technology
+          stack.
+        </p>
+      </div>
+      <div class="lp-cap">
+        <div class="lp-cap-header">
+          <span class="lp-cap-icon">
+            <nldd-icon name="brackets-ellipsis" class="h-5.5 w-5.5"></nldd-icon>
+          </span>
+          <h3>Open source</h3>
+        </div>
+        <p>
+          Built on proven open-source projects like metal-stack and Gardener, avoiding proprietary
+          lock-in.
+        </p>
       </div>
     </div>
   </div>
 
-  <div class="bg-white py-20 sm:py-24 dark:bg-gray-900">
-    <div class="mx-auto max-w-7xl px-6 lg:px-8">
-      <div class="mx-auto max-w-3xl text-center">
-        <h2 class="mt-0 mb-4 text-3xl font-bold text-gray-800 sm:text-4xl dark:text-gray-100">
-          Ready to get started?
-        </h2>
-        <p class="mb-10 text-lg text-gray-700 dark:text-gray-300">
-          Deploy Fundament in your infrastructure and start managing Kubernetes clusters today.
+  <!-- Architecture -->
+  <div class="lp-section">
+    <div class="lp-section-head">
+      <h2 class="lp-section-title">Built on proven foundations.</h2>
+      <p class="lp-section-intro">
+        Fundament combines best-in-class open-source technologies to deliver a complete cloud
+        solution.
+      </p>
+    </div>
+
+    <div class="lp-arch rounded-md">
+      <div class="lp-arch-piece">
+        <span class="lp-arch-layer">IaaS layer</span>
+        <h3 class="lp-arch-name">metal-stack</h3>
+        <p class="lp-arch-desc">
+          Automated bare-metal provisioning for reliable, high-performance infrastructure.
         </p>
-        <div class="mb-18 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <a
-            href="/docs"
-            class="inline-flex items-center gap-2 rounded-lg border-2 border-indigo-500 bg-indigo-600 px-8 py-4 text-lg font-semibold text-white no-underline transition-all duration-200 hover:bg-indigo-700 dark:border-indigo-500 dark:bg-indigo-600 dark:hover:bg-indigo-700"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              ></path>
-            </svg>
-            Read the documentation
-          </a>
-          <a
-            href="https://github.com/fundament-oss/fundament"
-            class="inline-flex items-center gap-2 rounded-lg border-2 border-gray-300 bg-transparent px-8 py-4 text-lg font-semibold text-gray-800 no-underline transition-all duration-200 hover:border-gray-400 dark:border-gray-700 dark:text-gray-100 dark:hover:border-gray-500"
-            rel="nofollow noopener noreferrer"
-          >
-            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill-rule="evenodd"
-                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                clip-rule="evenodd"></path>
-            </svg>
-            Explore on GitHub
-          </a>
-        </div>
+      </div>
+      <div class="lp-arch-op" aria-hidden="true">+</div>
+      <div class="lp-arch-piece">
+        <span class="lp-arch-layer">Orchestration</span>
+        <h3 class="lp-arch-name">Gardener</h3>
+        <p class="lp-arch-desc">Enterprise-grade Kubernetes cluster management at scale.</p>
+      </div>
+      <div class="lp-arch-op" aria-hidden="true">=</div>
+      <div class="lp-arch-piece lp-arch-piece--final">
+        <span class="lp-arch-layer">Complete solution</span>
+        <h3 class="lp-arch-name">Fundament</h3>
+        <p class="lp-arch-desc">IaaS + PaaS for self-hosted infrastructure.</p>
       </div>
     </div>
   </div>
+
+  <!-- End CTA -->
+  <section class="lp-endcta">
+    <div class="lp-endcta-inner">
+      <div>
+        <h2>Ready to get started?</h2>
+        <p>Deploy Fundament in your infrastructure and start managing Kubernetes clusters today.</p>
+      </div>
+      <div class="lp-btnrow">
+        <nldd-button
+          variant="accent-filled"
+          href="/docs"
+          text="Read the documentation"
+          start-icon="file-text"></nldd-button>
+        <nldd-button
+          variant="accent-outlined"
+          text="Explore on GitHub"
+          href="https://github.com/fundament-oss/fundament"
+          target="_blank"
+          rel="nofollow noopener noreferrer"
+        >
+          <svg
+            slot="start-icon"
+            class="h-5 w-5"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+              clip-rule="evenodd"></path>
+          </svg>
+        </nldd-button>
+      </div>
+    </div>
+  </section>
 </Layout>
+
+<style is:global>
+  @reference "../styles/global.css";
+
+  /* Hero */
+  .lp-hero {
+    @apply pt-primitives-space-80 px-primitives-space-32 pb-primitives-space-64 mx-auto max-w-7xl;
+  }
+  .lp-eyebrow {
+    @apply text-body-sm font-body text-content-secondary mb-primitives-space-16 gap-primitives-space-10 m-0 flex items-center font-medium tracking-[0.08em] uppercase;
+  }
+  .lp-hero-title {
+    @apply text-display-1 font-display mb-primitives-space-24 text-content m-0 max-w-225 font-medium tracking-[-0.02em];
+  }
+  .lp-hero-lede {
+    @apply text-body-lg font-body text-content mb-primitives-space-32 m-0 max-w-180 font-normal;
+  }
+
+  /* Buttons */
+  .lp-btnrow {
+    @apply gap-primitives-space-12 flex flex-wrap;
+  }
+
+  /* Metastrip */
+  .lp-metastrip {
+    @apply border-dividers mt-primitives-space-56 pt-primitives-space-24 grid grid-cols-4 gap-0 border-t;
+  }
+  .lp-metastrip-cell {
+    @apply pr-primitives-space-24;
+  }
+  .lp-metastrip-cell + .lp-metastrip-cell {
+    @apply border-dividers pl-primitives-space-24 border-l;
+  }
+  .lp-metastrip-label {
+    @apply text-body-xs font-body text-content-secondary mb-primitives-space-6 m-0 font-normal tracking-[0.06em] uppercase;
+  }
+  .lp-metastrip-value {
+    @apply text-display-5 font-display text-content font-normal tracking-[-0.01em];
+  }
+
+  /* Sections */
+  .lp-section {
+    @apply py-primitives-space-80 px-primitives-space-32 mx-auto max-w-7xl;
+  }
+  .lp-section-head {
+    @apply gap-primitives-space-48 mb-primitives-space-48 grid grid-cols-[1fr_2fr] items-start;
+  }
+  .lp-section-kicker {
+    @apply text-body-sm font-body text-content-secondary mx-0 mt-1.5 mb-0 font-medium tracking-[0.08em] uppercase;
+  }
+  .lp-section-title {
+    @apply text-display-3 font-display mb-primitives-space-16 text-content m-0 font-medium tracking-[-0.015em];
+  }
+  .lp-section-intro {
+    @apply text-body-md font-body text-content m-0 max-w-160 font-normal;
+  }
+
+  /* Capabilities grid */
+  .lp-caps {
+    @apply border-dividers grid grid-cols-3 border-t border-l;
+  }
+  .lp-cap {
+    @apply border-dividers p-primitives-space-28 gap-primitives-space-16 flex min-h-55 flex-col border-r border-b;
+  }
+  .lp-cap-header {
+    @apply gap-primitives-space-12 flex items-center;
+  }
+  .lp-cap-icon {
+    @apply bg-accent-100 text-accent-700 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-sm;
+  }
+  .lp-cap h3 {
+    @apply text-body-lg font-body text-content m-0 font-medium tracking-[-0.005em];
+  }
+  .lp-cap p {
+    @apply text-body-sm font-body text-content-secondary m-0 font-normal;
+  }
+
+  /* Architecture equation */
+  .lp-arch {
+    @apply bg-surface-tinted p-primitives-space-48 gap-primitives-space-32 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center;
+  }
+  .lp-arch-piece {
+    @apply gap-primitives-space-8 flex flex-col;
+  }
+  .lp-arch-layer {
+    @apply text-body-xs font-body text-content-secondary font-normal tracking-widest uppercase;
+  }
+  .lp-arch-name {
+    @apply text-display-4 font-display text-content m-0 font-medium tracking-[-0.01em];
+  }
+  .lp-arch-desc {
+    @apply text-body-sm font-body text-content m-0 font-normal;
+  }
+  .lp-arch-op {
+    @apply text-accent-600 text-center font-mono text-[32px] font-normal no-underline;
+  }
+  .lp-arch-piece--final .lp-arch-name {
+    @apply text-accent-600;
+  }
+
+  /* End CTA */
+  .lp-endcta {
+    @apply border-dividers bg-surface-tinted border-t;
+  }
+  .lp-endcta-inner {
+    @apply py-primitives-space-64 px-primitives-space-32 gap-primitives-space-32 mx-auto grid max-w-7xl grid-cols-[1fr_auto] items-center;
+  }
+  .lp-endcta h2 {
+    @apply text-display-3 font-display mb-primitives-space-8 text-content m-0 font-medium tracking-[-0.015em];
+  }
+  .lp-endcta p {
+    @apply text-body-md font-body text-content m-0 max-w-160 font-normal;
+  }
+
+  /* Responsive */
+  @media (max-width: 1000px) {
+    .lp-caps {
+      @apply grid-cols-2;
+    }
+  }
+  @media (max-width: 900px) {
+    .lp-section-head,
+    .lp-endcta-inner {
+      @apply grid-cols-1;
+    }
+    .lp-caps {
+      @apply grid-cols-1;
+    }
+    .lp-arch {
+      @apply grid-cols-1;
+    }
+    .lp-metastrip {
+      @apply grid-cols-2;
+    }
+  }
+</style>
