@@ -3,7 +3,7 @@ FROM oven/bun:1-alpine AS build
 WORKDIR /app
 
 # Copy package files
-COPY console-frontend/package.json console-frontend/bun.lock console-frontend/bunfig.toml ./
+COPY console-frontend/package.json console-frontend/bun.lock ./
 
 # Install dependencies
 RUN bun install --frozen-lockfile
