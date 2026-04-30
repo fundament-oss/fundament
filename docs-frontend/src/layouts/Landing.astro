@@ -29,7 +29,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
     <link rel="manifest" href="/site.webmanifest" />
   </head>
   <body>
-    <header class="topbar">
+    <header>
       <div class="topbar-inner">
         <a href="/" class="wordmark">
           <span class="wordmark-logo text-indigo-600 dark:text-indigo-400" aria-hidden="true">
@@ -75,7 +75,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
 
     <slot />
 
-    <footer class="foot">
+    <footer>
       <div class="foot-inner">
         <span class="wordmark cursor-default">
           <span class="wordmark-logo" aria-hidden="true">
@@ -163,8 +163,8 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
     @apply text-links-hover;
   }
 
-  /* Top bar */
-  .topbar {
+  /* Top bar / header */
+  header {
     @apply border-dividers bg-surface-bg sticky top-0 z-100 border-b;
   }
   .topbar-inner {
@@ -198,8 +198,9 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   .topbar-spacer {
     @apply flex-1;
   }
+  
   /* Footer */
-  .foot {
+  footer {
     @apply border-dividers border-t;
   }
   .foot-inner {
