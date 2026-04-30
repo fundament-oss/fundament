@@ -1,4 +1,4 @@
-@import '@minbzk/storybook/styles';
+@import '@nldd/design-system/styles';
 @reference "tailwindcss/theme";
 
 /* Use NLDD design system fonts */

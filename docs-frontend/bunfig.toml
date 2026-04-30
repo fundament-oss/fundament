@@ -1,3 +1,0 @@
-# Use a custom registry for the @minbzk scope
-[install.scopes]
-"@minbzk" = { url = "https://npm.pkg.github.com/", token = "$GITHUB_TOKEN" }
