@@ -226,7 +226,7 @@
             @if (item.requestStatus === 'pending') {
               <p class="text-sm text-gray-500 dark:text-gray-400">Waiting...</p>
             } @else if (item.requestStatus === 'in_progress') {
-              <p class="text-sm text-accent-600 dark:text-accent-400">Creating...</p>
+              <p class="text-accent-600 dark:text-accent-400 text-sm">Creating...</p>
             } @else if (item.requestStatus === 'failed') {
               <p class="text-danger-600 dark:text-danger-400 text-sm">{{ item.error }}</p>
             } @else if (item.syncStatus === 'syncing') {

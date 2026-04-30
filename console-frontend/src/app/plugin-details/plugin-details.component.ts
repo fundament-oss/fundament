@@ -26,7 +26,7 @@ import {
 } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ToastService } from '../toast.service';
-import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 
 // Extended cluster type for UI state
 interface ClusterWithState extends ClusterSummary {
@@ -162,11 +162,7 @@ export default class PluginDetailsComponent implements OnInit {
     }
 
     try {
-      await this.pluginInstallationService.installPlugin(
-        clusterId,
-        plugin.name,
-        this.pluginImage,
-      );
+      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, this.pluginImage);
       this.clusters.update((clusters) =>
         clusters.map((c) => (c.id === clusterId ? { ...c, installed: true } : c)),
       );

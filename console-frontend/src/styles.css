@@ -136,7 +136,7 @@
 /* Dark mode variant using the 'dark' class on the HTML element */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Make the CSS color-scheme follow the app's .dark class so that Overheid web
+/* Make the CSS color-scheme follow the app's .dark class so that NLDD web
    components using light-dark() respond to our toggle instead of the OS setting.
    html.dark specificity (0,1,1) beats :root (0,1,0) from the storybook tokens. */
 html:not(.dark) {

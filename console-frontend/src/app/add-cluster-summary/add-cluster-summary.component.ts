@@ -218,7 +218,9 @@ export default class AddClusterSummaryComponent implements OnDestroy {
     const abortSignal = this.idempotency.reset();
 
     await Promise.allSettled([
-      ...nodePoolItems.map((item) => this.createNodePool(item.key, item.nodePoolConfig!, cid, abortSignal)),
+      ...nodePoolItems.map((item) =>
+        this.createNodePool(item.key, item.nodePoolConfig!, cid, abortSignal),
+      ),
     ]);
 
     // Start polling for sync status

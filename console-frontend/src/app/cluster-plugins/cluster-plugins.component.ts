@@ -17,7 +17,7 @@ import { CLUSTER, PLUGIN } from '../../connect/tokens';
 import { fetchClusterDetails, getStatusLabel } from '../utils/cluster-status';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
-import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import type { PluginInstallationItem } from '../plugin-resources/types';
 
 @Component({

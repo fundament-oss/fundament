@@ -28,7 +28,7 @@ import {
 import { ListClusterNamespacesRequestSchema, Namespace } from '../../generated/v1/namespace_pb';
 import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
-import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
@@ -405,9 +405,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       ]);
 
       const installedNames = new Set(installations.map((item) => item.spec.pluginName));
-      this.installedPlugins.set(
-        pluginsResponse.plugins.filter((p) => installedNames.has(p.name)),
-      );
+      this.installedPlugins.set(pluginsResponse.plugins.filter((p) => installedNames.has(p.name)));
     } catch (error) {
       this.toastService.error(
         error instanceof Error
