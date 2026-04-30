@@ -7,11 +7,10 @@ import {
   effect,
   untracked,
   OnInit,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerArrowLeft } from '@ng-icons/tabler-icons';
 import FieldRendererComponent from '../field-renderers/field-renderer.component';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
 import PluginRegistryService from '../plugin-registry.service';
@@ -45,8 +44,8 @@ function toRecord(val: unknown): Record<string, unknown> {
 
 @Component({
   selector: 'app-resource-detail',
-  imports: [RouterLink, NgIcon, FieldRendererComponent, PluginIframeComponent],
-  viewProviders: [provideIcons({ tablerArrowLeft })],
+  imports: [RouterLink, FieldRendererComponent, PluginIframeComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

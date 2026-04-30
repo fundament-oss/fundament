@@ -5,25 +5,24 @@
   >
     <div role="status" class="flex justify-center">
       <app-loading-indicator
-        class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+        class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
       />
       <span class="sr-only">Loading...</span>
     </div>
-    <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading plugin details...</p>
+    <p class="mt-4 text-gray-600 dark:text-gray-300">Loading plugin details...</p>
   </div>
 }
 
 <!-- Error State -->
 @if (errorMessage() && !isLoading()) {
   <div
-    class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+    class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
   >
-    <ng-icon
-      name="tablerCircleXFill"
-      class="shrink-0 text-rose-500! dark:text-rose-400!"
-      size="1.125rem"
-    />
-    <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+    <nldd-icon
+      name="dismiss-circle"
+      class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+    ></nldd-icon>
+    <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
   </div>
 }
 
@@ -50,9 +49,9 @@
 
               <!-- Title and Tags -->
               <div class="flex-1">
-                <h1 class="text-3xl font-bold dark:text-white">{{ plugin()!.name }}</h1>
+                <h1 class="text-3xl font-bold">{{ plugin()!.name }}</h1>
                 @if (plugin()!.author?.name) {
-                  <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  <p class="mt-1 text-gray-600 dark:text-gray-400">
                     by {{ plugin()!.author!.name }}
                   </p>
                 }
@@ -61,21 +60,21 @@
                     <span
                       [class]="
                         tag.name.toLowerCase() === 'official'
-                          ? 'inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
-                          : 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                          ? 'inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
+                          : 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-sm font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-200'
                       "
                     >
                       @if (tag.name.toLowerCase() === 'official') {
-                        <ng-icon name="tablerCheck" size="0.75rem" class="mr-1" />
+                        <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
                       }
                       {{ tag.name }}
                     </span>
                   }
                   @if (hasInstalledClusters()) {
                     <span
-                      class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                      class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     >
-                      <ng-icon name="tablerCheck" size="0.75rem" class="mr-1" />
+                      <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
                       Installed on {{ getInstalledClusterCount() }} cluster{{
                         getInstalledClusterCount() > 1 ? 's' : ''
                       }}
@@ -98,38 +97,35 @@
         <div
           class="mb-6 rounded-md border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950"
         >
-          <button
+          <nldd-button
             type="button"
             (click)="openInstallModal()"
-            class="btn-primary w-full transition-transform duration-200 ease-in-out hover:-translate-y-px"
-          >
-            Install plugin
-          </button>
+            text="Install plugin"
+            variant="primary"
+            class="w-full"
+          ></nldd-button>
 
           <div class="mt-6 space-y-3 border-t border-gray-200 pt-6 dark:border-gray-800">
             <div class="flex items-start">
-              <ng-icon
-                name="tablerCheck"
-                size="1.25rem"
-                class="mr-3 shrink-0 text-emerald-600! dark:text-emerald-400!"
-              />
-              <span class="text-sm text-gray-600 dark:text-gray-300">Community support</span>
+              <nldd-icon
+                name="check-mark"
+                class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
+              ></nldd-icon>
+              <span class="text-gray-600 dark:text-gray-300">Community support</span>
             </div>
             <div class="flex items-start">
-              <ng-icon
-                name="tablerCheck"
-                size="1.25rem"
-                class="mr-3 shrink-0 text-emerald-600! dark:text-emerald-400!"
-              />
-              <span class="text-sm text-gray-600 dark:text-gray-300">Open source</span>
+              <nldd-icon
+                name="check-mark"
+                class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
+              ></nldd-icon>
+              <span class="text-gray-600 dark:text-gray-300">Open source</span>
             </div>
             <div class="flex items-start">
-              <ng-icon
-                name="tablerCheck"
-                size="1.25rem"
-                class="mr-3 shrink-0 text-emerald-600! dark:text-emerald-400!"
-              />
-              <span class="text-sm text-gray-600 dark:text-gray-300">Regular updates</span>
+              <nldd-icon
+                name="check-mark"
+                class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
+              ></nldd-icon>
+              <span class="text-gray-600 dark:text-gray-300">Regular updates</span>
             </div>
           </div>
         </div>
@@ -144,13 +140,13 @@
           <div
             class="rounded-md border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950"
           >
-            <h3 class="mb-2 text-lg font-medium dark:text-white">Categories</h3>
+            <h3 class="mb-2 text-lg font-medium">Categories</h3>
 
             @if (plugin()?.categories && plugin()!.categories.length > 0) {
               <div class="mb-4 flex flex-wrap gap-2">
                 @for (category of plugin()!.categories; track category.id) {
                   <span
-                    class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                    class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                   >
                     {{ category.name }}
                   </span>
@@ -158,18 +154,18 @@
               </div>
             }
 
-            <h3 class="mb-4 text-lg font-medium dark:text-white">Additional information</h3>
+            <h3 class="mb-4 text-lg font-medium">Additional information</h3>
             <div class="space-y-3">
               @if (plugin()!.repositoryUrl) {
                 <div>
-                  <p class="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <p class="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">
                     Repository
                   </p>
                   <a
                     [href]="plugin()!.repositoryUrl"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="link text-sm"
+                    class="link"
                   >
                     {{ plugin()!.repositoryUrl }}
                   </a>
@@ -177,7 +173,7 @@
               }
               @if (plugin()!.documentationLinks && plugin()!.documentationLinks.length > 0) {
                 <div>
-                  <p class="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <p class="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">
                     Documentation
                   </p>
                   @for (link of plugin()!.documentationLinks; track link.id) {
@@ -185,7 +181,7 @@
                       [href]="link.url"
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="link block text-sm"
+                      class="link block"
                     >
                       {{ link.title }}
                     </a>
@@ -194,14 +190,14 @@
               }
               @if (plugin()!.author?.url) {
                 <div>
-                  <p class="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <p class="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">
                     Author website
                   </p>
                   <a
                     [href]="plugin()!.author!.url"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="link text-sm"
+                    class="link"
                   >
                     {{ plugin()!.author!.url }}
                   </a>
@@ -219,7 +215,7 @@
 <app-install-plugin-modal
   [pluginName]="plugin()?.name || ''"
   [clusters]="clusters()"
-  [show]="showInstallModal"
+  [show]="showInstallModal()"
   (closeModal)="closeInstallModal()"
   (install)="onInstallOnCluster($event)"
 ></app-install-plugin-modal>

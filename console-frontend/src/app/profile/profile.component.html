@@ -1,8 +1,8 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Profile</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Your account information</p>
+    <h1 class="text-3xl font-semibold">Profile</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">Your account information</p>
   </div>
 
   @if (isLoading()) {
@@ -11,26 +11,25 @@
     </div>
   } @else if (error()) {
     <div class="card-body-lg">
-      <div class="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-        <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+      <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-4">
+        <p class="text-danger-800 dark:text-danger-200">{{ error() }}</p>
       </div>
     </div>
   } @else {
     <div class="card-body-lg">
       <div
-        class="mb-6 flex items-start gap-3 rounded-md border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
+        class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
       >
-        <ng-icon
-          name="tablerInfoCircle"
-          size="1.25rem"
-          class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
-        />
-        <p class="text-sm text-indigo-700 dark:text-indigo-300">
+        <nldd-icon
+          name="info-circle"
+          class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
+        ></nldd-icon>
+        <p class="text-accent-700 dark:text-accent-300">
           Your name and password are managed by your OIDC provider and cannot be changed here.
         </p>
       </div>
 
-      <div class="space-y-4 text-sm">
+      <div class="space-y-4">
         <div class="sm:flex">
           <p class="min-w-32 font-medium text-gray-600 dark:text-gray-400">Name:</p>
           <p>{{ userInfo()?.name || 'N/A' }}</p>

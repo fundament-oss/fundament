@@ -1,38 +1,35 @@
 <!-- Error Message -->
 @if (errorMessage()) {
   <div
-    class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+    class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
   >
-    <ng-icon
-      name="tablerCircleXFill"
-      class="shrink-0 text-rose-500! dark:text-rose-400!"
-      size="1.125rem"
-    />
-    <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+    <nldd-icon
+      name="dismiss-circle"
+      class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+    ></nldd-icon>
+    <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
   </div>
 }
 
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h2 class="text-2xl font-semibold">Namespaces</h2>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Manage namespaces for this project</p>
+    <h2 class="text-3xl font-semibold">Namespaces</h2>
+    <p class="mt-1 text-gray-600 dark:text-gray-400">Manage namespaces for this project</p>
   </div>
 
   <div class="p-6">
-    <button
+    <nldd-button
       type="button"
       (click)="openCreateNamespaceModal()"
-      class="btn-primary mb-5 inline-flex items-center"
-    >
-      <ng-icon name="tablerPlus" class="mr-1.5" />
-      Create namespace
-    </button>
+      text="Create namespace"
+      start-icon="plus-small"
+      variant="primary"
+      class="mb-6"
+    ></nldd-button>
 
     @if (namespaces().length === 0) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        No namespaces belong to this project yet.
-      </p>
+      <p class="text-gray-500 dark:text-gray-400">No namespaces belong to this project yet.</p>
     } @else {
       <div class="space-y-3">
         @for (namespace of namespaces(); track namespace.id) {
@@ -40,19 +37,19 @@
             class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
           >
             <div>
-              <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p class="font-mono text-sm">{{ namespace.name }}</p>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Created {{ formatDate(namespace.created) }}
               </p>
             </div>
-            <button
+            <nldd-button
               type="button"
               (click)="openDeleteNamespaceModal(namespace.id, namespace.name)"
-              class="inline-flex cursor-pointer items-center rounded-md border border-rose-300 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm ring-rose-500 hover:bg-rose-50 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-rose-600 dark:bg-gray-900 dark:text-rose-300 dark:ring-offset-gray-950 dark:hover:bg-rose-900 dark:hover:text-white"
-            >
-              <ng-icon name="tablerTrash" class="mr-1.5" />
-              Delete
-            </button>
+              text="Delete"
+              start-icon="trash"
+              variant="destructive"
+              size="sm"
+            ></nldd-button>
           </div>
         }
       </div>
@@ -61,99 +58,88 @@
 </div>
 
 <!-- Create Namespace Modal -->
-<app-modal
+<nldd-modal-dialog
+  #createNamespaceDialog
+  appDialogSync
   [show]="showCreateNamespaceModal()"
-  title="Create namespace"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showCreateNamespaceModal.set(false)"
+  text="Create namespace"
+  (open)="onCreateNamespaceModalOpen()"
+  (close)="showCreateNamespaceModal.set(false)"
 >
-  <form [formGroup]="namespaceForm" (ngSubmit)="createNamespace()">
-    <!-- Namespace Name -->
-    <div class="mb-4">
-      <label
-        for="namespaceName"
-        class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-      >
-        Namespace name
-      </label>
-      <input
-        id="namespaceName"
-        formControlName="name"
-        type="text"
-        placeholder="E.g. my-namespace"
-      />
-      @if (namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty) {
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ getNameError() }}</p>
-      }
-    </div>
+  <nldd-spacer size="24"></nldd-spacer>
 
-    <div modal-footer class="modal-footer">
-      <button
-        type="button"
-        (click)="showCreateNamespaceModal.set(false)"
-        class="btn-secondary"
-        [disabled]="isCreatingNamespace()"
-      >
-        Cancel
-      </button>
-      <button
-        type="submit"
-        class="btn-primary"
-        [disabled]="isCreatingNamespace() || !namespaceForm.valid"
-      >
-        @if (isCreatingNamespace()) {
-          Creating...
-        } @else {
-          Create namespace
-        }
-      </button>
-    </div>
+  <form
+    [formGroup]="namespaceForm"
+    (ngSubmit)="createNamespace()"
+    (keydown.enter)="createNamespace()"
+  >
+    <nldd-form-field label="Namespace name" class="mb-4">
+      <nldd-text-field
+        id="namespaceName"
+        [value]="namespaceForm.get('name')?.value ?? ''"
+        placeholder="E.g. my-namespace"
+        [invalid]="!!(namespaceForm.get('name')?.invalid && namespaceForm.get('name')?.dirty)"
+        error-message="namespace-name-error"
+        (input)="onNameInput($event)"
+      ></nldd-text-field>
+      <nldd-form-field-error-text id="namespace-name-error">
+        {{ getNameError() }}
+      </nldd-form-field-error-text>
+    </nldd-form-field>
   </form>
-</app-modal>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showCreateNamespaceModal.set(false)"
+    [disabled]="isCreatingNamespace()"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="createNamespace()"
+    text="Create namespace"
+    [text]="isCreatingNamespace() ? 'Creating...' : 'Create namespace'"
+    [disabled]="isCreatingNamespace() || !namespaceForm.valid"
+    variant="primary"
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Delete Namespace Modal -->
-<app-modal
+<nldd-modal-dialog
+  #deleteNamespaceDialog
+  appDialogSync
   [show]="showDeleteNamespaceModal()"
-  title="Delete namespace"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showDeleteNamespaceModal.set(false)"
+  text="Delete namespace"
+  variant="alert"
+  (open)="onDeleteNamespaceModalOpen()"
+  (close)="showDeleteNamespaceModal.set(false)"
 >
-  <div class="sm:flex sm:items-start">
-    <div
-      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
-    >
-      <ng-icon
-        name="tablerAlertTriangle"
-        size="1.5rem"
-        class="text-rose-600! dark:text-rose-400!"
-      />
-    </div>
-    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-      <div class="mt-2">
-        <p class="text-sm text-gray-800 dark:text-gray-400">
-          Are you sure you want to delete namespace
-          <span class="font-semibold text-gray-800 dark:text-white">{{
-            pendingNamespaceName()
-          }}</span
-          >?
-        </p>
-        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          This will remove the namespace and all resources running on it. This cannot be undone.
-        </p>
-      </div>
-    </div>
-  </div>
+  <nldd-spacer size="24"></nldd-spacer>
 
-  <div modal-footer class="modal-footer">
-    <button type="button" (click)="showDeleteNamespaceModal.set(false)" class="btn-secondary">
-      Cancel
-    </button>
-    <button
-      type="button"
-      (click)="confirmDeleteNamespace()"
-      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
-    >
-      Yes, delete this namespace
-    </button>
-  </div>
-</app-modal>
+  <p>
+    Are you sure you want to delete namespace
+    <strong class="font-semibold">{{ pendingNamespaceName() }}</strong
+    >?
+  </p>
+  <p class="mt-2">
+    This will remove the namespace and all resources running on it. This cannot be undone.
+  </p>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showDeleteNamespaceModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmDeleteNamespace()"
+    text="Yes, delete this namespace"
+    variant="destructive"
+  ></nldd-button>
+</nldd-modal-dialog>

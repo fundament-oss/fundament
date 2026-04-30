@@ -1,28 +1,26 @@
 import {
   Component,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
   inject,
   OnInit,
   ChangeDetectionStrategy,
   signal,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
+import AutofocusDirective from '../autofocus.directive';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 
 @Component({
   selector: 'app-add-cluster',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, AutofocusDirective],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster.component.html',
 })
-export default class AddClusterComponent implements AfterViewInit, OnInit {
-  @ViewChild('clusterNameInput') clusterNameInput!: ElementRef<HTMLInputElement>;
-
+export default class AddClusterComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -75,11 +73,6 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
     }
   }
 
-  ngAfterViewInit() {
-    // Focus the cluster name input after the view is initialized
-    this.clusterNameInput.nativeElement.focus();
-  }
-
   get clusterName() {
     return this.clusterForm.get('clusterName');
   }
@@ -106,7 +99,10 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
     this.clusterNameExists.set(exists);
   }
 
-  onClusterNameInput() {
+  onClusterNameInput(event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.clusterForm.get('clusterName')?.setValue(value);
+    this.clusterForm.get('clusterName')?.markAsDirty();
     this.clusterNameExists.set(false);
   }
 
@@ -141,6 +137,11 @@ export default class AddClusterComponent implements AfterViewInit, OnInit {
         (firstInvalidControl as HTMLElement).focus();
       }
     }, 0);
+  }
+
+  onRadioChange(controlName: string, event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.clusterForm.get(controlName)?.setValue(value);
   }
 
   onCancel() {

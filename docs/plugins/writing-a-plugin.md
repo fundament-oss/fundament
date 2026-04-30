@@ -18,7 +18,7 @@ metadata:
   description: Does something useful
   author: My Team
   license: Apache-2.0
-  icon: puzzle
+  icon: puzzle-piece
   tags:
     - example
 spec:
@@ -36,7 +36,7 @@ spec:
         list: true
         detail: true
         create: true
-        icon: box
+        icon: pencil-on-square
 
   uiHints:
     myresources.my-api.io:

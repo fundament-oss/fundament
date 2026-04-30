@@ -1,7 +1,12 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCheck, tablerHelpCircle } from '@ng-icons/tabler-icons';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
@@ -16,12 +21,10 @@ import {
   type Preset,
   type PluginSummary,
 } from '../../generated/v1/plugin_pb';
-import {
-  type ListClustersResponse_ClusterSummary as ClusterSummary,
-} from '../../generated/v1/cluster_pb';
+import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ToastService } from '../toast.service';
-import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 
 const getPluginIconName = (pluginName: string): string =>
   pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
@@ -58,13 +61,8 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
 
 @Component({
   selector: 'app-plugins',
-  imports: [RouterLink, InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCheck,
-      tablerHelpCircle,
-    }),
-  ],
+  imports: [RouterLink, InstallPluginModalComponent, LoadingIndicatorComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',
 })
@@ -83,7 +81,7 @@ export default class PluginsComponent implements OnInit {
 
   selectedPreset = 'all';
 
-  showInstallModal = false;
+  showInstallModal = signal(false);
 
   selectedPlugin: PluginWithPresets | null = null;
 
@@ -182,7 +180,10 @@ export default class PluginsComponent implements OnInit {
         ),
       );
       this.installs = this.clusters.flatMap((cluster, i) =>
-        installResults[i].map((item) => ({ clusterId: cluster.id, pluginName: item.metadata.name })),
+        installResults[i].map((item) => ({
+          clusterId: cluster.id,
+          pluginName: item.metadata.name,
+        })),
       );
 
       this.isLoading.set(false);
@@ -291,11 +292,11 @@ export default class PluginsComponent implements OnInit {
 
   onInstallPlugin(plugin: PluginWithPresets) {
     this.selectedPlugin = plugin;
-    this.showInstallModal = true;
+    this.showInstallModal.set(true);
   }
 
   closeInstallModal(): void {
-    this.showInstallModal = false;
+    this.showInstallModal.set(false);
     this.selectedPlugin = null;
   }
 
@@ -306,7 +307,8 @@ export default class PluginsComponent implements OnInit {
     }
 
     const alreadyInstalled = this.installs.some(
-      (install) => install.clusterId === clusterId && install.pluginName === this.selectedPlugin!.name,
+      (install) =>
+        install.clusterId === clusterId && install.pluginName === this.selectedPlugin!.name,
     );
     if (alreadyInstalled) return;
 

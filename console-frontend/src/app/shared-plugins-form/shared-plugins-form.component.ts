@@ -7,6 +7,7 @@ import {
   signal,
   Input,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
@@ -29,6 +30,7 @@ export interface Plugin {
 @Component({
   selector: 'app-shared-plugins-form',
   imports: [FormsModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-plugins-form.component.html',
 })
@@ -86,6 +88,11 @@ export class SharedPluginsFormComponent implements OnInit {
     }
   }
 
+  onPresetRadioChange(event: Event) {
+    this.selectedPreset = (event as CustomEvent<{ value: string }>).detail.value;
+    this.onPresetChange();
+  }
+
   onPresetChange() {
     if (this.selectedPreset === 'custom') {
       // For custom preset, don't change selections automatically
@@ -112,6 +119,10 @@ export class SharedPluginsFormComponent implements OnInit {
     } else {
       this.selectedCustomPluginFile = null;
     }
+  }
+
+  submit() {
+    this.onSubmit();
   }
 
   onSubmit() {

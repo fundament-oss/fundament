@@ -5,11 +5,11 @@ import {
   signal,
   computed,
   effect,
+  viewChild,
+  ElementRef,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { tablerSearch, tablerFolder, tablerBuilding } from '@ng-icons/tabler-icons';
-import ModalComponent from '../modal/modal.component';
 
 interface Project {
   id: string;
@@ -24,14 +24,8 @@ interface Organization {
 
 @Component({
   selector: 'app-selector-modal',
-  imports: [NgIconComponent, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerSearch,
-      tablerFolder,
-      tablerBuilding,
-    }),
-  ],
+  imports: [],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './selector-modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -54,7 +48,20 @@ export default class SelectorModalComponent {
 
   filterInputValue = signal('');
 
-  // Reset filter when modal opens
+  dialogRef = viewChild<ElementRef<HTMLElement & { show(): void; hide(): void }>>('dialog');
+
+  searchFieldRef = viewChild<ElementRef<HTMLElement>>('searchField');
+
+  private syncDialog = effect(() => {
+    const dialog = this.dialogRef();
+    if (!dialog) return;
+    if (this.show()) {
+      dialog.nativeElement.show();
+    } else {
+      dialog.nativeElement.hide();
+    }
+  });
+
   private resetOnOpen = effect(() => {
     if (this.show()) {
       this.filterText.set('');
@@ -87,14 +94,24 @@ export default class SelectorModalComponent {
       .filter((org): org is Organization => org !== null);
   });
 
+  onOpen(): void {
+    const el = this.searchFieldRef()?.nativeElement;
+    if (!el) return;
+    const focusTarget = el.shadowRoot?.querySelector<HTMLElement>('input:not([disabled])') ?? el;
+    focusTarget.focus({ focusVisible: true } as FocusOptions & { focusVisible?: boolean });
+  }
+
   onClose(): void {
     this.closeModal.emit();
   }
 
   updateFilter(event: Event): void {
-    const inputEl = event.target as HTMLInputElement;
-    this.filterInputValue.set(inputEl.value);
-    this.filterText.set(inputEl.value.toLowerCase());
+    const value =
+      (event as CustomEvent<{ value?: string }>).detail?.value ??
+      (event.target as HTMLInputElement).value ??
+      '';
+    this.filterInputValue.set(value);
+    this.filterText.set(value.toLowerCase());
   }
 
   onSelectOrganization(orgId: string): void {

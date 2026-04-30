@@ -1,14 +1,13 @@
 import {
+  AfterViewInit,
+  ChangeDetectorRef,
   Component,
   Input,
   Output,
   EventEmitter,
-  ViewChildren,
-  QueryList,
-  ElementRef,
-  AfterViewInit,
   inject,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import {
   ReactiveFormsModule,
@@ -19,8 +18,7 @@ import {
   AbstractControl,
   ValidationErrors,
 } from '@angular/forms';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerTrash, tablerPlus } from '@ng-icons/tabler-icons';
+import AutofocusDirective from '../autofocus.directive';
 
 export interface NodePoolData {
   name: string;
@@ -31,19 +29,12 @@ export interface NodePoolData {
 
 @Component({
   selector: 'app-shared-node-pools-form',
-  imports: [ReactiveFormsModule, NgIcon],
-  viewProviders: [
-    provideIcons({
-      tablerTrash,
-      tablerPlus,
-    }),
-  ],
+  imports: [ReactiveFormsModule, AutofocusDirective],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-node-pools-form.component.html',
 })
 export class SharedNodePoolsFormComponent implements AfterViewInit {
-  @ViewChildren('nodePoolNameInput') nodePoolNameInputs!: QueryList<ElementRef<HTMLInputElement>>;
-
   @Input() submitButtonText = 'Next step';
 
   @Input() set initialData(data: NodePoolData[] | null) {
@@ -55,6 +46,8 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
   @Output() formSubmit = new EventEmitter<{ nodePools: NodePoolData[] }>();
 
   private fb = inject(FormBuilder);
+
+  private cdr = inject(ChangeDetectorRef);
 
   // Form
   nodePoolsForm: FormGroup;
@@ -73,6 +66,10 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     this.nodePoolsForm = this.fb.group({
       nodePools: this.fb.array([this.createNodePoolFormGroup()]),
     });
+  }
+
+  ngAfterViewInit(): void {
+    this.cdr.markForCheck();
   }
 
   get nodePools(): FormArray {
@@ -136,10 +133,6 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     return hasDuplicate ? { duplicate: true } : null;
   }
 
-  ngAfterViewInit() {
-    this.nodePoolNameInputs.first?.nativeElement.focus();
-  }
-
   getNodePoolNameError(index: number): string {
     const nameControl = this.nodePools.at(index).get('name');
     if (nameControl?.hasError('required')) {
@@ -155,6 +148,12 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
       return 'This node pool name is already in use. Please choose a unique name.';
     }
     return '';
+  }
+
+  onNodePoolNameInput(index: number, event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.nodePools.at(index).get('name')?.setValue(value);
+    this.nodePools.at(index).get('name')?.markAsDirty();
   }
 
   addNodePool() {
@@ -173,6 +172,10 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     this.nodePools.controls.forEach((control) => {
       control.get('name')?.updateValueAndValidity();
     });
+  }
+
+  submit() {
+    this.onSubmit();
   }
 
   onSubmit() {

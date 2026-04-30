@@ -1,20 +1,16 @@
 import {
   Component,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
   OnInit,
   inject,
   signal,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
@@ -25,21 +21,16 @@ import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
+import AutofocusDirective from '../autofocus.directive';
 
 @Component({
   selector: 'app-add-project',
-  imports: [RouterLink, ReactiveFormsModule, NgIcon, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-    }),
-  ],
+  imports: [RouterLink, ReactiveFormsModule, LoadingIndicatorComponent, AutofocusDirective],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class AddProjectComponent implements AfterViewInit, OnInit {
-  @ViewChild('projectNameInput') projectNameInput!: ElementRef<HTMLInputElement>;
-
+export default class AddProjectComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -85,11 +76,6 @@ export default class AddProjectComponent implements AfterViewInit, OnInit {
     await this.loadClusters();
   }
 
-  ngAfterViewInit() {
-    // Focus the project name input after the view is initialized
-    this.projectNameInput.nativeElement.focus();
-  }
-
   async loadClusters() {
     try {
       this.isLoadingClusters.set(true);
@@ -125,10 +111,9 @@ export default class AddProjectComponent implements AfterViewInit, OnInit {
         name: this.projectForm.value.name!,
       });
 
-      const response = await withIdempotency(
-        (opts) => this.client.createProject(request, opts),
-        { signal: this.idempotency.reset() },
-      );
+      const response = await withIdempotency((opts) => this.client.createProject(request, opts), {
+        signal: this.idempotency.reset(),
+      });
 
       this.toastService.success(`Project '${this.projectForm.value.name}' created successfully`);
 
@@ -145,6 +130,12 @@ export default class AddProjectComponent implements AfterViewInit, OnInit {
     } finally {
       this.isSubmitting.set(false);
     }
+  }
+
+  onNameInput(event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.projectForm.get('name')?.setValue(value);
+    this.projectForm.get('name')?.markAsDirty();
   }
 
   getClusterError(): string {

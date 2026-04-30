@@ -47,13 +47,6 @@ function parseCrd(raw: RawCrdYaml): ParsedCrd {
   };
 }
 
-function toTablerIconName(icon: string): string {
-  return `tabler${icon
-    .split('-')
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join('')}`;
-}
-
 function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
   return {
     apiVersion: def.apiVersion,
@@ -67,7 +60,7 @@ function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
       project: def.menu?.project?.map((e) => ({
         crd: e.crd,
         label: e.label,
-        icon: e.icon ? toTablerIconName(e.icon) : undefined,
+        icon: e.icon ?? undefined,
       })),
     },
     crds: def.crds ?? [],

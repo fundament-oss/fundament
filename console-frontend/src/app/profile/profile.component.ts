@@ -5,11 +5,10 @@ import {
   signal,
   computed,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerInfoCircle } from '@ng-icons/tabler-icons';
 import { AUTHN, ORGANIZATION } from '../../connect/tokens';
 import type { User } from '../../generated/authn/v1/authn_pb';
 import type { Organization } from '../../generated/v1/organization_pb';
@@ -17,10 +16,10 @@ import { TitleService } from '../title.service';
 
 @Component({
   selector: 'app-profile',
-  imports: [ReactiveFormsModule, NgIcon],
-  viewProviders: [provideIcons({ tablerInfoCircle })],
+  imports: [ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile.component.html',
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class ProfileComponent implements OnInit {
   private titleService = inject(TitleService);

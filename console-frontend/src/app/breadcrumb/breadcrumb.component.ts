@@ -1,7 +1,12 @@
-import { Component, computed, inject, Input, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  Input,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerChevronRight } from '@ng-icons/tabler-icons';
 import { OrganizationDataService } from '../organization-data.service';
 
 export interface BreadcrumbSegment {
@@ -11,12 +16,8 @@ export interface BreadcrumbSegment {
 
 @Component({
   selector: 'app-breadcrumb',
-  imports: [RouterLink, NgIcon],
-  viewProviders: [
-    provideIcons({
-      tablerChevronRight,
-    }),
-  ],
+  imports: [RouterLink],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './breadcrumb.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

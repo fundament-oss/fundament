@@ -5,28 +5,19 @@ import {
   signal,
   computed,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerPlus,
-  tablerTrash,
-  tablerClockHour4,
-  tablerMail,
-  tablerAlertTriangle,
-  tablerX,
-  tablerInfoCircle,
-  tablerPencil,
-  tablerUsersGroup,
-} from '@ng-icons/tabler-icons';
+import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatTimeAgo } from '../utils/date-format';
 
@@ -40,10 +31,10 @@ const getInitials = (name: string): string =>
 
 const getAvatarColor = (name: string): string => {
   const colors = [
-    'bg-indigo-600',
+    'bg-accent-600',
     'bg-emerald-600',
     'bg-purple-600',
-    'bg-rose-600',
+    'bg-danger-600',
     'bg-amber-600',
     'bg-cyan-600',
   ];
@@ -64,20 +55,8 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [FormsModule, NgIcon, ModalComponent, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerPlus,
-      tablerX,
-      tablerTrash,
-      tablerClockHour4,
-      tablerMail,
-      tablerAlertTriangle,
-      tablerInfoCircle,
-      tablerPencil,
-      tablerUsersGroup,
-    }),
-  ],
+  imports: [DialogSyncDirective, LoadingIndicatorComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './organization-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -103,6 +82,8 @@ export default class OrganizationMembersComponent implements OnInit {
   isModalOpen = signal(false);
 
   inviteEmail = signal('');
+
+  inviteEmailDirty = signal(false);
 
   invitePermission = signal('viewer');
 
@@ -166,6 +147,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
   openModal() {
     this.inviteEmail.set('');
+    this.inviteEmailDirty.set(false);
     this.invitePermission.set('viewer');
     this.inviteError.set(null);
     this.isModalOpen.set(true);
@@ -187,7 +169,8 @@ export default class OrganizationMembersComponent implements OnInit {
 
     try {
       await withIdempotency(
-        (opts) => this.inviteClient.inviteMember({ email, permission: this.invitePermission() }, opts),
+        (opts) =>
+          this.inviteClient.inviteMember({ email, permission: this.invitePermission() }, opts),
         { signal: this.idempotency.reset() },
       );
       this.closeModal();
@@ -288,4 +271,25 @@ export default class OrganizationMembersComponent implements OnInit {
   getInitials = getInitials;
 
   getAvatarColor = getAvatarColor;
+
+  inviteDialogRef = viewChild<ElementRef<HTMLElement>>('inviteDialog');
+
+  onInviteModalOpen(): void {
+    const el = this.inviteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
+
+  onDeleteModalOpen(): void {
+    const el = this.deleteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  editDialogRef = viewChild<ElementRef<HTMLElement>>('editDialog');
+
+  onEditModalOpen(): void {
+    const el = this.editDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
 }

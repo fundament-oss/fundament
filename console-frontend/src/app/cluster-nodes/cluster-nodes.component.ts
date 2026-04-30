@@ -1,10 +1,16 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ViewChild,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import {
   SharedNodePoolsFormComponent,
@@ -22,16 +28,14 @@ import { fetchClusterName } from '../utils/cluster-status';
 
 @Component({
   selector: 'app-cluster-nodes',
-  imports: [SharedNodePoolsFormComponent, NgIcon],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-    }),
-  ],
+  imports: [SharedNodePoolsFormComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-nodes.component.html',
 })
 export default class ClusterNodesComponent implements OnInit {
+  @ViewChild(SharedNodePoolsFormComponent) nodePoolsForm!: SharedNodePoolsFormComponent;
+
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -121,7 +125,7 @@ export default class ClusterNodesComponent implements OnInit {
       );
 
       // Create or update pools
-      const signal = this.idempotency.reset();
+      const idempotencySignal = this.idempotency.reset();
 
       await Promise.all(
         newPools.map((newPool) => {
@@ -149,10 +153,9 @@ export default class ClusterNodesComponent implements OnInit {
               autoscaleMin: newPool.autoscaleMin,
               autoscaleMax: newPool.autoscaleMax,
             });
-            return withIdempotency(
-              (opts) => this.client.createNodePool(createRequest, opts),
-              { signal },
-            );
+            return withIdempotency((opts) => this.client.createNodePool(createRequest, opts), {
+              signal: idempotencySignal,
+            });
           }
           return undefined;
         }),

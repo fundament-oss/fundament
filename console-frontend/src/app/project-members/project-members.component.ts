@@ -1,22 +1,22 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
+} from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerPlus,
-  tablerTrash,
-  tablerPencil,
-  tablerAlertTriangle,
-  tablerInfoCircle,
-  tablerLock,
-  tablerArrowBackUp,
-} from '@ng-icons/tabler-icons';
+import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import { PROJECT, MEMBER } from '../../connect/tokens';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatTimeAgo } from '../utils/date-format';
 import type { ProjectMember } from '../../generated/v1/project_pb';
@@ -53,18 +53,8 @@ const formatMemberDate = (member: ProjectMember): string =>
 
 @Component({
   selector: 'app-project-members',
-  imports: [ReactiveFormsModule, NgIcon, ModalComponent, RouterLink, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerPlus,
-      tablerTrash,
-      tablerPencil,
-      tablerAlertTriangle,
-      tablerInfoCircle,
-      tablerLock,
-      tablerArrowBackUp,
-    }),
-  ],
+  imports: [ReactiveFormsModule, DialogSyncDirective, RouterLink, LoadingIndicatorComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-members.component.html',
 })
@@ -181,6 +171,11 @@ export default class ProjectMembersComponent implements OnInit {
     this.showAddMemberModal.set(true);
   }
 
+  onPermissionChange(event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.memberForm.get('permission')?.setValue(value);
+  }
+
   async saveMember() {
     if (this.memberForm.invalid) {
       this.memberForm.markAllAsTouched();
@@ -201,11 +196,15 @@ export default class ProjectMembersComponent implements OnInit {
       } else {
         const userId = this.memberForm.value.userId!;
         await withIdempotency(
-          (opts) => this.projectClient.addProjectMember({
-            projectId: this.projectId(),
-            userId,
-            role,
-          }, opts),
+          (opts) =>
+            this.projectClient.addProjectMember(
+              {
+                projectId: this.projectId(),
+                userId,
+                role,
+              },
+              opts,
+            ),
           { signal: this.idempotency.reset() },
         );
       }
@@ -271,4 +270,18 @@ export default class ProjectMembersComponent implements OnInit {
   roleToString = roleToString;
 
   formatMemberDate = formatMemberDate;
+
+  addMemberDialogRef = viewChild<ElementRef<HTMLElement>>('addMemberDialog');
+
+  onAddMemberModalOpen(): void {
+    const el = this.addMemberDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  removeMemberDialogRef = viewChild<ElementRef<HTMLElement>>('removeMemberDialog');
+
+  onRemoveMemberModalOpen(): void {
+    const el = this.removeMemberDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
 }

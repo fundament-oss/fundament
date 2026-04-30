@@ -35,7 +35,7 @@ As a rule of thumb, dark mode and light mode color values should add up to 1000 
 
 === Accent color
 
-The primary accent color is `indigo`. It is used for primary buttons, active navigation states, focus rings, and loading indicators. All interactive emphasis should use indigo rather than introducing other accent colors.
+The primary accent color is `accent`. It is used for primary buttons, active navigation states, focus rings, and loading indicators. All interactive emphasis should use accent rather than introducing other accent colors.
 
 === Semantic colors
 
@@ -68,7 +68,7 @@ Input fields should use `bg-gray-900` in dark mode to provide a subtle contrast 
 
 == Typography
 
-The default body text size is `text-sm`. Use `text-2xl font-semibold` for page titles, `text-lg` for section headings, and `text-xs` for badges and helper text. Use `font-mono` for technical identifiers such as UUIDs and tokens.
+The default body text size is `text-base`. Use `text-3xl font-semibold` for page titles, `text-lg` for section headings, and `text-sm` for badges and helper text. Use `font-mono` for technical identifiers such as UUIDs and tokens.
 
 == Headers
 
@@ -78,7 +78,7 @@ Preferably, do not capitalize every word in titles, headers, and buttons. Capita
 
 === Icon set
 
-The primary icon set is https://tabler.io/icons[Tabler Icons]. If this icon set does not offer a suitable icon for a particular use case, another icon set may be used, provided the chosen icon matches the same visual style and stroke width as Tabler icons.
+The primary icon set is the https://minbzk.github.io/storybook/?path=/story/components-content-icon--icon-gallery[NLDD icon gallery] from the `@nldd/design-system` library. Icon names are referenced using their kebab-case identifiers (e.g. `info-circle`, `check-mark`).
 
 === Icon style
 

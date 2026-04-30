@@ -1,12 +1,12 @@
-import { Component, inject, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  tablerPlus,
-  tablerChevronRight,
-  tablerFolder,
-  tablerFolders,
-} from '@ng-icons/tabler-icons';
+  Component,
+  inject,
+  computed,
+  OnInit,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { LoadingIndicatorComponent } from '../icons';
 import { TitleService } from '../title.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -14,15 +14,8 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-projects',
-  imports: [RouterLink, NgIcon, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerPlus,
-      tablerChevronRight,
-      tablerFolder,
-      tablerFolders,
-    }),
-  ],
+  imports: [RouterLink, LoadingIndicatorComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './projects.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

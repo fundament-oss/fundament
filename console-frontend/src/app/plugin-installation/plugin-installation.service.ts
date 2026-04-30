@@ -1,13 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 
 import { ConfigService } from '../config.service';
-import {
-  PluginInstallationItem,
-  PluginInstallationListResponse,
-} from '../plugin-resources/types';
+import { PluginInstallationItem, PluginInstallationListResponse } from '../plugin-resources/types';
 
 @Injectable({ providedIn: 'root' })
-export class PluginInstallationService {
+export default class PluginInstallationService {
   private configService = inject(ConfigService);
 
   private url(clusterId: string, name?: string): string {

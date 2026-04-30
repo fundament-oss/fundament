@@ -5,12 +5,10 @@ import {
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerEye } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -21,14 +19,8 @@ import { getStatusColor, getStatusLabel, isTransitionalStatus } from '../utils/c
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, NgIcon],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-      tablerPlus,
-      tablerEye,
-    }),
-  ],
+  imports: [RouterLink],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.component.html',
 })

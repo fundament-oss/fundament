@@ -11,12 +11,12 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.emailInput = page.locator('#email');
-    this.passwordInput = page.locator('#password');
-    this.submitButton = page.locator('button[type="submit"]');
-    this.errorMessage = page.locator('.text-red-800, .text-red-200');
-    this.validationError = page.locator('.text-rose-600, .text-rose-400');
-    this.heading = page.locator('h2');
+    this.emailInput = page.locator('nldd-text-field#email').locator('input');
+    this.passwordInput = page.locator('nldd-password-field#password').locator('input');
+    this.submitButton = page.locator('nldd-button[type="submit"]');
+    this.errorMessage = page.locator('.text-danger-800, .text-danger-200');
+    this.validationError = page.locator('nldd-form-field-error-text').filter({ hasText: /\S/ });
+    this.heading = page.getByRole('heading', { name: 'Log in' });
   }
 
   async goto() {

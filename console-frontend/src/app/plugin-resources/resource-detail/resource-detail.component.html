@@ -12,10 +12,10 @@
       <div class="card-header">
         <a
           [routerLink]="listLink"
-          class="mb-1 inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-          ><ng-icon name="tablerArrowLeft" class="mr-1" /> Back to list</a
+          class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 mb-1 inline-flex items-center"
+          ><nldd-icon name="arrow-left" class="mr-1 h-4 w-4"></nldd-icon> Back to list</a
         >
-        <h1 class="text-2xl font-semibold dark:text-white">{{ resource()!.metadata.name }}</h1>
+        <h1 class="text-3xl font-semibold">{{ resource()!.metadata.name }}</h1>
         @if (resource()!.metadata.namespace) {
           <p class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
             Namespace: {{ resource()!.metadata.namespace }}
@@ -27,16 +27,16 @@
       <div class="card-body">
         <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Kind</dt>
-            <dd class="mt-1 text-sm dark:text-white">{{ resource()!.kind }}</dd>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Kind</dt>
+            <dd class="mt-1">{{ resource()!.kind }}</dd>
           </div>
           <div>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">API Version</dt>
-            <dd class="mt-1 font-mono text-sm dark:text-white">{{ resource()!.apiVersion }}</dd>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">API Version</dt>
+            <dd class="mt-1 font-mono text-sm">{{ resource()!.apiVersion }}</dd>
           </div>
           <div>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Created</dt>
-            <dd class="mt-1 text-sm dark:text-white">
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Created</dt>
+            <dd class="mt-1">
               {{ formatDateValue(resource()!.metadata.creationTimestamp) }}
             </dd>
           </div>
@@ -48,16 +48,16 @@
     @for (group of specSections(); track group.name) {
       <div class="card">
         <div class="card-header">
-          <h2 class="text-lg font-semibold dark:text-white">{{ group.name }}</h2>
+          <h2 class="text-lg font-semibold">{{ group.name }}</h2>
         </div>
         <div class="card-body">
           <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             @for (field of group.fields; track field[0]) {
               <div [class.sm:col-span-2]="isWideField(field[1])">
-                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                <dt class="font-medium text-gray-500 dark:text-gray-400">
                   {{ formatLabel(field[0]) }}
                 </dt>
-                <dd class="mt-1 text-sm dark:text-white">
+                <dd class="mt-1">
                   <app-field-renderer [schema]="field[1]" [value]="getSpecValue(field[0])" />
                 </dd>
               </div>
@@ -71,16 +71,16 @@
     @if (resource()!.status && statusFields().length > 0) {
       <div class="card">
         <div class="card-header">
-          <h2 class="text-lg font-semibold dark:text-white">Status</h2>
+          <h2 class="text-lg font-semibold">Status</h2>
         </div>
         <div class="card-body">
           <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             @for (entry of statusFields(); track entry[0]) {
               <div [class.sm:col-span-2]="isWideStatusField(entry[0], entry[1])">
-                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                <dt class="font-medium text-gray-500 dark:text-gray-400">
                   {{ formatLabel(entry[0]) }}
                 </dt>
-                <dd class="mt-1 text-sm dark:text-white">
+                <dd class="mt-1">
                   @if (isConditionsField(entry[0], entry[1])) {
                     <!-- Conditions table -->
                     @if (asArray(entry[1]).length > 0) {
@@ -110,11 +110,11 @@
                                   }
                                 </td>
                                 <td
-                                  class="max-w-xs text-sm whitespace-normal text-gray-600 dark:text-gray-400"
+                                  class="max-w-xs whitespace-normal text-gray-600 dark:text-gray-400"
                                 >
                                   {{ asRecord(cond)['message'] || '\u2014' }}
                                 </td>
-                                <td class="text-sm">
+                                <td>
                                   {{ formatDateValue(asRecord(cond)['lastTransitionTime']) }}
                                 </td>
                               </tr>
@@ -139,8 +139,8 @@
 } @else {
   <div class="card">
     <div class="card-body text-center">
-      <p class="text-gray-600 dark:text-gray-300">Resource not found</p>
-      <a [routerLink]="listLink" class="btn-primary mt-4 inline-block">Back to list</a>
+      <p class="mb-4 text-gray-600 dark:text-gray-300">Resource not found</p>
+      <nldd-button [routerLink]="listLink" text="Back to list" variant="primary"></nldd-button>
     </div>
   </div>
 }
