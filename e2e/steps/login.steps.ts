@@ -30,8 +30,7 @@ Then('I should be redirected to the dashboard', async function (this: ICustomWor
 });
 
 Then('I should see the main navigation', async function (this: ICustomWorld) {
-  // Verify we're on the dashboard by checking for main content
-  const mainContent = this.page!.locator('main');
+  const mainContent = this.page!.locator('main').first();
   await expect(mainContent).toBeVisible();
 });
 
