@@ -1,35 +1,35 @@
 -- name: NamespaceListByClusterID :many
 SELECT
-  namespaces.id,
-  namespaces.project_id,
-  namespaces.name,
-  namespaces.created,
-  namespaces.deleted,
-  projects.cluster_id
+  id,
+  project_id,
+  cluster_id,
+  name,
+  created,
+  deleted
 FROM tenant.namespaces
-JOIN tenant.projects
-  ON projects.id = namespaces.project_id
-WHERE projects.cluster_id = $1
-  AND namespaces.deleted IS NULL
-ORDER BY namespaces.name ASC;
+WHERE cluster_id = $1
+  AND deleted IS NULL
+ORDER BY name ASC;
 
 -- name: NamespaceGetByID :one
 SELECT
-  namespaces.id,
-  namespaces.project_id,
-  namespaces.name,
-  namespaces.created,
-  namespaces.deleted,
-  projects.cluster_id
+  id,
+  project_id,
+  cluster_id,
+  name,
+  created,
+  deleted
 FROM tenant.namespaces
-JOIN tenant.projects
-  ON projects.id = namespaces.project_id
-WHERE namespaces.id = $1
-  AND namespaces.deleted IS NULL;
+WHERE id = $1
+  AND deleted IS NULL;
 
 -- name: NamespaceCreate :one
-INSERT INTO tenant.namespaces (project_id, name)
-VALUES ($1, $2)
+WITH project AS (
+    SELECT cluster_id FROM tenant.projects WHERE id = @project_id AND deleted IS NULL
+)
+INSERT INTO tenant.namespaces (project_id, cluster_id, name)
+SELECT @project_id, project.cluster_id, @name
+FROM project
 RETURNING id;
 
 -- name: NamespaceDelete :execrows
@@ -39,32 +39,30 @@ WHERE id = $1 AND deleted IS NULL;
 
 -- name: NamespaceListByProjectID :many
 SELECT
-  namespaces.id,
-  namespaces.project_id,
-  namespaces.name,
-  namespaces.created,
-  namespaces.deleted,
-  projects.cluster_id
+  id,
+  project_id,
+  cluster_id,
+  name,
+  created,
+  deleted
 FROM tenant.namespaces
-JOIN tenant.projects
-  ON projects.id = namespaces.project_id
-WHERE namespaces.project_id = $1
-  AND namespaces.deleted IS NULL
-ORDER BY namespaces.name ASC;
+WHERE project_id = $1
+  AND deleted IS NULL
+ORDER BY name ASC;
 
 -- name: NamespaceGetByProjectAndName :one
 SELECT
   namespaces.id,
   namespaces.project_id,
+  namespaces.cluster_id,
   namespaces.name,
   namespaces.created,
-  namespaces.deleted,
-  projects.cluster_id
+  namespaces.deleted
 FROM tenant.namespaces
 JOIN tenant.projects
   ON projects.id = namespaces.project_id
 JOIN tenant.clusters
-  ON clusters.id = projects.cluster_id
+  ON clusters.id = namespaces.cluster_id
 WHERE clusters.name = sqlc.arg('cluster_name')
   AND projects.name = sqlc.arg('project_name')
   AND namespaces.name = sqlc.arg('namespace_name')

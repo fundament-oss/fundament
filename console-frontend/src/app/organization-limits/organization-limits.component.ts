@@ -113,6 +113,11 @@ export default class OrganizationLimitsComponent implements OnInit {
     }
   }
 
+  protected toInt(value: unknown): number | undefined {
+    const n = Math.trunc(Number(value));
+    return n > 0 ? n : undefined;
+  }
+
   private buildUpdateRequest(orgId: string) {
     return create(UpdateOrganizationLimitsRequestSchema, {
       id: orgId,

@@ -66,6 +66,12 @@ const (
 	// ProjectServiceRemoveProjectMemberProcedure is the fully-qualified name of the ProjectService's
 	// RemoveProjectMember RPC.
 	ProjectServiceRemoveProjectMemberProcedure = "/organization.v1.ProjectService/RemoveProjectMember"
+	// ProjectServiceGetProjectLimitsProcedure is the fully-qualified name of the ProjectService's
+	// GetProjectLimits RPC.
+	ProjectServiceGetProjectLimitsProcedure = "/organization.v1.ProjectService/GetProjectLimits"
+	// ProjectServiceUpdateProjectLimitsProcedure is the fully-qualified name of the ProjectService's
+	// UpdateProjectLimits RPC.
+	ProjectServiceUpdateProjectLimitsProcedure = "/organization.v1.ProjectService/UpdateProjectLimits"
 )
 
 // ProjectServiceClient is a client for the organization.v1.ProjectService service.
@@ -92,6 +98,10 @@ type ProjectServiceClient interface {
 	UpdateProjectMemberRole(context.Context, *connect.Request[v1.UpdateProjectMemberRoleRequest]) (*connect.Response[v1.UpdateProjectMemberRoleResponse], error)
 	// Remove a member from a project (requires admin role)
 	RemoveProjectMember(context.Context, *connect.Request[v1.RemoveProjectMemberRequest]) (*connect.Response[v1.RemoveProjectMemberResponse], error)
+	// GetProjectLimits retrieves the namespace resource defaults for a project
+	GetProjectLimits(context.Context, *connect.Request[v1.GetProjectLimitsRequest]) (*connect.Response[v1.GetProjectLimitsResponse], error)
+	// UpdateProjectLimits sets the namespace resource defaults for a project
+	UpdateProjectLimits(context.Context, *connect.Request[v1.UpdateProjectLimitsRequest]) (*connect.Response[v1.UpdateProjectLimitsResponse], error)
 }
 
 // NewProjectServiceClient constructs a client for the organization.v1.ProjectService service. By
@@ -171,6 +181,18 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(projectServiceMethods.ByName("RemoveProjectMember")),
 			connect.WithClientOptions(opts...),
 		),
+		getProjectLimits: connect.NewClient[v1.GetProjectLimitsRequest, v1.GetProjectLimitsResponse](
+			httpClient,
+			baseURL+ProjectServiceGetProjectLimitsProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("GetProjectLimits")),
+			connect.WithClientOptions(opts...),
+		),
+		updateProjectLimits: connect.NewClient[v1.UpdateProjectLimitsRequest, v1.UpdateProjectLimitsResponse](
+			httpClient,
+			baseURL+ProjectServiceUpdateProjectLimitsProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("UpdateProjectLimits")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -187,6 +209,8 @@ type projectServiceClient struct {
 	addProjectMember        *connect.Client[v1.AddProjectMemberRequest, v1.AddProjectMemberResponse]
 	updateProjectMemberRole *connect.Client[v1.UpdateProjectMemberRoleRequest, v1.UpdateProjectMemberRoleResponse]
 	removeProjectMember     *connect.Client[v1.RemoveProjectMemberRequest, v1.RemoveProjectMemberResponse]
+	getProjectLimits        *connect.Client[v1.GetProjectLimitsRequest, v1.GetProjectLimitsResponse]
+	updateProjectLimits     *connect.Client[v1.UpdateProjectLimitsRequest, v1.UpdateProjectLimitsResponse]
 }
 
 // ListProjects calls organization.v1.ProjectService.ListProjects.
@@ -244,6 +268,16 @@ func (c *projectServiceClient) RemoveProjectMember(ctx context.Context, req *con
 	return c.removeProjectMember.CallUnary(ctx, req)
 }
 
+// GetProjectLimits calls organization.v1.ProjectService.GetProjectLimits.
+func (c *projectServiceClient) GetProjectLimits(ctx context.Context, req *connect.Request[v1.GetProjectLimitsRequest]) (*connect.Response[v1.GetProjectLimitsResponse], error) {
+	return c.getProjectLimits.CallUnary(ctx, req)
+}
+
+// UpdateProjectLimits calls organization.v1.ProjectService.UpdateProjectLimits.
+func (c *projectServiceClient) UpdateProjectLimits(ctx context.Context, req *connect.Request[v1.UpdateProjectLimitsRequest]) (*connect.Response[v1.UpdateProjectLimitsResponse], error) {
+	return c.updateProjectLimits.CallUnary(ctx, req)
+}
+
 // ProjectServiceHandler is an implementation of the organization.v1.ProjectService service.
 type ProjectServiceHandler interface {
 	// List all projects for the current organization
@@ -268,6 +302,10 @@ type ProjectServiceHandler interface {
 	UpdateProjectMemberRole(context.Context, *connect.Request[v1.UpdateProjectMemberRoleRequest]) (*connect.Response[v1.UpdateProjectMemberRoleResponse], error)
 	// Remove a member from a project (requires admin role)
 	RemoveProjectMember(context.Context, *connect.Request[v1.RemoveProjectMemberRequest]) (*connect.Response[v1.RemoveProjectMemberResponse], error)
+	// GetProjectLimits retrieves the namespace resource defaults for a project
+	GetProjectLimits(context.Context, *connect.Request[v1.GetProjectLimitsRequest]) (*connect.Response[v1.GetProjectLimitsResponse], error)
+	// UpdateProjectLimits sets the namespace resource defaults for a project
+	UpdateProjectLimits(context.Context, *connect.Request[v1.UpdateProjectLimitsRequest]) (*connect.Response[v1.UpdateProjectLimitsResponse], error)
 }
 
 // NewProjectServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -343,6 +381,18 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 		connect.WithSchema(projectServiceMethods.ByName("RemoveProjectMember")),
 		connect.WithHandlerOptions(opts...),
 	)
+	projectServiceGetProjectLimitsHandler := connect.NewUnaryHandler(
+		ProjectServiceGetProjectLimitsProcedure,
+		svc.GetProjectLimits,
+		connect.WithSchema(projectServiceMethods.ByName("GetProjectLimits")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectServiceUpdateProjectLimitsHandler := connect.NewUnaryHandler(
+		ProjectServiceUpdateProjectLimitsProcedure,
+		svc.UpdateProjectLimits,
+		connect.WithSchema(projectServiceMethods.ByName("UpdateProjectLimits")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/organization.v1.ProjectService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProjectServiceListProjectsProcedure:
@@ -367,6 +417,10 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 			projectServiceUpdateProjectMemberRoleHandler.ServeHTTP(w, r)
 		case ProjectServiceRemoveProjectMemberProcedure:
 			projectServiceRemoveProjectMemberHandler.ServeHTTP(w, r)
+		case ProjectServiceGetProjectLimitsProcedure:
+			projectServiceGetProjectLimitsHandler.ServeHTTP(w, r)
+		case ProjectServiceUpdateProjectLimitsProcedure:
+			projectServiceUpdateProjectLimitsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -418,4 +472,12 @@ func (UnimplementedProjectServiceHandler) UpdateProjectMemberRole(context.Contex
 
 func (UnimplementedProjectServiceHandler) RemoveProjectMember(context.Context, *connect.Request[v1.RemoveProjectMemberRequest]) (*connect.Response[v1.RemoveProjectMemberResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.RemoveProjectMember is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) GetProjectLimits(context.Context, *connect.Request[v1.GetProjectLimitsRequest]) (*connect.Response[v1.GetProjectLimitsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.GetProjectLimits is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) UpdateProjectLimits(context.Context, *connect.Request[v1.UpdateProjectLimitsRequest]) (*connect.Response[v1.UpdateProjectLimitsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.UpdateProjectLimits is not implemented"))
 }

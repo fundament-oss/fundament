@@ -848,7 +848,7 @@ func resolveTimeRange(hasStart bool, start time.Time, hasEnd bool, end time.Time
 }
 
 // namespaceNames extracts the name strings from a slice of namespace DB rows.
-func namespaceNames(rows []db.NamespaceListByProjectIDRow) []string {
+func namespaceNames(rows []db.TenantNamespace) []string {
 	names := make([]string, 0, len(rows))
 	for _, r := range rows {
 		names = append(names, r.Name)

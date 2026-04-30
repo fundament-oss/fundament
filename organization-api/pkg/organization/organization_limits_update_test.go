@@ -158,3 +158,61 @@ func Test_OrganizationLimits_Update_IsolatedBetweenOrgs(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, getRes.Msg.GetLimits().HasMaxNodesPerCluster())
 }
+
+func Test_OrganizationLimits_Update_MemoryLimitLessThanRequest(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{ID: userID, Name: "test-user", OrgIDs: []uuid.UUID{orgID}}),
+	)
+
+	token := env.createAuthnToken(t, userID)
+	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
+
+	req := connect.NewRequest(organizationv1.UpdateOrganizationLimitsRequest_builder{
+		Id:                     orgID.String(),
+		DefaultMemoryRequestMi: proto.Int32(256),
+		DefaultMemoryLimitMi:   proto.Int32(128),
+	}.Build())
+	req.Header().Set("Authorization", "Bearer "+token)
+	req.Header().Set("Fun-Organization", orgID.String())
+
+	_, err := client.UpdateOrganizationLimits(context.Background(), req)
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeInvalidArgument, connectErr.Code())
+}
+
+func Test_OrganizationLimits_Update_CpuLimitLessThanRequest(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{ID: userID, Name: "test-user", OrgIDs: []uuid.UUID{orgID}}),
+	)
+
+	token := env.createAuthnToken(t, userID)
+	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
+
+	req := connect.NewRequest(organizationv1.UpdateOrganizationLimitsRequest_builder{
+		Id:                 orgID.String(),
+		DefaultCpuRequestM: proto.Int32(500),
+		DefaultCpuLimitM:   proto.Int32(100),
+	}.Build())
+	req.Header().Set("Authorization", "Bearer "+token)
+	req.Header().Set("Fun-Organization", orgID.String())
+
+	_, err := client.UpdateOrganizationLimits(context.Background(), req)
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeInvalidArgument, connectErr.Code())
+}

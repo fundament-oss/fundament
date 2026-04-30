@@ -89,6 +89,32 @@ ALTER TABLE tenant.organization_limits OWNER TO fun_owner;
 ALTER TABLE tenant.organization_limits ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
 
+-- object: tenant.project_limits | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.project_limits CASCADE;
+CREATE TABLE tenant.project_limits (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	project_id uuid NOT NULL,
+	default_memory_request_mi integer,
+	default_memory_limit_mi integer,
+	default_cpu_request_m integer,
+	default_cpu_limit_m integer,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT project_limits_pk PRIMARY KEY (id),
+	CONSTRAINT project_limits_uq_project UNIQUE NULLS NOT DISTINCT (project_id,deleted),
+	CONSTRAINT project_limits_ck_default_memory_request_mi CHECK (default_memory_request_mi IS NULL OR default_memory_request_mi > 0),
+	CONSTRAINT project_limits_ck_default_memory_limit_mi CHECK (default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0),
+	CONSTRAINT project_limits_ck_default_cpu_request_m CHECK (default_cpu_request_m IS NULL OR default_cpu_request_m > 0),
+	CONSTRAINT project_limits_ck_default_cpu_limit_m CHECK (default_cpu_limit_m IS NULL OR default_cpu_limit_m > 0),
+	CONSTRAINT project_limits_ck_memory_limit_gte_request CHECK (default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi),
+	CONSTRAINT project_limits_ck_cpu_limit_gte_request CHECK (default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m)
+);
+-- ddl-end --
+ALTER TABLE tenant.project_limits OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.project_limits ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
 -- object: tenant.projects | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.projects CASCADE;
 CREATE TABLE tenant.projects (
@@ -111,12 +137,12 @@ ALTER TABLE tenant.projects ENABLE ROW LEVEL SECURITY;
 CREATE TABLE tenant.namespaces (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	project_id uuid NOT NULL,
+	cluster_id uuid NOT NULL,
 	name text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT namespaces_pk PRIMARY KEY (id),
-	CONSTRAINT namespaces_ck_name CHECK (name = name),
-	CONSTRAINT namespaces_uq_name UNIQUE NULLS NOT DISTINCT (project_id,name,deleted)
+	CONSTRAINT namespaces_uq_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted)
 );
 -- ddl-end --
 ALTER TABLE tenant.namespaces OWNER TO fun_owner;
@@ -1027,6 +1053,15 @@ CREATE POLICY organization_limits_organization_policy ON tenant.organization_lim
 	USING (organization_id = authn.current_organization_id());
 -- ddl-end --
 
+-- object: project_limits_project_policy | type: POLICY --
+-- DROP POLICY IF EXISTS project_limits_project_policy ON tenant.project_limits CASCADE;
+CREATE POLICY project_limits_project_policy ON tenant.project_limits
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (authn.is_project_in_organization(project_id));
+-- ddl-end --
+
 -- object: tenant.cluster_events | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.cluster_events CASCADE;
 CREATE TABLE tenant.cluster_events (
@@ -1723,6 +1758,13 @@ REFERENCES tenant.organizations (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
+-- object: project_limits_fk_project | type: CONSTRAINT --
+-- ALTER TABLE tenant.project_limits DROP CONSTRAINT IF EXISTS project_limits_fk_project CASCADE;
+ALTER TABLE tenant.project_limits ADD CONSTRAINT project_limits_fk_project FOREIGN KEY (project_id)
+REFERENCES tenant.projects (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
 -- object: projects_fk_cluster | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_cluster CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_cluster FOREIGN KEY (cluster_id)
@@ -1734,6 +1776,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.namespaces DROP CONSTRAINT IF EXISTS namespaces_fk_project CASCADE;
 ALTER TABLE tenant.namespaces ADD CONSTRAINT namespaces_fk_project FOREIGN KEY (project_id)
 REFERENCES tenant.projects (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: namespaces_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.namespaces DROP CONSTRAINT IF EXISTS namespaces_fk_cluster CASCADE;
+ALTER TABLE tenant.namespaces ADD CONSTRAINT namespaces_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -2017,6 +2066,14 @@ GRANT USAGE
 -- object: grant_raw_26cce2624c | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.organization_limits
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_15384c10e5 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.project_limits
    TO fun_fundament_api;
 
 -- ddl-end --

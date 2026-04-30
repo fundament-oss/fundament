@@ -9,12 +9,15 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const namespaceCreate = `-- name: NamespaceCreate :one
-INSERT INTO tenant.namespaces (project_id, name)
-VALUES ($1, $2)
+WITH project AS (
+    SELECT cluster_id FROM tenant.projects WHERE id = $1 AND deleted IS NULL
+)
+INSERT INTO tenant.namespaces (project_id, cluster_id, name)
+SELECT $1, project.cluster_id, $2
+FROM project
 RETURNING id
 `
 
@@ -50,42 +53,31 @@ func (q *Queries) NamespaceDelete(ctx context.Context, arg NamespaceDeleteParams
 
 const namespaceGetByID = `-- name: NamespaceGetByID :one
 SELECT
-  namespaces.id,
-  namespaces.project_id,
-  namespaces.name,
-  namespaces.created,
-  namespaces.deleted,
-  projects.cluster_id
+  id,
+  project_id,
+  cluster_id,
+  name,
+  created,
+  deleted
 FROM tenant.namespaces
-JOIN tenant.projects
-  ON projects.id = namespaces.project_id
-WHERE namespaces.id = $1
-  AND namespaces.deleted IS NULL
+WHERE id = $1
+  AND deleted IS NULL
 `
 
 type NamespaceGetByIDParams struct {
 	ID uuid.UUID
 }
 
-type NamespaceGetByIDRow struct {
-	ID        uuid.UUID
-	ProjectID uuid.UUID
-	Name      string
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-	ClusterID uuid.UUID
-}
-
-func (q *Queries) NamespaceGetByID(ctx context.Context, arg NamespaceGetByIDParams) (NamespaceGetByIDRow, error) {
+func (q *Queries) NamespaceGetByID(ctx context.Context, arg NamespaceGetByIDParams) (TenantNamespace, error) {
 	row := q.db.QueryRow(ctx, namespaceGetByID, arg.ID)
-	var i NamespaceGetByIDRow
+	var i TenantNamespace
 	err := row.Scan(
 		&i.ID,
 		&i.ProjectID,
+		&i.ClusterID,
 		&i.Name,
 		&i.Created,
 		&i.Deleted,
-		&i.ClusterID,
 	)
 	return i, err
 }
@@ -94,15 +86,15 @@ const namespaceGetByProjectAndName = `-- name: NamespaceGetByProjectAndName :one
 SELECT
   namespaces.id,
   namespaces.project_id,
+  namespaces.cluster_id,
   namespaces.name,
   namespaces.created,
-  namespaces.deleted,
-  projects.cluster_id
+  namespaces.deleted
 FROM tenant.namespaces
 JOIN tenant.projects
   ON projects.id = namespaces.project_id
 JOIN tenant.clusters
-  ON clusters.id = projects.cluster_id
+  ON clusters.id = namespaces.cluster_id
 WHERE clusters.name = $1
   AND projects.name = $2
   AND namespaces.name = $3
@@ -117,74 +109,54 @@ type NamespaceGetByProjectAndNameParams struct {
 	NamespaceName string
 }
 
-type NamespaceGetByProjectAndNameRow struct {
-	ID        uuid.UUID
-	ProjectID uuid.UUID
-	Name      string
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-	ClusterID uuid.UUID
-}
-
-func (q *Queries) NamespaceGetByProjectAndName(ctx context.Context, arg NamespaceGetByProjectAndNameParams) (NamespaceGetByProjectAndNameRow, error) {
+func (q *Queries) NamespaceGetByProjectAndName(ctx context.Context, arg NamespaceGetByProjectAndNameParams) (TenantNamespace, error) {
 	row := q.db.QueryRow(ctx, namespaceGetByProjectAndName, arg.ClusterName, arg.ProjectName, arg.NamespaceName)
-	var i NamespaceGetByProjectAndNameRow
+	var i TenantNamespace
 	err := row.Scan(
 		&i.ID,
 		&i.ProjectID,
+		&i.ClusterID,
 		&i.Name,
 		&i.Created,
 		&i.Deleted,
-		&i.ClusterID,
 	)
 	return i, err
 }
 
 const namespaceListByClusterID = `-- name: NamespaceListByClusterID :many
 SELECT
-  namespaces.id,
-  namespaces.project_id,
-  namespaces.name,
-  namespaces.created,
-  namespaces.deleted,
-  projects.cluster_id
+  id,
+  project_id,
+  cluster_id,
+  name,
+  created,
+  deleted
 FROM tenant.namespaces
-JOIN tenant.projects
-  ON projects.id = namespaces.project_id
-WHERE projects.cluster_id = $1
-  AND namespaces.deleted IS NULL
-ORDER BY namespaces.name ASC
+WHERE cluster_id = $1
+  AND deleted IS NULL
+ORDER BY name ASC
 `
 
 type NamespaceListByClusterIDParams struct {
 	ClusterID uuid.UUID
 }
 
-type NamespaceListByClusterIDRow struct {
-	ID        uuid.UUID
-	ProjectID uuid.UUID
-	Name      string
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-	ClusterID uuid.UUID
-}
-
-func (q *Queries) NamespaceListByClusterID(ctx context.Context, arg NamespaceListByClusterIDParams) ([]NamespaceListByClusterIDRow, error) {
+func (q *Queries) NamespaceListByClusterID(ctx context.Context, arg NamespaceListByClusterIDParams) ([]TenantNamespace, error) {
 	rows, err := q.db.Query(ctx, namespaceListByClusterID, arg.ClusterID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []NamespaceListByClusterIDRow
+	var items []TenantNamespace
 	for rows.Next() {
-		var i NamespaceListByClusterIDRow
+		var i TenantNamespace
 		if err := rows.Scan(
 			&i.ID,
 			&i.ProjectID,
+			&i.ClusterID,
 			&i.Name,
 			&i.Created,
 			&i.Deleted,
-			&i.ClusterID,
 		); err != nil {
 			return nil, err
 		}
@@ -198,49 +170,38 @@ func (q *Queries) NamespaceListByClusterID(ctx context.Context, arg NamespaceLis
 
 const namespaceListByProjectID = `-- name: NamespaceListByProjectID :many
 SELECT
-  namespaces.id,
-  namespaces.project_id,
-  namespaces.name,
-  namespaces.created,
-  namespaces.deleted,
-  projects.cluster_id
+  id,
+  project_id,
+  cluster_id,
+  name,
+  created,
+  deleted
 FROM tenant.namespaces
-JOIN tenant.projects
-  ON projects.id = namespaces.project_id
-WHERE namespaces.project_id = $1
-  AND namespaces.deleted IS NULL
-ORDER BY namespaces.name ASC
+WHERE project_id = $1
+  AND deleted IS NULL
+ORDER BY name ASC
 `
 
 type NamespaceListByProjectIDParams struct {
 	ProjectID uuid.UUID
 }
 
-type NamespaceListByProjectIDRow struct {
-	ID        uuid.UUID
-	ProjectID uuid.UUID
-	Name      string
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-	ClusterID uuid.UUID
-}
-
-func (q *Queries) NamespaceListByProjectID(ctx context.Context, arg NamespaceListByProjectIDParams) ([]NamespaceListByProjectIDRow, error) {
+func (q *Queries) NamespaceListByProjectID(ctx context.Context, arg NamespaceListByProjectIDParams) ([]TenantNamespace, error) {
 	rows, err := q.db.Query(ctx, namespaceListByProjectID, arg.ProjectID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []NamespaceListByProjectIDRow
+	var items []TenantNamespace
 	for rows.Next() {
-		var i NamespaceListByProjectIDRow
+		var i TenantNamespace
 		if err := rows.Scan(
 			&i.ID,
 			&i.ProjectID,
+			&i.ClusterID,
 			&i.Name,
 			&i.Created,
 			&i.Deleted,
-			&i.ClusterID,
 		); err != nil {
 			return nil, err
 		}

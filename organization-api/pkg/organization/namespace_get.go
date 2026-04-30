@@ -34,7 +34,7 @@ func (s *Server) GetNamespace(
 	}
 
 	return connect.NewResponse(organizationv1.GetNamespaceResponse_builder{
-		Namespace: namespaceFromRow((db.NamespaceListByClusterIDRow)(namespace)),
+		Namespace: namespaceFromRow(namespace),
 	}.Build()), nil
 }
 
@@ -60,6 +60,6 @@ func (s *Server) GetNamespaceByProjectAndName(
 	}
 
 	return connect.NewResponse(organizationv1.GetNamespaceByProjectAndNameResponse_builder{
-		Namespace: namespaceFromRow((db.NamespaceListByClusterIDRow)(namespace)),
+		Namespace: namespaceFromRow(namespace),
 	}.Build()), nil
 }

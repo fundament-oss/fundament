@@ -59,8 +59,8 @@ const (
 	ConstraintIdempotencyKeysFkUser = "idempotency_keys_fk_user"
 	// ConstraintIdempotencyKeysUqKeyUser is defined on tenant.idempotency_keys.
 	ConstraintIdempotencyKeysUqKeyUser = "idempotency_keys_uq_key_user"
-	// ConstraintNamespacesCkName is defined on tenant.namespaces.
-	ConstraintNamespacesCkName = "namespaces_ck_name"
+	// ConstraintNamespacesFkCluster is defined on tenant.namespaces.
+	ConstraintNamespacesFkCluster = "namespaces_fk_cluster"
 	// ConstraintNamespacesFkProject is defined on tenant.namespaces.
 	ConstraintNamespacesFkProject = "namespaces_fk_project"
 	// ConstraintNamespacesUqName is defined on tenant.namespaces.
@@ -143,6 +143,22 @@ const (
 	ConstraintPluginsUqName = "plugins_uq_name"
 	// ConstraintPresetsUqName is defined on appstore.presets.
 	ConstraintPresetsUqName = "presets_uq_name"
+	// ConstraintProjectLimitsCkCpuLimitGteRequest is defined on tenant.project_limits.
+	ConstraintProjectLimitsCkCpuLimitGteRequest = "project_limits_ck_cpu_limit_gte_request"
+	// ConstraintProjectLimitsCkDefaultCpuLimitM is defined on tenant.project_limits.
+	ConstraintProjectLimitsCkDefaultCpuLimitM = "project_limits_ck_default_cpu_limit_m"
+	// ConstraintProjectLimitsCkDefaultCpuRequestM is defined on tenant.project_limits.
+	ConstraintProjectLimitsCkDefaultCpuRequestM = "project_limits_ck_default_cpu_request_m"
+	// ConstraintProjectLimitsCkDefaultMemoryLimitMi is defined on tenant.project_limits.
+	ConstraintProjectLimitsCkDefaultMemoryLimitMi = "project_limits_ck_default_memory_limit_mi"
+	// ConstraintProjectLimitsCkDefaultMemoryRequestMi is defined on tenant.project_limits.
+	ConstraintProjectLimitsCkDefaultMemoryRequestMi = "project_limits_ck_default_memory_request_mi"
+	// ConstraintProjectLimitsCkMemoryLimitGteRequest is defined on tenant.project_limits.
+	ConstraintProjectLimitsCkMemoryLimitGteRequest = "project_limits_ck_memory_limit_gte_request"
+	// ConstraintProjectLimitsFkProject is defined on tenant.project_limits.
+	ConstraintProjectLimitsFkProject = "project_limits_fk_project"
+	// ConstraintProjectLimitsUqProject is defined on tenant.project_limits.
+	ConstraintProjectLimitsUqProject = "project_limits_uq_project"
 	// ConstraintProjectMembersCkRole is defined on tenant.project_members.
 	ConstraintProjectMembersCkRole = "project_members_ck_role"
 	// ConstraintProjectMembersFkProject is defined on tenant.project_members.
