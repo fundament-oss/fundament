@@ -89,7 +89,16 @@ export default class OrganizationLimitsComponent implements OnInit {
 
     this.clusterSaving.set(true);
     try {
-      await firstValueFrom(this.organizationClient.updateOrganizationLimits(this.buildUpdateRequest(orgId)));
+      await firstValueFrom(
+        this.organizationClient.updateOrganizationLimits(
+          create(UpdateOrganizationLimitsRequestSchema, {
+            id: orgId,
+            maxNodesPerCluster: this.maxNodesPerCluster(),
+            maxNodePoolsPerCluster: this.maxNodePools(),
+            maxNodesPerNodePool: this.maxNodesPerNodePool(),
+          }),
+        ),
+      );
       this.toastService.success('Cluster limits saved');
     } catch {
       this.toastService.error('Failed to save cluster limits');
@@ -104,7 +113,17 @@ export default class OrganizationLimitsComponent implements OnInit {
 
     this.namespaceSaving.set(true);
     try {
-      await firstValueFrom(this.organizationClient.updateOrganizationLimits(this.buildUpdateRequest(orgId)));
+      await firstValueFrom(
+        this.organizationClient.updateOrganizationLimits(
+          create(UpdateOrganizationLimitsRequestSchema, {
+            id: orgId,
+            defaultMemoryRequestMi: this.defaultMemoryRequestMi(),
+            defaultMemoryLimitMi: this.defaultMemoryLimitMi(),
+            defaultCpuRequestM: this.defaultCpuRequestM(),
+            defaultCpuLimitM: this.defaultCpuLimitM(),
+          }),
+        ),
+      );
       this.toastService.success('Namespace defaults saved');
     } catch {
       this.toastService.error('Failed to save namespace defaults');
@@ -113,16 +132,8 @@ export default class OrganizationLimitsComponent implements OnInit {
     }
   }
 
-  private buildUpdateRequest(orgId: string) {
-    return create(UpdateOrganizationLimitsRequestSchema, {
-      id: orgId,
-      maxNodesPerCluster: this.maxNodesPerCluster(),
-      maxNodePoolsPerCluster: this.maxNodePools(),
-      maxNodesPerNodePool: this.maxNodesPerNodePool(),
-      defaultMemoryRequestMi: this.defaultMemoryRequestMi(),
-      defaultMemoryLimitMi: this.defaultMemoryLimitMi(),
-      defaultCpuRequestM: this.defaultCpuRequestM(),
-      defaultCpuLimitM: this.defaultCpuLimitM(),
-    });
+  protected toInt(value: unknown): number | undefined {
+    const n = Math.trunc(Number(value));
+    return n > 0 ? n : undefined;
   }
 }

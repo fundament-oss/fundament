@@ -6,23 +6,23 @@ package dbconst
 type ClusterEventEventType string
 
 const (
-	ClusterEventEventType_SyncRequested ClusterEventEventType = "sync_requested"
-	ClusterEventEventType_SyncClaimed ClusterEventEventType = "sync_claimed"
-	ClusterEventEventType_SyncSucceeded ClusterEventEventType = "sync_succeeded"
-	ClusterEventEventType_SyncFailed ClusterEventEventType = "sync_failed"
+	ClusterEventEventType_SyncRequested     ClusterEventEventType = "sync_requested"
+	ClusterEventEventType_SyncClaimed       ClusterEventEventType = "sync_claimed"
+	ClusterEventEventType_SyncSucceeded     ClusterEventEventType = "sync_succeeded"
+	ClusterEventEventType_SyncFailed        ClusterEventEventType = "sync_failed"
 	ClusterEventEventType_StatusProgressing ClusterEventEventType = "status_progressing"
-	ClusterEventEventType_StatusReady ClusterEventEventType = "status_ready"
-	ClusterEventEventType_StatusError ClusterEventEventType = "status_error"
-	ClusterEventEventType_StatusDeleted ClusterEventEventType = "status_deleted"
+	ClusterEventEventType_StatusReady       ClusterEventEventType = "status_ready"
+	ClusterEventEventType_StatusError       ClusterEventEventType = "status_error"
+	ClusterEventEventType_StatusDeleted     ClusterEventEventType = "status_deleted"
 	ClusterEventEventType_UserSyncSucceeded ClusterEventEventType = "user_sync_succeeded"
-	ClusterEventEventType_UserSyncFailed ClusterEventEventType = "user_sync_failed"
+	ClusterEventEventType_UserSyncFailed    ClusterEventEventType = "user_sync_failed"
 )
 
 // ClusterEventSyncAction represents valid values for tenant.cluster_events.sync_action.
 type ClusterEventSyncAction string
 
 const (
-	ClusterEventSyncAction_Sync ClusterEventSyncAction = "sync"
+	ClusterEventSyncAction_Sync   ClusterEventSyncAction = "sync"
 	ClusterEventSyncAction_Delete ClusterEventSyncAction = "delete"
 )
 
@@ -30,38 +30,38 @@ const (
 type ClusterOutboxEvent string
 
 const (
-	ClusterOutboxEvent_Created ClusterOutboxEvent = "created"
-	ClusterOutboxEvent_Updated ClusterOutboxEvent = "updated"
-	ClusterOutboxEvent_Deleted ClusterOutboxEvent = "deleted"
+	ClusterOutboxEvent_Created   ClusterOutboxEvent = "created"
+	ClusterOutboxEvent_Updated   ClusterOutboxEvent = "updated"
+	ClusterOutboxEvent_Deleted   ClusterOutboxEvent = "deleted"
 	ClusterOutboxEvent_Reconcile ClusterOutboxEvent = "reconcile"
-	ClusterOutboxEvent_Ready ClusterOutboxEvent = "ready"
+	ClusterOutboxEvent_Ready     ClusterOutboxEvent = "ready"
 )
 
 // ClusterOutboxSource represents valid values for tenant.cluster_outbox.source.
 type ClusterOutboxSource string
 
 const (
-	ClusterOutboxSource_Trigger ClusterOutboxSource = "trigger"
+	ClusterOutboxSource_Trigger   ClusterOutboxSource = "trigger"
 	ClusterOutboxSource_Reconcile ClusterOutboxSource = "reconcile"
-	ClusterOutboxSource_Manual ClusterOutboxSource = "manual"
-	ClusterOutboxSource_Status ClusterOutboxSource = "status"
+	ClusterOutboxSource_Manual    ClusterOutboxSource = "manual"
+	ClusterOutboxSource_Status    ClusterOutboxSource = "status"
 )
 
 // ClusterOutboxStatus represents valid values for tenant.cluster_outbox.status.
 type ClusterOutboxStatus string
 
 const (
-	ClusterOutboxStatus_Pending ClusterOutboxStatus = "pending"
+	ClusterOutboxStatus_Pending   ClusterOutboxStatus = "pending"
 	ClusterOutboxStatus_Completed ClusterOutboxStatus = "completed"
-	ClusterOutboxStatus_Retrying ClusterOutboxStatus = "retrying"
-	ClusterOutboxStatus_Failed ClusterOutboxStatus = "failed"
+	ClusterOutboxStatus_Retrying  ClusterOutboxStatus = "retrying"
+	ClusterOutboxStatus_Failed    ClusterOutboxStatus = "failed"
 )
 
 // OrganizationsUserPermission represents valid values for tenant.organizations_users.permission.
 type OrganizationsUserPermission string
 
 const (
-	OrganizationsUserPermission_Admin OrganizationsUserPermission = "admin"
+	OrganizationsUserPermission_Admin  OrganizationsUserPermission = "admin"
 	OrganizationsUserPermission_Viewer OrganizationsUserPermission = "viewer"
 )
 
@@ -69,26 +69,26 @@ const (
 type OrganizationsUserStatus string
 
 const (
-	OrganizationsUserStatus_Pending OrganizationsUserStatus = "pending"
+	OrganizationsUserStatus_Pending  OrganizationsUserStatus = "pending"
 	OrganizationsUserStatus_Accepted OrganizationsUserStatus = "accepted"
 	OrganizationsUserStatus_Declined OrganizationsUserStatus = "declined"
-	OrganizationsUserStatus_Revoked OrganizationsUserStatus = "revoked"
+	OrganizationsUserStatus_Revoked  OrganizationsUserStatus = "revoked"
 )
 
 // OutboxStatus represents valid values for authz.outbox.status.
 type OutboxStatus string
 
 const (
-	OutboxStatus_Pending OutboxStatus = "pending"
+	OutboxStatus_Pending   OutboxStatus = "pending"
 	OutboxStatus_Completed OutboxStatus = "completed"
-	OutboxStatus_Retrying OutboxStatus = "retrying"
-	OutboxStatus_Failed OutboxStatus = "failed"
+	OutboxStatus_Retrying  OutboxStatus = "retrying"
+	OutboxStatus_Failed    OutboxStatus = "failed"
 )
 
 // ProjectMemberRole represents valid values for tenant.project_members.role.
 type ProjectMemberRole string
 
 const (
-	ProjectMemberRole_Admin ProjectMemberRole = "admin"
+	ProjectMemberRole_Admin  ProjectMemberRole = "admin"
 	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
 )
