@@ -2,63 +2,81 @@
 import Layout from '../layouts/Landing.astro';
 ---
 
-<Layout title="About - Fundament" heroClass="pb-12! sm:pb-16!">
-  <div class="relative z-10 mx-auto max-w-3xl text-left" slot="hero">
-    <h1 class="hero-title mb-8">About Fundament</h1>
-    <p class="mb-6 text-lg leading-relaxed text-gray-700 sm:text-xl dark:text-gray-300">
+<Layout title="About - Fundament">
+  <section class="about-hero">
+    <h1 class="about-hero-title">About Fundament</h1>
+    <p class="about-hero-body">
       Fundament is software for running an Autonomous Private Cloud. It is designed to provide
       organizations with a minimal, reliable foundation for running modern applications. Unlike
       traditional platforms that bundle every service by default, Fundament is basic at its core
-      &mdash;delivering only the essential infrastructure and orchestration layers&mdash; while
+      &mdash; delivering only the essential infrastructure and orchestration layers &mdash; while
       allowing each tenant to extend their environment with exactly the services and tools they
       need.
     </p>
-    <p class="mb-0 text-lg leading-relaxed text-gray-700 sm:text-xl dark:text-gray-300">
+    <p class="about-hero-body">
       On top of this foundation, Fundament serves as an internal developer platform (IDP): enabling
       developers to build, deploy, and operate applications with speed and confidence. Its API-first
       design, multi-tenant architecture, and focus on autonomy and scalability make it suitable for
       organizations that want cloud capabilities on their own terms; secure, reliable, and without
       unnecessary complexity.
     </p>
-  </div>
+  </section>
 
-  <div class="bg-white py-12 sm:py-16 dark:bg-gray-900">
-    <div class="mx-auto max-w-7xl px-6 lg:px-8">
-      <div class="mx-auto max-w-3xl">
-        <h2 class="mt-0 mb-4 text-3xl font-bold text-indigo-600 sm:text-4xl dark:text-indigo-400">
-          Project status
-        </h2>
-        <p class="mb-2 text-lg font-semibold text-gray-800 dark:text-gray-100">
-          Concept & Development
-        </p>
-        <p class="mb-0 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
-          The focus of the project is currently on research and ideation. Some initial PoC
-          applications may be built to give shape to ideas and to provide early feedback from
-          testing users.
-        </p>
-      </div>
+  <div class="about-section">
+    <div class="about-section-inner">
+      <h2 class="about-section-title">Project status</h2>
+      <p class="about-section-subtitle">Concept &amp; Development</p>
+      <p class="about-section-body">
+        The focus of the project is currently on research and ideation. Some initial PoC
+        applications may be built to give shape to ideas and to provide early feedback from testing
+        users.
+      </p>
     </div>
   </div>
 
-  <div class="bg-white py-12 sm:py-16 dark:bg-gray-900">
-    <div class="mx-auto max-w-7xl px-6 lg:px-8">
-      <div class="mx-auto max-w-3xl">
-        <h2 class="mt-0 mb-4 text-3xl font-bold text-indigo-600 sm:text-4xl dark:text-indigo-400">
-          Organization
-        </h2>
-        <p class="mb-0 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
-          Fundament is being developed by
-          <a
-            href="https://digilab.overheid.nl/"
-            class="font-medium text-blue-600 underline transition-colors duration-200 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-            target="_blank"
-          >
-            Digilab</a
-          >. Digilab is a technical innovation team and testing environment initiated by the Dutch
-          government to facilitate secure, responsible, and standardized data sharing across public
-          sector organizations.
-        </p>
-      </div>
+  <div class="about-section">
+    <div class="about-section-inner">
+      <h2 class="about-section-title">Organization</h2>
+      <p class="about-section-body">
+        Fundament is being developed by <a href="https://digilab.overheid.nl/" target="_blank"
+          >Digilab</a
+        >. Digilab is a technical innovation team and testing environment initiated by the Dutch
+        government to facilitate secure, responsible, and standardized data sharing across public
+        sector organizations.
+      </p>
     </div>
   </div>
 </Layout>
+
+<style is:global>
+  @reference "../styles/global.css";
+
+  .about-hero {
+    @apply py-primitives-space-64 px-primitives-space-32 mx-auto max-w-200;
+  }
+  .about-hero-title {
+    @apply text-display-2 font-display mb-primitives-space-24 text-content m-0 font-medium tracking-[-0.02em];
+  }
+  .about-hero-body {
+    @apply text-body-lg font-body text-content mb-primitives-space-16 m-0 max-w-180 font-normal;
+  }
+  .about-hero-body:last-child {
+    @apply mb-0;
+  }
+
+  .about-section {
+    @apply border-dividers border-t;
+  }
+  .about-section-inner {
+    @apply py-primitives-space-48 px-primitives-space-32 mx-auto max-w-200;
+  }
+  .about-section-title {
+    @apply text-display-4 font-display text-accent-600 mb-primitives-space-8 m-0 font-medium tracking-[-0.01em];
+  }
+  .about-section-subtitle {
+    @apply text-body-lg font-body text-content mb-primitives-space-8 m-0 font-medium;
+  }
+  .about-section-body {
+    @apply text-body-lg font-body text-content m-0 max-w-180 font-normal;
+  }
+</style>
