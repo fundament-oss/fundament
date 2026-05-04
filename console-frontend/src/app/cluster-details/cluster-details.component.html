@@ -51,7 +51,8 @@
           <nldd-button
             type="button"
             (click)="downloadKubeconfig()"
-            text="Download kubeconfig"
+            [disabled]="isDownloadingKubeconfig()"
+            [text]="isDownloadingKubeconfig() ? 'Downloading…' : 'Download kubeconfig'"
             start-icon="arrow-down-in-bucket"
             variant="primary"
             size="sm"
