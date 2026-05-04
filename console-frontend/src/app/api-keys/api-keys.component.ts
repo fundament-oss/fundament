@@ -3,26 +3,17 @@ import {
   inject,
   OnInit,
   signal,
-  ViewChild,
-  ElementRef,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerPlus,
-  tablerTrash,
-  tablerX,
-  tablerCheck,
-  tablerCopy,
-  tablerBan,
-  tablerAlertTriangle,
-} from '@ng-icons/tabler-icons';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import {
   type APIKey,
   ListAPIKeysRequestSchema,
@@ -32,10 +23,12 @@ import {
 } from '../../generated/v1/apikey_pb';
 import { APIKEY } from '../../connect/tokens';
 import { TitleService } from '../title.service';
+import { ToastService } from '../toast.service';
 import {
   formatDate as formatDateUtil,
   formatDateTime as formatDateTimeUtil,
 } from '../utils/date-format';
+import AutofocusDirective from '../autofocus.directive';
 
 const getNameError = (field?: { invalid: boolean | null; touched: boolean | null }): string => {
   if (field?.invalid && field?.touched) {
@@ -58,25 +51,15 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
 
 @Component({
   selector: 'app-api-keys',
-  imports: [FormsModule, NgIcon, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerPlus,
-      tablerTrash,
-      tablerX,
-      tablerCheck,
-      tablerCopy,
-      tablerBan,
-      tablerAlertTriangle,
-    }),
-  ],
+  imports: [DialogSyncDirective, AutofocusDirective],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './api-keys.component.html',
 })
 export default class ApiKeysComponent implements OnInit {
-  @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
-
   private titleService = inject(TitleService);
+
+  private toastService = inject(ToastService);
 
   private apiKeyClient = inject(APIKEY);
 
@@ -92,6 +75,8 @@ export default class ApiKeysComponent implements OnInit {
   isCreating = signal(false);
 
   newKeyName = signal('');
+
+  newKeyNameTouched = signal(false);
 
   newKeyExpiresIn = signal('');
 
@@ -203,18 +188,15 @@ export default class ApiKeysComponent implements OnInit {
   startCreating() {
     this.isCreating.set(true);
     this.newKeyName.set('');
+    this.newKeyNameTouched.set(false);
     this.newKeyExpiresIn.set('');
     this.error.set(null);
-
-    // Focus the name input field after Angular updates the view
-    setTimeout(() => {
-      this.nameInput?.nativeElement.focus();
-    });
   }
 
   cancelCreating() {
     this.isCreating.set(false);
     this.newKeyName.set('');
+    this.newKeyNameTouched.set(false);
     this.newKeyExpiresIn.set('');
   }
 
@@ -280,6 +262,7 @@ export default class ApiKeysComponent implements OnInit {
         document.execCommand('copy');
         document.body.removeChild(textarea);
       }
+      this.toastService.success('API key copied to clipboard');
     } catch {
       this.error.set('Failed to copy token to clipboard. Please copy it manually.');
     }
@@ -299,4 +282,18 @@ export default class ApiKeysComponent implements OnInit {
   isExpired = isExpired;
 
   isRevoked = isRevoked;
+
+  revokeDialogRef = viewChild<ElementRef<HTMLElement>>('revokeDialog');
+
+  onRevokeModalOpen(): void {
+    const el = this.revokeDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
+
+  onDeleteModalOpen(): void {
+    const el = this.deleteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
 }

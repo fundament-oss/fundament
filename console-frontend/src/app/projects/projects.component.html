@@ -3,11 +3,11 @@
   <div class="py-12 text-center">
     <div role="status" class="flex justify-center">
       <app-loading-indicator
-        class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+        class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
       />
       <span class="sr-only">Loading...</span>
     </div>
-    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading projects...</p>
+    <p class="mt-4 text-gray-500 dark:text-gray-400">Loading projects...</p>
   </div>
 }
 
@@ -16,16 +16,17 @@
   <div class="card">
     <!-- Header -->
     <div class="card-header">
-      <h1 class="text-2xl font-semibold">Projects</h1>
-      <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-        Manage projects across your clusters
-      </p>
+      <h1 class="text-3xl font-semibold">Projects</h1>
+      <p class="mt-1 text-gray-600 dark:text-gray-300">Manage projects across your clusters</p>
 
       @if (clusters().length > 0) {
-        <a routerLink="/projects/add" class="btn-primary mt-4 inline-flex items-center">
-          <ng-icon name="tablerPlus" class="mr-1.5" size="0.875rem" />
-          Add project
-        </a>
+        <nldd-button
+          routerLink="/projects/add"
+          text="Add project"
+          start-icon="plus-small"
+          variant="primary"
+          class="mt-4"
+        ></nldd-button>
       }
     </div>
 
@@ -36,8 +37,8 @@
         <div
           class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-16 text-center dark:border-gray-800 dark:bg-gray-900/30"
         >
-          <p class="text-sm font-medium text-gray-600 dark:text-gray-300">No clusters found</p>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p class="font-medium text-gray-600 dark:text-gray-300">No clusters found</p>
+          <p class="mt-1 text-gray-500 dark:text-gray-400">
             <a routerLink="/clusters/add" class="link">Create a cluster first</a> to add projects.
           </p>
         </div>
@@ -47,13 +48,13 @@
             <div>
               <!-- Cluster label -->
               <div class="mb-3 flex items-center gap-2.5">
-                <h2 class="text-sm font-semibold">
+                <h2 class="font-semibold">
                   <a routerLink="/clusters/{{ cluster.id }}" class="link"
                     >Cluster: {{ cluster.name }}</a
                   >
                 </h2>
                 <span
-                  class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                  class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-sm font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300"
                 >
                   {{ cluster.projects.length }}
                   {{ cluster.projects.length === 1 ? 'project' : 'projects' }}
@@ -65,14 +66,11 @@
                 <div
                   class="flex items-center gap-3 rounded-lg border border-dashed border-gray-200 px-5 py-4 dark:border-gray-800"
                 >
-                  <ng-icon
-                    name="tablerFolders"
-                    size="1.125rem"
-                    class="shrink-0 text-gray-300 dark:text-gray-600"
-                  />
-                  <p class="text-sm text-gray-500 dark:text-gray-400">
-                    No projects in this cluster yet.
-                  </p>
+                  <nldd-icon
+                    name="folder-stack"
+                    class="h-4.5 w-4.5 shrink-0 text-gray-300 dark:text-gray-600"
+                  ></nldd-icon>
+                  <p class="text-gray-500 dark:text-gray-400">No projects in this cluster yet.</p>
                 </div>
               } @else {
                 <div
@@ -84,18 +82,17 @@
                       class="group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-900/60"
                     >
                       <div
-                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+                        class="bg-accent-50 text-accent-600 dark:bg-accent-950/50 dark:text-accent-400 flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
                       >
-                        <ng-icon name="tablerFolder" />
+                        <nldd-icon name="folder" class="h-5 w-5"></nldd-icon>
                       </div>
-                      <span class="min-w-0 flex-1 text-sm font-medium">
+                      <span class="min-w-0 flex-1 font-medium">
                         {{ project.name }}
                       </span>
-                      <ng-icon
-                        name="tablerChevronRight"
-                        size="1.125rem"
-                        class="shrink-0 text-gray-300 group-hover:text-gray-400 dark:text-gray-600 dark:group-hover:text-gray-500"
-                      />
+                      <nldd-icon
+                        name="chevron-right-small"
+                        class="h-4.5 w-4.5 shrink-0 text-gray-300 group-hover:text-gray-400 dark:text-gray-600 dark:group-hover:text-gray-500"
+                      ></nldd-icon>
                     </a>
                   }
                 </div>

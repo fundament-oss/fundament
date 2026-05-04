@@ -1,7 +1,7 @@
 <!-- Toast Message -->
 @if (toastService.toast()) {
   <div
-    class="fixed right-4 bottom-4 z-100 flex w-sm items-center gap-3 rounded-md bg-gray-800/90 px-4 py-3 text-sm text-white shadow-lg dark:bg-gray-200/90 dark:text-gray-800"
+    class="fixed right-4 bottom-4 z-100 flex w-sm items-center gap-3 rounded-md bg-gray-800/90 px-4 py-3 text-white shadow-lg dark:bg-gray-200/90 dark:text-gray-800"
     role="alert"
   >
     <div
@@ -10,20 +10,20 @@
         toastService.toast()?.type === 'success'
           ? 'bg-emerald-400/20 text-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-500'
           : toastService.toast()?.type === 'error'
-            ? 'bg-rose-400/20 text-rose-400 dark:bg-rose-500/20 dark:text-rose-500'
+            ? 'bg-danger-400/20 text-danger-400 dark:bg-danger-500/20 dark:text-danger-500'
             : toastService.toast()?.type === 'warning'
               ? 'bg-amber-400/20 text-amber-400 dark:bg-amber-500/20 dark:text-amber-500'
-              : 'bg-indigo-400/20 text-indigo-400 dark:bg-indigo-500/20 dark:text-indigo-500'
+              : 'bg-accent-400/20 text-accent-400 dark:bg-accent-500/20 dark:text-accent-500'
       "
     >
       @if (toastService.toast()?.type === 'success') {
-        <ng-icon name="tablerCircleCheck" size="1.25rem" class="block!" />
+        <nldd-icon name="check-mark-circle" class="block! h-5 w-5"></nldd-icon>
       } @else if (toastService.toast()?.type === 'error') {
-        <ng-icon name="tablerCircleX" size="1.25rem" class="block!" />
+        <nldd-icon name="exclamation-circle" class="block! h-5 w-5"></nldd-icon>
       } @else if (toastService.toast()?.type === 'warning') {
-        <ng-icon name="tablerAlertTriangle" size="1.25rem" class="block!" />
+        <nldd-icon name="exclamation-triangle" class="block! h-5 w-5"></nldd-icon>
       } @else {
-        <ng-icon name="tablerInfoCircle" size="1.25rem" class="block!" />
+        <nldd-icon name="info-circle" class="block! h-5 w-5"></nldd-icon>
       }
     </div>
     <span class="min-w-0 flex-1 wrap-break-word">{{ toastService.toast()?.message }}</span>
@@ -33,7 +33,7 @@
       aria-label="Dismiss notification"
       class="ml-auto cursor-pointer text-gray-300 hover:text-white dark:text-gray-600 dark:hover:text-gray-800"
     >
-      <ng-icon name="tablerX" size="1.25rem" class="block!" />
+      <nldd-icon name="dismiss-small" class="block! h-4 w-4"></nldd-icon>
     </button>
   </div>
 }
@@ -45,7 +45,7 @@
     role="alert"
   >
     <div class="flex items-center">
-      <ng-icon name="tablerAlertTriangle" class="mr-3 shrink-0" size="1.5rem" />
+      <nldd-icon name="exclamation-circle" class="mr-3 h-6 w-6 shrink-0"></nldd-icon>
       <div>
         <p class="font-semibold">New version available</p>
         <p class="text-sm">The API has been updated. Please reload to use the latest version.</p>
@@ -61,107 +61,104 @@
   </div>
 }
 
-<!-- Header -->
-<header class="border-b border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-950">
-  <div class="mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex items-center justify-between py-3.5">
-      <div class="flex items-center">
-        @if (!isLoginPage()) {
-          <button
-            (click)="toggleSidebar()"
-            type="button"
-            aria-label="Toggle sidebar"
-            class="mr-3 cursor-pointer rounded-md p-1.5 text-gray-500 ring-indigo-500 hover:bg-gray-100 hover:text-gray-600 focus:ring-2 focus:outline-none lg:hidden dark:text-gray-400 dark:ring-offset-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-          >
-            <ng-icon name="tablerMenu2" class="block!" size="1.25rem" />
-          </button>
-        }
-        <h1 class="text-lg font-semibold tracking-tight dark:text-white">
-          <a class="flex items-center gap-2" routerLink="/"
-            ><app-fundament-logo-icon class="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
-            Fundament</a
-          >
-        </h1>
-      </div>
+<!-- Header: logo, dark/light mode toggle and user account -->
+<header
+  class="border-b border-gray-200 bg-white px-4 py-3.5 sm:px-6 lg:px-4 dark:border-gray-800 dark:bg-gray-950"
+>
+  <div class="flex items-center justify-between">
+    <!-- Left: mobile sidebar toggle + logo -->
+    <div class="flex items-center">
+      @if (!isLoginPage()) {
+        <nldd-icon-button
+          icon="list"
+          size="xs"
+          accessible-label="Toggle sidebar"
+          (click)="toggleSidebar()"
+          class="mr-3 flex items-center lg:hidden"
+        ></nldd-icon-button>
+      }
+      <h1 class="text-xl font-semibold tracking-tight">
+        <a class="flex items-center gap-2.5" routerLink="/">
+          <app-fundament-logo-icon class="h-5.5 w-5.5 text-indigo-600 dark:text-indigo-400" />
+          Fundament
+        </a>
+      </h1>
+    </div>
 
-      <!-- Right side dropdown -->
-      <div class="flex items-center gap-2">
-        <!-- Theme (dark/light mode) Switcher -->
-        <button
-          (click)="toggleTheme()"
-          type="button"
-          role="switch"
-          aria-label="Toggle dark mode"
-          [attr.aria-checked]="isDarkMode()"
-          class="group h-6 w-10 cursor-pointer rounded-full border border-gray-300 bg-gray-200 text-indigo-600 ring-indigo-500 outline-none focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:ring-offset-gray-950"
+    <!-- Right: dark/light toggle + user account -->
+    <div class="flex items-center gap-2">
+      <button
+        (click)="toggleTheme()"
+        type="button"
+        role="switch"
+        aria-label="Toggle dark mode"
+        [attr.aria-checked]="isDarkMode()"
+        class="group text-accent-600 ring-accent-500 h-6 w-10 cursor-pointer rounded-full border border-gray-300 bg-gray-200 outline-none focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:ring-offset-gray-900"
+      >
+        <span
+          class="flex h-5 w-5 translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow-xs transition-transform group-aria-checked:translate-x-4.5 dark:bg-gray-950 dark:text-gray-300"
         >
-          <span
-            class="flex h-5 w-5 translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow-xs transition-transform group-aria-checked:translate-x-4.5 dark:bg-gray-950 dark:text-gray-300"
+          @if (isDarkMode()) {
+            <nldd-icon name="moon" class="h-3 w-3"></nldd-icon>
+          } @else {
+            <nldd-icon name="sun" class="h-3 w-3"></nldd-icon>
+          }
+        </span>
+      </button>
+
+      @if (!isLoginPage()) {
+        <div class="user-dropdown relative">
+          <button
+            (click)="toggleUserDropdown()"
+            class="text-accent-600 ring-accent-500 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 flex cursor-pointer items-center rounded-full focus:ring-2 focus:outline-none dark:ring-offset-gray-900"
+            aria-label="User menu"
           >
-            @if (isDarkMode()) {
-              <ng-icon name="tablerMoon" size="0.75rem" />
-            } @else {
-              <ng-icon name="tablerSun" size="0.75rem" />
-            }
-          </span>
-        </button>
+            <nldd-icon name="person-circle" class="h-7 w-7"></nldd-icon>
+          </button>
 
-        @if (!isLoginPage()) {
-          <!-- User Dropdown -->
-          <div class="user-dropdown relative">
-            <button
-              (click)="toggleUserDropdown()"
-              class="flex cursor-pointer items-center rounded-full text-indigo-600 ring-indigo-500 hover:text-indigo-700 focus:ring-2 focus:outline-none dark:text-indigo-400 dark:ring-offset-gray-950 dark:hover:text-indigo-300"
-              aria-label="User menu"
+          @if (userDropdownOpen()) {
+            <div
+              class="absolute right-0 z-10 mt-2 w-52 rounded-lg border border-gray-200 bg-white py-1 shadow-md dark:border-gray-800 dark:bg-gray-950"
             >
-              <ng-icon name="tablerUserCircle" size="1.75rem" />
-            </button>
-
-            @if (userDropdownOpen()) {
-              <div
-                class="absolute right-0 z-10 mt-2 w-52 rounded-lg border border-gray-200 bg-white py-1 shadow-md dark:border-gray-800 dark:bg-gray-950"
-              >
-                <div class="border-b border-gray-100 px-4 py-2.5 dark:border-gray-800">
-                  <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Logged in as</p>
-                  <p class="mt-0.5 truncate text-sm font-medium text-gray-700 dark:text-gray-200">
-                    {{ currentUser()?.name || 'Unknown' }}
-                  </p>
-                </div>
-                <div class="py-1">
-                  <a
-                    routerLink="/profile"
-                    (click)="userDropdownOpen.set(false)"
-                    class="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
-                  >
-                    My profile
-                  </a>
-                  <a
-                    routerLink="/api-keys"
-                    (click)="userDropdownOpen.set(false)"
-                    class="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
-                  >
-                    API keys
-                  </a>
-                </div>
-                <div class="border-t border-gray-100 pt-1 dark:border-gray-800">
-                  <button
-                    (click)="handleLogout()"
-                    class="block w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
-                  >
-                    Log out
-                  </button>
-                </div>
+              <div class="border-b border-gray-100 px-4 py-2.5 dark:border-gray-800">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Logged in as</p>
+                <p class="mt-1 truncate font-medium text-gray-700 dark:text-gray-200">
+                  {{ currentUser()?.name || 'Unknown' }}
+                </p>
               </div>
-            }
-          </div>
-        }
-      </div>
+              <div class="py-1">
+                <a
+                  routerLink="/profile"
+                  (click)="userDropdownOpen.set(false)"
+                  class="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
+                >
+                  My profile
+                </a>
+                <a
+                  routerLink="/api-keys"
+                  (click)="userDropdownOpen.set(false)"
+                  class="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
+                >
+                  API keys
+                </a>
+              </div>
+              <div class="border-t border-gray-100 pt-1 dark:border-gray-800">
+                <button
+                  (click)="handleLogout()"
+                  class="block w-full cursor-pointer px-4 py-2 text-left text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
+                >
+                  Log out
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
     </div>
   </div>
 </header>
 
 @if (showOrgPicker() && !isLoginPage()) {
-  <!-- Organization Picker (shown after login for multi-org users) -->
   <app-org-picker
     [organizations]="organizationDataService.userOrganizations()"
     [invitations]="pendingInvitations()"
@@ -173,278 +170,40 @@
   <div class="flex">
     <!-- Sidebar -->
     @if (!isLoginPage()) {
-      <!-- Overlay for mobile -->
-      <div
-        class="fixed inset-0 z-40 bg-gray-900/50 transition-opacity duration-300 lg:hidden"
-        [class.opacity-0]="!sidebarOpen()"
-        [class.opacity-100]="sidebarOpen()"
-        [class.pointer-events-none]="!sidebarOpen()"
-        (click)="closeSidebar()"
-        (keydown.escape)="closeSidebar()"
-        role="button"
-        tabindex="0"
-        aria-label="Close sidebar"
-      ></div>
-
-      <!-- Sidebar -->
+      <!-- Desktop sidebar -->
       <aside
-        class="fixed inset-y-0 left-0 z-50 w-60 transform overflow-y-auto border-r border-gray-100 bg-white pt-4 transition-transform duration-300 ease-in-out lg:static lg:min-h-[calc(100vh-3.5rem-1px)] lg:translate-x-0 dark:border-gray-800/80 dark:bg-gray-950"
-        [class.-translate-x-full]="!sidebarOpen()"
+        class="hidden w-60 shrink-0 overflow-y-auto border-r border-gray-200 bg-white lg:block lg:min-h-[calc(100vh-3.5rem-1px)] dark:border-gray-800 dark:bg-gray-950"
       >
-        <!-- Close button for mobile -->
-        <div class="flex justify-end px-4 lg:hidden">
-          <button
-            (click)="closeSidebar()"
-            type="button"
-            aria-label="Close sidebar"
-            class="cursor-pointer rounded-md p-2 text-gray-600 ring-indigo-500 hover:bg-gray-100 focus:ring-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
-          >
-            <ng-icon name="tablerX" class="block!" size="1.5rem" />
-          </button>
-        </div>
-
-        <!-- Selector Button -->
-        <div class="px-3">
-          <!-- Label -->
-          <div
-            class="mb-1.5 px-2 text-xs font-medium tracking-wide text-gray-500 dark:text-gray-400"
-          >
-            Context
-          </div>
-
-          <!-- Button to open modal -->
-          <button
-            (click)="openSelectorModal()"
-            type="button"
-            class="flex w-full cursor-pointer items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 ring-indigo-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
-          >
-            <div class="flex min-w-0 flex-1 items-center">
-              @if (selectedItemDisplay(); as selected) {
-                @if (selected.type === 'organization') {
-                  <ng-icon name="tablerBuilding" class="mr-2 shrink-0" size="0.875rem" />
-                } @else if (selected.type === 'project') {
-                  <ng-icon name="tablerFolder" class="mr-2 shrink-0" size="0.875rem" />
-                }
-                <span class="truncate font-medium">{{ selected.name }}</span>
-              } @else {
-                <span class="text-gray-500 dark:text-gray-400">Select...</span>
-              }
-            </div>
-            <ng-icon name="tablerChevronRight" class="ml-2 shrink-0" size="0.875rem" />
-          </button>
-        </div>
-
-        <nav class="overflow-y-auto px-3 pb-6">
-          @if (selectedType()) {
-            <div class="mb-1.5 pt-5">
-              <p
-                class="px-3 text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
-              >
-                {{ settingsHeader() }}
-              </p>
-            </div>
-          }
-
-          <ul class="space-y-2">
-            @if (selectedType() === 'organization') {
-              <li>
-                <a
-                  routerLink="/"
-                  [class.active]="isClustersActive()"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <app-kubernetes-icon class="mr-3 h-5 w-5" />
-                  Clusters
-                </a>
-              </li>
-              <li>
-                <a
-                  routerLink="/projects"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerFolders" class="mr-3" size="1.25rem" />
-                  Projects
-                </a>
-              </li>
-              <li>
-                <a
-                  routerLink="/plugins"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerPuzzle" class="mr-3" size="1.25rem" />
-                  Plugins
-                </a>
-              </li>
-              <li>
-                <a
-                  routerLink="/organization/members"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
-                  Members
-                </a>
-              </li>
-              <li>
-                <a
-                  routerLink="/organization/limits"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerGauge" class="mr-3" size="1.25rem" />
-                  Limits
-                </a>
-              </li>
-              <li>
-                <a
-                  routerLink="/usage"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
-                  Usage
-                </a>
-              </li>
-              <li>
-                <a
-                  routerLink="/organization"
-                  routerLinkActive="active"
-                  [routerLinkActiveOptions]="{ exact: true }"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
-                  Settings
-                </a>
-              </li>
-            } @else if (selectedType() === 'project') {
-              <li>
-                <a
-                  [routerLink]="['/projects', selectedProjectId()]"
-                  routerLinkActive="active"
-                  [routerLinkActiveOptions]="{ exact: true }"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerFolder" size="1.25rem" class="mr-3" />
-                  General
-                </a>
-              </li>
-              <li>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'namespaces']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerBracketsContain" size="1.25rem" class="mr-3" />
-                  Namespaces
-                </a>
-              </li>
-              <li>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'members']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerUsers" class="mr-3" size="1.25rem" />
-                  Members
-                </a>
-              </li>
-              <li>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'roles']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerUserCog" class="mr-3" size="1.25rem" />
-                  Roles
-                </a>
-              </li>
-              <li>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'usage']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
-                  Usage
-                </a>
-              </li>
-              <li>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'limits']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerGauge" class="mr-3" size="1.25rem" />
-                  Limits
-                </a>
-              </li>
-              <li>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'settings']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <ng-icon name="tablerSettings" class="mr-3" size="1.25rem" />
-                  Settings
-                </a>
-              </li>
-
-              <!-- Plugin navigation groups (project-level) -->
-              @for (group of pluginNavService.projectNav(); track group.pluginName) {
-                <li class="mt-2">
-                  <p
-                    class="px-3 pt-3 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
-                  >
-                    {{ group.label }}
-                  </p>
-                  <ul class="mt-1 space-y-1">
-                    @for (item of group.items; track item.crdPlural) {
-                      <li>
-                        <a
-                          [routerLink]="[
-                            '/projects',
-                            selectedProjectId(),
-                            'plugin-resources',
-                            group.pluginName,
-                            item.crdPlural,
-                          ]"
-                          routerLinkActive="active"
-                          class="nav-link"
-                          (click)="closeSidebar()"
-                        >
-                          @if (item.icon) {
-                            <ng-icon [name]="item.icon" class="mr-3" size="1.25rem" />
-                          }
-                          {{ item.label }}
-                        </a>
-                      </li>
-                    }
-                  </ul>
-                </li>
-              }
-            }
-          </ul>
-        </nav>
+        <app-sidebar-nav
+          [selectedType]="selectedType()"
+          [selectedItemDisplay]="selectedItemDisplay()"
+          [selectedProjectId]="selectedProjectId()"
+          [settingsHeader]="settingsHeader()"
+          [isClustersActive]="isClustersActive()"
+          [projectNav]="pluginNavService.projectNav()"
+          (openSelectorModal)="openSelectorModal()"
+        />
       </aside>
+
+      <!-- Mobile sheet -->
+      <nldd-sheet #mobileSheet placement="left" accessible-label="Navigation">
+        <nldd-page sticky-header="">
+          <nldd-top-title-bar slot="header" dismiss-text="Close"></nldd-top-title-bar>
+          <app-sidebar-nav
+            [selectedType]="selectedType()"
+            [selectedItemDisplay]="selectedItemDisplay()"
+            [selectedProjectId]="selectedProjectId()"
+            [settingsHeader]="settingsHeader()"
+            [isClustersActive]="isClustersActive()"
+            [projectNav]="pluginNavService.projectNav()"
+            (openSelectorModal)="openSelectorModal()"
+            (closeSidebar)="closeSidebar()"
+          />
+        </nldd-page>
+      </nldd-sheet>
     }
 
-    <!-- Main Content (deferred until an organization is selected, to avoid API calls without Fun-Organization header) -->
+    <!-- Main content -->
     <main class="mx-auto max-w-7xl min-w-0 flex-1 px-4 py-6 sm:px-6">
       @if (isLoginPage() || selectedOrgId() || selectedProjectId()) {
         @if (!isLoginPage()) {

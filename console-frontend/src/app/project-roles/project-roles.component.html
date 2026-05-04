@@ -1,37 +1,33 @@
 <div class="card">
   <!-- Header -->
   <div class="card-header">
-    <h1 class="text-2xl font-semibold dark:text-white">Project roles</h1>
-    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-      Manage roles for members of this project
-    </p>
+    <h1 class="text-3xl font-semibold">Project roles</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">Manage roles for members of this project</p>
   </div>
 
   <div class="p-6">
     <!-- Info banner -->
     <div
-      class="mb-6 flex items-start gap-3 rounded-md border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950"
+      class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
     >
-      <ng-icon
-        name="tablerInfoCircle"
-        size="1.25rem"
-        class="mt-0.5 shrink-0 text-indigo-600! dark:text-indigo-400!"
-      />
-      <p class="text-sm text-indigo-700 dark:text-indigo-300">
+      <nldd-icon
+        name="info-circle"
+        class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
+      ></nldd-icon>
+      <p class="text-accent-700 dark:text-accent-300">
         Roles provide actual access to namespace resources. Only admins (on organization or project
         level) can manage roles.
       </p>
     </div>
 
-    <div class="mb-5 flex flex-wrap items-center gap-3">
-      <button
+    <div class="mb-6 flex flex-wrap items-center gap-3">
+      <nldd-button
         type="button"
         (click)="openCreateModal()"
-        class="btn-primary inline-flex items-center"
-      >
-        <ng-icon name="tablerPlus" class="mr-1.5" />
-        Create role binding
-      </button>
+        text="Create role binding"
+        start-icon="plus-small"
+        variant="primary"
+      ></nldd-button>
 
       <!-- Filters -->
       <select
@@ -47,7 +43,7 @@
     </div>
 
     @if (filteredBindings().length === 0) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">No role bindings found.</p>
+      <p class="text-gray-500 dark:text-gray-400">No role bindings found.</p>
     } @else {
       <div class="table-container">
         <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
@@ -62,11 +58,11 @@
           <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
             @for (binding of filteredBindings(); track binding.id) {
               <tr>
-                <td class="font-medium dark:text-white">
+                <td class="font-medium">
                   {{ binding.memberName }}
                 </td>
                 <td>
-                  <span class="badge badge-gray font-mono">{{ binding.namespace }}</span>
+                  <span class="badge badge-gray font-mono text-sm">{{ binding.namespace }}</span>
                 </td>
                 <td>
                   <div class="flex flex-wrap gap-1">
@@ -76,21 +72,23 @@
                   </div>
                 </td>
                 <td>
-                  <button
+                  <nldd-button
                     type="button"
                     (click)="openEditModal(binding)"
-                    class="btn-light mr-2 inline-flex shrink-0 items-center"
-                  >
-                    <ng-icon name="tablerPencil" class="mr-1.5" /> Edit
-                  </button>
+                    text="Edit"
+                    start-icon="pencil"
+                    variant="secondary"
+                    size="sm"
+                    class="mr-2"
+                  ></nldd-button>
 
-                  <button
-                    type="button"
+                  <nldd-button
                     (click)="openRemoveModal(binding.id)"
-                    class="btn-remove shrink-0"
-                  >
-                    <ng-icon name="tablerTrash" class="mr-1.5" /> Remove
-                  </button>
+                    text="Remove"
+                    start-icon="trash"
+                    variant="destructive"
+                    size="sm"
+                  ></nldd-button>
                 </td>
               </tr>
             }
@@ -102,20 +100,20 @@
 </div>
 
 <!-- Create/Edit Role Binding Modal -->
-<app-modal
+<nldd-modal-dialog
+  #createModal
+  appDialogSync
   [show]="showCreateModal()"
-  [title]="editingBinding() ? 'Edit role binding' : 'Create role binding'"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showCreateModal.set(false)"
+  [attr.text]="editingBinding() ? 'Edit role binding' : 'Create role binding'"
+  (open)="onCreateModalOpen()"
+  (close)="showCreateModal.set(false)"
 >
-  <form (ngSubmit)="saveBinding()" novalidate>
-    <!-- Member selection -->
-    <div class="mb-4">
-      <label for="rb-member" class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">
-        Member
-      </label>
+  <nldd-spacer size="24"></nldd-spacer>
+
+  <form (ngSubmit)="saveBinding()" (keydown.enter)="saveBinding()" novalidate>
+    <nldd-form-field label="Member" class="mb-4">
       @if (editingBinding()) {
-        <p class="text-sm dark:text-white">{{ editingBinding()?.memberName }}</p>
+        <p>{{ editingBinding()?.memberName }}</p>
       } @else {
         <select
           id="rb-member"
@@ -123,182 +121,161 @@
           [ngModel]="modalMemberId()"
           (ngModelChange)="modalMemberId.set($event)"
           name="memberId"
+          [attr.aria-invalid]="memberIdError() ? 'true' : null"
         >
           <option value="">Select a member</option>
           @for (member of members(); track member.id) {
             <option [value]="member.id">{{ member.name }}</option>
           }
         </select>
+        @if (memberIdError()) {
+          <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">Please select a member.</p>
+        }
       }
-    </div>
+    </nldd-form-field>
 
-    <!-- Namespace selection -->
     <div class="mb-4">
-      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Namespace</span>
       @if (editingBinding()) {
-        <p class="text-sm dark:text-white">{{ editingBinding()?.namespace }}</p>
+        <p>{{ editingBinding()?.namespace }}</p>
       } @else {
-        <div class="space-y-2">
-          <!-- All namespaces -->
-          <label class="radio-option">
-            <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
-              <input
-                name="namespaceMode"
-                type="radio"
+        <nldd-form-field label="Namespace">
+          <nldd-radio-button-group
+            name="namespaceMode"
+            (change)="onNamespaceModeChange($any($event).detail.value)"
+          >
+            <div class="radio-option mb-2 py-0.5">
+              <nldd-radio-button-field
                 value="all"
-                [ngModel]="namespaceMode()"
-                (ngModelChange)="onNamespaceModeChange($event)"
-              />
-              All namespaces
-            </span>
-            <span class="mt-1 ml-6 block text-sm text-gray-600 dark:text-gray-300">
-              All current and future namespaces in this project
-            </span>
-          </label>
-
-          <!-- Specific namespace -->
-          <label class="radio-option">
-            <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
-              <input
-                name="namespaceMode"
-                type="radio"
+                label="All namespaces"
+                [checked]="namespaceMode() === 'all'"
+              ></nldd-radio-button-field>
+            </div>
+            <div class="radio-option mb-2 py-0.5">
+              <nldd-radio-button-field
                 value="specific"
-                [ngModel]="namespaceMode()"
-                (ngModelChange)="onNamespaceModeChange($event)"
-              />
-              Specific namespace
-            </span>
-            @if (namespaceMode() === 'specific') {
-              <div class="mt-2 ml-6">
-                <select
-                  id="rb-namespace"
-                  class="w-full"
-                  [ngModel]="modalNamespace()"
-                  (ngModelChange)="modalNamespace.set($event)"
-                  name="namespace"
-                >
-                  <option value="">Select a namespace</option>
-                  @for (ns of namespaces(); track ns) {
-                    <option [value]="ns">{{ ns }}</option>
-                  }
-                </select>
-              </div>
-            }
-          </label>
-
-          <!-- Custom namespace -->
-          <label class="radio-option">
-            <span class="flex items-center text-sm font-medium text-gray-700 dark:text-white">
-              <input
-                name="namespaceMode"
-                type="radio"
+                label="Specific namespace"
+                [checked]="namespaceMode() === 'specific'"
+              ></nldd-radio-button-field>
+            </div>
+            <div class="radio-option py-0.5">
+              <nldd-radio-button-field
                 value="custom"
-                [ngModel]="namespaceMode()"
-                (ngModelChange)="onNamespaceModeChange($event)"
-              />
-              Custom pattern
-            </span>
-            <span class="mt-1 ml-6 block text-sm text-gray-600 dark:text-gray-300">
-              Type a namespace name, wildcard (<code class="text-xs">*</code>) allowed
-            </span>
-            @if (namespaceMode() === 'custom') {
-              <div class="mt-2 ml-6">
-                <input
-                  id="rb-custom-namespace"
-                  type="text"
-                  placeholder="E.g. staging-* or my-namespace"
-                  [ngModel]="modalCustomNamespace()"
-                  (ngModelChange)="modalCustomNamespace.set($event)"
-                  name="customNamespace"
-                />
-              </div>
+                label="Custom pattern"
+                [checked]="namespaceMode() === 'custom'"
+              ></nldd-radio-button-field>
+            </div>
+          </nldd-radio-button-group>
+        </nldd-form-field>
+        @if (namespaceMode() === 'specific') {
+          <div class="mt-2">
+            <select
+              id="rb-namespace"
+              class="w-full"
+              [ngModel]="modalNamespace()"
+              (ngModelChange)="modalNamespace.set($event)"
+              name="namespace"
+              [attr.aria-invalid]="namespaceError() ? 'true' : null"
+            >
+              <option value="">Select a namespace</option>
+              @for (ns of namespaces(); track ns) {
+                <option [value]="ns">{{ ns }}</option>
+              }
+            </select>
+            @if (namespaceError()) {
+              <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">
+                Please select a namespace.
+              </p>
             }
-          </label>
-        </div>
+          </div>
+        }
+        @if (namespaceMode() === 'custom') {
+          <div class="mt-2">
+            <nldd-text-field
+              id="rb-custom-namespace"
+              placeholder="E.g. staging-* or my-namespace"
+              [value]="modalCustomNamespace()"
+              (input)="modalCustomNamespace.set($any($event.target).value)"
+            ></nldd-text-field>
+            @if (customNamespaceError()) {
+              <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">
+                Please enter a namespace pattern.
+              </p>
+            }
+          </div>
+        }
       }
     </div>
 
-    <!-- Roles switches -->
     <div class="mb-4">
-      <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-white">Roles</span>
+      <span class="mb-2 block font-medium text-gray-700 dark:text-white">Roles</span>
+      @if (rolesError()) {
+        <p class="text-danger-600 dark:text-danger-400 mb-2 text-sm">
+          Please select at least one role.
+        </p>
+      }
       <div class="space-y-3">
         @for (role of availableRoles; track role) {
           <div>
-            <label class="inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                [checked]="modalRoles()[role]"
-                (change)="toggleRole(role)"
-                class="peer sr-only"
-              />
-              <span class="switch"></span>
-              <span class="ml-3 text-sm font-medium dark:text-gray-300">{{ role }}</span>
-            </label>
+            <nldd-switch-field
+              [label]="role"
+              [checked]="modalRoles()[role]"
+              (change)="toggleRole(role, $any($event).detail.checked)"
+            ></nldd-switch-field>
           </div>
         }
       </div>
     </div>
-
-    <div modal-footer class="modal-footer">
-      <button
-        type="button"
-        (click)="showCreateModal.set(false)"
-        class="btn-secondary"
-        [disabled]="isSubmitting()"
-      >
-        Cancel
-      </button>
-      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
-        @if (isSubmitting()) {
-          Saving...
-        } @else if (editingBinding()) {
-          Save changes
-        } @else {
-          Create binding
-        }
-      </button>
-    </div>
   </form>
-</app-modal>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showCreateModal.set(false)"
+    [disabled]="isSubmitting()"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="saveBinding()"
+    text="Save changes"
+    [text]="isSubmitting() ? 'Saving...' : editingBinding() ? 'Save changes' : 'Create binding'"
+    [disabled]="isSubmitting()"
+    variant="primary"
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Remove Role Binding Modal -->
-<app-modal
+<nldd-modal-dialog
+  #removeModal
+  appDialogSync
   [show]="showRemoveModal()"
-  title="Remove role binding"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showRemoveModal.set(false)"
+  text="Remove role binding"
+  variant="alert"
+  (open)="onRemoveModalOpen()"
+  (close)="showRemoveModal.set(false)"
 >
-  <div class="sm:flex sm:items-start">
-    <div
-      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
-    >
-      <ng-icon
-        name="tablerAlertTriangle"
-        size="1.5rem"
-        class="text-rose-600! dark:text-rose-400!"
-      />
-    </div>
-    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-      <div class="mt-2">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
-          Are you sure you want to remove the role binding for
-          <span class="font-semibold text-gray-800 dark:text-white">{{
-            pendingBindingDescription()
-          }}</span
-          >?
-        </p>
-      </div>
-    </div>
-  </div>
+  <nldd-spacer size="24"></nldd-spacer>
 
-  <div modal-footer class="modal-footer">
-    <button type="button" (click)="showRemoveModal.set(false)" class="btn-secondary">Cancel</button>
-    <button
-      type="button"
-      (click)="confirmRemoveBinding()"
-      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
-    >
-      Yes, remove this binding
-    </button>
-  </div>
-</app-modal>
+  <p>
+    Are you sure you want to remove the role binding for
+    <strong class="font-semibold">{{ pendingBindingDescription() }}</strong
+    >?
+  </p>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showRemoveModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmRemoveBinding()"
+    text="Yes, remove this binding"
+    variant="destructive"
+  ></nldd-button>
+</nldd-modal-dialog>

@@ -15,8 +15,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.6",
+    "glob": "8.1.0",
     "@eslint/js": "9.39.2",
-    "@fullhuman/postcss-purgecss": "7.0.2",
     "@typescript-eslint/parser": "8.53.1",
     "astro-eslint-parser": "1.2.2",
     "eslint": "9.39.2",
@@ -42,7 +42,6 @@
     "@tailwindcss/vite": "4.1.18",
     "astro": "5.18.1",
     "astro-asciidoc": "0.1.0",
-    "starlight-auto-sidebar": "0.2.0",
     "tailwindcss": "4.1.18"
   }
 }

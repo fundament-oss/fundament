@@ -1,12 +1,18 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerTrash, tablerAlertTriangle } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -17,20 +23,14 @@ import {
   DeleteNamespaceRequestSchema,
   Namespace,
 } from '../../generated/v1/namespace_pb';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-namespaces',
-  imports: [ReactiveFormsModule, NgIcon, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-      tablerPlus,
-      tablerTrash,
-      tablerAlertTriangle,
-    }),
-  ],
+  imports: [ReactiveFormsModule, DialogSyncDirective],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './namespaces.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -120,10 +120,9 @@ export default class NamespacesComponent implements OnInit {
         name: this.namespaceForm.value.name!,
       });
 
-      await withIdempotency(
-        (opts) => this.namespaceClient.createNamespace(request, opts),
-        { signal: this.idempotency.reset() },
-      );
+      await withIdempotency((opts) => this.namespaceClient.createNamespace(request, opts), {
+        signal: this.idempotency.reset(),
+      });
 
       this.showCreateNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
@@ -179,6 +178,12 @@ export default class NamespacesComponent implements OnInit {
 
   readonly formatDate = formatDateUtil;
 
+  onNameInput(event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.namespaceForm.get('name')?.setValue(value);
+    this.namespaceForm.get('name')?.markAsDirty();
+  }
+
   getNameError(): string {
     const nameControl = this.namespaceForm.get('name');
     if (nameControl?.hasError('required')) {
@@ -191,5 +196,19 @@ export default class NamespacesComponent implements OnInit {
       return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
     }
     return '';
+  }
+
+  createNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('createNamespaceDialog');
+
+  onCreateNamespaceModalOpen(): void {
+    const el = this.createNamespaceDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  deleteNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('deleteNamespaceDialog');
+
+  onDeleteNamespaceModalOpen(): void {
+    const el = this.deleteNamespaceDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }

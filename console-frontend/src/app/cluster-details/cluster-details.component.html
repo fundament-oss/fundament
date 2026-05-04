@@ -1,14 +1,13 @@
 <!-- Error Message -->
 @if (errorMessage()) {
   <div
-    class="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/30"
+    class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
   >
-    <ng-icon
-      name="tablerCircleXFill"
-      class="shrink-0 text-rose-500! dark:text-rose-400!"
-      size="1.125rem"
-    />
-    <p class="text-sm text-rose-700 dark:text-rose-300">{{ errorMessage() }}</p>
+    <nldd-icon
+      name="dismiss-circle"
+      class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+    ></nldd-icon>
+    <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
   </div>
 }
 
@@ -17,11 +16,11 @@
   <div class="py-12 text-center">
     <div role="status" class="flex justify-center">
       <app-loading-indicator
-        class="h-8 w-8 animate-spin fill-indigo-600 text-gray-200 dark:fill-indigo-400 dark:text-gray-800"
+        class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
       />
       <span class="sr-only">Loading...</span>
     </div>
-    <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading cluster details...</p>
+    <p class="mt-4 text-gray-600 dark:text-gray-300">Loading cluster details...</p>
   </div>
 }
 
@@ -32,29 +31,31 @@
     <div class="card-header">
       <div class="grid items-center gap-3 lg:grid-cols-2">
         <div>
-          <h1 class="text-2xl font-semibold dark:text-white">
+          <h1 class="text-3xl font-semibold">
             {{ clusterData.basics.name || 'Unknown cluster' }}
           </h1>
-          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          <p class="mt-1 text-gray-600 dark:text-gray-300">
             Created {{ formatDate(clusterData.creationDate) }}
           </p>
         </div>
 
         <div class="flex gap-2 lg:justify-end">
-          <button
+          <nldd-button
             type="button"
             (click)="openTerminal()"
-            class="btn-secondary inline-flex shrink-0 items-center transition-transform duration-200 ease-in-out hover:-translate-y-px"
-          >
-            <ng-icon name="tablerTerminal" class="mr-2" /> Open terminal
-          </button>
-          <button
+            text="Open terminal"
+            variant="secondary"
+            start-icon="terminal"
+            size="sm"
+          ></nldd-button>
+          <nldd-button
             type="button"
             (click)="downloadKubeconfig()"
-            class="btn-primary inline-flex shrink-0 items-center transition-transform duration-200 ease-in-out hover:-translate-y-px"
-          >
-            <ng-icon name="tablerDownload" class="mr-2" /> Download kubeconfig
-          </button>
+            text="Download kubeconfig"
+            start-icon="arrow-down-in-bucket"
+            variant="primary"
+            size="sm"
+          ></nldd-button>
         </div>
       </div>
     </div>
@@ -63,23 +64,23 @@
     <div class="card-body-lg space-y-6">
       <!-- Basics Block -->
       <div class="card card-body">
-        <h3 class="mb-4 text-lg font-medium dark:text-white">Basics</h3>
+        <h3 class="mb-4 text-xl font-medium">Basics</h3>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
-            <dd class="mt-1 text-sm dark:text-white">{{ clusterData.basics.name }}</dd>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
+            <dd class="mt-1">{{ clusterData.basics.name }}</dd>
           </dl>
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</dt>
-            <dd class="mt-1 text-sm dark:text-white">
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Region</dt>
+            <dd class="mt-1">
               {{ clusterData.basics.region.toUpperCase() }}
             </dd>
           </dl>
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Status</dt>
             <dd class="mt-1">
               <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                class="inline-flex items-center rounded-full px-2.5 py-0.5 font-medium"
                 [class]="getStatusColor(clusterData.status)"
               >
                 {{ getStatusLabel(clusterData.status) }}
@@ -87,15 +88,16 @@
             </dd>
           </dl>
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
-            <dd class="mt-1 text-sm dark:text-white">
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
+            <dd class="mt-1">
               {{ clusterData.basics.kubernetesVersion }}
-              <button
-                type="button"
-                class="btn-light -my-0.5 ml-1 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
-              >
-                <ng-icon name="tablerArrowUp" size="0.875rem" class="mr-1" /> Upgrade
-              </button>
+              <nldd-button
+                text="Upgrade"
+                start-icon="arrow-up"
+                variant="secondary"
+                size="xs"
+                class="ml-1"
+              ></nldd-button>
             </dd>
           </dl>
         </div>
@@ -103,10 +105,10 @@
 
       <!-- Gardener Sync State Block -->
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-        <h3 class="mb-4 text-lg font-medium dark:text-white">Provisioning status</h3>
+        <h3 class="mb-4 text-xl font-medium">Provisioning status</h3>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <dl>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Gardener status</dt>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Gardener status</dt>
             <dd class="mt-1">
               <span
                 class="badge capitalize"
@@ -118,32 +120,32 @@
           </dl>
           @if (clusterData.syncState?.shootMessage) {
             <dl class="sm:col-span-2 lg:col-span-3">
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Message</dt>
-              <dd class="mt-1 text-sm dark:text-white">
+              <dt class="font-medium text-gray-500 dark:text-gray-400">Message</dt>
+              <dd class="mt-1">
                 {{ clusterData.syncState?.shootMessage }}
               </dd>
             </dl>
           }
           @if (clusterData.syncState?.outboxError) {
             <dl class="sm:col-span-2">
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Sync error</dt>
-              <dd class="mt-1 text-sm text-red-600 dark:text-red-400">
+              <dt class="font-medium text-gray-500 dark:text-gray-400">Sync error</dt>
+              <dd class="text-danger-600 dark:text-danger-400 mt-1">
                 {{ clusterData.syncState?.outboxError }}
               </dd>
             </dl>
           }
           @if (clusterData.syncState?.outboxStatus) {
             <dl>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Outbox status</dt>
-              <dd class="mt-1 text-sm dark:text-white">
+              <dt class="font-medium text-gray-500 dark:text-gray-400">Outbox status</dt>
+              <dd class="mt-1">
                 {{ clusterData.syncState!.outboxStatus }}
               </dd>
             </dl>
           }
           @if (clusterData.syncState && clusterData.syncState.outboxRetries > 0) {
             <dl>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Outbox retries</dt>
-              <dd class="mt-1 text-sm dark:text-white">
+              <dt class="font-medium text-gray-500 dark:text-gray-400">Outbox retries</dt>
+              <dd class="mt-1">
                 {{ clusterData.syncState.outboxRetries }}
               </dd>
             </dl>
@@ -153,16 +155,16 @@
         <!-- Collapsible Sync History -->
         @if (clusterData.syncState) {
           <details class="group mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
-            <summary class="inline-flex cursor-pointer items-center text-sm font-medium">
-              <ng-icon
-                name="tablerCaretRight"
-                class="mr-1 text-indigo-500! transition-transform group-open:rotate-90"
-              />
+            <summary class="inline-flex cursor-pointer items-center font-medium">
+              <nldd-icon
+                name="caret-right"
+                class="text-accent-500! mr-1 h-4 w-4 transition-transform group-open:rotate-90"
+              ></nldd-icon>
               Sync details
             </summary>
 
             <div class="mt-3 overflow-x-auto">
-              <table class="min-w-full text-sm">
+              <table class="min-w-full">
                 <thead>
                   <tr class="border-b border-gray-200 dark:border-gray-800">
                     <th class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
@@ -176,19 +178,19 @@
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                   <tr>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Shoot status</td>
-                    <td class="px-3 py-2 dark:text-white">
+                    <td class="px-3 py-2">
                       {{ clusterData.syncState.shootStatus || 'N/A' }}
                     </td>
                   </tr>
                   <tr>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Status message</td>
-                    <td class="px-3 py-2 dark:text-white">
+                    <td class="px-3 py-2">
                       {{ clusterData.syncState.shootMessage || 'N/A' }}
                     </td>
                   </tr>
                   <tr>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Status updated</td>
-                    <td class="px-3 py-2 dark:text-white">
+                    <td class="px-3 py-2">
                       {{
                         clusterData.syncState.statusUpdatedAt
                           ? formatDate(clusterData.syncState.statusUpdatedAt)
@@ -198,20 +200,20 @@
                   </tr>
                   <tr>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Outbox status</td>
-                    <td class="px-3 py-2 dark:text-white">
+                    <td class="px-3 py-2">
                       {{ clusterData.syncState.outboxStatus || 'N/A' }}
                     </td>
                   </tr>
                   <tr>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Outbox retries</td>
-                    <td class="px-3 py-2 dark:text-white">
+                    <td class="px-3 py-2">
                       {{ clusterData.syncState.outboxRetries }}
                     </td>
                   </tr>
                   @if (clusterData.syncState.outboxError) {
                     <tr>
                       <td class="px-3 py-2 text-gray-600 dark:text-gray-400">Outbox error</td>
-                      <td class="px-3 py-2 text-red-600 dark:text-red-400">
+                      <td class="text-danger-600 dark:text-danger-400 px-3 py-2">
                         {{ clusterData.syncState.outboxError }}
                       </td>
                     </tr>
@@ -227,12 +229,12 @@
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <!-- Resource Usage Charts -->
         <div class="card card-body">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Resource usage</h3>
+          <h3 class="mb-4 text-xl font-medium">Resource usage</h3>
           <div class="space-y-4">
             <!-- CPU Usage -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
-                <span class="font-medium text-gray-700 dark:text-white">CPU</span>
+              <div class="mb-1 flex justify-between">
+                <span class="font-medium text-gray-700">CPU</span>
                 <span class="text-gray-500 dark:text-gray-400"
                   >{{ clusterData.resourceUsage.cpu.used }} /
                   {{ clusterData.resourceUsage.cpu.limit }}
@@ -258,7 +260,7 @@
                   "
                 ></div>
               </div>
-              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{
                   getUsagePercentage(
                     clusterData.resourceUsage.cpu.used,
@@ -270,8 +272,8 @@
 
             <!-- Memory Usage -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
-                <span class="font-medium text-gray-700 dark:text-white">Memory</span>
+              <div class="mb-1 flex justify-between">
+                <span class="font-medium text-gray-700">Memory</span>
                 <span class="text-gray-500 dark:text-gray-400"
                   >{{ clusterData.resourceUsage.memory.used }} /
                   {{ clusterData.resourceUsage.memory.limit }}
@@ -297,7 +299,7 @@
                   "
                 ></div>
               </div>
-              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{
                   getUsagePercentage(
                     clusterData.resourceUsage.memory.used,
@@ -309,8 +311,8 @@
 
             <!-- Disk Usage -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
-                <span class="font-medium text-gray-700 dark:text-white">Disk</span>
+              <div class="mb-1 flex justify-between">
+                <span class="font-medium text-gray-700">Disk</span>
                 <span class="text-gray-500 dark:text-gray-400"
                   >{{ clusterData.resourceUsage.disk.used }} /
                   {{ clusterData.resourceUsage.disk.limit }}
@@ -336,7 +338,7 @@
                   "
                 ></div>
               </div>
-              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{
                   getUsagePercentage(
                     clusterData.resourceUsage.disk.used,
@@ -348,8 +350,8 @@
 
             <!-- Pods Usage -->
             <div>
-              <div class="mb-1 flex justify-between text-sm">
-                <span class="font-medium text-gray-700 dark:text-white">Pods</span>
+              <div class="mb-1 flex justify-between">
+                <span class="font-medium text-gray-700">Pods</span>
                 <span class="text-gray-500 dark:text-gray-400"
                   >{{ clusterData.resourceUsage.pods.used }} /
                   {{ clusterData.resourceUsage.pods.limit }}
@@ -375,7 +377,7 @@
                   "
                 ></div>
               </div>
-              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <div class="mt-1 text-gray-500 dark:text-gray-400">
                 {{
                   getUsagePercentage(
                     clusterData.resourceUsage.pods.used,
@@ -389,10 +391,10 @@
 
         <!-- Event History -->
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Event History</h3>
+          <h3 class="mb-4 text-xl font-medium">Event History</h3>
           <div class="max-h-80 space-y-3 overflow-y-auto" tabindex="0">
             @if (clusterEvents().length === 0) {
-              <p class="text-sm text-gray-500 dark:text-gray-400">No events recorded yet</p>
+              <p class="text-gray-500 dark:text-gray-400">No events recorded yet</p>
             } @else {
               @for (event of clusterEvents(); track event.id) {
                 <div
@@ -405,14 +407,14 @@
                     ></div>
                   </div>
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium dark:text-white">
+                    <p class="font-medium">
                       {{ getEventTypeLabel(event.eventType) }}
                     </p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                    <p class="text-gray-500 dark:text-gray-400">
                       {{ getEventDetails(event) }}
                     </p>
                     @if (event.createdAt) {
-                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p class="mt-1 text-gray-500 dark:text-gray-400">
                         {{ formatDate(event.createdAt) }}
                       </p>
                     }
@@ -428,15 +430,10 @@
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <!-- Members -->
         <div class="card card-body">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">
+          <h3 class="mb-4 text-xl font-medium">
             Members
             <!-- TODO: Update this link - clusters belong to organizations, not projects
-            <a
-              routerLink="/project-members"
-              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
-            >
-              <ng-icon name="tablerPencil" class="mr-1" /> Edit
-            </a>
+            <nldd-button routerLink="/project-members" text="Edit" start-icon="pencil" variant="secondary" size="xs" class="ml-1" ></nldd-button>
             -->
           </h3>
           <div class="space-y-3">
@@ -445,14 +442,14 @@
                 <div class="flex items-center space-x-3">
                   <div class="flex-0">
                     <div
-                      class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900"
+                      class="bg-accent-100 dark:bg-accent-900 flex h-8 w-8 items-center justify-center rounded-full"
                     >
-                      <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">{{
+                      <span class="text-accent-700 dark:text-accent-300 font-medium">{{
                         member.name.charAt(0)
                       }}</span>
                     </div>
                   </div>
-                  <p class="text-sm font-medium dark:text-white">{{ member.name }}</p>
+                  <p class="font-medium">{{ member.name }}</p>
                 </div>
                 <div class="text-right">
                   <span
@@ -463,7 +460,7 @@
                   >
                     {{ member.role }}
                   </span>
-                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p class="mt-1 text-gray-500 dark:text-gray-400">
                     Last active: {{ formatDate(member.lastActive) }}
                   </p>
                 </div>
@@ -474,25 +471,25 @@
 
         <!-- Node Pools -->
         <div class="card card-body">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">
+          <h3 class="mb-4 text-xl font-medium">
             Node pools
-            <a
+            <nldd-button
               [routerLink]="['/clusters', clusterData.basics.id, 'nodes']"
-              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
-            >
-              <ng-icon name="tablerPencil" class="mr-1" /> Edit
-            </a>
+              text="Edit"
+              start-icon="pencil"
+              variant="secondary"
+              size="xs"
+              class="ml-1"
+            ></nldd-button>
           </h3>
           @if (clusterData.nodePools.length === 0) {
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              No node pools are configured yet.
-            </p>
+            <p class="text-gray-500 dark:text-gray-400">No node pools are configured yet.</p>
           } @else {
             <div class="space-y-4">
               @for (pool of clusterData.nodePools; track pool.name) {
                 <div class="card card-body-sm">
                   <div class="mb-2 flex items-center justify-between">
-                    <h4 class="text-sm font-medium dark:text-white">{{ pool.name }}</h4>
+                    <h4 class="font-medium">{{ pool.name }}</h4>
                     <span
                       class="badge-sm"
                       [class]="
@@ -508,14 +505,14 @@
                       {{ getNodePoolStatusLabel(pool.status) }}
                     </span>
                   </div>
-                  <div class="grid grid-cols-2 gap-2 text-sm">
+                  <div class="grid grid-cols-2 gap-2">
                     <div>
                       <span class="text-gray-500 dark:text-gray-400">Type:</span>
-                      <span class="ml-1 dark:text-white">{{ pool.machineType }}</span>
+                      <span class="ml-1">{{ pool.machineType }}</span>
                     </div>
                     <div class="text-right">
                       <span class="text-gray-500 dark:text-gray-400">Nodes:</span>
-                      <span class="ml-1 dark:text-white"
+                      <span class="ml-1"
                         >{{ pool.currentNodes }} (min: {{ pool.minNodes }} - max:
                         {{ pool.maxNodes }})</span
                       >
@@ -523,7 +520,7 @@
                     @if (pool.version) {
                       <div>
                         <span class="text-gray-500 dark:text-gray-400">Version:</span>
-                        <span class="ml-1 dark:text-white">{{ pool.version }}</span>
+                        <span class="ml-1">{{ pool.version }}</span>
                       </div>
                     }
                   </div>
@@ -535,20 +532,22 @@
 
         <!-- Plugins Block -->
         <div class="card card-body">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">
+          <h3 class="mb-4 text-xl font-medium">
             Plugins
-            <a
+            <nldd-button
               [routerLink]="['/clusters', clusterData.basics.id, 'plugins']"
-              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
-            >
-              <ng-icon name="tablerPencil" class="mr-1" /> Edit
-            </a>
+              text="Edit"
+              start-icon="pencil"
+              variant="secondary"
+              size="xs"
+              class="ml-1"
+            ></nldd-button>
           </h3>
           @if (isLoadingPlugins()) {
-            <p class="text-sm text-gray-500 dark:text-gray-400">Loading plugins...</p>
+            <p class="text-gray-500 dark:text-gray-400">Loading plugins...</p>
           } @else if (installedPlugins().length > 0) {
             <dl>
-              <dt class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+              <dt class="mb-2 font-medium text-gray-500 dark:text-gray-400">
                 Installed plugins ({{ installedPlugins().length }})
               </dt>
               <dd class="flex flex-wrap gap-1">
@@ -560,31 +559,31 @@
               </dd>
             </dl>
           } @else {
-            <p class="text-sm text-gray-500 dark:text-gray-400">No plugins installed</p>
+            <p class="text-gray-500 dark:text-gray-400">No plugins installed</p>
           }
         </div>
 
         <!-- Namespaces Block -->
         <div class="card card-body">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">
+          <h3 class="mb-4 text-xl font-medium">
             Namespaces
-            <a
+            <nldd-button
               [routerLink]="['/clusters', clusterData.basics.id, 'namespaces']"
-              class="btn-light ml-1.5 inline-flex items-center rounded! px-2! py-1! text-xs! shadow-xs!"
-            >
-              <ng-icon name="tablerPencil" class="mr-1" /> Edit
-            </a>
+              text="Edit"
+              start-icon="pencil"
+              variant="secondary"
+              size="xs"
+              class="ml-1"
+            ></nldd-button>
           </h3>
           @if (namespaces().length === 0) {
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              No namespaces in this cluster yet.
-            </p>
+            <p class="text-gray-500 dark:text-gray-400">No namespaces in this cluster yet.</p>
           } @else {
             <div class="space-y-3">
               @for (namespace of namespaces(); track namespace.id) {
                 <div class="card card-body-sm">
-                  <p class="font-mono text-sm dark:text-white">{{ namespace.name }}</p>
-                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p class="font-mono text-sm">{{ namespace.name }}</p>
+                  <p class="mt-1 text-gray-500 dark:text-gray-400">
                     Project: {{ getProjectName(namespace.projectId) }} &bull; Created
                     {{ formatDate(namespace.created) }}
                   </p>
@@ -597,59 +596,53 @@
 
       <!-- Danger Zone -->
       <div
-        class="rounded-md border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-900/20"
+        class="bg-danger-50 dark:bg-danger-900/20 rounded-md border border-rose-200 p-4 dark:border-rose-900"
       >
-        <h3 class="mb-2 text-lg font-medium text-rose-800 dark:text-rose-200">Danger zone</h3>
-        <p class="mb-4 text-sm text-rose-700 dark:text-rose-300">
+        <h3 class="text-danger-800 dark:text-danger-200 mb-2 text-lg font-medium">Danger zone</h3>
+        <p class="text-danger-700 dark:text-danger-300 mb-4">
           Deleting a cluster is permanent and cannot be undone.
         </p>
-        <button type="button" (click)="showDeleteModal.set(true)" class="btn-remove">
-          Delete this cluster
-        </button>
+        <nldd-button
+          (click)="showDeleteModal.set(true)"
+          text="Delete this cluster"
+          variant="destructive"
+        ></nldd-button>
       </div>
     </div>
   </div>
 }
 
 <!-- Delete Cluster Modal -->
-<app-modal
+<nldd-modal-dialog
+  #deleteDialog
+  appDialogSync
   [show]="showDeleteModal()"
-  title="Delete cluster"
-  [maxWidth]="'max-w-lg'"
-  (modalClose)="showDeleteModal.set(false)"
+  text="Delete cluster"
+  variant="alert"
+  (open)="onDeleteModalOpen()"
+  (close)="showDeleteModal.set(false)"
 >
-  <div class="sm:flex sm:items-start">
-    <div
-      class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-rose-900/20"
-    >
-      <ng-icon
-        name="tablerAlertTriangle"
-        size="1.5rem"
-        class="text-rose-600! dark:text-rose-400!"
-      />
-    </div>
-    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-      <div class="mt-2">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
-          Are you sure you want to delete cluster
-          <span class="font-semibold text-gray-800 dark:text-white">{{
-            clusterData.basics.name
-          }}</span
-          >?
-        </p>
-        <p class="mt-2 text-sm text-rose-600 dark:text-rose-400">This cannot be undone.</p>
-      </div>
-    </div>
-  </div>
+  <nldd-spacer size="24"></nldd-spacer>
 
-  <div modal-footer class="modal-footer">
-    <button type="button" (click)="showDeleteModal.set(false)" class="btn-secondary">Cancel</button>
-    <button
-      type="button"
-      (click)="deleteCluster()"
-      class="cursor-pointer items-center rounded-md border border-rose-700 bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm ring-rose-500 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none dark:border-rose-800 dark:bg-rose-700 dark:ring-offset-gray-950 dark:hover:bg-rose-800"
-    >
-      Yes, delete this cluster
-    </button>
-  </div>
-</app-modal>
+  <p>
+    Are you sure you want to delete cluster
+    <strong class="font-semibold">{{ clusterData.basics.name }}</strong
+    >?
+  </p>
+  <p class="text-danger-600 dark:text-danger-400 mt-2">This cannot be undone.</p>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showDeleteModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="deleteCluster()"
+    text="Yes, delete this cluster"
+    variant="destructive"
+  ></nldd-button>
+</nldd-modal-dialog>

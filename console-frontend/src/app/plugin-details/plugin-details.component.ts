@@ -1,9 +1,13 @@
-import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  signal,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerChevronRight, tablerCheck } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef } from '../../connect/idempotency';
@@ -22,7 +26,7 @@ import {
 } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ToastService } from '../toast.service';
-import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 
 // Extended cluster type for UI state
 interface ClusterWithState extends ClusterSummary {
@@ -32,14 +36,8 @@ interface ClusterWithState extends ClusterSummary {
 
 @Component({
   selector: 'app-plugin-details',
-  imports: [InstallPluginModalComponent, NgIcon, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerChevronRight,
-      tablerCheck,
-      tablerCircleXFill,
-    }),
-  ],
+  imports: [InstallPluginModalComponent, LoadingIndicatorComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
 })
@@ -72,7 +70,7 @@ export default class PluginDetailsComponent implements OnInit {
 
   errorMessage = signal<string | null>(null);
 
-  showInstallModal = false;
+  showInstallModal = signal(false);
 
   async ngOnInit() {
     // Get plugin ID from route
@@ -136,11 +134,8 @@ export default class PluginDetailsComponent implements OnInit {
 
     // Simple markdown to HTML conversion
     let html = description
-      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-semibold mb-3 dark:text-white">$1</h1>')
-      .replace(
-        /^## (.*$)/gim,
-        '<h2 class="text-xl font-semibold mb-2 mt-4 dark:text-white">$1</h2>',
-      )
+      .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-semibold mb-3">$1</h1>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mb-2 mt-4">$1</h2>')
       .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
       .replace(/\n\n/g, '</p><p class="mb-3">')
@@ -152,11 +147,11 @@ export default class PluginDetailsComponent implements OnInit {
   }
 
   openInstallModal(): void {
-    this.showInstallModal = true;
+    this.showInstallModal.set(true);
   }
 
   closeInstallModal(): void {
-    this.showInstallModal = false;
+    this.showInstallModal.set(false);
   }
 
   async onInstallOnCluster(clusterId: string): Promise<void> {
@@ -167,11 +162,7 @@ export default class PluginDetailsComponent implements OnInit {
     }
 
     try {
-      await this.pluginInstallationService.installPlugin(
-        clusterId,
-        plugin.name,
-        this.pluginImage,
-      );
+      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, this.pluginImage);
       this.clusters.update((clusters) =>
         clusters.map((c) => (c.id === clusterId ? { ...c, installed: true } : c)),
       );

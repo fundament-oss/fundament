@@ -1,9 +1,15 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
+} from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerPlus, tablerTrash, tablerAlertTriangle } from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
@@ -19,21 +25,15 @@ import {
 } from '../../generated/v1/namespace_pb';
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { fetchClusterName } from '../utils/cluster-status';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-cluster-namespaces',
-  imports: [ReactiveFormsModule, NgIcon, ModalComponent, RouterLink, LoadingIndicatorComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-      tablerPlus,
-      tablerTrash,
-      tablerAlertTriangle,
-    }),
-  ],
+  imports: [ReactiveFormsModule, DialogSyncDirective, RouterLink, LoadingIndicatorComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-namespaces.component.html',
 })
@@ -170,10 +170,9 @@ export default class ClusterNamespacesComponent implements OnInit {
         name: this.namespaceForm.value.name!,
       });
 
-      await withIdempotency(
-        (opts) => this.namespaceClient.createNamespace(request, opts),
-        { signal: this.idempotency.reset() },
-      );
+      await withIdempotency((opts) => this.namespaceClient.createNamespace(request, opts), {
+        signal: this.idempotency.reset(),
+      });
 
       this.showAddNamespaceModal.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
@@ -227,6 +226,12 @@ export default class ClusterNamespacesComponent implements OnInit {
     }
   }
 
+  onNamespaceNameInput(event: Event) {
+    const value = (event as CustomEvent<{ value: string }>).detail.value;
+    this.namespaceForm.get('name')?.setValue(value);
+    this.namespaceForm.get('name')?.markAsDirty();
+  }
+
   getNamespaceNameError(): string {
     const nameControl = this.namespaceForm.get('name');
     if (nameControl?.hasError('required')) {
@@ -243,5 +248,19 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   onCancel() {
     this.router.navigate(['/clusters', this.clusterId]);
+  }
+
+  addNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('addNamespaceDialog');
+
+  onAddNamespaceModalOpen(): void {
+    const el = this.addNamespaceDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  deleteNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('deleteNamespaceDialog');
+
+  onDeleteNamespaceModalOpen(): void {
+    const el = this.deleteNamespaceDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }

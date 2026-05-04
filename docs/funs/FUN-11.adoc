@@ -40,7 +40,7 @@ metadata:
   description: Automated TLS certificate management for Kubernetes using cert-manager.
   author: Fundament
   license: Apache-2.0
-  icon: shield-check
+  icon: shield-check-mark
   urls:
     homepage: https://cert-manager.io
     repository: https://github.com/cert-manager/cert-manager
@@ -76,18 +76,18 @@ spec:
         list: true
         detail: true
         create: true
-        icon: globe
+        icon: rectangle-stack
     project:
       - crd: certificates.cert-manager.io
         list: true
         detail: true
         create: true
-        icon: file-lock
+        icon: file-text
       - crd: certificaterequests.cert-manager.io
         list: true
         detail: true
         create: false
-        icon: file-search
+        icon: magnifier
 
   uiHints:
     certificates.cert-manager.io:

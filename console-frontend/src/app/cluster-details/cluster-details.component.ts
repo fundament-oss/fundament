@@ -6,20 +6,13 @@ import {
   OnDestroy,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
+  CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerTerminal,
-  tablerDownload,
-  tablerArrowUp,
-  tablerCaretRight,
-  tablerPencil,
-  tablerAlertTriangle,
-} from '@ng-icons/tabler-icons';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { CLUSTER, NAMESPACE, PLUGIN } from '../../connect/tokens';
@@ -35,18 +28,19 @@ import {
 import { ListClusterNamespacesRequestSchema, Namespace } from '../../generated/v1/namespace_pb';
 import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
-import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { LoadingIndicatorComponent } from '../icons';
 import { getStatusColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 const getUsagePercentage = (used: number, limit: number): number =>
   Math.round((used / limit) * 100);
 
 const getUsageColor = (percentage: number): string => {
-  if (percentage >= 90) return 'bg-red-500';
+  if (percentage >= 90) return 'bg-danger-500';
   if (percentage >= 75) return 'bg-yellow-500';
   return 'bg-green-500';
 };
@@ -101,10 +95,10 @@ const getEventTypeColor = (eventType: string): string => {
     sync_requested: 'bg-blue-500',
     sync_claimed: 'bg-blue-500',
     sync_succeeded: 'bg-green-500',
-    sync_failed: 'bg-red-500',
+    sync_failed: 'bg-danger-500',
     status_progressing: 'bg-blue-500',
     status_ready: 'bg-green-500',
-    status_error: 'bg-red-500',
+    status_error: 'bg-danger-500',
     status_deleted: 'bg-gray-500',
   };
   return colors[eventType] || 'bg-gray-500';
@@ -125,18 +119,8 @@ const getEventDetails = (event: ClusterEvent): string => {
 
 @Component({
   selector: 'app-cluster-details',
-  imports: [RouterLink, NgIcon, LoadingIndicatorComponent, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-      tablerTerminal,
-      tablerDownload,
-      tablerArrowUp,
-      tablerCaretRight,
-      tablerPencil,
-      tablerAlertTriangle,
-    }),
-  ],
+  imports: [RouterLink, LoadingIndicatorComponent, DialogSyncDirective],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -421,9 +405,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       ]);
 
       const installedNames = new Set(installations.map((item) => item.spec.pluginName));
-      this.installedPlugins.set(
-        pluginsResponse.plugins.filter((p) => installedNames.has(p.name)),
-      );
+      this.installedPlugins.set(pluginsResponse.plugins.filter((p) => installedNames.has(p.name)));
     } catch (error) {
       this.toastService.error(
         error instanceof Error
@@ -461,4 +443,11 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   getEventTypeColor = getEventTypeColor;
 
   getEventDetails = getEventDetails;
+
+  deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
+
+  onDeleteModalOpen(): void {
+    const el = this.deleteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
 }

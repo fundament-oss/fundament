@@ -1,7 +1,14 @@
-import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  OnInit,
+  ViewChild,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerCircleXFill } from '@ng-icons/tabler-icons/fill';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
@@ -10,21 +17,19 @@ import { CLUSTER, PLUGIN } from '../../connect/tokens';
 import { fetchClusterDetails, getStatusLabel } from '../utils/cluster-status';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
-import { PluginInstallationService } from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import type { PluginInstallationItem } from '../plugin-resources/types';
 
 @Component({
   selector: 'app-cluster-plugins',
-  imports: [SharedPluginsFormComponent, NgIcon],
-  viewProviders: [
-    provideIcons({
-      tablerCircleXFill,
-    }),
-  ],
+  imports: [SharedPluginsFormComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-plugins.component.html',
 })
 export default class ClusterPluginsComponent implements OnInit {
+  @ViewChild(SharedPluginsFormComponent) pluginsForm!: SharedPluginsFormComponent;
+
   private titleService = inject(TitleService);
 
   private router = inject(Router);

@@ -5,19 +5,15 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   computed,
+  CUSTOM_ELEMENTS_SCHEMA,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  tablerPlus,
-  tablerTrash,
-  tablerPencil,
-  tablerInfoCircle,
-  tablerAlertTriangle,
-} from '@ng-icons/tabler-icons';
 import { TitleService } from '../title.service';
-import ModalComponent from '../modal/modal.component';
+import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 
 interface RoleBinding {
   id: string;
@@ -31,16 +27,8 @@ const AVAILABLE_ROLES = ['deploy', 'view-pods', 'view-logs', 'manage-services'];
 
 @Component({
   selector: 'app-project-roles',
-  imports: [FormsModule, NgIcon, ModalComponent],
-  viewProviders: [
-    provideIcons({
-      tablerPlus,
-      tablerTrash,
-      tablerPencil,
-      tablerInfoCircle,
-      tablerAlertTriangle,
-    }),
-  ],
+  imports: [FormsModule, DialogSyncDirective],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-roles.component.html',
 })
@@ -85,6 +73,33 @@ export default class ProjectRolesComponent implements OnInit {
   modalCustomNamespace = signal<string>('');
 
   modalRoles = signal<Record<string, boolean>>({});
+
+  formSubmitted = signal<boolean>(false);
+
+  memberIdError = computed(
+    () => this.formSubmitted() && !this.modalMemberId() && !this.editingBinding(),
+  );
+
+  namespaceError = computed(
+    () =>
+      this.formSubmitted() &&
+      !this.editingBinding() &&
+      this.namespaceMode() === 'specific' &&
+      !this.modalNamespace(),
+  );
+
+  customNamespaceError = computed(
+    () =>
+      this.formSubmitted() &&
+      !this.editingBinding() &&
+      this.namespaceMode() === 'custom' &&
+      !this.modalCustomNamespace().trim(),
+  );
+
+  rolesError = computed(() => {
+    const selected = Object.values(this.modalRoles()).some(Boolean);
+    return this.formSubmitted() && !selected;
+  });
 
   // Members available for role bindings (same users from project-members mock data)
   members = signal([
@@ -159,6 +174,7 @@ export default class ProjectRolesComponent implements OnInit {
     this.modalNamespace.set('');
     this.modalCustomNamespace.set('');
     this.modalRoles.set(Object.fromEntries(AVAILABLE_ROLES.map((r) => [r, false])));
+    this.formSubmitted.set(false);
     this.showCreateModal.set(true);
   }
 
@@ -169,11 +185,12 @@ export default class ProjectRolesComponent implements OnInit {
     this.modalRoles.set(
       Object.fromEntries(AVAILABLE_ROLES.map((r) => [r, binding.roles.includes(r)])),
     );
+    this.formSubmitted.set(false);
     this.showCreateModal.set(true);
   }
 
-  toggleRole(role: string) {
-    this.modalRoles.update((roles) => ({ ...roles, [role]: !roles[role] }));
+  toggleRole(role: string, checked: boolean) {
+    this.modalRoles.update((roles) => ({ ...roles, [role]: checked }));
   }
 
   onNamespaceModeChange(mode: 'all' | 'specific' | 'custom') {
@@ -199,6 +216,8 @@ export default class ProjectRolesComponent implements OnInit {
   }
 
   saveBinding() {
+    this.formSubmitted.set(true);
+
     const memberId = this.modalMemberId();
     const namespace = this.editingBinding()
       ? this.editingBinding()!.namespace
@@ -249,5 +268,19 @@ export default class ProjectRolesComponent implements OnInit {
 
     this.roleBindings.update((bindings) => bindings.filter((rb) => rb.id !== bindingId));
     this.showRemoveModal.set(false);
+  }
+
+  createModalDialogRef = viewChild<ElementRef<HTMLElement>>('createModal');
+
+  onCreateModalOpen(): void {
+    const el = this.createModalDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  removeModalDialogRef = viewChild<ElementRef<HTMLElement>>('removeModal');
+
+  onRemoveModalOpen(): void {
+    const el = this.removeModalDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
   }
 }

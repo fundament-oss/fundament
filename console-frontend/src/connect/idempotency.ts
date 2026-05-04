@@ -8,7 +8,6 @@ export const IDEMPOTENCY_STATUS = {
   FAILED: 'failed',
 } as const;
 
-
 export interface IdempotencyOptions {
   /** Milliseconds between polling attempts. Default: 1000 */
   pollIntervalMs?: number;
@@ -55,8 +54,7 @@ export async function withIdempotency<T>(
       call({
         headers: { 'Idempotency-Key': key },
         onHeader: (headers) => {
-          idempotencyStatus =
-            headers.get('Idempotency-Status') ?? IDEMPOTENCY_STATUS.PROCESSING;
+          idempotencyStatus = headers.get('Idempotency-Status') ?? IDEMPOTENCY_STATUS.PROCESSING;
         },
         signal,
       }),
