@@ -293,6 +293,17 @@
               </li>
               <li>
                 <a
+                  routerLink="/organization/limits"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <ng-icon name="tablerGauge" class="mr-3" size="1.25rem" />
+                  Limits
+                </a>
+              </li>
+              <li>
+                <a
                   routerLink="/usage"
                   routerLinkActive="active"
                   class="nav-link"
@@ -369,6 +380,17 @@
                 >
                   <ng-icon name="tablerChartLine" class="mr-3" size="1.25rem" />
                   Usage
+                </a>
+              </li>
+              <li>
+                <a
+                  [routerLink]="['/projects', selectedProjectId(), 'limits']"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <ng-icon name="tablerGauge" class="mr-3" size="1.25rem" />
+                  Limits
                 </a>
               </li>
               <li>
