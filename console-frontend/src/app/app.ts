@@ -18,6 +18,8 @@ import '@nldd/design-system/page';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/box';
 import '@nldd/design-system/button';
+import '@nldd/design-system/form';
+import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/number-field';
