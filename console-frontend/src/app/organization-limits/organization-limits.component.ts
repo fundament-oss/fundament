@@ -1,5 +1,11 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 
@@ -19,9 +25,10 @@ function toInt(value: unknown): number | undefined {
 
 @Component({
   selector: 'app-organization-limits',
-  imports: [FormsModule],
+  imports: [],
   templateUrl: './organization-limits.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class OrganizationLimitsComponent implements OnInit {
   private titleService = inject(TitleService);

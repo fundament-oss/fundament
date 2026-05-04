@@ -16,85 +16,65 @@
       <div class="card-body-lg">
         <div class="space-y-5">
           <!-- Max nodes per cluster -->
-          <div>
-            <label
-              for="maxNodesPerCluster"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Max nodes per cluster
-            </label>
-            <input
+          <nldd-form-field label="Max nodes per cluster">
+            <nldd-text-field
               id="maxNodesPerCluster"
-              name="maxNodesPerCluster"
               type="number"
               min="1"
               step="1"
               placeholder="50"
-              [ngModel]="maxNodesPerCluster()"
-              (ngModelChange)="maxNodesPerCluster.set(toInt($event))"
+              [value]="maxNodesPerCluster()"
+              (input)="maxNodesPerCluster.set(toInt($any($event.target).value))"
               [disabled]="clusterSaving()"
-              class="w-48"
-            />
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            ></nldd-text-field>
+            <nldd-form-field-help-text>
               Maximum total number of nodes across all node pools in a shoot cluster.
-            </p>
-          </div>
+            </nldd-form-field-help-text>
+          </nldd-form-field>
 
           <!-- Max node pools -->
-          <div>
-            <label
-              for="maxNodePools"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Max node pools per cluster
-            </label>
-            <input
+          <nldd-form-field label="Max node pools per cluster">
+            <nldd-text-field
               id="maxNodePools"
-              name="maxNodePools"
               type="number"
               min="1"
               step="1"
               placeholder="10"
-              [ngModel]="maxNodePools()"
-              (ngModelChange)="maxNodePools.set(toInt($event))"
+              [value]="maxNodePools()"
+              (input)="maxNodePools.set(toInt($any($event.target).value))"
               [disabled]="clusterSaving()"
-              class="w-48"
-            />
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            ></nldd-text-field>
+            <nldd-form-field-help-text>
               Maximum number of node pools that can be configured per shoot cluster.
-            </p>
-          </div>
+            </nldd-form-field-help-text>
+          </nldd-form-field>
 
           <!-- Max nodes per node pool -->
-          <div>
-            <label
-              for="maxNodesPerNodePool"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Max nodes per node pool
-            </label>
-            <input
+          <nldd-form-field label="Max nodes per node pool">
+            <nldd-text-field
               id="maxNodesPerNodePool"
-              name="maxNodesPerNodePool"
               type="number"
               min="1"
               step="1"
               placeholder="20"
-              [ngModel]="maxNodesPerNodePool()"
-              (ngModelChange)="maxNodesPerNodePool.set(toInt($event))"
+              [value]="maxNodesPerNodePool()"
+              (input)="maxNodesPerNodePool.set(toInt($any($event.target).value))"
               [disabled]="clusterSaving()"
-              class="w-48"
-            />
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            ></nldd-text-field>
+            <nldd-form-field-help-text>
               Maximum number of nodes allowed in a single node pool (applies to autoscaler max).
-            </p>
-          </div>
+            </nldd-form-field-help-text>
+          </nldd-form-field>
         </div>
 
         <div class="mt-6">
-          <button type="submit" class="btn-primary" [disabled]="clusterSaving()">
-            {{ clusterSaving() ? 'Saving…' : 'Save cluster limits' }}
-          </button>
+          <nldd-button
+            type="button"
+            (click)="saveClusterLimits()"
+            [disabled]="clusterSaving()"
+            [text]="clusterSaving() ? 'Saving…' : 'Save cluster limits'"
+            variant="primary"
+          ></nldd-button>
         </div>
       </div>
     </form>
@@ -113,104 +93,72 @@
       <div class="card-body-lg">
         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <!-- Default memory request -->
-          <div>
-            <label
-              for="defaultMemoryRequest"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Default memory request
-            </label>
+          <nldd-form-field label="Default memory request">
             <div class="flex items-center gap-2">
-              <input
+              <nldd-text-field
                 id="defaultMemoryRequest"
-                name="defaultMemoryRequest"
                 type="number"
                 min="1"
                 step="1"
                 placeholder="128"
-                [ngModel]="defaultMemoryRequestMi()"
-                (ngModelChange)="defaultMemoryRequestMi.set(toInt($event))"
+                [value]="defaultMemoryRequestMi()"
+                (input)="defaultMemoryRequestMi.set(toInt($any($event.target).value))"
                 [disabled]="namespaceSaving()"
-                class="w-32"
-              />
+              ></nldd-text-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">MiB</span>
             </div>
-          </div>
+          </nldd-form-field>
 
           <!-- Default memory limit -->
-          <div>
-            <label
-              for="defaultMemoryLimit"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Default memory limit
-            </label>
+          <nldd-form-field label="Default memory limit">
             <div class="flex items-center gap-2">
-              <input
+              <nldd-text-field
                 id="defaultMemoryLimit"
-                name="defaultMemoryLimit"
                 type="number"
                 min="1"
                 step="1"
                 placeholder="256"
-                [ngModel]="defaultMemoryLimitMi()"
-                (ngModelChange)="defaultMemoryLimitMi.set(toInt($event))"
+                [value]="defaultMemoryLimitMi()"
+                (input)="defaultMemoryLimitMi.set(toInt($any($event.target).value))"
                 [disabled]="namespaceSaving()"
-                class="w-32"
-              />
+              ></nldd-text-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">MiB</span>
             </div>
-          </div>
+          </nldd-form-field>
 
           <!-- Default CPU request -->
-          <div>
-            <label
-              for="defaultCpuRequest"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Default CPU request
-            </label>
+          <nldd-form-field label="Default CPU request">
             <div class="flex items-center gap-2">
-              <input
+              <nldd-text-field
                 id="defaultCpuRequest"
-                name="defaultCpuRequest"
                 type="number"
                 min="1"
                 step="1"
                 placeholder="100"
-                [ngModel]="defaultCpuRequestM()"
-                (ngModelChange)="defaultCpuRequestM.set(toInt($event))"
+                [value]="defaultCpuRequestM()"
+                (input)="defaultCpuRequestM.set(toInt($any($event.target).value))"
                 [disabled]="namespaceSaving()"
-                class="w-32"
-              />
+              ></nldd-text-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">m</span>
             </div>
-          </div>
+          </nldd-form-field>
 
           <!-- Default CPU limit -->
-          <div>
-            <label
-              for="defaultCpuLimit"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Default CPU limit
-            </label>
+          <nldd-form-field label="Default CPU limit">
             <div class="flex items-center gap-2">
-              <input
+              <nldd-text-field
                 id="defaultCpuLimit"
-                name="defaultCpuLimit"
                 type="number"
                 min="1"
                 step="1"
                 placeholder="500"
-                [ngModel]="defaultCpuLimitM()"
-                (ngModelChange)="defaultCpuLimitM.set(toInt($event))"
+                [value]="defaultCpuLimitM()"
+                (input)="defaultCpuLimitM.set(toInt($any($event.target).value))"
                 [disabled]="namespaceSaving()"
-                class="w-32"
-              />
+              ></nldd-text-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">m</span>
             </div>
-          </div>
+          </nldd-form-field>
         </div>
 
         <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
@@ -218,9 +166,13 @@
         </p>
 
         <div class="mt-6">
-          <button type="submit" class="btn-primary" [disabled]="namespaceSaving()">
-            {{ namespaceSaving() ? 'Saving…' : 'Save namespace defaults' }}
-          </button>
+          <nldd-button
+            type="button"
+            (click)="saveNamespaceLimits()"
+            [disabled]="namespaceSaving()"
+            [text]="namespaceSaving() ? 'Saving…' : 'Save namespace defaults'"
+            variant="primary"
+          ></nldd-button>
         </div>
       </div>
     </form>
