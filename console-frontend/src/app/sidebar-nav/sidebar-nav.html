@@ -92,6 +92,17 @@
       </li>
       <li>
         <a
+          routerLink="/organization/limits"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <nldd-icon name="circle-dashed" class="mr-3 h-5 w-5"></nldd-icon>
+          Limits
+        </a>
+      </li>
+      <li>
+        <a
           routerLink="/organization"
           routerLinkActive="active"
           [routerLinkActiveOptions]="{ exact: true }"
@@ -157,6 +168,17 @@
         >
           <nldd-icon name="chart-x-y-axis-line" class="mr-3 h-5 w-5"></nldd-icon>
           Usage
+        </a>
+      </li>
+      <li>
+        <a
+          [routerLink]="['/projects', selectedProjectId(), 'limits']"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <nldd-icon name="circle-dashed" class="mr-3 h-5 w-5"></nldd-icon>
+          Limits
         </a>
       </li>
       <li>

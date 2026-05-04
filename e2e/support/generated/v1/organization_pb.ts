@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/organization.proto.
  */
 export const file_v1_organization: GenFile = /*@__PURE__*/
-  fileDesc("ChV2MS9vcmdhbml6YXRpb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSJkCgxPcmdhbml6YXRpb24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRINCgVhbGlhcxgeIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIuChZHZXRPcmdhbml6YXRpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASJOChdHZXRPcmdhbml6YXRpb25SZXNwb25zZRIzCgxvcmdhbml6YXRpb24YCiABKAsyHS5vcmdhbml6YXRpb24udjEuT3JnYW5pemF0aW9uIkwKGVVwZGF0ZU9yZ2FuaXphdGlvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEhkKBWFsaWFzGBQgASgJQgq6SAdyBRABGP8BIhwKGlVwZGF0ZU9yZ2FuaXphdGlvblJlc3BvbnNlIhoKGExpc3RPcmdhbml6YXRpb25zUmVxdWVzdCJRChlMaXN0T3JnYW5pemF0aW9uc1Jlc3BvbnNlEjQKDW9yZ2FuaXphdGlvbnMYCiADKAsyHS5vcmdhbml6YXRpb24udjEuT3JnYW5pemF0aW9uMtYCChNPcmdhbml6YXRpb25TZXJ2aWNlEmoKEUxpc3RPcmdhbml6YXRpb25zEikub3JnYW5pemF0aW9uLnYxLkxpc3RPcmdhbml6YXRpb25zUmVxdWVzdBoqLm9yZ2FuaXphdGlvbi52MS5MaXN0T3JnYW5pemF0aW9uc1Jlc3BvbnNlEmQKD0dldE9yZ2FuaXphdGlvbhInLm9yZ2FuaXphdGlvbi52MS5HZXRPcmdhbml6YXRpb25SZXF1ZXN0Gigub3JnYW5pemF0aW9uLnYxLkdldE9yZ2FuaXphdGlvblJlc3BvbnNlEm0KElVwZGF0ZU9yZ2FuaXphdGlvbhIqLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVPcmdhbml6YXRpb25SZXF1ZXN0Gisub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU9yZ2FuaXphdGlvblJlc3BvbnNlQl9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("ChV2MS9vcmdhbml6YXRpb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSJkCgxPcmdhbml6YXRpb24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRINCgVhbGlhcxgeIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIuChZHZXRPcmdhbml6YXRpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASJOChdHZXRPcmdhbml6YXRpb25SZXNwb25zZRIzCgxvcmdhbml6YXRpb24YCiABKAsyHS5vcmdhbml6YXRpb24udjEuT3JnYW5pemF0aW9uIkwKGVVwZGF0ZU9yZ2FuaXphdGlvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEhkKBWFsaWFzGBQgASgJQgq6SAdyBRABGP8BIhwKGlVwZGF0ZU9yZ2FuaXphdGlvblJlc3BvbnNlIhoKGExpc3RPcmdhbml6YXRpb25zUmVxdWVzdCJRChlMaXN0T3JnYW5pemF0aW9uc1Jlc3BvbnNlEjQKDW9yZ2FuaXphdGlvbnMYCiADKAsyHS5vcmdhbml6YXRpb24udjEuT3JnYW5pemF0aW9uIqkCChJPcmdhbml6YXRpb25MaW1pdHMSJAoVbWF4X25vZGVzX3Blcl9jbHVzdGVyGAogASgFQgWqAQIIARIpChptYXhfbm9kZV9wb29sc19wZXJfY2x1c3RlchgUIAEoBUIFqgECCAESJgoXbWF4X25vZGVzX3Blcl9ub2RlX3Bvb2wYHiABKAVCBaoBAggBEigKGWRlZmF1bHRfbWVtb3J5X3JlcXVlc3RfbWkYKCABKAVCBaoBAggBEiYKF2RlZmF1bHRfbWVtb3J5X2xpbWl0X21pGDIgASgFQgWqAQIIARIkChVkZWZhdWx0X2NwdV9yZXF1ZXN0X20YPCABKAVCBaoBAggBEiIKE2RlZmF1bHRfY3B1X2xpbWl0X20YRiABKAVCBaoBAggBIjQKHEdldE9yZ2FuaXphdGlvbkxpbWl0c1JlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIlQKHUdldE9yZ2FuaXphdGlvbkxpbWl0c1Jlc3BvbnNlEjMKBmxpbWl0cxgKIAEoCzIjLm9yZ2FuaXphdGlvbi52MS5Pcmdhbml6YXRpb25MaW1pdHMi/QIKH1VwZGF0ZU9yZ2FuaXphdGlvbkxpbWl0c1JlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEisKFW1heF9ub2Rlc19wZXJfY2x1c3RlchgUIAEoBUIMqgECCAG6SAQaAigBEjAKGm1heF9ub2RlX3Bvb2xzX3Blcl9jbHVzdGVyGB4gASgFQgyqAQIIAbpIBBoCKAESLQoXbWF4X25vZGVzX3Blcl9ub2RlX3Bvb2wYKCABKAVCDKoBAggBukgEGgIoARIvChlkZWZhdWx0X21lbW9yeV9yZXF1ZXN0X21pGDIgASgFQgyqAQIIAbpIBBoCKAESLQoXZGVmYXVsdF9tZW1vcnlfbGltaXRfbWkYPCABKAVCDKoBAggBukgEGgIoARIrChVkZWZhdWx0X2NwdV9yZXF1ZXN0X20YRiABKAVCDKoBAggBukgEGgIoARIpChNkZWZhdWx0X2NwdV9saW1pdF9tGFAgASgFQgyqAQIIAbpIBBoCKAEiIgogVXBkYXRlT3JnYW5pemF0aW9uTGltaXRzUmVzcG9uc2UyzwQKE09yZ2FuaXphdGlvblNlcnZpY2USagoRTGlzdE9yZ2FuaXphdGlvbnMSKS5vcmdhbml6YXRpb24udjEuTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0Gioub3JnYW5pemF0aW9uLnYxLkxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USZAoPR2V0T3JnYW5pemF0aW9uEicub3JnYW5pemF0aW9uLnYxLkdldE9yZ2FuaXphdGlvblJlcXVlc3QaKC5vcmdhbml6YXRpb24udjEuR2V0T3JnYW5pemF0aW9uUmVzcG9uc2USbQoSVXBkYXRlT3JnYW5pemF0aW9uEioub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU9yZ2FuaXphdGlvblJlcXVlc3QaKy5vcmdhbml6YXRpb24udjEuVXBkYXRlT3JnYW5pemF0aW9uUmVzcG9uc2USdgoVR2V0T3JnYW5pemF0aW9uTGltaXRzEi0ub3JnYW5pemF0aW9uLnYxLkdldE9yZ2FuaXphdGlvbkxpbWl0c1JlcXVlc3QaLi5vcmdhbml6YXRpb24udjEuR2V0T3JnYW5pemF0aW9uTGltaXRzUmVzcG9uc2USfwoYVXBkYXRlT3JnYW5pemF0aW9uTGltaXRzEjAub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU9yZ2FuaXphdGlvbkxpbWl0c1JlcXVlc3QaMS5vcmdhbml6YXRpb24udjEuVXBkYXRlT3JnYW5pemF0aW9uTGltaXRzUmVzcG9uc2VCX1pTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * Organization information
@@ -180,6 +180,196 @@ export const ListOrganizationsResponseSchema: GenMessage<ListOrganizationsRespon
   messageDesc(file_v1_organization, 6);
 
 /**
+ * OrganizationLimits holds Gardener cluster quotas and Kubernetes namespace LimitRange defaults
+ *
+ * @generated from message organization.v1.OrganizationLimits
+ */
+export type OrganizationLimits = Message<"organization.v1.OrganizationLimits"> & {
+  /**
+   * Maximum total number of nodes across all node pools in a shoot cluster
+   *
+   * @generated from field: int32 max_nodes_per_cluster = 10 [features.field_presence = EXPLICIT];
+   */
+  maxNodesPerCluster: number;
+
+  /**
+   * Maximum number of node pools per shoot cluster
+   *
+   * @generated from field: int32 max_node_pools_per_cluster = 20 [features.field_presence = EXPLICIT];
+   */
+  maxNodePoolsPerCluster: number;
+
+  /**
+   * Maximum number of nodes in a single node pool (autoscaler max)
+   *
+   * @generated from field: int32 max_nodes_per_node_pool = 30 [features.field_presence = EXPLICIT];
+   */
+  maxNodesPerNodePool: number;
+
+  /**
+   * Default memory request applied to containers via LimitRange (mebibytes)
+   *
+   * @generated from field: int32 default_memory_request_mi = 40 [features.field_presence = EXPLICIT];
+   */
+  defaultMemoryRequestMi: number;
+
+  /**
+   * Default memory limit applied to containers via LimitRange (mebibytes)
+   *
+   * @generated from field: int32 default_memory_limit_mi = 50 [features.field_presence = EXPLICIT];
+   */
+  defaultMemoryLimitMi: number;
+
+  /**
+   * Default CPU request applied to containers via LimitRange (millicores)
+   *
+   * @generated from field: int32 default_cpu_request_m = 60 [features.field_presence = EXPLICIT];
+   */
+  defaultCpuRequestM: number;
+
+  /**
+   * Default CPU limit applied to containers via LimitRange (millicores)
+   *
+   * @generated from field: int32 default_cpu_limit_m = 70 [features.field_presence = EXPLICIT];
+   */
+  defaultCpuLimitM: number;
+};
+
+/**
+ * Describes the message organization.v1.OrganizationLimits.
+ * Use `create(OrganizationLimitsSchema)` to create a new message.
+ */
+export const OrganizationLimitsSchema: GenMessage<OrganizationLimits> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 7);
+
+/**
+ * GetOrganizationLimits request
+ *
+ * @generated from message organization.v1.GetOrganizationLimitsRequest
+ */
+export type GetOrganizationLimitsRequest = Message<"organization.v1.GetOrganizationLimitsRequest"> & {
+  /**
+   * ID of the organization
+   *
+   * @generated from field: string id = 10;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message organization.v1.GetOrganizationLimitsRequest.
+ * Use `create(GetOrganizationLimitsRequestSchema)` to create a new message.
+ */
+export const GetOrganizationLimitsRequestSchema: GenMessage<GetOrganizationLimitsRequest> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 8);
+
+/**
+ * GetOrganizationLimits response
+ *
+ * @generated from message organization.v1.GetOrganizationLimitsResponse
+ */
+export type GetOrganizationLimitsResponse = Message<"organization.v1.GetOrganizationLimitsResponse"> & {
+  /**
+   * The current limits for the organization (absent fields mean no limit is set)
+   *
+   * @generated from field: organization.v1.OrganizationLimits limits = 10;
+   */
+  limits?: OrganizationLimits;
+};
+
+/**
+ * Describes the message organization.v1.GetOrganizationLimitsResponse.
+ * Use `create(GetOrganizationLimitsResponseSchema)` to create a new message.
+ */
+export const GetOrganizationLimitsResponseSchema: GenMessage<GetOrganizationLimitsResponse> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 9);
+
+/**
+ * UpdateOrganizationLimits request
+ *
+ * @generated from message organization.v1.UpdateOrganizationLimitsRequest
+ */
+export type UpdateOrganizationLimitsRequest = Message<"organization.v1.UpdateOrganizationLimitsRequest"> & {
+  /**
+   * ID of the organization to update
+   *
+   * @generated from field: string id = 10;
+   */
+  id: string;
+
+  /**
+   * Maximum total number of nodes across all node pools in a shoot cluster
+   *
+   * @generated from field: int32 max_nodes_per_cluster = 20 [features.field_presence = EXPLICIT];
+   */
+  maxNodesPerCluster: number;
+
+  /**
+   * Maximum number of node pools per shoot cluster
+   *
+   * @generated from field: int32 max_node_pools_per_cluster = 30 [features.field_presence = EXPLICIT];
+   */
+  maxNodePoolsPerCluster: number;
+
+  /**
+   * Maximum number of nodes in a single node pool (autoscaler max)
+   *
+   * @generated from field: int32 max_nodes_per_node_pool = 40 [features.field_presence = EXPLICIT];
+   */
+  maxNodesPerNodePool: number;
+
+  /**
+   * Default memory request applied to containers via LimitRange (mebibytes)
+   *
+   * @generated from field: int32 default_memory_request_mi = 50 [features.field_presence = EXPLICIT];
+   */
+  defaultMemoryRequestMi: number;
+
+  /**
+   * Default memory limit applied to containers via LimitRange (mebibytes)
+   *
+   * @generated from field: int32 default_memory_limit_mi = 60 [features.field_presence = EXPLICIT];
+   */
+  defaultMemoryLimitMi: number;
+
+  /**
+   * Default CPU request applied to containers via LimitRange (millicores)
+   *
+   * @generated from field: int32 default_cpu_request_m = 70 [features.field_presence = EXPLICIT];
+   */
+  defaultCpuRequestM: number;
+
+  /**
+   * Default CPU limit applied to containers via LimitRange (millicores)
+   *
+   * @generated from field: int32 default_cpu_limit_m = 80 [features.field_presence = EXPLICIT];
+   */
+  defaultCpuLimitM: number;
+};
+
+/**
+ * Describes the message organization.v1.UpdateOrganizationLimitsRequest.
+ * Use `create(UpdateOrganizationLimitsRequestSchema)` to create a new message.
+ */
+export const UpdateOrganizationLimitsRequestSchema: GenMessage<UpdateOrganizationLimitsRequest> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 10);
+
+/**
+ * UpdateOrganizationLimits response
+ *
+ * @generated from message organization.v1.UpdateOrganizationLimitsResponse
+ */
+export type UpdateOrganizationLimitsResponse = Message<"organization.v1.UpdateOrganizationLimitsResponse"> & {
+};
+
+/**
+ * Describes the message organization.v1.UpdateOrganizationLimitsResponse.
+ * Use `create(UpdateOrganizationLimitsResponseSchema)` to create a new message.
+ */
+export const UpdateOrganizationLimitsResponseSchema: GenMessage<UpdateOrganizationLimitsResponse> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 11);
+
+/**
  * OrganizationService manages organizations
  *
  * @generated from service organization.v1.OrganizationService
@@ -214,6 +404,26 @@ export const OrganizationService: GenService<{
     methodKind: "unary";
     input: typeof UpdateOrganizationRequestSchema;
     output: typeof UpdateOrganizationResponseSchema;
+  },
+  /**
+   * GetOrganizationLimits retrieves the resource limits for an organization
+   *
+   * @generated from rpc organization.v1.OrganizationService.GetOrganizationLimits
+   */
+  getOrganizationLimits: {
+    methodKind: "unary";
+    input: typeof GetOrganizationLimitsRequestSchema;
+    output: typeof GetOrganizationLimitsResponseSchema;
+  },
+  /**
+   * UpdateOrganizationLimits sets the resource limits for an organization
+   *
+   * @generated from rpc organization.v1.OrganizationService.UpdateOrganizationLimits
+   */
+  updateOrganizationLimits: {
+    methodKind: "unary";
+    input: typeof UpdateOrganizationLimitsRequestSchema;
+    output: typeof UpdateOrganizationLimitsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_organization, 0);

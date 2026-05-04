@@ -1597,6 +1597,534 @@ func (b0 RemoveProjectMemberResponse_builder) Build() *RemoveProjectMemberRespon
 	return m0
 }
 
+// ProjectLimits holds Kubernetes namespace LimitRange defaults for a project
+type ProjectLimits struct {
+	state                             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_DefaultMemoryRequestMi int32                  `protobuf:"varint,10,opt,name=default_memory_request_mi,json=defaultMemoryRequestMi"`
+	xxx_hidden_DefaultMemoryLimitMi   int32                  `protobuf:"varint,20,opt,name=default_memory_limit_mi,json=defaultMemoryLimitMi"`
+	xxx_hidden_DefaultCpuRequestM     int32                  `protobuf:"varint,30,opt,name=default_cpu_request_m,json=defaultCpuRequestM"`
+	xxx_hidden_DefaultCpuLimitM       int32                  `protobuf:"varint,40,opt,name=default_cpu_limit_m,json=defaultCpuLimitM"`
+	XXX_raceDetectHookData            protoimpl.RaceDetectHookData
+	XXX_presence                      [1]uint32
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
+}
+
+func (x *ProjectLimits) Reset() {
+	*x = ProjectLimits{}
+	mi := &file_v1_project_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProjectLimits) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProjectLimits) ProtoMessage() {}
+
+func (x *ProjectLimits) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ProjectLimits) GetDefaultMemoryRequestMi() int32 {
+	if x != nil {
+		return x.xxx_hidden_DefaultMemoryRequestMi
+	}
+	return 0
+}
+
+func (x *ProjectLimits) GetDefaultMemoryLimitMi() int32 {
+	if x != nil {
+		return x.xxx_hidden_DefaultMemoryLimitMi
+	}
+	return 0
+}
+
+func (x *ProjectLimits) GetDefaultCpuRequestM() int32 {
+	if x != nil {
+		return x.xxx_hidden_DefaultCpuRequestM
+	}
+	return 0
+}
+
+func (x *ProjectLimits) GetDefaultCpuLimitM() int32 {
+	if x != nil {
+		return x.xxx_hidden_DefaultCpuLimitM
+	}
+	return 0
+}
+
+func (x *ProjectLimits) SetDefaultMemoryRequestMi(v int32) {
+	x.xxx_hidden_DefaultMemoryRequestMi = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 4)
+}
+
+func (x *ProjectLimits) SetDefaultMemoryLimitMi(v int32) {
+	x.xxx_hidden_DefaultMemoryLimitMi = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 4)
+}
+
+func (x *ProjectLimits) SetDefaultCpuRequestM(v int32) {
+	x.xxx_hidden_DefaultCpuRequestM = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 4)
+}
+
+func (x *ProjectLimits) SetDefaultCpuLimitM(v int32) {
+	x.xxx_hidden_DefaultCpuLimitM = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 4)
+}
+
+func (x *ProjectLimits) HasDefaultMemoryRequestMi() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *ProjectLimits) HasDefaultMemoryLimitMi() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *ProjectLimits) HasDefaultCpuRequestM() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *ProjectLimits) HasDefaultCpuLimitM() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+}
+
+func (x *ProjectLimits) ClearDefaultMemoryRequestMi() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_DefaultMemoryRequestMi = 0
+}
+
+func (x *ProjectLimits) ClearDefaultMemoryLimitMi() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_DefaultMemoryLimitMi = 0
+}
+
+func (x *ProjectLimits) ClearDefaultCpuRequestM() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_DefaultCpuRequestM = 0
+}
+
+func (x *ProjectLimits) ClearDefaultCpuLimitM() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	x.xxx_hidden_DefaultCpuLimitM = 0
+}
+
+type ProjectLimits_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Default memory request applied to containers via LimitRange (mebibytes)
+	DefaultMemoryRequestMi *int32
+	// Default memory limit applied to containers via LimitRange (mebibytes)
+	DefaultMemoryLimitMi *int32
+	// Default CPU request applied to containers via LimitRange (millicores)
+	DefaultCpuRequestM *int32
+	// Default CPU limit applied to containers via LimitRange (millicores)
+	DefaultCpuLimitM *int32
+}
+
+func (b0 ProjectLimits_builder) Build() *ProjectLimits {
+	m0 := &ProjectLimits{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.DefaultMemoryRequestMi != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 4)
+		x.xxx_hidden_DefaultMemoryRequestMi = *b.DefaultMemoryRequestMi
+	}
+	if b.DefaultMemoryLimitMi != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 4)
+		x.xxx_hidden_DefaultMemoryLimitMi = *b.DefaultMemoryLimitMi
+	}
+	if b.DefaultCpuRequestM != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
+		x.xxx_hidden_DefaultCpuRequestM = *b.DefaultCpuRequestM
+	}
+	if b.DefaultCpuLimitM != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 4)
+		x.xxx_hidden_DefaultCpuLimitM = *b.DefaultCpuLimitM
+	}
+	return m0
+}
+
+// GetProjectLimits request
+type GetProjectLimitsRequest struct {
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ProjectId string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *GetProjectLimitsRequest) Reset() {
+	*x = GetProjectLimitsRequest{}
+	mi := &file_v1_project_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProjectLimitsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProjectLimitsRequest) ProtoMessage() {}
+
+func (x *GetProjectLimitsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetProjectLimitsRequest) GetProjectId() string {
+	if x != nil {
+		return x.xxx_hidden_ProjectId
+	}
+	return ""
+}
+
+func (x *GetProjectLimitsRequest) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+type GetProjectLimitsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// ID of the project
+	ProjectId string
+}
+
+func (b0 GetProjectLimitsRequest_builder) Build() *GetProjectLimitsRequest {
+	m0 := &GetProjectLimitsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ProjectId = b.ProjectId
+	return m0
+}
+
+// GetProjectLimits response
+type GetProjectLimitsResponse struct {
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Limits *ProjectLimits         `protobuf:"bytes,10,opt,name=limits"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *GetProjectLimitsResponse) Reset() {
+	*x = GetProjectLimitsResponse{}
+	mi := &file_v1_project_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProjectLimitsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProjectLimitsResponse) ProtoMessage() {}
+
+func (x *GetProjectLimitsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetProjectLimitsResponse) GetLimits() *ProjectLimits {
+	if x != nil {
+		return x.xxx_hidden_Limits
+	}
+	return nil
+}
+
+func (x *GetProjectLimitsResponse) SetLimits(v *ProjectLimits) {
+	x.xxx_hidden_Limits = v
+}
+
+func (x *GetProjectLimitsResponse) HasLimits() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Limits != nil
+}
+
+func (x *GetProjectLimitsResponse) ClearLimits() {
+	x.xxx_hidden_Limits = nil
+}
+
+type GetProjectLimitsResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// The current limits for the project (absent fields mean no default is set)
+	Limits *ProjectLimits
+}
+
+func (b0 GetProjectLimitsResponse_builder) Build() *GetProjectLimitsResponse {
+	m0 := &GetProjectLimitsResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Limits = b.Limits
+	return m0
+}
+
+// UpdateProjectLimits request
+type UpdateProjectLimitsRequest struct {
+	state                             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ProjectId              string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
+	xxx_hidden_DefaultMemoryRequestMi int32                  `protobuf:"varint,20,opt,name=default_memory_request_mi,json=defaultMemoryRequestMi"`
+	xxx_hidden_DefaultMemoryLimitMi   int32                  `protobuf:"varint,30,opt,name=default_memory_limit_mi,json=defaultMemoryLimitMi"`
+	xxx_hidden_DefaultCpuRequestM     int32                  `protobuf:"varint,40,opt,name=default_cpu_request_m,json=defaultCpuRequestM"`
+	xxx_hidden_DefaultCpuLimitM       int32                  `protobuf:"varint,50,opt,name=default_cpu_limit_m,json=defaultCpuLimitM"`
+	XXX_raceDetectHookData            protoimpl.RaceDetectHookData
+	XXX_presence                      [1]uint32
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
+}
+
+func (x *UpdateProjectLimitsRequest) Reset() {
+	*x = UpdateProjectLimitsRequest{}
+	mi := &file_v1_project_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateProjectLimitsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateProjectLimitsRequest) ProtoMessage() {}
+
+func (x *UpdateProjectLimitsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *UpdateProjectLimitsRequest) GetProjectId() string {
+	if x != nil {
+		return x.xxx_hidden_ProjectId
+	}
+	return ""
+}
+
+func (x *UpdateProjectLimitsRequest) GetDefaultMemoryRequestMi() int32 {
+	if x != nil {
+		return x.xxx_hidden_DefaultMemoryRequestMi
+	}
+	return 0
+}
+
+func (x *UpdateProjectLimitsRequest) GetDefaultMemoryLimitMi() int32 {
+	if x != nil {
+		return x.xxx_hidden_DefaultMemoryLimitMi
+	}
+	return 0
+}
+
+func (x *UpdateProjectLimitsRequest) GetDefaultCpuRequestM() int32 {
+	if x != nil {
+		return x.xxx_hidden_DefaultCpuRequestM
+	}
+	return 0
+}
+
+func (x *UpdateProjectLimitsRequest) GetDefaultCpuLimitM() int32 {
+	if x != nil {
+		return x.xxx_hidden_DefaultCpuLimitM
+	}
+	return 0
+}
+
+func (x *UpdateProjectLimitsRequest) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+func (x *UpdateProjectLimitsRequest) SetDefaultMemoryRequestMi(v int32) {
+	x.xxx_hidden_DefaultMemoryRequestMi = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 5)
+}
+
+func (x *UpdateProjectLimitsRequest) SetDefaultMemoryLimitMi(v int32) {
+	x.xxx_hidden_DefaultMemoryLimitMi = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 5)
+}
+
+func (x *UpdateProjectLimitsRequest) SetDefaultCpuRequestM(v int32) {
+	x.xxx_hidden_DefaultCpuRequestM = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 5)
+}
+
+func (x *UpdateProjectLimitsRequest) SetDefaultCpuLimitM(v int32) {
+	x.xxx_hidden_DefaultCpuLimitM = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 5)
+}
+
+func (x *UpdateProjectLimitsRequest) HasDefaultMemoryRequestMi() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *UpdateProjectLimitsRequest) HasDefaultMemoryLimitMi() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *UpdateProjectLimitsRequest) HasDefaultCpuRequestM() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+}
+
+func (x *UpdateProjectLimitsRequest) HasDefaultCpuLimitM() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
+}
+
+func (x *UpdateProjectLimitsRequest) ClearDefaultMemoryRequestMi() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_DefaultMemoryRequestMi = 0
+}
+
+func (x *UpdateProjectLimitsRequest) ClearDefaultMemoryLimitMi() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_DefaultMemoryLimitMi = 0
+}
+
+func (x *UpdateProjectLimitsRequest) ClearDefaultCpuRequestM() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	x.xxx_hidden_DefaultCpuRequestM = 0
+}
+
+func (x *UpdateProjectLimitsRequest) ClearDefaultCpuLimitM() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
+	x.xxx_hidden_DefaultCpuLimitM = 0
+}
+
+type UpdateProjectLimitsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// ID of the project to update
+	ProjectId string
+	// Default memory request applied to containers via LimitRange (mebibytes)
+	DefaultMemoryRequestMi *int32
+	// Default memory limit applied to containers via LimitRange (mebibytes)
+	DefaultMemoryLimitMi *int32
+	// Default CPU request applied to containers via LimitRange (millicores)
+	DefaultCpuRequestM *int32
+	// Default CPU limit applied to containers via LimitRange (millicores)
+	DefaultCpuLimitM *int32
+}
+
+func (b0 UpdateProjectLimitsRequest_builder) Build() *UpdateProjectLimitsRequest {
+	m0 := &UpdateProjectLimitsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ProjectId = b.ProjectId
+	if b.DefaultMemoryRequestMi != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 5)
+		x.xxx_hidden_DefaultMemoryRequestMi = *b.DefaultMemoryRequestMi
+	}
+	if b.DefaultMemoryLimitMi != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 5)
+		x.xxx_hidden_DefaultMemoryLimitMi = *b.DefaultMemoryLimitMi
+	}
+	if b.DefaultCpuRequestM != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 5)
+		x.xxx_hidden_DefaultCpuRequestM = *b.DefaultCpuRequestM
+	}
+	if b.DefaultCpuLimitM != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 5)
+		x.xxx_hidden_DefaultCpuLimitM = *b.DefaultCpuLimitM
+	}
+	return m0
+}
+
+// UpdateProjectLimits response
+type UpdateProjectLimitsResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateProjectLimitsResponse) Reset() {
+	*x = UpdateProjectLimitsResponse{}
+	mi := &file_v1_project_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateProjectLimitsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateProjectLimitsResponse) ProtoMessage() {}
+
+func (x *UpdateProjectLimitsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_project_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type UpdateProjectLimitsResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 UpdateProjectLimitsResponse_builder) Build() *UpdateProjectLimitsResponse {
+	m0 := &UpdateProjectLimitsResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
 var File_v1_project_proto protoreflect.FileDescriptor
 
 const file_v1_project_proto_rawDesc = "" +
@@ -1687,11 +2215,34 @@ const file_v1_project_proto_rawDesc = "" +
 	"\x1aRemoveProjectMemberRequest\x12%\n" +
 	"\tmember_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bmemberId\"\x1d\n" +
-	"\x1bRemoveProjectMemberResponse*w\n" +
+	"\x1bRemoveProjectMemberResponse\"\xff\x01\n" +
+	"\rProjectLimits\x12@\n" +
+	"\x19default_memory_request_mi\x18\n" +
+	" \x01(\x05B\x05\xaa\x01\x02\b\x01R\x16defaultMemoryRequestMi\x12<\n" +
+	"\x17default_memory_limit_mi\x18\x14 \x01(\x05B\x05\xaa\x01\x02\b\x01R\x14defaultMemoryLimitMi\x128\n" +
+	"\x15default_cpu_request_m\x18\x1e \x01(\x05B\x05\xaa\x01\x02\b\x01R\x12defaultCpuRequestM\x124\n" +
+	"\x13default_cpu_limit_m\x18( \x01(\x05B\x05\xaa\x01\x02\b\x01R\x10defaultCpuLimitM\"B\n" +
+	"\x17GetProjectLimitsRequest\x12'\n" +
+	"\n" +
+	"project_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"R\n" +
+	"\x18GetProjectLimitsResponse\x126\n" +
+	"\x06limits\x18\n" +
+	" \x01(\v2\x1e.organization.v1.ProjectLimitsR\x06limits\"\xd1\x02\n" +
+	"\x1aUpdateProjectLimitsRequest\x12'\n" +
+	"\n" +
+	"project_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\x12G\n" +
+	"\x19default_memory_request_mi\x18\x14 \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x16defaultMemoryRequestMi\x12C\n" +
+	"\x17default_memory_limit_mi\x18\x1e \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x14defaultMemoryLimitMi\x12?\n" +
+	"\x15default_cpu_request_m\x18( \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x12defaultCpuRequestM\x12;\n" +
+	"\x13default_cpu_limit_m\x182 \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x10defaultCpuLimitM\"\x1d\n" +
+	"\x1bUpdateProjectLimitsResponse*w\n" +
 	"\x11ProjectMemberRole\x12#\n" +
 	"\x1fPROJECT_MEMBER_ROLE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19PROJECT_MEMBER_ROLE_ADMIN\x10\x01\x12\x1e\n" +
-	"\x1aPROJECT_MEMBER_ROLE_VIEWER\x10\x022\xf8\b\n" +
+	"\x1aPROJECT_MEMBER_ROLE_VIEWER\x10\x022\xd3\n" +
+	"\n" +
 	"\x0eProjectService\x12[\n" +
 	"\fListProjects\x12$.organization.v1.ListProjectsRequest\x1a%.organization.v1.ListProjectsResponse\x12U\n" +
 	"\n" +
@@ -1704,10 +2255,12 @@ const file_v1_project_proto_rawDesc = "" +
 	"\x10GetProjectMember\x12(.organization.v1.GetProjectMemberRequest\x1a).organization.v1.GetProjectMemberResponse\x12g\n" +
 	"\x10AddProjectMember\x12(.organization.v1.AddProjectMemberRequest\x1a).organization.v1.AddProjectMemberResponse\x12|\n" +
 	"\x17UpdateProjectMemberRole\x12/.organization.v1.UpdateProjectMemberRoleRequest\x1a0.organization.v1.UpdateProjectMemberRoleResponse\x12p\n" +
-	"\x13RemoveProjectMember\x12+.organization.v1.RemoveProjectMemberRequest\x1a,.organization.v1.RemoveProjectMemberResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x13RemoveProjectMember\x12+.organization.v1.RemoveProjectMemberRequest\x1a,.organization.v1.RemoveProjectMemberResponse\x12g\n" +
+	"\x10GetProjectLimits\x12(.organization.v1.GetProjectLimitsRequest\x1a).organization.v1.GetProjectLimitsResponse\x12p\n" +
+	"\x13UpdateProjectLimits\x12+.organization.v1.UpdateProjectLimitsRequest\x1a,.organization.v1.UpdateProjectLimitsResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_project_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_v1_project_proto_goTypes = []any{
 	(ProjectMemberRole)(0),                  // 0: organization.v1.ProjectMemberRole
 	(*ListProjectsRequest)(nil),             // 1: organization.v1.ListProjectsRequest
@@ -1733,45 +2286,55 @@ var file_v1_project_proto_goTypes = []any{
 	(*UpdateProjectMemberRoleResponse)(nil), // 21: organization.v1.UpdateProjectMemberRoleResponse
 	(*RemoveProjectMemberRequest)(nil),      // 22: organization.v1.RemoveProjectMemberRequest
 	(*RemoveProjectMemberResponse)(nil),     // 23: organization.v1.RemoveProjectMemberResponse
-	(*timestamppb.Timestamp)(nil),           // 24: google.protobuf.Timestamp
+	(*ProjectLimits)(nil),                   // 24: organization.v1.ProjectLimits
+	(*GetProjectLimitsRequest)(nil),         // 25: organization.v1.GetProjectLimitsRequest
+	(*GetProjectLimitsResponse)(nil),        // 26: organization.v1.GetProjectLimitsResponse
+	(*UpdateProjectLimitsRequest)(nil),      // 27: organization.v1.UpdateProjectLimitsRequest
+	(*UpdateProjectLimitsResponse)(nil),     // 28: organization.v1.UpdateProjectLimitsResponse
+	(*timestamppb.Timestamp)(nil),           // 29: google.protobuf.Timestamp
 }
 var file_v1_project_proto_depIdxs = []int32{
 	6,  // 0: organization.v1.ListProjectsResponse.projects:type_name -> organization.v1.Project
 	6,  // 1: organization.v1.GetProjectResponse.project:type_name -> organization.v1.Project
-	24, // 2: organization.v1.Project.created:type_name -> google.protobuf.Timestamp
+	29, // 2: organization.v1.Project.created:type_name -> google.protobuf.Timestamp
 	0,  // 3: organization.v1.ProjectMember.role:type_name -> organization.v1.ProjectMemberRole
-	24, // 4: organization.v1.ProjectMember.created:type_name -> google.protobuf.Timestamp
+	29, // 4: organization.v1.ProjectMember.created:type_name -> google.protobuf.Timestamp
 	13, // 5: organization.v1.ListProjectMembersResponse.members:type_name -> organization.v1.ProjectMember
 	13, // 6: organization.v1.GetProjectMemberResponse.member:type_name -> organization.v1.ProjectMember
 	0,  // 7: organization.v1.AddProjectMemberRequest.role:type_name -> organization.v1.ProjectMemberRole
 	0,  // 8: organization.v1.UpdateProjectMemberRoleRequest.role:type_name -> organization.v1.ProjectMemberRole
-	1,  // 9: organization.v1.ProjectService.ListProjects:input_type -> organization.v1.ListProjectsRequest
-	3,  // 10: organization.v1.ProjectService.GetProject:input_type -> organization.v1.GetProjectRequest
-	4,  // 11: organization.v1.ProjectService.GetProjectByName:input_type -> organization.v1.GetProjectByNameRequest
-	7,  // 12: organization.v1.ProjectService.CreateProject:input_type -> organization.v1.CreateProjectRequest
-	9,  // 13: organization.v1.ProjectService.UpdateProject:input_type -> organization.v1.UpdateProjectRequest
-	11, // 14: organization.v1.ProjectService.DeleteProject:input_type -> organization.v1.DeleteProjectRequest
-	14, // 15: organization.v1.ProjectService.ListProjectMembers:input_type -> organization.v1.ListProjectMembersRequest
-	16, // 16: organization.v1.ProjectService.GetProjectMember:input_type -> organization.v1.GetProjectMemberRequest
-	18, // 17: organization.v1.ProjectService.AddProjectMember:input_type -> organization.v1.AddProjectMemberRequest
-	20, // 18: organization.v1.ProjectService.UpdateProjectMemberRole:input_type -> organization.v1.UpdateProjectMemberRoleRequest
-	22, // 19: organization.v1.ProjectService.RemoveProjectMember:input_type -> organization.v1.RemoveProjectMemberRequest
-	2,  // 20: organization.v1.ProjectService.ListProjects:output_type -> organization.v1.ListProjectsResponse
-	5,  // 21: organization.v1.ProjectService.GetProject:output_type -> organization.v1.GetProjectResponse
-	5,  // 22: organization.v1.ProjectService.GetProjectByName:output_type -> organization.v1.GetProjectResponse
-	8,  // 23: organization.v1.ProjectService.CreateProject:output_type -> organization.v1.CreateProjectResponse
-	10, // 24: organization.v1.ProjectService.UpdateProject:output_type -> organization.v1.UpdateProjectResponse
-	12, // 25: organization.v1.ProjectService.DeleteProject:output_type -> organization.v1.DeleteProjectResponse
-	15, // 26: organization.v1.ProjectService.ListProjectMembers:output_type -> organization.v1.ListProjectMembersResponse
-	17, // 27: organization.v1.ProjectService.GetProjectMember:output_type -> organization.v1.GetProjectMemberResponse
-	19, // 28: organization.v1.ProjectService.AddProjectMember:output_type -> organization.v1.AddProjectMemberResponse
-	21, // 29: organization.v1.ProjectService.UpdateProjectMemberRole:output_type -> organization.v1.UpdateProjectMemberRoleResponse
-	23, // 30: organization.v1.ProjectService.RemoveProjectMember:output_type -> organization.v1.RemoveProjectMemberResponse
-	20, // [20:31] is the sub-list for method output_type
-	9,  // [9:20] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	24, // 9: organization.v1.GetProjectLimitsResponse.limits:type_name -> organization.v1.ProjectLimits
+	1,  // 10: organization.v1.ProjectService.ListProjects:input_type -> organization.v1.ListProjectsRequest
+	3,  // 11: organization.v1.ProjectService.GetProject:input_type -> organization.v1.GetProjectRequest
+	4,  // 12: organization.v1.ProjectService.GetProjectByName:input_type -> organization.v1.GetProjectByNameRequest
+	7,  // 13: organization.v1.ProjectService.CreateProject:input_type -> organization.v1.CreateProjectRequest
+	9,  // 14: organization.v1.ProjectService.UpdateProject:input_type -> organization.v1.UpdateProjectRequest
+	11, // 15: organization.v1.ProjectService.DeleteProject:input_type -> organization.v1.DeleteProjectRequest
+	14, // 16: organization.v1.ProjectService.ListProjectMembers:input_type -> organization.v1.ListProjectMembersRequest
+	16, // 17: organization.v1.ProjectService.GetProjectMember:input_type -> organization.v1.GetProjectMemberRequest
+	18, // 18: organization.v1.ProjectService.AddProjectMember:input_type -> organization.v1.AddProjectMemberRequest
+	20, // 19: organization.v1.ProjectService.UpdateProjectMemberRole:input_type -> organization.v1.UpdateProjectMemberRoleRequest
+	22, // 20: organization.v1.ProjectService.RemoveProjectMember:input_type -> organization.v1.RemoveProjectMemberRequest
+	25, // 21: organization.v1.ProjectService.GetProjectLimits:input_type -> organization.v1.GetProjectLimitsRequest
+	27, // 22: organization.v1.ProjectService.UpdateProjectLimits:input_type -> organization.v1.UpdateProjectLimitsRequest
+	2,  // 23: organization.v1.ProjectService.ListProjects:output_type -> organization.v1.ListProjectsResponse
+	5,  // 24: organization.v1.ProjectService.GetProject:output_type -> organization.v1.GetProjectResponse
+	5,  // 25: organization.v1.ProjectService.GetProjectByName:output_type -> organization.v1.GetProjectResponse
+	8,  // 26: organization.v1.ProjectService.CreateProject:output_type -> organization.v1.CreateProjectResponse
+	10, // 27: organization.v1.ProjectService.UpdateProject:output_type -> organization.v1.UpdateProjectResponse
+	12, // 28: organization.v1.ProjectService.DeleteProject:output_type -> organization.v1.DeleteProjectResponse
+	15, // 29: organization.v1.ProjectService.ListProjectMembers:output_type -> organization.v1.ListProjectMembersResponse
+	17, // 30: organization.v1.ProjectService.GetProjectMember:output_type -> organization.v1.GetProjectMemberResponse
+	19, // 31: organization.v1.ProjectService.AddProjectMember:output_type -> organization.v1.AddProjectMemberResponse
+	21, // 32: organization.v1.ProjectService.UpdateProjectMemberRole:output_type -> organization.v1.UpdateProjectMemberRoleResponse
+	23, // 33: organization.v1.ProjectService.RemoveProjectMember:output_type -> organization.v1.RemoveProjectMemberResponse
+	26, // 34: organization.v1.ProjectService.GetProjectLimits:output_type -> organization.v1.GetProjectLimitsResponse
+	28, // 35: organization.v1.ProjectService.UpdateProjectLimits:output_type -> organization.v1.UpdateProjectLimitsResponse
+	23, // [23:36] is the sub-list for method output_type
+	10, // [10:23] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_v1_project_proto_init() }
@@ -1786,7 +2349,7 @@ func file_v1_project_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_project_proto_rawDesc), len(file_v1_project_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   23,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
