@@ -45,6 +45,12 @@ service ProjectService {
 
   // Remove a member from a project (requires admin role)
   rpc RemoveProjectMember(RemoveProjectMemberRequest) returns (RemoveProjectMemberResponse);
+
+  // GetProjectLimits retrieves the namespace resource defaults for a project
+  rpc GetProjectLimits(GetProjectLimitsRequest) returns (GetProjectLimitsResponse);
+
+  // UpdateProjectLimits sets the namespace resource defaults for a project
+  rpc UpdateProjectLimits(UpdateProjectLimitsRequest) returns (UpdateProjectLimitsResponse);
 }
 
 // List projects request
@@ -191,3 +197,56 @@ message RemoveProjectMemberRequest {
 
 // Remove project member response
 message RemoveProjectMemberResponse {}
+
+// ProjectLimits holds Kubernetes namespace LimitRange defaults for a project
+message ProjectLimits {
+  // Default memory request applied to containers via LimitRange (mebibytes)
+  int32 default_memory_request_mi = 10 [features.field_presence = EXPLICIT];
+  // Default memory limit applied to containers via LimitRange (mebibytes)
+  int32 default_memory_limit_mi = 20 [features.field_presence = EXPLICIT];
+  // Default CPU request applied to containers via LimitRange (millicores)
+  int32 default_cpu_request_m = 30 [features.field_presence = EXPLICIT];
+  // Default CPU limit applied to containers via LimitRange (millicores)
+  int32 default_cpu_limit_m = 40 [features.field_presence = EXPLICIT];
+}
+
+// GetProjectLimits request
+message GetProjectLimitsRequest {
+  // ID of the project
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// GetProjectLimits response
+message GetProjectLimitsResponse {
+  // The current limits for the project (absent fields mean no default is set)
+  ProjectLimits limits = 10;
+}
+
+// UpdateProjectLimits request
+message UpdateProjectLimitsRequest {
+  // ID of the project to update
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Default memory request applied to containers via LimitRange (mebibytes)
+  int32 default_memory_request_mi = 20 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // Default memory limit applied to containers via LimitRange (mebibytes)
+  int32 default_memory_limit_mi = 30 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // Default CPU request applied to containers via LimitRange (millicores)
+  int32 default_cpu_request_m = 40 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // Default CPU limit applied to containers via LimitRange (millicores)
+  int32 default_cpu_limit_m = 50 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+}
+
+// UpdateProjectLimits response
+message UpdateProjectLimitsResponse {}

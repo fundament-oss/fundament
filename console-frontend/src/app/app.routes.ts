@@ -144,6 +144,14 @@ const routes: Routes = [
         },
       },
       {
+        path: 'projects/:id/limits',
+        loadComponent: () =>
+          import('./project-limits/project-limits.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Limits' }],
+        },
+      },
+      {
         path: 'projects/:id/settings',
         loadComponent: () =>
           import('./project-settings/project-settings.component').then((m) => m.default),
@@ -201,6 +209,14 @@ const routes: Routes = [
           import('./organization-members/organization-members.component').then((m) => m.default),
         data: {
           breadcrumbs: [{ label: 'Organization members' }],
+        },
+      },
+      {
+        path: 'organization/limits',
+        loadComponent: () =>
+          import('./organization-limits/organization-limits.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: 'Limits' }],
         },
       },
       {

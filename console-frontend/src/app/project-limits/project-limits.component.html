@@ -1,0 +1,136 @@
+<div class="space-y-6">
+  @if (initialLoading()) {
+    <div class="py-8 text-center">
+      <p class="text-gray-600 dark:text-gray-300">Loading limits…</p>
+    </div>
+  } @else {
+  <form class="card" (ngSubmit)="save()" ngNativeValidate>
+    <div class="card-header">
+      <h2 class="text-xl font-semibold dark:text-white">Namespace resource defaults</h2>
+      <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        Default resource requests and limits applied to containers in all namespaces of this project
+        via a <span class="font-mono text-xs">LimitRange</span>. These values are used when a
+        workload does not specify its own resource constraints.
+      </p>
+    </div>
+
+    <div class="card-body-lg">
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <!-- Default memory request -->
+        <div>
+          <label
+            for="defaultMemoryRequest"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Default memory request
+          </label>
+          <div class="flex items-center gap-2">
+            <input
+              id="defaultMemoryRequest"
+              name="defaultMemoryRequest"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="128"
+              [ngModel]="defaultMemoryRequestMi()"
+              (ngModelChange)="defaultMemoryRequestMi.set(toInt($event))"
+              [disabled]="saving()"
+              class="w-32"
+            />
+            <span class="text-sm text-gray-500 dark:text-gray-400">MiB</span>
+          </div>
+        </div>
+
+        <!-- Default memory limit -->
+        <div>
+          <label
+            for="defaultMemoryLimit"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Default memory limit
+          </label>
+          <div class="flex items-center gap-2">
+            <input
+              id="defaultMemoryLimit"
+              name="defaultMemoryLimit"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="256"
+              [ngModel]="defaultMemoryLimitMi()"
+              (ngModelChange)="defaultMemoryLimitMi.set(toInt($event))"
+              [disabled]="saving()"
+              class="w-32"
+            />
+            <span class="text-sm text-gray-500 dark:text-gray-400">MiB</span>
+          </div>
+        </div>
+
+        <!-- Default CPU request -->
+        <div>
+          <label
+            for="defaultCpuRequest"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Default CPU request
+          </label>
+          <div class="flex items-center gap-2">
+            <input
+              id="defaultCpuRequest"
+              name="defaultCpuRequest"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="100"
+              [ngModel]="defaultCpuRequestM()"
+              (ngModelChange)="defaultCpuRequestM.set(toInt($event))"
+              [disabled]="saving()"
+              class="w-32"
+            />
+            <span class="text-sm text-gray-500 dark:text-gray-400">m</span>
+          </div>
+        </div>
+
+        <!-- Default CPU limit -->
+        <div>
+          <label
+            for="defaultCpuLimit"
+            class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Default CPU limit
+          </label>
+          <div class="flex items-center gap-2">
+            <input
+              id="defaultCpuLimit"
+              name="defaultCpuLimit"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="500"
+              [ngModel]="defaultCpuLimitM()"
+              (ngModelChange)="defaultCpuLimitM.set(toInt($event))"
+              [disabled]="saving()"
+              class="w-32"
+            />
+            <span class="text-sm text-gray-500 dark:text-gray-400">m</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+        Memory is in mebibytes (MiB). CPU is in millicores (m) — 1000 m = 1 vCPU.
+      </p>
+
+      <div class="mt-6">
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="saving()"
+        >
+          {{ saving() ? 'Saving…' : 'Save namespace defaults' }}
+        </button>
+      </div>
+    </div>
+  </form>
+  }
+</div>
