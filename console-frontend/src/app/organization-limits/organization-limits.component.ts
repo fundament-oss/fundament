@@ -1,7 +1,5 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerGauge } from '@ng-icons/tabler-icons';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 
@@ -14,10 +12,14 @@ import OrganizationContextService from '../organization-context.service';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 
+function toInt(value: unknown): number | undefined {
+  const n = Math.trunc(Number(value));
+  return n > 0 ? n : undefined;
+}
+
 @Component({
   selector: 'app-organization-limits',
-  imports: [FormsModule, NgIcon],
-  viewProviders: [provideIcons({ tablerGauge })],
+  imports: [FormsModule],
   templateUrl: './organization-limits.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -52,6 +54,8 @@ export default class OrganizationLimitsComponent implements OnInit {
 
   namespaceSaving = signal(false);
 
+  protected readonly toInt = toInt;
+
   constructor() {
     this.titleService.setTitle('Limits');
   }
@@ -70,9 +74,12 @@ export default class OrganizationLimitsComponent implements OnInit {
       if (limits) {
         if (limits.maxNodesPerCluster > 0) this.maxNodesPerCluster.set(limits.maxNodesPerCluster);
         if (limits.maxNodePoolsPerCluster > 0) this.maxNodePools.set(limits.maxNodePoolsPerCluster);
-        if (limits.maxNodesPerNodePool > 0) this.maxNodesPerNodePool.set(limits.maxNodesPerNodePool);
-        if (limits.defaultMemoryRequestMi > 0) this.defaultMemoryRequestMi.set(limits.defaultMemoryRequestMi);
-        if (limits.defaultMemoryLimitMi > 0) this.defaultMemoryLimitMi.set(limits.defaultMemoryLimitMi);
+        if (limits.maxNodesPerNodePool > 0)
+          this.maxNodesPerNodePool.set(limits.maxNodesPerNodePool);
+        if (limits.defaultMemoryRequestMi > 0)
+          this.defaultMemoryRequestMi.set(limits.defaultMemoryRequestMi);
+        if (limits.defaultMemoryLimitMi > 0)
+          this.defaultMemoryLimitMi.set(limits.defaultMemoryLimitMi);
         if (limits.defaultCpuRequestM > 0) this.defaultCpuRequestM.set(limits.defaultCpuRequestM);
         if (limits.defaultCpuLimitM > 0) this.defaultCpuLimitM.set(limits.defaultCpuLimitM);
       }
@@ -130,10 +137,5 @@ export default class OrganizationLimitsComponent implements OnInit {
     } finally {
       this.namespaceSaving.set(false);
     }
-  }
-
-  protected toInt(value: unknown): number | undefined {
-    const n = Math.trunc(Number(value));
-    return n > 0 ? n : undefined;
   }
 }

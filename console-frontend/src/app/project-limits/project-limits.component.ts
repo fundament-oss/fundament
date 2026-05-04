@@ -1,7 +1,5 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerGauge } from '@ng-icons/tabler-icons';
 import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -14,10 +12,14 @@ import { PROJECT } from '../../connect/tokens';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 
+function toInt(value: unknown): number | undefined {
+  const n = Math.trunc(Number(value));
+  return n > 0 ? n : undefined;
+}
+
 @Component({
   selector: 'app-project-limits',
-  imports: [FormsModule, NgIcon],
-  viewProviders: [provideIcons({ tablerGauge })],
+  imports: [FormsModule],
   templateUrl: './project-limits.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -42,6 +44,8 @@ export default class ProjectLimitsComponent implements OnInit {
 
   saving = signal(false);
 
+  protected readonly toInt = toInt;
+
   constructor() {
     this.titleService.setTitle('Limits');
   }
@@ -51,14 +55,14 @@ export default class ProjectLimitsComponent implements OnInit {
 
     try {
       const response = await firstValueFrom(
-        this.projectClient.getProjectLimits(
-          create(GetProjectLimitsRequestSchema, { projectId }),
-        ),
+        this.projectClient.getProjectLimits(create(GetProjectLimitsRequestSchema, { projectId })),
       );
       const limits = response.limits;
       if (limits) {
-        if (limits.defaultMemoryRequestMi > 0) this.defaultMemoryRequestMi.set(limits.defaultMemoryRequestMi);
-        if (limits.defaultMemoryLimitMi > 0) this.defaultMemoryLimitMi.set(limits.defaultMemoryLimitMi);
+        if (limits.defaultMemoryRequestMi > 0)
+          this.defaultMemoryRequestMi.set(limits.defaultMemoryRequestMi);
+        if (limits.defaultMemoryLimitMi > 0)
+          this.defaultMemoryLimitMi.set(limits.defaultMemoryLimitMi);
         if (limits.defaultCpuRequestM > 0) this.defaultCpuRequestM.set(limits.defaultCpuRequestM);
         if (limits.defaultCpuLimitM > 0) this.defaultCpuLimitM.set(limits.defaultCpuLimitM);
       }
@@ -67,11 +71,6 @@ export default class ProjectLimitsComponent implements OnInit {
     } finally {
       this.initialLoading.set(false);
     }
-  }
-
-  protected toInt(value: unknown): number | undefined {
-    const n = Math.trunc(Number(value));
-    return n > 0 ? n : undefined;
   }
 
   async save() {
