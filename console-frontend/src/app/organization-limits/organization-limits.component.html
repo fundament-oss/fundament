@@ -19,6 +19,7 @@
           <nldd-form-field label="Max nodes per cluster">
             <nldd-number-field
               id="maxNodesPerCluster"
+              full-width="true"
               min="1"
               step="1"
               [value]="maxNodesPerCluster()"
@@ -36,6 +37,7 @@
           <nldd-form-field label="Max node pools per cluster">
             <nldd-number-field
               id="maxNodePools"
+              full-width="true"
               min="1"
               step="1"
               [value]="maxNodePools()"
@@ -51,6 +53,7 @@
           <nldd-form-field label="Max nodes per node pool">
             <nldd-number-field
               id="maxNodesPerNodePool"
+              full-width="true"
               min="1"
               step="1"
               [value]="maxNodesPerNodePool()"
@@ -95,8 +98,10 @@
             <div class="flex items-center gap-2">
               <nldd-number-field
                 id="defaultMemoryRequest"
+                full-width="true"
                 min="1"
                 step="1"
+                [attr.max]="defaultMemoryLimitMi() ?? null"
                 [value]="defaultMemoryRequestMi()"
                 (input)="
                   $any($event).detail &&
@@ -113,7 +118,8 @@
             <div class="flex items-center gap-2">
               <nldd-number-field
                 id="defaultMemoryLimit"
-                min="1"
+                full-width="true"
+                [min]="defaultMemoryRequestMi() ?? 1"
                 step="1"
                 [value]="defaultMemoryLimitMi()"
                 (input)="
@@ -130,8 +136,10 @@
             <div class="flex items-center gap-2">
               <nldd-number-field
                 id="defaultCpuRequest"
+                full-width="true"
                 min="1"
                 step="1"
+                [attr.max]="defaultCpuLimitM() ?? null"
                 [value]="defaultCpuRequestM()"
                 (input)="
                   $any($event).detail && defaultCpuRequestM.set(toInt($any($event).detail.value))
@@ -147,7 +155,8 @@
             <div class="flex items-center gap-2">
               <nldd-number-field
                 id="defaultCpuLimit"
-                min="1"
+                full-width="true"
+                [min]="defaultCpuRequestM() ?? 1"
                 step="1"
                 [value]="defaultCpuLimitM()"
                 (input)="
