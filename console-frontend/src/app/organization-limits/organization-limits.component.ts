@@ -50,6 +50,12 @@ export default class OrganizationLimitsComponent implements OnInit {
 
   clusterSaving = signal(false);
 
+  private savedCluster = signal<{
+    maxNodesPerCluster: number | undefined;
+    maxNodePools: number | undefined;
+    maxNodesPerNodePool: number | undefined;
+  }>({ maxNodesPerCluster: undefined, maxNodePools: undefined, maxNodesPerNodePool: undefined });
+
   // Kubernetes namespace resource defaults
   defaultMemoryRequestMi = signal<number | undefined>(undefined);
 
@@ -60,6 +66,18 @@ export default class OrganizationLimitsComponent implements OnInit {
   defaultCpuLimitM = signal<number | undefined>(undefined);
 
   namespaceSaving = signal(false);
+
+  private savedNamespace = signal<{
+    defaultMemoryRequestMi: number | undefined;
+    defaultMemoryLimitMi: number | undefined;
+    defaultCpuRequestM: number | undefined;
+    defaultCpuLimitM: number | undefined;
+  }>({
+    defaultMemoryRequestMi: undefined,
+    defaultMemoryLimitMi: undefined,
+    defaultCpuRequestM: undefined,
+    defaultCpuLimitM: undefined,
+  });
 
   protected readonly toInt = toInt;
 
@@ -79,16 +97,35 @@ export default class OrganizationLimitsComponent implements OnInit {
       );
       const limits = response.limits;
       if (limits) {
-        if (limits.maxNodesPerCluster > 0) this.maxNodesPerCluster.set(limits.maxNodesPerCluster);
-        if (limits.maxNodePoolsPerCluster > 0) this.maxNodePools.set(limits.maxNodePoolsPerCluster);
-        if (limits.maxNodesPerNodePool > 0)
-          this.maxNodesPerNodePool.set(limits.maxNodesPerNodePool);
-        if (limits.defaultMemoryRequestMi > 0)
-          this.defaultMemoryRequestMi.set(limits.defaultMemoryRequestMi);
-        if (limits.defaultMemoryLimitMi > 0)
-          this.defaultMemoryLimitMi.set(limits.defaultMemoryLimitMi);
-        if (limits.defaultCpuRequestM > 0) this.defaultCpuRequestM.set(limits.defaultCpuRequestM);
-        if (limits.defaultCpuLimitM > 0) this.defaultCpuLimitM.set(limits.defaultCpuLimitM);
+        const maxNodesPerCluster =
+          limits.maxNodesPerCluster > 0 ? limits.maxNodesPerCluster : undefined;
+        const maxNodePools =
+          limits.maxNodePoolsPerCluster > 0 ? limits.maxNodePoolsPerCluster : undefined;
+        const maxNodesPerNodePool =
+          limits.maxNodesPerNodePool > 0 ? limits.maxNodesPerNodePool : undefined;
+        const defaultMemoryRequestMi =
+          limits.defaultMemoryRequestMi > 0 ? limits.defaultMemoryRequestMi : undefined;
+        const defaultMemoryLimitMi =
+          limits.defaultMemoryLimitMi > 0 ? limits.defaultMemoryLimitMi : undefined;
+        const defaultCpuRequestM =
+          limits.defaultCpuRequestM > 0 ? limits.defaultCpuRequestM : undefined;
+        const defaultCpuLimitM = limits.defaultCpuLimitM > 0 ? limits.defaultCpuLimitM : undefined;
+
+        this.maxNodesPerCluster.set(maxNodesPerCluster);
+        this.maxNodePools.set(maxNodePools);
+        this.maxNodesPerNodePool.set(maxNodesPerNodePool);
+        this.defaultMemoryRequestMi.set(defaultMemoryRequestMi);
+        this.defaultMemoryLimitMi.set(defaultMemoryLimitMi);
+        this.defaultCpuRequestM.set(defaultCpuRequestM);
+        this.defaultCpuLimitM.set(defaultCpuLimitM);
+
+        this.savedCluster.set({ maxNodesPerCluster, maxNodePools, maxNodesPerNodePool });
+        this.savedNamespace.set({
+          defaultMemoryRequestMi,
+          defaultMemoryLimitMi,
+          defaultCpuRequestM,
+          defaultCpuLimitM,
+        });
       }
     } catch {
       this.toastService.error('Failed to load organization limits');
@@ -101,18 +138,24 @@ export default class OrganizationLimitsComponent implements OnInit {
     const orgId = this.organizationContextService.currentOrganizationId();
     if (!orgId) return;
 
+    const maxNodesPerCluster = this.maxNodesPerCluster();
+    const maxNodePools = this.maxNodePools();
+    const maxNodesPerNodePool = this.maxNodesPerNodePool();
+
     this.clusterSaving.set(true);
     try {
       await firstValueFrom(
         this.organizationClient.updateOrganizationLimits(
           create(UpdateOrganizationLimitsRequestSchema, {
             id: orgId,
-            maxNodesPerCluster: this.maxNodesPerCluster(),
-            maxNodePoolsPerCluster: this.maxNodePools(),
-            maxNodesPerNodePool: this.maxNodesPerNodePool(),
+            maxNodesPerCluster,
+            maxNodePoolsPerCluster: maxNodePools,
+            maxNodesPerNodePool,
+            ...this.savedNamespace(),
           }),
         ),
       );
+      this.savedCluster.set({ maxNodesPerCluster, maxNodePools, maxNodesPerNodePool });
       this.toastService.success('Cluster limits saved');
     } catch {
       this.toastService.error('Failed to save cluster limits');
@@ -125,19 +168,34 @@ export default class OrganizationLimitsComponent implements OnInit {
     const orgId = this.organizationContextService.currentOrganizationId();
     if (!orgId) return;
 
+    const defaultMemoryRequestMi = this.defaultMemoryRequestMi();
+    const defaultMemoryLimitMi = this.defaultMemoryLimitMi();
+    const defaultCpuRequestM = this.defaultCpuRequestM();
+    const defaultCpuLimitM = this.defaultCpuLimitM();
+
     this.namespaceSaving.set(true);
     try {
+      const cluster = this.savedCluster();
       await firstValueFrom(
         this.organizationClient.updateOrganizationLimits(
           create(UpdateOrganizationLimitsRequestSchema, {
             id: orgId,
-            defaultMemoryRequestMi: this.defaultMemoryRequestMi(),
-            defaultMemoryLimitMi: this.defaultMemoryLimitMi(),
-            defaultCpuRequestM: this.defaultCpuRequestM(),
-            defaultCpuLimitM: this.defaultCpuLimitM(),
+            maxNodesPerCluster: cluster.maxNodesPerCluster,
+            maxNodePoolsPerCluster: cluster.maxNodePools,
+            maxNodesPerNodePool: cluster.maxNodesPerNodePool,
+            defaultMemoryRequestMi,
+            defaultMemoryLimitMi,
+            defaultCpuRequestM,
+            defaultCpuLimitM,
           }),
         ),
       );
+      this.savedNamespace.set({
+        defaultMemoryRequestMi,
+        defaultMemoryLimitMi,
+        defaultCpuRequestM,
+        defaultCpuLimitM,
+      });
       this.toastService.success('Namespace defaults saved');
     } catch {
       this.toastService.error('Failed to save namespace defaults');
