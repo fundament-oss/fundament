@@ -39,7 +39,7 @@ const routes: Routes = [
               import('./add-cluster-nodes/add-cluster-nodes.component').then((m) => m.default),
             canActivate: [clusterWizardGuard],
             data: {
-              breadcrumbs: [{ label: 'Worker nodes' }],
+              breadcrumbs: [{ label: 'Node pools' }],
             },
           },
           {
