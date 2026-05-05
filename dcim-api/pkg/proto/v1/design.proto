@@ -1,0 +1,307 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// ── Enums ─────────────────────────────────────────────────────────────────────
+
+// LogicalDesignStatus aligns with core.logical_designs status check constraint.
+enum LogicalDesignStatus {
+  LOGICAL_DESIGN_STATUS_UNSPECIFIED = 0;
+  LOGICAL_DESIGN_STATUS_DRAFT       = 10;
+  LOGICAL_DESIGN_STATUS_ACTIVE      = 20;
+  LOGICAL_DESIGN_STATUS_ARCHIVED    = 30;
+}
+
+// LogicalDeviceRole aligns with core.logical_devices role check constraint.
+enum LogicalDeviceRole {
+  LOGICAL_DEVICE_ROLE_UNSPECIFIED    = 0;
+  LOGICAL_DEVICE_ROLE_COMPUTE        = 10;
+  LOGICAL_DEVICE_ROLE_TOR            = 20;
+  LOGICAL_DEVICE_ROLE_SPINE          = 30;
+  LOGICAL_DEVICE_ROLE_CORE           = 40;
+  LOGICAL_DEVICE_ROLE_PDU            = 50;
+  LOGICAL_DEVICE_ROLE_PATCH_PANEL    = 60;
+  LOGICAL_DEVICE_ROLE_STORAGE        = 70;
+  LOGICAL_DEVICE_ROLE_FIREWALL       = 80;
+  LOGICAL_DEVICE_ROLE_LOAD_BALANCER  = 90;
+  LOGICAL_DEVICE_ROLE_CONSOLE_SERVER = 100;
+  LOGICAL_DEVICE_ROLE_CABLE_MANAGER  = 110;
+  LOGICAL_DEVICE_ROLE_ADAPTER        = 120;
+}
+
+// LogicalConnectionType aligns with core.logical_connections connection_type check constraint.
+enum LogicalConnectionType {
+  LOGICAL_CONNECTION_TYPE_UNSPECIFIED = 0;
+  LOGICAL_CONNECTION_TYPE_NETWORK     = 10;
+  LOGICAL_CONNECTION_TYPE_POWER       = 20;
+  LOGICAL_CONNECTION_TYPE_CONSOLE     = 30;
+}
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+
+// LogicalDesign is a versioned topology schema (core.logical_designs).
+// Only one design per name may have status ACTIVE at a time.
+message LogicalDesign {
+  string                    id          = 10;
+  string                    name        = 20;
+  int32                     version     = 30;
+  string                    description = 40;
+  LogicalDesignStatus       status      = 50;
+  google.protobuf.Timestamp created     = 60;
+  google.protobuf.Timestamp deleted     = 70 [features.field_presence = EXPLICIT];
+}
+
+// LogicalDevice is an abstract role within a design (core.logical_devices).
+// When device_catalog_id is absent, the device is generic and requirements
+// describes what kind of device is needed (e.g. {"cpu_cores": "32", "ram_gb": "256"}).
+message LogicalDevice {
+  string                    id                = 10;
+  string                    design_id         = 20;
+  string                    label             = 30;
+  LogicalDeviceRole         role              = 40;
+  string                    device_catalog_id = 50 [features.field_presence = EXPLICIT];
+  string                    requirements      = 60 [features.field_presence = EXPLICIT];
+  string                    notes             = 70;
+  google.protobuf.Timestamp created           = 80;
+  google.protobuf.Timestamp deleted           = 90 [features.field_presence = EXPLICIT];
+}
+
+// LogicalConnection is an intended link between two logical devices (core.logical_connections).
+message LogicalConnection {
+  string                    id               = 10;
+  string                    design_id        = 20;
+  string                    source_device_id = 30;
+  string                    source_port_role = 40;
+  string                    target_device_id = 50;
+  string                    target_port_role = 60;
+  LogicalConnectionType     connection_type  = 70;
+  string                    requirements     = 80 [features.field_presence = EXPLICIT];
+  string                    label            = 90;
+  google.protobuf.Timestamp created          = 100;
+  google.protobuf.Timestamp deleted          = 110 [features.field_presence = EXPLICIT];
+}
+
+// LogicalDeviceLayout stores position data for topology visualization.
+// Ephemeral view data — no soft delete.
+message LogicalDeviceLayout {
+  string                    design_id  = 10;
+  string                    device_id  = 20;
+  double                    position_x = 30;
+  double                    position_y = 40;
+  google.protobuf.Timestamp updated    = 50;
+}
+
+// ── LogicalDesignService ──────────────────────────────────────────────────────
+
+service LogicalDesignService {
+  rpc ListDesigns (ListDesignsRequest)  returns (ListDesignsResponse);
+  rpc GetDesign   (GetDesignRequest)    returns (GetDesignResponse);
+  rpc CreateDesign(CreateDesignRequest) returns (CreateDesignResponse);
+  rpc UpdateDesign(UpdateDesignRequest) returns (UpdateDesignResponse);
+  rpc DeleteDesign(DeleteDesignRequest) returns (DeleteDesignResponse);
+}
+
+message ListDesignsRequest {}
+
+message ListDesignsResponse {
+  repeated LogicalDesign designs = 10;
+}
+
+message GetDesignRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetDesignResponse {
+  LogicalDesign design = 10;
+}
+
+message CreateDesignRequest {
+  string name        = 10 [(buf.validate.field).string.min_len = 1];
+  string description = 20;
+}
+
+message CreateDesignResponse {
+  LogicalDesign design = 10;
+}
+
+message UpdateDesignRequest {
+  string              id          = 10 [(buf.validate.field).string = {uuid: true}];
+  string              name        = 20 [features.field_presence = EXPLICIT];
+  string              description = 30 [features.field_presence = EXPLICIT];
+  LogicalDesignStatus status      = 40 [features.field_presence = EXPLICIT];
+}
+
+message UpdateDesignResponse {
+  LogicalDesign design = 10;
+}
+
+message DeleteDesignRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteDesignResponse {}
+
+// ── LogicalDeviceService ──────────────────────────────────────────────────────
+
+service LogicalDeviceService {
+  rpc ListDevices (ListDevicesRequest)  returns (ListDevicesResponse);
+  rpc GetDevice   (GetDeviceRequest)    returns (GetDeviceResponse);
+  rpc CreateDevice(CreateDeviceRequest) returns (CreateDeviceResponse);
+  rpc UpdateDevice(UpdateDeviceRequest) returns (UpdateDeviceResponse);
+  rpc DeleteDevice(DeleteDeviceRequest) returns (DeleteDeviceResponse);
+}
+
+message ListDevicesRequest {
+  string design_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListDevicesResponse {
+  repeated LogicalDevice devices = 10;
+}
+
+message GetDeviceRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetDeviceResponse {
+  LogicalDevice device = 10;
+}
+
+message CreateDeviceRequest {
+  string            design_id         = 10 [(buf.validate.field).string = {uuid: true}];
+  string            label             = 20 [(buf.validate.field).string.min_len = 1];
+  LogicalDeviceRole role              = 30 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string            device_catalog_id = 40 [features.field_presence = EXPLICIT];
+  string            requirements      = 50 [features.field_presence = EXPLICIT];
+  string            notes             = 60;
+}
+
+message CreateDeviceResponse {
+  LogicalDevice device = 10;
+}
+
+message UpdateDeviceRequest {
+  string            id                = 10 [(buf.validate.field).string = {uuid: true}];
+  string            label             = 20 [features.field_presence = EXPLICIT];
+  LogicalDeviceRole role              = 30 [features.field_presence = EXPLICIT];
+  string            device_catalog_id = 40 [features.field_presence = EXPLICIT];
+  string            requirements      = 50 [features.field_presence = EXPLICIT];
+  string            notes             = 60 [features.field_presence = EXPLICIT];
+}
+
+message UpdateDeviceResponse {
+  LogicalDevice device = 10;
+}
+
+message DeleteDeviceRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteDeviceResponse {}
+
+// ── LogicalConnectionService ──────────────────────────────────────────────────
+
+service LogicalConnectionService {
+  rpc ListConnections (ListConnectionsRequest)  returns (ListConnectionsResponse);
+  rpc GetConnection   (GetConnectionRequest)    returns (GetConnectionResponse);
+  rpc CreateConnection(CreateConnectionRequest) returns (CreateConnectionResponse);
+  rpc UpdateConnection(UpdateConnectionRequest) returns (UpdateConnectionResponse);
+  rpc DeleteConnection(DeleteConnectionRequest) returns (DeleteConnectionResponse);
+}
+
+message ListConnectionsRequest {
+  string design_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetConnectionRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetConnectionResponse {
+  LogicalConnection connection = 10;
+}
+
+message ListConnectionsResponse {
+  repeated LogicalConnection connections = 10;
+}
+
+message CreateConnectionRequest {
+  string                design_id        = 10 [(buf.validate.field).string = {uuid: true}];
+  string                source_device_id = 20 [(buf.validate.field).string = {uuid: true}];
+  string                source_port_role = 30 [(buf.validate.field).string.min_len = 1];
+  string                target_device_id = 40 [(buf.validate.field).string = {uuid: true}];
+  string                target_port_role = 50 [(buf.validate.field).string.min_len = 1];
+  LogicalConnectionType connection_type  = 60 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string                requirements     = 70 [features.field_presence = EXPLICIT];
+  string                label            = 80;
+}
+
+message CreateConnectionResponse {
+  LogicalConnection connection = 10;
+}
+
+message UpdateConnectionRequest {
+  string                id               = 10 [(buf.validate.field).string = {uuid: true}];
+  string                source_port_role = 20 [features.field_presence = EXPLICIT];
+  string                target_port_role = 30 [features.field_presence = EXPLICIT];
+  LogicalConnectionType connection_type  = 40 [features.field_presence = EXPLICIT];
+  string                requirements     = 50 [features.field_presence = EXPLICIT];
+  string                label            = 60 [features.field_presence = EXPLICIT];
+}
+
+message UpdateConnectionResponse {
+  LogicalConnection connection = 10;
+}
+
+message DeleteConnectionRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteConnectionResponse {}
+
+// ── LogicalDeviceLayoutService ────────────────────────────────────────────────
+
+service LogicalDeviceLayoutService {
+  rpc GetLayout   (GetLayoutRequest)    returns (GetLayoutResponse);
+  rpc SaveLayout  (SaveLayoutRequest)   returns (SaveLayoutResponse);
+  rpc DeleteLayout(DeleteLayoutRequest) returns (DeleteLayoutResponse);
+}
+
+message GetLayoutRequest {
+  string design_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetLayoutResponse {
+  repeated LogicalDeviceLayout positions = 10;
+}
+
+message SaveLayoutRequest {
+  string design_id = 10 [(buf.validate.field).string = {uuid: true}];
+
+  message DevicePosition {
+    string device_id  = 10 [(buf.validate.field).string = {uuid: true}];
+    double position_x = 20;
+    double position_y = 30;
+  }
+
+  repeated DevicePosition positions = 20;
+}
+
+message SaveLayoutResponse {
+  repeated LogicalDeviceLayout positions = 10;
+}
+
+// DeleteLayout removes all stored positions for a design (hard delete — resets to auto-layout).
+message DeleteLayoutRequest {
+  string design_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteLayoutResponse {}

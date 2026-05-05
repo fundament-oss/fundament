@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 2.0.0-alpha
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -35,7 +35,14 @@ CREATE SCHEMA authz;
 ALTER SCHEMA authz OWNER TO fun_owner;
 -- ddl-end --
 
-SET search_path TO pg_catalog,public,tenant,appstore,authn,authz;
+-- object: dcim | type: SCHEMA --
+-- DROP SCHEMA IF EXISTS dcim CASCADE;
+CREATE SCHEMA dcim;
+-- ddl-end --
+ALTER SCHEMA dcim OWNER TO fun_owner;
+-- ddl-end --
+
+SET search_path TO pg_catalog,public,tenant,appstore,authn,authz,dcim;
 -- ddl-end --
 
 -- object: tenant.organizations | type: TABLE --
@@ -1751,6 +1758,315 @@ CREATE POLICY idempotency_keys_cleanup_policy ON tenant.idempotency_keys
 	USING (expires < now());
 -- ddl-end --
 
+-- object: dcim.sites | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.sites CASCADE;
+CREATE TABLE dcim.sites (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	name text NOT NULL,
+	address text,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT sites_pk PRIMARY KEY (id),
+	CONSTRAINT sites_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted)
+);
+-- ddl-end --
+ALTER TABLE dcim.sites OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.rooms | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.rooms CASCADE;
+CREATE TABLE dcim.rooms (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	site_id uuid NOT NULL,
+	name text NOT NULL,
+	floor text,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT rooms_pk PRIMARY KEY (id),
+	CONSTRAINT rooms_uq_site_name UNIQUE NULLS NOT DISTINCT (site_id,name,deleted)
+);
+-- ddl-end --
+ALTER TABLE dcim.rooms OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.rack_rows | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.rack_rows CASCADE;
+CREATE TABLE dcim.rack_rows (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	room_id uuid NOT NULL,
+	name text NOT NULL,
+	position_x double precision,
+	position_y double precision,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT rack_rows_pk PRIMARY KEY (id),
+	CONSTRAINT rack_rows_uq_room_name UNIQUE NULLS NOT DISTINCT (room_id,name,deleted)
+);
+-- ddl-end --
+ALTER TABLE dcim.rack_rows OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.racks | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.racks CASCADE;
+CREATE TABLE dcim.racks (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	rack_row_id uuid NOT NULL,
+	name text NOT NULL,
+	total_units integer NOT NULL,
+	position_in_row integer NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT racks_pk PRIMARY KEY (id),
+	CONSTRAINT racks_uq_rack_row_name UNIQUE NULLS NOT DISTINCT (rack_row_id,name,deleted)
+);
+-- ddl-end --
+ALTER TABLE dcim.racks OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.device_catalogs | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.device_catalogs CASCADE;
+CREATE TABLE dcim.device_catalogs (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	manufacturer text NOT NULL,
+	model text NOT NULL,
+	part_number text,
+	category text NOT NULL,
+	form_factor text,
+	rack_units integer,
+	weight_kg numeric,
+	power_draw_w numeric,
+	specs jsonb,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT device_catalogs_pk PRIMARY KEY (id),
+	CONSTRAINT device_catalogs_uq_manufacturer_model UNIQUE NULLS NOT DISTINCT (manufacturer,model,deleted),
+	CONSTRAINT device_catalogs_ck_category CHECK (category IN ('server','switch','pdu','patch_panel','sfp','nic','cpu','dimm','disk','cable','adapter','power_supply','cable_manager','console_server'))
+);
+-- ddl-end --
+ALTER TABLE dcim.device_catalogs OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.port_definitions | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.port_definitions CASCADE;
+CREATE TABLE dcim.port_definitions (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	device_catalog_id uuid NOT NULL,
+	name text NOT NULL,
+	port_type text NOT NULL,
+	media_type text,
+	speed text,
+	max_power_w numeric,
+	direction text NOT NULL,
+	ordinal integer NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT port_definitions_pk PRIMARY KEY (id),
+	CONSTRAINT port_definitions_uq_catalog_name UNIQUE NULLS NOT DISTINCT (device_catalog_id,name,deleted),
+	CONSTRAINT port_definitions_ck_port_type CHECK (port_type IN ('network','power_in','power_out','slot','bay','console')),
+	CONSTRAINT port_definitions_ck_direction CHECK (direction IN ('in','out','bidir'))
+);
+-- ddl-end --
+ALTER TABLE dcim.port_definitions OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.port_compatibilities | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.port_compatibilities CASCADE;
+CREATE TABLE dcim.port_compatibilities (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	port_definition_id uuid NOT NULL,
+	compatible_category text NOT NULL,
+	compatible_catalog_id uuid,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT port_compatibilities_pk PRIMARY KEY (id),
+	CONSTRAINT port_compatibilities_ck_compatible_category CHECK (compatible_category IN ('server','switch','pdu','patch_panel','sfp','nic','cpu','dimm','disk','cable','adapter','power_supply','cable_manager','console_server'))
+);
+-- ddl-end --
+ALTER TABLE dcim.port_compatibilities OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.assets | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.assets CASCADE;
+CREATE TABLE dcim.assets (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	device_catalog_id uuid NOT NULL,
+	serial_number text,
+	asset_tag text,
+	purchase_date date,
+	purchase_order text,
+	warranty_expiry date,
+	status text NOT NULL DEFAULT 'in_stock',
+	notes text,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT assets_pk PRIMARY KEY (id),
+	CONSTRAINT assets_uq_serial_number UNIQUE (serial_number,deleted),
+	CONSTRAINT assets_uq_asset_tag UNIQUE (asset_tag,deleted),
+	CONSTRAINT assets_ck_status CHECK (status IN ('in_stock','deployed','rma','decommissioned','in_transit','reserved'))
+);
+-- ddl-end --
+ALTER TABLE dcim.assets OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.asset_events | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.asset_events CASCADE;
+CREATE TABLE dcim.asset_events (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	asset_id uuid NOT NULL,
+	event_type text NOT NULL,
+	details text,
+	performed_by text,
+	created timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT asset_events_pk PRIMARY KEY (id),
+	CONSTRAINT asset_events_ck_event_type CHECK (event_type IN ('received','deployed','moved','rma_sent','rma_received','decommissioned','reserved','note'))
+);
+-- ddl-end --
+ALTER TABLE dcim.asset_events OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.logical_designs | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.logical_designs CASCADE;
+CREATE TABLE dcim.logical_designs (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	name text NOT NULL,
+	version integer NOT NULL DEFAULT 1,
+	description text,
+	status text NOT NULL DEFAULT 'draft',
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT logical_designs_pk PRIMARY KEY (id),
+	CONSTRAINT logical_designs_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
+	CONSTRAINT logical_designs_ck_status CHECK (status IN ('draft','active','archived'))
+);
+-- ddl-end --
+ALTER TABLE dcim.logical_designs OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.logical_devices | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.logical_devices CASCADE;
+CREATE TABLE dcim.logical_devices (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	logical_design_id uuid NOT NULL,
+	label text NOT NULL,
+	role text NOT NULL,
+	device_catalog_id uuid,
+	requirements text,
+	notes text,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT logical_devices_pk PRIMARY KEY (id),
+	CONSTRAINT logical_devices_uq_design_label UNIQUE NULLS NOT DISTINCT (logical_design_id,label,deleted),
+	CONSTRAINT logical_devices_ck_role CHECK (role IN ('compute','tor','spine','core','pdu','patch_panel','storage','firewall','load_balancer','console_server','cable_manager','adapter'))
+);
+-- ddl-end --
+ALTER TABLE dcim.logical_devices OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.logical_connections | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.logical_connections CASCADE;
+CREATE TABLE dcim.logical_connections (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	logical_design_id uuid NOT NULL,
+	a_logical_device_id uuid NOT NULL,
+	a_port_role text,
+	b_logical_device_id uuid NOT NULL,
+	b_port_role text,
+	connection_type text NOT NULL,
+	requirements text,
+	label text,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT logical_connections_pk PRIMARY KEY (id),
+	CONSTRAINT logical_connections_ck_connection_type CHECK (connection_type IN ('network','power','console'))
+);
+-- ddl-end --
+ALTER TABLE dcim.logical_connections OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.logical_device_layouts | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.logical_device_layouts CASCADE;
+CREATE TABLE dcim.logical_device_layouts (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	logical_device_id uuid NOT NULL,
+	position_x numeric NOT NULL,
+	position_y numeric NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	updated timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT logical_device_layouts_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE dcim.logical_device_layouts OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.placements | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.placements CASCADE;
+CREATE TABLE dcim.placements (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	asset_id uuid NOT NULL,
+	rack_id uuid,
+	start_unit integer,
+	slot_type text,
+	parent_placement_id uuid,
+	port_definition_id uuid,
+	logical_device_id uuid,
+	external_ref text,
+	notes text,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT placements_pk PRIMARY KEY (id),
+	CONSTRAINT placements_ck_slot_type CHECK (slot_type IS NULL OR slot_type IN ('unit','power','zero_u')),
+	CONSTRAINT placements_ck_exclusive_arc CHECK ((rack_id IS NOT NULL AND slot_type IS NOT NULL AND parent_placement_id IS NULL AND port_definition_id IS NULL) OR (rack_id IS NULL AND start_unit IS NULL AND slot_type IS NULL AND parent_placement_id IS NOT NULL AND port_definition_id IS NOT NULL)),
+	CONSTRAINT placements_ck_unit_start CHECK (slot_type != 'unit' OR start_unit IS NOT NULL)
+);
+-- ddl-end --
+ALTER TABLE dcim.placements OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.physical_connections | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.physical_connections CASCADE;
+CREATE TABLE dcim.physical_connections (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	a_placement_id uuid NOT NULL,
+	a_port_definition_id uuid NOT NULL,
+	b_placement_id uuid NOT NULL,
+	b_port_definition_id uuid NOT NULL,
+	cable_asset_id uuid,
+	logical_connection_id uuid,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT physical_connections_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE dcim.physical_connections OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.notes | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.notes CASCADE;
+CREATE TABLE dcim.notes (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	body text NOT NULL,
+	created_by text,
+	device_catalog_id uuid,
+	port_definition_id uuid,
+	asset_id uuid,
+	site_id uuid,
+	room_id uuid,
+	rack_row_id uuid,
+	rack_id uuid,
+	placement_id uuid,
+	physical_connection_id uuid,
+	logical_design_id uuid,
+	logical_device_id uuid,
+	logical_connection_id uuid,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT notes_pk PRIMARY KEY (id),
+	CONSTRAINT notes_ck_single_ref CHECK (num_nonnulls(device_catalog_id, port_definition_id, asset_id, site_id, room_id, rack_row_id, rack_id, placement_id, physical_connection_id, logical_design_id, logical_device_id, logical_connection_id) = 1)
+);
+-- ddl-end --
+ALTER TABLE dcim.notes OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: organization_limits_fk_organization | type: CONSTRAINT --
 -- ALTER TABLE tenant.organization_limits DROP CONSTRAINT IF EXISTS organization_limits_fk_organization CASCADE;
 ALTER TABLE tenant.organization_limits ADD CONSTRAINT organization_limits_fk_organization FOREIGN KEY (organization_id)
@@ -2021,6 +2337,265 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.idempotency_keys DROP CONSTRAINT IF EXISTS idempotency_keys_fk_user CASCADE;
 ALTER TABLE tenant.idempotency_keys ADD CONSTRAINT idempotency_keys_fk_user FOREIGN KEY (user_id)
 REFERENCES tenant.users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_rooms_fk_site | type: CONSTRAINT --
+-- ALTER TABLE dcim.rooms DROP CONSTRAINT IF EXISTS dcim_rooms_fk_site CASCADE;
+ALTER TABLE dcim.rooms ADD CONSTRAINT dcim_rooms_fk_site FOREIGN KEY (site_id)
+REFERENCES dcim.sites (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_rack_rows_fk_room | type: CONSTRAINT --
+-- ALTER TABLE dcim.rack_rows DROP CONSTRAINT IF EXISTS dcim_rack_rows_fk_room CASCADE;
+ALTER TABLE dcim.rack_rows ADD CONSTRAINT dcim_rack_rows_fk_room FOREIGN KEY (room_id)
+REFERENCES dcim.rooms (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_racks_fk_rack_row | type: CONSTRAINT --
+-- ALTER TABLE dcim.racks DROP CONSTRAINT IF EXISTS dcim_racks_fk_rack_row CASCADE;
+ALTER TABLE dcim.racks ADD CONSTRAINT dcim_racks_fk_rack_row FOREIGN KEY (rack_row_id)
+REFERENCES dcim.rack_rows (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_port_definitions_fk_device_catalog | type: CONSTRAINT --
+-- ALTER TABLE dcim.port_definitions DROP CONSTRAINT IF EXISTS dcim_port_definitions_fk_device_catalog CASCADE;
+ALTER TABLE dcim.port_definitions ADD CONSTRAINT dcim_port_definitions_fk_device_catalog FOREIGN KEY (device_catalog_id)
+REFERENCES dcim.device_catalogs (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_port_compatibilities_fk_port_definition | type: CONSTRAINT --
+-- ALTER TABLE dcim.port_compatibilities DROP CONSTRAINT IF EXISTS dcim_port_compatibilities_fk_port_definition CASCADE;
+ALTER TABLE dcim.port_compatibilities ADD CONSTRAINT dcim_port_compatibilities_fk_port_definition FOREIGN KEY (port_definition_id)
+REFERENCES dcim.port_definitions (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_port_compatibilities_fk_catalog | type: CONSTRAINT --
+-- ALTER TABLE dcim.port_compatibilities DROP CONSTRAINT IF EXISTS dcim_port_compatibilities_fk_catalog CASCADE;
+ALTER TABLE dcim.port_compatibilities ADD CONSTRAINT dcim_port_compatibilities_fk_catalog FOREIGN KEY (compatible_catalog_id)
+REFERENCES dcim.device_catalogs (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_assets_fk_device_catalog | type: CONSTRAINT --
+-- ALTER TABLE dcim.assets DROP CONSTRAINT IF EXISTS dcim_assets_fk_device_catalog CASCADE;
+ALTER TABLE dcim.assets ADD CONSTRAINT dcim_assets_fk_device_catalog FOREIGN KEY (device_catalog_id)
+REFERENCES dcim.device_catalogs (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_asset_events_fk_asset | type: CONSTRAINT --
+-- ALTER TABLE dcim.asset_events DROP CONSTRAINT IF EXISTS dcim_asset_events_fk_asset CASCADE;
+ALTER TABLE dcim.asset_events ADD CONSTRAINT dcim_asset_events_fk_asset FOREIGN KEY (asset_id)
+REFERENCES dcim.assets (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_logical_devices_fk_design | type: CONSTRAINT --
+-- ALTER TABLE dcim.logical_devices DROP CONSTRAINT IF EXISTS dcim_logical_devices_fk_design CASCADE;
+ALTER TABLE dcim.logical_devices ADD CONSTRAINT dcim_logical_devices_fk_design FOREIGN KEY (logical_design_id)
+REFERENCES dcim.logical_designs (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_logical_devices_fk_catalog | type: CONSTRAINT --
+-- ALTER TABLE dcim.logical_devices DROP CONSTRAINT IF EXISTS dcim_logical_devices_fk_catalog CASCADE;
+ALTER TABLE dcim.logical_devices ADD CONSTRAINT dcim_logical_devices_fk_catalog FOREIGN KEY (device_catalog_id)
+REFERENCES dcim.device_catalogs (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_logical_connections_fk_design | type: CONSTRAINT --
+-- ALTER TABLE dcim.logical_connections DROP CONSTRAINT IF EXISTS dcim_logical_connections_fk_design CASCADE;
+ALTER TABLE dcim.logical_connections ADD CONSTRAINT dcim_logical_connections_fk_design FOREIGN KEY (logical_design_id)
+REFERENCES dcim.logical_designs (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_logical_connections_fk_a_device | type: CONSTRAINT --
+-- ALTER TABLE dcim.logical_connections DROP CONSTRAINT IF EXISTS dcim_logical_connections_fk_a_device CASCADE;
+ALTER TABLE dcim.logical_connections ADD CONSTRAINT dcim_logical_connections_fk_a_device FOREIGN KEY (a_logical_device_id)
+REFERENCES dcim.logical_devices (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_logical_connections_fk_b_device | type: CONSTRAINT --
+-- ALTER TABLE dcim.logical_connections DROP CONSTRAINT IF EXISTS dcim_logical_connections_fk_b_device CASCADE;
+ALTER TABLE dcim.logical_connections ADD CONSTRAINT dcim_logical_connections_fk_b_device FOREIGN KEY (b_logical_device_id)
+REFERENCES dcim.logical_devices (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_logical_device_layouts_fk_device | type: CONSTRAINT --
+-- ALTER TABLE dcim.logical_device_layouts DROP CONSTRAINT IF EXISTS dcim_logical_device_layouts_fk_device CASCADE;
+ALTER TABLE dcim.logical_device_layouts ADD CONSTRAINT dcim_logical_device_layouts_fk_device FOREIGN KEY (logical_device_id)
+REFERENCES dcim.logical_devices (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_placements_fk_asset | type: CONSTRAINT --
+-- ALTER TABLE dcim.placements DROP CONSTRAINT IF EXISTS dcim_placements_fk_asset CASCADE;
+ALTER TABLE dcim.placements ADD CONSTRAINT dcim_placements_fk_asset FOREIGN KEY (asset_id)
+REFERENCES dcim.assets (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_placements_fk_rack | type: CONSTRAINT --
+-- ALTER TABLE dcim.placements DROP CONSTRAINT IF EXISTS dcim_placements_fk_rack CASCADE;
+ALTER TABLE dcim.placements ADD CONSTRAINT dcim_placements_fk_rack FOREIGN KEY (rack_id)
+REFERENCES dcim.racks (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_placements_fk_parent | type: CONSTRAINT --
+-- ALTER TABLE dcim.placements DROP CONSTRAINT IF EXISTS dcim_placements_fk_parent CASCADE;
+ALTER TABLE dcim.placements ADD CONSTRAINT dcim_placements_fk_parent FOREIGN KEY (parent_placement_id)
+REFERENCES dcim.placements (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_placements_fk_port_definition | type: CONSTRAINT --
+-- ALTER TABLE dcim.placements DROP CONSTRAINT IF EXISTS dcim_placements_fk_port_definition CASCADE;
+ALTER TABLE dcim.placements ADD CONSTRAINT dcim_placements_fk_port_definition FOREIGN KEY (port_definition_id)
+REFERENCES dcim.port_definitions (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_placements_fk_logical_device | type: CONSTRAINT --
+-- ALTER TABLE dcim.placements DROP CONSTRAINT IF EXISTS dcim_placements_fk_logical_device CASCADE;
+ALTER TABLE dcim.placements ADD CONSTRAINT dcim_placements_fk_logical_device FOREIGN KEY (logical_device_id)
+REFERENCES dcim.logical_devices (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_physical_connections_fk_a_placement | type: CONSTRAINT --
+-- ALTER TABLE dcim.physical_connections DROP CONSTRAINT IF EXISTS dcim_physical_connections_fk_a_placement CASCADE;
+ALTER TABLE dcim.physical_connections ADD CONSTRAINT dcim_physical_connections_fk_a_placement FOREIGN KEY (a_placement_id)
+REFERENCES dcim.placements (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_physical_connections_fk_a_port | type: CONSTRAINT --
+-- ALTER TABLE dcim.physical_connections DROP CONSTRAINT IF EXISTS dcim_physical_connections_fk_a_port CASCADE;
+ALTER TABLE dcim.physical_connections ADD CONSTRAINT dcim_physical_connections_fk_a_port FOREIGN KEY (a_port_definition_id)
+REFERENCES dcim.port_definitions (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_physical_connections_fk_b_placement | type: CONSTRAINT --
+-- ALTER TABLE dcim.physical_connections DROP CONSTRAINT IF EXISTS dcim_physical_connections_fk_b_placement CASCADE;
+ALTER TABLE dcim.physical_connections ADD CONSTRAINT dcim_physical_connections_fk_b_placement FOREIGN KEY (b_placement_id)
+REFERENCES dcim.placements (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_physical_connections_fk_b_port | type: CONSTRAINT --
+-- ALTER TABLE dcim.physical_connections DROP CONSTRAINT IF EXISTS dcim_physical_connections_fk_b_port CASCADE;
+ALTER TABLE dcim.physical_connections ADD CONSTRAINT dcim_physical_connections_fk_b_port FOREIGN KEY (b_port_definition_id)
+REFERENCES dcim.port_definitions (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_physical_connections_fk_cable_asset | type: CONSTRAINT --
+-- ALTER TABLE dcim.physical_connections DROP CONSTRAINT IF EXISTS dcim_physical_connections_fk_cable_asset CASCADE;
+ALTER TABLE dcim.physical_connections ADD CONSTRAINT dcim_physical_connections_fk_cable_asset FOREIGN KEY (cable_asset_id)
+REFERENCES dcim.assets (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_physical_connections_fk_logical_connection | type: CONSTRAINT --
+-- ALTER TABLE dcim.physical_connections DROP CONSTRAINT IF EXISTS dcim_physical_connections_fk_logical_connection CASCADE;
+ALTER TABLE dcim.physical_connections ADD CONSTRAINT dcim_physical_connections_fk_logical_connection FOREIGN KEY (logical_connection_id)
+REFERENCES dcim.logical_connections (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_device_catalog | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_device_catalog CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_device_catalog FOREIGN KEY (device_catalog_id)
+REFERENCES dcim.device_catalogs (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_port_definition | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_port_definition CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_port_definition FOREIGN KEY (port_definition_id)
+REFERENCES dcim.port_definitions (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_asset | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_asset CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_asset FOREIGN KEY (asset_id)
+REFERENCES dcim.assets (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_site | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_site CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_site FOREIGN KEY (site_id)
+REFERENCES dcim.sites (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_room | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_room CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_room FOREIGN KEY (room_id)
+REFERENCES dcim.rooms (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_rack_row | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_rack_row CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_rack_row FOREIGN KEY (rack_row_id)
+REFERENCES dcim.rack_rows (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_rack | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_rack CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_rack FOREIGN KEY (rack_id)
+REFERENCES dcim.racks (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_placement | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_placement CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_placement FOREIGN KEY (placement_id)
+REFERENCES dcim.placements (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_physical_connection | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_physical_connection CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_physical_connection FOREIGN KEY (physical_connection_id)
+REFERENCES dcim.physical_connections (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_logical_design | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_logical_design CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_logical_design FOREIGN KEY (logical_design_id)
+REFERENCES dcim.logical_designs (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_logical_device | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_logical_device CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_logical_device FOREIGN KEY (logical_device_id)
+REFERENCES dcim.logical_devices (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_logical_connection | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_logical_connection CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_logical_connection FOREIGN KEY (logical_connection_id)
+REFERENCES dcim.logical_connections (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -2596,6 +3171,22 @@ GRANT SELECT
 GRANT SELECT,INSERT,UPDATE,DELETE
    ON TABLE tenant.idempotency_keys
    TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_14773564a0" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA dcim
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_b7ac85ec57 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.sites
+   TO fun_dcim_api;
 
 -- ddl-end --
 

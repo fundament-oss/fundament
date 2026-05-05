@@ -11,6 +11,14 @@ const (
 	ConstraintApiKeysUqName = "api_keys_uq_name"
 	// ConstraintApiKeysUqTokenHash is defined on authn.api_keys.
 	ConstraintApiKeysUqTokenHash = "api_keys_uq_token_hash"
+	// ConstraintAssetEventsCkEventType is defined on dcim.asset_events.
+	ConstraintAssetEventsCkEventType = "asset_events_ck_event_type"
+	// ConstraintAssetsCkStatus is defined on dcim.assets.
+	ConstraintAssetsCkStatus = "assets_ck_status"
+	// ConstraintAssetsUqAssetTag is defined on dcim.assets.
+	ConstraintAssetsUqAssetTag = "assets_uq_asset_tag"
+	// ConstraintAssetsUqSerialNumber is defined on dcim.assets.
+	ConstraintAssetsUqSerialNumber = "assets_uq_serial_number"
 	// ConstraintCategoriesUqName is defined on appstore.categories.
 	ConstraintCategoriesUqName = "categories_uq_name"
 	// ConstraintClusterEventsCkEventType is defined on tenant.cluster_events.
@@ -39,6 +47,84 @@ const (
 	ConstraintClustersFkOrganization = "clusters_fk_organization"
 	// ConstraintClustersUqName is defined on tenant.clusters.
 	ConstraintClustersUqName = "clusters_uq_name"
+	// ConstraintDcimAssetEventsFkAsset is defined on dcim.asset_events.
+	ConstraintDcimAssetEventsFkAsset = "dcim_asset_events_fk_asset"
+	// ConstraintDcimAssetsFkDeviceCatalog is defined on dcim.assets.
+	ConstraintDcimAssetsFkDeviceCatalog = "dcim_assets_fk_device_catalog"
+	// ConstraintDcimLogicalConnectionsFkADevice is defined on dcim.logical_connections.
+	ConstraintDcimLogicalConnectionsFkADevice = "dcim_logical_connections_fk_a_device"
+	// ConstraintDcimLogicalConnectionsFkBDevice is defined on dcim.logical_connections.
+	ConstraintDcimLogicalConnectionsFkBDevice = "dcim_logical_connections_fk_b_device"
+	// ConstraintDcimLogicalConnectionsFkDesign is defined on dcim.logical_connections.
+	ConstraintDcimLogicalConnectionsFkDesign = "dcim_logical_connections_fk_design"
+	// ConstraintDcimLogicalDeviceLayoutsFkDevice is defined on dcim.logical_device_layouts.
+	ConstraintDcimLogicalDeviceLayoutsFkDevice = "dcim_logical_device_layouts_fk_device"
+	// ConstraintDcimLogicalDevicesFkCatalog is defined on dcim.logical_devices.
+	ConstraintDcimLogicalDevicesFkCatalog = "dcim_logical_devices_fk_catalog"
+	// ConstraintDcimLogicalDevicesFkDesign is defined on dcim.logical_devices.
+	ConstraintDcimLogicalDevicesFkDesign = "dcim_logical_devices_fk_design"
+	// ConstraintDcimNotesFkAsset is defined on dcim.notes.
+	ConstraintDcimNotesFkAsset = "dcim_notes_fk_asset"
+	// ConstraintDcimNotesFkDeviceCatalog is defined on dcim.notes.
+	ConstraintDcimNotesFkDeviceCatalog = "dcim_notes_fk_device_catalog"
+	// ConstraintDcimNotesFkLogicalConnection is defined on dcim.notes.
+	ConstraintDcimNotesFkLogicalConnection = "dcim_notes_fk_logical_connection"
+	// ConstraintDcimNotesFkLogicalDesign is defined on dcim.notes.
+	ConstraintDcimNotesFkLogicalDesign = "dcim_notes_fk_logical_design"
+	// ConstraintDcimNotesFkLogicalDevice is defined on dcim.notes.
+	ConstraintDcimNotesFkLogicalDevice = "dcim_notes_fk_logical_device"
+	// ConstraintDcimNotesFkPhysicalConnection is defined on dcim.notes.
+	ConstraintDcimNotesFkPhysicalConnection = "dcim_notes_fk_physical_connection"
+	// ConstraintDcimNotesFkPlacement is defined on dcim.notes.
+	ConstraintDcimNotesFkPlacement = "dcim_notes_fk_placement"
+	// ConstraintDcimNotesFkPortDefinition is defined on dcim.notes.
+	ConstraintDcimNotesFkPortDefinition = "dcim_notes_fk_port_definition"
+	// ConstraintDcimNotesFkRack is defined on dcim.notes.
+	ConstraintDcimNotesFkRack = "dcim_notes_fk_rack"
+	// ConstraintDcimNotesFkRackRow is defined on dcim.notes.
+	ConstraintDcimNotesFkRackRow = "dcim_notes_fk_rack_row"
+	// ConstraintDcimNotesFkRoom is defined on dcim.notes.
+	ConstraintDcimNotesFkRoom = "dcim_notes_fk_room"
+	// ConstraintDcimNotesFkSite is defined on dcim.notes.
+	ConstraintDcimNotesFkSite = "dcim_notes_fk_site"
+	// ConstraintDcimPhysicalConnectionsFkAPlacement is defined on dcim.physical_connections.
+	ConstraintDcimPhysicalConnectionsFkAPlacement = "dcim_physical_connections_fk_a_placement"
+	// ConstraintDcimPhysicalConnectionsFkAPort is defined on dcim.physical_connections.
+	ConstraintDcimPhysicalConnectionsFkAPort = "dcim_physical_connections_fk_a_port"
+	// ConstraintDcimPhysicalConnectionsFkBPlacement is defined on dcim.physical_connections.
+	ConstraintDcimPhysicalConnectionsFkBPlacement = "dcim_physical_connections_fk_b_placement"
+	// ConstraintDcimPhysicalConnectionsFkBPort is defined on dcim.physical_connections.
+	ConstraintDcimPhysicalConnectionsFkBPort = "dcim_physical_connections_fk_b_port"
+	// ConstraintDcimPhysicalConnectionsFkCableAsset is defined on dcim.physical_connections.
+	ConstraintDcimPhysicalConnectionsFkCableAsset = "dcim_physical_connections_fk_cable_asset"
+	// ConstraintDcimPhysicalConnectionsFkLogicalConnection is defined on dcim.physical_connections.
+	ConstraintDcimPhysicalConnectionsFkLogicalConnection = "dcim_physical_connections_fk_logical_connection"
+	// ConstraintDcimPlacementsFkAsset is defined on dcim.placements.
+	ConstraintDcimPlacementsFkAsset = "dcim_placements_fk_asset"
+	// ConstraintDcimPlacementsFkLogicalDevice is defined on dcim.placements.
+	ConstraintDcimPlacementsFkLogicalDevice = "dcim_placements_fk_logical_device"
+	// ConstraintDcimPlacementsFkParent is defined on dcim.placements.
+	ConstraintDcimPlacementsFkParent = "dcim_placements_fk_parent"
+	// ConstraintDcimPlacementsFkPortDefinition is defined on dcim.placements.
+	ConstraintDcimPlacementsFkPortDefinition = "dcim_placements_fk_port_definition"
+	// ConstraintDcimPlacementsFkRack is defined on dcim.placements.
+	ConstraintDcimPlacementsFkRack = "dcim_placements_fk_rack"
+	// ConstraintDcimPortCompatibilitiesFkCatalog is defined on dcim.port_compatibilities.
+	ConstraintDcimPortCompatibilitiesFkCatalog = "dcim_port_compatibilities_fk_catalog"
+	// ConstraintDcimPortCompatibilitiesFkPortDefinition is defined on dcim.port_compatibilities.
+	ConstraintDcimPortCompatibilitiesFkPortDefinition = "dcim_port_compatibilities_fk_port_definition"
+	// ConstraintDcimPortDefinitionsFkDeviceCatalog is defined on dcim.port_definitions.
+	ConstraintDcimPortDefinitionsFkDeviceCatalog = "dcim_port_definitions_fk_device_catalog"
+	// ConstraintDcimRackRowsFkRoom is defined on dcim.rack_rows.
+	ConstraintDcimRackRowsFkRoom = "dcim_rack_rows_fk_room"
+	// ConstraintDcimRacksFkRackRow is defined on dcim.racks.
+	ConstraintDcimRacksFkRackRow = "dcim_racks_fk_rack_row"
+	// ConstraintDcimRoomsFkSite is defined on dcim.rooms.
+	ConstraintDcimRoomsFkSite = "dcim_rooms_fk_site"
+	// ConstraintDeviceCatalogsCkCategory is defined on dcim.device_catalogs.
+	ConstraintDeviceCatalogsCkCategory = "device_catalogs_ck_category"
+	// ConstraintDeviceCatalogsUqManufacturerModel is defined on dcim.device_catalogs.
+	ConstraintDeviceCatalogsUqManufacturerModel = "device_catalogs_uq_manufacturer_model"
 	// ConstraintIdempotencyKeysCkSingleFk is defined on tenant.idempotency_keys.
 	ConstraintIdempotencyKeysCkSingleFk = "idempotency_keys_ck_single_fk"
 	// ConstraintIdempotencyKeysFkApiKey is defined on tenant.idempotency_keys.
@@ -59,6 +145,16 @@ const (
 	ConstraintIdempotencyKeysFkUser = "idempotency_keys_fk_user"
 	// ConstraintIdempotencyKeysUqKeyUser is defined on tenant.idempotency_keys.
 	ConstraintIdempotencyKeysUqKeyUser = "idempotency_keys_uq_key_user"
+	// ConstraintLogicalConnectionsCkConnectionType is defined on dcim.logical_connections.
+	ConstraintLogicalConnectionsCkConnectionType = "logical_connections_ck_connection_type"
+	// ConstraintLogicalDesignsCkStatus is defined on dcim.logical_designs.
+	ConstraintLogicalDesignsCkStatus = "logical_designs_ck_status"
+	// ConstraintLogicalDesignsUqName is defined on dcim.logical_designs.
+	ConstraintLogicalDesignsUqName = "logical_designs_uq_name"
+	// ConstraintLogicalDevicesCkRole is defined on dcim.logical_devices.
+	ConstraintLogicalDevicesCkRole = "logical_devices_ck_role"
+	// ConstraintLogicalDevicesUqDesignLabel is defined on dcim.logical_devices.
+	ConstraintLogicalDevicesUqDesignLabel = "logical_devices_uq_design_label"
 	// ConstraintNamespacesCkName is defined on tenant.namespaces.
 	ConstraintNamespacesCkName = "namespaces_ck_name"
 	// ConstraintNamespacesFkProject is defined on tenant.namespaces.
@@ -69,6 +165,8 @@ const (
 	ConstraintNodePoolsFkCluster = "node_pools_fk_cluster"
 	// ConstraintNodePoolsUqName is defined on tenant.node_pools.
 	ConstraintNodePoolsUqName = "node_pools_uq_name"
+	// ConstraintNotesCkSingleRef is defined on dcim.notes.
+	ConstraintNotesCkSingleRef = "notes_ck_single_ref"
 	// ConstraintOrganizationLimitsCkCpuLimitGteRequest is defined on tenant.organization_limits.
 	ConstraintOrganizationLimitsCkCpuLimitGteRequest = "organization_limits_ck_cpu_limit_gte_request"
 	// ConstraintOrganizationLimitsCkDefaultCpuLimitM is defined on tenant.organization_limits.
@@ -125,6 +223,12 @@ const (
 	ConstraintOutboxFkProject = "outbox_fk_project"
 	// ConstraintOutboxFkProjectMember is defined on authz.outbox.
 	ConstraintOutboxFkProjectMember = "outbox_fk_project_member"
+	// ConstraintPlacementsCkExclusiveArc is defined on dcim.placements.
+	ConstraintPlacementsCkExclusiveArc = "placements_ck_exclusive_arc"
+	// ConstraintPlacementsCkSlotType is defined on dcim.placements.
+	ConstraintPlacementsCkSlotType = "placements_ck_slot_type"
+	// ConstraintPlacementsCkUnitStart is defined on dcim.placements.
+	ConstraintPlacementsCkUnitStart = "placements_ck_unit_start"
 	// ConstraintPluginDocumentationLinksFkPlugin is defined on appstore.plugin_documentation_links.
 	ConstraintPluginDocumentationLinksFkPlugin = "plugin_documentation_links_fk_plugin"
 	// ConstraintPluginsCategoriesCategoryId is defined on appstore.categories_plugins.
@@ -141,6 +245,14 @@ const (
 	ConstraintPluginsTagsTagId = "plugins_tags_tag_id"
 	// ConstraintPluginsUqName is defined on appstore.plugins.
 	ConstraintPluginsUqName = "plugins_uq_name"
+	// ConstraintPortCompatibilitiesCkCompatibleCategory is defined on dcim.port_compatibilities.
+	ConstraintPortCompatibilitiesCkCompatibleCategory = "port_compatibilities_ck_compatible_category"
+	// ConstraintPortDefinitionsCkDirection is defined on dcim.port_definitions.
+	ConstraintPortDefinitionsCkDirection = "port_definitions_ck_direction"
+	// ConstraintPortDefinitionsCkPortType is defined on dcim.port_definitions.
+	ConstraintPortDefinitionsCkPortType = "port_definitions_ck_port_type"
+	// ConstraintPortDefinitionsUqCatalogName is defined on dcim.port_definitions.
+	ConstraintPortDefinitionsUqCatalogName = "port_definitions_uq_catalog_name"
 	// ConstraintPresetsUqName is defined on appstore.presets.
 	ConstraintPresetsUqName = "presets_uq_name"
 	// ConstraintProjectLimitsCkCpuLimitGteRequest is defined on tenant.project_limits.
@@ -171,8 +283,16 @@ const (
 	ConstraintProjectsFkCluster = "projects_fk_cluster"
 	// ConstraintProjectsUqClusterName is defined on tenant.projects.
 	ConstraintProjectsUqClusterName = "projects_uq_cluster_name"
+	// ConstraintRackRowsUqRoomName is defined on dcim.rack_rows.
+	ConstraintRackRowsUqRoomName = "rack_rows_uq_room_name"
+	// ConstraintRacksUqRackRowName is defined on dcim.racks.
+	ConstraintRacksUqRackRowName = "racks_uq_rack_row_name"
 	// ConstraintRequireAdmin is defined on (constraint trigger).
 	ConstraintRequireAdmin = "require_admin"
+	// ConstraintRoomsUqSiteName is defined on dcim.rooms.
+	ConstraintRoomsUqSiteName = "rooms_uq_site_name"
+	// ConstraintSitesUqName is defined on dcim.sites.
+	ConstraintSitesUqName = "sites_uq_name"
 	// ConstraintTagsUqName is defined on appstore.tags.
 	ConstraintTagsUqName = "tags_uq_name"
 	// ConstraintUsersUqExternalRef is defined on tenant.users.

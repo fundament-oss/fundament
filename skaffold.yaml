@@ -64,6 +64,16 @@ build:
       docker:
         dockerfile: plugin-controller/Dockerfile
 
+    - image: dcim-api
+      context: .
+      docker:
+        dockerfile: dcim-api/Dockerfile
+
+    - image: dcim-frontend
+      context: .
+      docker:
+        dockerfile: dcim-frontend/Dockerfile
+
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheck: true
@@ -86,6 +96,8 @@ deploy:
           images.kubeApiProxy: "{{.IMAGE_FULLY_QUALIFIED_kube_api_proxy}}"
           images.openfgaSetup: "{{.IMAGE_FULLY_QUALIFIED_openfga_setup}}"
           images.pluginController: "{{.IMAGE_FULLY_QUALIFIED_plugin_controller}}"
+          images.dcimApi: "{{.IMAGE_FULLY_QUALIFIED_dcim_api}}"
+          images.dcimFrontend: "{{.IMAGE_FULLY_QUALIFIED_dcim_frontend}}"
 
 profiles:
   - name: env-local
@@ -167,6 +179,18 @@ profiles:
         value: kube-api-proxy/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/7/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/10/docker/dockerfile
+        value: dcim-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/10/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/11/docker/dockerfile
+        value: dcim-frontend/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/11/sync
         value: {}
 
   # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)

@@ -14,6 +14,8 @@ externalUrls:
   corsAllowedOrigins: "" # e.g., "https://console.example.com" (space-separated; defaults to console URL if empty)
   console: "" # e.g., https://app.example.com
   docs: "" # e.g., https://docs.example.com
+  dcimApi: "" # e.g., https://dcim-api.example.com
+  dcim: "" # e.g., https://dcim.example.com
   cookieDomain: "" # e.g., example.com
 
 # Container images
@@ -28,6 +30,8 @@ images:
   kubeApiProxy: ghcr.io/fundament-oss/fundament/kube-api-proxy:latest
   openfgaSetup: ghcr.io/fundament-oss/fundament/openfga-setup:latest
   pluginController: ghcr.io/fundament-oss/fundament/plugin-controller:latest
+  dcimApi: ghcr.io/fundament-oss/fundament/dcim-api:latest
+  dcimFrontend: ghcr.io/fundament-oss/fundament/dcim-frontend:latest
 
 # Database (CloudNativePG)
 db:
@@ -126,6 +130,25 @@ openfga:
 pluginController:
   enabled: false
   logLevel: info
+
+# DCIM API
+dcimApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# DCIM Frontend
+dcimFrontend:
+  enabled: false
+  replicas: 1
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
 
 # Dex (OIDC Identity Provider)
 dex:

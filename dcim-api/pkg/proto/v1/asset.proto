@@ -1,0 +1,130 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+import "v1/common.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// Asset is a physical inventory item (core.assets).
+// Physical location is tracked via Placement, not stored on the asset itself.
+message Asset {
+  string                    id                = 10;
+  string                    device_catalog_id = 20;
+  AssetStatus               status            = 30;
+  // serial_number is absent for asset types that do not carry one (e.g. cables).
+  string                    serial_number     = 40 [features.field_presence = EXPLICIT];
+  string                    asset_tag         = 50 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp purchase_date     = 60 [features.field_presence = EXPLICIT];
+  string                    purchase_order    = 70 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp warranty_expiry   = 80 [features.field_presence = EXPLICIT];
+  string                    notes             = 90;
+  google.protobuf.Timestamp created           = 100;
+  google.protobuf.Timestamp deleted           = 110 [features.field_presence = EXPLICIT];
+}
+
+message AssetStats {
+  int32 total          = 10;
+  int32 in_stock       = 20;
+  int32 deployed       = 30;
+  int32 available      = 40;
+  int32 rma            = 50;
+  int32 decommissioned = 60;
+}
+
+enum AssetSortField {
+  ASSET_SORT_FIELD_UNSPECIFIED     = 0;
+  ASSET_SORT_FIELD_STATUS          = 10;
+  ASSET_SORT_FIELD_SERIAL_NUMBER   = 20;
+  ASSET_SORT_FIELD_ASSET_TAG       = 30;
+  ASSET_SORT_FIELD_PURCHASE_DATE   = 40;
+  ASSET_SORT_FIELD_WARRANTY_EXPIRY = 50;
+}
+
+service AssetService {
+  rpc ListAssets    (ListAssetsRequest)     returns (ListAssetsResponse);
+  rpc GetAsset      (GetAssetRequest)       returns (GetAssetResponse);
+  rpc CreateAsset   (CreateAssetRequest)    returns (CreateAssetResponse);
+  rpc UpdateAsset   (UpdateAssetRequest)    returns (UpdateAssetResponse);
+  rpc DeleteAsset   (DeleteAssetRequest)    returns (DeleteAssetResponse);
+  rpc GetAssetEvents(GetAssetEventsRequest) returns (GetAssetEventsResponse);
+  rpc GetAssetStats (GetAssetStatsRequest)  returns (GetAssetStatsResponse);
+}
+
+message ListAssetsRequest {
+  AssetStatus    status_filter     = 10 [features.field_presence = EXPLICIT];
+  AssetCategory  category_filter   = 20 [features.field_presence = EXPLICIT];
+  string         device_catalog_id = 30 [features.field_presence = EXPLICIT];
+  string         search            = 40;
+  AssetSortField sort_by           = 50;
+  SortDirection  sort_direction    = 60;
+  bool           include_deleted   = 70;
+}
+
+message ListAssetsResponse {
+  repeated Asset assets = 10;
+}
+
+message GetAssetRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetAssetResponse {
+  Asset asset = 10;
+}
+
+message CreateAssetRequest {
+  string                    device_catalog_id = 10 [(buf.validate.field).string = {uuid: true}];
+  AssetStatus               status            = 20 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string                    serial_number     = 30 [features.field_presence = EXPLICIT];
+  string                    asset_tag         = 40 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp purchase_date     = 50 [features.field_presence = EXPLICIT];
+  string                    purchase_order    = 60 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp warranty_expiry   = 70 [features.field_presence = EXPLICIT];
+  string                    notes             = 80;
+}
+
+message CreateAssetResponse {
+  Asset asset = 10;
+}
+
+message UpdateAssetRequest {
+  string                    id              = 10 [(buf.validate.field).string = {uuid: true}];
+  AssetStatus               status          = 20 [features.field_presence = EXPLICIT];
+  string                    serial_number   = 30 [features.field_presence = EXPLICIT];
+  string                    asset_tag       = 40 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp warranty_expiry = 50 [features.field_presence = EXPLICIT];
+  string                    notes           = 60 [features.field_presence = EXPLICIT];
+}
+
+message UpdateAssetResponse {
+  Asset asset = 10;
+}
+
+message DeleteAssetRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteAssetResponse {}
+
+message GetAssetEventsRequest {
+  string asset_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetAssetEventsResponse {
+  repeated AssetEvent events = 10;
+}
+
+message GetAssetStatsRequest {
+  // Optionally scope counts to assets with a placement in a specific site.
+  string site_id = 10 [features.field_presence = EXPLICIT];
+}
+
+message GetAssetStatsResponse {
+  AssetStats stats = 10;
+}

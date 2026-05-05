@@ -1,0 +1,173 @@
+<!-- Identity strip (lintblauw) + topbar wrapped as single sticky unit -->
+<div class="sticky top-0 z-40">
+  <div class="h-1 bg-accent-750" aria-hidden="true"></div>
+
+  <header class="flex h-16 bg-white border-b border-slate-200" role="banner">
+    <!-- Brand -->
+    <div class="flex items-center px-6 border-r border-slate-200 shrink-0">
+      <a
+        routerLink="/"
+        aria-label="Fundament DCIM home"
+        class="flex items-center leading-tight gap-2"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5.5 w-5.5 text-indigo-600 dark:text-indigo-400"
+          viewBox="0 0 24 24"
+        >
+          <path
+            fill="currentColor"
+            d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
+          />
+        </svg>
+        <span class="font-semibold tracking-tight text-slate-900">
+          Fundament <span class="text-slate-400 font-normal ml-0.5">DCIM</span>
+        </span>
+      </a>
+    </div>
+
+    <!-- Primary navigation -->
+    <nav class="flex flex-1 items-stretch pl-1" aria-label="Main navigation">
+      <a
+        routerLink="/catalog"
+        routerLinkActive
+        #catalogLink="routerLinkActive"
+        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
+        [class]="
+          catalogLink.isActive
+            ? 'text-slate-900 font-medium border-accent-600'
+            : 'text-slate-500 border-transparent hover:text-slate-900'
+        "
+      >
+        <nldd-icon name="folder-stack" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
+        Catalog
+      </a>
+
+      <a
+        routerLink="/inventory"
+        routerLinkActive
+        #inventoryLink="routerLinkActive"
+        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
+        [class]="
+          inventoryLink.isActive
+            ? 'text-slate-900 font-medium border-accent-600'
+            : 'text-slate-500 border-transparent hover:text-slate-900'
+        "
+      >
+        <nldd-icon name="rectangle-stack" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
+        Inventory
+      </a>
+
+      <a
+        routerLink="/datacenters"
+        routerLinkActive
+        #dcLink="routerLinkActive"
+        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
+        [class]="
+          dcLink.isActive
+            ? 'text-slate-900 font-medium border-accent-600'
+            : 'text-slate-500 border-transparent hover:text-slate-900'
+        "
+      >
+        <nldd-icon name="apartment-building" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
+        Data centers
+      </a>
+
+      <a
+        routerLink="/racks"
+        routerLinkActive
+        #racksLink="routerLinkActive"
+        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
+        [class]="
+          racksLink.isActive
+            ? 'text-slate-900 font-medium border-accent-600'
+            : 'text-slate-500 border-transparent hover:text-slate-900'
+        "
+      >
+        <nldd-icon name="cylinder-split" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
+        Racks
+      </a>
+
+      <a
+        routerLink="/patch-mapping"
+        routerLinkActive
+        #patchLink="routerLinkActive"
+        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
+        [class]="
+          patchLink.isActive
+            ? 'text-slate-900 font-medium border-accent-600'
+            : 'text-slate-500 border-transparent hover:text-slate-900'
+        "
+      >
+        <nldd-icon name="list" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
+        Patch mapping
+      </a>
+
+      <a
+        routerLink="/designs"
+        routerLinkActive
+        #designsLink="routerLinkActive"
+        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
+        [class]="
+          designsLink.isActive
+            ? 'text-slate-900 font-medium border-accent-600'
+            : 'text-slate-500 border-transparent hover:text-slate-900'
+        "
+      >
+        <nldd-icon name="pencil-on-square" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
+        Designs
+      </a>
+
+      <a
+        routerLink="/task-management-admin"
+        routerLinkActive
+        #tasksLink="routerLinkActive"
+        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
+        [class]="
+          tasksLink.isActive
+            ? 'text-slate-900 font-medium border-accent-600'
+            : 'text-slate-500 border-transparent hover:text-slate-900'
+        "
+      >
+        <nldd-icon name="check-mark-circle" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
+        Tasks
+      </a>
+    </nav>
+
+    <!-- User section -->
+    <div class="flex items-center gap-3 px-6 border-l border-slate-200 shrink-0">
+      <button
+        class="relative flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+        aria-label="Notifications"
+      >
+        <nldd-icon name="inbox" class="w-5 h-5" aria-hidden="true"></nldd-icon>
+        <span
+          class="absolute right-2 top-2 h-1.75 w-1.75 rounded-full bg-red-600 border-2 border-white"
+          aria-hidden="true"
+        ></span>
+      </button>
+
+      <button
+        class="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+        aria-label="Help"
+      >
+        <nldd-icon name="question-mark-circle" class="w-5 h-5" aria-hidden="true"></nldd-icon>
+      </button>
+
+      <div class="text-right leading-tight hidden sm:block">
+        <div class="text-sm text-slate-900">Piet Bakker</div>
+        <div class="text-xs text-slate-400">Admin</div>
+      </div>
+
+      <div
+        class="h-8 w-8 rounded-full bg-[#154273] flex items-center justify-center text-white text-xs font-medium select-none shrink-0"
+        aria-label="User avatar: Piet Bakker"
+        role="img"
+      >
+        PB
+      </div>
+    </div>
+  </header>
+</div>
+
+<router-outlet />

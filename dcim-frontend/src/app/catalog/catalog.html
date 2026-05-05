@@ -1,0 +1,346 @@
+<!-- ══════════════════════════════════════════════════════════════
+     SUBBAR
+     ══════════════════════════════════════════════════════════════ -->
+<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
+  <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0 flex-1">Catalog</h1>
+  <div class="flex items-center gap-2 shrink-0">
+    <nldd-button
+      variant="accent-filled"
+      text="Add product"
+      start-icon="plus-small"
+      size="sm"
+      (click)="openCreateEntry()"
+    ></nldd-button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TOOLBAR
+     ══════════════════════════════════════════════════════════════ -->
+<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-2.5 flex items-center gap-2.5">
+  <div class="max-w-xs w-full">
+    <nldd-search-field
+      accessible-label="Search catalog"
+      placeholder="Search models…"
+      start-icon="magnifier"
+      [value]="searchQuery()"
+      (input)="searchQuery.set($any($event.target).value)"
+      class="block w-full"
+      size="sm"
+    >
+    </nldd-search-field>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     BODY (sidebar + main)
+     ══════════════════════════════════════════════════════════════ -->
+<div class="flex flex-1 min-h-0">
+  <!-- ── LEFT SIDEBAR: Category nav ────────────────────────────── -->
+  <aside
+    class="w-60 shrink-0 border-r border-slate-200 bg-white flex flex-col overflow-y-auto"
+    aria-label="Category filter"
+  >
+    <div class="px-4 py-3">
+      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+        Categories
+      </p>
+
+      <button
+        (click)="selectCategory('all')"
+        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+        [class]="
+          categoryFilter() === 'all'
+            ? 'bg-accent-50 text-accent-700 font-medium'
+            : 'text-slate-600 hover:bg-slate-50'
+        "
+      >
+        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
+        <span class="flex-1 text-left">All categories</span>
+        <span class="text-xs text-slate-400">{{ totalProducts() }}</span>
+      </button>
+
+      @for (cat of categories; track cat) {
+        <button
+          (click)="selectCategory(cat)"
+          class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+          [class]="
+            categoryFilter() === cat
+              ? 'bg-accent-50 text-accent-700 font-medium'
+              : 'text-slate-600 hover:bg-slate-50'
+          "
+        >
+          <nldd-icon
+            [name]="categoryIcon(cat)"
+            class="w-4 h-4 shrink-0"
+            aria-hidden="true"
+          ></nldd-icon>
+          <span class="flex-1 text-left">{{ cat }}</span>
+          @if (categoryCounts()[cat]) {
+            <span class="text-xs text-slate-400">{{ categoryCounts()[cat] }}</span>
+          }
+        </button>
+      }
+    </div>
+  </aside>
+
+  <!-- ── MAIN ───────────────────────────────────────────────────── -->
+  <main class="flex-1 min-w-0 overflow-y-auto" aria-label="Product catalog">
+    <div class="px-6 pb-6">
+      <!-- Stats row -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 pb-5">
+        <div
+          class="bg-white border border-slate-200 border-l-[3px] border-l-indigo-700 px-4 py-3.5 grid gap-1"
+        >
+          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Product Models</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ totalProducts() }}</p>
+          <p class="text-xs text-slate-400">across {{ categories.length }} categories</p>
+        </div>
+        <div
+          class="bg-white border border-slate-200 border-l-[3px] border-l-[#154273] px-4 py-3.5 grid gap-1"
+        >
+          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Total Assets</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ totalAssets() }}</p>
+          <p class="text-xs text-slate-400">across all categories</p>
+        </div>
+        <div
+          class="bg-white border border-slate-200 border-l-[3px] border-l-emerald-600 px-4 py-3.5 grid gap-1"
+        >
+          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Available</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ totalAvailable() }}</p>
+          <p class="text-xs text-slate-400">ready to deploy</p>
+        </div>
+        <div
+          class="bg-white border border-slate-200 border-l-[3px] border-l-amber-500 px-4 py-3.5 grid gap-1"
+        >
+          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Open Issues</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ totalIssues() }}</p>
+          <p class="text-xs text-slate-400">need attention</p>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div role="table" aria-label="Product catalog">
+        <!-- Column headers -->
+        <div role="row" class="flex items-center gap-3 border-b border-slate-100 py-2.5">
+          <div class="w-9 shrink-0"></div>
+          <div
+            class="flex-1 min-w-0 grid grid-cols-[1fr_110px_60px_60px_60px_60px_56px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 uppercase tracking-wide"
+          >
+            <span role="columnheader">Model</span>
+            <span role="columnheader" class="hidden sm:block">Category</span>
+            <span role="columnheader" class="hidden md:block text-right">Total</span>
+            <span role="columnheader" class="hidden md:block text-right">Deployed</span>
+            <span role="columnheader" class="hidden md:block text-right">Available</span>
+            <span role="columnheader" class="hidden md:block text-right">Issues</span>
+            <span role="columnheader"></span>
+          </div>
+        </div>
+
+        <!-- Catalog rows -->
+        @for (row of rows(); track row.entry.id) {
+          <a
+            role="row"
+            [routerLink]="['/catalog', row.entry.id]"
+            class="flex items-center gap-3 border-b border-slate-100 py-2.5 hover:bg-slate-50 transition-colors group cursor-pointer"
+          >
+            <div
+              role="cell"
+              class="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 group-hover:bg-slate-200 transition-colors"
+              [attr.aria-label]="row.entry.category"
+            >
+              <nldd-icon
+                [name]="categoryIcon(row.entry.category)"
+                class="w-4.5 h-4.5"
+                aria-hidden="true"
+              ></nldd-icon>
+            </div>
+
+            <div
+              class="flex-1 min-w-0 grid grid-cols-[1fr_110px_60px_60px_60px_60px_56px] gap-3 lg:gap-4 items-center"
+            >
+              <div role="cell" class="min-w-0">
+                <p class="truncate text-sm font-medium text-slate-900">{{ row.entry.model }}</p>
+                <p class="text-xs text-slate-400">{{ row.entry.manufacturer }}</p>
+              </div>
+
+              <div role="cell" class="hidden sm:block">
+                <span
+                  class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  [class]="categoryBadgeClass(row.entry.category)"
+                >
+                  {{ row.entry.category }}
+                </span>
+              </div>
+
+              <div role="cell" class="hidden md:block text-right">
+                <span class="text-sm font-semibold text-slate-700">{{ row.total }}</span>
+              </div>
+              <div role="cell" class="hidden md:block text-right">
+                <span class="text-sm font-semibold text-teal-600">{{ row.deployed }}</span>
+              </div>
+              <div role="cell" class="hidden md:block text-right">
+                <span class="text-sm font-semibold text-green-600">{{ row.available }}</span>
+              </div>
+              <div role="cell" class="hidden md:block text-right">
+                <span
+                  class="text-sm font-semibold"
+                  [class]="row.issues > 0 ? 'text-amber-600' : 'text-slate-300'"
+                  >{{ row.issues }}</span
+                >
+              </div>
+
+              <!-- Row actions -->
+              <div
+                role="cell"
+                class="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <nldd-icon-button
+                  icon="pencil-on-square"
+                  variant="neutral-transparent"
+                  size="xs"
+                  text="Edit entry"
+                  (click)="openEditEntry(row.entry, $event)"
+                ></nldd-icon-button>
+                <nldd-icon-button
+                  icon="trash"
+                  variant="neutral-transparent"
+                  size="xs"
+                  text="Delete entry"
+                  (click)="openDeleteEntry(row.entry, $event)"
+                ></nldd-icon-button>
+              </div>
+            </div>
+          </a>
+        }
+
+        <!-- Empty state -->
+        @if (rows().length === 0) {
+          <div class="flex flex-col items-center justify-center py-16 text-center">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400 mb-3"
+            >
+              <nldd-icon name="rectangle-stack" class="w-6 h-6" aria-hidden="true"></nldd-icon>
+            </div>
+            <p class="text-sm font-medium text-slate-600">No products found</p>
+            <p class="mt-1 text-xs text-slate-400">Try adjusting your search or filter.</p>
+          </div>
+        }
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     CATALOG ENTRY EDIT SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #entrySheet accessible-label="Catalog entry details" placement="right" width="480px">
+  <div class="flex flex-col h-full">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+      <h2 class="text-base font-semibold text-slate-900">
+        {{ editEntry()?.id ? 'Edit product' : 'New product' }}
+      </h2>
+      <nldd-icon-button
+        icon="dismiss"
+        variant="neutral-transparent"
+        size="sm"
+        text="Close"
+        (click)="closeEntryForm()"
+      ></nldd-icon-button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+      <nldd-form-field label="Model name">
+        <nldd-text-field
+          #fEntryModel
+          [attr.value]="editEntry()?.model ?? ''"
+          placeholder="E.g. Dell PowerEdge R750"
+        ></nldd-text-field>
+      </nldd-form-field>
+      <nldd-form-field label="Manufacturer">
+        <nldd-text-field
+          #fEntryMfr
+          [attr.value]="editEntry()?.manufacturer ?? ''"
+          placeholder="E.g. Dell Technologies"
+        ></nldd-text-field>
+      </nldd-form-field>
+      <nldd-form-field label="Category">
+        <nldd-dropdown #fEntryCat [attr.value]="editEntry()?.category ?? 'Server'">
+          @for (cat of categories; track cat) {
+            <nldd-dropdown-item [attr.value]="cat" [attr.label]="cat"></nldd-dropdown-item>
+          }
+        </nldd-dropdown>
+      </nldd-form-field>
+
+      <!-- Specs section -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-sm font-medium text-slate-700">Specifications</p>
+          <nldd-button
+            variant="neutral-tinted"
+            text="Add spec"
+            start-icon="plus-small"
+            size="xs"
+            (click)="addSpecRow()"
+          ></nldd-button>
+        </div>
+        <div class="flex flex-col gap-2">
+          @for (spec of specRows(); track $index; let i = $index) {
+            <div class="flex items-center gap-2">
+              <nldd-text-field
+                [attr.value]="spec.key"
+                placeholder="Key"
+                (input)="updateSpecKey(i, $event)"
+                class="flex-1"
+              ></nldd-text-field>
+              <nldd-text-field
+                [attr.value]="spec.value"
+                placeholder="Value"
+                (input)="updateSpecVal(i, $event)"
+                class="flex-1"
+              ></nldd-text-field>
+              <nldd-icon-button
+                icon="dismiss"
+                variant="neutral-transparent"
+                size="sm"
+                text="Remove spec"
+                (click)="removeSpecRow(i)"
+              ></nldd-icon-button>
+            </div>
+          }
+          @if (specRows().length === 0) {
+            <p class="text-xs text-slate-400 italic">
+              No specifications. Click "Add spec" to add one.
+            </p>
+          }
+        </div>
+      </div>
+    </div>
+    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
+      <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeEntryForm()"></nldd-button>
+      <nldd-button variant="accent-filled" text="Save" (click)="saveEntry()"></nldd-button>
+    </div>
+  </div>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     CATALOG ENTRY DELETE MODAL
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #entryModal
+  [attr.text]="'Delete \'' + (deleteEntry()?.model ?? '') + '\'?'"
+  supporting-text="This will remove the product from the catalog. Existing assets will not be affected."
+  accessible-label="Confirm catalog entry deletion"
+>
+  <nldd-button
+    slot="actions"
+    variant="neutral-tinted"
+    text="Cancel"
+    (click)="cancelDeleteEntry()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    (click)="confirmDeleteEntry()"
+  ></nldd-button>
+</nldd-modal-dialog>

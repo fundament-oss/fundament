@@ -1,0 +1,102 @@
+{{- if $.Values.dcimFrontend.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dcim-frontend-config
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "dcim-frontend" "component" "frontend") | nindent 4 }}
+data:
+  config.json: |
+    {
+      "apiUrl": "{{ $.Values.externalUrls.dcimApi }}"
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dcim-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "dcim-frontend" "component" "frontend") | nindent 4 }}
+spec:
+  replicas: {{ $.Values.dcimFrontend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "dcim-frontend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "fundament.labels" (dict "root" $ "name" "dcim-frontend" "component" "frontend") | nindent 8 }}
+    spec:
+      containers:
+        - name: dcim-frontend
+          image: {{ $.Values.images.dcimFrontend }}
+          env:
+            - name: CONNECT_SRC
+              value: "{{ $.Values.externalUrls.dcimApi }}"
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/nginx/html/assets/config
+              readOnly: true
+            - name: config
+              mountPath: /app/public/assets/config
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: dcim-frontend-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dcim-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "dcim-frontend" "component" "frontend") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      name: http
+  selector:
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "dcim-frontend") | nindent 4 }}
+
+{{- if $.Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dcim-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "dcim-frontend" "component" "frontend") | nindent 4 }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
+  {{- end }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  tls:
+    - hosts:
+        - dcim.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      secretName: dcim-frontend-tls
+  {{- end }}
+  rules:
+    - host: dcim.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dcim-frontend
+                port:
+                  name: http
+{{- end }}
+
+{{- end }}
