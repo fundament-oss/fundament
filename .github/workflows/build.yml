@@ -224,7 +224,7 @@ jobs:
             **1. Connect**
 
             ```bash
-            export KUBECONFIG=~/.kube/pinniped_apps-sandbox.yaml
+            export KUBECONFIG=~/.kube/pinniped_digikluster.yaml
             export NS=tn-fundament-pr-${{ env.PR_NUMBER }}
             kubectl -n $NS get pods
             ```
@@ -246,6 +246,7 @@ jobs:
             ```bash
             kubectl -n $NS get pods
             kubectl -n $NS get events --sort-by=.lastTimestamp
+            kubectl -n $NS describe pod <pod>   # readiness probes, env refs, and pod events
             kubectl -n $NS logs <pod>
             kubectl -n $NS logs <pod> --previous   # if the pod crashed
 
@@ -254,7 +255,19 @@ jobs:
             kubectl -n $NS get pods -l app.kubernetes.io/name=organization-api
             ```
 
-            **4. DB & migrations**
+            **4. OpenFGA / authorization config**
+
+            ```bash
+            # organization-api and kube-api-proxy readiness depend on OpenFGA.
+            kubectl -n $NS get configmap openfga-config -o yaml
+            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c setup
+            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c openfga --tail=100
+
+            # If consumers are still using an old store/model ID after setup patched openfga-config:
+            kubectl -n $NS rollout restart deployment/organization-api deployment/kube-api-proxy
+            ```
+
+            **5. DB & migrations**
 
             ```bash
             kubectl -n $NS get cluster.postgresql.cnpg.io/db
@@ -265,14 +278,14 @@ jobs:
             kubectl -n $NS logs job/db-migrations -c migrations
             ```
 
-            **5. Routes & TLS**
+            **6. Routes & TLS**
 
             ```bash
             kubectl -n $NS get httproutes
             kubectl -n istio-gateway get certificate tn-fundament-pr-${{ env.PR_NUMBER }}-wildcard-tls
             ```
 
-            **6. Nothing deployed at all?**
+            **7. Nothing deployed at all?**
 
             If the namespace is missing, the PR overlay never reached the cluster. Check the [PR overlay in the Flux repo](https://${{ vars.GITLAB_REPO_HOST }}/${{ vars.GITLAB_REPO_PATH }}/-/tree/master/apps/fundament/overlays/pr/pr-${{ env.PR_NUMBER }}) — if it's not there, the CI push to the Flux repo failed; if it is, the cluster-level Flux reconciliation is stuck.
             </details>
