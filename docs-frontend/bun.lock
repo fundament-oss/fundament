@@ -9,7 +9,7 @@
         "@astrojs/mdx": "4.3.13",
         "@astrojs/starlight": "0.37.3",
         "@fortawesome/fontawesome-free": "7.1.0",
-        "@nldd/design-system": "^0.8.37",
+        "@nldd/design-system": "0.8.37",
         "@tailwindcss/vite": "4.1.18",
         "astro": "5.18.1",
         "astro-asciidoc": "0.1.0",
@@ -17,7 +17,6 @@
       },
       "devDependencies": {
         "@astrojs/check": "0.9.6",
-        "@eslint/js": "9.39.2",
         "@typescript-eslint/parser": "8.53.1",
         "astro-eslint-parser": "1.2.2",
         "eslint": "9.39.2",
