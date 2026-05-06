@@ -2068,8 +2068,6 @@ export default class InventoryComponent {
 
   locationFilter = signal<string>('all');
 
-  showDecommissioned = signal(false);
-
   sortColumn = signal<SortableColumn>('status');
 
   sortDirection = signal<'asc' | 'desc'>('asc');
@@ -2143,12 +2141,12 @@ export default class InventoryComponent {
   ].sort();
 
   readonly statuses: { value: AssetStatus; label: string }[] = [
-    { value: 'needs-repair', label: 'Needs Repair' },
-    { value: 'decommissioned', label: 'Decommissioned' },
     { value: 'deployed', label: 'Deployed' },
     { value: 'available', label: 'Available' },
     { value: 'on-order', label: 'On Order' },
     { value: 'requested', label: 'Requested' },
+    { value: 'needs-repair', label: 'Needs Repair' },
+    { value: 'decommissioned', label: 'Decommissioned' },
   ];
 
   private readonly filtered = computed(() => {
@@ -2156,11 +2154,9 @@ export default class InventoryComponent {
     const status = this.statusFilter();
     const category = this.categoryFilter();
     const location = this.locationFilter();
-    const showDecomm = this.showDecommissioned();
 
     return this.mutableAssets().filter((a) => {
       if (a.parentId) return false; // sub-assets are shown as children, not in top-level list
-      if (status === 'all' && !showDecomm && a.status === 'decommissioned') return false;
       if (status !== 'all' && a.status !== status) return false;
       if (category !== 'all' && a.category !== category) return false;
       if (location !== 'all' && a.datacenter !== location) return false;

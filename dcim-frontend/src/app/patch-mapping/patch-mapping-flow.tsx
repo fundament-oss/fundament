@@ -1,6 +1,5 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import ReactFlow, {
-  addEdge,
   Background,
   Controls,
   MiniMap,
@@ -8,48 +7,58 @@ import ReactFlow, {
   useEdgesState,
   Handle,
   Position,
-  Connection,
+  ConnectionMode,
   NodeProps,
   Node,
   Edge,
-  ConnectionMode,
 } from 'reactflow';
+import { Cable, CABLE_COLOR_HEX, Port } from './cable.model';
 
-// --- Custom Device Node ---
+// ── Props ─────────────────────────────────────────────────────────────────────
+
+interface PatchMappingFlowProps {
+  cables: Cable[];
+  devicePorts: Record<string, Port[]>;
+  selectedCableId: string | null;
+  onCableClick: (id: string) => void;
+  onDeviceClick: (id: string) => void;
+}
+
+// ── Device node ───────────────────────────────────────────────────────────────
 
 interface DeviceNodeData {
   label: string;
-  type: 'server' | 'switch' | 'patch-panel';
+  deviceType: 'server' | 'switch' | 'patch' | 'pdu';
+  ports: Port[];
+  nodeId: string;
+  onDeviceClick: (id: string) => void;
 }
 
-const PORT_COUNT = 3;
-
-const deviceStyle: React.CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #94a3b8',
-  borderRadius: 4,
-  padding: '6px 16px',
-  fontSize: 11,
-  fontFamily: 'monospace',
-  width: 180,
-  position: 'relative',
+const TYPE_BADGE: Record<string, string> = {
+  server: 'SRV',
+  switch: 'SW',
+  patch: 'PP',
+  pdu: 'PDU',
 };
 
-const labelRowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-};
-
-const typeIconStyle: React.CSSProperties = {
-  fontSize: 10,
-  color: '#64748b',
-  background: '#f1f5f9',
-  borderRadius: 2,
-  padding: '1px 4px',
+const TYPE_COLOR: Record<string, string> = {
+  server: '#dbeafe',
+  switch: '#d1fae5',
+  patch: '#fef3c7',
+  pdu: '#ede9fe',
 };
 
 function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
+  const leftPorts = data.ports.filter(
+    (p) =>
+      p.type === 'network-interface' ||
+      p.type === 'console-port' ||
+      p.type === 'console-server-port',
+  );
+  const rightPorts = data.ports.filter((p) => p.type === 'power-port' || p.type === 'power-outlet');
+
+  const height = Math.max(64, Math.max(leftPorts.length, rightPorts.length) * 18 + 36);
+
   const handleStyle = (index: number, total: number): React.CSSProperties => ({
     top: `${((index + 1) / (total + 1)) * 100}%`,
     width: 8,
@@ -60,38 +69,80 @@ function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
   });
 
   return (
-    <div style={deviceStyle}>
-      {Array.from({ length: PORT_COUNT }, (_, i) => (
+    <div
+      style={{
+        background: '#ffffff',
+        border: '1px solid #94a3b8',
+        borderRadius: 4,
+        padding: '6px 14px',
+        fontSize: 11,
+        fontFamily: 'monospace',
+        width: 190,
+        minHeight: height,
+        position: 'relative',
+        cursor: 'pointer',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+      }}
+      onClick={() => data.onDeviceClick(data.nodeId)}
+    >
+      {leftPorts.map((p, i) => (
         <Handle
-          key={`left-${i}`}
+          key={p.id}
           type="source"
           position={Position.Left}
-          id={`left-${i}`}
-          style={handleStyle(i, PORT_COUNT)}
+          id={p.id}
+          title={p.name}
+          style={handleStyle(i, leftPorts.length)}
         />
       ))}
 
-      <div style={labelRowStyle}>
-        <span style={typeIconStyle}>
-          {data.type === 'server' ? 'SRV' : data.type === 'switch' ? 'SW' : 'PP'}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span
+          style={{
+            fontSize: 9,
+            color: '#475569',
+            background: TYPE_COLOR[data.deviceType] ?? '#f1f5f9',
+            borderRadius: 2,
+            padding: '1px 4px',
+            fontWeight: 600,
+          }}
+        >
+          {TYPE_BADGE[data.deviceType] ?? data.deviceType.toUpperCase()}
         </span>
-        <span>{data.label}</span>
+        <span
+          style={{
+            color: '#1e293b',
+            fontWeight: 600,
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {data.label}
+        </span>
       </div>
 
-      {Array.from({ length: PORT_COUNT }, (_, i) => (
+      {leftPorts.length > 0 && (
+        <div style={{ marginTop: 4, fontSize: 9, color: '#94a3b8' }}>
+          {leftPorts.map((p) => p.name).join(' · ')}
+        </div>
+      )}
+
+      {rightPorts.map((p, i) => (
         <Handle
-          key={`right-${i}`}
+          key={p.id}
           type="source"
           position={Position.Right}
-          id={`right-${i}`}
-          style={handleStyle(i, PORT_COUNT)}
+          id={p.id}
+          title={p.name}
+          style={handleStyle(i, rightPorts.length)}
         />
       ))}
     </div>
   );
 }
 
-// --- Rack Node ---
+// ── Rack container node ───────────────────────────────────────────────────────
 
 function RackNode({ data }: NodeProps<{ label: string }>) {
   return (
@@ -99,7 +150,7 @@ function RackNode({ data }: NodeProps<{ label: string }>) {
       style={{
         width: '100%',
         height: '100%',
-        background: 'rgba(226, 232, 240, 0.4)',
+        background: 'rgba(226, 232, 240, 0.35)',
         border: '2px dashed #94a3b8',
         borderRadius: 6,
         pointerEvents: 'none',
@@ -112,9 +163,9 @@ function RackNode({ data }: NodeProps<{ label: string }>) {
           left: 12,
           fontSize: 11,
           fontFamily: 'monospace',
-          fontWeight: 600,
+          fontWeight: 700,
           color: '#475569',
-          letterSpacing: '0.05em',
+          letterSpacing: '0.06em',
           textTransform: 'uppercase',
           pointerEvents: 'none',
         }}
@@ -125,174 +176,177 @@ function RackNode({ data }: NodeProps<{ label: string }>) {
   );
 }
 
-// --- Node Types ---
-
 const nodeTypes = { device: DeviceNode, rack: RackNode };
 
-// --- Initial Nodes ---
+// ── Static layout for AMS-01 devices ─────────────────────────────────────────
+// Device IDs match rack.model.ts. Layout is position-only; ports come from props.
 
-const DEVICE_WIDTH = 180;
-const RACK_WIDTH = DEVICE_WIDTH + 40; // 220
+interface DeviceLayout {
+  id: string;
+  label: string;
+  deviceType: 'server' | 'switch' | 'patch' | 'pdu';
+  parentNode: string;
+  position: { x: number; y: number };
+}
 
-const initialNodes: Node[] = [
-  // Left rack group
+const RACK_LAYOUTS: {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}[] = [
+  { id: 'rack-r01', label: 'AMS-01-R01', x: 40, y: 40, width: 230, height: 480 },
+  { id: 'rack-r02', label: 'AMS-01-R02', x: 320, y: 40, width: 230, height: 360 },
+  { id: 'rack-r04', label: 'AMS-01-R04', x: 600, y: 40, width: 230, height: 200 },
+];
+
+const DEVICE_LAYOUTS: DeviceLayout[] = [
+  // R01
   {
-    id: 'rack-left',
-    type: 'rack',
-    position: { x: 50, y: 50 },
-    style: { width: RACK_WIDTH, height: 500 },
-    data: { label: 'Rack 1' },
-  },
-  // Left rack children
-  {
-    id: 'server-l1',
-    type: 'device',
-    parentNode: 'rack-left',
-    extent: 'parent' as const,
-    position: { x: 20, y: 60 },
-    data: { label: 'Server L1', type: 'server' },
-  },
-  {
-    id: 'server-l2',
-    type: 'device',
-    parentNode: 'rack-left',
-    extent: 'parent' as const,
-    position: { x: 20, y: 160 },
-    data: { label: 'Server L2', type: 'server' },
+    id: 'd-001',
+    label: 'tor-switch-01',
+    deviceType: 'switch',
+    parentNode: 'rack-r01',
+    position: { x: 20, y: 50 },
   },
   {
-    id: 'switch-l',
-    type: 'device',
-    parentNode: 'rack-left',
-    extent: 'parent' as const,
-    position: { x: 20, y: 270 },
-    data: { label: 'Switch L', type: 'switch' },
+    id: 'd-002',
+    label: 'patch-panel-01',
+    deviceType: 'patch',
+    parentNode: 'rack-r01',
+    position: { x: 20, y: 155 },
   },
   {
-    id: 'pp-l',
-    type: 'device',
-    parentNode: 'rack-left',
-    extent: 'parent' as const,
+    id: 'd-003',
+    label: 'server-01',
+    deviceType: 'server',
+    parentNode: 'rack-r01',
+    position: { x: 20, y: 260 },
+  },
+  {
+    id: 'd-008',
+    label: 'pdu-01',
+    deviceType: 'pdu',
+    parentNode: 'rack-r01',
     position: { x: 20, y: 390 },
-    data: { label: 'Patch Panel L', type: 'patch-panel' },
   },
-
-  // Right rack group
+  // R02
   {
-    id: 'rack-right',
-    type: 'rack',
-    position: { x: 420, y: 50 },
-    style: { width: RACK_WIDTH, height: 500 },
-    data: { label: 'Rack 2' },
-  },
-  // Right rack children
-  {
-    id: 'server-r1',
-    type: 'device',
-    parentNode: 'rack-right',
-    extent: 'parent' as const,
-    position: { x: 20, y: 60 },
-    data: { label: 'Server R1', type: 'server' },
+    id: 'd-101',
+    label: 'leaf-switch-01',
+    deviceType: 'switch',
+    parentNode: 'rack-r02',
+    position: { x: 20, y: 50 },
   },
   {
-    id: 'server-r2',
-    type: 'device',
-    parentNode: 'rack-right',
-    extent: 'parent' as const,
-    position: { x: 20, y: 160 },
-    data: { label: 'Server R2', type: 'server' },
+    id: 'd-102',
+    label: 'server-10',
+    deviceType: 'server',
+    parentNode: 'rack-r02',
+    position: { x: 20, y: 180 },
   },
   {
-    id: 'switch-r',
-    type: 'device',
-    parentNode: 'rack-right',
-    extent: 'parent' as const,
-    position: { x: 20, y: 270 },
-    data: { label: 'Switch R', type: 'switch' },
+    id: 'd-103',
+    label: 'server-11',
+    deviceType: 'server',
+    parentNode: 'rack-r02',
+    position: { x: 20, y: 290 },
   },
+  // R04
   {
-    id: 'pp-r',
-    type: 'device',
-    parentNode: 'rack-right',
-    extent: 'parent' as const,
-    position: { x: 20, y: 390 },
-    data: { label: 'Patch Panel R', type: 'patch-panel' },
+    id: 'd-301',
+    label: 'spine-switch-01',
+    deviceType: 'switch',
+    parentNode: 'rack-r04',
+    position: { x: 20, y: 50 },
   },
 ];
 
-// --- Initial Edges ---
+function buildNodes(
+  devicePorts: Record<string, Port[]>,
+  onDeviceClick: (id: string) => void,
+): Node[] {
+  const rackNodes: Node[] = RACK_LAYOUTS.map((r) => ({
+    id: r.id,
+    type: 'rack',
+    position: { x: r.x, y: r.y },
+    style: { width: r.width, height: r.height },
+    data: { label: r.label },
+    selectable: false,
+    draggable: false,
+  }));
 
-const initialEdges: Edge[] = [
-  // Intra-rack left
-  {
-    id: 'e-sl1-swl',
-    source: 'server-l1',
-    sourceHandle: 'right-0',
-    target: 'switch-l',
-    targetHandle: 'left-0',
-  },
-  {
-    id: 'e-sl2-swl',
-    source: 'server-l2',
-    sourceHandle: 'right-0',
-    target: 'switch-l',
-    targetHandle: 'left-1',
-  },
-  {
-    id: 'e-swl-ppl',
-    source: 'switch-l',
-    sourceHandle: 'right-0',
-    target: 'pp-l',
-    targetHandle: 'left-0',
-  },
-  // Intra-rack right
-  {
-    id: 'e-sr1-swr',
-    source: 'server-r1',
-    sourceHandle: 'left-0',
-    target: 'switch-r',
-    targetHandle: 'right-0',
-  },
-  {
-    id: 'e-sr2-swr',
-    source: 'server-r2',
-    sourceHandle: 'left-0',
-    target: 'switch-r',
-    targetHandle: 'right-1',
-  },
-  {
-    id: 'e-swr-ppr',
-    source: 'switch-r',
-    sourceHandle: 'left-0',
-    target: 'pp-r',
-    targetHandle: 'right-0',
-  },
-  // Cross-rack cables
-  {
-    id: 'e-ppl-ppr',
-    source: 'pp-l',
-    sourceHandle: 'right-0',
-    target: 'pp-r',
-    targetHandle: 'left-0',
-  },
-  {
-    id: 'e-sl1-sr1',
-    source: 'server-l1',
-    sourceHandle: 'right-1',
-    target: 'server-r1',
-    targetHandle: 'left-1',
-  },
-];
+  const deviceNodes: Node[] = DEVICE_LAYOUTS.map((d) => ({
+    id: d.id,
+    type: 'device',
+    parentNode: d.parentNode,
+    extent: 'parent' as const,
+    position: d.position,
+    data: {
+      label: d.label,
+      deviceType: d.deviceType,
+      ports: devicePorts[d.id] ?? [],
+      nodeId: d.id,
+      onDeviceClick,
+    },
+  }));
 
-// --- Main Component ---
+  return [...rackNodes, ...deviceNodes];
+}
 
-export function PatchMappingFlow() {
+// ── Main component ────────────────────────────────────────────────────────────
+
+export function PatchMappingFlow({
+  cables,
+  devicePorts,
+  selectedCableId,
+  onCableClick,
+  onDeviceClick,
+}: PatchMappingFlowProps) {
+  const initialNodes = useMemo(
+    () => buildNodes(devicePorts, onDeviceClick),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  const onConnect = useCallback(
-    (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
-    [setEdges],
+  const edges = useMemo<Edge[]>(
+    () =>
+      cables.map((cable) => ({
+        id: cable.id,
+        source: cable.aSide.deviceId,
+        sourceHandle: cable.aSide.portId,
+        target: cable.bSide.deviceId,
+        targetHandle: cable.bSide.portId,
+        label: cable.label,
+        selected: cable.id === selectedCableId,
+        style: {
+          stroke: cable.color ? CABLE_COLOR_HEX[cable.color] : '#94a3b8',
+          strokeWidth: cable.id === selectedCableId ? 3 : 1.5,
+          strokeDasharray: cable.status === 'planned' ? '6 3' : undefined,
+          opacity: cable.status === 'decommissioned' ? 0.3 : 1,
+        },
+        labelStyle: { fontSize: 10, fill: '#475569' },
+        labelBgStyle: { fill: '#f8fafc', fillOpacity: 0.9 },
+      })),
+    [cables, selectedCableId],
+  );
+
+  const [, setEdges, onEdgesChange] = useEdgesState(edges);
+
+  // Keep edges in sync with prop changes
+  React.useEffect(() => {
+    setEdges(edges);
+  }, [edges, setEdges]);
+
+  const onEdgeClick = useCallback(
+    (_: React.MouseEvent, edge: Edge) => {
+      onCableClick(edge.id);
+    },
+    [onCableClick],
   );
 
   return (
@@ -301,7 +355,7 @@ export function PatchMappingFlow() {
       edges={edges}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
+      onEdgeClick={onEdgeClick}
       nodeTypes={nodeTypes}
       connectionMode={ConnectionMode.Loose}
       fitView

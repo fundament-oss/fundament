@@ -56,14 +56,6 @@ const routes: Routes = [
         loadComponent: () =>
           import('./task-management-admin/task-management-admin').then((m) => m.default),
       },
-      {
-        path: 'designs/:id',
-        loadComponent: () => import('./designs/design-detail/design-detail').then((m) => m.default),
-      },
-      {
-        path: 'designs',
-        loadComponent: () => import('./designs/designs').then((m) => m.default),
-      },
     ],
   },
   {

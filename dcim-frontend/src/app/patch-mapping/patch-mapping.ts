@@ -6,153 +6,157 @@ import {
   ElementRef,
   inject,
   signal,
+  computed,
   viewChild,
 } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import DcSelectorComponent from '../shared/dc-selector';
+import { Router } from '@angular/router';
 import PatchMappingFlowWrapperComponent from './patch-mapping-flow-wrapper';
-import { MOCK_PHYSICAL_CONNECTIONS, PhysicalConnection } from './patch-mapping.model';
-import PatchMappingApiService from './patch-mapping-api.service';
-import connectErrorMessage from '../../connect/error';
+import CableListComponent from './cable-list/cable-list';
+import CableFormComponent from './cable-form/cable-form';
+import { Cable, DEVICE_PORTS, MOCK_CABLES } from './cable.model';
 
 @Component({
   selector: 'app-patch-mapping',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DcSelectorComponent, PatchMappingFlowWrapperComponent],
+  imports: [PatchMappingFlowWrapperComponent, CableListComponent, CableFormComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
-    class: 'flex flex-col overflow-hidden bg-white text-slate-900',
-    style: 'height: calc(100dvh - 4.25rem)',
+    class: 'flex flex-col bg-white text-slate-900',
+    '[class.min-h-screen]': "activeView() === 'list'",
+    '[class.overflow-hidden]': "activeView() === 'topology'",
+    '[style.height]': "activeView() === 'topology' ? 'calc(100dvh - 4.25rem)' : null",
   },
   templateUrl: './patch-mapping.html',
 })
 export default class PatchMappingComponent {
-  private readonly patchApi = inject(PatchMappingApiService);
+  private readonly router = inject(Router);
 
   readonly selectedDcId = signal('ams-01');
 
-  // ── Mutable connection list ────────────────────────────────────────────────
-  readonly mutableConnections = signal([...MOCK_PHYSICAL_CONNECTIONS]);
+  readonly activeView = signal<'list' | 'topology'>('list');
 
-  // ── CRUD state — null = closed, object = open (new or edit) ───────────────
-  editConnection = signal<Partial<PhysicalConnection> | null>(null);
+  // ── Cable state ────────────────────────────────────────────────────────────
+  readonly mutableCables = signal([...MOCK_CABLES]);
 
-  deleteConnection = signal<PhysicalConnection | null>(null);
+  readonly dcCables = computed(() =>
+    this.mutableCables().filter((c) => c.dcId === this.selectedDcId()),
+  );
 
-  connectionsVisible = signal(false);
+  readonly editCable = signal<Partial<Cable> | null>(null);
 
-  private readonly connSheetEl = viewChild<ElementRef>('connSheet');
+  readonly deleteCable = signal<Cable | null>(null);
+
+  readonly DEVICE_PORTS = DEVICE_PORTS;
+
+  private readonly cableSheetEl = viewChild<ElementRef>('cableSheet');
 
   private readonly deleteModalEl = viewChild<ElementRef>('deleteModal');
 
-  private readonly fSrcDevice = viewChild<ElementRef>('fSrcDevice');
-
-  private readonly fSrcPort = viewChild<ElementRef>('fSrcPort');
-
-  private readonly fTgtDevice = viewChild<ElementRef>('fTgtDevice');
-
-  private readonly fTgtPort = viewChild<ElementRef>('fTgtPort');
-
   constructor() {
     effect(() => {
-      const el = this.connSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
-      if (this.editConnection() !== null) el?.show?.();
+      const el = this.cableSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.editCable() !== null) el?.show?.();
       else el?.hide?.();
     });
     effect(() => {
       const el = this.deleteModalEl()?.nativeElement as { show?: () => void; hide?: () => void };
-      if (this.deleteConnection() !== null) el?.show?.();
+      if (this.deleteCable() !== null) el?.show?.();
       else el?.hide?.();
     });
   }
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
-  openAddConnection(): void {
-    this.editConnection.set({ id: '', dcId: this.selectedDcId() });
+  openAddCable(): void {
+    this.editCable.set({ dcId: this.selectedDcId(), status: 'connected' });
   }
 
-  openEditConnection(conn: PhysicalConnection): void {
-    this.editConnection.set({ ...conn });
+  openEditCable(cable: Cable): void {
+    this.editCable.set({ ...cable });
   }
 
-  closeConnForm(): void {
-    this.editConnection.set(null);
+  openEditCableById(id: string): void {
+    const cable = this.mutableCables().find((c) => c.id === id);
+    if (cable) this.openEditCable(cable);
   }
 
-  saveConnection(): void {
-    const form = this.editConnection();
-    if (!form) return;
-    const srcDevice = (this.fSrcDevice()?.nativeElement as HTMLInputElement)?.value ?? '';
-    const srcPort = (this.fSrcPort()?.nativeElement as HTMLInputElement)?.value ?? '';
-    const tgtDevice = (this.fTgtDevice()?.nativeElement as HTMLInputElement)?.value ?? '';
-    const tgtPort = (this.fTgtPort()?.nativeElement as HTMLInputElement)?.value ?? '';
-    if (!srcDevice || !srcPort || !tgtDevice || !tgtPort) return;
-
-    if (form.id) {
-      firstValueFrom(this.patchApi.updatePhysicalConnection(form.id, ''))
-        .then(() => {
-          this.mutableConnections.update((list) =>
-            list.map((c) =>
-              c.id === form.id
-                ? {
-                    ...c,
-                    sourceDeviceLabel: srcDevice,
-                    sourcePortName: srcPort,
-                    targetDeviceLabel: tgtDevice,
-                    targetPortName: tgtPort,
-                  }
-                : c,
-            ),
-          );
-          this.editConnection.set(null);
-        })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+  saveFromForm(cable: Cable): void {
+    if (cable.id) {
+      this.mutableCables.update((list) => list.map((c) => (c.id === cable.id ? cable : c)));
     } else {
-      const srcPlacement = srcDevice.toLowerCase().replace(/\s+/g, '-');
-      const tgtPlacement = tgtDevice.toLowerCase().replace(/\s+/g, '-');
-      firstValueFrom(
-        this.patchApi.createPhysicalConnection(srcPlacement, srcPort, tgtPlacement, tgtPort),
-      )
-        .then((res) => {
-          const created = PatchMappingApiService.mapConnection(res.connection!);
-          const newConn: PhysicalConnection = {
-            ...created,
-            dcId: this.selectedDcId(),
-            sourceDeviceLabel: srcDevice,
-            targetDeviceLabel: tgtDevice,
-          };
-          this.mutableConnections.update((list) => [...list, newConn]);
-          this.editConnection.set(null);
-        })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+      const id = `cab-${Date.now().toString(36)}`;
+      this.mutableCables.update((list) => [...list, { ...cable, id, dcId: this.selectedDcId() }]);
     }
+    this.editCable.set(null);
   }
 
-  openDeleteConnection(conn: PhysicalConnection): void {
-    this.deleteConnection.set(conn);
-    this.editConnection.set(null);
+  closeForm(): void {
+    this.editCable.set(null);
   }
 
-  cancelDeleteConnection(): void {
-    this.deleteConnection.set(null);
+  openDeleteCable(cable: Cable): void {
+    this.deleteCable.set(cable);
+    this.editCable.set(null);
   }
 
-  confirmDeleteConnection(): void {
-    const target = this.deleteConnection();
+  cancelDelete(): void {
+    this.deleteCable.set(null);
+  }
+
+  confirmDelete(): void {
+    const target = this.deleteCable();
     if (!target) return;
-    firstValueFrom(this.patchApi.deletePhysicalConnection(target.id))
-      .then(() => {
-        this.mutableConnections.update((list) => list.filter((c) => c.id !== target.id));
-        this.deleteConnection.set(null);
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+    this.mutableCables.update((list) => list.filter((c) => c.id !== target.id));
+    this.deleteCable.set(null);
   }
 
-  dcConnections(): PhysicalConnection[] {
-    return this.mutableConnections().filter((c) => c.dcId === this.selectedDcId());
+  navigateToDevice(id: string): void {
+    this.router.navigate(['/racks/device', id]);
+  }
+
+  // ── CSV export ─────────────────────────────────────────────────────────────
+
+  exportCsv(): void {
+    const cables = this.dcCables();
+    const headers = [
+      'ID',
+      'Label',
+      'A Device',
+      'A Port',
+      'A Port Type',
+      'B Device',
+      'B Port',
+      'B Port Type',
+      'Status',
+      'Type',
+      'Color',
+      'Description',
+      'Comments',
+    ];
+    const rows = cables.map((c) => [
+      c.id,
+      c.label ?? '',
+      c.aSide.deviceName,
+      c.aSide.portName,
+      c.aSide.portType,
+      c.bSide.deviceName,
+      c.bSide.portName,
+      c.bSide.portType,
+      c.status,
+      c.type,
+      c.color ?? '',
+      c.description ?? '',
+      c.comments ?? '',
+    ]);
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cables-${this.selectedDcId()}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 }

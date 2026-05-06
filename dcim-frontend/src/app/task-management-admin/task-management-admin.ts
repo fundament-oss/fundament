@@ -313,11 +313,23 @@ export default class TaskManagementAdminComponent {
 
   readonly kanbanColumns = ['Ready', 'In Progress', 'Review', 'Blocked', 'Done'];
 
+  readonly priorities = ['Critical', 'High', 'Medium', 'Low'];
+
+  readonly taskCategories = ['Hardware', 'Network', 'Cooling', 'Power', 'Security', 'Other'];
+
   private readonly dateLocale = 'en-US';
 
   private readonly taskIdBase = 2890;
 
   currentView = signal<'list' | 'kanban'>('list');
+
+  searchQuery = signal('');
+
+  statusFilter = signal('all');
+
+  priorityFilter = signal('all');
+
+  categoryFilter = signal('all');
 
   selectedTasks = signal<Set<number>>(new Set());
 
@@ -346,6 +358,42 @@ export default class TaskManagementAdminComponent {
   toastMessage = signal<string | null>(null);
 
   private toastTimeout: number | undefined;
+
+  filteredTasks = computed(() => {
+    const q = this.searchQuery().toLowerCase().trim();
+    const st = this.statusFilter();
+    const pr = this.priorityFilter();
+    const cat = this.categoryFilter();
+    return this.tasks().filter((t) => {
+      if (st !== 'all' && t.status !== st) return false;
+      if (pr !== 'all' && t.priority !== pr) return false;
+      if (cat !== 'all' && t.category !== cat) return false;
+      if (q && !t.title.toLowerCase().includes(q) && !t.description.toLowerCase().includes(q))
+        return false;
+      return true;
+    });
+  });
+
+  statusCounts = computed(() =>
+    this.tasks().reduce<Record<string, number>>(
+      (acc, t) => ({ ...acc, [t.status]: (acc[t.status] ?? 0) + 1 }),
+      {},
+    ),
+  );
+
+  priorityCounts = computed(() =>
+    this.tasks().reduce<Record<string, number>>(
+      (acc, t) => ({ ...acc, [t.priority]: (acc[t.priority] ?? 0) + 1 }),
+      {},
+    ),
+  );
+
+  categoryCounts = computed(() =>
+    this.tasks().reduce<Record<string, number>>(
+      (acc, t) => ({ ...acc, [t.category]: (acc[t.category] ?? 0) + 1 }),
+      {},
+    ),
+  );
 
   detailTask = computed(() => {
     const id = this.detailTaskId();
@@ -394,7 +442,7 @@ export default class TaskManagementAdminComponent {
   }
 
   tasksForColumn(col: string): Task[] {
-    return this.tasks().filter((t) => t.status === col);
+    return this.filteredTasks().filter((t) => t.status === col);
   }
 
   setView(view: 'list' | 'kanban'): void {

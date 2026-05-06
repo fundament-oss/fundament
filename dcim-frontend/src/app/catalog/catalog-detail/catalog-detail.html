@@ -408,6 +408,7 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #portModal
+  (close)="cancelDeletePortDef()"
   [attr.text]="'Delete port \'' + (deletePortDef()?.name ?? '') + '\'?'"
   supporting-text="All port compatibilities for this port will also be removed."
   accessible-label="Confirm port definition deletion"
@@ -431,6 +432,7 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #compatModal
+  (close)="cancelAddCompatibility()"
   text="Add Port Compatibility"
   [attr.supporting-text]="
     'Select a catalog entry compatible with port ' + portDefName(addCompatPortDefId() ?? '')
@@ -468,6 +470,7 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #compatDeleteModal
+  (close)="cancelDeleteCompat()"
   [attr.text]="
     'Remove compatibility with ' +
     compatibleEntryName(deleteCompat()?.compatibleCatalogEntryId ?? '') +

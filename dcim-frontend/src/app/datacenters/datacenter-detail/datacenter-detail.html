@@ -290,6 +290,7 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #roomModal
+  (close)="cancelDeleteRoom()"
   [attr.text]="'Delete room \'' + (deleteRoom()?.name ?? '') + '\'?'"
   supporting-text="All rack rows in this room will also be removed."
   accessible-label="Confirm room deletion"
@@ -368,6 +369,7 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #rowModal
+  (close)="cancelDeleteRackRow()"
   [attr.text]="'Delete rack row \'' + (deleteRackRow()?.name ?? '') + '\'?'"
   supporting-text="This action cannot be undone."
   accessible-label="Confirm rack row deletion"

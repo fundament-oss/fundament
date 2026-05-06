@@ -690,6 +690,7 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #deleteModal
+  (close)="cancelDelete()"
   [attr.text]="'Delete ' + (deleteTarget()?.name ?? '') + '?'"
   supporting-text="All rooms, rack rows, and floor positions will be removed. This action cannot be undone."
   accessible-label="Confirm datacenter deletion"

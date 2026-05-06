@@ -1,207 +1,107 @@
 <!-- ══════════════════════════════════════════════════════════════
-     PAGE HEADER (subbar)
+     PAGE HEADER
      ══════════════════════════════════════════════════════════════ -->
 <div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
   <div class="flex-1 min-w-0">
-    <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0">Patch Mapping</h1>
+    <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0">Patch mapping</h1>
   </div>
-  <div class="flex items-center gap-2 shrink-0">
-    <nldd-button
-      variant="secondary"
-      text="Connections"
-      [attr.start-icon]="connectionsVisible() ? 'eye-slash' : 'eye'"
-      size="sm"
-      (click)="connectionsVisible.set(!connectionsVisible())"
-    ></nldd-button>
-    <nldd-button
-      variant="accent-filled"
-      text="Add connection"
-      start-icon="plus-small"
-      size="sm"
-      (click)="openAddConnection()"
-    ></nldd-button>
-  </div>
+
+  <!-- View toggle -->
+  <nldd-segmented-control
+    [value]="activeView()"
+    size="sm"
+    type="radio"
+    variant="text"
+    (change)="activeView.set($any($event).detail.value)"
+  >
+    <nldd-segmented-control-item value="list" text="Cables"></nldd-segmented-control-item>
+    <nldd-segmented-control-item value="topology" text="Topology"></nldd-segmented-control-item>
+  </nldd-segmented-control>
+
+  <nldd-button
+    variant="secondary"
+    text="Download CSV"
+    start-icon="arrow-down-in-bucket"
+    size="sm"
+    (click)="exportCsv()"
+    aria-label="Export cables as CSV"
+  ></nldd-button>
+  <nldd-button
+    variant="accent-filled"
+    text="Add cable"
+    start-icon="plus-small"
+    size="sm"
+    (click)="openAddCable()"
+    aria-label="Add a new cable"
+  ></nldd-button>
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
-     DC SELECTOR TOOLBAR
+     MAIN CONTENT (list or topology)
      ══════════════════════════════════════════════════════════════ -->
-<div class="shrink-0 border-b border-slate-200 bg-white px-6">
-  <app-dc-selector [selectedId]="selectedDcId()" (dcSelected)="selectedDcId.set($event)" />
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════
-     FLOW CANVAS + OPTIONAL CONNECTIONS PANEL
-     ══════════════════════════════════════════════════════════════ -->
-<div class="flex flex-1 min-h-0">
-  <!-- Canvas -->
-  <div class="flex-1 min-w-0">
-    <app-patch-mapping-flow class="block w-full h-full" />
-  </div>
-
-  <!-- Connection list panel -->
-  @if (connectionsVisible()) {
-    <aside
-      class="w-80 shrink-0 border-l border-slate-200 bg-white flex flex-col overflow-hidden"
-      aria-label="Physical connections"
-    >
-      <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between shrink-0">
-        <h2 class="text-sm font-semibold text-slate-900">
-          Connections ({{ dcConnections().length }})
-        </h2>
-        <nldd-icon-button
-          icon="dismiss"
-          variant="neutral-transparent"
-          size="sm"
-          text="Close"
-          (click)="connectionsVisible.set(false)"
-        ></nldd-icon-button>
-      </div>
-      <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
-        @for (conn of dcConnections(); track conn.id) {
-          <div class="px-4 py-3 group hover:bg-slate-50 transition-colors">
-            <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-1.5 text-xs font-medium text-slate-800 truncate">
-                  <span class="font-mono">{{ conn.sourceDeviceLabel }}</span>
-                  <nldd-icon
-                    name="arrow-right"
-                    style="width: 10px; height: 10px; color: #94a3b8; flex-shrink: 0"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  <span class="font-mono">{{ conn.targetDeviceLabel }}</span>
-                </div>
-                <p class="text-xs text-slate-400 mt-0.5 font-mono">
-                  {{ conn.sourcePortName }} → {{ conn.targetPortName }}
-                </p>
-              </div>
-              <div
-                class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-              >
-                <nldd-icon-button
-                  icon="pencil-on-square"
-                  variant="neutral-transparent"
-                  size="xs"
-                  text="Edit connection"
-                  (click)="openEditConnection(conn)"
-                ></nldd-icon-button>
-                <nldd-icon-button
-                  icon="trash"
-                  variant="neutral-transparent"
-                  size="xs"
-                  text="Delete connection"
-                  (click)="openDeleteConnection(conn)"
-                ></nldd-icon-button>
-              </div>
-            </div>
-          </div>
-        }
-        @if (dcConnections().length === 0) {
-          <div class="flex flex-col items-center justify-center py-12 text-slate-400">
-            <nldd-icon name="puzzle-piece" class="w-6 h-6" aria-hidden="true"></nldd-icon>
-            <p class="mt-2 text-xs">No connections for this DC.</p>
-          </div>
-        }
-      </div>
-    </aside>
+<div [class]="activeView() === 'topology' ? 'flex-1 min-h-0 flex flex-col' : 'flex flex-col'">
+  @if (activeView() === 'list') {
+    <app-cable-list
+      class="flex flex-col"
+      [cables]="dcCables()"
+      [dcId]="selectedDcId()"
+      (editCable)="openEditCable($event)"
+      (deleteCable)="openDeleteCable($event)"
+      (dcSelected)="selectedDcId.set($event)"
+    />
+  } @else {
+    <app-patch-mapping-flow
+      class="block w-full h-full"
+      [cables]="dcCables()"
+      [devicePorts]="DEVICE_PORTS"
+      [selectedCableId]="editCable()?.id ?? null"
+      (cableSelected)="openEditCableById($event)"
+      (deviceNavigate)="navigateToDevice($event)"
+    />
   }
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
-     ADD / EDIT CONNECTION SHEET
+     ADD / EDIT CABLE SHEET
      ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #connSheet accessible-label="Connection details" placement="right" width="420px">
-  <div class="flex flex-col h-full">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
-      <h2 class="text-base font-semibold text-slate-900">
-        {{ editConnection()?.id ? 'Edit Connection' : 'New Connection' }}
-      </h2>
-      <nldd-icon-button
-        icon="dismiss"
-        variant="neutral-transparent"
-        size="sm"
-        text="Close"
-        (click)="closeConnForm()"
-      ></nldd-icon-button>
-    </div>
-    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
-      <div class="grid grid-cols-2 gap-3">
-        <nldd-form-field label="Source device">
-          <nldd-text-field
-            #fSrcDevice
-            [attr.value]="editConnection()?.sourceDeviceLabel ?? ''"
-            placeholder="e.g. Switch L"
-          ></nldd-text-field>
-        </nldd-form-field>
-        <nldd-form-field label="Source port">
-          <nldd-text-field
-            #fSrcPort
-            [attr.value]="editConnection()?.sourcePortName ?? ''"
-            placeholder="e.g. ge-0/0/1"
-          ></nldd-text-field>
-        </nldd-form-field>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <nldd-form-field label="Target device">
-          <nldd-text-field
-            #fTgtDevice
-            [attr.value]="editConnection()?.targetDeviceLabel ?? ''"
-            placeholder="e.g. Server L1"
-          ></nldd-text-field>
-        </nldd-form-field>
-        <nldd-form-field label="Target port">
-          <nldd-text-field
-            #fTgtPort
-            [attr.value]="editConnection()?.targetPortName ?? ''"
-            placeholder="e.g. eth0"
-          ></nldd-text-field>
-        </nldd-form-field>
-      </div>
-    </div>
-    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-      @if (editConnection()?.id) {
-        <nldd-button
-          variant="destructive"
-          text="Delete"
-          start-icon="trash"
-          (click)="openDeleteConnection($any(editConnection()))"
-        ></nldd-button>
-      } @else {
-        <span></span>
-      }
-      <div class="flex gap-2">
-        <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeConnForm()"></nldd-button>
-        <nldd-button variant="accent-filled" text="Save" (click)="saveConnection()"></nldd-button>
-      </div>
-    </div>
-  </div>
+<nldd-sheet #cableSheet accessible-label="Cable details" placement="right" width="480px">
+  <app-cable-form
+    [cable]="editCable()"
+    [dcId]="selectedDcId()"
+    (save)="saveFromForm($event)"
+    (cancelForm)="closeForm()"
+    (cableDelete)="openDeleteCable($event)"
+  />
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
-     DELETE CONNECTION MODAL
+     DELETE CABLE MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #deleteModal
+  (close)="cancelDelete()"
   [attr.text]="
-    'Delete connection ' +
-    (deleteConnection()?.sourceDeviceLabel ?? '') +
-    ' → ' +
-    (deleteConnection()?.targetDeviceLabel ?? '') +
+    'Delete cable ' +
+    (deleteCable()?.label
+      ? '&quot;' + deleteCable()!.label + '&quot;'
+      : (deleteCable()?.aSide?.deviceName ?? '') +
+        ' → ' +
+        (deleteCable()?.bSide?.deviceName ?? '')) +
     '?'
   "
   supporting-text="This action cannot be undone."
-  accessible-label="Confirm connection deletion"
+  accessible-label="Confirm cable deletion"
 >
   <nldd-button
     slot="actions"
     variant="neutral-tinted"
     text="Cancel"
-    (click)="cancelDeleteConnection()"
+    (click)="cancelDelete()"
   ></nldd-button>
   <nldd-button
     slot="actions"
     variant="destructive"
     text="Delete"
-    (click)="confirmDeleteConnection()"
+    (click)="confirmDelete()"
   ></nldd-button>
 </nldd-modal-dialog>

@@ -403,26 +403,35 @@ export default class TaskManagementTechnicianComponent {
 
   // ── State signals ──
   readonly phase = signal<Phase>('gather');
+
   readonly currentTaskIndex = signal(0);
+
   readonly currentStepIndex = signal(0);
+
   readonly checkedItems = signal(new Set<number>());
+
   readonly gatherCompleted = signal(false);
+
   readonly showCompleteScreen = signal(false);
+
   readonly menuOpen = signal(false);
+
   readonly showPhotoModal = signal(false);
+
   readonly showNoteModal = signal(false);
+
   readonly photoPreviewUrl = signal<string | null>(null);
+
   readonly toastMessage = signal<string | null>(null);
 
   private toastTimeout: ReturnType<typeof setTimeout> | undefined;
+
   private completedTaskSteps = new Map<number, Set<number>>();
 
   // ── Computed ──
   readonly currentTask = computed(() => this.tasks[this.currentTaskIndex()]);
 
-  readonly totalSteps = computed(
-    () => 1 + this.tasks.reduce((s, t) => s + t.steps.length, 0),
-  );
+  readonly totalSteps = computed(() => 1 + this.tasks.reduce((s, t) => s + t.steps.length, 0));
 
   readonly completedCount = computed(() => {
     let n = this.gatherCompleted() ? 1 : 0;
@@ -432,9 +441,7 @@ export default class TaskManagementTechnicianComponent {
     return n;
   });
 
-  readonly progressPct = computed(
-    () => (this.completedCount() / this.totalSteps()) * 100,
-  );
+  readonly progressPct = computed(() => (this.completedCount() / this.totalSteps()) * 100);
 
   readonly showCompleteBtn = computed(() => {
     const p = this.phase();

@@ -430,6 +430,186 @@
             </section>
           }
 
+          <!-- Ports -->
+          <section
+            class="rounded-lg border border-gray-200 bg-white"
+            aria-labelledby="ports-heading"
+          >
+            <!-- Card header -->
+            <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h2 id="ports-heading" class="font-semibold text-gray-700">
+                Ports
+                <span class="ml-1.5 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-500">
+                  {{ devicePorts().length }}
+                </span>
+              </h2>
+              <button
+                class="text-xs text-indigo-600 hover:text-indigo-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-2 py-1"
+                (click)="showAddPortForm.set(!showAddPortForm())"
+                [attr.aria-expanded]="showAddPortForm()"
+              >
+                + Add Port
+              </button>
+            </div>
+
+            <!-- Tab bar -->
+            <div
+              class="flex border-b border-gray-100 px-4 pt-1.5 gap-0.5 overflow-x-auto"
+              role="tablist"
+              aria-label="Port type tabs"
+            >
+              @for (tab of PORT_TABS; track tab) {
+                <button
+                  class="px-3 py-1.5 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-inset"
+                  [class]="
+                    activePortTab() === tab
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  "
+                  (click)="activePortTab.set(tab)"
+                  role="tab"
+                  [attr.aria-selected]="activePortTab() === tab"
+                  [attr.id]="'port-tab-' + tab"
+                  [attr.aria-controls]="'port-panel-' + tab"
+                >
+                  {{ PORT_TYPE_LABEL[tab] }}
+                </button>
+              }
+            </div>
+
+            <!-- Add port inline form -->
+            @if (showAddPortForm()) {
+              <div
+                class="px-4 py-3 bg-slate-50 border-b border-gray-100 flex flex-wrap items-center gap-2"
+              >
+                <input
+                  type="text"
+                  [value]="newPortName()"
+                  (input)="newPortName.set($any($event.target).value)"
+                  placeholder="Port name (e.g. eth4)"
+                  aria-label="New port name"
+                  class="rounded border border-gray-200 px-2 py-1 text-xs font-mono w-40 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
+                />
+                <input
+                  type="text"
+                  [value]="newPortLabel()"
+                  (input)="newPortLabel.set($any($event.target).value)"
+                  placeholder="Label (optional)"
+                  aria-label="New port label"
+                  class="rounded border border-gray-200 px-2 py-1 text-xs w-40 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
+                />
+                <button
+                  (click)="addPort()"
+                  class="text-xs text-white bg-indigo-600 hover:bg-indigo-700 font-medium px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  Add
+                </button>
+                <button
+                  (click)="showAddPortForm.set(false)"
+                  class="text-xs text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+                >
+                  Cancel
+                </button>
+              </div>
+            }
+
+            <!-- Port table -->
+            <div
+              role="tabpanel"
+              [attr.id]="'port-panel-' + activePortTab()"
+              [attr.aria-labelledby]="'port-tab-' + activePortTab()"
+            >
+              @if (devicePorts().length > 0) {
+                <table
+                  class="w-full text-xs"
+                  [attr.aria-label]="PORT_TYPE_LABEL[activePortTab()] + ' table'"
+                >
+                  <thead class="bg-slate-50 border-b border-gray-100">
+                    <tr>
+                      <th class="px-4 py-2 text-left font-medium text-gray-500">Name</th>
+                      <th class="px-4 py-2 text-left font-medium text-gray-500">Label</th>
+                      <th class="px-4 py-2 text-left font-medium text-gray-500">Cable</th>
+                      <th class="px-4 py-2 text-left font-medium text-gray-500">Peer</th>
+                      <th class="px-4 py-2 text-right font-medium text-gray-500">
+                        <span class="sr-only">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-50">
+                    @for (port of devicePorts(); track port.id) {
+                      @let cable = portCableMap().get(port.id);
+                      <tr class="hover:bg-slate-50 group">
+                        <td class="px-4 py-2.5 font-mono text-gray-800 font-medium">
+                          {{ port.name }}
+                        </td>
+                        <td class="px-4 py-2.5 text-gray-500">{{ port.label ?? '—' }}</td>
+                        <td class="px-4 py-2.5">
+                          @if (cable) {
+                            <a
+                              routerLink="/patch-mapping"
+                              class="font-mono text-indigo-600 underline hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+                              [title]="cable.id"
+                              >{{ cable.label ?? cable.id }}</a
+                            >
+                          } @else {
+                            <span class="text-gray-300">—</span>
+                          }
+                        </td>
+                        <td class="px-4 py-2.5 font-mono text-gray-500">
+                          @if (cable) {
+                            @let peer =
+                              cable.aSide.deviceId === deviceId() ? cable.bSide : cable.aSide;
+                            <a
+                              [routerLink]="['/racks/device', peer.deviceId]"
+                              class="text-indigo-600 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+                              >{{ peer.deviceName }}</a
+                            >
+                            <span class="text-gray-400 ml-1">› {{ peer.portName }}</span>
+                          } @else {
+                            <span class="text-gray-300">—</span>
+                          }
+                        </td>
+                        <td class="px-4 py-2.5 text-right">
+                          <div
+                            class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1"
+                          >
+                            @if (cable) {
+                              <button
+                                (click)="disconnectCable(port.id)"
+                                class="text-[10px] text-red-500 hover:text-red-700 font-medium px-1.5 py-0.5 rounded hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400"
+                                [attr.aria-label]="'Disconnect ' + port.name"
+                              >
+                                Disconnect
+                              </button>
+                            } @else {
+                              <button
+                                (click)="openConnectForm(port)"
+                                class="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium px-1.5 py-0.5 rounded hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                [attr.aria-label]="'Connect ' + port.name"
+                              >
+                                Connect
+                              </button>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              } @else {
+                <div class="py-8 text-center text-gray-400 text-xs">
+                  No {{ PORT_TYPE_LABEL[activePortTab()] | lowercase }} on this device.
+                  <button
+                    class="block mx-auto mt-2 text-indigo-500 hover:text-indigo-700 underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+                    (click)="showAddPortForm.set(true)"
+                  >
+                    Add one
+                  </button>
+                </div>
+              }
+            </div>
+          </section>
+
           <!-- Notes -->
           <section
             class="rounded-lg border border-gray-200 bg-white"
