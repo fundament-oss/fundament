@@ -91,7 +91,7 @@ spec:
       cookieDomain: pr${PR_NUM}.${DOMAIN}
       dcimApi: https://dcim-api.pr${PR_NUM}.${DOMAIN}
       dcim: https://dcim.pr${PR_NUM}.${DOMAIN}
-      corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN} https://dcim.pr${PR_NUM}.${DOMAIN}"
+      corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN}"
 
     images:
       dbMigrations: ${IMAGE_PREFIX}/db-migrations:${IMAGE_TAG}

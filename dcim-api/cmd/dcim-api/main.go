@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -21,9 +20,9 @@ import (
 
 type config struct {
 	Database           psqldb.Config
-	ListenAddr         string `env:"LISTEN_ADDR" envDefault:":8080"`
-	LogLevel           string `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins string `env:"CORS_ALLOWED_ORIGINS"`
+	ListenAddr         string   `env:"LISTEN_ADDR" envDefault:":8080"`
+	LogLevel           string   `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins []string `env:"CORS_ALLOWED_ORIGINS"`
 }
 
 func main() {
@@ -63,12 +62,12 @@ func run() error {
 	})
 	mux.Handle("/", server.Handler())
 
-	allowedOrigins := strings.Split(cfg.CORSAllowedOrigins, ",")
 	c := cors.New(cors.Options{
-		AllowedOrigins: allowedOrigins,
-		AllowedMethods: []string{"GET", "POST"},
-		AllowedHeaders: []string{"Authorization", "Content-Type", "Connect-Protocol-Version", "Connect-Timeout-Ms", "Grpc-Timeout", "X-Grpc-Web", "X-User-Agent"},
-		ExposedHeaders: []string{"Grpc-Status", "Grpc-Message", "Grpc-Status-Details-Bin"},
+		AllowedOrigins:   cfg.CORSAllowedOrigins,
+		AllowedMethods:   []string{"GET", "POST"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type", "Connect-Protocol-Version", "Connect-Timeout-Ms", "Grpc-Timeout", "X-Grpc-Web", "X-User-Agent"},
+		ExposedHeaders:   []string{"Grpc-Status", "Grpc-Message", "Grpc-Status-Details-Bin"},
+		AllowCredentials: true,
 	})
 
 	srv := &http.Server{
