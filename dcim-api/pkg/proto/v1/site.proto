@@ -1,0 +1,195 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// Site is a physical data center location (core.sites).
+message Site {
+  string                    id      = 10;
+  string                    name    = 20;
+  string                    address = 30;
+  google.protobuf.Timestamp created = 40;
+  google.protobuf.Timestamp deleted = 50 [features.field_presence = EXPLICIT];
+}
+
+// Room is a hall or room within a site (core.rooms).
+message Room {
+  string                    id      = 10;
+  string                    site_id = 20;
+  string                    name    = 30;
+  string                    floor   = 40;
+  google.protobuf.Timestamp created = 50;
+  google.protobuf.Timestamp deleted = 60 [features.field_presence = EXPLICIT];
+}
+
+// RackRow is a row of racks within a room (core.rack_rows).
+// position_x and position_y enable cable length estimation between racks.
+message RackRow {
+  string                    id         = 10;
+  string                    room_id    = 20;
+  string                    name       = 30;
+  double                    position_x = 40 [features.field_presence = EXPLICIT];
+  double                    position_y = 50 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp created    = 60;
+  google.protobuf.Timestamp deleted    = 70 [features.field_presence = EXPLICIT];
+}
+
+// ── SiteService ───────────────────────────────────────────────────────────────
+
+service SiteService {
+  rpc ListSites (ListSitesRequest)  returns (ListSitesResponse);
+  rpc GetSite   (GetSiteRequest)    returns (GetSiteResponse);
+  rpc CreateSite(CreateSiteRequest) returns (CreateSiteResponse);
+  rpc UpdateSite(UpdateSiteRequest) returns (UpdateSiteResponse);
+  rpc DeleteSite(DeleteSiteRequest) returns (DeleteSiteResponse);
+}
+
+message ListSitesRequest {}
+
+message ListSitesResponse {
+  repeated Site sites = 10;
+}
+
+message GetSiteRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetSiteResponse {
+  Site site = 10;
+}
+
+message CreateSiteRequest {
+  string name    = 10 [(buf.validate.field).string.min_len = 1];
+  string address = 20;
+}
+
+message CreateSiteResponse {
+  string site_id = 10;
+}
+
+message UpdateSiteRequest {
+  string id      = 10 [(buf.validate.field).string = {uuid: true}];
+  string name    = 20 [features.field_presence = EXPLICIT];
+  string address = 30 [features.field_presence = EXPLICIT];
+}
+
+message UpdateSiteResponse {}
+
+message DeleteSiteRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteSiteResponse {}
+
+// ── RoomService ───────────────────────────────────────────────────────────────
+
+service RoomService {
+  rpc ListRooms (ListRoomsRequest)  returns (ListRoomsResponse);
+  rpc GetRoom   (GetRoomRequest)    returns (GetRoomResponse);
+  rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse);
+  rpc UpdateRoom(UpdateRoomRequest) returns (UpdateRoomResponse);
+  rpc DeleteRoom(DeleteRoomRequest) returns (DeleteRoomResponse);
+}
+
+message ListRoomsRequest {
+  string site_id = 10 [features.field_presence = EXPLICIT];
+}
+
+message ListRoomsResponse {
+  repeated Room rooms = 10;
+}
+
+message GetRoomRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetRoomResponse {
+  Room room = 10;
+}
+
+message CreateRoomRequest {
+  string site_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string name    = 20 [(buf.validate.field).string.min_len = 1];
+  string floor   = 30;
+}
+
+message CreateRoomResponse {
+  Room room = 10;
+}
+
+message UpdateRoomRequest {
+  string id    = 10 [(buf.validate.field).string = {uuid: true}];
+  string name  = 20 [features.field_presence = EXPLICIT];
+  string floor = 30 [features.field_presence = EXPLICIT];
+}
+
+message UpdateRoomResponse {
+  Room room = 10;
+}
+
+message DeleteRoomRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteRoomResponse {}
+
+// ── RackRowService ────────────────────────────────────────────────────────────
+
+service RackRowService {
+  rpc ListRackRows (ListRackRowsRequest)  returns (ListRackRowsResponse);
+  rpc GetRackRow   (GetRackRowRequest)    returns (GetRackRowResponse);
+  rpc CreateRackRow(CreateRackRowRequest) returns (CreateRackRowResponse);
+  rpc UpdateRackRow(UpdateRackRowRequest) returns (UpdateRackRowResponse);
+  rpc DeleteRackRow(DeleteRackRowRequest) returns (DeleteRackRowResponse);
+}
+
+message ListRackRowsRequest {
+  string room_id = 10 [features.field_presence = EXPLICIT];
+}
+
+message ListRackRowsResponse {
+  repeated RackRow rack_rows = 10;
+}
+
+message GetRackRowRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetRackRowResponse {
+  RackRow rack_row = 10;
+}
+
+message CreateRackRowRequest {
+  string room_id    = 10 [(buf.validate.field).string = {uuid: true}];
+  string name       = 20 [(buf.validate.field).string.min_len = 1];
+  double position_x = 30 [features.field_presence = EXPLICIT];
+  double position_y = 40 [features.field_presence = EXPLICIT];
+}
+
+message CreateRackRowResponse {
+  RackRow rack_row = 10;
+}
+
+message UpdateRackRowRequest {
+  string id         = 10 [(buf.validate.field).string = {uuid: true}];
+  string name       = 20 [features.field_presence = EXPLICIT];
+  double position_x = 30 [features.field_presence = EXPLICIT];
+  double position_y = 40 [features.field_presence = EXPLICIT];
+}
+
+message UpdateRackRowResponse {
+  RackRow rack_row = 10;
+}
+
+message DeleteRackRowRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteRackRowResponse {}

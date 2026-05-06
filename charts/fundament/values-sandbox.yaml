@@ -9,7 +9,9 @@ externalUrls:
   console: https://console.fundament.projects.digilab.network
   docs: https://docs.fundament.projects.digilab.network
   cookieDomain: fundament.projects.digilab.network
-  corsAllowedOrigins: "https://console.fundament.projects.digilab.network"
+  dcimApi: https://dcim-api.fundament.projects.digilab.network
+  dcim: https://dcim.fundament.projects.digilab.network
+  corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network"
 
 db:
   enabled: true
@@ -102,6 +104,14 @@ openfga:
     # This is due to CSP restrictions in the embedded play.fga.dev iframe.
     # See: https://github.com/openfga/openfga/issues/1174
     enabled: true
+
+dcimApi:
+  enabled: true
+  replicas: 2
+
+dcimFrontend:
+  enabled: true
+  replicas: 2
 
 ingress:
   enabled: false

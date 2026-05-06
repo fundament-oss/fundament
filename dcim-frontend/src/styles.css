@@ -1,0 +1,173 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import 'tailwindcss';
+@import '@nldd/design-system/styles';
+
+/* Make the CSS color-scheme follow the app's .dark class so that Overheid web
+   components using light-dark() respond to our toggle instead of the OS setting.
+   html.dark specificity (0,1,1) beats :root (0,1,0) from the storybook tokens. */
+html:not(.dark) {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+@theme {
+  --color-accent-25: oklch(0.973 0.013 253.4);
+  --color-accent-50: oklch(0.947 0.026 253.4);
+  --color-accent-75: oklch(0.922 0.038 253.4);
+  --color-accent-100: oklch(0.897 0.051 253.4);
+  --color-accent-150: oklch(0.849 0.076 253.4);
+  --color-accent-200: oklch(0.804 0.097 253.4);
+  --color-accent-250: oklch(0.76 0.097 253.4);
+  --color-accent-300: oklch(0.718 0.097 253.4);
+  --color-accent-350: oklch(0.677 0.097 253.4);
+  --color-accent-400: oklch(0.638 0.097 253.4);
+  --color-accent-450: oklch(0.6 0.097 253.4);
+  --color-accent-500: oklch(0.563 0.097 253.4);
+  --color-accent-550: oklch(0.527 0.097 253.4);
+  --color-accent-600: oklch(0.492 0.097 253.4);
+  --color-accent-650: oklch(0.457 0.097 253.4);
+  --color-accent-700: oklch(0.421 0.097 253.4);
+  --color-accent-750: oklch(0.386 0.097 253.4);
+  --color-accent-800: oklch(0.348 0.097 253.4);
+  --color-accent-850: oklch(0.308 0.096 253.4);
+  --color-accent-900: oklch(0.262 0.082 253.4);
+  --color-accent-950: oklch(0.203 0.063 253.4);
+
+  --color-neutral-25: oklch(0.974 0.004 253.4);
+  --color-neutral-50: oklch(0.948 0.007 253.4);
+  --color-neutral-75: oklch(0.923 0.009 253.4);
+  --color-neutral-100: oklch(0.898 0.011 253.4);
+  --color-neutral-150: oklch(0.85 0.015 253.4);
+  --color-neutral-200: oklch(0.804 0.019 253.4);
+  --color-neutral-250: oklch(0.76 0.023 253.4);
+  --color-neutral-300: oklch(0.718 0.026 253.4);
+  --color-neutral-350: oklch(0.677 0.03 253.4);
+  --color-neutral-400: oklch(0.638 0.033 253.4);
+  --color-neutral-450: oklch(0.6 0.037 253.4);
+  --color-neutral-500: oklch(0.563 0.04 253.4);
+  --color-neutral-550: oklch(0.527 0.036 253.4);
+  --color-neutral-600: oklch(0.491 0.032 253.4);
+  --color-neutral-650: oklch(0.456 0.029 253.4);
+  --color-neutral-700: oklch(0.421 0.026 253.4);
+  --color-neutral-750: oklch(0.385 0.023 253.4);
+  --color-neutral-800: oklch(0.347 0.02 253.4);
+  --color-neutral-850: oklch(0.307 0.018 253.4);
+  --color-neutral-900: oklch(0.261 0.015 253.4);
+  --color-neutral-950: oklch(0.202 0.011 253.4);
+
+  --color-danger-25: oklch(0.975 0.012 29.5);
+  --color-danger-50: oklch(0.951 0.025 29.5);
+  --color-danger-75: oklch(0.927 0.037 29.5);
+  --color-danger-100: oklch(0.903 0.05 29.5);
+  --color-danger-150: oklch(0.859 0.077 29.5);
+  --color-danger-200: oklch(0.816 0.104 29.5);
+  --color-danger-250: oklch(0.776 0.132 29.5);
+  --color-danger-300: oklch(0.737 0.161 29.5);
+  --color-danger-350: oklch(0.7 0.191 29.5);
+  --color-danger-400: oklch(0.663 0.207 29.5);
+  --color-danger-450: oklch(0.625 0.207 29.5);
+  --color-danger-500: oklch(0.588 0.207 29.5);
+  --color-danger-550: oklch(0.552 0.207 29.5);
+  --color-danger-600: oklch(0.517 0.207 29.5);
+  --color-danger-650: oklch(0.48 0.195 29.5);
+  --color-danger-700: oklch(0.443 0.18 29.5);
+  --color-danger-750: oklch(0.405 0.165 29.5);
+  --color-danger-800: oklch(0.365 0.148 29.5);
+  --color-danger-850: oklch(0.323 0.131 29.5);
+  --color-danger-900: oklch(0.275 0.112 29.5);
+  --color-danger-950: oklch(0.212 0.086 29.5);
+
+  /* Semantic colors */
+  --color-dividers: var(--semantics-dividers-color);
+  --color-surface-bg: var(--semantics-surfaces-background-color);
+  --color-surface-tinted: var(--semantics-surfaces-tinted-background-color);
+  --color-content: var(--semantics-content-color);
+  --color-content-secondary: var(--semantics-content-secondary-color);
+  --color-links: var(--semantics-links-color);
+  --color-links-hover: var(--semantics-links-is-hovered-color);
+
+  /* Spacing */
+  --spacing-primitives-space-6: 6px;
+  --spacing-primitives-space-8: 8px;
+  --spacing-primitives-space-10: 10px;
+  --spacing-primitives-space-12: 12px;
+  --spacing-primitives-space-16: 16px;
+  --spacing-primitives-space-24: 24px;
+  --spacing-primitives-space-28: 28px;
+  --spacing-primitives-space-32: 32px;
+  --spacing-primitives-space-48: 48px;
+  --spacing-primitives-space-56: 56px;
+  --spacing-primitives-space-64: 64px;
+  --spacing-primitives-space-80: 80px;
+
+  /* Text sizes with line-heights (snug = 1.5, flat = 1.125) */
+  --text-body-xs: var(--primitives-font-size-80);
+  --text-body-xs--line-height: 1.5;
+  --text-body-sm: var(--primitives-font-size-90);
+  --text-body-sm--line-height: 1.5;
+  --text-body-md: var(--primitives-font-size-100);
+  --text-body-md--line-height: 1.5;
+  --text-body-lg: var(--primitives-font-size-200);
+  --text-body-lg--line-height: 1.5;
+  --text-display-1: var(--primitives-font-size-1000);
+  --text-display-1--line-height: 1.125;
+  --text-display-2: var(--primitives-font-size-800);
+  --text-display-2--line-height: 1.125;
+  --text-display-3: var(--primitives-font-size-600);
+  --text-display-3--line-height: 1.125;
+  --text-display-4: var(--primitives-font-size-400);
+  --text-display-4--line-height: 1.125;
+  --text-display-5: var(--primitives-font-size-200);
+  --text-display-5--line-height: 1.125;
+
+  /* Font families */
+  --font-body: var(--primitives-font-family-body);
+  --font-display: var(--primitives-font-family-display);
+  --font-mono: var(--primitives-font-family-monospace);
+}
+
+body {
+  @apply text-content font-body;
+}
+
+button {
+  @apply cursor-pointer;
+}
+
+/* Custom select styles until nldd-dropdown has been fixed */
+
+select {
+  @apply ring-accent-200 dark:ring-accent-800 appearance-none rounded-[9px] bg-size-[1.5em_1.5em] bg-position-[right_0.625rem_center] bg-no-repeat py-2.5 pr-10 pl-3 ring-offset-2 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50;
+  background-color: var(--semantics-buttons-neutral-tinted-background-color);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3e%3cpath fill='currentColor' d='M12 5.828 7.4 10.4 6 9l6-6 6 6-1.4 1.4zm0 12.344L7.4 13.6 6 15l6 6 6-6-1.4-1.4z'%3e%3c/path%3e%3c/svg%3e");
+}
+
+input[type='radio'] {
+  appearance: none;
+  -webkit-appearance: none;
+}
+input[type='radio']:checked {
+  background-color: rgb(79 70 229);
+  border-color: rgb(79 70 229);
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='3'/%3e%3c/svg%3e");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Rack diagram: free slot diagonal stripe */
+.rack-slot-free {
+  background-color: #f8fafc;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    #e2e8f0 4px,
+    #e2e8f0 5px
+  );
+  border: 1px dashed #94a3b8;
+  color: #94a3b8;
+}

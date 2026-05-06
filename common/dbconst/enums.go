@@ -2,6 +2,32 @@
 
 package dbconst
 
+// AssetEventEventType represents valid values for dcim.asset_events.event_type.
+type AssetEventEventType string
+
+const (
+	AssetEventEventType_Received       AssetEventEventType = "received"
+	AssetEventEventType_Deployed       AssetEventEventType = "deployed"
+	AssetEventEventType_Moved          AssetEventEventType = "moved"
+	AssetEventEventType_RmaSent        AssetEventEventType = "rma_sent"
+	AssetEventEventType_RmaReceived    AssetEventEventType = "rma_received"
+	AssetEventEventType_Decommissioned AssetEventEventType = "decommissioned"
+	AssetEventEventType_Reserved       AssetEventEventType = "reserved"
+	AssetEventEventType_Note           AssetEventEventType = "note"
+)
+
+// AssetStatus represents valid values for dcim.assets.status.
+type AssetStatus string
+
+const (
+	AssetStatus_InStock        AssetStatus = "in_stock"
+	AssetStatus_Deployed       AssetStatus = "deployed"
+	AssetStatus_Rma            AssetStatus = "rma"
+	AssetStatus_Decommissioned AssetStatus = "decommissioned"
+	AssetStatus_InTransit      AssetStatus = "in_transit"
+	AssetStatus_Reserved       AssetStatus = "reserved"
+)
+
 // ClusterEventEventType represents valid values for tenant.cluster_events.event_type.
 type ClusterEventEventType string
 
@@ -57,6 +83,62 @@ const (
 	ClusterOutboxStatus_Failed    ClusterOutboxStatus = "failed"
 )
 
+// DeviceCatalogCategory represents valid values for dcim.device_catalogs.category.
+type DeviceCatalogCategory string
+
+const (
+	DeviceCatalogCategory_Server        DeviceCatalogCategory = "server"
+	DeviceCatalogCategory_Switch        DeviceCatalogCategory = "switch"
+	DeviceCatalogCategory_Pdu           DeviceCatalogCategory = "pdu"
+	DeviceCatalogCategory_PatchPanel    DeviceCatalogCategory = "patch_panel"
+	DeviceCatalogCategory_Sfp           DeviceCatalogCategory = "sfp"
+	DeviceCatalogCategory_Nic           DeviceCatalogCategory = "nic"
+	DeviceCatalogCategory_Cpu           DeviceCatalogCategory = "cpu"
+	DeviceCatalogCategory_Dimm          DeviceCatalogCategory = "dimm"
+	DeviceCatalogCategory_Disk          DeviceCatalogCategory = "disk"
+	DeviceCatalogCategory_Cable         DeviceCatalogCategory = "cable"
+	DeviceCatalogCategory_Adapter       DeviceCatalogCategory = "adapter"
+	DeviceCatalogCategory_PowerSupply   DeviceCatalogCategory = "power_supply"
+	DeviceCatalogCategory_CableManager  DeviceCatalogCategory = "cable_manager"
+	DeviceCatalogCategory_ConsoleServer DeviceCatalogCategory = "console_server"
+)
+
+// LogicalConnectionConnectionType represents valid values for dcim.logical_connections.connection_type.
+type LogicalConnectionConnectionType string
+
+const (
+	LogicalConnectionConnectionType_Network LogicalConnectionConnectionType = "network"
+	LogicalConnectionConnectionType_Power   LogicalConnectionConnectionType = "power"
+	LogicalConnectionConnectionType_Console LogicalConnectionConnectionType = "console"
+)
+
+// LogicalDesignStatus represents valid values for dcim.logical_designs.status.
+type LogicalDesignStatus string
+
+const (
+	LogicalDesignStatus_Draft    LogicalDesignStatus = "draft"
+	LogicalDesignStatus_Active   LogicalDesignStatus = "active"
+	LogicalDesignStatus_Archived LogicalDesignStatus = "archived"
+)
+
+// LogicalDeviceRole represents valid values for dcim.logical_devices.role.
+type LogicalDeviceRole string
+
+const (
+	LogicalDeviceRole_Compute       LogicalDeviceRole = "compute"
+	LogicalDeviceRole_Tor           LogicalDeviceRole = "tor"
+	LogicalDeviceRole_Spine         LogicalDeviceRole = "spine"
+	LogicalDeviceRole_Core          LogicalDeviceRole = "core"
+	LogicalDeviceRole_Pdu           LogicalDeviceRole = "pdu"
+	LogicalDeviceRole_PatchPanel    LogicalDeviceRole = "patch_panel"
+	LogicalDeviceRole_Storage       LogicalDeviceRole = "storage"
+	LogicalDeviceRole_Firewall      LogicalDeviceRole = "firewall"
+	LogicalDeviceRole_LoadBalancer  LogicalDeviceRole = "load_balancer"
+	LogicalDeviceRole_ConsoleServer LogicalDeviceRole = "console_server"
+	LogicalDeviceRole_CableManager  LogicalDeviceRole = "cable_manager"
+	LogicalDeviceRole_Adapter       LogicalDeviceRole = "adapter"
+)
+
 // OrganizationsUserPermission represents valid values for tenant.organizations_users.permission.
 type OrganizationsUserPermission string
 
@@ -83,6 +165,56 @@ const (
 	OutboxStatus_Completed OutboxStatus = "completed"
 	OutboxStatus_Retrying  OutboxStatus = "retrying"
 	OutboxStatus_Failed    OutboxStatus = "failed"
+)
+
+// PlacementSlotType represents valid values for dcim.placements.slot_type.
+type PlacementSlotType string
+
+const (
+	PlacementSlotType_Unit  PlacementSlotType = "unit"
+	PlacementSlotType_Power PlacementSlotType = "power"
+	PlacementSlotType_ZeroU PlacementSlotType = "zero_u"
+)
+
+// PortCompatibilitieCompatibleCategory represents valid values for dcim.port_compatibilities.compatible_category.
+type PortCompatibilitieCompatibleCategory string
+
+const (
+	PortCompatibilitieCompatibleCategory_Server        PortCompatibilitieCompatibleCategory = "server"
+	PortCompatibilitieCompatibleCategory_Switch        PortCompatibilitieCompatibleCategory = "switch"
+	PortCompatibilitieCompatibleCategory_Pdu           PortCompatibilitieCompatibleCategory = "pdu"
+	PortCompatibilitieCompatibleCategory_PatchPanel    PortCompatibilitieCompatibleCategory = "patch_panel"
+	PortCompatibilitieCompatibleCategory_Sfp           PortCompatibilitieCompatibleCategory = "sfp"
+	PortCompatibilitieCompatibleCategory_Nic           PortCompatibilitieCompatibleCategory = "nic"
+	PortCompatibilitieCompatibleCategory_Cpu           PortCompatibilitieCompatibleCategory = "cpu"
+	PortCompatibilitieCompatibleCategory_Dimm          PortCompatibilitieCompatibleCategory = "dimm"
+	PortCompatibilitieCompatibleCategory_Disk          PortCompatibilitieCompatibleCategory = "disk"
+	PortCompatibilitieCompatibleCategory_Cable         PortCompatibilitieCompatibleCategory = "cable"
+	PortCompatibilitieCompatibleCategory_Adapter       PortCompatibilitieCompatibleCategory = "adapter"
+	PortCompatibilitieCompatibleCategory_PowerSupply   PortCompatibilitieCompatibleCategory = "power_supply"
+	PortCompatibilitieCompatibleCategory_CableManager  PortCompatibilitieCompatibleCategory = "cable_manager"
+	PortCompatibilitieCompatibleCategory_ConsoleServer PortCompatibilitieCompatibleCategory = "console_server"
+)
+
+// PortDefinitionDirection represents valid values for dcim.port_definitions.direction.
+type PortDefinitionDirection string
+
+const (
+	PortDefinitionDirection_In    PortDefinitionDirection = "in"
+	PortDefinitionDirection_Out   PortDefinitionDirection = "out"
+	PortDefinitionDirection_Bidir PortDefinitionDirection = "bidir"
+)
+
+// PortDefinitionPortType represents valid values for dcim.port_definitions.port_type.
+type PortDefinitionPortType string
+
+const (
+	PortDefinitionPortType_Network  PortDefinitionPortType = "network"
+	PortDefinitionPortType_PowerIn  PortDefinitionPortType = "power_in"
+	PortDefinitionPortType_PowerOut PortDefinitionPortType = "power_out"
+	PortDefinitionPortType_Slot     PortDefinitionPortType = "slot"
+	PortDefinitionPortType_Bay      PortDefinitionPortType = "bay"
+	PortDefinitionPortType_Console  PortDefinitionPortType = "console"
 )
 
 // ProjectMemberRole represents valid values for tenant.project_members.role.

@@ -244,6 +244,7 @@ func createRoles(pool *pgxpool.Pool) {
 		{name: "fun_authz", bypassrls: true},
 		{name: "fun_cluster_worker"},
 		{name: "fun_authz_worker", bypassrls: true},
+		{name: "fun_dcim_api"},
 	}
 	for _, role := range roles {
 		_, err := pool.Exec(ctx, fmt.Sprintf(`DO $$ BEGIN CREATE ROLE %s WITH LOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$`, role.name))
