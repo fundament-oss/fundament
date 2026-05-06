@@ -9,7 +9,9 @@ externalUrls:
   console: https://console.fundament.localhost:8443
   docs: https://docs.fundament.localhost:8443
   cookieDomain: fundament.localhost
-  corsAllowedOrigins: "https://console.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
+  dcimApi: https://dcim-api.fundament.localhost:8443
+  dcim: https://dcim.fundament.localhost:8443
+  corsAllowedOrigins: "https://console.fundament.localhost:8443,https://dcim.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true
@@ -118,6 +120,15 @@ dex:
 pluginController:
   enabled: true
   logLevel: debug
+
+dcimApi:
+  enabled: true
+  replicas: 1
+  logLevel: debug
+
+dcimFrontend:
+  enabled: true
+  replicas: 1
 
 authzWorker:
   enabled: true

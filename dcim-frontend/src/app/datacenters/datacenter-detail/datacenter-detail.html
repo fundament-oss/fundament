@@ -1,0 +1,387 @@
+<!-- ══════════════════════════════════════════════════════════════
+     PAGE HEADER
+     ══════════════════════════════════════════════════════════════ -->
+<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-3">
+  <a
+    routerLink="/datacenters"
+    class="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 transition-colors"
+    aria-label="Back to Data centers"
+  >
+    <nldd-icon name="arrow-left" class="w-4 h-4" aria-hidden="true"></nldd-icon>
+    Data centers
+  </a>
+  <span class="text-slate-300" aria-hidden="true">/</span>
+  @if (dc(); as dc) {
+    <h1 class="text-base font-semibold text-slate-900 m-0">
+      {{ dc.name }} — Rooms &amp; Rack Rows
+    </h1>
+  }
+  <div class="flex-1"></div>
+  <nldd-button
+    variant="accent-filled"
+    text="Add Room"
+    start-icon="plus-small"
+    size="sm"
+    (click)="openCreateRoom()"
+  ></nldd-button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MAIN CONTENT
+     ══════════════════════════════════════════════════════════════ -->
+<main class="flex-1 overflow-y-auto">
+  @if (dc(); as dc) {
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6 py-6">
+      <!-- ── LEFT: DC info ─────────────────────────────────────────── -->
+      <div class="lg:col-span-1">
+        <section
+          aria-labelledby="dc-info-heading"
+          class="rounded-xl border border-slate-200 bg-white"
+        >
+          <div class="px-5 py-4 border-b border-slate-100">
+            <h2 id="dc-info-heading" class="text-sm font-semibold text-slate-900">
+              {{ dc.fullName }}
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">{{ dc.city }}, {{ dc.country }}</p>
+          </div>
+          <dl class="divide-y divide-slate-100">
+            <div class="flex items-center justify-between px-5 py-2.5">
+              <dt class="text-xs text-slate-500">Tier</dt>
+              <dd class="text-xs font-medium text-slate-800">Tier {{ dc.tier }}</dd>
+            </div>
+            <div class="flex items-center justify-between px-5 py-2.5">
+              <dt class="text-xs text-slate-500">PUE</dt>
+              <dd class="text-xs font-medium text-slate-800">{{ dc.pue }}</dd>
+            </div>
+            <div class="flex items-center justify-between px-5 py-2.5">
+              <dt class="text-xs text-slate-500">Power</dt>
+              <dd class="text-xs font-medium text-slate-800">{{ dc.powerCapacityKw }} kW</dd>
+            </div>
+            <div class="flex items-center justify-between px-5 py-2.5">
+              <dt class="text-xs text-slate-500">Cooling</dt>
+              <dd class="text-xs font-medium text-slate-800">{{ dc.coolingCapacityKw }} kW</dd>
+            </div>
+            <div class="flex items-center justify-between px-5 py-2.5">
+              <dt class="text-xs text-slate-500">Floor</dt>
+              <dd class="text-xs font-medium text-slate-800">{{ dc.floorSqm }} m²</dd>
+            </div>
+            <div class="flex items-center justify-between px-5 py-2.5">
+              <dt class="text-xs text-slate-500">Racks</dt>
+              <dd class="text-xs font-medium text-slate-800">{{ dcRacks().length }}</dd>
+            </div>
+          </dl>
+          <div class="px-5 py-3 border-t border-slate-100">
+            <a
+              [routerLink]="['/datacenters']"
+              class="inline-flex items-center gap-2 text-xs text-accent-700 hover:underline"
+            >
+              <nldd-icon name="arrow-left" class="w-3 h-3" aria-hidden="true"></nldd-icon>
+              Back to floor map
+            </a>
+          </div>
+        </section>
+
+        <!-- Racks quick list -->
+        @if (dcRacks().length) {
+          <section
+            aria-labelledby="racks-heading"
+            class="mt-4 rounded-xl border border-slate-200 bg-white"
+          >
+            <div class="px-5 py-4 border-b border-slate-100">
+              <h2 id="racks-heading" class="text-sm font-semibold text-slate-900">
+                Racks ({{ dcRacks().length }})
+              </h2>
+            </div>
+            <ul class="divide-y divide-slate-100" role="list">
+              @for (rack of dcRacks(); track rack.id) {
+                <li>
+                  <a
+                    [routerLink]="['/racks', rack.id]"
+                    class="flex items-center gap-2 px-5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    <nldd-icon
+                      name="cylinder-split"
+                      style="width: 14px; height: 14px; color: #94a3b8"
+                      aria-hidden="true"
+                    ></nldd-icon>
+                    {{ rack.name }}
+                    <span class="ml-auto text-xs text-slate-400">{{ rack.totalU }}U</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </div>
+
+      <!-- ── CENTER + RIGHT: Rooms + Rack Rows ─────────────────────── -->
+      <div class="lg:col-span-2 flex flex-col gap-4">
+        @if (dcRooms().length === 0) {
+          <div
+            class="rounded-xl border-2 border-dashed border-slate-200 py-16 flex flex-col items-center gap-3 text-slate-400"
+          >
+            <nldd-icon name="apartment-building" class="w-8 h-8" aria-hidden="true"></nldd-icon>
+            <p class="text-sm">No rooms yet.</p>
+            <nldd-button
+              variant="accent-filled"
+              text="Add first room"
+              start-icon="plus-small"
+              size="sm"
+              (click)="openCreateRoom()"
+            ></nldd-button>
+          </div>
+        }
+
+        @for (room of dcRooms(); track room.id) {
+          <section
+            [attr.aria-labelledby]="'room-' + room.id"
+            class="rounded-xl border border-slate-200 bg-white"
+          >
+            <!-- Room header -->
+            <div class="flex items-center gap-3 px-5 py-3 border-b border-slate-100">
+              <nldd-icon
+                name="apartment-building"
+                style="width: 16px; height: 16px; color: #94a3b8"
+                aria-hidden="true"
+              ></nldd-icon>
+              <div class="flex-1 min-w-0">
+                <h3 [id]="'room-' + room.id" class="text-sm font-semibold text-slate-900">
+                  {{ room.name }}
+                </h3>
+                <p class="text-xs text-slate-400">Floor {{ room.floor }}</p>
+              </div>
+              <div class="flex items-center gap-1">
+                <nldd-button
+                  variant="neutral-tinted"
+                  text="Add Rack Row"
+                  start-icon="plus-small"
+                  size="xs"
+                  (click)="openCreateRackRow(room.id)"
+                ></nldd-button>
+                <nldd-icon-button
+                  icon="pencil-on-square"
+                  variant="neutral-transparent"
+                  size="sm"
+                  text="Edit room"
+                  (click)="openEditRoom(room)"
+                ></nldd-icon-button>
+                <nldd-icon-button
+                  icon="trash"
+                  variant="neutral-transparent"
+                  size="sm"
+                  text="Delete room"
+                  (click)="openDeleteRoom(room)"
+                ></nldd-icon-button>
+              </div>
+            </div>
+
+            <!-- Rack rows table -->
+            @if (rackRowsForRoom(room.id).length === 0) {
+              <p class="px-5 py-4 text-xs text-slate-400 italic">No rack rows in this room.</p>
+            } @else {
+              <table class="w-full text-sm" role="grid">
+                <thead>
+                  <tr class="border-b border-slate-100">
+                    <th
+                      class="px-5 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                    >
+                      Name
+                    </th>
+                    <th
+                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                    >
+                      Position X
+                    </th>
+                    <th
+                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                    >
+                      Position Y
+                    </th>
+                    <th class="px-3 py-2 w-20"></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  @for (rr of rackRowsForRoom(room.id); track rr.id) {
+                    <tr class="hover:bg-slate-50 transition-colors">
+                      <td class="px-5 py-2.5 font-medium text-slate-800">{{ rr.name }}</td>
+                      <td class="px-3 py-2.5 text-slate-600 tabular-nums">{{ rr.positionX }}</td>
+                      <td class="px-3 py-2.5 text-slate-600 tabular-nums">{{ rr.positionY }}</td>
+                      <td class="px-3 py-2.5">
+                        <div class="flex items-center gap-1 justify-end">
+                          <nldd-icon-button
+                            icon="pencil-on-square"
+                            variant="neutral-transparent"
+                            size="xs"
+                            text="Edit rack row"
+                            (click)="openEditRackRow(rr)"
+                          ></nldd-icon-button>
+                          <nldd-icon-button
+                            icon="trash"
+                            variant="neutral-transparent"
+                            size="xs"
+                            text="Delete rack row"
+                            (click)="openDeleteRackRow(rr)"
+                          ></nldd-icon-button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="flex flex-col items-center justify-center py-20 text-slate-400">
+      <p class="text-sm">Datacenter not found.</p>
+      <a routerLink="/datacenters" class="mt-2 text-xs text-accent-700 hover:underline"
+        >Back to list</a
+      >
+    </div>
+  }
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ROOM EDIT SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #roomSheet accessible-label="Room details" placement="right" width="400px">
+  <div class="flex flex-col h-full">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+      <h2 class="text-base font-semibold text-slate-900">
+        {{ editRoom()?.id ? 'Edit Room' : 'New Room' }}
+      </h2>
+      <nldd-icon-button
+        icon="dismiss"
+        variant="neutral-transparent"
+        size="sm"
+        text="Close"
+        (click)="closeRoomForm()"
+      ></nldd-icon-button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+      <nldd-form-field label="Room name">
+        <nldd-text-field
+          #fRoomName
+          [attr.value]="editRoom()?.name ?? ''"
+          placeholder="Main Hall"
+        ></nldd-text-field>
+      </nldd-form-field>
+      <nldd-form-field label="Floor number">
+        <nldd-number-field
+          #fRoomFloor
+          [attr.value]="editRoom()?.floor ?? 1"
+          min="0"
+          max="99"
+          full-width
+        ></nldd-number-field>
+      </nldd-form-field>
+    </div>
+    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
+      <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeRoomForm()"></nldd-button>
+      <nldd-button variant="accent-filled" text="Save" (click)="saveRoom()"></nldd-button>
+    </div>
+  </div>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ROOM DELETE MODAL
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #roomModal
+  [attr.text]="'Delete room \'' + (deleteRoom()?.name ?? '') + '\'?'"
+  supporting-text="All rack rows in this room will also be removed."
+  accessible-label="Confirm room deletion"
+>
+  <nldd-button
+    slot="actions"
+    variant="neutral-tinted"
+    text="Cancel"
+    (click)="cancelDeleteRoom()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    (click)="confirmDeleteRoom()"
+  ></nldd-button>
+</nldd-modal-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════
+     RACK ROW EDIT SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #rowSheet accessible-label="Rack row details" placement="right" width="400px">
+  <div class="flex flex-col h-full">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+      <h2 class="text-base font-semibold text-slate-900">
+        {{ editRackRow()?.id ? 'Edit rack row' : 'Add rack row' }}
+      </h2>
+      <nldd-icon-button
+        icon="dismiss"
+        variant="neutral-transparent"
+        size="sm"
+        text="Close"
+        (click)="closeRackRowForm()"
+      ></nldd-icon-button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+      <nldd-form-field label="Row name">
+        <nldd-text-field
+          #fRowName
+          [attr.value]="editRackRow()?.name ?? ''"
+          placeholder="Row A"
+        ></nldd-text-field>
+      </nldd-form-field>
+      <div class="grid grid-cols-2 gap-3">
+        <nldd-form-field label="Position X">
+          <nldd-number-field
+            #fRowX
+            [attr.value]="editRackRow()?.positionX ?? 1"
+            min="1"
+            full-width
+          ></nldd-number-field>
+        </nldd-form-field>
+        <nldd-form-field label="Position Y">
+          <nldd-number-field
+            #fRowY
+            [attr.value]="editRackRow()?.positionY ?? 1"
+            min="1"
+            full-width
+          ></nldd-number-field>
+        </nldd-form-field>
+      </div>
+    </div>
+    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
+      <nldd-button
+        variant="neutral-tinted"
+        text="Cancel"
+        (click)="closeRackRowForm()"
+      ></nldd-button>
+      <nldd-button variant="accent-filled" text="Save" (click)="saveRackRow()"></nldd-button>
+    </div>
+  </div>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     RACK ROW DELETE MODAL
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #rowModal
+  [attr.text]="'Delete rack row \'' + (deleteRackRow()?.name ?? '') + '\'?'"
+  supporting-text="This action cannot be undone."
+  accessible-label="Confirm rack row deletion"
+>
+  <nldd-button
+    slot="actions"
+    variant="neutral-tinted"
+    text="Cancel"
+    (click)="cancelDeleteRackRow()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    (click)="confirmDeleteRackRow()"
+  ></nldd-button>
+</nldd-modal-dialog>

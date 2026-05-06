@@ -1,0 +1,18 @@
+{{- if $.Values.dcimApi.httproute.enabled }}
+{{- if not $.Values.dcimApi.httproute.parentRefs }}{{ fail "dcimApi.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-dcim-api
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "dcim-api" "component" "gateway") | nindent 4 }}
+spec:
+  parentRefs:
+    {{- toYaml $.Values.dcimApi.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml $.Values.dcimApi.httproute.hostnames | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: dcim-api
+          port: 8080
+{{- end }}
