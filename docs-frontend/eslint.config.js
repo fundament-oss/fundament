@@ -1,10 +1,8 @@
-import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import eslintPluginAstro from 'eslint-plugin-astro';
 import prettier from 'eslint-plugin-prettier/recommended';
 
 export default [
-  js.configs.recommended,
   ...tseslint.configs.recommended,
   ...eslintPluginAstro.configs.recommended,
   prettier,
@@ -42,6 +40,12 @@ export default [
       'import/extensions': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/triple-slash-reference': 'off',
+    },
+  },
+  {
+    files: ['**/*.astro', '**/*.astro/*.js', '**/*.astro/*.ts'],
+    rules: {
+      'prettier/prettier': 'off',
     },
   },
   {

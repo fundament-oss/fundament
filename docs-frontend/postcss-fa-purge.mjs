@@ -7,7 +7,7 @@
 // This plugin scans source files, keeps only .fa-* rules for icons that are actually used,
 // and injects .icon-* rules for admonition types that are actually present in the docs.
 // Tailwind v4 already tree-shakes its own output, so no Tailwind handling is needed here.
-import glob from 'glob';
+import { globSync } from 'glob';
 import { readFileSync } from 'fs';
 
 // Maps Asciidoctor admonition types to their FA7 alias icon names.
@@ -40,7 +40,7 @@ const plugin = () => ({
     // Scan source files for used FA icons and admonition types.
     const usedFaIcons = new Set();
     const usedAdmonitions = new Set();
-    const files = glob.sync('./src/**/*.{astro,html,js,ts,adoc}');
+    const files = globSync('./src/**/*.{astro,html,js,ts,adoc}');
     for (const file of files) {
       const content = readFileSync(file, 'utf-8');
       for (const m of content.matchAll(/\bfa-([a-z0-9-]+)\b/g)) usedFaIcons.add(m[1]);

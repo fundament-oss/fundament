@@ -1,7 +1,7 @@
 import { defineCollection } from 'astro:content';
 import { docsSchema } from '@astrojs/starlight/schema';
 import { docsLoader } from '@astrojs/starlight/loaders';
-import { asciidocLoader } from '../asciidoc-loader.ts';
+import { asciidocLoader } from './asciidoc-loader.ts';
 import type { LoaderContext } from 'astro/loaders';
 import { z } from 'astro:content';
 
