@@ -159,6 +159,11 @@
           @if (bDeviceId() && bFilteredPorts().length === 0) {
             <p class="text-[10px] text-amber-600 mt-0.5">No ports of this type on this device.</p>
           }
+          @if (isSamePort()) {
+            <p class="text-[10px] text-red-600 mt-0.5" role="alert">
+              A and B sides cannot use the same port.
+            </p>
+          }
         </div>
       </div>
     </section>

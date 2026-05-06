@@ -98,6 +98,8 @@ export default class CableFormComponent {
 
   readonly isEditMode = computed(() => !!this.cable()?.id);
 
+  readonly isSamePort = computed(() => !!this.aPortId() && this.aPortId() === this.bPortId());
+
   readonly canSave = computed(
     () =>
       !!(
@@ -106,7 +108,7 @@ export default class CableFormComponent {
         this.bDeviceId() &&
         this.bPortId() &&
         this.cableType()
-      ),
+      ) && !this.isSamePort(),
   );
 
   constructor() {
