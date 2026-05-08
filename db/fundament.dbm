@@ -2471,6 +2471,9 @@ END;]]> </definition>
 	<constraint name="logical_device_layouts_pk" type="pk-constr" table="dcim.logical_device_layouts">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
+	<constraint name="logical_device_layouts_uq_device" type="uq-constr" table="dcim.logical_device_layouts">
+		<columns names="logical_device_id" ref-type="src-columns"/>
+	</constraint>
 </table>
 
 <table name="placements" layers="0" collapse-mode="2" max-obj-count="14" z-value="0">
@@ -2563,7 +2566,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="notes" layers="0" collapse-mode="2" max-obj-count="20" z-value="0">
+<table name="notes" layers="0" collapse-mode="2" max-obj-count="22" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
 	<position x="6800" y="400"/>
@@ -2612,6 +2615,9 @@ END;]]> </definition>
 	<column name="logical_connection_id">
 		<type name="uuid" length="0"/>
 	</column>
+	<column name="task_id">
+		<type name="uuid" length="0"/>
+	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
@@ -2622,7 +2628,91 @@ END;]]> </definition>
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="notes_ck_single_ref" type="ck-constr" table="dcim.notes">
-			<expression> <![CDATA[num_nonnulls(device_catalog_id, port_definition_id, asset_id, site_id, room_id, rack_row_id, rack_id, placement_id, physical_connection_id, logical_design_id, logical_device_id, logical_connection_id) = 1]]> </expression>
+			<expression> <![CDATA[num_nonnulls(device_catalog_id, port_definition_id, asset_id, site_id, room_id, rack_row_id, rack_id, placement_id, physical_connection_id, logical_design_id, logical_device_id, logical_connection_id, task_id) = 1]]> </expression>
+	</constraint>
+</table>
+
+<table name="tasks" layers="0" collapse-mode="2" max-obj-count="15" z-value="0">
+	<schema name="dcim"/>
+	<role name="fun_owner"/>
+	<position x="7400" y="400"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="title" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="description">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status" not-null="true" default-value="'ready'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="priority" not-null="true" default-value="'medium'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="category" not-null="true" default-value="'other'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="assignee_id">
+		<type name="text" length="0"/>
+	</column>
+	<column name="due_date">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="location">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="tasks_pk" type="pk-constr" table="dcim.tasks">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="tasks_ck_status" type="ck-constr" table="dcim.tasks">
+			<expression> <![CDATA[status IN ('ready','in_progress','review','blocked','done')]]> </expression>
+	</constraint>
+	<constraint name="tasks_ck_priority" type="ck-constr" table="dcim.tasks">
+			<expression> <![CDATA[priority IN ('low','medium','high','critical')]]> </expression>
+	</constraint>
+	<constraint name="tasks_ck_category" type="ck-constr" table="dcim.tasks">
+			<expression> <![CDATA[category IN ('hardware','network','cooling','power','security','other')]]> </expression>
+	</constraint>
+</table>
+
+<table name="task_steps" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
+	<schema name="dcim"/>
+	<role name="fun_owner"/>
+	<position x="7400" y="800"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="task_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="title" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="description">
+		<type name="text" length="0"/>
+	</column>
+	<column name="ordinal" not-null="true">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="completed" not-null="true" default-value="false">
+		<type name="boolean" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="task_steps_pk" type="pk-constr" table="dcim.task_steps">
+		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 </table>
 
@@ -3082,6 +3172,18 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="dcim_notes_fk_task" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="dcim.tasks" table="dcim.notes">
+	<columns names="task_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="dcim_task_steps_fk_task" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="dcim.tasks" table="dcim.task_steps">
+	<columns names="task_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <relationship name="rel_projects_clusters" type="relfk" layers="0"
 	 src-table="tenant.projects"
 	 dst-table="tenant.clusters" reference-fk="projects_fk_cluster"
@@ -3431,6 +3533,16 @@ END;]]> </definition>
 	 src-table="dcim.notes"
 	 dst-table="dcim.logical_connections" reference-fk="dcim_notes_fk_logical_connection"
 	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_dcim_notes_tasks" type="relfk" layers="0"
+	 src-table="dcim.notes"
+	 dst-table="dcim.tasks" reference-fk="dcim_notes_fk_task"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_dcim_task_steps_tasks" type="relfk" layers="0"
+	 src-table="dcim.task_steps"
+	 dst-table="dcim.tasks" reference-fk="dcim_task_steps_fk_task"
+	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_idempotency_keys_projects" type="relfk" layers="0"
 	 src-table="tenant.idempotency_keys"
@@ -3839,6 +3951,91 @@ END;]]> </definition>
 </permission>
 <permission>
 	<object name="dcim.sites" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.rooms" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.rack_rows" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.racks" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.device_catalogs" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.port_definitions" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.port_compatibilities" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.assets" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.asset_events" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.placements" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.physical_connections" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.logical_designs" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.logical_devices" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.logical_connections" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.logical_device_layouts" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true" delete="true"/>
+</permission>
+<permission>
+	<object name="dcim.notes" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.tasks" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.task_steps" type="table"/>
 	<roles names="fun_dcim_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>

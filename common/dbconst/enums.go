@@ -224,3 +224,36 @@ const (
 	ProjectMemberRole_Admin  ProjectMemberRole = "admin"
 	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
 )
+
+// TaskCategory represents valid values for dcim.tasks.category.
+type TaskCategory string
+
+const (
+	TaskCategory_Hardware TaskCategory = "hardware"
+	TaskCategory_Network  TaskCategory = "network"
+	TaskCategory_Cooling  TaskCategory = "cooling"
+	TaskCategory_Power    TaskCategory = "power"
+	TaskCategory_Security TaskCategory = "security"
+	TaskCategory_Other    TaskCategory = "other"
+)
+
+// TaskPriority represents valid values for dcim.tasks.priority.
+type TaskPriority string
+
+const (
+	TaskPriority_Low      TaskPriority = "low"
+	TaskPriority_Medium   TaskPriority = "medium"
+	TaskPriority_High     TaskPriority = "high"
+	TaskPriority_Critical TaskPriority = "critical"
+)
+
+// TaskStatus represents valid values for dcim.tasks.status.
+type TaskStatus string
+
+const (
+	TaskStatus_Ready      TaskStatus = "ready"
+	TaskStatus_InProgress TaskStatus = "in_progress"
+	TaskStatus_Review     TaskStatus = "review"
+	TaskStatus_Blocked    TaskStatus = "blocked"
+	TaskStatus_Done       TaskStatus = "done"
+)

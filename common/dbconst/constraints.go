@@ -87,6 +87,8 @@ const (
 	ConstraintDcimNotesFkRoom = "dcim_notes_fk_room"
 	// ConstraintDcimNotesFkSite is defined on dcim.notes.
 	ConstraintDcimNotesFkSite = "dcim_notes_fk_site"
+	// ConstraintDcimNotesFkTask is defined on dcim.notes.
+	ConstraintDcimNotesFkTask = "dcim_notes_fk_task"
 	// ConstraintDcimPhysicalConnectionsFkAPlacement is defined on dcim.physical_connections.
 	ConstraintDcimPhysicalConnectionsFkAPlacement = "dcim_physical_connections_fk_a_placement"
 	// ConstraintDcimPhysicalConnectionsFkAPort is defined on dcim.physical_connections.
@@ -121,6 +123,8 @@ const (
 	ConstraintDcimRacksFkRackRow = "dcim_racks_fk_rack_row"
 	// ConstraintDcimRoomsFkSite is defined on dcim.rooms.
 	ConstraintDcimRoomsFkSite = "dcim_rooms_fk_site"
+	// ConstraintDcimTaskStepsFkTask is defined on dcim.task_steps.
+	ConstraintDcimTaskStepsFkTask = "dcim_task_steps_fk_task"
 	// ConstraintDeviceCatalogsCkCategory is defined on dcim.device_catalogs.
 	ConstraintDeviceCatalogsCkCategory = "device_catalogs_ck_category"
 	// ConstraintDeviceCatalogsUqManufacturerModel is defined on dcim.device_catalogs.
@@ -151,6 +155,8 @@ const (
 	ConstraintLogicalDesignsCkStatus = "logical_designs_ck_status"
 	// ConstraintLogicalDesignsUqName is defined on dcim.logical_designs.
 	ConstraintLogicalDesignsUqName = "logical_designs_uq_name"
+	// ConstraintLogicalDeviceLayoutsUqDevice is defined on dcim.logical_device_layouts.
+	ConstraintLogicalDeviceLayoutsUqDevice = "logical_device_layouts_uq_device"
 	// ConstraintLogicalDevicesCkRole is defined on dcim.logical_devices.
 	ConstraintLogicalDevicesCkRole = "logical_devices_ck_role"
 	// ConstraintLogicalDevicesUqDesignLabel is defined on dcim.logical_devices.
@@ -295,6 +301,12 @@ const (
 	ConstraintSitesUqName = "sites_uq_name"
 	// ConstraintTagsUqName is defined on appstore.tags.
 	ConstraintTagsUqName = "tags_uq_name"
+	// ConstraintTasksCkCategory is defined on dcim.tasks.
+	ConstraintTasksCkCategory = "tasks_ck_category"
+	// ConstraintTasksCkPriority is defined on dcim.tasks.
+	ConstraintTasksCkPriority = "tasks_ck_priority"
+	// ConstraintTasksCkStatus is defined on dcim.tasks.
+	ConstraintTasksCkStatus = "tasks_ck_status"
 	// ConstraintUsersUqExternalRef is defined on tenant.users.
 	ConstraintUsersUqExternalRef = "users_uq_external_ref"
 	// ConstraintVerifyDeleted is defined on (constraint trigger).
