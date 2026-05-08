@@ -104,21 +104,6 @@
       </a>
 
       <a
-        routerLink="/designs"
-        routerLinkActive
-        #designsLink="routerLinkActive"
-        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
-        [class]="
-          designsLink.isActive
-            ? 'text-slate-900 font-medium border-accent-600'
-            : 'text-slate-500 border-transparent hover:text-slate-900'
-        "
-      >
-        <nldd-icon name="pencil-on-square" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
-        Designs
-      </a>
-
-      <a
         routerLink="/task-management-admin"
         routerLinkActive
         #tasksLink="routerLinkActive"
@@ -136,24 +121,6 @@
 
     <!-- User section -->
     <div class="flex items-center gap-3 px-6 border-l border-slate-200 shrink-0">
-      <button
-        class="relative flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-        aria-label="Notifications"
-      >
-        <nldd-icon name="inbox" class="w-5 h-5" aria-hidden="true"></nldd-icon>
-        <span
-          class="absolute right-2 top-2 h-1.75 w-1.75 rounded-full bg-red-600 border-2 border-white"
-          aria-hidden="true"
-        ></span>
-      </button>
-
-      <button
-        class="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-        aria-label="Help"
-      >
-        <nldd-icon name="question-mark-circle" class="w-5 h-5" aria-hidden="true"></nldd-icon>
-      </button>
-
       <div class="text-right leading-tight hidden sm:block">
         <div class="text-sm text-slate-900">Piet Bakker</div>
         <div class="text-xs text-slate-400">Admin</div>

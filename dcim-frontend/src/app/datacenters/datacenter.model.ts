@@ -50,20 +50,6 @@ export interface RackCell {
   floorStatus: RackFloorStatus | 'n/a';
 }
 
-// ── View model shared between DatacentersComponent and IsometricCanvasComponent ──
-
-export interface RackCell {
-  rackId: string | undefined;
-  rackName: string;
-  row: string;
-  col: number;
-  fillPct: number;
-  deviceCount: number;
-  powerW: number;
-  ownership: 'own' | 'other-client';
-  floorStatus: RackFloorStatus | 'n/a';
-}
-
 export interface Room {
   id: string;
   siteId: string;

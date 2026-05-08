@@ -15,24 +15,6 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
-     TOOLBAR
-     ══════════════════════════════════════════════════════════════ -->
-<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-2.5 flex items-center gap-2.5">
-  <div class="max-w-xs w-full">
-    <nldd-search-field
-      accessible-label="Search catalog"
-      placeholder="Search models…"
-      start-icon="magnifier"
-      [value]="searchQuery()"
-      (input)="searchQuery.set($any($event.target).value)"
-      class="block w-full"
-      size="sm"
-    >
-    </nldd-search-field>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════
      BODY (sidebar + main)
      ══════════════════════════════════════════════════════════════ -->
 <div class="flex flex-1 min-h-0">
@@ -41,6 +23,18 @@
     class="w-60 shrink-0 border-r border-slate-200 bg-white flex flex-col overflow-y-auto"
     aria-label="Category filter"
   >
+    <div class="px-4 py-3 border-b border-slate-100">
+      <nldd-search-field
+        accessible-label="Search catalog"
+        placeholder="Search models…"
+        start-icon="magnifier"
+        [value]="searchQuery()"
+        (input)="searchQuery.set($any($event.target).value)"
+        class="block w-full"
+        size="sm"
+      >
+      </nldd-search-field>
+    </div>
     <div class="px-4 py-3">
       <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
         Categories
@@ -327,6 +321,7 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #entryModal
+  (close)="cancelDeleteEntry()"
   [attr.text]="'Delete \'' + (deleteEntry()?.model ?? '') + '\'?'"
   supporting-text="This will remove the product from the catalog. Existing assets will not be affected."
   accessible-label="Confirm catalog entry deletion"

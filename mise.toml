@@ -27,7 +27,7 @@ opentofu = "1.11.3"
 "go:connectrpc.com/connect/cmd/protoc-gen-connect-go" = "1.19.1"
 
 # Go
-go = "1.26.2"
+go = "1.26.3"
 "go:sigs.k8s.io/controller-tools/cmd/controller-gen" = "0.20.1"
 golangci-lint = "2.11.4"
 "aqua:sqlc-dev/sqlc" = "1.30.0"

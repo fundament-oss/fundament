@@ -389,6 +389,7 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #rackModal
+  (close)="cancelDeleteRack()"
   [attr.text]="'Delete rack ' + (deleteRack()?.name ?? '') + '?'"
   supporting-text="All devices in this rack will be unplaced. This action cannot be undone."
   accessible-label="Confirm rack deletion"

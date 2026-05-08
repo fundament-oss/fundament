@@ -2,6 +2,8 @@ console-frontend/node_modules/
 console-frontend/dist/
 docs-frontend/node_modules/
 docs-frontend/dist/
+dcim-frontend/node_modules/
+dcim-frontend/dist/
 
 .git
 **/.gitignore

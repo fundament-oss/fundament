@@ -1,5 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import type { Site, Room as ProtoRoom, RackRow as ProtoRackRow } from '../../generated/v1/site_pb';
+import type { Site } from '../../generated/v1/site_pb';
+import type { Room as ProtoRoom } from '../../generated/v1/room_pb';
+import type { RackRow as ProtoRackRow } from '../../generated/v1/rack_row_pb';
 import type { DatacenterInfo, Room, RackRow } from './datacenter.model';
 import { SITE_CLIENT, ROOM_CLIENT, RACK_ROW_CLIENT } from '../../connect/tokens';
 

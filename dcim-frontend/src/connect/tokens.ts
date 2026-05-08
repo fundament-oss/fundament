@@ -14,7 +14,9 @@ import {
   LogicalDeviceLayoutService,
 } from '../generated/v1/design_pb';
 import { RackService } from '../generated/v1/rack_pb';
-import { SiteService, RoomService, RackRowService } from '../generated/v1/site_pb';
+import { SiteService } from '../generated/v1/site_pb';
+import { RoomService } from '../generated/v1/room_pb';
+import { RackRowService } from '../generated/v1/rack_row_pb';
 
 export const DCIM_TRANSPORT = new InjectionToken<Transport>('dcim-transport', {
   providedIn: 'root',

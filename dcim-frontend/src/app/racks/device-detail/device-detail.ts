@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { LowerCasePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import RackDiagramComponent from '../rack-diagram/rack-diagram';
@@ -30,12 +31,21 @@ import {
   DEVICE_HISTORY,
   DEVICE_CONNECTIONS,
 } from '../rack.model';
+import {
+  Cable,
+  DEVICE_PORTS,
+  MOCK_CABLES,
+  Port,
+  PortType,
+  PORT_TABS,
+  PORT_TYPE_LABEL,
+} from '../../patch-mapping/cable.model';
 
 @Component({
   selector: 'app-device-detail',
   templateUrl: './device-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RackDiagramComponent],
+  imports: [RouterLink, RackDiagramComponent, LowerCasePipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class DeviceDetailComponent {
@@ -78,6 +88,74 @@ export default class DeviceDetailComponent {
   readonly newNoteText = signal('');
 
   private readonly extraComments = signal<Record<string, DeviceComment[]>>({});
+
+  // ── Port management ────────────────────────────────────────────────────────
+  readonly activePortTab = signal<PortType>('network-interface');
+
+  readonly showAddPortForm = signal(false);
+
+  readonly newPortName = signal('');
+
+  readonly newPortLabel = signal('');
+
+  private readonly extraPorts = signal<Record<string, Port[]>>({});
+
+  private readonly removedCableIds = signal<Set<string>>(new Set());
+
+  readonly PORT_TABS = PORT_TABS;
+
+  readonly PORT_TYPE_LABEL = PORT_TYPE_LABEL;
+
+  readonly devicePorts = computed<Port[]>(() => {
+    const devId = this.deviceId();
+    const tab = this.activePortTab();
+    const base = DEVICE_PORTS[devId] ?? [];
+    const extra = this.extraPorts()[devId] ?? [];
+    return [...base, ...extra].filter((p) => p.type === tab);
+  });
+
+  readonly portCableMap = computed<Map<string, Cable>>(() => {
+    const devId = this.deviceId();
+    const removed = this.removedCableIds();
+    const cableMap = new Map<string, Cable>();
+    MOCK_CABLES.filter((cable) => !removed.has(cable.id)).forEach((cable) => {
+      if (cable.aSide.deviceId === devId) cableMap.set(cable.aSide.portId, cable);
+      if (cable.bSide.deviceId === devId) cableMap.set(cable.bSide.portId, cable);
+    });
+    return cableMap;
+  });
+
+  addPort(): void {
+    const name = this.newPortName().trim();
+    if (!name) return;
+    const devId = this.deviceId();
+    const port: Port = {
+      id: `p-${devId}-${Date.now()}`,
+      deviceId: devId,
+      name,
+      label: this.newPortLabel().trim() || undefined,
+      type: this.activePortTab(),
+    };
+    this.extraPorts.update((prev) => ({
+      ...prev,
+      [devId]: [...(prev[devId] ?? []), port],
+    }));
+    this.newPortName.set('');
+    this.newPortLabel.set('');
+    this.showAddPortForm.set(false);
+  }
+
+  disconnectCable(portId: string): void {
+    const cable = this.portCableMap().get(portId);
+    if (!cable) return;
+    this.removedCableIds.update((prev) => new Set([...prev, cable.id]));
+  }
+
+  openConnectForm(port: Port): void {
+    this.router.navigate(['/patch-mapping'], {
+      queryParams: { aDeviceId: port.deviceId, aPortId: port.id },
+    });
+  }
 
   readonly deviceNotesDescription = computed<string>(
     () => DEVICE_NOTES[this.deviceId()]?.description ?? '',

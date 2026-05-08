@@ -1,2 +1,5 @@
 # Dependency lock files
 bun.lock
+
+# Generated code
+src/generated/

@@ -15,33 +15,6 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
-     TOOLBAR
-     ══════════════════════════════════════════════════════════════ -->
-<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-2.5 flex items-center gap-6">
-  <div class="max-w-xs w-full">
-    <nldd-search-field
-      accessible-label="Search assets"
-      placeholder="Search assets…"
-      start-icon="magnifier"
-      [value]="searchQuery()"
-      (input)="searchQuery.set($any($event.target).value); onFilterChange()"
-      class="block w-full"
-      size="sm"
-    >
-    </nldd-search-field>
-  </div>
-  <div class="flex items-center gap-3">
-    <nldd-checkbox
-      accessible-label="Show decommissioned"
-      [attr.checked]="showDecommissioned() || null"
-      (change)="showDecommissioned.set($any($event).detail.checked); onFilterChange()"
-    >
-    </nldd-checkbox>
-    <span class="text-sm font-medium text-slate-600">Show decommissioned</span>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════
      BODY (sidebar + main)
      ══════════════════════════════════════════════════════════════ -->
 <div class="flex flex-1 min-h-0">
@@ -50,6 +23,20 @@
     class="w-60 shrink-0 border-r border-slate-200 bg-white flex-col overflow-y-auto hidden sm:flex"
     aria-label="Filters"
   >
+    <!-- Search -->
+    <div class="px-4 py-3 border-b border-slate-100">
+      <nldd-search-field
+        accessible-label="Search assets"
+        placeholder="Search assets…"
+        start-icon="magnifier"
+        [value]="searchQuery()"
+        (input)="searchQuery.set($any($event.target).value); onFilterChange()"
+        class="block w-full"
+        size="sm"
+      >
+      </nldd-search-field>
+    </div>
+
     <!-- Status -->
     <div class="px-4 py-3 border-b border-slate-100">
       <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</p>
@@ -70,11 +57,7 @@
 
       @for (s of statuses; track s.value) {
         <button
-          (click)="
-            statusFilter.set(s.value);
-            showDecommissioned.set(s.value === 'decommissioned' ? true : showDecommissioned());
-            onFilterChange()
-          "
+          (click)="statusFilter.set(s.value); onFilterChange()"
           class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
           [class]="
             statusFilter() === s.value
@@ -230,7 +213,7 @@
             <button
               role="columnheader"
               (click)="toggleSort('model')"
-              class="cursor-pointer flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
+              class="uppercase cursor-pointer flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
               [attr.aria-sort]="
                 sortColumn() === 'model'
                   ? sortDirection() === 'asc'
@@ -254,7 +237,7 @@
             <button
               role="columnheader"
               (click)="toggleSort('category')"
-              class="cursor-pointer hidden sm:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
+              class="uppercase cursor-pointer hidden sm:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
               [attr.aria-sort]="
                 sortColumn() === 'category'
                   ? sortDirection() === 'asc'
@@ -280,7 +263,7 @@
             <button
               role="columnheader"
               (click)="toggleSort('datacenter')"
-              class="cursor-pointer hidden md:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
+              class="uppercase cursor-pointer hidden md:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
               [attr.aria-sort]="
                 sortColumn() === 'datacenter'
                   ? sortDirection() === 'asc'
@@ -306,7 +289,7 @@
             <button
               role="columnheader"
               (click)="toggleSort('status')"
-              class="cursor-pointer hidden sm:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
+              class="uppercase cursor-pointer hidden sm:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
               [attr.aria-sort]="
                 sortColumn() === 'status'
                   ? sortDirection() === 'asc'
@@ -687,6 +670,7 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #assetModal
+  (close)="cancelDeleteAsset()"
   [attr.text]="'Delete ' + (deleteAsset()?.assetTag ?? '') + '?'"
   [attr.supporting-text]="
     'Remove ' + (deleteAsset()?.model ?? '') + ' from inventory. This action cannot be undone.'
