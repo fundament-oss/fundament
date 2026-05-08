@@ -159,355 +159,6 @@ func (b0 Site_builder) Build() *Site {
 	return m0
 }
 
-// Room is a hall or room within a site (core.rooms).
-type Room struct {
-	state              protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id      string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_SiteId  string                 `protobuf:"bytes,20,opt,name=site_id,json=siteId"`
-	xxx_hidden_Name    string                 `protobuf:"bytes,30,opt,name=name"`
-	xxx_hidden_Floor   string                 `protobuf:"bytes,40,opt,name=floor"`
-	xxx_hidden_Created *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=created"`
-	xxx_hidden_Deleted *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=deleted"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
-}
-
-func (x *Room) Reset() {
-	*x = Room{}
-	mi := &file_v1_site_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Room) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Room) ProtoMessage() {}
-
-func (x *Room) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *Room) GetId() string {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return ""
-}
-
-func (x *Room) GetSiteId() string {
-	if x != nil {
-		return x.xxx_hidden_SiteId
-	}
-	return ""
-}
-
-func (x *Room) GetName() string {
-	if x != nil {
-		return x.xxx_hidden_Name
-	}
-	return ""
-}
-
-func (x *Room) GetFloor() string {
-	if x != nil {
-		return x.xxx_hidden_Floor
-	}
-	return ""
-}
-
-func (x *Room) GetCreated() *timestamppb.Timestamp {
-	if x != nil {
-		return x.xxx_hidden_Created
-	}
-	return nil
-}
-
-func (x *Room) GetDeleted() *timestamppb.Timestamp {
-	if x != nil {
-		return x.xxx_hidden_Deleted
-	}
-	return nil
-}
-
-func (x *Room) SetId(v string) {
-	x.xxx_hidden_Id = v
-}
-
-func (x *Room) SetSiteId(v string) {
-	x.xxx_hidden_SiteId = v
-}
-
-func (x *Room) SetName(v string) {
-	x.xxx_hidden_Name = v
-}
-
-func (x *Room) SetFloor(v string) {
-	x.xxx_hidden_Floor = v
-}
-
-func (x *Room) SetCreated(v *timestamppb.Timestamp) {
-	x.xxx_hidden_Created = v
-}
-
-func (x *Room) SetDeleted(v *timestamppb.Timestamp) {
-	x.xxx_hidden_Deleted = v
-}
-
-func (x *Room) HasCreated() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Created != nil
-}
-
-func (x *Room) HasDeleted() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Deleted != nil
-}
-
-func (x *Room) ClearCreated() {
-	x.xxx_hidden_Created = nil
-}
-
-func (x *Room) ClearDeleted() {
-	x.xxx_hidden_Deleted = nil
-}
-
-type Room_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Id      string
-	SiteId  string
-	Name    string
-	Floor   string
-	Created *timestamppb.Timestamp
-	Deleted *timestamppb.Timestamp
-}
-
-func (b0 Room_builder) Build() *Room {
-	m0 := &Room{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Id = b.Id
-	x.xxx_hidden_SiteId = b.SiteId
-	x.xxx_hidden_Name = b.Name
-	x.xxx_hidden_Floor = b.Floor
-	x.xxx_hidden_Created = b.Created
-	x.xxx_hidden_Deleted = b.Deleted
-	return m0
-}
-
-// RackRow is a row of racks within a room (core.rack_rows).
-// position_x and position_y enable cable length estimation between racks.
-type RackRow struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_RoomId      string                 `protobuf:"bytes,20,opt,name=room_id,json=roomId"`
-	xxx_hidden_Name        string                 `protobuf:"bytes,30,opt,name=name"`
-	xxx_hidden_PositionX   float64                `protobuf:"fixed64,40,opt,name=position_x,json=positionX"`
-	xxx_hidden_PositionY   float64                `protobuf:"fixed64,50,opt,name=position_y,json=positionY"`
-	xxx_hidden_Created     *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created"`
-	xxx_hidden_Deleted     *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=deleted"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *RackRow) Reset() {
-	*x = RackRow{}
-	mi := &file_v1_site_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RackRow) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RackRow) ProtoMessage() {}
-
-func (x *RackRow) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *RackRow) GetId() string {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return ""
-}
-
-func (x *RackRow) GetRoomId() string {
-	if x != nil {
-		return x.xxx_hidden_RoomId
-	}
-	return ""
-}
-
-func (x *RackRow) GetName() string {
-	if x != nil {
-		return x.xxx_hidden_Name
-	}
-	return ""
-}
-
-func (x *RackRow) GetPositionX() float64 {
-	if x != nil {
-		return x.xxx_hidden_PositionX
-	}
-	return 0
-}
-
-func (x *RackRow) GetPositionY() float64 {
-	if x != nil {
-		return x.xxx_hidden_PositionY
-	}
-	return 0
-}
-
-func (x *RackRow) GetCreated() *timestamppb.Timestamp {
-	if x != nil {
-		return x.xxx_hidden_Created
-	}
-	return nil
-}
-
-func (x *RackRow) GetDeleted() *timestamppb.Timestamp {
-	if x != nil {
-		return x.xxx_hidden_Deleted
-	}
-	return nil
-}
-
-func (x *RackRow) SetId(v string) {
-	x.xxx_hidden_Id = v
-}
-
-func (x *RackRow) SetRoomId(v string) {
-	x.xxx_hidden_RoomId = v
-}
-
-func (x *RackRow) SetName(v string) {
-	x.xxx_hidden_Name = v
-}
-
-func (x *RackRow) SetPositionX(v float64) {
-	x.xxx_hidden_PositionX = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 7)
-}
-
-func (x *RackRow) SetPositionY(v float64) {
-	x.xxx_hidden_PositionY = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 7)
-}
-
-func (x *RackRow) SetCreated(v *timestamppb.Timestamp) {
-	x.xxx_hidden_Created = v
-}
-
-func (x *RackRow) SetDeleted(v *timestamppb.Timestamp) {
-	x.xxx_hidden_Deleted = v
-}
-
-func (x *RackRow) HasPositionX() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
-}
-
-func (x *RackRow) HasPositionY() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
-}
-
-func (x *RackRow) HasCreated() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Created != nil
-}
-
-func (x *RackRow) HasDeleted() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Deleted != nil
-}
-
-func (x *RackRow) ClearPositionX() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
-	x.xxx_hidden_PositionX = 0
-}
-
-func (x *RackRow) ClearPositionY() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
-	x.xxx_hidden_PositionY = 0
-}
-
-func (x *RackRow) ClearCreated() {
-	x.xxx_hidden_Created = nil
-}
-
-func (x *RackRow) ClearDeleted() {
-	x.xxx_hidden_Deleted = nil
-}
-
-type RackRow_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Id        string
-	RoomId    string
-	Name      string
-	PositionX *float64
-	PositionY *float64
-	Created   *timestamppb.Timestamp
-	Deleted   *timestamppb.Timestamp
-}
-
-func (b0 RackRow_builder) Build() *RackRow {
-	m0 := &RackRow{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Id = b.Id
-	x.xxx_hidden_RoomId = b.RoomId
-	x.xxx_hidden_Name = b.Name
-	if b.PositionX != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 7)
-		x.xxx_hidden_PositionX = *b.PositionX
-	}
-	if b.PositionY != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 7)
-		x.xxx_hidden_PositionY = *b.PositionY
-	}
-	x.xxx_hidden_Created = b.Created
-	x.xxx_hidden_Deleted = b.Deleted
-	return m0
-}
-
 type ListSitesRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -516,7 +167,7 @@ type ListSitesRequest struct {
 
 func (x *ListSitesRequest) Reset() {
 	*x = ListSitesRequest{}
-	mi := &file_v1_site_proto_msgTypes[3]
+	mi := &file_v1_site_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -528,7 +179,7 @@ func (x *ListSitesRequest) String() string {
 func (*ListSitesRequest) ProtoMessage() {}
 
 func (x *ListSitesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[3]
+	mi := &file_v1_site_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -560,7 +211,7 @@ type ListSitesResponse struct {
 
 func (x *ListSitesResponse) Reset() {
 	*x = ListSitesResponse{}
-	mi := &file_v1_site_proto_msgTypes[4]
+	mi := &file_v1_site_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -572,7 +223,7 @@ func (x *ListSitesResponse) String() string {
 func (*ListSitesResponse) ProtoMessage() {}
 
 func (x *ListSitesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[4]
+	mi := &file_v1_site_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -619,7 +270,7 @@ type GetSiteRequest struct {
 
 func (x *GetSiteRequest) Reset() {
 	*x = GetSiteRequest{}
-	mi := &file_v1_site_proto_msgTypes[5]
+	mi := &file_v1_site_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -631,7 +282,7 @@ func (x *GetSiteRequest) String() string {
 func (*GetSiteRequest) ProtoMessage() {}
 
 func (x *GetSiteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[5]
+	mi := &file_v1_site_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -676,7 +327,7 @@ type GetSiteResponse struct {
 
 func (x *GetSiteResponse) Reset() {
 	*x = GetSiteResponse{}
-	mi := &file_v1_site_proto_msgTypes[6]
+	mi := &file_v1_site_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -688,7 +339,7 @@ func (x *GetSiteResponse) String() string {
 func (*GetSiteResponse) ProtoMessage() {}
 
 func (x *GetSiteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[6]
+	mi := &file_v1_site_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -745,7 +396,7 @@ type CreateSiteRequest struct {
 
 func (x *CreateSiteRequest) Reset() {
 	*x = CreateSiteRequest{}
-	mi := &file_v1_site_proto_msgTypes[7]
+	mi := &file_v1_site_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -757,7 +408,7 @@ func (x *CreateSiteRequest) String() string {
 func (*CreateSiteRequest) ProtoMessage() {}
 
 func (x *CreateSiteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[7]
+	mi := &file_v1_site_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -815,7 +466,7 @@ type CreateSiteResponse struct {
 
 func (x *CreateSiteResponse) Reset() {
 	*x = CreateSiteResponse{}
-	mi := &file_v1_site_proto_msgTypes[8]
+	mi := &file_v1_site_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -827,7 +478,7 @@ func (x *CreateSiteResponse) String() string {
 func (*CreateSiteResponse) ProtoMessage() {}
 
 func (x *CreateSiteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[8]
+	mi := &file_v1_site_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -876,7 +527,7 @@ type UpdateSiteRequest struct {
 
 func (x *UpdateSiteRequest) Reset() {
 	*x = UpdateSiteRequest{}
-	mi := &file_v1_site_proto_msgTypes[9]
+	mi := &file_v1_site_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -888,7 +539,7 @@ func (x *UpdateSiteRequest) String() string {
 func (*UpdateSiteRequest) ProtoMessage() {}
 
 func (x *UpdateSiteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[9]
+	mi := &file_v1_site_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -996,7 +647,7 @@ type UpdateSiteResponse struct {
 
 func (x *UpdateSiteResponse) Reset() {
 	*x = UpdateSiteResponse{}
-	mi := &file_v1_site_proto_msgTypes[10]
+	mi := &file_v1_site_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1008,7 +659,7 @@ func (x *UpdateSiteResponse) String() string {
 func (*UpdateSiteResponse) ProtoMessage() {}
 
 func (x *UpdateSiteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[10]
+	mi := &file_v1_site_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1040,7 +691,7 @@ type DeleteSiteRequest struct {
 
 func (x *DeleteSiteRequest) Reset() {
 	*x = DeleteSiteRequest{}
-	mi := &file_v1_site_proto_msgTypes[11]
+	mi := &file_v1_site_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1052,7 +703,7 @@ func (x *DeleteSiteRequest) String() string {
 func (*DeleteSiteRequest) ProtoMessage() {}
 
 func (x *DeleteSiteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[11]
+	mi := &file_v1_site_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1096,7 +747,7 @@ type DeleteSiteResponse struct {
 
 func (x *DeleteSiteResponse) Reset() {
 	*x = DeleteSiteResponse{}
-	mi := &file_v1_site_proto_msgTypes[12]
+	mi := &file_v1_site_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1108,7 +759,7 @@ func (x *DeleteSiteResponse) String() string {
 func (*DeleteSiteResponse) ProtoMessage() {}
 
 func (x *DeleteSiteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[12]
+	mi := &file_v1_site_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1131,1497 +782,6 @@ func (b0 DeleteSiteResponse_builder) Build() *DeleteSiteResponse {
 	return m0
 }
 
-type ListRoomsRequest struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_SiteId      *string                `protobuf:"bytes,10,opt,name=site_id,json=siteId"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *ListRoomsRequest) Reset() {
-	*x = ListRoomsRequest{}
-	mi := &file_v1_site_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListRoomsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListRoomsRequest) ProtoMessage() {}
-
-func (x *ListRoomsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *ListRoomsRequest) GetSiteId() string {
-	if x != nil {
-		if x.xxx_hidden_SiteId != nil {
-			return *x.xxx_hidden_SiteId
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *ListRoomsRequest) SetSiteId(v string) {
-	x.xxx_hidden_SiteId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
-}
-
-func (x *ListRoomsRequest) HasSiteId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *ListRoomsRequest) ClearSiteId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_SiteId = nil
-}
-
-type ListRoomsRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	SiteId *string
-}
-
-func (b0 ListRoomsRequest_builder) Build() *ListRoomsRequest {
-	m0 := &ListRoomsRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.SiteId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
-		x.xxx_hidden_SiteId = b.SiteId
-	}
-	return m0
-}
-
-type ListRoomsResponse struct {
-	state            protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Rooms *[]*Room               `protobuf:"bytes,10,rep,name=rooms"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *ListRoomsResponse) Reset() {
-	*x = ListRoomsResponse{}
-	mi := &file_v1_site_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListRoomsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListRoomsResponse) ProtoMessage() {}
-
-func (x *ListRoomsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *ListRoomsResponse) GetRooms() []*Room {
-	if x != nil {
-		if x.xxx_hidden_Rooms != nil {
-			return *x.xxx_hidden_Rooms
-		}
-	}
-	return nil
-}
-
-func (x *ListRoomsResponse) SetRooms(v []*Room) {
-	x.xxx_hidden_Rooms = &v
-}
-
-type ListRoomsResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Rooms []*Room
-}
-
-func (b0 ListRoomsResponse_builder) Build() *ListRoomsResponse {
-	m0 := &ListRoomsResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Rooms = &b.Rooms
-	return m0
-}
-
-type GetRoomRequest struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetRoomRequest) Reset() {
-	*x = GetRoomRequest{}
-	mi := &file_v1_site_proto_msgTypes[15]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetRoomRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetRoomRequest) ProtoMessage() {}
-
-func (x *GetRoomRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[15]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *GetRoomRequest) GetId() string {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return ""
-}
-
-func (x *GetRoomRequest) SetId(v string) {
-	x.xxx_hidden_Id = v
-}
-
-type GetRoomRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Id string
-}
-
-func (b0 GetRoomRequest_builder) Build() *GetRoomRequest {
-	m0 := &GetRoomRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Id = b.Id
-	return m0
-}
-
-type GetRoomResponse struct {
-	state           protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Room *Room                  `protobuf:"bytes,10,opt,name=room"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *GetRoomResponse) Reset() {
-	*x = GetRoomResponse{}
-	mi := &file_v1_site_proto_msgTypes[16]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetRoomResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetRoomResponse) ProtoMessage() {}
-
-func (x *GetRoomResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[16]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *GetRoomResponse) GetRoom() *Room {
-	if x != nil {
-		return x.xxx_hidden_Room
-	}
-	return nil
-}
-
-func (x *GetRoomResponse) SetRoom(v *Room) {
-	x.xxx_hidden_Room = v
-}
-
-func (x *GetRoomResponse) HasRoom() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Room != nil
-}
-
-func (x *GetRoomResponse) ClearRoom() {
-	x.xxx_hidden_Room = nil
-}
-
-type GetRoomResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Room *Room
-}
-
-func (b0 GetRoomResponse_builder) Build() *GetRoomResponse {
-	m0 := &GetRoomResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Room = b.Room
-	return m0
-}
-
-type CreateRoomRequest struct {
-	state             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_SiteId string                 `protobuf:"bytes,10,opt,name=site_id,json=siteId"`
-	xxx_hidden_Name   string                 `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_Floor  string                 `protobuf:"bytes,30,opt,name=floor"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
-}
-
-func (x *CreateRoomRequest) Reset() {
-	*x = CreateRoomRequest{}
-	mi := &file_v1_site_proto_msgTypes[17]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateRoomRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateRoomRequest) ProtoMessage() {}
-
-func (x *CreateRoomRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[17]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *CreateRoomRequest) GetSiteId() string {
-	if x != nil {
-		return x.xxx_hidden_SiteId
-	}
-	return ""
-}
-
-func (x *CreateRoomRequest) GetName() string {
-	if x != nil {
-		return x.xxx_hidden_Name
-	}
-	return ""
-}
-
-func (x *CreateRoomRequest) GetFloor() string {
-	if x != nil {
-		return x.xxx_hidden_Floor
-	}
-	return ""
-}
-
-func (x *CreateRoomRequest) SetSiteId(v string) {
-	x.xxx_hidden_SiteId = v
-}
-
-func (x *CreateRoomRequest) SetName(v string) {
-	x.xxx_hidden_Name = v
-}
-
-func (x *CreateRoomRequest) SetFloor(v string) {
-	x.xxx_hidden_Floor = v
-}
-
-type CreateRoomRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	SiteId string
-	Name   string
-	Floor  string
-}
-
-func (b0 CreateRoomRequest_builder) Build() *CreateRoomRequest {
-	m0 := &CreateRoomRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_SiteId = b.SiteId
-	x.xxx_hidden_Name = b.Name
-	x.xxx_hidden_Floor = b.Floor
-	return m0
-}
-
-type CreateRoomResponse struct {
-	state           protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Room *Room                  `protobuf:"bytes,10,opt,name=room"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *CreateRoomResponse) Reset() {
-	*x = CreateRoomResponse{}
-	mi := &file_v1_site_proto_msgTypes[18]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateRoomResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateRoomResponse) ProtoMessage() {}
-
-func (x *CreateRoomResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[18]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *CreateRoomResponse) GetRoom() *Room {
-	if x != nil {
-		return x.xxx_hidden_Room
-	}
-	return nil
-}
-
-func (x *CreateRoomResponse) SetRoom(v *Room) {
-	x.xxx_hidden_Room = v
-}
-
-func (x *CreateRoomResponse) HasRoom() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Room != nil
-}
-
-func (x *CreateRoomResponse) ClearRoom() {
-	x.xxx_hidden_Room = nil
-}
-
-type CreateRoomResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Room *Room
-}
-
-func (b0 CreateRoomResponse_builder) Build() *CreateRoomResponse {
-	m0 := &CreateRoomResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Room = b.Room
-	return m0
-}
-
-type UpdateRoomRequest struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_Name        *string                `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_Floor       *string                `protobuf:"bytes,30,opt,name=floor"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *UpdateRoomRequest) Reset() {
-	*x = UpdateRoomRequest{}
-	mi := &file_v1_site_proto_msgTypes[19]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateRoomRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateRoomRequest) ProtoMessage() {}
-
-func (x *UpdateRoomRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[19]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdateRoomRequest) GetId() string {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return ""
-}
-
-func (x *UpdateRoomRequest) GetName() string {
-	if x != nil {
-		if x.xxx_hidden_Name != nil {
-			return *x.xxx_hidden_Name
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *UpdateRoomRequest) GetFloor() string {
-	if x != nil {
-		if x.xxx_hidden_Floor != nil {
-			return *x.xxx_hidden_Floor
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *UpdateRoomRequest) SetId(v string) {
-	x.xxx_hidden_Id = v
-}
-
-func (x *UpdateRoomRequest) SetName(v string) {
-	x.xxx_hidden_Name = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
-}
-
-func (x *UpdateRoomRequest) SetFloor(v string) {
-	x.xxx_hidden_Floor = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 3)
-}
-
-func (x *UpdateRoomRequest) HasName() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *UpdateRoomRequest) HasFloor() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
-func (x *UpdateRoomRequest) ClearName() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_Name = nil
-}
-
-func (x *UpdateRoomRequest) ClearFloor() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_Floor = nil
-}
-
-type UpdateRoomRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Id    string
-	Name  *string
-	Floor *string
-}
-
-func (b0 UpdateRoomRequest_builder) Build() *UpdateRoomRequest {
-	m0 := &UpdateRoomRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Id = b.Id
-	if b.Name != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
-		x.xxx_hidden_Name = b.Name
-	}
-	if b.Floor != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 3)
-		x.xxx_hidden_Floor = b.Floor
-	}
-	return m0
-}
-
-type UpdateRoomResponse struct {
-	state           protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Room *Room                  `protobuf:"bytes,10,opt,name=room"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *UpdateRoomResponse) Reset() {
-	*x = UpdateRoomResponse{}
-	mi := &file_v1_site_proto_msgTypes[20]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateRoomResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateRoomResponse) ProtoMessage() {}
-
-func (x *UpdateRoomResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[20]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdateRoomResponse) GetRoom() *Room {
-	if x != nil {
-		return x.xxx_hidden_Room
-	}
-	return nil
-}
-
-func (x *UpdateRoomResponse) SetRoom(v *Room) {
-	x.xxx_hidden_Room = v
-}
-
-func (x *UpdateRoomResponse) HasRoom() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Room != nil
-}
-
-func (x *UpdateRoomResponse) ClearRoom() {
-	x.xxx_hidden_Room = nil
-}
-
-type UpdateRoomResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Room *Room
-}
-
-func (b0 UpdateRoomResponse_builder) Build() *UpdateRoomResponse {
-	m0 := &UpdateRoomResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Room = b.Room
-	return m0
-}
-
-type DeleteRoomRequest struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteRoomRequest) Reset() {
-	*x = DeleteRoomRequest{}
-	mi := &file_v1_site_proto_msgTypes[21]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteRoomRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteRoomRequest) ProtoMessage() {}
-
-func (x *DeleteRoomRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[21]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *DeleteRoomRequest) GetId() string {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return ""
-}
-
-func (x *DeleteRoomRequest) SetId(v string) {
-	x.xxx_hidden_Id = v
-}
-
-type DeleteRoomRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Id string
-}
-
-func (b0 DeleteRoomRequest_builder) Build() *DeleteRoomRequest {
-	m0 := &DeleteRoomRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Id = b.Id
-	return m0
-}
-
-type DeleteRoomResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteRoomResponse) Reset() {
-	*x = DeleteRoomResponse{}
-	mi := &file_v1_site_proto_msgTypes[22]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteRoomResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteRoomResponse) ProtoMessage() {}
-
-func (x *DeleteRoomResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[22]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteRoomResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteRoomResponse_builder) Build() *DeleteRoomResponse {
-	m0 := &DeleteRoomResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
-type ListRackRowsRequest struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_RoomId      *string                `protobuf:"bytes,10,opt,name=room_id,json=roomId"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *ListRackRowsRequest) Reset() {
-	*x = ListRackRowsRequest{}
-	mi := &file_v1_site_proto_msgTypes[23]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListRackRowsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListRackRowsRequest) ProtoMessage() {}
-
-func (x *ListRackRowsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[23]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *ListRackRowsRequest) GetRoomId() string {
-	if x != nil {
-		if x.xxx_hidden_RoomId != nil {
-			return *x.xxx_hidden_RoomId
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *ListRackRowsRequest) SetRoomId(v string) {
-	x.xxx_hidden_RoomId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
-}
-
-func (x *ListRackRowsRequest) HasRoomId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *ListRackRowsRequest) ClearRoomId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_RoomId = nil
-}
-
-type ListRackRowsRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	RoomId *string
-}
-
-func (b0 ListRackRowsRequest_builder) Build() *ListRackRowsRequest {
-	m0 := &ListRackRowsRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.RoomId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
-		x.xxx_hidden_RoomId = b.RoomId
-	}
-	return m0
-}
-
-type ListRackRowsResponse struct {
-	state               protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_RackRows *[]*RackRow            `protobuf:"bytes,10,rep,name=rack_rows,json=rackRows"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
-}
-
-func (x *ListRackRowsResponse) Reset() {
-	*x = ListRackRowsResponse{}
-	mi := &file_v1_site_proto_msgTypes[24]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListRackRowsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListRackRowsResponse) ProtoMessage() {}
-
-func (x *ListRackRowsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[24]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *ListRackRowsResponse) GetRackRows() []*RackRow {
-	if x != nil {
-		if x.xxx_hidden_RackRows != nil {
-			return *x.xxx_hidden_RackRows
-		}
-	}
-	return nil
-}
-
-func (x *ListRackRowsResponse) SetRackRows(v []*RackRow) {
-	x.xxx_hidden_RackRows = &v
-}
-
-type ListRackRowsResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	RackRows []*RackRow
-}
-
-func (b0 ListRackRowsResponse_builder) Build() *ListRackRowsResponse {
-	m0 := &ListRackRowsResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_RackRows = &b.RackRows
-	return m0
-}
-
-type GetRackRowRequest struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetRackRowRequest) Reset() {
-	*x = GetRackRowRequest{}
-	mi := &file_v1_site_proto_msgTypes[25]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetRackRowRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetRackRowRequest) ProtoMessage() {}
-
-func (x *GetRackRowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[25]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *GetRackRowRequest) GetId() string {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return ""
-}
-
-func (x *GetRackRowRequest) SetId(v string) {
-	x.xxx_hidden_Id = v
-}
-
-type GetRackRowRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Id string
-}
-
-func (b0 GetRackRowRequest_builder) Build() *GetRackRowRequest {
-	m0 := &GetRackRowRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Id = b.Id
-	return m0
-}
-
-type GetRackRowResponse struct {
-	state              protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_RackRow *RackRow               `protobuf:"bytes,10,opt,name=rack_row,json=rackRow"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
-}
-
-func (x *GetRackRowResponse) Reset() {
-	*x = GetRackRowResponse{}
-	mi := &file_v1_site_proto_msgTypes[26]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetRackRowResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetRackRowResponse) ProtoMessage() {}
-
-func (x *GetRackRowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[26]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *GetRackRowResponse) GetRackRow() *RackRow {
-	if x != nil {
-		return x.xxx_hidden_RackRow
-	}
-	return nil
-}
-
-func (x *GetRackRowResponse) SetRackRow(v *RackRow) {
-	x.xxx_hidden_RackRow = v
-}
-
-func (x *GetRackRowResponse) HasRackRow() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_RackRow != nil
-}
-
-func (x *GetRackRowResponse) ClearRackRow() {
-	x.xxx_hidden_RackRow = nil
-}
-
-type GetRackRowResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	RackRow *RackRow
-}
-
-func (b0 GetRackRowResponse_builder) Build() *GetRackRowResponse {
-	m0 := &GetRackRowResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_RackRow = b.RackRow
-	return m0
-}
-
-type CreateRackRowRequest struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_RoomId      string                 `protobuf:"bytes,10,opt,name=room_id,json=roomId"`
-	xxx_hidden_Name        string                 `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_PositionX   float64                `protobuf:"fixed64,30,opt,name=position_x,json=positionX"`
-	xxx_hidden_PositionY   float64                `protobuf:"fixed64,40,opt,name=position_y,json=positionY"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *CreateRackRowRequest) Reset() {
-	*x = CreateRackRowRequest{}
-	mi := &file_v1_site_proto_msgTypes[27]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateRackRowRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateRackRowRequest) ProtoMessage() {}
-
-func (x *CreateRackRowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[27]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *CreateRackRowRequest) GetRoomId() string {
-	if x != nil {
-		return x.xxx_hidden_RoomId
-	}
-	return ""
-}
-
-func (x *CreateRackRowRequest) GetName() string {
-	if x != nil {
-		return x.xxx_hidden_Name
-	}
-	return ""
-}
-
-func (x *CreateRackRowRequest) GetPositionX() float64 {
-	if x != nil {
-		return x.xxx_hidden_PositionX
-	}
-	return 0
-}
-
-func (x *CreateRackRowRequest) GetPositionY() float64 {
-	if x != nil {
-		return x.xxx_hidden_PositionY
-	}
-	return 0
-}
-
-func (x *CreateRackRowRequest) SetRoomId(v string) {
-	x.xxx_hidden_RoomId = v
-}
-
-func (x *CreateRackRowRequest) SetName(v string) {
-	x.xxx_hidden_Name = v
-}
-
-func (x *CreateRackRowRequest) SetPositionX(v float64) {
-	x.xxx_hidden_PositionX = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 4)
-}
-
-func (x *CreateRackRowRequest) SetPositionY(v float64) {
-	x.xxx_hidden_PositionY = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 4)
-}
-
-func (x *CreateRackRowRequest) HasPositionX() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
-func (x *CreateRackRowRequest) HasPositionY() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
-}
-
-func (x *CreateRackRowRequest) ClearPositionX() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_PositionX = 0
-}
-
-func (x *CreateRackRowRequest) ClearPositionY() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
-	x.xxx_hidden_PositionY = 0
-}
-
-type CreateRackRowRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	RoomId    string
-	Name      string
-	PositionX *float64
-	PositionY *float64
-}
-
-func (b0 CreateRackRowRequest_builder) Build() *CreateRackRowRequest {
-	m0 := &CreateRackRowRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_RoomId = b.RoomId
-	x.xxx_hidden_Name = b.Name
-	if b.PositionX != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
-		x.xxx_hidden_PositionX = *b.PositionX
-	}
-	if b.PositionY != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 4)
-		x.xxx_hidden_PositionY = *b.PositionY
-	}
-	return m0
-}
-
-type CreateRackRowResponse struct {
-	state              protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_RackRow *RackRow               `protobuf:"bytes,10,opt,name=rack_row,json=rackRow"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
-}
-
-func (x *CreateRackRowResponse) Reset() {
-	*x = CreateRackRowResponse{}
-	mi := &file_v1_site_proto_msgTypes[28]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateRackRowResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateRackRowResponse) ProtoMessage() {}
-
-func (x *CreateRackRowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[28]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *CreateRackRowResponse) GetRackRow() *RackRow {
-	if x != nil {
-		return x.xxx_hidden_RackRow
-	}
-	return nil
-}
-
-func (x *CreateRackRowResponse) SetRackRow(v *RackRow) {
-	x.xxx_hidden_RackRow = v
-}
-
-func (x *CreateRackRowResponse) HasRackRow() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_RackRow != nil
-}
-
-func (x *CreateRackRowResponse) ClearRackRow() {
-	x.xxx_hidden_RackRow = nil
-}
-
-type CreateRackRowResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	RackRow *RackRow
-}
-
-func (b0 CreateRackRowResponse_builder) Build() *CreateRackRowResponse {
-	m0 := &CreateRackRowResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_RackRow = b.RackRow
-	return m0
-}
-
-type UpdateRackRowRequest struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_Name        *string                `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_PositionX   float64                `protobuf:"fixed64,30,opt,name=position_x,json=positionX"`
-	xxx_hidden_PositionY   float64                `protobuf:"fixed64,40,opt,name=position_y,json=positionY"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *UpdateRackRowRequest) Reset() {
-	*x = UpdateRackRowRequest{}
-	mi := &file_v1_site_proto_msgTypes[29]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateRackRowRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateRackRowRequest) ProtoMessage() {}
-
-func (x *UpdateRackRowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[29]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdateRackRowRequest) GetId() string {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return ""
-}
-
-func (x *UpdateRackRowRequest) GetName() string {
-	if x != nil {
-		if x.xxx_hidden_Name != nil {
-			return *x.xxx_hidden_Name
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *UpdateRackRowRequest) GetPositionX() float64 {
-	if x != nil {
-		return x.xxx_hidden_PositionX
-	}
-	return 0
-}
-
-func (x *UpdateRackRowRequest) GetPositionY() float64 {
-	if x != nil {
-		return x.xxx_hidden_PositionY
-	}
-	return 0
-}
-
-func (x *UpdateRackRowRequest) SetId(v string) {
-	x.xxx_hidden_Id = v
-}
-
-func (x *UpdateRackRowRequest) SetName(v string) {
-	x.xxx_hidden_Name = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 4)
-}
-
-func (x *UpdateRackRowRequest) SetPositionX(v float64) {
-	x.xxx_hidden_PositionX = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 4)
-}
-
-func (x *UpdateRackRowRequest) SetPositionY(v float64) {
-	x.xxx_hidden_PositionY = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 4)
-}
-
-func (x *UpdateRackRowRequest) HasName() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *UpdateRackRowRequest) HasPositionX() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
-func (x *UpdateRackRowRequest) HasPositionY() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
-}
-
-func (x *UpdateRackRowRequest) ClearName() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_Name = nil
-}
-
-func (x *UpdateRackRowRequest) ClearPositionX() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_PositionX = 0
-}
-
-func (x *UpdateRackRowRequest) ClearPositionY() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
-	x.xxx_hidden_PositionY = 0
-}
-
-type UpdateRackRowRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Id        string
-	Name      *string
-	PositionX *float64
-	PositionY *float64
-}
-
-func (b0 UpdateRackRowRequest_builder) Build() *UpdateRackRowRequest {
-	m0 := &UpdateRackRowRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Id = b.Id
-	if b.Name != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 4)
-		x.xxx_hidden_Name = b.Name
-	}
-	if b.PositionX != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
-		x.xxx_hidden_PositionX = *b.PositionX
-	}
-	if b.PositionY != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 4)
-		x.xxx_hidden_PositionY = *b.PositionY
-	}
-	return m0
-}
-
-type UpdateRackRowResponse struct {
-	state              protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_RackRow *RackRow               `protobuf:"bytes,10,opt,name=rack_row,json=rackRow"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
-}
-
-func (x *UpdateRackRowResponse) Reset() {
-	*x = UpdateRackRowResponse{}
-	mi := &file_v1_site_proto_msgTypes[30]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateRackRowResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateRackRowResponse) ProtoMessage() {}
-
-func (x *UpdateRackRowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[30]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdateRackRowResponse) GetRackRow() *RackRow {
-	if x != nil {
-		return x.xxx_hidden_RackRow
-	}
-	return nil
-}
-
-func (x *UpdateRackRowResponse) SetRackRow(v *RackRow) {
-	x.xxx_hidden_RackRow = v
-}
-
-func (x *UpdateRackRowResponse) HasRackRow() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_RackRow != nil
-}
-
-func (x *UpdateRackRowResponse) ClearRackRow() {
-	x.xxx_hidden_RackRow = nil
-}
-
-type UpdateRackRowResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	RackRow *RackRow
-}
-
-func (b0 UpdateRackRowResponse_builder) Build() *UpdateRackRowResponse {
-	m0 := &UpdateRackRowResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_RackRow = b.RackRow
-	return m0
-}
-
-type DeleteRackRowRequest struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteRackRowRequest) Reset() {
-	*x = DeleteRackRowRequest{}
-	mi := &file_v1_site_proto_msgTypes[31]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteRackRowRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteRackRowRequest) ProtoMessage() {}
-
-func (x *DeleteRackRowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[31]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *DeleteRackRowRequest) GetId() string {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return ""
-}
-
-func (x *DeleteRackRowRequest) SetId(v string) {
-	x.xxx_hidden_Id = v
-}
-
-type DeleteRackRowRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Id string
-}
-
-func (b0 DeleteRackRowRequest_builder) Build() *DeleteRackRowRequest {
-	m0 := &DeleteRackRowRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Id = b.Id
-	return m0
-}
-
-type DeleteRackRowResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteRackRowResponse) Reset() {
-	*x = DeleteRackRowResponse{}
-	mi := &file_v1_site_proto_msgTypes[32]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteRackRowResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteRackRowResponse) ProtoMessage() {}
-
-func (x *DeleteRackRowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[32]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteRackRowResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteRackRowResponse_builder) Build() *DeleteRackRowResponse {
-	m0 := &DeleteRackRowResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 var File_v1_site_proto protoreflect.FileDescriptor
 
 const file_v1_site_proto_rawDesc = "" +
@@ -2633,26 +793,7 @@ const file_v1_site_proto_rawDesc = "" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12\x18\n" +
 	"\aaddress\x18\x1e \x01(\tR\aaddress\x124\n" +
 	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
-	"\adeleted\x182 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\xcc\x01\n" +
-	"\x04Room\x12\x0e\n" +
-	"\x02id\x18\n" +
-	" \x01(\tR\x02id\x12\x17\n" +
-	"\asite_id\x18\x14 \x01(\tR\x06siteId\x12\x12\n" +
-	"\x04name\x18\x1e \x01(\tR\x04name\x12\x14\n" +
-	"\x05floor\x18( \x01(\tR\x05floor\x124\n" +
-	"\acreated\x182 \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
-	"\adeleted\x18< \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\x85\x02\n" +
-	"\aRackRow\x12\x0e\n" +
-	"\x02id\x18\n" +
-	" \x01(\tR\x02id\x12\x17\n" +
-	"\aroom_id\x18\x14 \x01(\tR\x06roomId\x12\x12\n" +
-	"\x04name\x18\x1e \x01(\tR\x04name\x12$\n" +
-	"\n" +
-	"position_x\x18( \x01(\x01B\x05\xaa\x01\x02\b\x01R\tpositionX\x12$\n" +
-	"\n" +
-	"position_y\x182 \x01(\x01B\x05\xaa\x01\x02\b\x01R\tpositionY\x124\n" +
-	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
-	"\adeleted\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\x12\n" +
+	"\adeleted\x182 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\x12\n" +
 	"\x10ListSitesRequest\"8\n" +
 	"\x11ListSitesResponse\x12#\n" +
 	"\x05sites\x18\n" +
@@ -2679,77 +820,7 @@ const file_v1_site_proto_rawDesc = "" +
 	"\x11DeleteSiteRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x14\n" +
-	"\x12DeleteSiteResponse\"2\n" +
-	"\x10ListRoomsRequest\x12\x1e\n" +
-	"\asite_id\x18\n" +
-	" \x01(\tB\x05\xaa\x01\x02\b\x01R\x06siteId\"8\n" +
-	"\x11ListRoomsResponse\x12#\n" +
-	"\x05rooms\x18\n" +
-	" \x03(\v2\r.dcim.v1.RoomR\x05rooms\"*\n" +
-	"\x0eGetRoomRequest\x12\x18\n" +
-	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"4\n" +
-	"\x0fGetRoomResponse\x12!\n" +
-	"\x04room\x18\n" +
-	" \x01(\v2\r.dcim.v1.RoomR\x04room\"i\n" +
-	"\x11CreateRoomRequest\x12!\n" +
-	"\asite_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06siteId\x12\x1b\n" +
-	"\x04name\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12\x14\n" +
-	"\x05floor\x18\x1e \x01(\tR\x05floor\"7\n" +
-	"\x12CreateRoomResponse\x12!\n" +
-	"\x04room\x18\n" +
-	" \x01(\v2\r.dcim.v1.RoomR\x04room\"e\n" +
-	"\x11UpdateRoomRequest\x12\x18\n" +
-	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x19\n" +
-	"\x04name\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x04name\x12\x1b\n" +
-	"\x05floor\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x05floor\"7\n" +
-	"\x12UpdateRoomResponse\x12!\n" +
-	"\x04room\x18\n" +
-	" \x01(\v2\r.dcim.v1.RoomR\x04room\"-\n" +
-	"\x11DeleteRoomRequest\x12\x18\n" +
-	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x14\n" +
-	"\x12DeleteRoomResponse\"5\n" +
-	"\x13ListRackRowsRequest\x12\x1e\n" +
-	"\aroom_id\x18\n" +
-	" \x01(\tB\x05\xaa\x01\x02\b\x01R\x06roomId\"E\n" +
-	"\x14ListRackRowsResponse\x12-\n" +
-	"\track_rows\x18\n" +
-	" \x03(\v2\x10.dcim.v1.RackRowR\brackRows\"-\n" +
-	"\x11GetRackRowRequest\x12\x18\n" +
-	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"A\n" +
-	"\x12GetRackRowResponse\x12+\n" +
-	"\brack_row\x18\n" +
-	" \x01(\v2\x10.dcim.v1.RackRowR\arackRow\"\xa2\x01\n" +
-	"\x14CreateRackRowRequest\x12!\n" +
-	"\aroom_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06roomId\x12\x1b\n" +
-	"\x04name\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12$\n" +
-	"\n" +
-	"position_x\x18\x1e \x01(\x01B\x05\xaa\x01\x02\b\x01R\tpositionX\x12$\n" +
-	"\n" +
-	"position_y\x18( \x01(\x01B\x05\xaa\x01\x02\b\x01R\tpositionY\"D\n" +
-	"\x15CreateRackRowResponse\x12+\n" +
-	"\brack_row\x18\n" +
-	" \x01(\v2\x10.dcim.v1.RackRowR\arackRow\"\x97\x01\n" +
-	"\x14UpdateRackRowRequest\x12\x18\n" +
-	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x19\n" +
-	"\x04name\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x04name\x12$\n" +
-	"\n" +
-	"position_x\x18\x1e \x01(\x01B\x05\xaa\x01\x02\b\x01R\tpositionX\x12$\n" +
-	"\n" +
-	"position_y\x18( \x01(\x01B\x05\xaa\x01\x02\b\x01R\tpositionY\"D\n" +
-	"\x15UpdateRackRowResponse\x12+\n" +
-	"\brack_row\x18\n" +
-	" \x01(\v2\x10.dcim.v1.RackRowR\arackRow\"0\n" +
-	"\x14DeleteRackRowRequest\x12\x18\n" +
-	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x17\n" +
-	"\x15DeleteRackRowResponse2\xe4\x02\n" +
+	"\x12DeleteSiteResponse2\xe4\x02\n" +
 	"\vSiteService\x12B\n" +
 	"\tListSites\x12\x19.dcim.v1.ListSitesRequest\x1a\x1a.dcim.v1.ListSitesResponse\x12<\n" +
 	"\aGetSite\x12\x17.dcim.v1.GetSiteRequest\x1a\x18.dcim.v1.GetSiteResponse\x12E\n" +
@@ -2758,113 +829,43 @@ const file_v1_site_proto_rawDesc = "" +
 	"\n" +
 	"UpdateSite\x12\x1a.dcim.v1.UpdateSiteRequest\x1a\x1b.dcim.v1.UpdateSiteResponse\x12E\n" +
 	"\n" +
-	"DeleteSite\x12\x1a.dcim.v1.DeleteSiteRequest\x1a\x1b.dcim.v1.DeleteSiteResponse2\xe4\x02\n" +
-	"\vRoomService\x12B\n" +
-	"\tListRooms\x12\x19.dcim.v1.ListRoomsRequest\x1a\x1a.dcim.v1.ListRoomsResponse\x12<\n" +
-	"\aGetRoom\x12\x17.dcim.v1.GetRoomRequest\x1a\x18.dcim.v1.GetRoomResponse\x12E\n" +
-	"\n" +
-	"CreateRoom\x12\x1a.dcim.v1.CreateRoomRequest\x1a\x1b.dcim.v1.CreateRoomResponse\x12E\n" +
-	"\n" +
-	"UpdateRoom\x12\x1a.dcim.v1.UpdateRoomRequest\x1a\x1b.dcim.v1.UpdateRoomResponse\x12E\n" +
-	"\n" +
-	"DeleteRoom\x12\x1a.dcim.v1.DeleteRoomRequest\x1a\x1b.dcim.v1.DeleteRoomResponse2\x94\x03\n" +
-	"\x0eRackRowService\x12K\n" +
-	"\fListRackRows\x12\x1c.dcim.v1.ListRackRowsRequest\x1a\x1d.dcim.v1.ListRackRowsResponse\x12E\n" +
-	"\n" +
-	"GetRackRow\x12\x1a.dcim.v1.GetRackRowRequest\x1a\x1b.dcim.v1.GetRackRowResponse\x12N\n" +
-	"\rCreateRackRow\x12\x1d.dcim.v1.CreateRackRowRequest\x1a\x1e.dcim.v1.CreateRackRowResponse\x12N\n" +
-	"\rUpdateRackRow\x12\x1d.dcim.v1.UpdateRackRowRequest\x1a\x1e.dcim.v1.UpdateRackRowResponse\x12N\n" +
-	"\rDeleteRackRow\x12\x1d.dcim.v1.DeleteRackRowRequest\x1a\x1e.dcim.v1.DeleteRackRowResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"DeleteSite\x12\x1a.dcim.v1.DeleteSiteRequest\x1a\x1b.dcim.v1.DeleteSiteResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_site_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_v1_site_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_v1_site_proto_goTypes = []any{
 	(*Site)(nil),                  // 0: dcim.v1.Site
-	(*Room)(nil),                  // 1: dcim.v1.Room
-	(*RackRow)(nil),               // 2: dcim.v1.RackRow
-	(*ListSitesRequest)(nil),      // 3: dcim.v1.ListSitesRequest
-	(*ListSitesResponse)(nil),     // 4: dcim.v1.ListSitesResponse
-	(*GetSiteRequest)(nil),        // 5: dcim.v1.GetSiteRequest
-	(*GetSiteResponse)(nil),       // 6: dcim.v1.GetSiteResponse
-	(*CreateSiteRequest)(nil),     // 7: dcim.v1.CreateSiteRequest
-	(*CreateSiteResponse)(nil),    // 8: dcim.v1.CreateSiteResponse
-	(*UpdateSiteRequest)(nil),     // 9: dcim.v1.UpdateSiteRequest
-	(*UpdateSiteResponse)(nil),    // 10: dcim.v1.UpdateSiteResponse
-	(*DeleteSiteRequest)(nil),     // 11: dcim.v1.DeleteSiteRequest
-	(*DeleteSiteResponse)(nil),    // 12: dcim.v1.DeleteSiteResponse
-	(*ListRoomsRequest)(nil),      // 13: dcim.v1.ListRoomsRequest
-	(*ListRoomsResponse)(nil),     // 14: dcim.v1.ListRoomsResponse
-	(*GetRoomRequest)(nil),        // 15: dcim.v1.GetRoomRequest
-	(*GetRoomResponse)(nil),       // 16: dcim.v1.GetRoomResponse
-	(*CreateRoomRequest)(nil),     // 17: dcim.v1.CreateRoomRequest
-	(*CreateRoomResponse)(nil),    // 18: dcim.v1.CreateRoomResponse
-	(*UpdateRoomRequest)(nil),     // 19: dcim.v1.UpdateRoomRequest
-	(*UpdateRoomResponse)(nil),    // 20: dcim.v1.UpdateRoomResponse
-	(*DeleteRoomRequest)(nil),     // 21: dcim.v1.DeleteRoomRequest
-	(*DeleteRoomResponse)(nil),    // 22: dcim.v1.DeleteRoomResponse
-	(*ListRackRowsRequest)(nil),   // 23: dcim.v1.ListRackRowsRequest
-	(*ListRackRowsResponse)(nil),  // 24: dcim.v1.ListRackRowsResponse
-	(*GetRackRowRequest)(nil),     // 25: dcim.v1.GetRackRowRequest
-	(*GetRackRowResponse)(nil),    // 26: dcim.v1.GetRackRowResponse
-	(*CreateRackRowRequest)(nil),  // 27: dcim.v1.CreateRackRowRequest
-	(*CreateRackRowResponse)(nil), // 28: dcim.v1.CreateRackRowResponse
-	(*UpdateRackRowRequest)(nil),  // 29: dcim.v1.UpdateRackRowRequest
-	(*UpdateRackRowResponse)(nil), // 30: dcim.v1.UpdateRackRowResponse
-	(*DeleteRackRowRequest)(nil),  // 31: dcim.v1.DeleteRackRowRequest
-	(*DeleteRackRowResponse)(nil), // 32: dcim.v1.DeleteRackRowResponse
-	(*timestamppb.Timestamp)(nil), // 33: google.protobuf.Timestamp
+	(*ListSitesRequest)(nil),      // 1: dcim.v1.ListSitesRequest
+	(*ListSitesResponse)(nil),     // 2: dcim.v1.ListSitesResponse
+	(*GetSiteRequest)(nil),        // 3: dcim.v1.GetSiteRequest
+	(*GetSiteResponse)(nil),       // 4: dcim.v1.GetSiteResponse
+	(*CreateSiteRequest)(nil),     // 5: dcim.v1.CreateSiteRequest
+	(*CreateSiteResponse)(nil),    // 6: dcim.v1.CreateSiteResponse
+	(*UpdateSiteRequest)(nil),     // 7: dcim.v1.UpdateSiteRequest
+	(*UpdateSiteResponse)(nil),    // 8: dcim.v1.UpdateSiteResponse
+	(*DeleteSiteRequest)(nil),     // 9: dcim.v1.DeleteSiteRequest
+	(*DeleteSiteResponse)(nil),    // 10: dcim.v1.DeleteSiteResponse
+	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
 }
 var file_v1_site_proto_depIdxs = []int32{
-	33, // 0: dcim.v1.Site.created:type_name -> google.protobuf.Timestamp
-	33, // 1: dcim.v1.Site.deleted:type_name -> google.protobuf.Timestamp
-	33, // 2: dcim.v1.Room.created:type_name -> google.protobuf.Timestamp
-	33, // 3: dcim.v1.Room.deleted:type_name -> google.protobuf.Timestamp
-	33, // 4: dcim.v1.RackRow.created:type_name -> google.protobuf.Timestamp
-	33, // 5: dcim.v1.RackRow.deleted:type_name -> google.protobuf.Timestamp
-	0,  // 6: dcim.v1.ListSitesResponse.sites:type_name -> dcim.v1.Site
-	0,  // 7: dcim.v1.GetSiteResponse.site:type_name -> dcim.v1.Site
-	1,  // 8: dcim.v1.ListRoomsResponse.rooms:type_name -> dcim.v1.Room
-	1,  // 9: dcim.v1.GetRoomResponse.room:type_name -> dcim.v1.Room
-	1,  // 10: dcim.v1.CreateRoomResponse.room:type_name -> dcim.v1.Room
-	1,  // 11: dcim.v1.UpdateRoomResponse.room:type_name -> dcim.v1.Room
-	2,  // 12: dcim.v1.ListRackRowsResponse.rack_rows:type_name -> dcim.v1.RackRow
-	2,  // 13: dcim.v1.GetRackRowResponse.rack_row:type_name -> dcim.v1.RackRow
-	2,  // 14: dcim.v1.CreateRackRowResponse.rack_row:type_name -> dcim.v1.RackRow
-	2,  // 15: dcim.v1.UpdateRackRowResponse.rack_row:type_name -> dcim.v1.RackRow
-	3,  // 16: dcim.v1.SiteService.ListSites:input_type -> dcim.v1.ListSitesRequest
-	5,  // 17: dcim.v1.SiteService.GetSite:input_type -> dcim.v1.GetSiteRequest
-	7,  // 18: dcim.v1.SiteService.CreateSite:input_type -> dcim.v1.CreateSiteRequest
-	9,  // 19: dcim.v1.SiteService.UpdateSite:input_type -> dcim.v1.UpdateSiteRequest
-	11, // 20: dcim.v1.SiteService.DeleteSite:input_type -> dcim.v1.DeleteSiteRequest
-	13, // 21: dcim.v1.RoomService.ListRooms:input_type -> dcim.v1.ListRoomsRequest
-	15, // 22: dcim.v1.RoomService.GetRoom:input_type -> dcim.v1.GetRoomRequest
-	17, // 23: dcim.v1.RoomService.CreateRoom:input_type -> dcim.v1.CreateRoomRequest
-	19, // 24: dcim.v1.RoomService.UpdateRoom:input_type -> dcim.v1.UpdateRoomRequest
-	21, // 25: dcim.v1.RoomService.DeleteRoom:input_type -> dcim.v1.DeleteRoomRequest
-	23, // 26: dcim.v1.RackRowService.ListRackRows:input_type -> dcim.v1.ListRackRowsRequest
-	25, // 27: dcim.v1.RackRowService.GetRackRow:input_type -> dcim.v1.GetRackRowRequest
-	27, // 28: dcim.v1.RackRowService.CreateRackRow:input_type -> dcim.v1.CreateRackRowRequest
-	29, // 29: dcim.v1.RackRowService.UpdateRackRow:input_type -> dcim.v1.UpdateRackRowRequest
-	31, // 30: dcim.v1.RackRowService.DeleteRackRow:input_type -> dcim.v1.DeleteRackRowRequest
-	4,  // 31: dcim.v1.SiteService.ListSites:output_type -> dcim.v1.ListSitesResponse
-	6,  // 32: dcim.v1.SiteService.GetSite:output_type -> dcim.v1.GetSiteResponse
-	8,  // 33: dcim.v1.SiteService.CreateSite:output_type -> dcim.v1.CreateSiteResponse
-	10, // 34: dcim.v1.SiteService.UpdateSite:output_type -> dcim.v1.UpdateSiteResponse
-	12, // 35: dcim.v1.SiteService.DeleteSite:output_type -> dcim.v1.DeleteSiteResponse
-	14, // 36: dcim.v1.RoomService.ListRooms:output_type -> dcim.v1.ListRoomsResponse
-	16, // 37: dcim.v1.RoomService.GetRoom:output_type -> dcim.v1.GetRoomResponse
-	18, // 38: dcim.v1.RoomService.CreateRoom:output_type -> dcim.v1.CreateRoomResponse
-	20, // 39: dcim.v1.RoomService.UpdateRoom:output_type -> dcim.v1.UpdateRoomResponse
-	22, // 40: dcim.v1.RoomService.DeleteRoom:output_type -> dcim.v1.DeleteRoomResponse
-	24, // 41: dcim.v1.RackRowService.ListRackRows:output_type -> dcim.v1.ListRackRowsResponse
-	26, // 42: dcim.v1.RackRowService.GetRackRow:output_type -> dcim.v1.GetRackRowResponse
-	28, // 43: dcim.v1.RackRowService.CreateRackRow:output_type -> dcim.v1.CreateRackRowResponse
-	30, // 44: dcim.v1.RackRowService.UpdateRackRow:output_type -> dcim.v1.UpdateRackRowResponse
-	32, // 45: dcim.v1.RackRowService.DeleteRackRow:output_type -> dcim.v1.DeleteRackRowResponse
-	31, // [31:46] is the sub-list for method output_type
-	16, // [16:31] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	11, // 0: dcim.v1.Site.created:type_name -> google.protobuf.Timestamp
+	11, // 1: dcim.v1.Site.deleted:type_name -> google.protobuf.Timestamp
+	0,  // 2: dcim.v1.ListSitesResponse.sites:type_name -> dcim.v1.Site
+	0,  // 3: dcim.v1.GetSiteResponse.site:type_name -> dcim.v1.Site
+	1,  // 4: dcim.v1.SiteService.ListSites:input_type -> dcim.v1.ListSitesRequest
+	3,  // 5: dcim.v1.SiteService.GetSite:input_type -> dcim.v1.GetSiteRequest
+	5,  // 6: dcim.v1.SiteService.CreateSite:input_type -> dcim.v1.CreateSiteRequest
+	7,  // 7: dcim.v1.SiteService.UpdateSite:input_type -> dcim.v1.UpdateSiteRequest
+	9,  // 8: dcim.v1.SiteService.DeleteSite:input_type -> dcim.v1.DeleteSiteRequest
+	2,  // 9: dcim.v1.SiteService.ListSites:output_type -> dcim.v1.ListSitesResponse
+	4,  // 10: dcim.v1.SiteService.GetSite:output_type -> dcim.v1.GetSiteResponse
+	6,  // 11: dcim.v1.SiteService.CreateSite:output_type -> dcim.v1.CreateSiteResponse
+	8,  // 12: dcim.v1.SiteService.UpdateSite:output_type -> dcim.v1.UpdateSiteResponse
+	10, // 13: dcim.v1.SiteService.DeleteSite:output_type -> dcim.v1.DeleteSiteResponse
+	9,  // [9:14] is the sub-list for method output_type
+	4,  // [4:9] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_v1_site_proto_init() }
@@ -2878,9 +879,9 @@ func file_v1_site_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_site_proto_rawDesc), len(file_v1_site_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   33,
+			NumMessages:   11,
 			NumExtensions: 0,
-			NumServices:   3,
+			NumServices:   1,
 		},
 		GoTypes:           file_v1_site_proto_goTypes,
 		DependencyIndexes: file_v1_site_proto_depIdxs,
