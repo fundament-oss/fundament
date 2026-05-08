@@ -302,7 +302,7 @@ export default class RacksComponent {
     } else {
       firstValueFrom(this.rackApi.createRack(name, totalU, ''))
         .then((res) => {
-          const created = { ...updated, id: res.rack?.id ?? updated.id };
+          const created = { ...updated, id: res.rackId ?? updated.id };
           this.mutableRacks.update((list) => [...list, created]);
           this.router.navigate(['/racks', created.id]);
           this.editRack.set(null);

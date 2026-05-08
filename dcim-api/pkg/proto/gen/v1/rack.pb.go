@@ -550,10 +550,10 @@ func (b0 CreateRackRequest_builder) Build() *CreateRackRequest {
 }
 
 type CreateRackResponse struct {
-	state           protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Rack *Rack                  `protobuf:"bytes,10,opt,name=rack"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_RackId string                 `protobuf:"bytes,10,opt,name=rack_id,json=rackId"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CreateRackResponse) Reset() {
@@ -581,39 +581,28 @@ func (x *CreateRackResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *CreateRackResponse) GetRack() *Rack {
+func (x *CreateRackResponse) GetRackId() string {
 	if x != nil {
-		return x.xxx_hidden_Rack
+		return x.xxx_hidden_RackId
 	}
-	return nil
+	return ""
 }
 
-func (x *CreateRackResponse) SetRack(v *Rack) {
-	x.xxx_hidden_Rack = v
-}
-
-func (x *CreateRackResponse) HasRack() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Rack != nil
-}
-
-func (x *CreateRackResponse) ClearRack() {
-	x.xxx_hidden_Rack = nil
+func (x *CreateRackResponse) SetRackId(v string) {
+	x.xxx_hidden_RackId = v
 }
 
 type CreateRackResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Rack *Rack
+	RackId string
 }
 
 func (b0 CreateRackResponse_builder) Build() *CreateRackResponse {
 	m0 := &CreateRackResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Rack = b.Rack
+	x.xxx_hidden_RackId = b.RackId
 	return m0
 }
 
@@ -770,10 +759,9 @@ func (b0 UpdateRackRequest_builder) Build() *UpdateRackRequest {
 }
 
 type UpdateRackResponse struct {
-	state           protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Rack *Rack                  `protobuf:"bytes,10,opt,name=rack"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateRackResponse) Reset() {
@@ -801,39 +789,15 @@ func (x *UpdateRackResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *UpdateRackResponse) GetRack() *Rack {
-	if x != nil {
-		return x.xxx_hidden_Rack
-	}
-	return nil
-}
-
-func (x *UpdateRackResponse) SetRack(v *Rack) {
-	x.xxx_hidden_Rack = v
-}
-
-func (x *UpdateRackResponse) HasRack() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Rack != nil
-}
-
-func (x *UpdateRackResponse) ClearRack() {
-	x.xxx_hidden_Rack = nil
-}
-
 type UpdateRackResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Rack *Rack
 }
 
 func (b0 UpdateRackResponse_builder) Build() *UpdateRackResponse {
 	m0 := &UpdateRackResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Rack = b.Rack
 	return m0
 }
 
@@ -1119,20 +1083,18 @@ const file_v1_rack_proto_rawDesc = "" +
 	"\x04name\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12(\n" +
 	"\vtotal_units\x18\x1e \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\n" +
 	"totalUnits\x12&\n" +
-	"\x0fposition_in_row\x18( \x01(\x05R\rpositionInRow\"7\n" +
-	"\x12CreateRackResponse\x12!\n" +
-	"\x04rack\x18\n" +
-	" \x01(\v2\r.dcim.v1.RackR\x04rack\"\x9f\x01\n" +
+	"\x0fposition_in_row\x18( \x01(\x05R\rpositionInRow\"-\n" +
+	"\x12CreateRackResponse\x12\x17\n" +
+	"\arack_id\x18\n" +
+	" \x01(\tR\x06rackId\"\x9f\x01\n" +
 	"\x11UpdateRackRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x19\n" +
 	"\x04name\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x04name\x12&\n" +
 	"\vtotal_units\x18\x1e \x01(\x05B\x05\xaa\x01\x02\b\x01R\n" +
 	"totalUnits\x12-\n" +
-	"\x0fposition_in_row\x18( \x01(\x05B\x05\xaa\x01\x02\b\x01R\rpositionInRow\"7\n" +
-	"\x12UpdateRackResponse\x12!\n" +
-	"\x04rack\x18\n" +
-	" \x01(\v2\r.dcim.v1.RackR\x04rack\"-\n" +
+	"\x0fposition_in_row\x18( \x01(\x05B\x05\xaa\x01\x02\b\x01R\rpositionInRow\"\x14\n" +
+	"\x12UpdateRackResponse\"-\n" +
 	"\x11DeleteRackRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x14\n" +
@@ -1168,24 +1130,22 @@ var file_v1_rack_proto_depIdxs = []int32{
 	12, // 1: dcim.v1.Rack.deleted:type_name -> google.protobuf.Timestamp
 	11, // 2: dcim.v1.ListRacksResponse.racks:type_name -> dcim.v1.ListRacksResponse.RackSummary
 	0,  // 3: dcim.v1.GetRackResponse.rack:type_name -> dcim.v1.Rack
-	0,  // 4: dcim.v1.CreateRackResponse.rack:type_name -> dcim.v1.Rack
-	0,  // 5: dcim.v1.UpdateRackResponse.rack:type_name -> dcim.v1.Rack
-	0,  // 6: dcim.v1.ListRacksResponse.RackSummary.rack:type_name -> dcim.v1.Rack
-	1,  // 7: dcim.v1.RackService.ListRacks:input_type -> dcim.v1.ListRacksRequest
-	3,  // 8: dcim.v1.RackService.GetRack:input_type -> dcim.v1.GetRackRequest
-	5,  // 9: dcim.v1.RackService.CreateRack:input_type -> dcim.v1.CreateRackRequest
-	7,  // 10: dcim.v1.RackService.UpdateRack:input_type -> dcim.v1.UpdateRackRequest
-	9,  // 11: dcim.v1.RackService.DeleteRack:input_type -> dcim.v1.DeleteRackRequest
-	2,  // 12: dcim.v1.RackService.ListRacks:output_type -> dcim.v1.ListRacksResponse
-	4,  // 13: dcim.v1.RackService.GetRack:output_type -> dcim.v1.GetRackResponse
-	6,  // 14: dcim.v1.RackService.CreateRack:output_type -> dcim.v1.CreateRackResponse
-	8,  // 15: dcim.v1.RackService.UpdateRack:output_type -> dcim.v1.UpdateRackResponse
-	10, // 16: dcim.v1.RackService.DeleteRack:output_type -> dcim.v1.DeleteRackResponse
-	12, // [12:17] is the sub-list for method output_type
-	7,  // [7:12] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	0,  // 4: dcim.v1.ListRacksResponse.RackSummary.rack:type_name -> dcim.v1.Rack
+	1,  // 5: dcim.v1.RackService.ListRacks:input_type -> dcim.v1.ListRacksRequest
+	3,  // 6: dcim.v1.RackService.GetRack:input_type -> dcim.v1.GetRackRequest
+	5,  // 7: dcim.v1.RackService.CreateRack:input_type -> dcim.v1.CreateRackRequest
+	7,  // 8: dcim.v1.RackService.UpdateRack:input_type -> dcim.v1.UpdateRackRequest
+	9,  // 9: dcim.v1.RackService.DeleteRack:input_type -> dcim.v1.DeleteRackRequest
+	2,  // 10: dcim.v1.RackService.ListRacks:output_type -> dcim.v1.ListRacksResponse
+	4,  // 11: dcim.v1.RackService.GetRack:output_type -> dcim.v1.GetRackResponse
+	6,  // 12: dcim.v1.RackService.CreateRack:output_type -> dcim.v1.CreateRackResponse
+	8,  // 13: dcim.v1.RackService.UpdateRack:output_type -> dcim.v1.UpdateRackResponse
+	10, // 14: dcim.v1.RackService.DeleteRack:output_type -> dcim.v1.DeleteRackResponse
+	10, // [10:15] is the sub-list for method output_type
+	5,  // [5:10] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_v1_rack_proto_init() }

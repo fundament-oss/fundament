@@ -63,7 +63,7 @@ message CreateRackRequest {
 }
 
 message CreateRackResponse {
-  Rack rack = 10;
+  string rack_id = 10;
 }
 
 message UpdateRackRequest {
@@ -73,9 +73,7 @@ message UpdateRackRequest {
   int32  position_in_row = 40 [features.field_presence = EXPLICIT];
 }
 
-message UpdateRackResponse {
-  Rack rack = 10;
-}
+message UpdateRackResponse {}
 
 message DeleteRackRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
