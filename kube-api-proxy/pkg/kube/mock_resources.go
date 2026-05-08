@@ -14,10 +14,28 @@ const mockCertManagerDefinitionJSON = `{
     "project": [
       {"crd": "clusterissuers.cert-manager.io", "label": "Cluster Issuers", "icon": "shield-check-mark"},
       {"crd": "certificates.cert-manager.io", "label": "Certificates", "icon": "certificate"},
+      {"crd": "issuers.cert-manager.io", "label": "Issuers", "icon": "rectangle-stack"},
       {"crd": "certificaterequests.cert-manager.io", "label": "Certificate Requests", "icon": "folder"}
     ]
   },
-  "crds": ["clusterissuers.cert-manager.io", "certificates.cert-manager.io", "certificaterequests.cert-manager.io"]
+  "crds": [
+    "clusterissuers.cert-manager.io",
+    "certificates.cert-manager.io",
+    "issuers.cert-manager.io",
+    "certificaterequests.cert-manager.io"
+  ],
+  "customComponents": {
+    "Certificate": {"list": "certificates-list.html", "detail": "certificates-detail.html"},
+    "CertificateRequest": {"list": "certificaterequests-list.html", "detail": "certificaterequests-detail.html"},
+    "Issuer": {"list": "issuers-list.html", "detail": "issuers-detail.html"},
+    "ClusterIssuer": {"list": "clusterissuers-list.html", "detail": "clusterissuers-detail.html"}
+  },
+  "allowedResources": [
+    {"group": "cert-manager.io", "version": "v1", "resource": "certificates",        "verbs": ["list", "get"]},
+    {"group": "cert-manager.io", "version": "v1", "resource": "certificaterequests", "verbs": ["list", "get"]},
+    {"group": "cert-manager.io", "version": "v1", "resource": "issuers",             "verbs": ["list", "get"]},
+    {"group": "cert-manager.io", "version": "v1", "resource": "clusterissuers",      "verbs": ["list", "get"]}
+  ]
 }`
 
 const mockCnpgDefinitionJSON = `{
@@ -95,6 +113,47 @@ const mockCertificateListJSON = `{
       },
       "status": {
         "conditions": [{"type": "Ready", "status": "False", "lastTransitionTime": "2026-02-10T09:00:00Z", "message": "Issuer ca-issuer not found"}]
+      }
+    }
+  ]
+}`
+
+const mockCertificateRequestListJSON = `{
+  "apiVersion": "cert-manager.io/v1",
+  "kind": "CertificateRequestList",
+  "metadata": {"resourceVersion": "1"},
+  "items": [
+    {
+      "apiVersion": "cert-manager.io/v1",
+      "kind": "CertificateRequest",
+      "metadata": {"name": "web-tls-cert-1", "namespace": "default", "uid": "cr-1", "creationTimestamp": "2026-02-01T11:58:00Z"},
+      "spec": {
+        "issuerRef": {"name": "letsencrypt-prod", "kind": "ClusterIssuer", "group": "cert-manager.io"},
+        "duration": "2160h",
+        "request": "LS0tLS1CRUdJTi…"
+      },
+      "status": {
+        "conditions": [
+          {"type": "Approved", "status": "True", "reason": "cert-manager.io", "lastTransitionTime": "2026-02-01T11:58:30Z"},
+          {"type": "Ready",    "status": "True", "reason": "Issued",         "lastTransitionTime": "2026-02-01T12:00:00Z", "message": "Certificate fetched from issuer successfully"}
+        ],
+        "certificate": "LS0tLS1CRUdJTi…"
+      }
+    },
+    {
+      "apiVersion": "cert-manager.io/v1",
+      "kind": "CertificateRequest",
+      "metadata": {"name": "internal-cert-1", "namespace": "internal", "uid": "cr-2", "creationTimestamp": "2026-02-10T08:55:00Z"},
+      "spec": {
+        "issuerRef": {"name": "ca-issuer", "kind": "Issuer"},
+        "duration": "8760h",
+        "request": "LS0tLS1CRUdJTi…"
+      },
+      "status": {
+        "conditions": [
+          {"type": "Approved", "status": "True",  "reason": "cert-manager.io", "lastTransitionTime": "2026-02-10T08:55:30Z"},
+          {"type": "Ready",    "status": "False", "reason": "Pending",         "lastTransitionTime": "2026-02-10T09:00:00Z", "message": "Issuer ca-issuer not found"}
+        ]
       }
     }
   ]

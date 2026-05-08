@@ -11,7 +11,7 @@ The cert-manager plugin is a reference implementation that installs and manages 
 1. **Start**: Checks if cert-manager is already installed, then runs `helm upgrade --install cert-manager` from the Jetstack Helm repo
 2. **Verify**: Checks that all cert-manager CRDs exist (`certificates`, `issuers`, `clusterissuers`, `certificaterequests`)
 3. **Reconcile**: Periodically re-checks CRD availability, reports degraded if missing
-4. **Console**: Serves a placeholder console UI at `/console/`
+4. **Console**: Serves list and detail HTML for each managed CRD from `/console/`, talking to the host through the plugin SDK's `fundament.k8s.*` broker
 
 ## File structure
 
@@ -20,12 +20,28 @@ plugins/cert-manager/
 ├── main.go             # Entry point: load definition, call pluginruntime.Run()
 ├── plugin.go           # Plugin implementation (Start, Install, Reconcile, etc.)
 ├── console.go          # Embeds console/ directory as http.FileSystem
-├── definition.yaml     # Plugin metadata, permissions, menu entries, UI hints
+├── definition.yaml     # Metadata, permissions, menu, customComponents, allowedResources
 ├── console/
-│   └── placeholder.html
+│   ├── _shared.js                  # SDK loader + shared helpers (escapeHtml, formatAge, …)
+│   ├── certificates-list.html
+│   ├── certificates-detail.html
+│   ├── certificaterequests-list.html
+│   ├── certificaterequests-detail.html
+│   ├── issuers-list.html
+│   ├── issuers-detail.html
+│   ├── clusterissuers-list.html
+│   └── clusterissuers-detail.html
 ├── plugin_test.go      # Unit tests
 └── Dockerfile          # Multi-stage build (Go build + alpine with helm)
 ```
+
+Each `<resource>-list.html` and `<resource>-detail.html` corresponds to an
+entry in `spec.customComponents` in `definition.yaml`. `_shared.js`
+contains the SDK loader (`loadSdk()` reads `?host=` from the query string
+and injects the `plugin-sdk.js` / `.css` tags) plus the rendering
+helpers — copy it as a starting point for new plugins. See
+[Custom UI](custom-ui) for the pattern and
+[Console integration](console-integration) for the architecture.
 
 ## Why it needs `cluster-admin`
 

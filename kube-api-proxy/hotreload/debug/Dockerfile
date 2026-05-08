@@ -6,6 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY kube-api-proxy/ ./kube-api-proxy/
 COPY common/ ./common/
+COPY plugins/ ./plugins/
 RUN chmod +x /src/kube-api-proxy/hotreload/debug/start.sh
 EXPOSE 2345
 CMD ["air", "-c", "kube-api-proxy/hotreload/debug/.air.toml"]
