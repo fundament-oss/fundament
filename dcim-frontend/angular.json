@@ -27,7 +27,14 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css"]
+            "styles": ["src/styles.css"],
+            "allowedCommonJsDependencies": [
+              "react",
+              "react-dom",
+              "react-dom/client",
+              "react/jsx-runtime",
+              "use-sync-external-store/shim/with-selector.js"
+            ]
           },
           "configurations": {
             "production": {

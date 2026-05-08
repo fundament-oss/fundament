@@ -172,7 +172,7 @@ export default class DatacenterDetailComponent implements OnInit {
     } else {
       firstValueFrom(this.dcApi.createRoom(form.siteId!, name, floor))
         .then((res) => {
-          const created = DatacenterApiService.mapRoom(res.room!);
+          const created: Room = { id: res.roomId, siteId: form.siteId!, name, floor };
           this.mutableRooms.update((list) => [...list, created]);
           this.editRoom.set(null);
         })
@@ -244,7 +244,7 @@ export default class DatacenterDetailComponent implements OnInit {
     } else {
       firstValueFrom(this.dcApi.createRackRow(form.roomId!, name, posX, posY))
         .then((res) => {
-          const created = DatacenterApiService.mapRackRow(res.rackRow!);
+          const created: RackRow = { id: res.rackRowId, roomId: form.roomId!, name, positionX: posX, positionY: posY };
           this.mutableRackRows.update((list) => [...list, created]);
           this.editRackRow.set(null);
         })
